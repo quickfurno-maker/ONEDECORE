@@ -1,54 +1,52 @@
-# PHASE 2C — LOCAL DATABASE MIGRATION & IDENTITY/RBAC FOUNDATION AUDIT LOG
+# PHASE 2C1 — HARDENED IDENTITY & RBAC FOUNDATION AUDIT LOG
 
 **Execution Date:** July 24, 2026  
 **Phase 2B Merge Commit:** `eb69f015ed915814d3f718c3014eb9d281082086`  
-**Current Feature Branch:** `phase-2c-identity-rbac-foundation`  
-**CLI Version:** `2.109.1`  
-**Docker Engine Version:** `29.6.1`  
-**Migration Path:** `supabase/migrations/20260724174648_identity_rbac_foundation.sql`  
-**Migration SHA-256:** `772a67b74d61f12e63a86e27d6b4f4ed0a354458bc4ed7dae0bd2b6bb2e18ab0`  
-**Generated Types Path:** `src/types/database.generated.ts`  
+**Phase 2C Base Commit:** `98bd22c4b62f0ed3cb1d6d0749613414f07ed457`
+**Current Feature Branch:** `phase-2c-identity-rbac-foundation`
+**CLI Version:** `2.109.1`
+**Docker Engine:** Shared Docker Desktop 4.82.0 (Engine 29.6.1) with strict ONEDECORE project isolation
+**Migration Path:** `supabase/migrations/20260724174648_identity_rbac_foundation.sql`
+**Migration SHA-256:** `a19dc6d497401b6cdd1df7bee6f8c5bc1e5f1aa354135debebfab4a659e1a9dd`
+**Generated Types Path:** `src/types/database.generated.ts`
 
 ---
 
-## 1. Database Objects Introduced
+## 1. Migration Hardening Summary
 
-- **Schemas:** `private` (internal security functions schema; not exposed via API).
-- **Public Tables:**
-  1. `public.profiles` (Staff profiles linked 1:1 to `auth.users`).
-  2. `public.roles` (System roles: `super_admin`, `management`, `sales`, `designer`, `project_operations`, `content_manager`).
-  3. `public.permissions` (Foundation permissions: `admin.access`, `users.read`, `users.manage`, `roles.read`, `roles.manage`, `audit.read`).
-  4. `public.role_permissions` (Role-permission grant mappings).
-  5. `public.user_roles` (Staff role assignments).
-- **Private Helper Functions & Triggers:**
-  - `private.set_updated_at()` — Trigger function for auto-updating `updated_at`.
-  - `private.handle_new_auth_user()` — Trigger on `auth.users` inserting `public.profiles(id)` for new auth users.
-  - `private.has_role(text)` — `security definer` function with `set search_path = ''` checking user role membership.
-  - `private.has_permission(text)` — `security definer` function with `set search_path = ''` checking user permission grants.
-- **Indexes:** `idx_user_roles_role_id`, `idx_role_permissions_permission_id`.
-
----
-
-## 2. Row Level Security & Privileges
-
-- **RLS Status:** Enabled on 100% of public identity/RBAC tables (`profiles`, `roles`, `permissions`, `role_permissions`, `user_roles`).
-- **Anonymous Role (`anon`):** 0 table privileges granted; 0 RLS policies created.
-- **Authenticated Role (`authenticated`):** Explicit table grants (`select`, `update`, `insert`, `delete` where allowed per table specification).
+- **Schema Drift Protection:** Removed `IF NOT EXISTS` from schema, table, and index DDL to ensure immediate failure on unexpected schema drift.
+- **Explicit Privilege Reset:** Executed `REVOKE ALL ON TABLE ... FROM public, anon, authenticated` before granting least-privilege permissions.
+- **Column-Level Write Privileges:**
+  - `profiles`: Table-level `SELECT`, column-level `UPDATE` on (`display_name`, `phone_e164`, `status`).
+  - `roles` & `permissions`: Table-level `SELECT`, column-level `INSERT` on (`code`, `name`, `description`, `is_active`), column-level `UPDATE` on (`name`, `description`, `is_active`).
+  - `role_permissions`: Table-level `SELECT`, `INSERT`, `DELETE`.
+  - `user_roles`: Table-level `SELECT`, `DELETE`, column-level `INSERT` on (`user_id`, `role_id`).
+- **System RBAC Record Protection:**
+  - `roles.is_system` & `permissions.is_system` default `false`. Seeded foundation records set `is_system = true`.
+  - RLS policies restrict `INSERT`/`UPDATE` on `roles` and `permissions` to `is_system = false`.
+  - `role_permissions` RLS policies restrict custom mapping changes to `is_system = false` roles.
+- **Attribution & Metadata Safety:**
+  - `user_roles.assigned_by` defaults to `auth.uid()`. Callers cannot forge attribution due to column-limited inserts.
+  - `private.handle_new_auth_user()` normalizes display names to at most 120 characters without failing user signup.
+- **Function Privilege Minimization:**
+  - `private.set_updated_at()` removed `SECURITY DEFINER`.
+  - `REVOKE ALL ON SCHEMA private FROM public;` applied. Direct execution of triggers revoked from `public`, `anon`, `authenticated`.
 
 ---
 
-## 3. Database & Quality Validation Results
+## 2. Shared Docker Isolation
 
+- Executed strictly within `C:\Users\KESHAV SHARMA\Desktop\OneDecore` working directory.
+- `project_id = "OneDecore"` isolated from Jarvis (`qf-jarvis-postgres-dev`) and QuickFurno containers.
+- Zero global prune commands executed.
+
+---
+
+## 3. Database & Application Quality Gate Results
+
+- `npx supabase db reset`: Clean replay from empty local database.
 - `npm run db:lint`: 0 schema errors found (`supabase db lint --local --level warning`).
-- `npm run db:test`: 14 pgTAP subtests passed (`supabase test db`).
-- `npm run check:db`: Combined database quality gate passed cleanly.
-- `npm run check`: Next.js lint, TypeScript check, and Turbopack production build passed cleanly.
-- Type Safety: Client wrappers (`client.ts`, `server.ts`, `proxy.ts`) updated to generic `Database` type.
-
----
-
-## 4. Remote Safety & Isolation Confirmation
-
-- **Remote Project Mutation:** 0 remote database changes, 0 remote migrations applied.
-- **Remote Commands:** Zero `supabase link`, `supabase login`, `supabase db push`, or `supabase db pull` commands executed.
-- **Client Factory Status:** Clarified that the server client factory (`src/lib/supabase/server.ts`) was created in Phase 2B; authentication UI and first Super Admin bootstrap remain deferred to Phase 2D.
+- `npm run db:test`: 19 pgTAP subtests passed (`supabase test db`).
+- `npm run check:db`: Combined database gate passed cleanly.
+- `npm run check`: Next.js lint, TypeScript check (`tsc --noEmit`), and Turbopack build passed cleanly.
+- `git diff --check`: Passed with 0 whitespace errors.

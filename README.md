@@ -68,7 +68,8 @@ Detailed project documentation is available in the [`docs/`](docs/) directory:
 - **Framework Baseline:** Next.js 16.2.11 (React 19, Tailwind CSS v4, TypeScript 5).
 - **Engine Contract:** Node.js 24.x LTS (`>=24 <25`) and npm 11.16.0 (`.nvmrc`, `.node-version`, `.npmrc`).
 - **Database & SSR Integration:** Supabase Mumbai Project (`lpurlfmpvriyvpkujvyl`), `@supabase/supabase-js@2.110.8`, `@supabase/ssr@0.12.3`, `supabase@2.109.1`.
-- **Database Schema:** Identity & RBAC foundation (`profiles`, `roles`, `permissions`, `role_permissions`, `user_roles`) with 100% RLS coverage and pgTAP test suite.
+- **Database Schema & Hardening:** Identity & RBAC foundation (`profiles`, `roles`, `permissions`, `role_permissions`, `user_roles`) with strict column-level grants, 100% RLS coverage, system RBAC immutability, and pgTAP test suite.
+- **Docker Isolation Policy:** Shared Docker Desktop engine with strict project isolation (`project_id = "OneDecore"`). Zero global prune commands.
 - **Repository Structure:** Single modular monolith (`src/app`, `src/config`, `src/lib/supabase`, `src/types`, `supabase/migrations`, `supabase/tests`).
 - **Admin Prefix:** `/admin` for all internal application routes.
 - **Quality Verification:** Execute `npm run check` (App quality gate) and `npm run check:db` (Database lint & pgTAP tests).

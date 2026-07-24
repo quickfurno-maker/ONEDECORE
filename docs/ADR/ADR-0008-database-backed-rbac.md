@@ -28,6 +28,8 @@ ONEDECORE requires multi-role staff authorization for internal CRM management (`
 ### Key Rules
 
 1. RLS policies invoke `private.has_permission('permission.code')` for authorization decisions.
-2. Helper functions execute with `security definer` and explicit `set search_path = ''` to prevent search path hijacking.
-3. Custom JWT claims and Supabase Auth Hooks are deferred to avoid stale token state during initial schema evolution.
-4. Anonymous role (`anon`) receives 0 table grants or RLS policies on identity and RBAC tables.
+2. Helper functions (`private.has_role`, `private.has_permission`) execute with `SECURITY DEFINER` and explicit `set search_path = ''` to prevent search path hijacking.
+3. Non-elevated trigger functions (`private.set_updated_at`) omit `SECURITY DEFINER`.
+4. System RBAC records (`is_system = true`) are immutable through the Data API and can only be altered via version-controlled migrations.
+5. Column-level write privileges restrict user modifications on `profiles`, `roles`, `permissions`, and `user_roles`.
+6. Anonymous role (`anon`) receives 0 table grants or RLS policies on identity and RBAC tables.

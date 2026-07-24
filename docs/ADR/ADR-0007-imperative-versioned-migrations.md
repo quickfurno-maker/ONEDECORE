@@ -29,5 +29,7 @@ ONEDECORE requires reproducible, version-controlled database schema changes that
 
 1. All DDL and seed changes execute exclusively via reviewed timestamped SQL files in `supabase/migrations/`.
 2. Declarative schema subdirectories (e.g. `supabase/schemas/`) are strictly prohibited.
-3. Every migration must execute cleanly from an empty local database reset (`supabase db reset`).
-4. Dashboard SQL Editor execution on remote environments is prohibited except for authorized emergency operations.
+3. Foundation DDL statements omit `IF NOT EXISTS` to ensure immediate failure on unexpected schema drift.
+4. Least-privilege grants apply explicit `REVOKE ALL` before granting column-level write access.
+5. Every migration must execute cleanly from an empty local database reset (`supabase db reset`).
+6. Dashboard SQL Editor execution on remote environments is prohibited except for authorized emergency operations.

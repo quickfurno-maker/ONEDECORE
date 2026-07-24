@@ -27,6 +27,7 @@
 | **DEC-0016** | Supabase SSR cookie connection established using @supabase/ssr behind ONEDECORE wrappers | LOCKED | Provides secure browser/server cookie-based Supabase integration for Mumbai project | No | Phase 2B | N/A |
 | **DEC-0017** | Imperative timestamped migrations in supabase/migrations/ established as single schema source | LOCKED | Ensures version-controlled, reproducible schema evolution across all environments | No | Phase 2C | N/A |
 | **DEC-0018** | Database-backed RBAC with private.has_role() and private.has_permission() security-definer helpers | LOCKED | Implements immediate permission enforcement without relying on stale JWT claims | No | Phase 2C | N/A |
+| **DEC-0020** | Shared-Docker Desktop policy with strict project isolation and least-privilege column-level RBAC hardening | LOCKED | Ensures zero resource contention with Jarvis/QuickFurno and enforces strict SQL schema drift protection | No | Phase 2C1 | N/A |
 
 ---
 

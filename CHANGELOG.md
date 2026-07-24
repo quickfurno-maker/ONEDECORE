@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2C1 (July 24, 2026)
+- Hardened foundation migration `20260724174648_identity_rbac_foundation.sql`:
+  - Removed `IF NOT EXISTS` from schema, table, and index DDL to fail loudly on unexpected schema drift.
+  - Added explicit `REVOKE ALL ON TABLE ... FROM public, anon, authenticated` before least-privilege grants.
+  - Configured strict column-level write privileges for `profiles`, `roles`, `permissions`, and `user_roles`.
+  - Enforced system RBAC record immutability (`is_system = true`) via RLS policies.
+  - Restricted `user_roles` assignment attribution (`assigned_by = auth.uid()`).
+  - Added display name metadata normalization (max 120 chars) in `private.handle_new_auth_user()`.
+  - Removed `SECURITY DEFINER` from `private.set_updated_at()`.
+- Expanded pgTAP database test suite (`01_identity_rbac_test.sql`) to 19 subtests.
+- Established Shared-Docker Desktop policy with strict project isolation and zero global prune commands.
+- Regenerated TypeScript types (`src/types/database.generated.ts`).
+
 ### Added - Phase 2C (July 24, 2026)
 - Installed `supabase@2.109.1` devDependency and initialized local CLI configuration (`supabase/config.toml`).
 - Created identity & RBAC migration `20260724174648_identity_rbac_foundation.sql` (`private` schema, `profiles`, `roles`, `permissions`, `role_permissions`, `user_roles`).

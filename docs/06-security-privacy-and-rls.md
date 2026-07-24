@@ -31,7 +31,16 @@ Following mandatory corrections in Phase 1B, RLS policies are applied to all API
 
 ---
 
-## 2. Policy Enforcement Matrix
+## 2. Identity & RBAC RLS Contract (Phase 2C1 Baseline)
+
+- **Least-Privilege Privilege Reset:** Explicit `REVOKE ALL ON TABLE ... FROM public, anon, authenticated` executed prior to explicit grants.
+- **Column-Level Write Security:**
+  - `profiles`: `UPDATE` restricted to (`display_name`, `phone_e164`, `status`). `id`, `created_at`, `updated_at` cannot be updated via Data API.
+  - `roles` & `permissions`: `INSERT`/`UPDATE` restricted to non-system records (`is_system = false`) and non-key columns (`name`, `description`, `is_active`).
+  - `user_roles`: `INSERT` restricted to (`user_id`, `role_id`). `assigned_by` defaults to `auth.uid()` and cannot be forged.
+- **System Record Immutability:** Seeded system roles (`super_admin`, `management`, `sales`, `designer`, `project_operations`, `content_manager`) and permissions are protected from Data API modification or deletion.
+
+## 3. Policy Enforcement Matrix
 
 1. **Anonymous Role (`anon`):**
    - Read access permitted exclusively for `portfolio_projects` and `portfolio_media` where `status = 'published'`.
