@@ -1,7 +1,7 @@
--- ONEDECORE Phase 2C1 Identity & RBAC pgTAP Hardened Database Tests
+-- ONEDECORE Phase 2C3 Identity & RBAC pgTAP Database Tests
 
 begin;
-select plan(19);
+select plan(27);
 
 -- 1. Verify schema existence
 select has_schema('private', 'Private security schema should exist');
@@ -107,6 +107,50 @@ select results_eq(
   array[5],
   'Public schema must contain exactly the 5 authorized identity tables'
 );
+
+-- 11. Phase 2C3 — rls_auto_enable existence and security properties
+select has_function('public', 'rls_auto_enable', array[]::text[], 'public.rls_auto_enable function should exist');
+
+select results_eq(
+  'select prosecdef from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = ''public'' and p.proname = ''rls_auto_enable''',
+  array[true],
+  'public.rls_auto_enable must be security definer'
+);
+
+select is(
+  (select array_to_string(proconfig, ',') from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'rls_auto_enable'),
+  'search_path=pg_catalog',
+  'public.rls_auto_enable search_path must be pg_catalog'
+);
+
+-- 12. Phase 2C3 — ensure_rls event trigger existence and status
+select results_eq(
+  'select evtenabled from pg_event_trigger where evtname = ''ensure_rls''',
+  array['O'::"char"],
+  'ensure_rls event trigger must exist and be enabled'
+);
+
+-- 13. Phase 2C3 — Revoked execution privileges on public.rls_auto_enable()
+select results_eq(
+  'select has_function_privilege(''anon'', ''public.rls_auto_enable()'', ''execute'')',
+  array[false],
+  'anon must NOT have execute privilege on public.rls_auto_enable'
+);
+
+select results_eq(
+  'select has_function_privilege(''authenticated'', ''public.rls_auto_enable()'', ''execute'')',
+  array[false],
+  'authenticated must NOT have execute privilege on public.rls_auto_enable'
+);
+
+select results_eq(
+  'select has_function_privilege(''public'', ''public.rls_auto_enable()'', ''execute'')',
+  array[false],
+  'public pseudo-role must NOT have execute privilege on public.rls_auto_enable'
+);
+
+-- 14. Phase 2C3 — idx_user_roles_assigned_by index coverage
+select has_index('public', 'user_roles', 'idx_user_roles_assigned_by', 'idx_user_roles_assigned_by index should exist on user_roles');
 
 select * from finish();
 rollback;

@@ -66,3 +66,29 @@ Phase 2C2 represents the first authorized remote database mutation for ONEDECORE
 
 - **Phase 2D:** Auth login UI (`/login`), admin route protection middleware (`/admin/*`), and first Super Admin user bootstrap.
 - **Phase 2E:** Portfolio database schema, room tags, case-study models, and Supabase Storage bucket policies.
+
+---
+
+## 5. Phase 2C3 — Remote RBAC Post-Deployment Hardening
+
+**Hardening Date:** July 24, 2026
+**Applied Migration Version:** `20260724192233`
+**Applied Migration Filename:** `supabase/migrations/20260724192233_secure_rls_event_trigger_and_index_assignment_actor.sql`
+**Migration SHA-256:** `3ef8512a50a26610d8ee2960661dcf21f8bf8a0142064fea0bd02e75ba0c4c1b`
+
+### 5.1 Advisor Findings & Root Cause Analysis
+- **Security Advisor Finding:** `public.rls_auto_enable()` is a `SECURITY DEFINER` event-trigger function executable by `public`, `anon`, and `authenticated`. Root cause: Supabase platform auto-RLS helper inherited default public function execution privileges upon project provisioning.
+- **Performance Advisor Finding:** Foreign key `public.user_roles.assigned_by` lacked a covering index, risking sequential scans during actor-based role lookup and audit queries.
+
+### 5.2 Remediation & Validation Pipeline
+1. **Forward-Only Migration:** Created `20260724192233_secure_rls_event_trigger_and_index_assignment_actor.sql` revoking `EXECUTE ON FUNCTION public.rls_auto_enable()` from `public, anon, authenticated` and creating index `idx_user_roles_assigned_by`.
+2. **Local Replay & pgTAP Suite:** Executed `npx supabase db reset` cleanly from scratch. Expanded pgTAP suite (`supabase/tests/database/01_identity_rbac_test.sql`) to 27 subtests verifying `rls_auto_enable()` existence, `SECURITY DEFINER` flag, `search_path = pg_catalog`, `ensure_rls` event trigger active status, revoked privileges, and `idx_user_roles_assigned_by` index presence.
+3. **Remote Dry Run:** `npx supabase db push --dry-run` confirmed exactly 1 pending migration with zero modifications to applied migration `20260724174648`.
+4. **Owner Confirmation:** Explicit approval requested and granted prior to remote execution.
+5. **Remote Push & Linked Verification:** Executed `npx supabase db push` successfully. Verified `npx supabase migration list` shows 1:1 match across both migrations (`20260724174648` and `20260724192233`). Linked database lint (`npx supabase db lint --linked`) reported 0 schema errors.
+
+### 5.3 Post-Hardening Status & Non-Blocking Notices
+- **Security Advisor Status:** 100% accepted. 0 warnings for direct API execution of `rls_auto_enable()`.
+- **Performance Advisor Status:** Foreign key warning cleared. `idx_user_roles_assigned_by` confirmed online.
+- **Allowed Non-Blocking INFO Notices:** Unused indexes reported on zero-row empty database; Auth DB connection allocation strategy notice.
+- **Zero Business Domain Mutation:** 0 Auth users created, 0 user-role assignments created, 0 storage buckets created, 0 business tables added.

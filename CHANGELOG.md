@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2C3 (July 24, 2026)
+- Applied forward-only hardening migration `20260724192233_secure_rls_event_trigger_and_index_assignment_actor.sql` (SHA-256: `3ef8512a50a26610d8ee2960661dcf21f8bf8a0142064fea0bd02e75ba0c4c1b`) to remote project `lpurlfmpvriyvpkujvyl` in Mumbai.
+- Revoked direct `EXECUTE` privileges on platform helper `public.rls_auto_enable()` from `public`, `anon`, and `authenticated` while retaining active `ensure_rls` event trigger owned by `postgres`.
+- Added covering index `idx_user_roles_assigned_by` on `public.user_roles(assigned_by)`.
+- Expanded pgTAP database test suite (`supabase/tests/database/01_identity_rbac_test.sql`) to 27 subtests.
+- Verified Security Advisor and Performance Advisor findings resolved with zero schema drift and 0 business data/user mutations.
+
 ### Added - Phase 2C2 (July 24, 2026)
 - Applied reviewed migration `20260724174648_identity_rbac_foundation.sql` (SHA-256: `a19dc6d497401b6cdd1df7bee6f8c5bc1e5f1aa354135debebfab4a659e1a9dd`) to remote Supabase project `lpurlfmpvriyvpkujvyl` in Mumbai (`ap-south-1`).
 - Verified 1:1 local and remote migration history match via `npx supabase migration list`.

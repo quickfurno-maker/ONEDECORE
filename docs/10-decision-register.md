@@ -29,6 +29,7 @@
 | **DEC-0018** | Database-backed RBAC with private.has_role() and private.has_permission() security-definer helpers | LOCKED | Implements immediate permission enforcement without relying on stale JWT claims | No | Phase 2C | N/A |
 | **DEC-0020** | Shared-Docker Desktop policy with strict project isolation and least-privilege column-level RBAC hardening | LOCKED | Ensures zero resource contention with Jarvis/QuickFurno and enforces strict SQL schema drift protection | No | Phase 2C1 | N/A |
 | **DEC-0021** | Phase 2C2 Controlled Remote Migration Deployment to Mumbai Supabase Project lpurlfmpvriyvpkujvyl | LOCKED | Establishes the initial remote identity & RBAC schema baseline with zero Auth users or business tables | No | Phase 2C2 | N/A |
+| **DEC-0022** | Phase 2C3 Remote RBAC Post-Deployment Hardening (RLS Event Trigger & User Roles Index) | LOCKED | Revokes direct execution on platform helper public.rls_auto_enable() and covers user_roles.assigned_by foreign key | YES | Phase 2C3 | N/A |
 
 ---
 

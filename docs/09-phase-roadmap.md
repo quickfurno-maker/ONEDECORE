@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2C2 Controlled Remote Identity/RBAC Migration Complete
+**Current Phase:** Phase 2C3 Remote RBAC Post-Deployment Hardening Complete
 
 ---
 
@@ -23,7 +23,7 @@ Phase 2A: Next.js 16.2.11 Engineering Scaffold & Quality Baseline (COMPLETED)
 Phase 2B: Supabase SSR Connection Foundation & Wrappers (COMPLETED)
    │
    ▼
-Phase 2C / 2C1 / 2C2: Remote Identity & RBAC Migration Deployed, Linked Lint & Generated Types (COMPLETED)
+Phase 2C / 2C1 / 2C2 / 2C3: Remote Identity & RBAC Migration Deployed, Event Trigger Hardened, Index Added (COMPLETED)
    │
    ▼
 Phase 2D: Auth UI, Route Middleware & First Super Admin Bootstrap

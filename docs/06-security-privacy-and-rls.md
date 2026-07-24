@@ -39,6 +39,8 @@ Following mandatory corrections in Phase 1B, RLS policies are applied to all API
   - `roles` & `permissions`: `INSERT`/`UPDATE` restricted to non-system records (`is_system = false`) and non-key columns (`name`, `description`, `is_active`).
   - `user_roles`: `INSERT` restricted to (`user_id`, `role_id`). `assigned_by` defaults to `auth.uid()` and cannot be forged.
 - **System Record Immutability:** Seeded system roles (`super_admin`, `management`, `sales`, `designer`, `project_operations`, `content_manager`) and permissions are protected from Data API modification or deletion.
+- **Platform Helper Hardening (Phase 2C3):** Direct API execution on platform helper `public.rls_auto_enable()` revoked from `public`, `anon`, and `authenticated`. Event trigger `ensure_rls` remains active and owned by `postgres`.
+- **Actor Foreign Key Coverage (Phase 2C3):** Added covering index `idx_user_roles_assigned_by` on `public.user_roles(assigned_by)` for actor-based audit query optimization.
 
 ## 3. Policy Enforcement Matrix
 
