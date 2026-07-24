@@ -23,6 +23,7 @@
 | **DEC-0012** | Qualification & discount approval thresholds remain configurable | LOCKED | Prevents hardcoded business rules; thresholds set by Management | YES | Phase 7 | Phase 1B (Hardcoded 10%) |
 | **DEC-0013** | Quotation acceptance defined as auditable client acceptance acknowledgement | LOCKED | Accurately describes digital acknowledgement boundary without e-sig claims | No | Phase 8 | Phase 1B |
 | **DEC-0014** | V1 No-ERP Boundary (accounting, procurement, inventory, labor scheduling excluded) | LOCKED | Preserves core V1 focus on customer acquisition & sales CRM | No | Phase 1B | N/A |
+| **DEC-0015** | Framework baseline scaffolded on Next.js 16.2.11 with Node 24 LTS & npm 11.16.0 | LOCKED | Establishes reproducible engineering foundation and quality script contracts | No | Phase 2A | N/A |
 
 ---
 

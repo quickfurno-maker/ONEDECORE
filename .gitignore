@@ -8,6 +8,7 @@
 /build
 /dist
 /.turbo
+*.tsbuildinfo
 
 # Logs
 npm-debug.log*

@@ -65,9 +65,11 @@ Detailed project documentation is available in the [`docs/`](docs/) directory:
 
 ## 5. Repository Setup & Governance
 
-- **Framework Target:** Next.js 16.x stable (pinned during Phase 2).
+- **Framework Baseline:** Next.js 16.2.11 (React 19, Tailwind CSS v4, TypeScript 5).
+- **Engine Contract:** Node.js 24.x LTS (`>=24 <25`) and npm 11.16.0 (`.nvmrc`, `.node-version`, `.npmrc`).
 - **Repository Structure:** Single modular monolith (`src/app`, `src/features`, `src/server`, `src/components/ui`).
 - **Admin Prefix:** `/admin` for all internal application routes.
+- **Quality Verification:** Execute `npm run check` (Linting, TypeScript check, Next.js build).
 - **Contributions:** Refer to [`CONTRIBUTING.md`](CONTRIBUTING.md) for workflow rules and [`SECURITY.md`](SECURITY.md) for security policy.
 
 ---
