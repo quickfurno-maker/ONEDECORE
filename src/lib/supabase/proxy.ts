@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getPublicSupabaseEnv } from "@/config/env";
+import type { Database } from "@/types/database.generated";
 
 /**
  * Updates session cookies and refreshes claims for Next.js 16 Proxy / Middleware routing.
@@ -12,7 +13,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   const { url, publishableKey } = getPublicSupabaseEnv();
 
-  const supabase = createServerClient(url, publishableKey, {
+  const supabase = createServerClient<Database>(url, publishableKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -31,7 +32,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     },
   });
 
-  // Refresh session claims idempotently without route redirection in Phase 2B
+  // Refresh session claims idempotently without route redirection in Phase 2C
   await supabase.auth.getClaims();
 
   return supabaseResponse;

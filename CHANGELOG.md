@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2C (July 24, 2026)
+- Installed `supabase@2.109.1` devDependency and initialized local CLI configuration (`supabase/config.toml`).
+- Created identity & RBAC migration `20260724174648_identity_rbac_foundation.sql` (`private` schema, `profiles`, `roles`, `permissions`, `role_permissions`, `user_roles`).
+- Implemented `private.has_role()` and `private.has_permission()` security-definer helper functions.
+- Seeded 6 foundation roles and 6 permissions with role-permission mappings.
+- Configured 100% RLS policies and revoked table privileges from `anon`.
+- Created pgTAP database tests (`supabase/tests/database/01_identity_rbac_test.sql`).
+- Added package scripts (`db:start`, `db:stop`, `db:reset`, `db:lint`, `db:test`, `check:db`).
+- Generated typed database interfaces (`src/types/database.generated.ts`) and updated Supabase client wrappers.
+- Created ADRs `ADR-0007` and `ADR-0008` and audit log `docs/audits/phase-2c-identity-rbac-foundation.md`.
+
 ### Added - Phase 2B (July 24, 2026)
 - Connected Next.js App Router to Mumbai Supabase project (`lpurlfmpvriyvpkujvyl.supabase.co`).
 - Installed `@supabase/supabase-js@2.110.8` and `@supabase/ssr@0.12.3`.

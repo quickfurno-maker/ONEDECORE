@@ -12,7 +12,13 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck && npm run build"
+    "check": "npm run lint && npm run typecheck && npm run build",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:lint": "supabase db lint --local --level warning",
+    "db:test": "supabase test db",
+    "check:db": "npm run db:lint && npm run db:test"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",
@@ -28,6 +34,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
+    "supabase": "2.109.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2B Supabase SSR Foundation Complete
+**Current Phase:** Phase 2C Local Database Migration & Identity/RBAC Foundation Complete
 
 ---
 
@@ -23,10 +23,10 @@ Phase 2A: Next.js 16.2.11 Engineering Scaffold & Quality Baseline (COMPLETED)
 Phase 2B: Supabase SSR Connection Foundation & Wrappers (COMPLETED)
    │
    ▼
-Phase 2C: Database Schema Migrations & 100% RLS Policy Setup
+Phase 2C: Local Identity & RBAC Migration, pgTAP Tests & Generated Types (COMPLETED)
    │
    ▼
-Phase 2D: Server Client Factories, Auth Middleware & Base Types
+Phase 2D: Auth UI, Route Middleware & First Super Admin Bootstrap
    │
    ▼
 Phase 3: Design System, UI Tokens & Component Showroom

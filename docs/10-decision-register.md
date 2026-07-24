@@ -25,6 +25,8 @@
 | **DEC-0014** | V1 No-ERP Boundary (accounting, procurement, inventory, labor scheduling excluded) | LOCKED | Preserves core V1 focus on customer acquisition & sales CRM | No | Phase 1B | N/A |
 | **DEC-0015** | Framework baseline scaffolded on Next.js 16.2.11 with Node 24 LTS & npm 11.16.0 | LOCKED | Establishes reproducible engineering foundation and quality script contracts | No | Phase 2A | N/A |
 | **DEC-0016** | Supabase SSR cookie connection established using @supabase/ssr behind ONEDECORE wrappers | LOCKED | Provides secure browser/server cookie-based Supabase integration for Mumbai project | No | Phase 2B | N/A |
+| **DEC-0017** | Imperative timestamped migrations in supabase/migrations/ established as single schema source | LOCKED | Ensures version-controlled, reproducible schema evolution across all environments | No | Phase 2C | N/A |
+| **DEC-0018** | Database-backed RBAC with private.has_role() and private.has_permission() security-definer helpers | LOCKED | Implements immediate permission enforcement without relying on stale JWT claims | No | Phase 2C | N/A |
 
 ---
 
