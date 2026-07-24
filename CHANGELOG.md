@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2C2 (July 24, 2026)
+- Applied reviewed migration `20260724174648_identity_rbac_foundation.sql` (SHA-256: `a19dc6d497401b6cdd1df7bee6f8c5bc1e5f1aa354135debebfab4a659e1a9dd`) to remote Supabase project `lpurlfmpvriyvpkujvyl` in Mumbai (`ap-south-1`).
+- Verified 1:1 local and remote migration history match via `npx supabase migration list`.
+- Executed linked database linting (`npx supabase db lint --linked --level warning`) with 0 schema errors.
+- Verified remote TypeScript type generation matching local database type contract.
+- Verified remote object inventory (1 private schema, 5 public tables, 6 system roles, 6 system permissions, 100% RLS coverage, 0 Auth users, 0 Storage buckets, 0 business tables).
+
 ### Added - Phase 2C1 (July 24, 2026)
 - Hardened foundation migration `20260724174648_identity_rbac_foundation.sql`:
   - Removed `IF NOT EXISTS` from schema, table, and index DDL to fail loudly on unexpected schema drift.
