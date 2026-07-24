@@ -82,8 +82,10 @@ OneDecore/
     │   ├── repositories/      # Server-side data access objects
     │   ├── services/          # Business logic & domain workflows
     │   └── auth/              # Server-side authorization checks & RBAC
-    ├── types/                 # Shared TypeScript interfaces & DB types
-    └── lib/                   # Shared utility functions & constants
+    ├── config/                # Environment validation (env.ts)
+    ├── lib/                   # System wrappers & integration adapters
+    │   └── supabase/          # Supabase client factories (client.ts, server.ts, proxy.ts)
+    ├── proxy.ts               # Next.js 16 Proxy entry point
 ```
 
 ---
