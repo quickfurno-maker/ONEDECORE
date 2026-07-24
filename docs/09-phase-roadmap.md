@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 1C Complete  
+**Current Phase:** Phase 2A Engineering Scaffold Complete
 
 ---
 
@@ -17,7 +17,14 @@ Phase 1B: Architecture, Scope & Decision Freeze (COMPLETED)
 Phase 1C: Documentation Baseline & Clean Git Setup (COMPLETED)
    │
    ▼
-Phase 2: Next.js 16.x Stable, TypeScript & Supabase Foundation
+Phase 2A: Next.js 16.2.11 Engineering Scaffold & Quality Baseline (COMPLETED)
+   │
+   ▼
+Phase 2B: Supabase CLI, Database Schema & RLS Policy Baseline
+   │
+   ▼
+Phase 2C: Server Client Factories, Auth Middleware & Base Types
+```,StartLine:3,TargetContent:
    │
    ▼
 Phase 3: Design System, UI Tokens & Component Showroom

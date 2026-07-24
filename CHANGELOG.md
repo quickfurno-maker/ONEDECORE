@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2A (July 24, 2026)
+- Scaffolded Next.js 16.2.11 with TypeScript, ESLint, and Tailwind CSS v4 in `src/` directory.
+- Established Node.js 24 LTS and npm 11.16.0 engine contracts (`.nvmrc`, `.node-version`, `.npmrc`).
+- Added package quality scripts (`dev`, `build`, `start`, `lint`, `typecheck`, `check`).
+- Added `.env.example` with Supabase key placeholders and security guidance.
+- Created minimal application shell (`layout.tsx`, `page.tsx`, `globals.css`, `error.tsx`, `not-found.tsx`).
+- Created audit log `docs/audits/phase-2a-engineering-scaffold.md`.
+
 ### Added - Phase 1C (July 24, 2026)
 - Established formal repository governance documentation baseline in `docs/`.
 - Created Architecture Decision Records (`ADR-0001` through `ADR-0006`).
