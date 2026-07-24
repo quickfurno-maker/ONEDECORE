@@ -1,0 +1,58 @@
+# Dependencies
+/node_modules
+/.pnpm-store
+
+# Next.js & Build Output
+/.next/
+/out/
+/build
+/dist
+/.turbo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Environment Files (Do NOT ignore .env.example)
+.env
+.env*.local
+.env.development
+.env.production
+.env.test
+
+# Test Output & Coverage
+/coverage
+/.nyc_output
+/playwright-report
+/test-results
+
+# Supabase Local Temporary State
+supabase/.temp
+supabase/.branches
+
+# Local Automation & Runtime Secrets
+automation/n8n/.env
+automation/n8n/secrets/
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & Editor Files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
