@@ -36,6 +36,7 @@
 | **DEC-0026** | Guarded one-time operational Super Admin bootstrap for ONEDECORE owner account | LOCKED | Establishes single initial owner Super Admin user with active profile status and super_admin role assignment | No | Phase 2D2 | N/A |
 | **DEC-0027** | Portfolio publication state & access control model (published status required for public access) | LOCKED | Ensures draft and archived projects remain 100% invisible to public site visitors via database RLS | No | Phase 2E1 | N/A |
 | **DEC-0028** | Two-bucket media storage architecture (portfolio-originals private vs portfolio-public web derivatives) | LOCKED | Isolates master raw photographs from public web assets without depending on paid image transformations | No | Phase 2E1 | N/A |
+| **DEC-0029** | Column-level privilege hardening & RLS subquery optimization for Portfolio tables | LOCKED | Enforces database-level immutability on audit fields and eliminates RLS init-plan and multiple policy warnings | No | Phase 2E1A | N/A |
 
 ---
 

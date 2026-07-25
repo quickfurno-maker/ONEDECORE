@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2E1A (July 25, 2026)
+- Enabled Leaked Password Protection in Supabase Cloud Dashboard under Authentication → Providers → Email → Password security, resolving Security Advisor warning `auth_leaked_password_protection`.
+- Applied forward-only migration `20260725033329_harden_portfolio_rls_and_audit_privileges.sql` (SHA-256: `6f0a9fd28f88c4ac58012956cb1bc74f6cf9e30b0efdf88841e0f029e199d59b`) to remote project `lpurlfmpvriyvpkujvyl` in Mumbai.
+- Revoked broad table-level write privileges on all four portfolio tables and granted explicit column-level `INSERT` and `UPDATE` privileges to `authenticated` staff.
+- Rendered audit fields (`id`, `created_by`, `created_at`, `updated_at`, `uploaded_by`) immutable by excluding them from column-level `UPDATE` grants.
+- Consolidated `SELECT` RLS policies to eliminate `multiple_permissive_policies` warnings on `portfolio_projects`, `portfolio_project_services`, and `portfolio_media`.
+- Wrapped `(select auth.uid())` and `(select public.authorize(...))` in subqueries across all table and `storage.objects` RLS policies to eliminate `auth_rls_initplan` performance warnings.
+- Expanded pgTAP database test suite (`02_portfolio_media_test.sql`) to 80 subtests verifying column privilege boundaries, audit immutability, and policy consolidation.
+
 ### Added - Phase 2E1 (July 25, 2026)
 - Corrected owner email redaction domain pattern in `docs/audits/phase-2d2-first-super-admin-bootstrap.md` (`o***@gmail.com` verified).
 - Merged Phase 2D2 active staff authorization & initial Super Admin bootstrap into `main` with non-fast-forward merge (`56bd79f874581f1484ffbde1ee9bca2cbfdd0429`).

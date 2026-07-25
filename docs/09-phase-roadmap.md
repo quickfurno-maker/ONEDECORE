@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2E1 Portfolio Data & Media Storage Foundation Complete
+**Current Phase:** Phase 2E1A Portfolio RLS, Audit Privilege & Auth Hardening Complete
 
 ---
 

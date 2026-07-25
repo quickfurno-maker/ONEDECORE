@@ -1,7 +1,7 @@
--- ONEDECORE Phase 2E1 Portfolio Data & Media Storage pgTAP Tests
+-- ONEDECORE Phase 2E1 & Phase 2E1A Portfolio Data & Media Storage pgTAP Tests
 
 begin;
-select plan(26);
+select plan(36);
 
 -- 1. Verify portfolio tables exist
 select has_table('public', 'portfolio_projects', 'public.portfolio_projects table should exist');
@@ -87,7 +87,7 @@ update public.profiles set status = 'active' where id = '33333333-3333-3333-3333
 insert into public.user_roles (user_id, role_id)
 select '33333333-3333-3333-3333-333333333333', id from public.roles where code = 'super_admin';
 
--- User B: Staff reader with portfolio.read only (role with portfolio.read)
+-- User B: Staff reader with portfolio.read only
 insert into auth.users (id, instance_id, email, aud, role)
 values (
   '44444444-4444-4444-4444-444444444444',
@@ -100,7 +100,7 @@ update public.profiles set status = 'active' where id = '44444444-4444-4444-4444
 insert into public.user_roles (user_id, role_id)
 select '44444444-4444-4444-4444-444444444444', id from public.roles where code = 'super_admin';
 
--- User C: Staff user with NO portfolio.manage (role sales, only admin.access)
+-- User C: Staff user with NO portfolio permissions (role sales)
 insert into auth.users (id, instance_id, email, aud, role)
 values (
   '88888888-8888-8888-8888-888888888888',
@@ -140,6 +140,9 @@ insert into public.portfolio_projects (
   '33333333-3333-3333-3333-333333333333',
   '33333333-3333-3333-3333-333333333333'
 );
+
+insert into public.portfolio_project_services (project_id, service_code)
+values ('66666666-6666-6666-6666-666666666666', 'complete_home_interiors');
 
 -- Media fixture for published project
 insert into public.portfolio_media (
@@ -210,8 +213,14 @@ select results_eq(
   'Staff reader can see both draft and published portfolio projects'
 );
 
--- Switch to User C (sales role, no portfolio.manage permission)
+-- Switch to User C (sales role, no portfolio permissions)
 select set_config('request.jwt.claim.sub', '88888888-8888-8888-8888-888888888888', true);
+
+select results_eq(
+  'select count(*)::integer from public.portfolio_projects',
+  array[1],
+  'Authenticated non-staff user sees only published portfolio projects'
+);
 
 select throws_ok(
   'insert into public.portfolio_projects (slug, title, summary, created_by, updated_by) values (''test-slug'', ''Test'', ''Summary length at least twenty chars'', ''88888888-8888-8888-8888-888888888888'', ''88888888-8888-8888-8888-888888888888'')',
@@ -230,7 +239,7 @@ select throws_ok(
   'Audit identity spoofing (created_by != auth.uid()) should fail RLS check'
 );
 
--- 11. Constraint validation tests (executing as postgres to isolate table check constraints)
+-- 11. Constraint & Privilege Hardening tests (executing as postgres / authenticated)
 reset role;
 
 select throws_ok(
@@ -266,6 +275,83 @@ select throws_ok(
   '23514',
   null,
   'Unsafe object path containing .. should fail check constraint'
+);
+
+-- 12. Phase 2E1A Column-Level Privilege & Policy Hardening Verification
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '33333333-3333-3333-3333-333333333333', true);
+
+-- Attempting to UPDATE created_by on portfolio_projects must fail privilege check (42501)
+select throws_ok(
+  'update public.portfolio_projects set created_by = ''44444444-4444-4444-4444-444444444444'' where id = ''55555555-5555-5555-5555-555555555555''',
+  '42501',
+  null,
+  'Updating created_by on portfolio_projects must fail privilege check'
+);
+
+-- Attempting to UPDATE created_at on portfolio_projects must fail privilege check (42501)
+select throws_ok(
+  'update public.portfolio_projects set created_at = now() where id = ''55555555-5555-5555-5555-555555555555''',
+  '42501',
+  null,
+  'Updating created_at on portfolio_projects must fail privilege check'
+);
+
+-- Attempting to UPDATE portfolio_project_services directly must fail privilege check (42501)
+select throws_ok(
+  'update public.portfolio_project_services set service_code = ''modular_kitchens'' where project_id = ''66666666-6666-6666-6666-666666666666''',
+  '42501',
+  null,
+  'Updating portfolio_project_services must fail privilege check'
+);
+
+-- Attempting to UPDATE uploaded_by on portfolio_media_sources must fail privilege check (42501)
+select throws_ok(
+  'update public.portfolio_media_sources set uploaded_by = ''44444444-4444-4444-4444-444444444444'' where media_id = ''77777777-7777-7777-7777-777777777777''',
+  '42501',
+  null,
+  'Updating uploaded_by on portfolio_media_sources must fail privilege check'
+);
+
+-- Attempting to INSERT created_at directly on portfolio_projects must fail privilege check (42501)
+select throws_ok(
+  'insert into public.portfolio_projects (slug, title, summary, created_by, updated_by, created_at) values (''test-created-at'', ''Title'', ''Summary text at least 20 chars long'', ''33333333-3333-3333-3333-333333333333'', ''33333333-3333-3333-3333-333333333333'', now())',
+  '42501',
+  null,
+  'Inserting created_at directly on portfolio_projects must fail privilege check'
+);
+
+-- Allowed business column UPDATE (title, summary, title) by portfolio manager succeeds
+update public.portfolio_projects
+set title = 'Updated Villa Title',
+    updated_by = '33333333-3333-3333-3333-333333333333'
+where id = '55555555-5555-5555-5555-555555555555';
+
+select results_eq(
+  'select title from public.portfolio_projects where id = ''55555555-5555-5555-5555-555555555555''',
+  array['Updated Villa Title'],
+  'Allowed business column update by portfolio manager should succeed'
+);
+
+-- 13. Policy count verification (verify exactly 1 permissive SELECT policy for authenticated on public tables)
+reset role;
+
+select results_eq(
+  'select count(*)::integer from pg_policies where schemaname = ''public'' and tablename = ''portfolio_projects'' and cmd = ''SELECT'' and ''authenticated'' = any(roles)',
+  array[1],
+  'portfolio_projects must have exactly 1 SELECT policy for authenticated'
+);
+
+select results_eq(
+  'select count(*)::integer from pg_policies where schemaname = ''public'' and tablename = ''portfolio_project_services'' and cmd = ''SELECT'' and ''authenticated'' = any(roles)',
+  array[1],
+  'portfolio_project_services must have exactly 1 SELECT policy for authenticated'
+);
+
+select results_eq(
+  'select count(*)::integer from pg_policies where schemaname = ''public'' and tablename = ''portfolio_media'' and cmd = ''SELECT'' and ''authenticated'' = any(roles)',
+  array[1],
+  'portfolio_media must have exactly 1 SELECT policy for authenticated'
 );
 
 select * from finish();
