@@ -19,7 +19,7 @@
     "db:lint": "supabase db lint --local --level warning",
     "db:test": "supabase test db",
     "check:db": "npm run db:lint && npm run db:test",
-    "test:app": "node --experimental-strip-types --test src/features/portfolio/server/__tests__/portfolio-media.test.ts",
+    "test:app": "node --experimental-strip-types --test src/features/portfolio/server/__tests__/portfolio-media.test.ts src/features/portfolio/server/__tests__/portfolio-rpc-rest.test.ts",
     "test:image": "node --experimental-strip-types --test src/features/portfolio/server/__tests__/portfolio-image-pipeline.test.ts"
   },
   "dependencies": {

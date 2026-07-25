@@ -89,10 +89,11 @@ Following mandatory corrections in Phase 1B, RLS policies are applied to all API
 
 ---
 
-## 6. Phase 2E2 Portfolio CMS Publication & RPC Security Contracts
+## 6. Phase 2E2 / Phase 2E2A Portfolio CMS Publication & RPC Security Contracts
 
 - **Direct Status Column Revocation:** `REVOKE UPDATE (status, published_at) ON public.portfolio_projects FROM authenticated;`
-- **Status Transition RPC (`public.set_portfolio_project_status`):** Defined as `SECURITY DEFINER` (owner: `postgres`, `set search_path = ''`). `EXECUTE` granted to `authenticated` only; revoked from `anon` and `public`. Requires `public.authorize('portfolio.manage')`, locks target row (`FOR UPDATE`), and validates publication prerequisites ($\ge 1$ assigned service, $\ge 1$ ready cover image) before setting `status = 'published'` and `published_at = NOW()`.
+- **Public Wrapper RPC (`public.set_portfolio_project_status`):** Defined as `SECURITY INVOKER` (`set search_path = ''`). Exposed under `/rest/v1/rpc/set_portfolio_project_status`. `EXECUTE` granted to `authenticated` only; revoked from `anon` and `public`. Delegates execution to private definer helper. Resolves Security Advisor warning `authenticated_security_definer_function_executable`.
+- **Private Helper (`private.set_portfolio_project_status_impl`):** Defined as `SECURITY DEFINER` (owner `postgres`, `set search_path = ''`). Unexposed in PostgREST. Executable by `authenticated`; revoked from `anon` and `public`. Requires `public.authorize('portfolio.manage')`, non-null `auth.uid()`, locks target row (`FOR UPDATE`), and validates publication prerequisites ($\ge 1$ assigned service, $\ge 1$ ready cover image) before setting `status = 'published'` and `published_at = NOW()`.
 - **Atomic Service Replacement RPC (`public.replace_portfolio_project_services`):** Defined as `SECURITY INVOKER` (`set search_path = ''`). `EXECUTE` granted to `authenticated` only. Validates service array bounds ($1 \le count \le 3$) and executes atomic service replacement.
 - **Published Cover Guard Trigger (`trg_prevent_published_cover_mutation`):** `BEFORE UPDATE OR DELETE ON public.portfolio_media` (`SECURITY INVOKER`, `set search_path = ''`). Blocks deletion or mutation of ready cover images on `published` projects.
 - **Published Final Service Guard Trigger (`trg_prevent_published_service_deletion`):** `BEFORE DELETE ON public.portfolio_project_services` (`SECURITY INVOKER`, `set search_path = ''`). Blocks deletion of the final service on a `published` project.
@@ -106,4 +107,6 @@ Following mandatory corrections in Phase 1B, RLS policies are applied to all API
 - [ADR-0012: Two-Bucket Media Architecture](ADR/ADR-0012-private-originals-public-derivatives.md)
 - [ADR-0013: Server-Side Portfolio Image Processing Pipeline](ADR/ADR-0013-server-side-portfolio-image-processing.md)
 - [ADR-0014: Database-Controlled Portfolio Publication](ADR/ADR-0014-database-controlled-portfolio-publication.md)
+- [ADR-0015: Private Definer Status Transition Helper Pattern](ADR/ADR-0015-private-definer-status-transition-helper.md)
 - [Phase 2E2 Audit Report](audits/phase-2e2-portfolio-admin-cms.md)
+- [Phase 2E2A Audit Report](audits/phase-2e2a-status-rpc-exposure-hardening.md)

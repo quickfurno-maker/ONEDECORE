@@ -39,6 +39,7 @@
 | **DEC-0029** | Column-level privilege hardening & RLS subquery optimization for Portfolio tables | LOCKED | Enforces database-level immutability on audit fields and eliminates RLS init-plan and multiple policy warnings | No | Phase 2E1A | N/A |
 | **DEC-0030** | Server-side Sharp 0.35.3 image processing pipeline with automatic metadata stripping & WebP derivatives | LOCKED | Ensures private master images have EXIF privacy metadata stripped and generates cover/gallery/thumb WebP derivatives | No | Phase 2E2 | N/A |
 | **DEC-0031** | Database-controlled publication workflow with SECURITY DEFINER status RPC and trigger guards | LOCKED | Revokes direct UPDATE on status/published_at columns and enforces publication prerequisites via SECURITY DEFINER RPC and triggers | No | Phase 2E2 | N/A |
+| **DEC-0032** | Two-tier RPC architecture separating PostgREST-exposed SECURITY INVOKER wrapper from private SECURITY DEFINER helper | LOCKED | Resolves Security Advisor alert authenticated_security_definer_function_executable while preserving privilege escalation bounds | No | Phase 2E2A | DEC-0031 (Refined RPC Structure) |
 
 ---
 
@@ -49,3 +50,4 @@
 - [Phase Implementation Roadmap](09-phase-roadmap.md)
 - [ADR-0013: Server-Side Portfolio Image Processing Pipeline](ADR/ADR-0013-server-side-portfolio-image-processing.md)
 - [ADR-0014: Database-Controlled Portfolio Publication](ADR/ADR-0014-database-controlled-portfolio-publication.md)
+- [ADR-0015: Private Definer Status Transition Helper Pattern](ADR/ADR-0015-private-definer-status-transition-helper.md)

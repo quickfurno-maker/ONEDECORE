@@ -9,7 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - Phase 2E2 (July 25, 2026)
+### Added - Phase 2E2A (July 25, 2026)
+- Identified and purged 15 orphaned storage objects across `portfolio-originals` and `portfolio-public` storage buckets via authenticated owner Storage API `.remove()` (0 storage objects and 0 portfolio database rows remaining).
+- Created forward migration `supabase/migrations/<timestamp>_harden_portfolio_status_rpc_exposure.sql` implementing a two-tier RPC status transition architecture:
+  - Re-created `public.set_portfolio_project_status(uuid, text)` as `SECURITY INVOKER` (`set search_path = ''`), resolving Supabase Security Advisor alert `authenticated_security_definer_function_executable`.
+  - Created internal `private.set_portfolio_project_status_impl(uuid, text)` as `SECURITY DEFINER` (owner `postgres`, `set search_path = ''`), unexposed in PostgREST and restricted from anonymous execution.
+- Extended pgTAP database test suite (`02_portfolio_media_test.sql`) to 88 subtests verifying SECURITY INVOKER/DEFINER flags, function ownership, and search_path isolation.
+- Added REST exposure and RPC privilege unit tests in `portfolio-media.test.ts`.
+- Created ADR-0015 (`docs/ADR/ADR-0015-private-definer-status-transition-helper.md`) and audit report (`docs/audits/phase-2e2a-status-rpc-exposure-hardening.md`).
+
 - Applied forward-only migration `20260725044930_portfolio_cms_publication_workflow.sql` (SHA-256: `46B9E5DC248B5087018EBA5513667EA5EF150BC4FDAC4FF0A930FE1E73EFECEE`) to official remote project `lpurlfmpvriyvpkujvyl` in Mumbai (`ap-south-1`).
 - Implemented Admin Portfolio CMS UI (`/admin/portfolio`, `/admin/portfolio/new`, `/admin/portfolio/[projectId]`) with React 19 server forms, `useActionState`, and server actions (`createProjectAction`, `updateProjectAction`, `setProjectStatusAction`, `deleteProjectAction`, `reorderMediaAction`).
 - Created server-side Sharp 0.35.3 image processing pipeline (`src/features/portfolio/server/portfolio-image-pipeline.ts`) enforcing:

@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2E2 Portfolio Admin CMS & Secure Media Pipeline Complete
+**Current Phase:** Phase 2E2A Portfolio Admin CMS, Orphan Storage Cleanup & Status RPC Exposure Hardening Complete
 
 ---
 
@@ -35,7 +35,7 @@ Phase 2D2: Active Staff Authorization Hardening & First Super Admin Bootstrap (C
 Phase 2E1 / 2E1A: Portfolio Data & Media Storage Foundation & RLS Privilege Hardening (COMPLETED)
    │
    ▼
-Phase 2E2: Portfolio Admin CMS & Secure Media Pipeline (COMPLETED)
+Phase 2E2 / 2E2A: Portfolio Admin CMS, Secure Media Pipeline, Storage Orphan Purge & RPC Exposure Hardening (COMPLETED)
    │
    ▼
 Phase 2E3 / Phase 3: Public Portfolio Showcase & Design System Foundation

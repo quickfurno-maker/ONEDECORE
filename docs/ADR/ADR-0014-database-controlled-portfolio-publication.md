@@ -21,19 +21,24 @@ We revoke direct `UPDATE (status, published_at)` permissions from `authenticated
 revoke update (status, published_at) on public.portfolio_projects from authenticated;
 ```
 
-### 2. Status Management RPC: `public.set_portfolio_project_status(uuid, text)`
-- **Security Mode:** `SECURITY DEFINER` (owner: `postgres`).
-  - *Accepted Security Correction:* `SECURITY DEFINER` is intentionally required because direct `UPDATE` on `status` and `published_at` columns is revoked from `authenticated`. The RPC executes with owner privileges to perform the column update after enforcing strict business logic guards.
-- **Search Path:** Pinned to empty string (`set search_path = ''`).
-- **Grants:** `EXECUTE` granted to `authenticated` only; explicitly revoked from `anon` and `public`.
-- **Publication Prerequisites Enforced:**
-  1. Authorizes caller via `public.authorize('portfolio.manage')`.
-  2. Locks target project row (`FOR UPDATE`).
-  3. Validates status parameter (`draft`, `published`, `archived`).
-  4. Requires at least 1 assigned service in `portfolio_project_services`.
-  5. Requires at least 1 ready cover image (`media_role = 'cover'`, `status = 'ready'`, `public_object_path IS NOT NULL`) in `portfolio_media`.
-  6. Sets `published_at = COALESCE(published_at, NOW())` on publication, or clears `published_at = NULL` and `is_featured = false` on return to draft/archive.
-  7. Derives `updated_by` from `auth.uid()`.
+### 2. Status Management RPC Architecture (Phase 2E2 / Phase 2E2A)
+- **Public API Wrapper (`public.set_portfolio_project_status(uuid, text)`):**
+  - **Security Mode:** `SECURITY INVOKER` (`set search_path = ''`).
+  - **Grants:** `EXECUTE` granted to `authenticated` only; explicitly revoked from `anon` and `public`.
+  - **Function:** Exposed via PostgREST API under `/rest/v1/rpc/set_portfolio_project_status`. Delegates state transition to the private definer helper. Resolves Security Advisor warning `authenticated_security_definer_function_executable`.
+- **Private Definer Helper (`private.set_portfolio_project_status_impl(uuid, text)`):**
+  - **Security Mode:** `SECURITY DEFINER` (owner: `postgres`, `set search_path = ''`).
+  - **Grants:** Executable by `authenticated`; revoked from `anon` and `public`. Unexposed in PostgREST.
+  - **Publication Prerequisites Enforced:**
+    1. Authorizes caller via `public.authorize('portfolio.manage')`.
+    2. Requires non-null `auth.uid()`.
+    3. Locks target project row (`FOR UPDATE`).
+    4. Validates status parameter (`draft`, `published`, `archived`).
+    5. Requires at least 1 assigned service in `portfolio_project_services`.
+    6. Requires at least 1 ready cover image (`media_role = 'cover'`, `status = 'ready'`, `public_object_path IS NOT NULL`) in `portfolio_media`.
+    7. Sets `published_at = COALESCE(published_at, NOW())` on publication, or clears `published_at = NULL` and `is_featured = false` on return to draft/archive.
+    8. Derives `updated_by` from `auth.uid()`.
+
 
 ### 3. Atomic Service Replacement RPC: `public.replace_portfolio_project_services(uuid, text[])`
 - **Security Mode:** `SECURITY INVOKER`.

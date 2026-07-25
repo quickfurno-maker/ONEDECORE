@@ -24,11 +24,14 @@ Phase 2E2 implements the complete Portfolio Admin CMS and Secure Media Pipeline 
 6. `20260725033329_harden_portfolio_rls_and_audit_privileges.sql`
 7. `20260725044930_portfolio_cms_publication_workflow.sql`
 
-### Accepted RPC Security Contracts:
-- `public.set_portfolio_project_status(uuid, text)`: `SECURITY DEFINER` (owner: `postgres`, `set search_path = ''`). `EXECUTE` granted to `authenticated` only; revoked from `anon` and `public`. Requires active `portfolio.manage` permission. Direct `UPDATE (status, published_at)` on `portfolio_projects` is revoked from `authenticated`.
+### Accepted RPC Security Contracts (Hardened in Phase 2E2A):
+- `public.set_portfolio_project_status(uuid, text)`: `SECURITY INVOKER` (`set search_path = ''`). `EXECUTE` granted to `authenticated` only; revoked from `anon` and `public`. Exposed in PostgREST under `/rest/v1/rpc/set_portfolio_project_status`. Delegates status transition to private definer helper.
+- `private.set_portfolio_project_status_impl(uuid, text)`: `SECURITY DEFINER` (owner: `postgres`, `set search_path = ''`). Executable by `authenticated`; revoked from `anon` and `public`. Unexposed in PostgREST. Requires active `portfolio.manage` permission and enforces publication prerequisites. Direct `UPDATE (status, published_at)` on `portfolio_projects` is revoked from `authenticated`.
 - `public.replace_portfolio_project_services(uuid, text[])`: `SECURITY INVOKER` (`set search_path = ''`). `EXECUTE` granted to `authenticated` only.
 - `trg_prevent_published_cover_mutation`: Prevents deleting or mutating ready cover images of published projects.
 - `trg_prevent_published_service_deletion`: Prevents deleting the final service of a published project.
+- **Orphan Remote Storage Cleanup (Phase 2E2A):** 15 orphaned storage objects resulting from initial E2E validation were purged via the authenticated owner Storage API (0 storage objects and 0 portfolio database rows remaining).
+
 
 ---
 

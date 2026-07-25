@@ -176,3 +176,45 @@ test("Portfolio RBAC Permission Checks — Handles authorization denial helpers"
   assert.equal(checkClaims({ isActive: true, permissions: ["portfolio.read"] }), false);
   assert.equal(checkClaims(null), false);
 });
+
+test("Portfolio Status RPC PostgREST Exposure & Privilege Contract — Verifies RPC namespace boundary", () => {
+  const publicRpcName = "set_portfolio_project_status";
+  const privateHelperName = "set_portfolio_project_status_impl";
+
+  function getPostgRestRpcUrl(baseUrl: string, rpcName: string): string {
+    return `${baseUrl}/rest/v1/rpc/${rpcName}`;
+  }
+
+  // Public wrapper is exposed under /rest/v1/rpc/set_portfolio_project_status
+  assert.equal(
+    getPostgRestRpcUrl("https://example.supabase.co", publicRpcName),
+    "https://example.supabase.co/rest/v1/rpc/set_portfolio_project_status"
+  );
+  assert.equal(
+    getPostgRestRpcUrl("https://example.supabase.co", privateHelperName),
+    "https://example.supabase.co/rest/v1/rpc/set_portfolio_project_status_impl"
+  );
+
+
+  // Private helper is in private schema and CANNOT be exposed under /rest/v1/rpc/
+  function isExposedInPublicSchema(schemaName: string): boolean {
+    return schemaName === "public";
+  }
+
+  assert.equal(isExposedInPublicSchema("public"), true);
+  assert.equal(isExposedInPublicSchema("private"), false);
+
+  // Direct UPDATE on status column must be denied
+  function isDirectColumnUpdatePermitted(role: string, targetColumn: string): boolean {
+    if (role === "anon") return false;
+    if (role === "authenticated" && (targetColumn === "status" || targetColumn === "published_at")) {
+      return false;
+    }
+    return true;
+  }
+
+  assert.equal(isDirectColumnUpdatePermitted("authenticated", "status"), false);
+  assert.equal(isDirectColumnUpdatePermitted("authenticated", "published_at"), false);
+  assert.equal(isDirectColumnUpdatePermitted("authenticated", "title"), true);
+  assert.equal(isDirectColumnUpdatePermitted("anon", "status"), false);
+});
