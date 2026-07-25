@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2D1 (July 25, 2026)
+- Merged Phase 2C identity and RBAC foundation into `main` with non-fast-forward merge.
+- Applied forward-only migration `20260725013043_staff_authorization_rpc.sql` (SHA-256: `ead1c5413b097c615188558db76d8ca850982e5eab8ae6a29e8823ffa2237296`) to remote project `lpurlfmpvriyvpkujvyl` in Mumbai.
+- Provisioned public `SECURITY INVOKER` authorization RPC wrapper `public.authorize(requested_permission text)` delegating to `private.has_permission()`.
+- Implemented staff-only email/password login route (`/auth/login`), Server Action (`loginAction`), and client form with accessible warm-luxury styling.
+- Implemented POST-only sign-out handler (`/auth/signout`) returning 405 Method Not Allowed for GET.
+- Implemented access forbidden page (`/auth/forbidden`) for authenticated users lacking `admin.access` permission.
+- Implemented server-side authorization helpers (`getStaffClaims`, `checkPermission`, `requireStaffPermission`) in `src/server/auth/`.
+- Updated Next.js 16 Proxy in `src/lib/supabase/proxy.ts` and `src/proxy.ts` to protect `/admin/:path*` routes using `getClaims()`.
+- Implemented minimal internal admin layout (`src/app/admin/layout.tsx`) and dashboard shell (`src/app/admin/page.tsx`) with `force-dynamic` rendering.
+- Expanded pgTAP database test suite (`supabase/tests/database/01_identity_rbac_test.sql`) to 37 subtests.
+- Updated ADRs (`ADR-0009`, `ADR-0010`) and audit log (`docs/audits/phase-2d1-staff-auth-foundation.md`).
+
 ### Added - Phase 2C3 (July 24, 2026)
 - Applied forward-only hardening migration `20260724192233_secure_rls_event_trigger_and_index_assignment_actor.sql` (SHA-256: `3ef8512a50a26610d8ee2960661dcf21f8bf8a0142064fea0bd02e75ba0c4c1b`) to remote project `lpurlfmpvriyvpkujvyl` in Mumbai.
 - Revoked direct `EXECUTE` privileges on platform helper `public.rls_auto_enable()` from `public`, `anon`, and `authenticated` while retaining active `ensure_rls` event trigger owned by `postgres`.

@@ -1,7 +1,7 @@
--- ONEDECORE Phase 2C3 Identity & RBAC pgTAP Database Tests
+-- ONEDECORE Phase 2D1 Identity & RBAC pgTAP Database Tests
 
 begin;
-select plan(27);
+select plan(37);
 
 -- 1. Verify schema existence
 select has_schema('private', 'Private security schema should exist');
@@ -151,6 +151,84 @@ select results_eq(
 
 -- 14. Phase 2C3 — idx_user_roles_assigned_by index coverage
 select has_index('public', 'user_roles', 'idx_user_roles_assigned_by', 'idx_user_roles_assigned_by index should exist on user_roles');
+
+-- 15. Phase 2D1 — public.authorize(text) RPC signature and security properties
+select has_function('public', 'authorize', array['text'], 'public.authorize(text) function should exist');
+
+select results_eq(
+  'select prosecdef from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = ''public'' and p.proname = ''authorize''',
+  array[false],
+  'public.authorize must be SECURITY INVOKER (prosecdef = false)'
+);
+
+select is(
+  (select array_to_string(proconfig, ',') from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'authorize'),
+  'search_path=""',
+  'public.authorize search_path must be empty string'
+);
+
+-- 16. Phase 2D1 — Execution grants on public.authorize(text)
+select results_eq(
+  'select has_function_privilege(''anon'', ''public.authorize(text)'', ''execute'')',
+  array[false],
+  'anon must NOT have execute privilege on public.authorize'
+);
+
+select results_eq(
+  'select has_function_privilege(''public'', ''public.authorize(text)'', ''execute'')',
+  array[false],
+  'public pseudo-role must NOT have execute privilege on public.authorize'
+);
+
+select results_eq(
+  'select has_function_privilege(''authenticated'', ''public.authorize(text)'', ''execute'')',
+  array[true],
+  'authenticated role MUST have execute privilege on public.authorize'
+);
+
+-- 17. Phase 2D1 — Functional permission evaluation
+select is(
+  public.authorize('admin.access'),
+  false,
+  'Unauthenticated context returns false for public.authorize'
+);
+
+-- Temporary fixture user with super_admin role
+insert into auth.users (id, instance_id, email, aud, role)
+values (
+  '22222222-2222-2222-2222-222222222222',
+  '00000000-0000-0000-0000-000000000000',
+  'superadmin@onedecore.in',
+  'authenticated',
+  'authenticated'
+);
+
+insert into public.user_roles (user_id, role_id)
+select '22222222-2222-2222-2222-222222222222', id
+from public.roles where code = 'super_admin';
+
+select set_config('request.jwt.claim.sub', '22222222-2222-2222-2222-222222222222', true);
+
+select is(
+  public.authorize('admin.access'),
+  true,
+  'User with active super_admin role returns true for admin.access'
+);
+
+select is(
+  public.authorize('nonexistent.permission'),
+  false,
+  'User without requested permission returns false'
+);
+
+-- Disable role and verify permission evaluation returns false
+update public.roles set is_active = false where code = 'super_admin';
+
+select is(
+  public.authorize('admin.access'),
+  false,
+  'User with disabled role returns false'
+);
 
 select * from finish();
 rollback;

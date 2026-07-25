@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2C3 Remote RBAC Post-Deployment Hardening Complete
+**Current Phase:** Phase 2D1 Staff Authentication & Authorization Foundation Complete
 
 ---
 
@@ -26,7 +26,10 @@ Phase 2B: Supabase SSR Connection Foundation & Wrappers (COMPLETED)
 Phase 2C / 2C1 / 2C2 / 2C3: Remote Identity & RBAC Migration Deployed, Event Trigger Hardened, Index Added (COMPLETED)
    │
    ▼
-Phase 2D: Auth UI, Route Middleware & First Super Admin Bootstrap
+Phase 2D1: Staff Auth Foundation, public.authorize RPC, Proxy Guard & Admin Shell (COMPLETED)
+   │
+   ▼
+Phase 2D2 / 2D3: First Super Admin Bootstrap Script & Remote Live Auth Validation
    │
    ▼
 Phase 3: Design System, UI Tokens & Component Showroom
