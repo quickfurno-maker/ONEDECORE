@@ -32,6 +32,8 @@
 | **DEC-0022** | Phase 2C3 Remote RBAC Post-Deployment Hardening (RLS Event Trigger & User Roles Index) | LOCKED | Revokes direct execution on platform helper public.rls_auto_enable() and covers user_roles.assigned_by foreign key | YES | Phase 2C3 | N/A |
 | **DEC-0023** | Public SECURITY INVOKER authorization RPC wrapper (public.authorize) for server-side permission checks | LOCKED | Provides safe public Data API RPC endpoint delegating to private.has_permission with zero JWT custom claims overhead | No | Phase 2D1 | N/A |
 | **DEC-0024** | Staff-only password authentication and POST-only sign-out with Proxy authentication guard | LOCKED | Restricts authentication to staff signInWithPassword, disallows public sign-up, and protects /admin routes in Proxy | No | Phase 2D1 | N/A |
+| **DEC-0025** | Hardened active staff profile status requirement (status = 'active') in database authorization functions | LOCKED | Prevents pending, suspended, or disabled staff profiles from passing role or permission authorization checks | No | Phase 2D2 | N/A |
+| **DEC-0026** | Guarded one-time operational Super Admin bootstrap for ONEDECORE owner account | LOCKED | Establishes single initial owner Super Admin user with active profile status and super_admin role assignment | No | Phase 2D2 | N/A |
 
 ---
 

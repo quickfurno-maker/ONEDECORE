@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2D1 Staff Authentication & Authorization Foundation Complete
+**Current Phase:** Phase 2D2 Active-Staff Enforcement & First Super Admin Bootstrap Complete
 
 ---
 
@@ -29,7 +29,7 @@ Phase 2C / 2C1 / 2C2 / 2C3: Remote Identity & RBAC Migration Deployed, Event Tri
 Phase 2D1: Staff Auth Foundation, public.authorize RPC, Proxy Guard & Admin Shell (COMPLETED)
    │
    ▼
-Phase 2D2 / 2D3: First Super Admin Bootstrap Script & Remote Live Auth Validation
+Phase 2D2: Active Staff Authorization Hardening & First Super Admin Bootstrap (COMPLETED)
    │
    ▼
 Phase 3: Design System, UI Tokens & Component Showroom
