@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2E1A (July 25, 2026)
+- Enabled Leaked Password Protection in Supabase Cloud Dashboard under Authentication → Providers → Email → Password security, resolving Security Advisor warning `auth_leaked_password_protection`.
+- Applied forward-only migration `20260725033329_harden_portfolio_rls_and_audit_privileges.sql` (SHA-256: `6f0a9fd28f88c4ac58012956cb1bc74f6cf9e30b0efdf88841e0f029e199d59b`) to remote project `lpurlfmpvriyvpkujvyl` in Mumbai.
+- Revoked broad table-level write privileges on all four portfolio tables and granted explicit column-level `INSERT` and `UPDATE` privileges to `authenticated` staff.
+- Rendered audit fields (`id`, `created_by`, `created_at`, `updated_at`, `uploaded_by`) immutable by excluding them from column-level `UPDATE` grants.
+- Consolidated `SELECT` RLS policies to eliminate `multiple_permissive_policies` warnings on `portfolio_projects`, `portfolio_project_services`, and `portfolio_media`.
+- Wrapped `(select auth.uid())` and `(select public.authorize(...))` in subqueries across all table and `storage.objects` RLS policies to eliminate `auth_rls_initplan` performance warnings.
+- Expanded pgTAP database test suite (`02_portfolio_media_test.sql`) to 80 subtests verifying column privilege boundaries, audit immutability, and policy consolidation.
+
+### Added - Phase 2E1 (July 25, 2026)
+- Corrected owner email redaction domain pattern in `docs/audits/phase-2d2-first-super-admin-bootstrap.md` (`o***@gmail.com` verified).
+- Merged Phase 2D2 active staff authorization & initial Super Admin bootstrap into `main` with non-fast-forward merge (`56bd79f874581f1484ffbde1ee9bca2cbfdd0429`).
+- Applied forward-only migration `20260725031137_portfolio_media_foundation.sql` (SHA-256: `5196de49a49c985c21df01c0042f14ebb1fbafe43a54f108e8468ef46b70e229`) to remote project `lpurlfmpvriyvpkujvyl` in Mumbai.
+- Created four core portfolio tables: `portfolio_projects`, `portfolio_project_services`, `portfolio_media`, and `portfolio_media_sources`.
+- Added system permissions `portfolio.read` and `portfolio.manage`, mapped to active system `super_admin` role.
+- Created two Storage buckets: private `portfolio-originals` (20 MiB file limit) and public `portfolio-public` (8 MiB file limit), restricted to JPEG/PNG/WebP.
+- Provisioned least-privilege RLS policies on all four portfolio tables and `storage.objects` table.
+- Added updated-at triggers, foreign key indexes, check constraints, and partial unique index enforcing single active cover image per project.
+- Expanded pgTAP database test suite (`02_portfolio_media_test.sql`) to 70 total subtests verifying publication state filters, audit anti-spoofing, and bucket policies.
+- Generated TypeScript types (`src/types/database.generated.ts`) and created typed server repository (`getPublishedProjects`, `getPublishedProjectBySlug`, `getStaffProjects`).
+
 ### Added - Phase 2D2 (July 25, 2026)
 - Merged Phase 2D1 staff authentication foundation into `main` with non-fast-forward merge (`cf734c692c087646fde618fd19674e79089dc4e9`).
 - Applied forward-only active staff authorization hardening migration `20260725020833_enforce_active_staff_authorization.sql` (SHA-256: `193d7780ab27480d27c4b8a350de5804c177e9ff6b0710fcbddf36cf58e1b832`) to remote project `lpurlfmpvriyvpkujvyl` in Mumbai.

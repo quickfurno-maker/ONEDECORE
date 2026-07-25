@@ -54,8 +54,8 @@ select results_eq(
 -- 5. Verify seeded system permissions count and is_system flag
 select results_eq(
   'select count(*)::integer from public.permissions where is_system = true',
-  array[6],
-  'Should have exactly 6 seeded foundation permissions with is_system = true'
+  array[8],
+  'Should have exactly 8 seeded system permissions (6 foundation + 2 portfolio) with is_system = true'
 );
 
 -- 6. Verify user_roles starts empty
@@ -101,11 +101,11 @@ select results_eq(
   'Oversized display_name metadata should be truncated to exactly 120 characters'
 );
 
--- 10. Verify no unexpected application tables exist
+-- 10. Verify authorized application tables count
 select results_eq(
   'select count(*)::integer from information_schema.tables where table_schema = ''public'' and table_type = ''BASE TABLE''',
-  array[5],
-  'Public schema must contain exactly the 5 authorized identity tables'
+  array[9],
+  'Public schema must contain exactly the 9 authorized application tables'
 );
 
 -- 11. Phase 2C3 — rls_auto_enable existence and security properties
