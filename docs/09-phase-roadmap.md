@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2E1A Portfolio RLS, Audit Privilege & Auth Hardening Complete
+**Current Phase:** Phase 2E2 Portfolio Admin CMS & Secure Media Pipeline Complete
 
 ---
 
@@ -32,13 +32,13 @@ Phase 2D1: Staff Auth Foundation, public.authorize RPC, Proxy Guard & Admin Shel
 Phase 2D2: Active Staff Authorization Hardening & First Super Admin Bootstrap (COMPLETED)
    │
    ▼
-Phase 2E1: Portfolio Data & Media Storage Foundation (COMPLETED)
+Phase 2E1 / 2E1A: Portfolio Data & Media Storage Foundation & RLS Privilege Hardening (COMPLETED)
    │
    ▼
-Phase 2E2: Portfolio CMS & Media Upload Workflow
+Phase 2E2: Portfolio Admin CMS & Secure Media Pipeline (COMPLETED)
    │
    ▼
-Phase 3: Design System, UI Tokens & Component Showroom
+Phase 2E3 / Phase 3: Public Portfolio Showcase & Design System Foundation
    │
    ▼
 Phase 4: Cinematic Public Homepage & Consultation Lead Form

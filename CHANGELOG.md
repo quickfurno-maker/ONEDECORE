@@ -9,7 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - Phase 2E1A (July 25, 2026)
+### Added - Phase 2E2 (July 25, 2026)
+- Applied forward-only migration `20260725044930_portfolio_cms_publication_workflow.sql` (SHA-256: `46B9E5DC248B5087018EBA5513667EA5EF150BC4FDAC4FF0A930FE1E73EFECEE`) to official remote project `lpurlfmpvriyvpkujvyl` in Mumbai (`ap-south-1`).
+- Implemented Admin Portfolio CMS UI (`/admin/portfolio`, `/admin/portfolio/new`, `/admin/portfolio/[projectId]`) with React 19 server forms, `useActionState`, and server actions (`createProjectAction`, `updateProjectAction`, `setProjectStatusAction`, `deleteProjectAction`, `reorderMediaAction`).
+- Created server-side Sharp 0.35.3 image processing pipeline (`src/features/portfolio/server/portfolio-image-pipeline.ts`) enforcing:
+  - 20 MiB max input file size, 12,000 px max dimension, 50 MP max pixels.
+  - MIME spoofing detection and rejection of animated/multi-page images (`ANIMATED_IMAGE_NOT_ALLOWED`).
+  - Auto-orientation via `.rotate()` and 100% EXIF/GPS metadata stripping on private masters and public WebP derivatives.
+  - Public WebP derivatives: Cover max 1600px width (quality 82), Gallery max 1200px width (quality 82), Thumbnail max 480px width (quality 78).
+  - Immutable UUID-only object storage path bounds (`${projectId}/${mediaId}/${filename}`).
+- Implemented multi-phase upload compensation cleanup in media upload Route Handler (`/api/admin/portfolio/media`).
+- Implemented database-controlled publication workflow:
+  - Revoked direct `UPDATE (status, published_at)` on `public.portfolio_projects` from `authenticated`.
+  - Created status management RPC `public.set_portfolio_project_status(uuid, text)` (`SECURITY DEFINER`, owner `postgres`, `set search_path = ''`). Enforces `public.authorize('portfolio.manage')`, row lock (`FOR UPDATE`), and publication prerequisites ($\ge 1$ service, $\ge 1$ ready cover image).
+  - Created service replacement RPC `public.replace_portfolio_project_services(uuid, text[])` (`SECURITY INVOKER`, `set search_path = ''`).
+  - Added trigger guards: `trg_prevent_published_cover_mutation` and `trg_prevent_published_service_deletion`.
+- Expanded test suite: 87 pgTAP database subtests, 11 application logic subtests, 17 image pipeline/WebP subtests. All 100% passing.
+- Conducted controlled temporary remote E2E test on live project `lpurlfmpvriyvpkujvyl`, verifying end-to-end creation, image upload, RPC publishing, direct update denial, trigger guards, return to draft, and 100% zero-state cleanup.
+- Created ADR-0013, ADR-0014, and Phase 2E2 audit documentation (`docs/audits/phase-2e2-portfolio-admin-cms.md`).
+
 - Enabled Leaked Password Protection in Supabase Cloud Dashboard under Authentication → Providers → Email → Password security, resolving Security Advisor warning `auth_leaked_password_protection`.
 - Applied forward-only migration `20260725033329_harden_portfolio_rls_and_audit_privileges.sql` (SHA-256: `6f0a9fd28f88c4ac58012956cb1bc74f6cf9e30b0efdf88841e0f029e199d59b`) to remote project `lpurlfmpvriyvpkujvyl` in Mumbai.
 - Revoked broad table-level write privileges on all four portfolio tables and granted explicit column-level `INSERT` and `UPDATE` privileges to `authenticated` staff.

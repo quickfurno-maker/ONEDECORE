@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireStaffPermission } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,21 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               Admin Shell
             </span>
           </div>
+
+          <nav className="flex items-center space-x-6">
+            <Link
+              href="/admin"
+              className="text-xs font-medium text-neutral-300 hover:text-white transition"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/admin/portfolio"
+              className="text-xs font-medium text-neutral-300 hover:text-white transition"
+            >
+              Portfolio CMS
+            </Link>
+          </nav>
 
           <div className="flex items-center space-x-4">
             <div className="text-right">

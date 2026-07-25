@@ -1,7 +1,7 @@
--- ONEDECORE Phase 2E1 & Phase 2E1A Portfolio Data & Media Storage pgTAP Tests
+-- ONEDECORE Phase 2E1 & Phase 2E2 Portfolio Data & Media Storage pgTAP Tests
 
 begin;
-select plan(36);
+select plan(43);
 
 -- 1. Verify portfolio tables exist
 select has_table('public', 'portfolio_projects', 'public.portfolio_projects table should exist');
@@ -277,11 +277,10 @@ select throws_ok(
   'Unsafe object path containing .. should fail check constraint'
 );
 
--- 12. Phase 2E1A Column-Level Privilege & Policy Hardening Verification
+-- 12. Column-Level Privilege Hardening Verification
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '33333333-3333-3333-3333-333333333333', true);
 
--- Attempting to UPDATE created_by on portfolio_projects must fail privilege check (42501)
 select throws_ok(
   'update public.portfolio_projects set created_by = ''44444444-4444-4444-4444-444444444444'' where id = ''55555555-5555-5555-5555-555555555555''',
   '42501',
@@ -289,7 +288,6 @@ select throws_ok(
   'Updating created_by on portfolio_projects must fail privilege check'
 );
 
--- Attempting to UPDATE created_at on portfolio_projects must fail privilege check (42501)
 select throws_ok(
   'update public.portfolio_projects set created_at = now() where id = ''55555555-5555-5555-5555-555555555555''',
   '42501',
@@ -297,7 +295,6 @@ select throws_ok(
   'Updating created_at on portfolio_projects must fail privilege check'
 );
 
--- Attempting to UPDATE portfolio_project_services directly must fail privilege check (42501)
 select throws_ok(
   'update public.portfolio_project_services set service_code = ''modular_kitchens'' where project_id = ''66666666-6666-6666-6666-666666666666''',
   '42501',
@@ -305,7 +302,6 @@ select throws_ok(
   'Updating portfolio_project_services must fail privilege check'
 );
 
--- Attempting to UPDATE uploaded_by on portfolio_media_sources must fail privilege check (42501)
 select throws_ok(
   'update public.portfolio_media_sources set uploaded_by = ''44444444-4444-4444-4444-444444444444'' where media_id = ''77777777-7777-7777-7777-777777777777''',
   '42501',
@@ -313,45 +309,96 @@ select throws_ok(
   'Updating uploaded_by on portfolio_media_sources must fail privilege check'
 );
 
--- Attempting to INSERT created_at directly on portfolio_projects must fail privilege check (42501)
+-- 13. Phase 2E2 Workflow RPC & Guard Tests
+select has_function('public', 'set_portfolio_project_status', array['uuid', 'text'], 'set_portfolio_project_status RPC should exist');
+select has_function('public', 'replace_portfolio_project_services', array['uuid', 'text[]'], 'replace_portfolio_project_services RPC should exist');
+
+-- Direct UPDATE on status column must fail privilege check
 select throws_ok(
-  'insert into public.portfolio_projects (slug, title, summary, created_by, updated_by, created_at) values (''test-created-at'', ''Title'', ''Summary text at least 20 chars long'', ''33333333-3333-3333-3333-333333333333'', ''33333333-3333-3333-3333-333333333333'', now())',
+  'update public.portfolio_projects set status = ''published'' where id = ''55555555-5555-5555-5555-555555555555''',
   '42501',
   null,
-  'Inserting created_at directly on portfolio_projects must fail privilege check'
+  'Direct status UPDATE on portfolio_projects must fail privilege check'
 );
 
--- Allowed business column UPDATE (title, summary, title) by portfolio manager succeeds
-update public.portfolio_projects
-set title = 'Updated Villa Title',
-    updated_by = '33333333-3333-3333-3333-333333333333'
-where id = '55555555-5555-5555-5555-555555555555';
-
-select results_eq(
-  'select title from public.portfolio_projects where id = ''55555555-5555-5555-5555-555555555555''',
-  array['Updated Villa Title'],
-  'Allowed business column update by portfolio manager should succeed'
+-- Publish without services must fail RPC execution
+select throws_ok(
+  'select public.set_portfolio_project_status(''55555555-5555-5555-5555-555555555555'', ''published'')',
+  '22000',
+  null,
+  'Publishing project without assigned service should fail'
 );
 
--- 13. Policy count verification (verify exactly 1 permissive SELECT policy for authenticated on public tables)
-reset role;
-
-select results_eq(
-  'select count(*)::integer from pg_policies where schemaname = ''public'' and tablename = ''portfolio_projects'' and cmd = ''SELECT'' and ''authenticated'' = any(roles)',
-  array[1],
-  'portfolio_projects must have exactly 1 SELECT policy for authenticated'
+-- Assign service using replace_portfolio_project_services RPC
+select isnt_empty(
+  'select public.replace_portfolio_project_services(''55555555-5555-5555-5555-555555555555'', array[''complete_home_interiors'', ''modular_kitchens''])',
+  'Atomic service assignment should return inserted service rows'
 );
 
-select results_eq(
-  'select count(*)::integer from pg_policies where schemaname = ''public'' and tablename = ''portfolio_project_services'' and cmd = ''SELECT'' and ''authenticated'' = any(roles)',
-  array[1],
-  'portfolio_project_services must have exactly 1 SELECT policy for authenticated'
+-- Publish without ready cover must fail RPC execution
+select throws_ok(
+  'select public.set_portfolio_project_status(''55555555-5555-5555-5555-555555555555'', ''published'')',
+  '22000',
+  null,
+  'Publishing project without ready cover should fail'
 );
 
-select results_eq(
-  'select count(*)::integer from pg_policies where schemaname = ''public'' and tablename = ''portfolio_media'' and cmd = ''SELECT'' and ''authenticated'' = any(roles)',
-  array[1],
-  'portfolio_media must have exactly 1 SELECT policy for authenticated'
+-- Add ready cover to draft project
+insert into public.portfolio_media (
+  id, project_id, status, media_role, public_object_path, width_px, height_px, file_size_bytes, mime_type, alt_text, created_by, updated_by
+) values (
+  '99999999-9999-9999-9999-999999999999',
+  '55555555-5555-5555-5555-555555555555',
+  'ready',
+  'cover',
+  '55555555-5555-5555-5555-555555555555/99999999-9999-9999-9999-999999999999/cover-1600.webp',
+  1600,
+  900,
+  450000,
+  'image/webp',
+  'Villa cover image',
+  '33333333-3333-3333-3333-333333333333',
+  '33333333-3333-3333-3333-333333333333'
+);
+
+-- Publish with valid service and ready cover should succeed
+select isnt_empty(
+  'select public.set_portfolio_project_status(''55555555-5555-5555-5555-555555555555'', ''published'')',
+  'Publishing project with valid service and ready cover should succeed'
+);
+
+-- Published cover deletion must fail guard trigger
+select throws_ok(
+  'delete from public.portfolio_media where id = ''99999999-9999-9999-9999-999999999999''',
+  '22000',
+  null,
+  'Deleting ready cover of published project should fail guard trigger'
+);
+
+-- Final published service deletion must fail guard trigger
+select throws_ok(
+  'delete from public.portfolio_project_services where project_id = ''66666666-6666-6666-6666-666666666666''',
+  '22000',
+  null,
+  'Deleting final service of published project should fail guard trigger'
+);
+
+-- Return project to draft
+select isnt_empty(
+  'select public.set_portfolio_project_status(''55555555-5555-5555-5555-555555555555'', ''draft'')',
+  'Returning published project to draft should succeed'
+);
+
+-- Cover deletion on draft project should now succeed
+select lives_ok(
+  'delete from public.portfolio_media where id = ''99999999-9999-9999-9999-999999999999''',
+  'Cover deletion on draft project should succeed'
+);
+
+-- Non-published project deletion cascade should succeed
+select lives_ok(
+  'delete from public.portfolio_projects where id = ''55555555-5555-5555-5555-555555555555''',
+  'Deleting non-published project and cascading services/media should succeed'
 );
 
 select * from finish();

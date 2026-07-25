@@ -89,8 +89,21 @@ Following mandatory corrections in Phase 1B, RLS policies are applied to all API
 
 ---
 
-## 6. Related Governance Documents
+## 6. Phase 2E2 Portfolio CMS Publication & RPC Security Contracts
+
+- **Direct Status Column Revocation:** `REVOKE UPDATE (status, published_at) ON public.portfolio_projects FROM authenticated;`
+- **Status Transition RPC (`public.set_portfolio_project_status`):** Defined as `SECURITY DEFINER` (owner: `postgres`, `set search_path = ''`). `EXECUTE` granted to `authenticated` only; revoked from `anon` and `public`. Requires `public.authorize('portfolio.manage')`, locks target row (`FOR UPDATE`), and validates publication prerequisites ($\ge 1$ assigned service, $\ge 1$ ready cover image) before setting `status = 'published'` and `published_at = NOW()`.
+- **Atomic Service Replacement RPC (`public.replace_portfolio_project_services`):** Defined as `SECURITY INVOKER` (`set search_path = ''`). `EXECUTE` granted to `authenticated` only. Validates service array bounds ($1 \le count \le 3$) and executes atomic service replacement.
+- **Published Cover Guard Trigger (`trg_prevent_published_cover_mutation`):** `BEFORE UPDATE OR DELETE ON public.portfolio_media` (`SECURITY INVOKER`, `set search_path = ''`). Blocks deletion or mutation of ready cover images on `published` projects.
+- **Published Final Service Guard Trigger (`trg_prevent_published_service_deletion`):** `BEFORE DELETE ON public.portfolio_project_services` (`SECURITY INVOKER`, `set search_path = ''`). Blocks deletion of the final service on a `published` project.
+
+---
+
+## 7. Related Governance Documents
 
 - [Supabase Data Domains](05-supabase-data-domains.md)
 - [ADR-0011: Portfolio Publication Model](ADR/ADR-0011-portfolio-publication-model.md)
 - [ADR-0012: Two-Bucket Media Architecture](ADR/ADR-0012-private-originals-public-derivatives.md)
+- [ADR-0013: Server-Side Portfolio Image Processing Pipeline](ADR/ADR-0013-server-side-portfolio-image-processing.md)
+- [ADR-0014: Database-Controlled Portfolio Publication](ADR/ADR-0014-database-controlled-portfolio-publication.md)
+- [Phase 2E2 Audit Report](audits/phase-2e2-portfolio-admin-cms.md)

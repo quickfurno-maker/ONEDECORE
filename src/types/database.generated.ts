@@ -7,11 +7,6 @@
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -401,6 +396,52 @@ export type Database = {
     }
     Functions: {
       authorize: { Args: { requested_permission: string }; Returns: boolean }
+      replace_portfolio_project_services: {
+        Args: {
+          requested_project_id: string
+          requested_service_codes: string[]
+        }
+        Returns: {
+          created_at: string
+          project_id: string
+          service_code: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "portfolio_project_services"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      set_portfolio_project_status: {
+        Args: { requested_project_id: string; requested_status: string }
+        Returns: {
+          completion_year: number | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_featured: boolean
+          location_label: string | null
+          property_type: string | null
+          published_at: string | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          sort_order: number
+          status: string
+          summary: string
+          title: string
+          updated_at: string
+          updated_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "portfolio_projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never
