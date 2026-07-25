@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2C3 (July 24, 2026)
+- Applied forward-only hardening migration `20260724192233_secure_rls_event_trigger_and_index_assignment_actor.sql` (SHA-256: `3ef8512a50a26610d8ee2960661dcf21f8bf8a0142064fea0bd02e75ba0c4c1b`) to remote project `lpurlfmpvriyvpkujvyl` in Mumbai.
+- Revoked direct `EXECUTE` privileges on platform helper `public.rls_auto_enable()` from `public`, `anon`, and `authenticated` while retaining active `ensure_rls` event trigger owned by `postgres`.
+- Added covering index `idx_user_roles_assigned_by` on `public.user_roles(assigned_by)`.
+- Expanded pgTAP database test suite (`supabase/tests/database/01_identity_rbac_test.sql`) to 27 subtests.
+- Verified Security Advisor and Performance Advisor findings resolved with zero schema drift and 0 business data/user mutations.
+
+### Added - Phase 2C2 (July 24, 2026)
+- Applied reviewed migration `20260724174648_identity_rbac_foundation.sql` (SHA-256: `a19dc6d497401b6cdd1df7bee6f8c5bc1e5f1aa354135debebfab4a659e1a9dd`) to remote Supabase project `lpurlfmpvriyvpkujvyl` in Mumbai (`ap-south-1`).
+- Verified 1:1 local and remote migration history match via `npx supabase migration list`.
+- Executed linked database linting (`npx supabase db lint --linked --level warning`) with 0 schema errors.
+- Verified remote TypeScript type generation matching local database type contract.
+- Verified remote object inventory (1 private schema, 5 public tables, 6 system roles, 6 system permissions, 100% RLS coverage, 0 Auth users, 0 Storage buckets, 0 business tables).
+
+### Added - Phase 2C1 (July 24, 2026)
+- Hardened foundation migration `20260724174648_identity_rbac_foundation.sql`:
+  - Removed `IF NOT EXISTS` from schema, table, and index DDL to fail loudly on unexpected schema drift.
+  - Added explicit `REVOKE ALL ON TABLE ... FROM public, anon, authenticated` before least-privilege grants.
+  - Configured strict column-level write privileges for `profiles`, `roles`, `permissions`, and `user_roles`.
+  - Enforced system RBAC record immutability (`is_system = true`) via RLS policies.
+  - Restricted `user_roles` assignment attribution (`assigned_by = auth.uid()`).
+  - Added display name metadata normalization (max 120 chars) in `private.handle_new_auth_user()`.
+  - Removed `SECURITY DEFINER` from `private.set_updated_at()`.
+- Expanded pgTAP database test suite (`01_identity_rbac_test.sql`) to 19 subtests.
+- Established Shared-Docker Desktop policy with strict project isolation and zero global prune commands.
+- Regenerated TypeScript types (`src/types/database.generated.ts`).
+
+### Added - Phase 2C (July 24, 2026)
+- Installed `supabase@2.109.1` devDependency and initialized local CLI configuration (`supabase/config.toml`).
+- Created identity & RBAC migration `20260724174648_identity_rbac_foundation.sql` (`private` schema, `profiles`, `roles`, `permissions`, `role_permissions`, `user_roles`).
+- Implemented `private.has_role()` and `private.has_permission()` security-definer helper functions.
+- Seeded 6 foundation roles and 6 permissions with role-permission mappings.
+- Configured 100% RLS policies and revoked table privileges from `anon`.
+- Created pgTAP database tests (`supabase/tests/database/01_identity_rbac_test.sql`).
+- Added package scripts (`db:start`, `db:stop`, `db:reset`, `db:lint`, `db:test`, `check:db`).
+- Generated typed database interfaces (`src/types/database.generated.ts`) and updated Supabase client wrappers.
+- Created ADRs `ADR-0007` and `ADR-0008` and audit log `docs/audits/phase-2c-identity-rbac-foundation.md`.
+
 ### Added - Phase 2B (July 24, 2026)
 - Connected Next.js App Router to Mumbai Supabase project (`lpurlfmpvriyvpkujvyl.supabase.co`).
 - Installed `@supabase/supabase-js@2.110.8` and `@supabase/ssr@0.12.3`.
