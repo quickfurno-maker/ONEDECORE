@@ -30,6 +30,8 @@
 | **DEC-0020** | Shared-Docker Desktop policy with strict project isolation and least-privilege column-level RBAC hardening | LOCKED | Ensures zero resource contention with Jarvis/QuickFurno and enforces strict SQL schema drift protection | No | Phase 2C1 | N/A |
 | **DEC-0021** | Phase 2C2 Controlled Remote Migration Deployment to Mumbai Supabase Project lpurlfmpvriyvpkujvyl | LOCKED | Establishes the initial remote identity & RBAC schema baseline with zero Auth users or business tables | No | Phase 2C2 | N/A |
 | **DEC-0022** | Phase 2C3 Remote RBAC Post-Deployment Hardening (RLS Event Trigger & User Roles Index) | LOCKED | Revokes direct execution on platform helper public.rls_auto_enable() and covers user_roles.assigned_by foreign key | YES | Phase 2C3 | N/A |
+| **DEC-0023** | Public SECURITY INVOKER authorization RPC wrapper (public.authorize) for server-side permission checks | LOCKED | Provides safe public Data API RPC endpoint delegating to private.has_permission with zero JWT custom claims overhead | No | Phase 2D1 | N/A |
+| **DEC-0024** | Staff-only password authentication and POST-only sign-out with Proxy authentication guard | LOCKED | Restricts authentication to staff signInWithPassword, disallows public sign-up, and protects /admin routes in Proxy | No | Phase 2D1 | N/A |
 
 ---
 

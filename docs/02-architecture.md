@@ -105,3 +105,5 @@ OneDecore/
 - [ADR-0002: Supabase as Primary Source of Truth](ADR/ADR-0002-supabase-source-of-truth.md)
 - [ADR-0004: Server-Side Lead Persistence Before n8n](ADR/ADR-0004-crm-before-n8n-persistence.md)
 - [ADR-0006: Public and Admin Route Separation](ADR/ADR-0006-public-and-admin-route-separation.md)
+- [ADR-0009: Public Security Invoker Authorization RPC Wrapper](ADR/ADR-0009-public-invoker-authorization-rpc.md)
+- [ADR-0010: Staff-Only Password Authentication and Admin Route Protection](ADR/ADR-0010-staff-only-password-authentication.md)
