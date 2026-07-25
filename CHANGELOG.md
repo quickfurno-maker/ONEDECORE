@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2D2 (July 25, 2026)
+- Merged Phase 2D1 staff authentication foundation into `main` with non-fast-forward merge (`cf734c692c087646fde618fd19674e79089dc4e9`).
+- Applied forward-only active staff authorization hardening migration `20260725020833_enforce_active_staff_authorization.sql` (SHA-256: `193d7780ab27480d27c4b8a350de5804c177e9ff6b0710fcbddf36cf58e1b832`) to remote project `lpurlfmpvriyvpkujvyl` in Mumbai.
+- Hardened `private.has_role(text)` and `private.has_permission(text)` database functions to require `public.profiles.status = 'active'`.
+- Expanded pgTAP database test suite (`supabase/tests/database/01_identity_rbac_test.sql`) to 44 subtests verifying pending/active/suspended/disabled profile statuses.
+- Completed manual owner Auth user creation and guarded one-time operational Super Admin bootstrap in Supabase Dashboard.
+- Verified manual end-to-end authentication flow on `http://localhost:3000` (Login, Admin Shell, Sign-Out, Proxy Protection, Generic Invalid Password Error).
+- Updated audit log (`docs/audits/phase-2d2-first-super-admin-bootstrap.md`) and governance documentation.
+
 ### Added - Phase 2D1 (July 25, 2026)
 - Merged Phase 2C identity and RBAC foundation into `main` with non-fast-forward merge.
 - Applied forward-only migration `20260725013043_staff_authorization_rpc.sql` (SHA-256: `ead1c5413b097c615188558db76d8ca850982e5eab8ae6a29e8823ffa2237296`) to remote project `lpurlfmpvriyvpkujvyl` in Mumbai.

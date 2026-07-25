@@ -1,7 +1,7 @@
--- ONEDECORE Phase 2D1 Identity & RBAC pgTAP Database Tests
+-- ONEDECORE Phase 2D2 Identity & RBAC pgTAP Database Tests
 
 begin;
-select plan(37);
+select plan(44);
 
 -- 1. Verify schema existence
 select has_schema('private', 'Private security schema should exist');
@@ -186,14 +186,14 @@ select results_eq(
   'authenticated role MUST have execute privilege on public.authorize'
 );
 
--- 17. Phase 2D1 — Functional permission evaluation
+-- 17. Phase 2D1 — Functional permission evaluation unauthenticated check
 select is(
   public.authorize('admin.access'),
   false,
   'Unauthenticated context returns false for public.authorize'
 );
 
--- Temporary fixture user with super_admin role
+-- 18. Phase 2D2 — Profile status enforcement tests (pending, active, suspended, disabled)
 insert into auth.users (id, instance_id, email, aud, role)
 values (
   '22222222-2222-2222-2222-222222222222',
@@ -209,10 +209,32 @@ from public.roles where code = 'super_admin';
 
 select set_config('request.jwt.claim.sub', '22222222-2222-2222-2222-222222222222', true);
 
+-- Test 18.1: Pending profile status (default on insert) returns false
+select is(
+  public.authorize('admin.access'),
+  false,
+  'Pending profile status returns false for admin.access'
+);
+
+select is(
+  private.has_role('super_admin'),
+  false,
+  'Pending profile status returns false for has_role'
+);
+
+-- Test 18.2: Active profile status returns true
+update public.profiles set status = 'active' where id = '22222222-2222-2222-2222-222222222222';
+
 select is(
   public.authorize('admin.access'),
   true,
-  'User with active super_admin role returns true for admin.access'
+  'Active profile status with super_admin role returns true for admin.access'
+);
+
+select is(
+  private.has_role('super_admin'),
+  true,
+  'Active profile status with super_admin role returns true for has_role'
 );
 
 select is(
@@ -221,13 +243,44 @@ select is(
   'User without requested permission returns false'
 );
 
--- Disable role and verify permission evaluation returns false
+-- Test 18.3: Suspended profile status returns false
+update public.profiles set status = 'suspended' where id = '22222222-2222-2222-2222-222222222222';
+
+select is(
+  public.authorize('admin.access'),
+  false,
+  'Suspended profile status returns false for admin.access'
+);
+
+select is(
+  private.has_role('super_admin'),
+  false,
+  'Suspended profile status returns false for has_role'
+);
+
+-- Test 18.4: Disabled profile status returns false
+update public.profiles set status = 'disabled' where id = '22222222-2222-2222-2222-222222222222';
+
+select is(
+  public.authorize('admin.access'),
+  false,
+  'Disabled profile status returns false for admin.access'
+);
+
+select is(
+  private.has_role('super_admin'),
+  false,
+  'Disabled profile status returns false for has_role'
+);
+
+-- Test 18.5: Active profile with inactive role returns false
+update public.profiles set status = 'active' where id = '22222222-2222-2222-2222-222222222222';
 update public.roles set is_active = false where code = 'super_admin';
 
 select is(
   public.authorize('admin.access'),
   false,
-  'User with disabled role returns false'
+  'Active profile with disabled role returns false for admin.access'
 );
 
 select * from finish();

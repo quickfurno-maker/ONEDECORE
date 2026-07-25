@@ -41,6 +41,8 @@ Following mandatory corrections in Phase 1B, RLS policies are applied to all API
 - **System Record Immutability:** Seeded system roles (`super_admin`, `management`, `sales`, `designer`, `project_operations`, `content_manager`) and permissions are protected from Data API modification or deletion.
 - **Platform Helper Hardening (Phase 2C3):** Direct API execution on platform helper `public.rls_auto_enable()` revoked from `public`, `anon`, and `authenticated`. Event trigger `ensure_rls` remains active and owned by `postgres`.
 - **Actor Foreign Key Coverage (Phase 2C3):** Added covering index `idx_user_roles_assigned_by` on `public.user_roles(assigned_by)` for actor-based audit query optimization.
+- **Public Authorization RPC (Phase 2D1):** `public.authorize(requested_permission text)` wrapper (`SECURITY INVOKER`, `STABLE`, `SET search_path = ''`) delegating to `private.has_permission()`. Granted to `authenticated`, revoked from `anon` and `public`.
+- **Active Staff Profile Enforcement (Phase 2D2):** Hardened `private.has_role(text)` and `private.has_permission(text)` to require `public.profiles.status = 'active'`. Pending, suspended, or disabled staff profiles are automatically denied authorization even if active role assignments exist.
 
 ## 3. Policy Enforcement Matrix
 
