@@ -75,7 +75,22 @@ Following mandatory corrections in Phase 1B, RLS policies are applied to all API
 
 ---
 
-## 5. Related Governance Documents
+## 5. Phase 2E1 Portfolio & Storage RLS Policies
+
+- **Portfolio System Permissions:** `portfolio.read` and `portfolio.manage` mapped to system `super_admin` role.
+- **Table RLS Enforcement:**
+  - `portfolio_projects`: Public `SELECT` allowed when `status = 'published'`. Staff `SELECT` allowed with `portfolio.read` or `portfolio.manage`. Staff mutations (`INSERT`, `UPDATE`, `DELETE`) require `portfolio.manage` with audit anti-spoofing (`created_by = auth.uid()`, `updated_by = auth.uid()`).
+  - `portfolio_project_services`: Public `SELECT` allowed when parent project is published. Staff mutations require `portfolio.manage`.
+  - `portfolio_media`: Public `SELECT` allowed when `status = 'ready'` and parent project is published. Staff mutations require `portfolio.manage`.
+  - `portfolio_media_sources`: Private table. `SELECT`, `INSERT`, `UPDATE`, `DELETE` strictly restricted to staff with `portfolio.manage` and `uploaded_by = auth.uid()`. Inaccessible to anonymous visitors.
+- **Storage Bucket RLS Policies:**
+  - `portfolio-originals` (Private, 20 MiB limit): `SELECT`, `INSERT`, `UPDATE`, `DELETE` policies on `storage.objects` strictly check `bucket_id = 'portfolio-originals' AND public.authorize('portfolio.manage')`.
+  - `portfolio-public` (Public, 8 MiB limit): Direct HTTP GET enabled. `INSERT`, `UPDATE`, `DELETE` policies on `storage.objects` check `bucket_id = 'portfolio-public' AND public.authorize('portfolio.manage')`.
+
+---
+
+## 6. Related Governance Documents
 
 - [Supabase Data Domains](05-supabase-data-domains.md)
-- [ADR-0003: Portfolio Storage Boundaries](ADR/ADR-0003-portfolio-storage-boundaries.md)
+- [ADR-0011: Portfolio Publication Model](ADR/ADR-0011-portfolio-publication-model.md)
+- [ADR-0012: Two-Bucket Media Architecture](ADR/ADR-0012-private-originals-public-derivatives.md)

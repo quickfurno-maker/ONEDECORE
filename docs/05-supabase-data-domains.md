@@ -35,11 +35,11 @@ Supabase PostgreSQL serves as the sole authoritative database for all structured
 - **`user_roles`:** Role assignments (`super_admin`, `management`, `sales`, `designer`, `operations`, `content_manager`).
 - **`role_permissions`:** Granular feature permissions per role.
 
-### 2.2 Portfolio Domain
-- **`portfolio_projects`:** Portfolio records (`id`, `title`, `slug`, `service_category`, `status`, `is_featured`, `created_at`).
-- **`portfolio_media`:** Media items (`id`, `project_id`, `derivative_url`, `media_type`, `sort_order`, `is_cover`, `alt_text`).
-- **`project_tags`:** Mapping table between projects and room tags.
-- **`ownership_records`:** Verified ownership and commercial publication rights record.
+### 2.2 Portfolio Domain (Implemented in Phase 2E1)
+- **`portfolio_projects`:** Catalog of luxury projects (`id`, `slug`, `title`, `summary`, `description`, `location_label`, `property_type`, `completion_year`, `status`, `is_featured`, `sort_order`, `seo_title`, `seo_description`, `published_at`, `created_by`, `updated_by`).
+- **`portfolio_project_services`:** Service junction (`project_id`, `service_code`, `created_at`).
+- **`portfolio_media`:** Public web derivative media (`id`, `project_id`, `public_bucket`, `public_object_path`, `media_role`, `status`, `alt_text`, `caption`, `width_px`, `height_px`, `file_size_bytes`, `mime_type`, `sort_order`, `created_by`, `updated_by`).
+- **`portfolio_media_sources`:** Private master original photographs (`media_id`, `original_bucket`, `original_object_path`, `original_file_name`, `original_mime_type`, `original_file_size_bytes`, `checksum_sha256`, `uploaded_by`).
 
 ### 2.3 CRM & Lead Domain
 - **`leads`:** Lead entries (`id`, `full_name`, `phone`, `email`, `locality`, `property_type`, `budget_range`, `status`, `assigned_to`).

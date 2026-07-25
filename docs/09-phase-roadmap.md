@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2D2 Active-Staff Enforcement & First Super Admin Bootstrap Complete
+**Current Phase:** Phase 2E1 Portfolio Data & Media Storage Foundation Complete
 
 ---
 
@@ -30,6 +30,12 @@ Phase 2D1: Staff Auth Foundation, public.authorize RPC, Proxy Guard & Admin Shel
    │
    ▼
 Phase 2D2: Active Staff Authorization Hardening & First Super Admin Bootstrap (COMPLETED)
+   │
+   ▼
+Phase 2E1: Portfolio Data & Media Storage Foundation (COMPLETED)
+   │
+   ▼
+Phase 2E2: Portfolio CMS & Media Upload Workflow
    │
    ▼
 Phase 3: Design System, UI Tokens & Component Showroom

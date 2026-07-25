@@ -7,6 +7,11 @@
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -64,6 +69,207 @@ export type Database = {
           is_system?: boolean
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      portfolio_media: {
+        Row: {
+          alt_text: string
+          caption: string | null
+          created_at: string
+          created_by: string
+          file_size_bytes: number | null
+          height_px: number | null
+          id: string
+          media_role: string
+          mime_type: string | null
+          project_id: string
+          public_bucket: string
+          public_object_path: string | null
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string
+          width_px: number | null
+        }
+        Insert: {
+          alt_text: string
+          caption?: string | null
+          created_at?: string
+          created_by: string
+          file_size_bytes?: number | null
+          height_px?: number | null
+          id?: string
+          media_role?: string
+          mime_type?: string | null
+          project_id: string
+          public_bucket?: string
+          public_object_path?: string | null
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          updated_by: string
+          width_px?: number | null
+        }
+        Update: {
+          alt_text?: string
+          caption?: string | null
+          created_at?: string
+          created_by?: string
+          file_size_bytes?: number | null
+          height_px?: number | null
+          id?: string
+          media_role?: string
+          mime_type?: string | null
+          project_id?: string
+          public_bucket?: string
+          public_object_path?: string | null
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string
+          width_px?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_media_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_media_sources: {
+        Row: {
+          checksum_sha256: string | null
+          created_at: string
+          media_id: string
+          original_bucket: string
+          original_file_name: string | null
+          original_file_size_bytes: number
+          original_mime_type: string
+          original_object_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          checksum_sha256?: string | null
+          created_at?: string
+          media_id: string
+          original_bucket?: string
+          original_file_name?: string | null
+          original_file_size_bytes: number
+          original_mime_type: string
+          original_object_path: string
+          uploaded_by: string
+        }
+        Update: {
+          checksum_sha256?: string | null
+          created_at?: string
+          media_id?: string
+          original_bucket?: string
+          original_file_name?: string | null
+          original_file_size_bytes?: number
+          original_mime_type?: string
+          original_object_path?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_media_sources_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: true
+            referencedRelation: "portfolio_media"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_project_services: {
+        Row: {
+          created_at: string
+          project_id: string
+          service_code: string
+        }
+        Insert: {
+          created_at?: string
+          project_id: string
+          service_code: string
+        }
+        Update: {
+          created_at?: string
+          project_id?: string
+          service_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_project_services_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_projects: {
+        Row: {
+          completion_year: number | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_featured: boolean
+          location_label: string | null
+          property_type: string | null
+          published_at: string | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          sort_order: number
+          status: string
+          summary: string
+          title: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          completion_year?: number | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_featured?: boolean
+          location_label?: string | null
+          property_type?: string | null
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          sort_order?: number
+          status?: string
+          summary: string
+          title: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          completion_year?: number | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_featured?: boolean
+          location_label?: string | null
+          property_type?: string | null
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          sort_order?: number
+          status?: string
+          summary?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string
         }
         Relationships: []
       }
