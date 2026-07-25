@@ -32,7 +32,7 @@ Phase 2D2 enforces active staff profile status requirements (`status = 'active'`
 - **Auth Users Count:** 1 (Confirmed)
 - **Profiles Count:** 1 (Status: `active`)
 - **User Role Assignments:** 1 (Assigned Role: `super_admin`, `assigned_by` self-assigned)
-- **Owner Email Identity:** Redacted for security (`owner@onedecore.in` pattern verified)
+- **Owner Email Identity:** Redacted for security (`o***@gmail.com` verified)
 - **Password & Secret Storage:** 0 passwords, secret keys, or raw JWT tokens stored in Git or application code.
 
 ---
