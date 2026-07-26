@@ -208,7 +208,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '44444444-4444-4444-4444-444444444444', true);
 
 select results_eq(
-  'select count(*)::integer from public.portfolio_projects',
+  'select count(*)::integer from public.portfolio_projects where id in (''55555555-5555-5555-5555-555555555555'', ''66666666-6666-6666-6666-666666666666'')',
   array[2],
   'Staff reader can see both draft and published portfolio projects'
 );
@@ -217,7 +217,7 @@ select results_eq(
 select set_config('request.jwt.claim.sub', '88888888-8888-8888-8888-888888888888', true);
 
 select results_eq(
-  'select count(*)::integer from public.portfolio_projects',
+  'select count(*)::integer from public.portfolio_projects where id in (''55555555-5555-5555-5555-555555555555'', ''66666666-6666-6666-6666-666666666666'')',
   array[1],
   'Authenticated non-staff user sees only published portfolio projects'
 );
