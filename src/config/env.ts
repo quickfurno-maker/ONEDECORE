@@ -16,15 +16,22 @@ function getEnvVar(name: string): string {
 function validateSupabaseUrl(urlStr: string): string {
   try {
     const parsed = new URL(urlStr);
-    if (parsed.protocol !== "https:") {
-      throw new Error(
-        `[ONEDECORE Env Error] NEXT_PUBLIC_SUPABASE_URL must use HTTPS protocol.`
-      );
-    }
-    if (parsed.hostname !== "lpurlfmpvriyvpkujvyl.supabase.co") {
-      throw new Error(
-        `[ONEDECORE Env Error] Invalid NEXT_PUBLIC_SUPABASE_URL hostname. Expected lpurlfmpvriyvpkujvyl.supabase.co`
-      );
+    const isLocal =
+      parsed.hostname === "127.0.0.1" ||
+      parsed.hostname === "localhost" ||
+      process.env.NODE_ENV !== "production";
+
+    if (!isLocal) {
+      if (parsed.protocol !== "https:") {
+        throw new Error(
+          `[ONEDECORE Env Error] NEXT_PUBLIC_SUPABASE_URL must use HTTPS protocol.`
+        );
+      }
+      if (parsed.hostname !== "lpurlfmpvriyvpkujvyl.supabase.co") {
+        throw new Error(
+          `[ONEDECORE Env Error] Invalid NEXT_PUBLIC_SUPABASE_URL hostname. Expected lpurlfmpvriyvpkujvyl.supabase.co`
+        );
+      }
     }
     return parsed.origin;
   } catch (err) {
@@ -38,7 +45,8 @@ function validateSupabaseUrl(urlStr: string): string {
 }
 
 function validatePublishableKey(keyStr: string): string {
-  if (!keyStr.startsWith("sb_publishable_")) {
+  const isLocal = keyStr.startsWith("eyJ") || process.env.NODE_ENV !== "production";
+  if (!keyStr.startsWith("sb_publishable_") && !isLocal) {
     throw new Error(
       `[ONEDECORE Env Error] NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY must begin with 'sb_publishable_' prefix.`
     );

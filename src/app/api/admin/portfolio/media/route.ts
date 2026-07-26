@@ -9,6 +9,7 @@ import {
   generateMediaPath,
   MAX_FILE_SIZE_BYTES,
 } from "@/features/portfolio/server/portfolio-image-pipeline";
+import { invalidatePublicPortfolio } from "@/features/portfolio/public/public-portfolio-invalidation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Verify project exists
     const { data: project } = await supabase
       .from("portfolio_projects")
-      .select("id")
+      .select("id, slug")
       .eq("id", projectId)
       .maybeSingle();
 
@@ -205,7 +206,15 @@ export async function POST(request: NextRequest) {
       throw new Error(`Media status ready update failed: ${readyUpdateError?.message}`);
     }
 
-    return NextResponse.json({ success: true, media: finalMedia });
+    // Storage and database writes have committed. A cache refresh failure here
+    // is reported as a warning rather than failing the upload.
+    const invalidation = invalidatePublicPortfolio(project.slug);
+
+    return NextResponse.json({
+      success: true,
+      media: finalMedia,
+      warning: invalidation.ok ? undefined : invalidation.warning,
+    });
   } catch (err: unknown) {
     // 12. Best-Effort Compensation Cleanup on Failure
     if (masterObjectPath) {

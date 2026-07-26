@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClaims } from "@/server/auth/claims";
 import { createClient } from "@/lib/supabase/server";
+import { invalidatePublicPortfolio } from "@/features/portfolio/public/public-portfolio-invalidation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +41,7 @@ export async function DELETE(
   // 1. Fetch media item with project status check
   const { data: mediaItem } = await supabase
     .from("portfolio_media")
-    .select("id, project_id, media_role, status, public_object_path, portfolio_projects!inner(status)")
+    .select("id, project_id, media_role, status, public_object_path, portfolio_projects!inner(status, slug)")
     .eq("id", mediaId)
     .maybeSingle();
 
@@ -49,7 +50,11 @@ export async function DELETE(
   }
 
   // Published cover protection check
-  const projectStatus = (mediaItem.portfolio_projects as unknown as { status: string })?.status;
+  const parentProject = mediaItem.portfolio_projects as unknown as {
+    status: string;
+    slug: string;
+  };
+  const projectStatus = parentProject?.status;
   if (projectStatus === "published" && mediaItem.media_role === "cover" && mediaItem.status === "ready") {
     return NextResponse.json(
       { error: "Cannot delete ready cover image of a published project. Return project to draft first." },
@@ -83,5 +88,12 @@ export async function DELETE(
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true });
+  // Storage and database deletions have committed. A cache refresh failure
+  // here is reported as a warning rather than failing the deletion.
+  const invalidation = invalidatePublicPortfolio(parentProject.slug);
+
+  return NextResponse.json({
+    success: true,
+    warning: invalidation.ok ? undefined : invalidation.warning,
+  });
 }

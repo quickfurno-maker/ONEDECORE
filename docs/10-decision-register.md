@@ -40,6 +40,10 @@
 | **DEC-0030** | Server-side Sharp 0.35.3 image processing pipeline with automatic metadata stripping & WebP derivatives | LOCKED | Ensures private master images have EXIF privacy metadata stripped and generates cover/gallery/thumb WebP derivatives | No | Phase 2E2 | N/A |
 | **DEC-0031** | Database-controlled publication workflow with SECURITY DEFINER status RPC and trigger guards | LOCKED | Revokes direct UPDATE on status/published_at columns and enforces publication prerequisites via SECURITY DEFINER RPC and triggers | No | Phase 2E2 | N/A |
 | **DEC-0032** | Two-tier RPC architecture separating PostgREST-exposed SECURITY INVOKER wrapper from private SECURITY DEFINER helper | LOCKED | Resolves Security Advisor alert authenticated_security_definer_function_executable while preserving privilege escalation bounds | No | Phase 2E2A | DEC-0031 (Refined RPC Structure) |
+| **DEC-0033** | Server-only RSC DTO data repository pattern for public portfolio showcase (`/portfolio`, `/portfolio/[slug]`) | LOCKED | Prevents internal database column and user UUID leakage to public clients while consuming server-resolved WebP image URLs | No | Phase 2E3A | N/A |
+| **DEC-0034** | Outcome A RLS verification & tag-based cache revalidation for public portfolio performance | LOCKED | Confirms existing RLS policies safely permit public read access to published items (zero migration) and invalidates Next.js cache tags on CMS edit | No | Phase 2E3A | N/A |
+| **DEC-0035** | Public portfolio delivery without route-level loading boundary; true HTTP 404 for invalid public portfolio requests | LOCKED | Whole-route Suspense loading shell committed HTTP 200 before notFound() could set status; removed loading.tsx to preserve true 404 semantics | No | Phase 2E3B | N/A |
+| **DEC-0036** | Database-side displayable filtering before bounded listing pagination (12 cards/page) | LOCKED | Prevents malformed projects from occupying page slots and hiding valid published projects from paginated results | No | Phase 2E3B | N/A |
 
 ---
 
@@ -51,3 +55,5 @@
 - [ADR-0013: Server-Side Portfolio Image Processing Pipeline](ADR/ADR-0013-server-side-portfolio-image-processing.md)
 - [ADR-0014: Database-Controlled Portfolio Publication](ADR/ADR-0014-database-controlled-portfolio-publication.md)
 - [ADR-0015: Private Definer Status Transition Helper Pattern](ADR/ADR-0015-private-definer-status-transition-helper.md)
+- [ADR-0016: Public Portfolio Data Delivery Architecture](ADR/ADR-0016-public-portfolio-data-delivery.md)
+- [ADR-0017: Public Portfolio Cache & Revalidation Strategy](ADR/ADR-0017-public-portfolio-cache-and-revalidation.md)

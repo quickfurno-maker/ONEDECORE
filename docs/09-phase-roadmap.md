@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2E2A Portfolio Admin CMS, Orphan Storage Cleanup & Status RPC Exposure Hardening Complete
+**Current Phase:** Phase 2E3 Public Portfolio Experience Complete (Ready for Phase 3)
 
 ---
 
@@ -38,7 +38,13 @@ Phase 2E1 / 2E1A: Portfolio Data & Media Storage Foundation & RLS Privilege Hard
 Phase 2E2 / 2E2A: Portfolio Admin CMS, Secure Media Pipeline, Storage Orphan Purge & RPC Exposure Hardening (COMPLETED)
    │
    ▼
-Phase 2E3 / Phase 3: Public Portfolio Showcase & Design System Foundation
+Phase 2E3A: Public Portfolio Experience & SEO Architecture Freeze (COMPLETED)
+   │
+   ▼
+Phase 2E3B / 2E3C / 2E3D: Public Portfolio Implementation, Remote E2E & Merge Closeout (COMPLETED)
+   │
+   ▼
+Phase 3: Design System Foundation
    │
    ▼
 Phase 4: Cinematic Public Homepage & Consultation Lead Form

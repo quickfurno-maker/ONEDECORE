@@ -4,7 +4,27 @@ import { revalidatePath } from "next/cache";
 import { getClaims } from "@/server/auth/claims";
 import { createClient } from "@/lib/supabase/server";
 import { PORTFOLIO_SERVICE_CODES, type PortfolioServiceCode } from "../domain/portfolio-service";
+import { invalidatePublicPortfolio } from "../public/public-portfolio-invalidation";
 import { type PortfolioFormState } from "./portfolio-form-state";
+
+/**
+ * Refreshes every public surface touched by a Portfolio mutation.
+ *
+ * Accepts more than one slug because renaming a project has to clear the cache
+ * entry for the slug it used to be served under as well as the new one.
+ */
+function invalidatePublicSurfaces(slugs: Array<string | null | undefined>): string | undefined {
+  let warning: string | undefined;
+
+  for (const slug of new Set(slugs.filter((s): s is string => Boolean(s)))) {
+    const outcome = invalidatePublicPortfolio(slug);
+    if (!outcome.ok) {
+      warning = outcome.warning;
+    }
+  }
+
+  return warning;
+}
 
 /**
  * Asserts authenticated staff has portfolio.manage permission.
@@ -116,9 +136,11 @@ export async function createProjectAction(
   }
 
   revalidatePath("/admin/portfolio");
+  const createWarning = invalidatePublicSurfaces([slug]);
+
   return {
     success: true,
-    message: "Project created successfully.",
+    message: createWarning ?? "Project created successfully.",
     fieldErrors: {},
     redirectTo: `/admin/portfolio/${project.id}`,
   };
@@ -183,6 +205,13 @@ export async function updateProjectAction(
 
   const supabase = await createClient();
 
+  // Captured before the write so a slug rename can invalidate the old URL too.
+  const { data: previous } = await supabase
+    .from("portfolio_projects")
+    .select("slug")
+    .eq("id", projectId)
+    .maybeSingle();
+
   const { error: updateError } = await supabase
     .from("portfolio_projects")
     .update({
@@ -224,9 +253,11 @@ export async function updateProjectAction(
 
   revalidatePath("/admin/portfolio");
   revalidatePath(`/admin/portfolio/${projectId}`);
+  const updateWarning = invalidatePublicSurfaces([previous?.slug, slug]);
+
   return {
     success: true,
-    message: "Project metadata saved successfully.",
+    message: updateWarning ?? "Project metadata saved successfully.",
     fieldErrors: {},
   };
 }
@@ -241,6 +272,12 @@ export async function setProjectStatusAction(
   await requirePortfolioManage();
   const supabase = await createClient();
 
+  const { data: target } = await supabase
+    .from("portfolio_projects")
+    .select("slug")
+    .eq("id", projectId)
+    .maybeSingle();
+
   const { error } = await supabase.rpc("set_portfolio_project_status", {
     requested_project_id: projectId,
     requested_status: status,
@@ -252,7 +289,9 @@ export async function setProjectStatusAction(
 
   revalidatePath("/admin/portfolio");
   revalidatePath(`/admin/portfolio/${projectId}`);
-  return { success: true };
+  const statusWarning = invalidatePublicSurfaces([target?.slug]);
+
+  return { success: true, warning: statusWarning };
 }
 
 /**
@@ -265,7 +304,7 @@ export async function deleteProjectAction(projectId: string) {
   // 1. Verify project exists and is not published
   const { data: project } = await supabase
     .from("portfolio_projects")
-    .select("status")
+    .select("status, slug")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -321,7 +360,9 @@ export async function deleteProjectAction(projectId: string) {
   }
 
   revalidatePath("/admin/portfolio");
-  return { success: true, redirectTo: "/admin/portfolio" };
+  const deleteWarning = invalidatePublicSurfaces([project.slug]);
+
+  return { success: true, redirectTo: "/admin/portfolio", warning: deleteWarning };
 }
 
 /**
@@ -367,6 +408,14 @@ export async function reorderMediaAction(
     .update({ sort_order: currentMedia.sort_order, updated_by: claims.userId })
     .eq("id", targetMedia.id);
 
+  const { data: reordered } = await supabase
+    .from("portfolio_projects")
+    .select("slug")
+    .eq("id", projectId)
+    .maybeSingle();
+
   revalidatePath(`/admin/portfolio/${projectId}`);
-  return { success: true };
+  const reorderWarning = invalidatePublicSurfaces([reordered?.slug]);
+
+  return { success: true, warning: reorderWarning };
 }
