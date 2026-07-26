@@ -42,6 +42,8 @@
 | **DEC-0032** | Two-tier RPC architecture separating PostgREST-exposed SECURITY INVOKER wrapper from private SECURITY DEFINER helper | LOCKED | Resolves Security Advisor alert authenticated_security_definer_function_executable while preserving privilege escalation bounds | No | Phase 2E2A | DEC-0031 (Refined RPC Structure) |
 | **DEC-0033** | Server-only RSC DTO data repository pattern for public portfolio showcase (`/portfolio`, `/portfolio/[slug]`) | LOCKED | Prevents internal database column and user UUID leakage to public clients while consuming server-resolved WebP image URLs | No | Phase 2E3A | N/A |
 | **DEC-0034** | Outcome A RLS verification & tag-based cache revalidation for public portfolio performance | LOCKED | Confirms existing RLS policies safely permit public read access to published items (zero migration) and invalidates Next.js cache tags on CMS edit | No | Phase 2E3A | N/A |
+| **DEC-0035** | Public portfolio delivery without route-level loading boundary; true HTTP 404 for invalid public portfolio requests | LOCKED | Whole-route Suspense loading shell committed HTTP 200 before notFound() could set status; removed loading.tsx to preserve true 404 semantics | No | Phase 2E3B | N/A |
+| **DEC-0036** | Database-side displayable filtering before bounded listing pagination (12 cards/page) | LOCKED | Prevents malformed projects from occupying page slots and hiding valid published projects from paginated results | No | Phase 2E3B | N/A |
 
 ---
 

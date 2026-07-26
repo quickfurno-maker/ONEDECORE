@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2E3 (July 27, 2026)
+- Delivered public Portfolio experience: homepage featured section, paginated listing (`/portfolio`), dynamic detail routes (`/portfolio/[slug]`), `robots.ts`, and `sitemap.ts` (`205cb8deb081f68802589ab420bbb67b3f62e885`).
+- Added central site identity (`src/config/site.ts`) with canonical domain `https://onedecore.in` (no invented legal name).
+- Implemented server-only anonymous Supabase public repository layer with strict public DTOs, exact WebP derivative path validation, and `unstable_cache` tag-based revalidation wired into CMS server actions and media route handlers.
+- Fixed true HTTP 404 behaviour by removing whole-route `loading.tsx` Suspense boundary that masked 404 status codes.
+- Fixed database-side displayable filtering before pagination so malformed projects do not occupy listing page slots.
+- Added deterministic local fixtures (`scripts/seed-local-fixtures.sql`) and production HTTP verification tooling (`scripts/verify-production-http.ts`).
+- Expanded automated test suite: 107 pgTAP database tests, 90 application/public tests, 17 image/WebP tests; production HTTP gate 13/13 endpoints and 82/82 deep assertions.
+- Completed controlled remote CMS-to-public E2E on official Supabase project with full zero-state cleanup (`phase-2e3c-remote-portfolio-e2e.md`).
+- No schema migration; reuses existing anonymous RLS (Outcome A).
+- Accepted npm audit exception: 3 high / 0 critical in Next.js nested dependencies; direct `sharp@0.35.3` unaffected.
+
 ### Added - Phase 2E2A (July 25, 2026)
 - Identified and purged 15 orphaned storage objects across `portfolio-originals` and `portfolio-public` storage buckets via authenticated owner Storage API `.remove()` (0 storage objects and 0 portfolio database rows remaining).
 - Created forward migration `supabase/migrations/<timestamp>_harden_portfolio_status_rpc_exposure.sql` implementing a two-tier RPC status transition architecture:
