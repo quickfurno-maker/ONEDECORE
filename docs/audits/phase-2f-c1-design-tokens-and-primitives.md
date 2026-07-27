@@ -2,8 +2,11 @@
 
 **Date:** July 27, 2026  
 **Gate:** Phase 2F-C1 Design Tokens, Typography & Shared Primitives  
-**Status:** `PHASE_2F_C1_TOKENS_AND_PRIMITIVES_COMPLETE`  
-**Branch:** `phase-2f-public-website-experience`  
+**Status:** `PHASE_2F_C1_HTTP_GATE_CLEAN`
+
+**Branch:** `phase-2f-public-website-experience`
+
+**Implementation HEAD:** `5d5e774aa4a866d1dcbfa292bbede8bf061fbe8b`
 **Base HEAD:** `014c9698757945b5264ff54d6437746569ca7ff0`
 
 ---
@@ -58,9 +61,19 @@ Gate specifies `src/app/__phase2f-c1-preview` but Next.js App Router excludes `_
 | ESLint | clean (3 warnings in ignored `onedecore-chatgpt` tooling only) |
 | Production build | pass |
 | Preview routes | `/__phase2f-c1-preview` and `/phase2f-c1-preview` → HTTP 404 after deletion |
-| Production HTTP | 9/13 pass — 4 failures due to empty local DB after `db reset` (fixture seed unavailable in gate run); no C1 changes to `/`, `/portfolio`, or portfolio contracts |
+| Production HTTP endpoints | 13/13 pass |
+| Deep body assertions | 82/82 pass |
+| Migrations | 8 synchronized, 0 new |
+
+## Production HTTP closeout
+
+Executed against `npm run build` + `npm run start -- -p 3100` after deterministic local fixtures (`scripts/seed-local-fixtures.sql` via local Supabase Postgres).
+
+Tooling: `scripts/verify-production-http.ts` (13 endpoints), `onedecore-chatgpt/cursor-handoff/deep-verify.mjs` (82 assertions, ignored handoff evidence).
+
+Initial C1 commit gate recorded 9/13 because fixture seeding was omitted after `db reset`; rerunning the canonical fixture workflow restored 13/13 and 82/82 with no C1 source changes.
 
 ## Commit
 
 Message: `feat(public-site): add design tokens and primitives`  
-SHA: _(post-commit)_
+SHA: `5d5e774aa4a866d1dcbfa292bbede8bf061fbe8b`
