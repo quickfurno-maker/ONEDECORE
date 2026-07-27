@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2E3 Public Portfolio Experience Complete (Ready for Phase 3)
+**Current Phase:** Phase 2F-B Public Website Design Architecture Frozen (Ready for Phase 2F-C Implementation)
 
 ---
 
@@ -44,16 +44,25 @@ Phase 2E3A: Public Portfolio Experience & SEO Architecture Freeze (COMPLETED)
 Phase 2E3B / 2E3C / 2E3D: Public Portfolio Implementation, Remote E2E & Merge Closeout (COMPLETED)
    │
    ▼
-Phase 3: Design System Foundation
+Phase 2F-A: Public Website Research, Visual Concepts & Owner Selection (COMPLETED)
    │
    ▼
-Phase 4: Cinematic Public Homepage & Consultation Lead Form
+Phase 2F-B: Direction A Design System & Implementation Architecture Freeze (COMPLETED)
    │
    ▼
-Phase 5: Dedicated Portfolio Page, Case Studies & Internal CMS
+Phase 2F-C: Global Shell, Tokens & Homepage Implementation
    │
    ▼
-Phase 6: Service Pages, Process, Craftsmanship & Pune SEO Engine
+Phase 2F-D: Service Routes (/services/*)
+   │
+   ▼
+Phase 2F-E: About, Process, Contact & Legal Pages
+   │
+   ▼
+Phase 2F-F: Cross-Route QA, Accessibility, Performance, SEO & Closeout
+   │
+   ▼
+Phase 3: CRM & Lead Capture Expansion (formerly combined design phases)
    │
    ▼
 Phase 7: Internal CRM Foundation, Lead Management & Role Access
@@ -74,11 +83,8 @@ Phase 10: Security Hardening, E2E Testing & Hostinger VPS Deployment
 
 - **Phase 1 (A/B/C):** Governance, audit, architecture freeze, documentation baseline, clean Git init.
 - **Phase 2:** Scaffold Next.js 16.x stable, configure TypeScript, set up local Supabase CLI, draft database migrations, create RLS policies.
-- **Phase 3:** Build design system primitives, color tokens, typography showroom, responsive layout shells.
-- **Phase 4:** Build cinematic homepage, signature project carousel, interactive consultation lead booking form.
-- **Phase 5:** Build public `/portfolio`, room tag filters, case-study pages (`/portfolio/[slug]`), internal CMS (`/admin/portfolio`).
-- **Phase 6:** Build core service pages, process guide, craftsmanship spotlight, Pune locality SEO pages.
-- **Phase 7:** Build CRM portal (`/admin/leads`), lead pipeline views, activity tracking, role-based permissions.
+- **Phase 2F (A/B/C–F):** Owner-approved Direction A design research, Figma specification, architecture freeze, homepage implementation, service pages, supporting routes, hardening.
+- **Phase 3:** CRM portal (`/admin/leads`), lead pipeline views, activity tracking, role-based permissions.
 - **Phase 8:** Build commercial quotation builder (`/admin/quotations`), itemized pricing, version history, quote acceptance portal.
 - **Phase 9:** Build verified Meta WhatsApp webhook endpoints, template triggers, n8n async outbox dispatcher.
 - **Phase 10:** Comprehensive security audit, Lighthouse performance optimization, E2E test suites, Hostinger VPS deployment.

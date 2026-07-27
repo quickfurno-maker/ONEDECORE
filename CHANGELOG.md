@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2F-B (July 27, 2026)
+- Froze owner-approved Direction A public website design system and implementation architecture (documentation only; no production code changes).
+- Added design specifications: production spec, design tokens, component architecture, content/asset contracts, responsive accessibility, implementation plan (`docs/design/phase-2f-*.md`).
+- Added ADR-0018 (design system), ADR-0019 (motion architecture), ADR-0020 (content/asset boundaries).
+- Locked typography: Cormorant Garamond + Inter via `next/font/google`; warm stone/bronze palette; editorial service rows; CSS + IO + WAAPI motion stack.
+- Documented implementation slices 2F-C1 through 2F-F and route phase classification.
+- Audit: `docs/audits/phase-2f-b-design-and-architecture-freeze.md`.
+
 ### Added - Phase 2E3 (July 27, 2026)
 - Delivered public Portfolio experience: homepage featured section, paginated listing (`/portfolio`), dynamic detail routes (`/portfolio/[slug]`), `robots.ts`, and `sitemap.ts` (`205cb8deb081f68802589ab420bbb67b3f62e885`).
 - Added central site identity (`src/config/site.ts`) with canonical domain `https://onedecore.in` (no invented legal name).

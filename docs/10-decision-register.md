@@ -19,7 +19,7 @@
 | **DEC-0008** | Single modular monolith repository using `src/` directory layout | LOCKED | Maintains clean code organization without microservice overhead | No | Phase 2 | N/A |
 | **DEC-0009** | Portfolio storage split between private master assets and public web derivatives | LOCKED | Protects master high-res files while serving fast web assets | No | Phase 5 | Phase 1B Storage |
 | **DEC-0010** | RLS mandatory on 100% API-exposed application tables; anon access denied | LOCKED | Ensures complete database security and privacy compliance | No | Phase 2 | N/A |
-| **DEC-0011** | Typography pairing recommendation (*Playfair Display* + *Plus Jakarta Sans*) | RECOMMENDED | Pending Phase 3 design showroom evaluation & owner sign-off | YES | Phase 3 | N/A |
+| **DEC-0011** | Typography pairing recommendation (*Playfair Display* + *Plus Jakarta Sans*) | SUPERSEDED | Superseded by DEC-0038 (Cormorant Garamond + Inter) per owner Direction A selection | YES | Phase 2F-B | N/A |
 | **DEC-0012** | Qualification & discount approval thresholds remain configurable | LOCKED | Prevents hardcoded business rules; thresholds set by Management | YES | Phase 7 | Phase 1B (Hardcoded 10%) |
 | **DEC-0013** | Quotation acceptance defined as auditable client acceptance acknowledgement | LOCKED | Accurately describes digital acknowledgement boundary without e-sig claims | No | Phase 8 | Phase 1B |
 | **DEC-0014** | V1 No-ERP Boundary (accounting, procurement, inventory, labor scheduling excluded) | LOCKED | Preserves core V1 focus on customer acquisition & sales CRM | No | Phase 1B | N/A |
@@ -44,6 +44,12 @@
 | **DEC-0034** | Outcome A RLS verification & tag-based cache revalidation for public portfolio performance | LOCKED | Confirms existing RLS policies safely permit public read access to published items (zero migration) and invalidates Next.js cache tags on CMS edit | No | Phase 2E3A | N/A |
 | **DEC-0035** | Public portfolio delivery without route-level loading boundary; true HTTP 404 for invalid public portfolio requests | LOCKED | Whole-route Suspense loading shell committed HTTP 200 before notFound() could set status; removed loading.tsx to preserve true 404 semantics | No | Phase 2E3B | N/A |
 | **DEC-0036** | Database-side displayable filtering before bounded listing pagination (12 cards/page) | LOCKED | Prevents malformed projects from occupying page slots and hiding valid published projects from paginated results | No | Phase 2E3B | N/A |
+| **DEC-0037** | Public marketing site design direction: Direction A — Quiet Architectural Editorial | LOCKED | Owner selection July 27, 2026; warm stone editorial palette; highest trust/a11y/perf alignment | No | Phase 2F-B | N/A |
+| **DEC-0038** | Production typography: Cormorant Garamond (display) + Inter (body/UI) via next/font/google | LOCKED | Open-source OFL fonts; no runtime third-party CDN; supersedes DEC-0011 | No | Phase 2F-B | DEC-0011 |
+| **DEC-0039** | Public site motion stack: CSS + Intersection Observer + WAAPI; no default GSAP/Lenis/WebGL | LOCKED | Balanced motion per owner; GSAP only via future explicit ADR amendment | No | Phase 2F-B | N/A |
+| **DEC-0040** | Homepage service presentation: alternating editorial image/text rows — not identical cards | LOCKED | Preserves Direction A editorial rhythm | No | Phase 2F-C | N/A |
+| **DEC-0041** | Public marketing content boundaries: no invented contact, testimonials, or claims | LOCKED | OWNER CONTENT REQUIRED fields omitted from public render | No | Phase 2F-B | N/A |
+| **DEC-0042** | Homepage featured portfolio: restyle wrapper only; preserve Phase 2E3 CMS contracts | LOCKED | No DTO, cache, or RLS changes during public site redesign | No | Phase 2F-C | N/A |
 
 ---
 
@@ -57,3 +63,6 @@
 - [ADR-0015: Private Definer Status Transition Helper Pattern](ADR/ADR-0015-private-definer-status-transition-helper.md)
 - [ADR-0016: Public Portfolio Data Delivery Architecture](ADR/ADR-0016-public-portfolio-data-delivery.md)
 - [ADR-0017: Public Portfolio Cache & Revalidation Strategy](ADR/ADR-0017-public-portfolio-cache-and-revalidation.md)
+- [ADR-0018: Public Website Design System](ADR/ADR-0018-public-website-design-system.md)
+- [ADR-0019: Public Website Motion Architecture](ADR/ADR-0019-public-website-motion-architecture.md)
+- [ADR-0020: Public Website Content & Asset Boundaries](ADR/ADR-0020-public-website-content-and-asset-boundaries.md)
