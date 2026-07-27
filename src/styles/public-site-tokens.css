@@ -185,6 +185,20 @@
   color: var(--color-dark-section-muted);
 }
 
+[data-public-site] .ps-surface-dark .ps-type-heading-1,
+[data-public-site] .ps-surface-dark .ps-type-heading-2,
+[data-public-site] .ps-surface-dark .ps-type-heading-3,
+[data-public-site] .ps-surface-dark h1,
+[data-public-site] .ps-surface-dark h2,
+[data-public-site] .ps-surface-dark h3 {
+  color: var(--color-dark-section-text);
+}
+
+[data-public-site] .ps-surface-dark .ps-type-body,
+[data-public-site] .ps-surface-dark .ps-type-body-lg {
+  color: var(--color-dark-section-muted);
+}
+
 [data-public-site] :focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 3px;
@@ -1100,4 +1114,173 @@
 
 [data-public-site] .ps-featured-empty__body {
   color: var(--color-text-muted);
+}
+
+/* —— Phase 2F-C5B: Process —— */
+
+[data-public-site] .ps-process__heading {
+  margin-bottom: var(--space-12);
+}
+
+[data-public-site] .ps-process__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-10);
+  counter-reset: none;
+}
+
+@media (min-width: 1024px) {
+  [data-public-site] .ps-process__steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-8);
+    align-items: start;
+  }
+}
+
+[data-public-site] .ps-process__step-item {
+  margin: 0;
+  min-width: 0;
+}
+
+[data-public-site] .ps-process-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  height: 100%;
+}
+
+[data-public-site] .ps-process-step__ordinal {
+  letter-spacing: 0.12em;
+}
+
+[data-public-site] .ps-process-step__title {
+  color: var(--color-text-primary);
+}
+
+[data-public-site] .ps-process-step__description {
+  color: var(--color-text-muted);
+  max-width: 36ch;
+}
+
+@media (min-width: 1024px) {
+  [data-public-site] .ps-process-step__description {
+    max-width: none;
+  }
+}
+
+/* —— Phase 2F-C5B: Material Story (selective dark) —— */
+
+[data-public-site] .ps-material .ps-type-heading-2,
+[data-public-site] .ps-material .ps-type-heading-3,
+[data-public-site] .ps-material h2 {
+  color: var(--color-dark-section-text);
+}
+
+[data-public-site] .ps-material .ps-type-body {
+  color: var(--color-dark-section-muted);
+}
+
+[data-public-site] .ps-material__heading {
+  margin-bottom: var(--space-12);
+}
+
+[data-public-site] .ps-material__grid {
+  display: grid;
+  gap: var(--space-8);
+}
+
+@media (min-width: 1024px) {
+  [data-public-site] .ps-material__grid {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    gap: var(--space-8);
+    align-items: start;
+  }
+}
+
+[data-public-site] .ps-material__supporting {
+  display: grid;
+  gap: var(--space-8);
+}
+
+[data-public-site] .ps-material-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+[data-public-site] .ps-material-item__frame {
+  background: #12100e;
+}
+
+[data-public-site] .ps-material-item__frame img {
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  [data-public-site] .ps-material-item:hover .ps-material-item__frame img {
+    transform: scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-public-site] .ps-material-item__frame img {
+    transition: none;
+  }
+}
+
+[data-public-site] .ps-material-item__caption {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+[data-public-site] .ps-material-item__text {
+  color: var(--color-dark-section-muted);
+  max-width: 42ch;
+}
+
+/* —— Phase 2F-C5B: Trust —— */
+
+[data-public-site] .ps-trust__heading {
+  margin-bottom: var(--space-12);
+}
+
+[data-public-site] .ps-trust__pillars {
+  display: grid;
+  gap: var(--space-10);
+}
+
+@media (min-width: 768px) {
+  [data-public-site] .ps-trust__pillars {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-8);
+  }
+}
+
+[data-public-site] .ps-trust-pillar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+[data-public-site] .ps-trust-pillar__title {
+  color: var(--color-text-primary);
+}
+
+[data-public-site] .ps-trust-pillar__body {
+  color: var(--color-text-muted);
+  max-width: 36ch;
+}
+
+@media (min-width: 768px) {
+  [data-public-site] .ps-trust-pillar__body {
+    max-width: none;
+  }
 }

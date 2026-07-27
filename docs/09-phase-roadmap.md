@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2F-C4 Service Stories & Editorial Featured Portfolio Complete (Ready for Phase 2F-C5)
+**Current Phase:** Phase 2F-C5B Process, Material Story & Trust Complete (Ready for Phase 2F-C6)
 
 ---
 
@@ -62,7 +62,10 @@ Phase 2F-C3: Homepage Hero & Brand Proposition (COMPLETED — hero asset replace
 Phase 2F-C4: Service Stories & Editorial Featured Portfolio (COMPLETED)
    │
    ▼
-Phase 2F-C5–C6: Remaining Homepage Sections & Visual QA
+Phase 2F-C5B: Process, Material Story & Trust (COMPLETED — ConsultationBand deferred to 2F-E)
+   │
+   ▼
+Phase 2F-C6: Homepage Visual QA and Correction
    │
    ▼
 Phase 2F-D: Service Routes (/services/*)

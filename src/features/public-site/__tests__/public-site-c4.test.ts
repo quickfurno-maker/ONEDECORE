@@ -251,7 +251,7 @@ describe("Public Site C4 — Architecture guards", () => {
     }
   });
 
-  test("homepage order is hero → proposition → services → featured", () => {
+  test("homepage order is hero → proposition → services → featured before C5 sections", () => {
     const page = readApp("(public)/(home)/page.tsx");
     const body = page.slice(page.indexOf("return"));
     const order = [
@@ -266,9 +266,6 @@ describe("Public Site C4 — Architecture guards", () => {
       assert.ok(idx > cursor, name);
       cursor = idx;
     }
-    assert.equal(page.includes("ProcessSection"), false);
-    assert.equal(page.includes("MaterialStory"), false);
-    assert.equal(page.includes("TrustSection"), false);
     assert.equal(page.includes("ConsultationBand"), false);
   });
 

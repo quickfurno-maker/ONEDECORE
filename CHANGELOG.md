@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2F-C5B (July 27, 2026)
+- Added homepage `ProcessSection` with four owner-approved stages (Discover → Define → Detail → Deliver); calm design-journey narrative with no Process CTA (deferred to Phase 2F-E `/process`).
+- Added selective-dark `MaterialStorySection` with one primary and two supporting Category-C ONEDECORE-owned material WebP assets under `public/marketing/materials/` (≤120 KB each); not presented as completed project photography.
+- Added `TrustSection` with three owner-approved design-philosophy pillars; no statistics, testimonials, awards, or conversion CTA.
+- Deferred entire `ConsultationBand` to Phase 2F-E with `/contact`.
+- Homepage order: Hero → Brand Proposition → Services → Featured Portfolio → Process → Material Story → Trust → Footer.
+- Application/public tests: 183 → 202. Audit: `docs/audits/phase-2f-c5b-process-material-story-and-trust.md`.
+- No package, migration, admin, or Portfolio data-contract changes.
+
 ### Added - Phase 2F-C4 (July 27, 2026)
 - Added homepage `ServicesSection` with three alternating `ServiceEditorialRow` compositions (left/right/left) for Complete Home Interiors, Modular Kitchens, and Custom Wardrobes.
 - Added three Category-C ONEDECORE-owned 4:3 WebP service marketing assets under `public/marketing/services/` (≤120 KB each); not presented as completed project photography.

@@ -231,7 +231,6 @@ describe("Public Site C3 — Homepage composition", () => {
     assert.match(page, /BrandProposition/);
     assert.match(page, /ServicesSection/);
     assert.match(page, /FeaturedPortfolioSection/);
-    assert.equal(page.includes("ProcessSection"), false);
     assert.equal(page.includes("TODO"), false);
     const body = page.slice(page.indexOf("return"));
     const heroIdx = body.indexOf("<HeroSection");
