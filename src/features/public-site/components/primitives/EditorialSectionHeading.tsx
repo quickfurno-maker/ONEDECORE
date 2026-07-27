@@ -9,6 +9,8 @@ export interface EditorialSectionHeadingProps extends HTMLAttributes<HTMLDivElem
   description?: string;
   as?: HeadingLevel;
   align?: "left" | "center";
+  /** Applied to the heading element for aria-labelledby targets. */
+  headingId?: string;
 }
 
 const HEADING_TYPE_CLASS: Record<HeadingLevel, string> = {
@@ -24,6 +26,7 @@ export function EditorialSectionHeading({
   description,
   as: HeadingTag = "h2",
   align = "left",
+  headingId,
   className,
   ...props
 }: EditorialSectionHeadingProps) {
@@ -37,7 +40,10 @@ export function EditorialSectionHeading({
       {...props}
     >
       {overline ? <p className="ps-type-overline">{overline}</p> : null}
-      <HeadingTag className={cn(HEADING_TYPE_CLASS[HeadingTag], "text-[var(--color-text-primary)]")}>
+      <HeadingTag
+        id={headingId}
+        className={cn(HEADING_TYPE_CLASS[HeadingTag], "text-[var(--color-text-primary)]")}
+      >
         {title}
       </HeadingTag>
       {description ? (

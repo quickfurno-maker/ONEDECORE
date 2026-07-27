@@ -225,13 +225,20 @@ describe("Public Site C3 — BrandProposition contract", () => {
 });
 
 describe("Public Site C3 — Homepage composition", () => {
-  test("homepage composes hero, proposition, and featured portfolio only", () => {
+  test("homepage composes hero, proposition, services, and featured portfolio", () => {
     const page = readAppSource("(public)/(home)/page.tsx");
     assert.match(page, /HeroSection/);
     assert.match(page, /BrandProposition/);
+    assert.match(page, /ServicesSection/);
     assert.match(page, /FeaturedPortfolioSection/);
-    assert.equal(page.includes("ServiceEditorialRow"), false);
+    assert.equal(page.includes("ProcessSection"), false);
     assert.equal(page.includes("TODO"), false);
+    const body = page.slice(page.indexOf("return"));
+    const heroIdx = body.indexOf("<HeroSection");
+    const propIdx = body.indexOf("<BrandProposition");
+    const svcIdx = body.indexOf("<ServicesSection");
+    const featIdx = body.indexOf("<FeaturedPortfolioSection");
+    assert.ok(heroIdx < propIdx && propIdx < svcIdx && svcIdx < featIdx);
   });
 
   test("featured portfolio import path is unchanged", () => {

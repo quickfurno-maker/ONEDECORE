@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2F-C4 (July 27, 2026)
+- Added homepage `ServicesSection` with three alternating `ServiceEditorialRow` compositions (left/right/left) for Complete Home Interiors, Modular Kitchens, and Custom Wardrobes.
+- Added three Category-C ONEDECORE-owned 4:3 WebP service marketing assets under `public/marketing/services/` (≤120 KB each); not presented as completed project photography.
+- Deferred service CTAs until Phase 2F-D routes exist; `ServiceEditorialRow` supports optional typed `ctaHref` for tests and future activation.
+- Restyled CMS-powered `FeaturedPortfolioSection` to Direction A editorial presentation; `PortfolioCard` gains `listing` | `featuredEditorial` variants without changing DTO, cache, repository, or fetch count.
+- Homepage order: Hero → Brand Proposition → Services → Featured Portfolio.
+- Application/public tests: 166 → 183. Audit: `docs/audits/phase-2f-c4-service-stories-and-featured-portfolio.md`.
+- No package, migration, admin, or Portfolio data-contract changes.
+
 ### Fixed - Phase 2F-C3 hero asset replacement (July 27, 2026)
 - Replaced the failed C3 hero binary (procedural WebP, 9,240 bytes, flat gradient bands) with a generated category-C abstract architectural composition — layered travertine and limestone planes, slim bronze reveals, charcoal recesses. Final asset 1920 × 1280 WebP, 188,526 bytes, sRGB, metadata stripped, ONEDECORE-owned with public redistribution rights.
 - Added desktop and mobile focal points (`58% 45%` / `66% 50%`) driven through CSS custom properties so `object-position` is responsive.

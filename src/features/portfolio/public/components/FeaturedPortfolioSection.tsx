@@ -1,61 +1,99 @@
 import Link from "next/link";
+import { FEATURED_PORTFOLIO_COPY } from "../content/featured-portfolio";
 import { PortfolioCard } from "./PortfolioCard";
 import { getFeaturedProjects } from "../public-portfolio-cache";
+import type { PublicPortfolioCard } from "../types";
 
+export { FEATURED_PORTFOLIO_COPY };
+
+function layoutClass(count: number): string {
+  if (count <= 0) return "ps-featured-grid--empty";
+  if (count === 1) return "ps-featured-grid--one";
+  if (count === 2) return "ps-featured-grid--two";
+  if (count === 3) return "ps-featured-grid--three";
+  return "ps-featured-grid--many";
+}
+
+function FeaturedEmptyState() {
+  return (
+    <div id="featured-empty-state" className="ps-featured-empty">
+      <h3 className="ps-type-heading-3 ps-featured-empty__title">
+        {FEATURED_PORTFOLIO_COPY.emptyHeading}
+      </h3>
+      <p className="ps-type-body ps-featured-empty__body">{FEATURED_PORTFOLIO_COPY.emptyBody}</p>
+      <Link
+        id="featured-empty-cta-button"
+        href="/portfolio"
+        className="ps-featured-empty__cta"
+      >
+        {FEATURED_PORTFOLIO_COPY.exploreLabel}
+        <span aria-hidden="true"> →</span>
+      </Link>
+    </div>
+  );
+}
+
+function FeaturedGrid({ cards }: { cards: PublicPortfolioCard[] }) {
+  return (
+    <div
+      id="featured-cards-grid"
+      className={`ps-featured-grid ${layoutClass(cards.length)}`}
+      data-count={cards.length}
+    >
+      {cards.map((card, idx) => (
+        <div
+          key={card.slug}
+          className={`ps-featured-grid__item ps-featured-grid__item--${idx + 1}`}
+        >
+          <PortfolioCard
+            card={card}
+            eagerImage={idx < 3}
+            variant="featuredEditorial"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Homepage featured portfolio — editorial presentation only.
+ * Data contract: single getFeaturedProjects() call; DTO/cache/repo unchanged.
+ */
 export async function FeaturedPortfolioSection() {
   const featuredCards = await getFeaturedProjects();
 
   return (
-    <section id="featured-portfolio-section" className="w-full py-16 bg-neutral-50 dark:bg-neutral-950">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
-          <div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white sm:text-4xl">
-              Featured Portfolio
+    <section
+      id="featured-portfolio-section"
+      className="ps-featured"
+      aria-labelledby="featured-portfolio-heading"
+    >
+      <div className="ps-featured__inner">
+        <header className="ps-featured__header">
+          <div className="ps-featured__intro">
+            <p className="ps-type-overline">{FEATURED_PORTFOLIO_COPY.overline}</p>
+            <h2 id="featured-portfolio-heading" className="ps-type-heading-2">
+              {FEATURED_PORTFOLIO_COPY.heading}
             </h2>
-            <p className="mt-2 text-base text-neutral-600 dark:text-neutral-400 max-w-2xl">
-              Explore our recent complete home interior transformations and bespoke design solutions.
+            <p className="ps-type-body ps-featured__description">
+              {FEATURED_PORTFOLIO_COPY.description}
             </p>
           </div>
           <Link
             id="featured-view-all-link"
             href="/portfolio"
-            className="inline-flex items-center text-sm font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+            className="ps-featured__explore"
           >
-            View All Projects &rarr;
+            {FEATURED_PORTFOLIO_COPY.exploreLabel}
+            <span aria-hidden="true"> →</span>
           </Link>
-        </div>
+        </header>
 
         {featuredCards.length > 0 ? (
-          <div
-            id="featured-cards-grid"
-            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {featuredCards.map((card, idx) => (
-              <PortfolioCard key={card.slug} card={card} eagerImage={idx < 3} />
-            ))}
-          </div>
+          <FeaturedGrid cards={featuredCards} />
         ) : (
-          <div
-            id="featured-empty-state"
-            className="rounded-2xl border border-dashed border-neutral-300 p-12 text-center dark:border-neutral-800 bg-white dark:bg-neutral-900"
-          >
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
-              Curated portfolio projects coming soon.
-            </h3>
-            <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-              We are finalizing documentation for our latest interior transformations.
-            </p>
-            <div className="mt-6">
-              <Link
-                id="featured-empty-cta-button"
-                href="/portfolio"
-                className="inline-flex items-center rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
-              >
-                Browse Portfolio Directory
-              </Link>
-            </div>
-          </div>
+          <FeaturedEmptyState />
         )}
       </div>
     </section>

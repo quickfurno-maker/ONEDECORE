@@ -1,6 +1,7 @@
 import { FeaturedPortfolioSection } from "@/features/portfolio/public/components/FeaturedPortfolioSection";
 import { BrandProposition } from "@/features/public-site/components/home/BrandProposition";
 import { HeroSection } from "@/features/public-site/components/home/HeroSection";
+import { ServicesSection } from "@/features/public-site/components/home/ServicesSection";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ export default function HomePage() {
     <>
       <HeroSection />
       <BrandProposition />
+      <ServicesSection />
       <FeaturedPortfolioSection />
     </>
   );
