@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2F-B Public Website Design Architecture Frozen (Ready for Phase 2F-C Implementation)
+**Current Phase:** Phase 2F-C1 Design Tokens & Primitives Complete (Ready for Phase 2F-C2)
 
 ---
 
@@ -50,7 +50,13 @@ Phase 2F-A: Public Website Research, Visual Concepts & Owner Selection (COMPLETE
 Phase 2F-B: Direction A Design System & Implementation Architecture Freeze (COMPLETED)
    │
    ▼
-Phase 2F-C: Global Shell, Tokens & Homepage Implementation
+Phase 2F-C1: Design Tokens, Typography & Shared Primitives (COMPLETED)
+   │
+   ▼
+Phase 2F-C2: Header, Mobile Navigation, Footer & Shell
+   │
+   ▼
+Phase 2F-C3–C6: Homepage Sections & Visual QA
    │
    ▼
 Phase 2F-D: Service Routes (/services/*)

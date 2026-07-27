@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2F-C1 (July 27, 2026)
+- Implemented Direction A public-site design tokens (`src/styles/public-site-tokens.css`) scoped to `[data-public-site]`.
+- Added Cormorant Garamond + Inter font module via `next/font/google` (`src/features/public-site/fonts.ts`).
+- Added shared primitives: Container, Section, EditorialSectionHeading, PrimaryButton, SecondaryLink, ImageFrame, VisuallyHidden, SkipLink, Reveal.
+- Added `useReducedMotion` hook and IO-based Reveal progressive enhancement (CSS + Intersection Observer only).
+- Expanded application tests for public-site token and architecture guard contracts.
+- Audit: `docs/audits/phase-2f-c1-design-tokens-and-primitives.md`.
+- No package, migration, homepage, header, footer, or Portfolio contract changes.
+
 ### Added - Phase 2F-B (July 27, 2026)
 - Froze owner-approved Direction A public website design system and implementation architecture (documentation only; no production code changes).
 - Added design specifications: production spec, design tokens, component architecture, content/asset contracts, responsive accessibility, implementation plan (`docs/design/phase-2f-*.md`).
