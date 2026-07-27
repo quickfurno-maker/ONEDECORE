@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2F-C2 (July 27, 2026)
+- Implemented Direction A public-site shell: `PublicSiteShell`, `PublicHeader`, `DesktopNavigation`, `MobileNavigation`, `PublicFooter`.
+- Activated shell on existing public routes via `src/app/(public)/layout.tsx` (URLs unchanged; admin/auth isolated).
+- Production header uses solid mode; overlay mode implemented for C3; consultation CTA deferred until `/contact` exists.
+- Safe production navigation: Home and Portfolio only; footer lists approved service names without future-route links.
+- Added scroll header hook (80px threshold), body scroll lock, mobile focus trap, and +23 automated C2 contract tests (140 total).
+- Audit: `docs/audits/phase-2f-c2-public-shell-navigation-footer.md`.
+- No package, migration, homepage section, or Portfolio data-contract changes.
+
 ### Added - Phase 2F-C1 (July 27, 2026)
 - Implemented Direction A public-site design tokens (`src/styles/public-site-tokens.css`) scoped to `[data-public-site]`.
 - Added Cormorant Garamond + Inter font module via `next/font/google` (`src/features/public-site/fonts.ts`).

@@ -6,8 +6,8 @@ export const dynamic = "force-dynamic";
 
 export default function HomePage() {
   return (
-    <div id="homepage-container" className="flex flex-col min-h-screen">
-      {/* Hero Section */}
+    <div id="homepage-container" className="flex flex-col">
+      {/* Hero Section — scaffold unchanged in C2; C3 replaces */}
       <section id="homepage-hero-section" className="flex flex-col items-center justify-center py-20 px-4 text-center bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
         <div className="max-w-3xl space-y-6">
           <h1 className="text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-white sm:text-6xl">
@@ -31,7 +31,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Projects Section */}
       <FeaturedPortfolioSection />
     </div>
   );

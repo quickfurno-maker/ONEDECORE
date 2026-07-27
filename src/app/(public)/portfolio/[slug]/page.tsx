@@ -12,10 +12,6 @@ interface ProjectDetailPageProps {
   params: Promise<{ slug: string }>;
 }
 
-/**
- * Rejects malformed slugs before querying so traversal and grammar violations
- * never reach Supabase.
- */
 async function loadPublishedProject(slugPromise: Promise<{ slug: string }>) {
   const { slug } = await slugPromise;
 
@@ -69,70 +65,69 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
   const canonicalUrl = canonicalPortfolioUrl(project.slug);
 
-  // Construct structured data graph
   const jsonLdGraph = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "WebPage",
         "@id": canonicalUrl,
-        "url": canonicalUrl,
-        "name": project.title,
-        "description": project.summary,
-        "isPartOf": {
+        url: canonicalUrl,
+        name: project.title,
+        description: project.summary,
+        isPartOf: {
           "@type": "WebSite",
-          "name": SITE_CONFIG.name,
-          "url": SITE_CONFIG.url,
+          name: SITE_CONFIG.name,
+          url: SITE_CONFIG.url,
         },
       },
       {
         "@type": "BreadcrumbList",
-        "itemListElement": [
+        itemListElement: [
           {
             "@type": "ListItem",
-            "position": 1,
-            "name": "Home",
-            "item": SITE_CONFIG.url,
+            position: 1,
+            name: "Home",
+            item: SITE_CONFIG.url,
           },
           {
             "@type": "ListItem",
-            "position": 2,
-            "name": "Portfolio",
-            "item": `${SITE_CONFIG.url}/portfolio`,
+            position: 2,
+            name: "Portfolio",
+            item: `${SITE_CONFIG.url}/portfolio`,
           },
           {
             "@type": "ListItem",
-            "position": 3,
-            "name": project.title,
-            "item": canonicalUrl,
+            position: 3,
+            name: project.title,
+            item: canonicalUrl,
           },
         ],
       },
       {
         "@type": "CreativeWork",
         "@id": `${canonicalUrl}#creativework`,
-        "name": project.title,
-        "description": project.summary,
-        "datePublished": project.publishedAt,
-        "publisher": {
+        name: project.title,
+        description: project.summary,
+        datePublished: project.publishedAt,
+        publisher: {
           "@type": "Organization",
-          "name": SITE_CONFIG.name,
-          "url": SITE_CONFIG.url,
+          name: SITE_CONFIG.name,
+          url: SITE_CONFIG.url,
         },
-        "image": [
+        image: [
           {
             "@type": "ImageObject",
-            "url": project.cover.url,
-            "width": project.cover.width,
-            "height": project.cover.height,
-            "caption": project.cover.caption || project.cover.altText,
+            url: project.cover.url,
+            width: project.cover.width,
+            height: project.cover.height,
+            caption: project.cover.caption || project.cover.altText,
           },
           ...project.gallery.map((img) => ({
             "@type": "ImageObject",
-            "url": img.url,
-            "width": img.width,
-            "height": img.height,
-            "caption": img.caption || img.altText,
+            url: img.url,
+            width: img.width,
+            height: img.height,
+            caption: img.caption || img.altText,
           })),
         ],
       },
@@ -140,14 +135,12 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   };
 
   return (
-    <main id="project-detail-main" className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-12">
-      {/* JSON-LD Script */}
+    <div id="project-detail-main" className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-12">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdGraph) }}
       />
 
-      {/* Breadcrumb Navigation */}
       <nav id="detail-breadcrumb" aria-label="Breadcrumb" className="text-xs text-neutral-500 dark:text-neutral-400">
         <ol className="flex items-center gap-2">
           <li>
@@ -168,7 +161,6 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         </ol>
       </nav>
 
-      {/* Header */}
       <header className="space-y-4">
         <div className="flex flex-wrap gap-2">
           {project.services.map((svc) => (
@@ -187,7 +179,6 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           {project.summary}
         </p>
 
-        {/* Project Metadata Specs */}
         <div className="flex flex-wrap items-center gap-6 pt-4 text-sm text-neutral-600 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-800">
           {project.locationLabel && (
             <div>
@@ -210,7 +201,6 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         </div>
       </header>
 
-      {/* Main Description */}
       {project.description && (
         <section id="project-description-section" className="prose prose-neutral dark:prose-invert max-w-none">
           <h2 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white mb-4">
@@ -222,12 +212,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         </section>
       )}
 
-      {/* Gallery */}
       <PortfolioGallery
         cover={project.cover}
         gallery={project.gallery}
         projectTitle={project.title}
       />
-    </main>
+    </div>
   );
 }
