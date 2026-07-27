@@ -14,21 +14,45 @@
 
 ## Hero asset provenance
 
+> **Superseded 27 Jul 2026.** The first C3 asset (procedural WebP, 9,240 bytes) failed the
+> rendered visual-quality gate — it read as flat horizontal gradient bands rather than a
+> premium architectural editorial surface. It was replaced under the hero-replacement gate.
+> See *Hero asset replacement* below for the production record.
+
 | Field | Value |
 |---|---|
 | Path | `public/marketing/hero/homepage-hero-architectural.webp` |
-| Category | **C** — owner-approved abstract architectural surface (not presented as completed work) |
-| Source | Procedurally authored warm stone/bronze marketing surface (ONEDECORE-owned) |
+| Category | **C** — abstract architectural marketing artwork (not presented as completed work) |
+| Source method | Generated in-editor from a written art-direction brief, then optimised locally with the existing `sharp` dependency |
+| Generation capability | Cursor in-editor image generation (three candidates authored, one selected) |
+| Generation date | 27 July 2026 |
 | Owner/provider | ONEDECORE / quickfurno-maker |
-| Public GitHub redistribution | **Yes** (ONEDECORE-owned binary) |
-| Website use | Yes |
-| Real ONEDECORE project photo | **No** |
-| Stock / generated finished interior | **No** |
-| Dimensions | 1920 × 1280 |
-| Measured bytes | 9,240 (≤ 200 KB target) |
-| Format | WebP |
-| Focal point | `50% 42%` |
-| Alt | Abstract warm stone architectural surface with bronze accents |
+| Generated artwork | **Yes** |
+| Depicts real project work | **No** |
+| Website use permission | Yes |
+| Public GitHub redistribution | **Yes** (ONEDECORE-owned binary, no third-party licence encumbrance) |
+| Attribution requirement | None |
+| Source dimensions / format | 1536 × 1024 PNG (native 3:2) |
+| Final dimensions / format | 1920 × 1280 WebP |
+| Final encoded bytes | 188,526 (120–200 KB budget) |
+| Encoder settings | `sharp` lanczos3 resize → unsharp (σ 0.6) → `webp` quality 78, effort 6, smart subsample |
+| Colour / metadata | sRGB, no alpha, EXIF and ICC stripped |
+| Desktop focal point | `58% 45%` |
+| Mobile focal point | `66% 50%` |
+| Alt | Abstract architectural composition of layered travertine and limestone planes with slim bronze reveals and deep charcoal shadow |
+| Presentation boundary | Marketing artwork only; never captioned or implied as an ONEDECORE client project |
+
+### Hero asset replacement
+
+| Item | Result |
+|---|---|
+| Candidates authored | 3 (A, B, C) |
+| Candidate review | 100% and 200% zoom, plus 1440/1280/1024/390/360/844-landscape crops |
+| Rejected A | Bright plaster left plane forced an excessive scrim for white copy |
+| Rejected B | Bronze framing read heavy and the palette drifted warm |
+| Selected C | Layered travertine/limestone planes, slim bronze reveals, charcoal recesses, mid-tone left negative space, focal detail right of centre |
+| 200% zoom | Authentic travertine pitting and veining; no banding, blocking, blur or repeated procedural pattern |
+| Remote hotlink / private Storage path | None — local `public/` binary only |
 
 ---
 
@@ -151,11 +175,92 @@ Viewports exercised: 1440×1024, 1280×800, 1024×768, 768×1024, 390×844, 360�
 
 | Metric | Value |
 |---|---|
-| Hero asset bytes | 9,240 |
+| Hero asset bytes | 188,526 |
 | Hero dimensions | 1920 × 1280 |
-| LCP candidate | Hero `next/image` with `priority` |
-| CLS | Stable `fill` + `object-cover` + fixed min-heights |
+| Request URL | `/_next/image?url=%2Fmarketing%2Fhero%2Fhomepage-hero-architectural.webp&w=1920&q=75` |
+| Selected responsive candidate | `w=1920` from the `next/image` srcset (640…3840) |
+| Encoded / decoded body size | 188,526 / 188,526 bytes (optimiser passthrough — source already WebP at target width) |
+| Preload behaviour | `priority` emits a `<link rel="preload" as="image">`; resource initiator recorded as `link` |
+| LCP candidate | Hero `next/image` (`priority`, no lazy attribute) |
+| CLS | No layout shift observed — `fill` + `object-cover` inside fixed hero min-heights |
+| Client JS delta | 0 — no new client component, hook, or dependency |
+| Long tasks | None observed during load or scroll |
+| Remote hotlink / private path | None |
 | New motion dependencies | None |
+
+> Lighthouse and Core Web Vitals field scores were not collected; only directly observed
+> browser network and timing values are recorded above.
+
+---
+
+## Contrast and scrim decision (hero replacement)
+
+The previous review found supporting text too weak over pale stone. The flat bronze wash
+(`--color-scrim`, 25 %) was replaced with a **restrained directional scrim** — no full-frame
+dark wash, no blur, no glassmorphism, no amber drift:
+
+- Desktop: neutral-charcoal left-to-right gradient (0.66 → 0.63 @ 40 % → 0.60 @ 53 % → 0.22 @ 66 % → 0.04 @ 76 % → 0), plus a top band (0.55 → 0 by 24 %) for the overlay header. The right 34 % of the artwork carries no scrim.
+- Mobile: bottom-weighted gradient (0.66 held to 55 % → 0.22 → 0.04 → 0) plus the same header band; hero `min-height` raised to `min(80vh, 700px)` so clean artwork remains above the copy.
+- Supporting copy moved off `--color-dark-section-muted` to a hero-scoped `--color-hero-supporting: #f0ece6`.
+
+Worst-case measured contrast (source pixels composited with the exact CSS gradient stops):
+
+| Element | Desktop 1440 | Mobile 390 | Required |
+|---|---|---|---|
+| Header wordmark | 15.4:1 | 8.9:1 | 4.5:1 |
+| Header navigation / menu trigger | 8.1:1 | 5.0:1 | 4.5:1 / 3:1 |
+| Brand overline | 11.9:1 | 5.5:1 | 4.5:1 |
+| H1 | 7.2:1 | 5.4:1 | 3:1 |
+| Supporting copy | 5.7:1 | 5.0:1 | 4.5:1 |
+| CTA | 7.6:1 | 5.4:1 | 4.5:1 |
+
+---
+
+## Rendered visual closeout (hero replacement)
+
+**Environment.** Docker Desktop running; `supabase start` + `db reset` + `scripts/seed-local-fixtures.sql`
+piped through `psql`. Fixture verified: published 16, draft 1, archived 1, featured 1,
+portfolio page 1 renders 12 cards. Single production build served on `http://localhost:3100`
+with no rebuild during capture.
+
+**Browser.** Cursor browser (Chromium webview) with CDP viewport emulation.
+
+| Check | Result |
+|---|---|
+| Overlay header at top | `ps-header--overlay ps-header--on-dark`, `background: rgba(0,0,0,0)`, `data-scrolled="false"` |
+| Header after 400 px scroll | `ps-header--solid ps-header--scrolled`, `background: #fdfcfa`, wordmark `#1a1816` |
+| Overlay restored at top | Yes |
+| Header transition | `background-color/border-color/color 300 ms cubic-bezier(0.4, 0, 0.2, 1)` |
+| Hero motion (motion allowed) | `ps-hero-scale-in`, 800 ms, `cubic-bezier(0, 0, 0.2, 1)`, `forwards`, ends at `scale(1)` |
+| Hero motion (reduced motion) | `data-hero-motion="static"`, `animation-name: none`, `transform: none` |
+| Mobile navigation | Opens to `role="dialog" aria-modal="true"`, initial focus on close control, Escape/backdrop/link close paths present |
+| Hero CTA | Activates to `/portfolio`; destination header renders solid; 12 seeded cards |
+| Horizontal overflow | None — `scrollWidth === clientWidth` at 1440, 768, 390, 360 |
+| Image errors / broken requests | None; hero served locally, no remote hotlink, no Storage path |
+| Visible CLS | None observed |
+
+**Rendered evidence (ignored path)** — `onedecore-chatgpt/phase-2f-c3/hero-replacement/`:
+`final-visual-proof/` (1440, 1280, 1024, 768, 390, 360, 844×390 landscape, mobile nav open),
+`candidates/` (candidate zoom and crop review), `composites/` (exact object-fit + scrim math),
+`visual-closeout-ledger.md`.
+
+**Known environment limitation.** The embedded Cursor browser rasterises the page into a
+~593 px surface, so wide-viewport captures are produced by scaled CDP clips and lose
+per-pixel sharpness. Asset detail was therefore verified separately at native resolution
+(raw asset in-browser at 100 %, plus 200 % source crops), and the desktop scrim was validated
+by replicating the exact `object-fit: cover` and CSS gradient maths against the shipped binary.
+
+### Direction A mismatch ledger
+
+Full 32-entry ledger: `onedecore-chatgpt/phase-2f-c3/hero-replacement/visual-closeout-ledger.md`.
+Summary — 0 material mismatches remaining; 4 previously material items corrected in this pass:
+
+| Previously material | Correction |
+|---|---|
+| Hero artwork read as flat gradient bands | Replaced with generated layered travertine/limestone composition |
+| Supporting-text contrast below AA over pale stone | Directional scrim + hero-scoped `#f0ece6` supporting tone (5.7:1 desktop, 5.0:1 mobile) |
+| Header navigation contrast over bright hero region | Added 0.55 top scrim band (8.1:1 desktop) |
+| Mobile crop lost the focal composition | Mobile focal point `66% 50%` + `min(80vh, 700px)` min-height |
 
 ---
 

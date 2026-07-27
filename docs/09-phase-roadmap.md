@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
 
 **Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2F-C3 Homepage Hero & Brand Proposition Complete (Ready for Phase 2F-C4)
+**Current Phase:** Phase 2F-C3 Homepage Hero & Brand Proposition Complete — hero asset replaced and rendered visual gate closed (Ready for Phase 2F-C4)
 
 ---
 
@@ -56,7 +56,7 @@ Phase 2F-C1: Design Tokens, Typography & Shared Primitives (COMPLETED)
 Phase 2F-C2: Header, Mobile Navigation, Footer & Shell (COMPLETED)
    │
    ▼
-Phase 2F-C3: Homepage Hero & Brand Proposition (COMPLETED)
+Phase 2F-C3: Homepage Hero & Brand Proposition (COMPLETED — hero asset replaced, rendered visual gate clean)
    │
    ▼
 Phase 2F-C4–C6: Remaining Homepage Sections & Visual QA

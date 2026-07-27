@@ -93,7 +93,17 @@ describe("Public Site C1 — Architecture guards", () => {
     assert.equal(css.includes("#f59e0b"), false);
     assert.equal(css.includes("#d97706"), false);
     assert.equal(css.includes("backdrop-filter"), false);
-    assert.equal(css.includes("linear-gradient"), false);
+    assert.equal(css.includes("radial-gradient"), false);
+    assert.equal(css.includes("conic-gradient"), false);
+
+    // Gradients are permitted only for the C3 directional hero scrim.
+    const gradientRules = [...css.matchAll(/([^{}]+)\{([^{}]*linear-gradient[^{}]*)\}/g)];
+    assert.ok(gradientRules.length > 0);
+    for (const [, selector, body] of gradientRules) {
+      assert.match(selector.trim(), /\.ps-hero__scrim$/);
+      assert.equal(/#[0-9a-f]{3,8}/i.test(body), false, "scrim must use tokens only");
+      assert.equal(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+/.test(body), false, "scrim must use tokens only");
+    }
   });
 
   test("fonts.ts does not request runtime Google Fonts CDN", () => {

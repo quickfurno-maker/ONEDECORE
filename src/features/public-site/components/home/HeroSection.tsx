@@ -1,4 +1,5 @@
 import Image from "next/image";
+import type { CSSProperties } from "react";
 import { HOMEPAGE_HERO_ASSET } from "../../config/home-hero";
 import { HOMEPAGE_COPY } from "../../content/homepage";
 import { Container } from "../primitives/Container";
@@ -12,6 +13,12 @@ export function HeroSection() {
       id="homepage-hero-section"
       className="ps-hero"
       aria-label="Introduction"
+      style={
+        {
+          "--ps-hero-focal": HOMEPAGE_HERO_ASSET.focalPoint,
+          "--ps-hero-focal-mobile": HOMEPAGE_HERO_ASSET.mobileFocalPoint,
+        } as CSSProperties
+      }
     >
       <HeroMediaMotion>
         <Image
@@ -21,7 +28,6 @@ export function HeroSection() {
           priority
           sizes="100vw"
           className="ps-hero__image"
-          style={{ objectPosition: HOMEPAGE_HERO_ASSET.focalPoint }}
         />
       </HeroMediaMotion>
       <div className="ps-hero__scrim" aria-hidden="true" />
@@ -31,7 +37,7 @@ export function HeroSection() {
           <h1 className="ps-type-display-xl ps-hero__title text-balance max-w-[12ch]">
             {HOMEPAGE_COPY.h1}
           </h1>
-          <p className="ps-type-body-lg ps-hero__supporting text-[var(--color-dark-section-muted)] max-w-[36ch]">
+          <p className="ps-type-body-lg ps-hero__supporting max-w-[36ch]">
             {HOMEPAGE_COPY.supportingLine}
           </p>
           <div className="ps-hero__cta">

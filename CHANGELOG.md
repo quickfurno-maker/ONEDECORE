@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Phase 2F-C3 hero asset replacement (July 27, 2026)
+- Replaced the failed C3 hero binary (procedural WebP, 9,240 bytes, flat gradient bands) with a generated category-C abstract architectural composition — layered travertine and limestone planes, slim bronze reveals, charcoal recesses. Final asset 1920 × 1280 WebP, 188,526 bytes, sRGB, metadata stripped, ONEDECORE-owned with public redistribution rights.
+- Added desktop and mobile focal points (`58% 45%` / `66% 50%`) driven through CSS custom properties so `object-position` is responsive.
+- Replaced the flat 25 % bronze wash with a restrained directional scrim (left-to-right on desktop, bottom-weighted on mobile, plus a header band) and moved hero supporting copy to a hero-scoped `--color-hero-supporting` tone; all hero and overlay-header text now clears WCAG AA.
+- Raised mobile hero `min-height` to `min(80vh, 700px)` so artwork remains visible above the copy.
+- Approved copy, CTA destination, section order, motion contract, and Portfolio behaviour unchanged.
+- Application/public tests: 162 → 166, all passing. No package, migration, admin, or Portfolio contract changes.
+
 ### Added - Phase 2F-C3 (July 27, 2026)
 - Implemented Direction A homepage hero (`HeroSection`) with full-bleed category-C abstract architectural WebP, bronze scrim, and `HeroMediaMotion` client island for balanced scale reveal.
 - Added `BrandProposition` with restrained factual copy; homepage composition: Hero → Brand Proposition → existing `FeaturedPortfolioSection`.

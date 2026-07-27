@@ -87,27 +87,73 @@ describe("Public Site C3 — HeroSection contract", () => {
     assert.equal(source.includes("https://"), false);
     assert.match(asset, /\/marketing\/hero\/homepage-hero-architectural\.webp/);
     assert.match(asset, /provenanceCategory: "C"/);
+    assert.equal(asset.includes("http://"), false);
+    assert.equal(asset.includes("https://"), false);
+    assert.equal(asset.includes("supabase"), false);
+    assert.equal(asset.includes("/storage/v1/"), false);
   });
 
-  test("hero asset contract records dimensions and focal point", () => {
+  test("hero asset provenance stays category C marketing artwork", () => {
+    const asset = readSource("config/home-hero.ts");
+    assert.match(asset, /not a photograph of a\s+\* completed client project/);
+    assert.match(asset, /Public-repository redistribution permitted/);
+    assert.equal(/completed project photograph of ONEDECORE/i.test(asset), false);
+  });
+
+  test("hero asset contract records dimensions, bytes and focal points", () => {
     const asset = readSource("config/home-hero.ts");
     assert.match(asset, /width: 1920/);
     assert.match(asset, /height: 1280/);
-    assert.match(asset, /focalPoint: "50% 42%"/);
+    assert.match(asset, /focalPoint: "58% 45%"/);
+    assert.match(asset, /mobileFocalPoint: "66% 50%"/);
+    assert.match(asset, /bytes: 188526/);
     const assetPath = join(REPO_ROOT, "public/marketing/hero/homepage-hero-architectural.webp");
     assert.equal(existsSync(assetPath), true);
     const bytes = statSync(assetPath).size;
-    assert.ok(bytes <= 200_000);
+    assert.equal(bytes, 188_526);
+    assert.ok(bytes >= 120_000, "hero must retain material detail");
+    assert.ok(bytes <= 200_000, "hero must stay inside the asset weight budget");
+    const header = readFileSync(assetPath).subarray(0, 12);
+    assert.equal(header.subarray(0, 4).toString("ascii"), "RIFF");
+    assert.equal(header.subarray(8, 12).toString("ascii"), "WEBP");
   });
 
-  test("hero applies bronze scrim without glassmorphism or image wash class", () => {
+  test("hero alt text describes abstract material artwork, not a project", () => {
+    const asset = readSource("config/home-hero.ts");
+    assert.match(asset, /alt: "Abstract architectural composition/);
+    for (const banned of ["project", "client", "home in", "apartment", "villa"]) {
+      const altLine = asset.split("\n").find((line) => line.includes("alt:")) ?? "";
+      assert.equal(altLine.toLowerCase().includes(banned), false, banned);
+    }
+  });
+
+  test("hero focal points drive object-position through CSS variables", () => {
+    const hero = readSource("components/home/HeroSection.tsx");
+    const css = readFileSync(join(SRC_ROOT, "styles/public-site-tokens.css"), "utf8");
+    assert.match(hero, /"--ps-hero-focal": HOMEPAGE_HERO_ASSET\.focalPoint/);
+    assert.match(hero, /"--ps-hero-focal-mobile": HOMEPAGE_HERO_ASSET\.mobileFocalPoint/);
+    assert.match(css, /object-position: var\(--ps-hero-focal,/);
+    assert.match(
+      css,
+      /@media \(max-width: 767px\)[\s\S]*?object-position: var\(--ps-hero-focal-mobile,/
+    );
+  });
+
+  test("hero uses a directional scrim without glassmorphism or full-frame wash", () => {
     const hero = readSource("components/home/HeroSection.tsx");
     const css = readFileSync(join(SRC_ROOT, "styles/public-site-tokens.css"), "utf8");
     assert.match(hero, /ps-hero__scrim/);
-    assert.match(css, /--color-scrim: rgba\(139, 111, 71, 0\.25\)/);
-    assert.match(css, /\.ps-hero__scrim/);
+    assert.match(css, /--color-hero-scrim-deep: rgba\(24, 21, 18, 0\.66\)/);
+    assert.match(css, /--color-hero-supporting: #f0ece6/);
+    assert.match(css, /\.ps-hero__scrim[\s\S]*?linear-gradient\(\s*to right/);
+    assert.match(
+      css,
+      /@media \(max-width: 767px\)[\s\S]*?\.ps-hero__scrim[\s\S]*?linear-gradient\(\s*to top/
+    );
+    assert.match(css, /\.ps-hero__supporting\s*\{\s*color: var\(--color-hero-supporting\)/);
     assert.equal(css.includes("backdrop-filter"), false);
     assert.equal(hero.includes("backdrop-filter"), false);
+    assert.equal(hero.includes("--color-dark-section-muted"), false);
   });
 
   test("hero motion is isolated to HeroMediaMotion client island", () => {
@@ -210,6 +256,25 @@ describe("Public Site C3 — Portfolio and admin preservation", () => {
       const full = join(portfolioRoot, file);
       const stat = statSync(full);
       assert.ok(stat.mtimeMs > 0);
+    }
+  });
+
+  test("hero replacement introduces no new runtime dependency", () => {
+    const pkg = JSON.parse(
+      readFileSync(join(REPO_ROOT, "package.json"), "utf8")
+    ) as { dependencies: Record<string, string>; devDependencies: Record<string, string> };
+    assert.deepEqual(Object.keys(pkg.dependencies).sort(), [
+      "@supabase/ssr",
+      "@supabase/supabase-js",
+      "next",
+      "react",
+      "react-dom",
+      "server-only",
+      "sharp",
+    ]);
+    const all = { ...pkg.dependencies, ...pkg.devDependencies };
+    for (const forbidden of ["gsap", "motion", "framer-motion", "lenis", "three"]) {
+      assert.equal(forbidden in all, false, forbidden);
     }
   });
 
