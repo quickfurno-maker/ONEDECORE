@@ -73,6 +73,8 @@ describe("Public Site C1 — Architecture guards", () => {
       join(SRC_ROOT, "app/__phase2f-c1-preview"),
       join(SRC_ROOT, "app/phase2f-c1-preview"),
       join(SRC_ROOT, "app/__phase2f-c2-preview"),
+      join(SRC_ROOT, "app/phase2f-c2-preview"),
+      join(SRC_ROOT, "app/phase2f-c3-preview"),
     ];
     for (const previewPath of previewPaths) {
       let exists = false;

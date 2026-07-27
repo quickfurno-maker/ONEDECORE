@@ -618,3 +618,106 @@
     transition: none;
   }
 }
+
+/* --- Phase 2F-C3 Hero & Brand Proposition -------------------------------- */
+
+[data-public-site] .ps-hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: min(70vh, 640px);
+  color: var(--color-dark-section-text);
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  [data-public-site] .ps-hero {
+    align-items: center;
+    min-height: min(85vh, 900px);
+  }
+}
+
+[data-public-site] .ps-hero__media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+[data-public-site] .ps-hero__image {
+  object-fit: cover;
+}
+
+[data-public-site] .ps-hero__media--motion .ps-hero__image {
+  transform: scale(1.05);
+  animation: ps-hero-scale-in var(--duration-slow) var(--ease-out) forwards;
+}
+
+@keyframes ps-hero-scale-in {
+  to {
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 767px) {
+  [data-public-site] .ps-hero__media--motion .ps-hero__image {
+    transform: none;
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-public-site] .ps-hero__media--motion .ps-hero__image {
+    transform: none;
+    animation: none;
+  }
+}
+
+[data-public-site] .ps-hero__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--color-scrim);
+  pointer-events: none;
+}
+
+[data-public-site] .ps-hero__content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding-block: calc(72px + var(--space-12)) var(--space-16);
+}
+
+@media (min-width: 768px) {
+  [data-public-site] .ps-hero__content {
+    padding-block: calc(72px + var(--space-16)) var(--space-24);
+  }
+}
+
+[data-public-site] .ps-hero__copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: var(--container-content);
+}
+
+[data-public-site] .ps-hero__brand {
+  color: var(--color-dark-section-muted);
+}
+
+[data-public-site] .ps-hero__title {
+  color: var(--color-dark-section-text);
+  text-wrap: balance;
+}
+
+[data-public-site] .ps-hero__cta {
+  padding-top: var(--space-2);
+}
+
+[data-public-site] .ps-hero__cta-link {
+  color: var(--color-dark-section-text);
+}
+
+[data-public-site] .ps-hero__cta-link:hover {
+  color: var(--color-dark-section-text);
+}

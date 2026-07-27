@@ -38,6 +38,12 @@ export const PRODUCTION_SHELL_CONFIG: PublicShellConfig = {
   },
 };
 
+/** Homepage shell — overlay header over approved C3 hero. */
+export const HOMEPAGE_SHELL_CONFIG: PublicShellConfig = {
+  ...PRODUCTION_SHELL_CONFIG,
+  headerMode: "overlay",
+};
+
 const UNSAFE_HREF_PATTERN = /^(?:javascript:|data:|mailto:|tel:)/i;
 
 export function isSafeInternalHref(href: string): href is `/${string}` {

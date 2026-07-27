@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2F-C3 (July 27, 2026)
+- Implemented Direction A homepage hero (`HeroSection`) with full-bleed category-C abstract architectural WebP, bronze scrim, and `HeroMediaMotion` client island for balanced scale reveal.
+- Added `BrandProposition` with restrained factual copy; homepage composition: Hero → Brand Proposition → existing `FeaturedPortfolioSection`.
+- Activated overlay header on `/` via `(home)` route-group shell; portfolio routes remain solid via `(solid)` route group.
+- Deferred consultation CTA; hero renders only **Explore Our Work** → `/portfolio`.
+- Added `force-dynamic` to `sitemap.ts` for runtime CMS project URLs during production verification.
+- Added +22 automated C3 contract tests (162 total).
+- Audit: `docs/audits/phase-2f-c3-homepage-hero-and-proposition.md`.
+- No package, migration, admin, or Portfolio data-contract changes.
+
 ### Added - Phase 2F-C2 (July 27, 2026)
 - Implemented Direction A public-site shell: `PublicSiteShell`, `PublicHeader`, `DesktopNavigation`, `MobileNavigation`, `PublicFooter`.
 - Activated shell on existing public routes via `src/app/(public)/layout.tsx` (URLs unchanged; admin/auth isolated).

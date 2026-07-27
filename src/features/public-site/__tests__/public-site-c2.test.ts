@@ -6,6 +6,7 @@ import { describe, test } from "node:test";
 import {
   APPROVED_SERVICE_NAMES,
   HEADER_SCROLL_THRESHOLD_PX,
+  HOMEPAGE_SHELL_CONFIG,
   PRODUCTION_PUBLIC_NAVIGATION,
   PRODUCTION_SHELL_CONFIG,
   PUBLIC_MAIN_ID,
@@ -52,12 +53,19 @@ describe("Public Site C2 — Shell contract", () => {
     assert.match(skip, /main-content/);
   });
 
-  test("public layout wraps only the public route group", () => {
-    const layout = readAppSource("(public)/layout.tsx");
-    assert.match(layout, /PublicSiteShell/);
-    assert.match(layout, /PRODUCTION_SHELL_CONFIG/);
-    assert.equal(layout.includes("headerMode"), true);
-    assert.equal(layout.includes('"use client"'), false);
+  test("public route groups use segment shells for overlay and solid modes", () => {
+    const passThrough = readAppSource("(public)/layout.tsx");
+    assert.equal(passThrough.includes("PublicSiteShell"), false);
+
+    const home = readAppSource("(public)/(home)/layout.tsx");
+    assert.match(home, /PublicSiteShell/);
+    assert.match(home, /HOMEPAGE_SHELL_CONFIG/);
+    assert.match(home, /headerMode/);
+    assert.equal(home.includes('"use client"'), false);
+
+    const solid = readAppSource("(public)/(solid)/layout.tsx");
+    assert.match(solid, /PublicSiteShell/);
+    assert.match(solid, /PRODUCTION_SHELL_CONFIG/);
   });
 });
 
@@ -87,7 +95,7 @@ describe("Public Site C2 — Header contract", () => {
     assert.match(hook, /removeEventListener/);
   });
 
-  test("production homepage uses solid header mode", () => {
+  test("production portfolio routes use solid header mode", () => {
     assert.equal(PRODUCTION_SHELL_CONFIG.headerMode, "solid");
   });
 });
@@ -177,8 +185,12 @@ describe("Public Site C2 — Footer contract", () => {
 describe("Public Site C2 — Safe link and CTA contract", () => {
   test("production shell omits consultation CTA until contact route exists", () => {
     assert.equal(PRODUCTION_SHELL_CONFIG.cta, null);
-    const layout = readAppSource("(public)/layout.tsx");
-    assert.equal(layout.includes("cta={null}") || layout.includes("cta={cta}"), true);
+    assert.equal(HOMEPAGE_SHELL_CONFIG.cta, null);
+    const solidLayout = readAppSource("(public)/(solid)/layout.tsx");
+    assert.equal(
+      solidLayout.includes("cta={null}") || solidLayout.includes("cta={cta}"),
+      true
+    );
   });
 
   test("navigation config rejects placeholder hash links", () => {
