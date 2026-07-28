@@ -1,11 +1,26 @@
 /**
- * Phase 2F-R2 owner-review concept registry.
+ * Phase 2F owner-review concept registry.
+ *
+ * R3 Conversion Master is the active direction (see conversion-master feature).
+ * The three R2 entries below remain for historical comparison only.
  *
  * Internal design review only. These routes are not part of the public site,
  * are excluded from the sitemap, and carry noindex/nofollow metadata.
  */
 
 export type ConceptId = "cinematic" | "architectural" | "design-tech";
+
+/** Active Phase 2F-R3 owner-review prototype (not part of the R2 letter set). */
+export const CONVERSION_MASTER = {
+  id: "conversion-master",
+  slug: "conversion-master",
+  href: "/design-concepts/conversion-master",
+  name: "Conversion Master",
+  phase: "2F-R3",
+  active: true,
+  thesis:
+    "Warm Conversion Luxury homepage with shared lead planner, portfolio proof, scope brief, FAQ, and consultation conversion — local prototype only.",
+} as const;
 
 export interface ConceptDefinition {
   readonly id: ConceptId;

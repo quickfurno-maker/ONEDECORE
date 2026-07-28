@@ -5,9 +5,10 @@ import "@/features/design-concepts/styles/index-page.css";
 import "@/features/design-concepts/styles/cinematic.css";
 import "@/features/design-concepts/styles/architectural.css";
 import "@/features/design-concepts/styles/design-tech.css";
+import "@/features/design-concepts/conversion-master/styles/conversion-master.css";
 
 /**
- * Phase 2F-R2 owner-review area.
+ * Phase 2F owner-review area (R2 concepts + R3 Conversion Master).
  *
  * These routes exist only on the redesign branch for live owner review. They
  * are excluded from the sitemap and marked noindex/nofollow, and their CSS is

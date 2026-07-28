@@ -16,6 +16,7 @@ const CONCEPT_ROUTE_FILES = [
   "cinematic-coffee-luxe/page.tsx",
   "modern-architectural/page.tsx",
   "luxury-design-tech/page.tsx",
+  "conversion-master/page.tsx",
 ] as const;
 
 const CONCEPT_CSS_FILES = [
@@ -25,6 +26,11 @@ const CONCEPT_CSS_FILES = [
   "architectural.css",
   "design-tech.css",
 ] as const;
+
+const CONVERSION_MASTER_CSS = join(
+  CONCEPTS_ROOT,
+  "conversion-master/styles/conversion-master.css"
+);
 
 function walk(dir: string, match: RegExp, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -121,6 +127,7 @@ describe("Design concepts R2 — preview isolation", () => {
       "/design-concepts/cinematic-coffee-luxe",
       "/design-concepts/modern-architectural",
       "/design-concepts/luxury-design-tech",
+      "/design-concepts/conversion-master",
     ]);
     const allowedPrefixes = ["/portfolio/", "/marketing/"];
 
@@ -159,7 +166,11 @@ describe("Design concepts R2 — preview isolation", () => {
   });
 
   test("concept sources are independent of the QuickFurno reference", () => {
-    for (const file of [...conceptSourceFiles(), ...CONCEPT_CSS_FILES.map((name) => join(CONCEPTS_ROOT, "styles", name))]) {
+    const cssFiles = [
+      ...CONCEPT_CSS_FILES.map((name) => join(CONCEPTS_ROOT, "styles", name)),
+      CONVERSION_MASTER_CSS,
+    ];
+    for (const file of [...conceptSourceFiles(), ...cssFiles]) {
       const source = read(file).toLowerCase();
       assert.equal(
         source.includes("quickfurno"),
@@ -178,7 +189,12 @@ describe("Design concepts R2 — preview isolation", () => {
       "cdn.",
     ];
 
-    for (const file of [...conceptSourceFiles(), ...CONCEPT_CSS_FILES.map((name) => join(CONCEPTS_ROOT, "styles", name))]) {
+    const cssFiles = [
+      ...CONCEPT_CSS_FILES.map((name) => join(CONCEPTS_ROOT, "styles", name)),
+      CONVERSION_MASTER_CSS,
+    ];
+
+    for (const file of [...conceptSourceFiles(), ...cssFiles]) {
       const source = read(file);
       for (const host of forbiddenHosts) {
         assert.equal(
@@ -210,18 +226,26 @@ describe("Design concepts R2 — preview isolation", () => {
       "clients served",
       "free consultation",
       "book a call",
-      "whatsapp",
       "+91",
       "₹",
     ];
 
     for (const file of conceptSourceFiles()) {
       const source = read(file).toLowerCase();
+      const isConversionMaster = label(file).includes("conversion-master");
       for (const needle of forbidden) {
         assert.equal(
           source.includes(needle),
           false,
           `${label(file)} must not contain "${needle}"`
+        );
+      }
+      // Phone-number WhatsApp CTAs remain forbidden; consent labels are allowed in R3.
+      if (!isConversionMaster) {
+        assert.equal(
+          source.includes("whatsapp"),
+          false,
+          `${label(file)} must not contain "whatsapp"`
         );
       }
     }
@@ -303,10 +327,16 @@ describe("Design concepts R2 — production is untouched", () => {
       "[data-dc-reveal]",
       ".dc-",
       ".dcx-",
+      ".cm-",
     ];
 
-    for (const name of CONCEPT_CSS_FILES) {
-      const path = join(CONCEPTS_ROOT, "styles", name);
+    const cssFiles = [
+      ...CONCEPT_CSS_FILES.map((name) => join(CONCEPTS_ROOT, "styles", name)),
+      CONVERSION_MASTER_CSS,
+    ];
+
+    for (const path of cssFiles) {
+      const name = label(path);
       const css = read(path);
 
       assert.equal(
@@ -466,6 +496,17 @@ describe("Design concepts R2 — typography and motion contract", () => {
       );
     }
 
+    const conversionCss = read(CONVERSION_MASTER_CSS);
+    assert.equal(
+      conversionCss.includes("infinite"),
+      false,
+      "conversion-master.css must not declare an infinite animation"
+    );
+    assert.ok(
+      conversionCss.includes("@media (prefers-reduced-motion: reduce)"),
+      "conversion-master.css must honour reduced motion"
+    );
+
     const foundation = read(join(CONCEPTS_ROOT, "styles/foundation.css"));
     assert.ok(
       foundation.includes("@media (prefers-reduced-motion: reduce)"),
@@ -480,13 +521,22 @@ describe("Design concepts R2 — typography and motion contract", () => {
     );
   });
 
-  test("only navigation and the reveal runtime are Client Components", () => {
+  test("client components are limited to interaction surfaces", () => {
     const clientFiles = conceptSourceFiles()
       .filter((file) => read(file).trimStart().startsWith('"use client"'))
       .map(label)
       .sort();
 
     assert.deepEqual(clientFiles, [
+      "src/features/design-concepts/conversion-master/CmHero.tsx",
+      "src/features/design-concepts/conversion-master/CmNav.tsx",
+      "src/features/design-concepts/conversion-master/FinalForm.tsx",
+      "src/features/design-concepts/conversion-master/LeadContext.tsx",
+      "src/features/design-concepts/conversion-master/LeadPlanner.tsx",
+      "src/features/design-concepts/conversion-master/ProcessSection.tsx",
+      "src/features/design-concepts/conversion-master/ScopePlanner.tsx",
+      "src/features/design-concepts/conversion-master/ServicesSection.tsx",
+      "src/features/design-concepts/conversion-master/StickyBar.tsx",
       "src/features/design-concepts/shared/ConceptNav.tsx",
       "src/features/design-concepts/shared/RevealRuntime.tsx",
     ]);
