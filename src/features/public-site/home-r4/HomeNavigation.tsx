@@ -4,20 +4,22 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   PM_CTA,
-  PM_HREF,
   PM_NAV_ITEMS,
   PM_TRACKED_SECTIONS,
 } from "./content";
 import { usePlan } from "./PlanContext";
+import { OneDecoreWordmark } from "./OneDecoreWordmark";
 
 /** Floating nav: scroll condensation, active-section tracking, inert drawer. */
 export function HomeNavigation() {
-  const { openPlanner } = usePlan();
+  const { openPlanner, progress, service, property, timeline } = usePlan();
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const drawerId = useId();
   const toggleRef = useRef<HTMLButtonElement | null>(null);
+  const planLabel =
+    service || property || timeline ? PM_CTA.continuePlan : PM_CTA.open;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -63,10 +65,7 @@ export function HomeNavigation() {
   return (
     <header className="pm-nav" data-scrolled={scrolled ? "" : undefined}>
       <div className="pm-nav__bar">
-        <Link href={PM_HREF} className="dc-wordmark pm-nav__mark" data-size="nav">
-          <span className="dc-wordmark__one">ONE</span>
-          <span className="dc-wordmark__decore">DECORE</span>
-        </Link>
+        <OneDecoreWordmark size="nav" className="pm-nav__mark" />
 
         <nav className="pm-nav__links" aria-label="Homepage sections">
           {PM_NAV_ITEMS.map((item) => {
@@ -86,15 +85,21 @@ export function HomeNavigation() {
         </nav>
 
         <div className="pm-nav__actions">
+          {progress > 0 ? (
+            <span className="pm-nav__progress" aria-hidden="true">
+              {progress}%
+            </span>
+          ) : null}
           <button
             type="button"
             className="dc-btn pm-btn--nav pm-btn--sheen"
+            data-conversion-action="nav-start-plan"
             onClick={() => {
               setOpen(false);
               openPlanner();
             }}
           >
-            {PM_CTA.open}
+            {planLabel}
           </button>
           <button
             ref={toggleRef}
@@ -127,6 +132,7 @@ export function HomeNavigation() {
         data-open={open ? "" : undefined}
         inert={!open}
       >
+        <OneDecoreWordmark size="drawer" className="pm-drawer__mark" />
         <nav className="pm-drawer__nav" aria-label="Homepage sections, mobile">
           {PM_NAV_ITEMS.map((item, index) => (
             <a
@@ -144,6 +150,7 @@ export function HomeNavigation() {
             className="pm-drawer__link"
             style={{ "--pm-drawer-index": PM_NAV_ITEMS.length } as React.CSSProperties}
             onClick={() => setOpen(false)}
+            data-conversion-action="portfolio-view"
           >
             {PM_CTA.projects}
           </Link>
@@ -151,12 +158,13 @@ export function HomeNavigation() {
         <button
           type="button"
           className="dc-btn dc-btn--primary pm-btn--sheen"
+          data-conversion-action="nav-start-plan"
           onClick={() => {
             setOpen(false);
             openPlanner();
           }}
         >
-          {PM_CTA.open}
+          {planLabel}
         </button>
       </div>
     </header>

@@ -69,11 +69,9 @@ describe("R5 room explorer", () => {
     assert.deepEqual(ensureRoom(once, "kitchen"), ["living", "kitchen"]);
   });
 
-  test("room explorer updates PlanContext via addRoom", () => {
+  test("room explorer updates PlanContext via addAreaToPlanAndOpen", () => {
     const source = read("HomeRoomExplorer.tsx");
-    assert.match(source, /addRoom/);
-    assert.match(source, /openPlanner/);
-    assert.match(source, /getNextIncompleteStep/);
+    assert.match(source, /addAreaToPlanAndOpen/);
   });
 });
 

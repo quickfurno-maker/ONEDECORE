@@ -1,5 +1,6 @@
+import { PM_FOOTER, SITE_CONFIG } from "./content";
+import { OneDecoreWordmark } from "./OneDecoreWordmark";
 import Link from "next/link";
-import { PM_FOOTER, PM_HREF, SITE_CONFIG } from "./content";
 
 export function HomeFooter() {
   return (
@@ -7,10 +8,7 @@ export function HomeFooter() {
       <div className="dc-container">
         <div className="pm-footer__grid">
           <div>
-            <Link href={PM_HREF} className="dc-wordmark" data-size="footer">
-              <span className="dc-wordmark__one">ONE</span>
-              <span className="dc-wordmark__decore">DECORE</span>
-            </Link>
+            <OneDecoreWordmark size="footer" />
             <p className="pm-footer__tagline">{PM_FOOTER.tagline}</p>
             <p className="pm-footer__positioning">{PM_FOOTER.positioning}</p>
           </div>
@@ -34,7 +32,13 @@ export function HomeFooter() {
                       {item.label}
                     </a>
                   ) : (
-                    <Link href={item.href} className="pm-footer__link">
+                    <Link
+                      href={item.href}
+                      className="pm-footer__link"
+                      data-conversion-action={
+                        item.href === "/portfolio" ? "portfolio-view" : undefined
+                      }
+                    >
                       {item.label}
                     </Link>
                   )}

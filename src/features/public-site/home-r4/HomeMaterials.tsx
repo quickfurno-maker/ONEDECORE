@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   PM_MATERIALS_COPY,
   PM_MATERIAL_DECISION_STEPS,
@@ -10,12 +10,19 @@ import {
   PM_SECTION_IDS,
 } from "./content";
 import { Reveal } from "@/features/public-site/motion/Reveal";
+import { useRovingTabs } from "./useRovingTabs";
 
-/** Tactile materials gallery plus compact decision-guidance flow. */
 export function HomeMaterials() {
+  const baseId = useId();
+  const panelId = `${baseId}-panel`;
   const primary = PM_MATERIAL_PRIMARY;
   const [stepIndex, setStepIndex] = useState(0);
   const step = PM_MATERIAL_DECISION_STEPS[stepIndex]!;
+  const { setTabRef, onTabListKeyDown, activate } = useRovingTabs(
+    PM_MATERIAL_DECISION_STEPS.length,
+    stepIndex,
+    setStepIndex
+  );
 
   return (
     <section
@@ -80,27 +87,48 @@ export function HomeMaterials() {
             className="pm-materials__steps"
             role="tablist"
             aria-label="Material decision sequence"
+            onKeyDown={onTabListKeyDown}
           >
             {PM_MATERIAL_DECISION_STEPS.map((entry, index) => (
               <button
                 key={entry.id}
+                ref={setTabRef(index)}
                 type="button"
                 role="tab"
+                id={`${baseId}-tab-${entry.id}`}
                 className="pm-materials__step"
                 aria-selected={index === stepIndex}
+                aria-controls={panelId}
                 tabIndex={index === stepIndex ? 0 : -1}
                 data-active={index === stepIndex ? "" : undefined}
-                onClick={() => setStepIndex(index)}
+                onClick={() => activate(index)}
               >
                 <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
                 {entry.title}
               </button>
             ))}
           </div>
-          <div className="pm-materials__stepPanel" role="tabpanel" key={step.id}>
+          <div
+            id={panelId}
+            className="pm-materials__stepPanel"
+            role="tabpanel"
+            aria-labelledby={`${baseId}-tab-${step.id}`}
+          >
             <p className="pm-body">{step.body}</p>
           </div>
         </Reveal>
+
+        <noscript>
+          <div className="pm-noscript">
+            <h3>{PM_MATERIALS_COPY.decisionHeading}</h3>
+            {PM_MATERIAL_DECISION_STEPS.map((entry) => (
+              <article key={entry.id}>
+                <h4>{entry.title}</h4>
+                <p>{entry.body}</p>
+              </article>
+            ))}
+          </div>
+        </noscript>
       </div>
     </section>
   );

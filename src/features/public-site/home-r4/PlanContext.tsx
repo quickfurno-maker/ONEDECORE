@@ -33,6 +33,11 @@ export interface PlanContactFields {
   readonly privacyConsent: boolean;
 }
 
+export interface AddAreaToPlanInput {
+  readonly service?: PmServiceId;
+  readonly rooms: readonly PmRoomId[];
+}
+
 interface PlanApi extends PlanSnapshot {
   readonly step: PmStep;
   readonly isOpen: boolean;
@@ -47,6 +52,7 @@ interface PlanApi extends PlanSnapshot {
   readonly setTimeline: (timeline: PmTimelineId) => void;
   readonly toggleRoom: (room: PmRoomId) => void;
   readonly addRoom: (room: PmRoomId) => void;
+  readonly addAreaToPlanAndOpen: (input: AddAreaToPlanInput) => void;
   readonly setContact: (fields: Partial<PlanContactFields>) => void;
   readonly setMessage: (message: string) => void;
   readonly setStep: (step: PmStep) => void;
@@ -154,6 +160,32 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
     setRooms((current) => ensureRoomIn(current, room));
   }, []);
 
+  /**
+   * Atomically apply service/rooms, compute the next step from a prospective
+   * snapshot, then open the planner — never stale relative to the just-added area.
+   */
+  const addAreaToPlanAndOpen = useCallback(
+    (input: AddAreaToPlanInput) => {
+      let nextRooms = snapshot.rooms;
+      for (const room of input.rooms) {
+        nextRooms = ensureRoomIn(nextRooms, room);
+      }
+      const nextService = input.service ?? snapshot.service;
+      const prospective: PlanSnapshot = {
+        ...snapshot,
+        service: nextService,
+        rooms: nextRooms,
+      };
+      const target = computeNextStep(prospective);
+      if (input.service) setServiceState(input.service);
+      setRooms(nextRooms);
+      setMode(currentMode());
+      setStepState(target);
+      setIsOpen(true);
+    },
+    [snapshot]
+  );
+
   const setContact = useCallback((fields: Partial<PlanContactFields>) => {
     if (fields.name !== undefined) setName(fields.name);
     if (fields.mobile !== undefined) setMobile(fields.mobile);
@@ -224,6 +256,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       setTimeline,
       toggleRoom,
       addRoom,
+      addAreaToPlanAndOpen,
       setContact,
       setMessage,
       setStep,
@@ -247,6 +280,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       setTimeline,
       toggleRoom,
       addRoom,
+      addAreaToPlanAndOpen,
       setContact,
       setMessage,
       setStep,

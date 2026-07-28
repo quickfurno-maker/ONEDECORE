@@ -60,6 +60,7 @@ export function HomeHero() {
             <button
               type="button"
               className="dc-btn dc-btn--primary pm-btn--lg pm-btn--sheen"
+              data-conversion-action="hero-start-plan"
               onClick={() => openPlanner()}
             >
               {PM_HERO.primaryCta}
@@ -67,6 +68,7 @@ export function HomeHero() {
             <Link
               href={PM_HERO.secondaryHref}
               className="dc-btn dc-btn--ghost pm-btn--lg"
+              data-conversion-action="portfolio-view"
             >
               {PM_HERO.secondaryCta}
             </Link>

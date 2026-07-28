@@ -118,6 +118,7 @@ export function HomePlan() {
                 type="button"
                 className="dc-btn dc-btn--primary pm-btn--sheen"
                 onClick={() => void onCopy()}
+                data-conversion-action="brief-copy"
               >
                 {PM_CLOSE.submitLabel}
               </button>

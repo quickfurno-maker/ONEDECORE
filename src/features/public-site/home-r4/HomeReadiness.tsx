@@ -75,6 +75,7 @@ export function HomeReadiness() {
           <button
             type="button"
             className="dc-btn dc-btn--primary pm-btn--sheen"
+            data-conversion-action="readiness-continue"
             onClick={onCta}
           >
             {copy.cta}

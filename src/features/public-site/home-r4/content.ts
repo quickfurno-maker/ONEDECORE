@@ -732,7 +732,7 @@ export const PM_CLOSE = {
 export const PM_STICKY = {
   plan: PM_CTA.open,
   projects: PM_CTA.projects,
-  projectsHref: `#${PM_SECTION_IDS.projects}`,
+  projectsHref: "/portfolio",
 } as const;
 
 export const PM_FOOTER = {

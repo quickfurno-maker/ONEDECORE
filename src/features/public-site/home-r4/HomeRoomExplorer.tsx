@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   PM_ROOM_CATEGORIES,
   PM_ROOMS_COPY,
@@ -11,45 +11,43 @@ import {
 } from "./content";
 import { usePlan } from "./PlanContext";
 import { Reveal } from "@/features/public-site/motion/Reveal";
+import { useRovingTabs } from "./useRovingTabs";
 
 export function HomeRoomExplorer() {
   const baseId = useId();
-  const { addRoom, setService, openPlanner, getNextIncompleteStep } = usePlan();
-  const [activeId, setActiveId] = useState<(typeof PM_ROOM_CATEGORIES)[number]["id"]>(
-    PM_ROOM_CATEGORIES[0]!.id
-  );
+  const panelId = `${baseId}-panel`;
+  const { addAreaToPlanAndOpen } = usePlan();
+  const [activeIndex, setActiveIndex] = useState(0);
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const active =
-    PM_ROOM_CATEGORIES.find((room) => room.id === activeId) ??
-    PM_ROOM_CATEGORIES[0]!;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const active = PM_ROOM_CATEGORIES[activeIndex]!;
+  const { setTabRef, onTabListKeyDown, activate } = useRovingTabs(
+    PM_ROOM_CATEGORIES.length,
+    activeIndex,
+    setActiveIndex
+  );
 
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const index = PM_ROOM_CATEGORIES.findIndex((room) => room.id === activeId);
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      event.preventDefault();
-      const next = PM_ROOM_CATEGORIES[(index + 1) % PM_ROOM_CATEGORIES.length]!;
-      setActiveId(next.id);
-    }
-    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      event.preventDefault();
-      const next =
-        PM_ROOM_CATEGORIES[
-          (index - 1 + PM_ROOM_CATEGORIES.length) % PM_ROOM_CATEGORIES.length
-        ]!;
-      setActiveId(next.id);
-    }
-  };
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const addArea = () => {
-    if (active.id === "kitchen" || active.id === "bedroom-storage") {
-      setService(active.serviceId as PmServiceId);
-    }
-    for (const room of active.rooms) {
-      addRoom(room as PmRoomId);
-    }
+    const service =
+      active.id === "kitchen" || active.id === "bedroom-storage"
+        ? (active.serviceId as PmServiceId)
+        : undefined;
+    addAreaToPlanAndOpen({
+      service,
+      rooms: active.rooms as readonly PmRoomId[],
+    });
     setConfirmId(active.id);
-    openPlanner(getNextIncompleteStep());
-    window.setTimeout(() => setConfirmId((current) => (current === active.id ? null : current)), 2400);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setConfirmId((current) => (current === active.id ? null : current));
+      timerRef.current = null;
+    }, 2400);
   };
 
   return (
@@ -73,20 +71,21 @@ export function HomeRoomExplorer() {
             className="pm-rooms__tabs"
             role="tablist"
             aria-label="Room categories"
-            onKeyDown={onKeyDown}
+            onKeyDown={onTabListKeyDown}
           >
-            {PM_ROOM_CATEGORIES.map((room) => (
+            {PM_ROOM_CATEGORIES.map((room, index) => (
               <button
                 key={room.id}
+                ref={setTabRef(index)}
                 type="button"
                 role="tab"
                 id={`${baseId}-tab-${room.id}`}
-                aria-selected={room.id === active.id}
-                aria-controls={`${baseId}-panel-${room.id}`}
-                tabIndex={room.id === active.id ? 0 : -1}
+                aria-selected={index === activeIndex}
+                aria-controls={panelId}
+                tabIndex={index === activeIndex ? 0 : -1}
                 className="pm-rooms__tab"
-                data-active={room.id === active.id ? "" : undefined}
-                onClick={() => setActiveId(room.id)}
+                data-active={index === activeIndex ? "" : undefined}
+                onClick={() => activate(index)}
               >
                 {room.title}
               </button>
@@ -94,8 +93,7 @@ export function HomeRoomExplorer() {
           </div>
 
           <div
-            key={active.id}
-            id={`${baseId}-panel-${active.id}`}
+            id={panelId}
             role="tabpanel"
             aria-labelledby={`${baseId}-tab-${active.id}`}
             className="pm-rooms__panel"
@@ -129,6 +127,7 @@ export function HomeRoomExplorer() {
               <button
                 type="button"
                 className="dc-btn dc-btn--primary pm-btn--sheen"
+                data-conversion-action="room-add"
                 onClick={addArea}
               >
                 {PM_ROOMS_COPY.addLabel}
@@ -139,6 +138,27 @@ export function HomeRoomExplorer() {
             </div>
           </div>
         </Reveal>
+
+        <noscript>
+          <div className="pm-noscript">
+            <p>{PM_ROOMS_COPY.inspirationNote}</p>
+            {PM_ROOM_CATEGORIES.map((room) => (
+              <article key={room.id}>
+                <h3>{room.title}</h3>
+                <p>
+                  <strong>Goal. </strong>
+                  {room.goal}
+                </p>
+                <ul>
+                  {room.priorities.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+                <p>Relevant service: {room.serviceLabel}</p>
+              </article>
+            ))}
+          </div>
+        </noscript>
       </div>
     </section>
   );

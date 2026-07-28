@@ -4,25 +4,19 @@ import { useId, useState } from "react";
 import { PM_SCOPE_AREAS, PM_SCOPE_COPY, PM_SECTION_IDS } from "./content";
 import { usePlan } from "./PlanContext";
 import { Reveal } from "@/features/public-site/motion/Reveal";
+import { useRovingTabs } from "./useRovingTabs";
 
 export function HomeScopeIncluded() {
   const baseId = useId();
+  const panelId = `${baseId}-panel`;
   const { openPlanner, getNextIncompleteStep } = usePlan();
   const [activeIndex, setActiveIndex] = useState(0);
   const active = PM_SCOPE_AREAS[activeIndex]!;
-
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      event.preventDefault();
-      setActiveIndex((index) => (index + 1) % PM_SCOPE_AREAS.length);
-    }
-    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      event.preventDefault();
-      setActiveIndex(
-        (index) => (index - 1 + PM_SCOPE_AREAS.length) % PM_SCOPE_AREAS.length
-      );
-    }
-  };
+  const { setTabRef, onTabListKeyDown, activate } = useRovingTabs(
+    PM_SCOPE_AREAS.length,
+    activeIndex,
+    setActiveIndex
+  );
 
   return (
     <section
@@ -44,20 +38,21 @@ export function HomeScopeIncluded() {
             className="pm-scope__list"
             role="tablist"
             aria-label="Project scope areas"
-            onKeyDown={onKeyDown}
+            onKeyDown={onTabListKeyDown}
           >
             {PM_SCOPE_AREAS.map((area, index) => (
               <button
                 key={area.id}
+                ref={setTabRef(index)}
                 type="button"
                 role="tab"
                 id={`${baseId}-tab-${area.id}`}
                 className="pm-scope__tab"
                 aria-selected={index === activeIndex}
-                aria-controls={`${baseId}-panel`}
+                aria-controls={panelId}
                 tabIndex={index === activeIndex ? 0 : -1}
                 data-active={index === activeIndex ? "" : undefined}
-                onClick={() => setActiveIndex(index)}
+                onClick={() => activate(index)}
               >
                 <span className="pm-scope__num" aria-hidden="true">
                   {String(index + 1).padStart(2, "0")}
@@ -98,11 +93,10 @@ export function HomeScopeIncluded() {
             </svg>
 
             <div
-              id={`${baseId}-panel`}
+              id={panelId}
               role="tabpanel"
               aria-labelledby={`${baseId}-tab-${active.id}`}
               className="pm-scope__panel"
-              key={active.id}
             >
               <h3 className="pm-h3">{active.title}</h3>
               <p className="pm-body">{active.body}</p>
@@ -114,11 +108,23 @@ export function HomeScopeIncluded() {
           <button
             type="button"
             className="dc-btn dc-btn--primary pm-btn--lg pm-btn--sheen"
+            data-conversion-action="scope-build-brief"
             onClick={() => openPlanner(getNextIncompleteStep())}
           >
             {PM_SCOPE_COPY.cta}
           </button>
         </Reveal>
+
+        <noscript>
+          <div className="pm-noscript">
+            {PM_SCOPE_AREAS.map((area) => (
+              <article key={area.id}>
+                <h3>{area.title}</h3>
+                <p>{area.body}</p>
+              </article>
+            ))}
+          </div>
+        </noscript>
       </div>
     </section>
   );
