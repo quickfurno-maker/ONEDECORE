@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { CM_HREF, CM_NAV_ITEMS, CM_TRACKED_SECTIONS } from "./content";
+import { CM_CTA, CM_HREF, CM_NAV_ITEMS, CM_TRACKED_SECTIONS } from "./content";
 import { useLead } from "./LeadContext";
 
 /**
@@ -141,7 +141,7 @@ export function CmNav() {
               openPlanner();
             }}
           >
-            Plan My Interiors
+            {CM_CTA.open}
           </button>
           <button
             ref={toggleRef}
@@ -178,7 +178,7 @@ export function CmNav() {
             openPlanner();
           }}
         >
-          Plan My Interiors
+          {CM_CTA.open}
         </button>
       </div>
 

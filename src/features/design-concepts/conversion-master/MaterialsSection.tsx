@@ -1,6 +1,5 @@
 import Image from "next/image";
 import {
-  ARTWORK_PROVENANCE_NOTE,
   CM_SECTION_IDS,
   MATERIAL_PRIMARY,
   MATERIAL_STORY_SECTION_COPY,
@@ -67,8 +66,6 @@ export function MaterialsSection() {
             ))}
           </ul>
         </div>
-
-        <p className="dc-provenance">{ARTWORK_PROVENANCE_NOTE}</p>
       </div>
     </section>
   );

@@ -1,42 +1,72 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useRef, useState, type FormEvent } from "react";
+import { useId, useMemo, useRef, useState, type FormEvent } from "react";
 import {
-  CM_FINAL_FORM,
+  CM_FINAL,
   CM_PLANNER,
+  CM_SCOPE,
   CM_SECTION_IDS,
-  type CmPropertyId,
-  type CmServiceId,
-  type CmTimelineId,
 } from "./content";
 import { useLead } from "./LeadContext";
+import { isValidIndianMobile } from "./lead-state";
 
-const INDIAN_MOBILE = /^[6-9]\d{9}$/;
+function labelOf(
+  options: readonly { id: string; label: string }[],
+  id: string | null
+): string | null {
+  if (!id) return null;
+  return options.find((option) => option.id === id)?.label ?? null;
+}
 
+/** ContactCompletion — final section bound to LeadContext (no local contact duplicates). */
 export function FinalForm() {
   const lead = useLead();
   const formId = useId();
   const errorRef = useRef<HTMLDivElement | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
-  const [message, setMessage] = useState("");
-  const [done, setDone] = useState(false);
-  const [name, setName] = useState(lead.name);
-  const [mobile, setMobile] = useState(lead.mobile);
-  const [locality, setLocality] = useState(lead.locality);
-  const [service, setService] = useState<CmServiceId | null>(lead.service);
-  const [property, setProperty] = useState<CmPropertyId | null>(lead.property);
-  const [timeline, setTimeline] = useState<CmTimelineId | null>(lead.timeline);
-  const [whatsappConsent, setWhatsappConsent] = useState(lead.whatsappConsent);
+
+  const summaryRows = useMemo(() => {
+    const rooms =
+      lead.rooms.length > 0
+        ? lead.rooms
+            .map((id) => labelOf(CM_SCOPE.rooms, id))
+            .filter(Boolean)
+            .join(", ")
+        : null;
+
+    return [
+      { label: "Service", value: labelOf(CM_PLANNER.services, lead.service) },
+      {
+        label: "Property",
+        value: labelOf(CM_PLANNER.properties, lead.property),
+      },
+      {
+        label: "Timeline",
+        value: labelOf(CM_PLANNER.timelines, lead.timeline),
+      },
+      { label: "Rooms / areas", value: rooms },
+      {
+        label: "Locality",
+        value: lead.locality.trim() || null,
+      },
+    ].filter((row) => row.value);
+  }, [
+    lead.service,
+    lead.property,
+    lead.timeline,
+    lead.rooms,
+    lead.locality,
+  ]);
 
   const validate = (): string[] => {
     const next: string[] = [];
-    if (!name.trim()) next.push("Name is required.");
-    if (!INDIAN_MOBILE.test(mobile.trim())) {
+    if (!lead.name.trim()) next.push("Name is required.");
+    if (!isValidIndianMobile(lead.mobile)) {
       next.push("Enter a valid 10-digit Indian mobile number.");
     }
-    if (!locality.trim()) next.push("Pune locality is required.");
-    if (!service) next.push("Select a service.");
+    if (!lead.locality.trim()) next.push("Pune locality is required.");
+    if (!lead.privacyConsent) next.push("Privacy consent is required.");
     return next;
   };
 
@@ -48,17 +78,11 @@ export function FinalForm() {
       queueMicrotask(() => errorRef.current?.focus());
       return;
     }
+    lead.markSubmitted();
+  };
 
-    lead.setContact({
-      name: name.trim(),
-      mobile: mobile.trim(),
-      locality: locality.trim(),
-      whatsappConsent,
-    });
-    if (service) lead.setService(service);
-    if (property) lead.setProperty(property);
-    if (timeline) lead.setTimeline(timeline);
-    setDone(true);
+  const editPlan = () => {
+    lead.openPlanner(lead.getNextIncompleteStep());
   };
 
   return (
@@ -69,23 +93,36 @@ export function FinalForm() {
     >
       <div className="dc-container cm-final__grid">
         <div className="cm-final__intro">
-          <p className="dc-eyebrow">{CM_FINAL_FORM.overline}</p>
+          <p className="dc-eyebrow">{CM_FINAL.overline}</p>
           <h2 id="cm-final-title" className="cm-h2">
-            {CM_FINAL_FORM.heading}
+            {CM_FINAL.heading}
           </h2>
-          <p className="dc-lede">{CM_FINAL_FORM.lede}</p>
-          <Link href={CM_FINAL_FORM.secondaryHref} className="dc-textlink">
-            {CM_FINAL_FORM.secondaryLabel}
+          <p className="dc-lede">{CM_FINAL.lede}</p>
+          <Link href={CM_FINAL.secondaryHref} className="dc-textlink">
+            {CM_FINAL.secondaryLabel}
           </Link>
         </div>
 
         <div className="cm-final__panel">
-          {done ? (
-            <div className="cm-planner__success" role="status">
-              <h3 className="cm-planner__successTitle">
-                {CM_FINAL_FORM.successTitle}
-              </h3>
-              <p className="cm-planner__successBody">{CM_FINAL_FORM.successBody}</p>
+          {lead.submitted ? (
+            <div className="cm-planner__success cm-final__success" role="status">
+              <h3 className="cm-planner__successTitle">{CM_FINAL.successTitle}</h3>
+              <p className="cm-planner__successBody">{CM_FINAL.successBody}</p>
+              <div className="cm-final__actions">
+                <button
+                  type="button"
+                  className="dc-btn dc-btn--ghost"
+                  onClick={() => lead.editSubmission()}
+                >
+                  {CM_FINAL.editDetailsLabel}
+                </button>
+                <Link
+                  href={CM_FINAL.secondaryHref}
+                  className="dc-btn dc-btn--primary"
+                >
+                  {CM_FINAL.secondaryLabel}
+                </Link>
+              </div>
             </div>
           ) : (
             <form className="cm-final__form" onSubmit={onSubmit} noValidate>
@@ -105,33 +142,67 @@ export function FinalForm() {
                 </div>
               ) : null}
 
+              <div className="cm-final__summary">
+                <div className="cm-final__summaryHead">
+                  <h3 className="cm-h3">{CM_FINAL.summaryHeading}</h3>
+                  <button
+                    type="button"
+                    className="dc-textlink cm-final__editPlan"
+                    onClick={editPlan}
+                  >
+                    {CM_FINAL.editLabel}
+                  </button>
+                </div>
+                {summaryRows.length > 0 ? (
+                  <dl className="cm-final__summaryList">
+                    {summaryRows.map((row) => (
+                      <div key={row.label}>
+                        <dt>{row.label}</dt>
+                        <dd>{row.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : (
+                  <p className="cm-final__summaryEmpty">
+                    No plan details yet — edit your plan to choose a service.
+                  </p>
+                )}
+              </div>
+
               <div className="cm-field">
                 <label htmlFor={`${formId}-name`}>
-                  Name <span className="cm-req">required</span>
+                  {CM_FINAL.nameLabel} <span className="cm-req">required</span>
                 </label>
                 <input
                   id={`${formId}-name`}
+                  name="name"
                   type="text"
                   autoComplete="name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
+                  value={lead.name}
+                  onChange={(event) =>
+                    lead.setContact({ name: event.target.value })
+                  }
                   required
                 />
               </div>
 
               <div className="cm-field">
                 <label htmlFor={`${formId}-mobile`}>
-                  Mobile number <span className="cm-req">required</span>
+                  {CM_FINAL.mobileLabel}{" "}
+                  <span className="cm-req">required</span>
                 </label>
                 <input
                   id={`${formId}-mobile`}
+                  name="mobile"
                   type="tel"
                   inputMode="numeric"
                   autoComplete="tel-national"
                   maxLength={10}
-                  value={mobile}
+                  value={lead.mobile}
                   onChange={(event) =>
-                    setMobile(event.target.value.replace(/\D/g, "").slice(0, 10))
+                    lead.setContact({
+                      mobile: event.target.value.replace(/\D/g, "").slice(0, 10),
+                    })
                   }
                   required
                 />
@@ -139,119 +210,74 @@ export function FinalForm() {
 
               <div className="cm-field">
                 <label htmlFor={`${formId}-locality`}>
-                  Pune locality <span className="cm-req">required</span>
+                  {CM_FINAL.localityLabel}{" "}
+                  <span className="cm-req">required</span>
                 </label>
                 <input
                   id={`${formId}-locality`}
+                  name="locality"
                   type="text"
-                  value={locality}
-                  onChange={(event) => setLocality(event.target.value)}
+                  autoComplete="address-level2"
+                  value={lead.locality}
+                  onChange={(event) =>
+                    lead.setContact({ locality: event.target.value })
+                  }
                   required
                 />
               </div>
 
-              <fieldset className="cm-fieldset">
-                <legend className="cm-legend">
-                  Service <span className="cm-req">required</span>
-                </legend>
-                <div className="cm-options">
-                  {CM_PLANNER.services.map((option) => (
-                    <label
-                      key={option.id}
-                      className="cm-option"
-                      data-selected={service === option.id ? "" : undefined}
-                    >
-                      <input
-                        type="radio"
-                        name="final-service"
-                        checked={service === option.id}
-                        onChange={() => setService(option.id)}
-                      />
-                      <span>{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-
-              <fieldset className="cm-fieldset">
-                <legend className="cm-legend">
-                  Property type <span className="cm-opt">optional</span>
-                </legend>
-                <div className="cm-options">
-                  {CM_PLANNER.properties.map((option) => (
-                    <label
-                      key={option.id}
-                      className="cm-option"
-                      data-selected={property === option.id ? "" : undefined}
-                    >
-                      <input
-                        type="radio"
-                        name="final-property"
-                        checked={property === option.id}
-                        onChange={() => setProperty(option.id)}
-                      />
-                      <span>{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-
-              <fieldset className="cm-fieldset">
-                <legend className="cm-legend">
-                  Timeline <span className="cm-opt">optional</span>
-                </legend>
-                <div className="cm-options">
-                  {CM_PLANNER.timelines.map((option) => (
-                    <label
-                      key={option.id}
-                      className="cm-option"
-                      data-selected={timeline === option.id ? "" : undefined}
-                    >
-                      <input
-                        type="radio"
-                        name="final-timeline"
-                        checked={timeline === option.id}
-                        onChange={() => setTimeline(option.id)}
-                      />
-                      <span>{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-
               <div className="cm-field">
                 <label htmlFor={`${formId}-message`}>
-                  Message <span className="cm-opt">optional</span>
+                  {CM_FINAL.messageLabel}{" "}
+                  <span className="cm-opt">optional</span>
                 </label>
                 <textarea
                   id={`${formId}-message`}
+                  name="message"
                   rows={4}
-                  value={message}
-                  onChange={(event) => setMessage(event.target.value)}
+                  value={lead.message}
+                  onChange={(event) => lead.setMessage(event.target.value)}
                 />
               </div>
 
               <label className="cm-check">
                 <input
                   type="checkbox"
-                  checked={whatsappConsent}
-                  onChange={(event) => setWhatsappConsent(event.target.checked)}
+                  checked={lead.privacyConsent}
+                  onChange={(event) =>
+                    lead.setContact({ privacyConsent: event.target.checked })
+                  }
+                  required
                 />
                 <span>
-                  {CM_FINAL_FORM.whatsappConsentLabel}{" "}
+                  {CM_FINAL.privacyConsentLabel}{" "}
+                  <span className="cm-req">required</span>
+                </span>
+              </label>
+
+              <label className="cm-check">
+                <input
+                  type="checkbox"
+                  checked={lead.whatsappConsent}
+                  onChange={(event) =>
+                    lead.setContact({ whatsappConsent: event.target.checked })
+                  }
+                />
+                <span>
+                  {CM_FINAL.whatsappConsentLabel}{" "}
                   <span className="cm-opt">optional</span>
                 </span>
               </label>
 
               <div className="cm-final__actions">
                 <button type="submit" className="dc-btn dc-btn--primary">
-                  {CM_FINAL_FORM.submitLabel}
+                  {CM_FINAL.submitLabel}
                 </button>
                 <Link
-                  href={CM_FINAL_FORM.secondaryHref}
+                  href={CM_FINAL.secondaryHref}
                   className="dc-btn dc-btn--ghost"
                 >
-                  {CM_FINAL_FORM.secondaryLabel}
+                  {CM_FINAL.secondaryLabel}
                 </Link>
               </div>
             </form>

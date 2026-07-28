@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { PublicPortfolioCard } from "@/features/portfolio/public/types";
 import {
+  CM_CTA,
   CM_SECTION_IDS,
   FEATURED_PORTFOLIO_COPY,
 } from "./content";
@@ -58,7 +59,7 @@ export function ProjectsSection({ featured }: ProjectsSectionProps) {
               portfolio when published work is available.
             </p>
             <Link href="/portfolio" className="dc-btn dc-btn--primary">
-              Explore All Projects
+              {CM_CTA.projects}
             </Link>
           </Reveal>
         ) : (
@@ -85,11 +86,6 @@ export function ProjectsSection({ featured }: ProjectsSectionProps) {
                   {projectMeta(lead) ? (
                     <p className="cm-project__meta">{projectMeta(lead)}</p>
                   ) : null}
-                  <p className="dc-provenance">
-                    Local review note: cover media may be a Category-C stand-in
-                    until authentic project photography is uploaded through
-                    admin. Metadata comes from the published Portfolio record.
-                  </p>
                   <Link
                     href={`/portfolio/${lead.slug}`}
                     className="dc-textlink"
@@ -139,7 +135,7 @@ export function ProjectsSection({ featured }: ProjectsSectionProps) {
 
             <Reveal className="cm-projects__explore">
               <Link href="/portfolio" className="dc-btn dc-btn--ghost">
-                Explore All Projects
+                {CM_CTA.projects}
               </Link>
             </Reveal>
           </>

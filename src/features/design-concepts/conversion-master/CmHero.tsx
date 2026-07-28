@@ -2,13 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import {
-  ARTWORK_PROVENANCE_NOTE,
-  CM_HERO,
-  HOMEPAGE_HERO_ASSET,
-} from "./content";
+import { CM_HERO, CM_PLANNER, HOMEPAGE_HERO_ASSET } from "./content";
 import { useLead } from "./LeadContext";
-import { LeadPlannerInline, LeadPlannerSheet } from "./LeadPlanner";
+import { LeadPlannerHost, LeadPlannerInline } from "./LeadPlanner";
 import { Reveal } from "../shared/Reveal";
 
 export function CmHero() {
@@ -48,17 +44,28 @@ export function CmHero() {
               {CM_HERO.secondaryCta}
             </Link>
           </div>
-          <p className="dc-provenance cm-hero__provenance">
-            {ARTWORK_PROVENANCE_NOTE}
-          </p>
         </Reveal>
 
         <Reveal className="cm-hero__plannerWrap" order={1}>
           <LeadPlannerInline />
         </Reveal>
+
+        <Reveal className="cm-hero__entry" order={1}>
+          <button
+            type="button"
+            className="cm-hero__entryCard"
+            onClick={() => openPlanner()}
+          >
+            <span className="cm-hero__entryTitle">{CM_PLANNER.title}</span>
+            <span className="cm-hero__entryHint">{CM_PLANNER.entryHint}</span>
+            <span className="dc-btn dc-btn--primary cm-hero__entryCta">
+              {CM_HERO.primaryCta}
+            </span>
+          </button>
+        </Reveal>
       </div>
 
-      <LeadPlannerSheet />
+      <LeadPlannerHost />
     </section>
   );
 }

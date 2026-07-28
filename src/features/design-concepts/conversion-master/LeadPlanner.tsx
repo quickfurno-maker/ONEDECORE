@@ -9,8 +9,7 @@ import {
   type CmTimelineId,
 } from "./content";
 import { useLead } from "./LeadContext";
-
-const INDIAN_MOBILE = /^[6-9]\d{9}$/;
+import { isValidIndianMobile } from "./lead-state";
 
 function OptionGrid({
   legend,
@@ -55,14 +54,43 @@ function OptionGrid({
   );
 }
 
+function CloseIconButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="cm-sheet__close"
+      onClick={onClick}
+      aria-label="Close"
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 18 18"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M4.5 4.5l9 9M13.5 4.5l-9 9"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </svg>
+    </button>
+  );
+}
+
 function PlannerFormBody({
   formId,
   onClose,
   showClose,
+  compactEntry,
 }: {
   formId: string;
   onClose?: () => void;
   showClose?: boolean;
+  /** Desktop-inline compact: service + hint + Continue expand only. */
+  compactEntry?: boolean;
 }) {
   const lead = useLead();
   const errorSummaryId = useId();
@@ -84,7 +112,7 @@ function PlannerFormBody({
     if (step === 4) {
       const next: string[] = [];
       if (!lead.name.trim()) next.push("Name is required.");
-      if (!INDIAN_MOBILE.test(lead.mobile.trim())) {
+      if (!isValidIndianMobile(lead.mobile)) {
         next.push("Enter a valid 10-digit Indian mobile number.");
       }
       if (!lead.locality.trim()) next.push("Pune locality is required.");
@@ -105,6 +133,17 @@ function PlannerFormBody({
     lead.goNext();
   };
 
+  const handleCompactContinue = () => {
+    if (!lead.service) {
+      setErrors(["Select a service to continue."]);
+      queueMicrotask(() => errorRef.current?.focus());
+      return;
+    }
+    setErrors([]);
+    lead.expandPlanner();
+    lead.goNext();
+  };
+
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     const nextErrors = validateStep(4);
@@ -121,12 +160,68 @@ function PlannerFormBody({
       <div className="cm-planner__success" role="status">
         <h3 className="cm-planner__successTitle">{CM_PLANNER.successTitle}</h3>
         <p className="cm-planner__successBody">{CM_PLANNER.successBody}</p>
+        <button
+          type="button"
+          className="dc-btn dc-btn--ghost"
+          onClick={() => lead.editSubmission()}
+        >
+          {CM_PLANNER.editLabel}
+        </button>
         {showClose && onClose ? (
           <button type="button" className="dc-btn dc-btn--ghost" onClick={onClose}>
             Close
           </button>
         ) : null}
       </div>
+    );
+  }
+
+  if (compactEntry) {
+    return (
+      <form
+        id={formId}
+        className="cm-planner__form cm-planner__form--entry"
+        onSubmit={(event) => {
+          event.preventDefault();
+          handleCompactContinue();
+        }}
+        noValidate
+      >
+        <p className="cm-planner__hint">{CM_PLANNER.entryHint}</p>
+
+        {errors.length > 0 ? (
+          <div
+            ref={errorRef}
+            id={errorSummaryId}
+            className="cm-error-summary"
+            role="alert"
+            tabIndex={-1}
+          >
+            <p className="cm-error-summary__title">Please fix the following:</p>
+            <ul>
+              {errors.map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <OptionGrid
+          legend={CM_PLANNER.steps[0].legend}
+          name="cm-service-entry"
+          options={CM_PLANNER.services}
+          value={lead.service}
+          onChange={(id) => lead.setService(id as CmServiceId)}
+          errorId={errors.length ? errorSummaryId : undefined}
+        />
+
+        <div className="cm-planner__actions">
+          <span />
+          <button type="submit" className="dc-btn dc-btn--primary">
+            {CM_PLANNER.continueLabel}
+          </button>
+        </div>
+      </form>
     );
   }
 
@@ -268,20 +363,6 @@ function PlannerFormBody({
           <label className="cm-check">
             <input
               type="checkbox"
-              checked={lead.whatsappConsent}
-              onChange={(event) =>
-                lead.setContact({ whatsappConsent: event.target.checked })
-              }
-            />
-            <span>
-              {CM_PLANNER.whatsappConsentLabel}{" "}
-              <span className="cm-opt">optional</span>
-            </span>
-          </label>
-
-          <label className="cm-check">
-            <input
-              type="checkbox"
               checked={lead.privacyConsent}
               onChange={(event) =>
                 lead.setContact({ privacyConsent: event.target.checked })
@@ -291,6 +372,20 @@ function PlannerFormBody({
             <span>
               {CM_PLANNER.privacyConsentLabel}{" "}
               <span className="cm-req">required</span>
+            </span>
+          </label>
+
+          <label className="cm-check">
+            <input
+              type="checkbox"
+              checked={lead.whatsappConsent}
+              onChange={(event) =>
+                lead.setContact({ whatsappConsent: event.target.checked })
+              }
+            />
+            <span>
+              {CM_PLANNER.whatsappConsentLabel}{" "}
+              <span className="cm-opt">optional</span>
             </span>
           </label>
         </fieldset>
@@ -317,7 +412,11 @@ function PlannerFormBody({
         )}
 
         {lead.step < 4 ? (
-          <button type="button" className="dc-btn dc-btn--primary" onClick={handleContinue}>
+          <button
+            type="button"
+            className="dc-btn dc-btn--primary"
+            onClick={handleContinue}
+          >
             {CM_PLANNER.continueLabel}
           </button>
         ) : (
@@ -330,32 +429,9 @@ function PlannerFormBody({
   );
 }
 
-/** Desktop inline card — always in the hero composition on large screens. */
-export function LeadPlannerInline() {
-  const formId = useId();
-  return (
-    <aside
-      id="cm-lead-planner"
-      className="cm-planner cm-planner--inline"
-      aria-labelledby="cm-planner-title"
-    >
-      <h2 id="cm-planner-title" className="cm-planner__title">
-        {CM_PLANNER.title}
-      </h2>
-      <PlannerFormBody formId={formId} />
-    </aside>
-  );
-}
-
-/** Mobile bottom sheet — opens only on user intent. */
-export function LeadPlannerSheet() {
-  const lead = useLead();
-  const formId = useId();
+function usePlannerOverlay(open: boolean, closePlanner: () => void) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
-  const titleId = useId();
-
-  const open = lead.isOpen && lead.mode === "mobile-sheet";
 
   useEffect(() => {
     if (!open) return;
@@ -372,7 +448,7 @@ export function LeadPlannerSheet() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        lead.closePlanner();
+        closePlanner();
         return;
       }
       if (event.key !== "Tab" || !panelRef.current) return;
@@ -398,7 +474,40 @@ export function LeadPlannerSheet() {
       document.body.style.overflow = overflow;
       previouslyFocused.current?.focus();
     };
-  }, [open, lead]);
+  }, [open, closePlanner]);
+
+  return panelRef;
+}
+
+/** Desktop inline card — compact entry until expanded (wide screens). */
+export function LeadPlannerInline() {
+  const formId = useId();
+  const { mode, plannerExpanded, step } = useLead();
+  const showCompact =
+    mode === "desktop-inline" && !plannerExpanded && step === 1;
+
+  return (
+    <aside
+      id="cm-lead-planner"
+      className="cm-planner cm-planner--inline"
+      aria-labelledby="cm-planner-title"
+      data-expanded={showCompact ? undefined : ""}
+    >
+      <h2 id="cm-planner-title" className="cm-planner__title">
+        {CM_PLANNER.title}
+      </h2>
+      <PlannerFormBody formId={formId} compactEntry={showCompact} />
+    </aside>
+  );
+}
+
+/** Mobile bottom sheet — opens only on user intent. */
+export function LeadPlannerSheet() {
+  const { isOpen, mode, closePlanner } = useLead();
+  const formId = useId();
+  const titleId = useId();
+  const open = isOpen && mode === "mobile-sheet";
+  const panelRef = usePlannerOverlay(open, closePlanner);
 
   return (
     <>
@@ -409,7 +518,7 @@ export function LeadPlannerSheet() {
         hidden={!open}
         tabIndex={-1}
         aria-hidden="true"
-        onClick={() => lead.closePlanner()}
+        onClick={closePlanner}
       />
       <div
         ref={panelRef}
@@ -425,21 +534,63 @@ export function LeadPlannerSheet() {
           <h2 id={titleId} className="cm-planner__title">
             {CM_PLANNER.title}
           </h2>
-          <button
-            type="button"
-            className="cm-sheet__close"
-            onClick={() => lead.closePlanner()}
-            aria-label="Close planner"
-          >
-            ×
-          </button>
+          <CloseIconButton onClick={closePlanner} />
         </div>
-        <PlannerFormBody
-          formId={formId}
-          showClose
-          onClose={() => lead.closePlanner()}
-        />
+        <PlannerFormBody formId={formId} showClose onClose={closePlanner} />
       </div>
+    </>
+  );
+}
+
+/** Mid-desktop modal dialog (1024–1279). */
+export function LeadPlannerModal() {
+  const { isOpen, mode, closePlanner } = useLead();
+  const formId = useId();
+  const titleId = useId();
+  const open = isOpen && mode === "desktop-modal";
+  const panelRef = usePlannerOverlay(open, closePlanner);
+
+  return (
+    <>
+      <button
+        type="button"
+        className="cm-modal__scrim"
+        data-open={open ? "" : undefined}
+        hidden={!open}
+        tabIndex={-1}
+        aria-hidden="true"
+        onClick={closePlanner}
+      />
+      <div
+        ref={panelRef}
+        id="cm-lead-planner-modal"
+        className="cm-modal"
+        data-open={open ? "" : undefined}
+        hidden={!open}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <div className="cm-modal__panel cm-planner">
+          <div className="cm-sheet__header">
+            <h2 id={titleId} className="cm-planner__title">
+              {CM_PLANNER.title}
+            </h2>
+            <CloseIconButton onClick={closePlanner} />
+          </div>
+          <PlannerFormBody formId={formId} showClose onClose={closePlanner} />
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** Mount sheet + modal hosts once (hero). */
+export function LeadPlannerHost() {
+  return (
+    <>
+      <LeadPlannerSheet />
+      <LeadPlannerModal />
     </>
   );
 }

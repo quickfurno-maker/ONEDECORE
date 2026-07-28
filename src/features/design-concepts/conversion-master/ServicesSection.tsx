@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import {
-  ARTWORK_PROVENANCE_NOTE,
   CM_SECTION_IDS,
+  CM_SERVICE_CTA,
   CM_SERVICE_MODULES,
   SERVICES_SECTION_COPY,
   type CmServiceId,
@@ -46,19 +46,15 @@ export function ServicesSection() {
               <div className="cm-service__body">
                 <span className="dc-ordinal">{service.ordinal}</span>
                 <h3 className="cm-service__title">{service.title}</h3>
-                <p className="cm-service__desc">{service.description}</p>
+                <p className="cm-service__desc">{service.value}</p>
                 <dl className="cm-service__meta">
                   <div>
                     <dt>Includes</dt>
                     <dd>{service.includes}</dd>
                   </div>
                   <div>
-                    <dt>For</dt>
-                    <dd>{service.forWhom}</dd>
-                  </div>
-                  <div>
-                    <dt>Value</dt>
-                    <dd>{service.value}</dd>
+                    <dt>Best for</dt>
+                    <dd>{service.bestFor}</dd>
                   </div>
                 </dl>
                 <button
@@ -66,16 +62,15 @@ export function ServicesSection() {
                   className="dc-btn dc-btn--ghost"
                   onClick={() => {
                     setService(service.id as CmServiceId);
-                    openPlanner(1);
+                    openPlanner(2);
                   }}
                 >
-                  Plan this service
+                  {CM_SERVICE_CTA}
                 </button>
               </div>
             </Reveal>
           ))}
         </ul>
-        <p className="dc-provenance">{ARTWORK_PROVENANCE_NOTE}</p>
       </div>
     </section>
   );

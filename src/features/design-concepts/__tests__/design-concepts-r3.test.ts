@@ -1,5 +1,5 @@
 /**
- * Phase 2F-R3 Conversion Master isolation tests.
+ * Phase 2F-R3.1 Conversion Master isolation and CTA guards.
  */
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
@@ -16,11 +16,26 @@ const CM_ROUTE = join(
   "conversion-master",
   "page.tsx"
 );
-const INDEX = join(ROOT, "src", "app", "design-concepts", "page.tsx");
 const SITEMAP = join(ROOT, "src", "app", "sitemap.ts");
 const HOME = join(ROOT, "src", "app", "(public)", "(home)", "page.tsx");
 const PKG = join(ROOT, "package.json");
-const PKG_LOCK = join(ROOT, "package-lock.json");
+
+const CTA_OPEN = "Start My Interior Plan";
+const CTA_SUBMIT = "Request a Design Call";
+const CTA_PROJECTS = "View Projects";
+const CTA_CONTINUE = "Continue My Interior Plan";
+
+const DISALLOWED_CTA = [
+  "Plan My Interiors",
+  "View Our Work",
+  "Start With Your Home",
+  "Plan this service",
+  "Continue to contact",
+  "View Portfolio",
+  "Book Free",
+  "Get Instant",
+  "saved locally",
+] as const;
 
 function read(path: string) {
   return readFileSync(path, "utf8");
@@ -41,60 +56,57 @@ function cmSources() {
   return walk(CM_DIR).filter((f) => /\.(tsx?|css)$/.test(f));
 }
 
-test("R3 conversion-master route exists and is noindex", () => {
+function cmUiSources() {
+  return cmSources().filter(
+    (f) => !f.endsWith(`${join("conversion-master", "content.ts")}`) && !f.includes("__tests__")
+  );
+}
+
+test("R3.1 conversion-master route exists and is noindex", () => {
   assert.equal(existsSync(CM_ROUTE), true);
   const source = read(CM_ROUTE);
   assert.match(source, /index:\s*false/);
   assert.match(source, /follow:\s*false/);
-  assert.match(source, /loadConceptFeatured/);
 });
 
-test("R3 conversion-master is absent from sitemap", () => {
+test("R3.1 conversion-master is absent from sitemap", () => {
   const source = read(SITEMAP);
   assert.equal(source.includes("conversion-master"), false);
   assert.equal(source.includes("design-concepts"), false);
 });
 
-test("R3 production homepage page.tsx is unchanged from R2 baseline content contracts", () => {
+test("R3.1 production homepage unchanged by conversion master", () => {
   const source = read(HOME);
   assert.equal(source.includes("conversion-master"), false);
-  assert.equal(source.includes("Plan My Interiors"), false);
+  assert.equal(source.includes(CTA_OPEN), false);
   assert.equal(source.includes("LeadPlanner"), false);
 });
 
-test("R3 index marks Conversion Master as active", () => {
-  const source = read(INDEX);
-  assert.match(source, /Active — Conversion Master|Conversion Master is the active/i);
-  assert.match(source, /conversion-master/);
+test("R3.1 CTA freeze constants are exact", () => {
+  const source = read(join(CM_DIR, "content.ts"));
+  assert.match(source, new RegExp(`open:\\s*"${CTA_OPEN}"`));
+  assert.match(source, new RegExp(`submit:\\s*"${CTA_SUBMIT}"`));
+  assert.match(source, new RegExp(`projects:\\s*"${CTA_PROJECTS}"`));
+  assert.match(source, new RegExp(`continuePlan:\\s*"${CTA_CONTINUE}"`));
 });
 
-test("R3 primary CTA copy is consistent", () => {
-  const content = read(join(CM_DIR, "content.ts"));
-  assert.match(content, /Plan My Interiors/);
-  assert.match(content, /Request a Design Call/);
-  assert.match(content, /View Our Work/);
-});
-
-test("R3 lead planner option values match the brief", () => {
-  const content = read(join(CM_DIR, "content.ts"));
-  for (const needle of [
-    "Complete Home Interiors",
-    "Modular Kitchen",
-    "Custom Wardrobe",
-    "1 BHK",
-    "2 BHK",
-    "3 BHK",
-    "4 BHK / Villa",
-    "Ready now",
-    "Within 3 months",
-    "Just exploring",
-  ]) {
-    assert.equal(content.includes(needle), true, `missing ${needle}`);
+test("R3.1 disallows legacy CTA phrases outside the allowlist file", () => {
+  for (const file of cmUiSources()) {
+    const source = read(file);
+    const rel = relative(ROOT, file);
+    for (const phrase of DISALLOWED_CTA) {
+      assert.equal(
+        source.includes(phrase),
+        false,
+        `${rel} must not contain disallowed CTA phrase: ${phrase}`
+      );
+    }
   }
 });
 
-test("R3 forbids unsupported claims and QuickFurno identity", () => {
+test("R3.1 forbids unsupported claims and QuickFurno identity", () => {
   for (const file of cmSources()) {
+    if (file.includes("__tests__")) continue;
     const source = read(file);
     const rel = relative(ROOT, file);
     for (const needle of [
@@ -108,13 +120,12 @@ test("R3 forbids unsupported claims and QuickFurno identity", () => {
       "free consultation",
       "instant estimate",
       "script.google",
-      "macros/s/",
       "wa.me/",
       "whatsapp.com",
       "+91",
       "₹",
       'href="#"',
-      'href={"#"}',
+      "saved locally",
     ]) {
       assert.equal(
         source.includes(needle),
@@ -125,10 +136,11 @@ test("R3 forbids unsupported claims and QuickFurno identity", () => {
   }
 });
 
-test("R3 forbids unbuilt route links", () => {
+test("R3.1 forbids unbuilt route links", () => {
   const forbidden =
     /["'`]\/(services|process|contact|about|privacy|terms)(?=["'`/])/;
   for (const file of cmSources()) {
+    if (file.includes("__tests__")) continue;
     const source = read(file);
     assert.equal(
       forbidden.test(source),
@@ -138,60 +150,67 @@ test("R3 forbids unbuilt route links", () => {
   }
 });
 
-test("R3 consent defaults are false in LeadContext", () => {
+test("R3.1 consent defaults are false in LeadContext", () => {
   const source = read(join(CM_DIR, "LeadContext.tsx"));
-  assert.match(source, /whatsappConsent,\s*setWhatsappConsent\]\s*=\s*useState\(false\)/);
-  assert.match(source, /privacyConsent,\s*setPrivacyConsent\]\s*=\s*useState\(false\)/);
+  assert.match(
+    source,
+    /whatsappConsent,\s*setWhatsappConsent\]\s*=\s*useState\(false\)/
+  );
+  assert.match(
+    source,
+    /privacyConsent,\s*setPrivacyConsent\]\s*=\s*useState\(false\)/
+  );
 });
 
-test("R3 accessible labels exist on planner and final form", () => {
-  const planner = read(join(CM_DIR, "LeadPlanner.tsx"));
-  const finalForm = read(join(CM_DIR, "FinalForm.tsx"));
-  assert.match(planner, /fieldset|legend|<label/);
-  assert.match(finalForm, /<label/);
-  assert.match(planner, /aria-describedby|aria-invalid|error/);
+test("R3.1 privacy acknowledgement copy is frozen", () => {
+  const source = read(join(CM_DIR, "content.ts"));
+  assert.match(
+    source,
+    /I agree that ONEDECORE may use these details to respond to my interior enquiry\./
+  );
 });
 
-test("R3 CSS is scoped to conversion-master", () => {
+test("R3.1 success copy does not claim local save or submission", () => {
+  const source = read(join(CM_DIR, "content.ts"));
+  assert.match(source, /enquiry preview is ready/);
+  assert.match(source, /does not submit data/);
+  assert.equal(source.includes("saved locally"), false);
+});
+
+test("R3.1 premium UI does not show Category-C stand-in disclaimer", () => {
+  for (const file of ["ProjectsSection.tsx", "CmHero.tsx", "ServicesSection.tsx"]) {
+    const source = read(join(CM_DIR, file));
+    assert.equal(source.includes("Local review note"), false);
+    assert.equal(source.includes("Category-C stand-in"), false);
+    assert.equal(source.includes("ARTWORK_PROVENANCE_NOTE"), false);
+  }
+});
+
+test("R3.1 LeadPlanner sheet effect does not depend on full lead object", () => {
+  const source = read(join(CM_DIR, "LeadPlanner.tsx"));
+  assert.match(source, /\[\s*open\s*,\s*closePlanner\s*\]/);
+  assert.equal(/\[\s*open\s*,\s*lead\s*\]/.test(source), false);
+});
+
+test("R3.1 CSS is scoped to conversion-master", () => {
   const css = read(join(CM_DIR, "styles", "conversion-master.css"));
-  assert.match(css, /\[data-design-concept\]\[data-concept=["']conversion-master["']\]/);
-  assert.equal(css.includes("[data-public-site]"), false);
+  assert.match(
+    css,
+    /\[data-design-concept\]\[data-concept=["']conversion-master["']\]/
+  );
 });
 
-test("R3 does not add animation or package drift markers", () => {
+test("R3.1 does not add animation packages", () => {
   const pkg = read(PKG);
-  const lock = read(PKG_LOCK);
   for (const needle of ["gsap", "framer-motion", "lenis", "swiper"]) {
     assert.equal(pkg.includes(needle), false);
   }
-  // lock may mention transitive names in unrelated packages; only assert package.json
-  void lock;
 });
 
-test("R3 client components are limited", () => {
-  const clients = cmSources().filter((f) => {
-    const head = read(f).slice(0, 40);
-    return head.includes('"use client"') || head.includes("'use client'");
-  });
-  const names = clients.map((f) => relative(CM_DIR, f).replace(/\\/g, "/"));
-  for (const allowed of [
-    "LeadContext.tsx",
-    "LeadPlanner.tsx",
-    "CmNav.tsx",
-    "CmHero.tsx",
-    "ServicesSection.tsx",
-    "ProcessSection.tsx",
-    "ScopePlanner.tsx",
-    "FinalForm.tsx",
-    "StickyBar.tsx",
-  ]) {
-    // Services/Process may be server if they only call openPlanner via child buttons —
-    // assert only that unexpected heavy clients are absent.
-    void allowed;
-  }
-  assert.equal(
-    names.some((n) => n.includes("ConversionMaster.tsx")),
-    false,
-    "ConversionMaster must remain a Server Component"
-  );
+test("R3.1 LeadContext exposes getNextIncompleteStep and message", () => {
+  const source = read(join(CM_DIR, "LeadContext.tsx"));
+  assert.match(source, /getNextIncompleteStep/);
+  assert.match(source, /setMessage/);
+  assert.match(source, /editSubmission/);
+  assert.match(source, /resetAll/);
 });

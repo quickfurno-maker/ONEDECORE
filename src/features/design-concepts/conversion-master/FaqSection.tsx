@@ -19,7 +19,7 @@ export function FaqSection() {
         <div className="cm-faq__list">
           {CM_FAQS.map((item, index) => (
             <Reveal key={item.id} order={index} className="cm-faq__item">
-              <details>
+              <details open={index === 0}>
                 <summary>
                   <span className="cm-faq__q">{item.question}</span>
                 </summary>

@@ -16,8 +16,12 @@ import type {
   CmServiceId,
   CmTimelineId,
 } from "./content";
+import {
+  getNextIncompleteStep as computeNextStep,
+  type LeadSnapshot,
+} from "./lead-state";
 
-export type PlannerMode = "desktop-inline" | "mobile-sheet";
+export type PlannerMode = "desktop-inline" | "mobile-sheet" | "desktop-modal";
 
 export interface LeadContactFields {
   name: string;
@@ -32,10 +36,13 @@ export interface LeadState extends LeadContactFields {
   property: CmPropertyId | null;
   timeline: CmTimelineId | null;
   rooms: readonly CmRoomId[];
+  message: string;
   step: CmPlannerStep;
   isOpen: boolean;
   submitted: boolean;
   mode: PlannerMode;
+  /** Compact entry card vs expanded multi-step on desktop. */
+  plannerExpanded: boolean;
 }
 
 interface LeadContextValue extends LeadState {
@@ -46,22 +53,53 @@ interface LeadContextValue extends LeadState {
   setTimeline: (timeline: CmTimelineId) => void;
   setRooms: (rooms: readonly CmRoomId[]) => void;
   setContact: (fields: Partial<LeadContactFields>) => void;
+  setMessage: (message: string) => void;
   setStep: (step: CmPlannerStep) => void;
+  expandPlanner: () => void;
   goNext: () => void;
   goBack: () => void;
   markSubmitted: () => void;
-  resetSubmitted: () => void;
+  editSubmission: () => void;
+  resetAll: () => void;
+  getNextIncompleteStep: () => CmPlannerStep;
 }
 
 const LeadContext = createContext<LeadContextValue | null>(null);
 
 const DESKTOP_MQ = "(min-width: 1024px)";
+const WIDE_MQ = "(min-width: 1280px)";
 
 function detectMode(): PlannerMode {
   if (typeof window === "undefined") return "desktop-inline";
-  return window.matchMedia(DESKTOP_MQ).matches
-    ? "desktop-inline"
-    : "mobile-sheet";
+  if (!window.matchMedia(DESKTOP_MQ).matches) return "mobile-sheet";
+  if (!window.matchMedia(WIDE_MQ).matches) return "desktop-modal";
+  return "desktop-inline";
+}
+
+function snapshotFrom(
+  service: CmServiceId | null,
+  property: CmPropertyId | null,
+  timeline: CmTimelineId | null,
+  rooms: readonly CmRoomId[],
+  name: string,
+  mobile: string,
+  locality: string,
+  message: string,
+  whatsappConsent: boolean,
+  privacyConsent: boolean
+): LeadSnapshot {
+  return {
+    service,
+    property,
+    timeline,
+    rooms,
+    name,
+    mobile,
+    locality,
+    message,
+    whatsappConsent,
+    privacyConsent,
+  };
 }
 
 export function LeadProvider({ children }: { children: ReactNode }) {
@@ -73,33 +111,105 @@ export function LeadProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [mode, setMode] = useState<PlannerMode>("desktop-inline");
+  const [plannerExpanded, setPlannerExpanded] = useState(false);
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [locality, setLocality] = useState("");
+  const [message, setMessageState] = useState("");
   const [whatsappConsent, setWhatsappConsent] = useState(false);
   const [privacyConsent, setPrivacyConsent] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia(DESKTOP_MQ);
-    const sync = () => setMode(mq.matches ? "desktop-inline" : "mobile-sheet");
+    const desktop = window.matchMedia(DESKTOP_MQ);
+    const wide = window.matchMedia(WIDE_MQ);
+    const sync = () => setMode(detectMode());
     sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
+    desktop.addEventListener("change", sync);
+    wide.addEventListener("change", sync);
+    return () => {
+      desktop.removeEventListener("change", sync);
+      wide.removeEventListener("change", sync);
+    };
   }, []);
 
-  const openPlanner = useCallback((nextStep?: CmPlannerStep) => {
-    setSubmitted(false);
-    if (nextStep) setStep(nextStep);
-    const current = detectMode();
-    setMode(current);
-    if (current === "mobile-sheet") {
+  const getNextIncompleteStep = useCallback((): CmPlannerStep => {
+    return computeNextStep(
+      snapshotFrom(
+        service,
+        property,
+        timeline,
+        rooms,
+        name,
+        mobile,
+        locality,
+        message,
+        whatsappConsent,
+        privacyConsent
+      )
+    );
+  }, [
+    service,
+    property,
+    timeline,
+    rooms,
+    name,
+    mobile,
+    locality,
+    message,
+    whatsappConsent,
+    privacyConsent,
+  ]);
+
+  const openPlanner = useCallback(
+    (nextStep?: CmPlannerStep) => {
+      setSubmitted(false);
+      const current = detectMode();
+      setMode(current);
+      const target = nextStep ?? computeNextStep(
+        snapshotFrom(
+          service,
+          property,
+          timeline,
+          rooms,
+          name,
+          mobile,
+          locality,
+          message,
+          whatsappConsent,
+          privacyConsent
+        )
+      );
+      setStep(target);
+      setPlannerExpanded(target > 1 || Boolean(service));
       setIsOpen(true);
-    } else {
-      setIsOpen(true);
-      const target = document.getElementById("cm-lead-planner");
-      target?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }, []);
+
+      if (current === "desktop-inline") {
+        requestAnimationFrame(() => {
+          document
+            .getElementById("cm-lead-planner")
+            ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+      } else if (current === "desktop-modal") {
+        requestAnimationFrame(() => {
+          document
+            .getElementById("cm-lead-planner-modal")
+            ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+      }
+    },
+    [
+      service,
+      property,
+      timeline,
+      rooms,
+      name,
+      mobile,
+      locality,
+      message,
+      whatsappConsent,
+      privacyConsent,
+    ]
+  );
 
   const closePlanner = useCallback(() => {
     setIsOpen(false);
@@ -107,6 +217,7 @@ export function LeadProvider({ children }: { children: ReactNode }) {
 
   const setService = useCallback((next: CmServiceId) => {
     setServiceState(next);
+    setPlannerExpanded(true);
   }, []);
 
   const setContact = useCallback((fields: Partial<LeadContactFields>) => {
@@ -121,20 +232,52 @@ export function LeadProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setMessage = useCallback((value: string) => {
+    setMessageState(value);
+  }, []);
+
+  const expandPlanner = useCallback(() => {
+    setPlannerExpanded(true);
+  }, []);
+
   const goNext = useCallback(() => {
-    setStep((current) => (current < 4 ? ((current + 1) as CmPlannerStep) : current));
+    setStep((current) =>
+      current < 4 ? ((current + 1) as CmPlannerStep) : current
+    );
   }, []);
 
   const goBack = useCallback(() => {
-    setStep((current) => (current > 1 ? ((current - 1) as CmPlannerStep) : current));
+    setStep((current) =>
+      current > 1 ? ((current - 1) as CmPlannerStep) : current
+    );
   }, []);
 
   const markSubmitted = useCallback(() => {
     setSubmitted(true);
+    setIsOpen(false);
   }, []);
 
-  const resetSubmitted = useCallback(() => {
+  const editSubmission = useCallback(() => {
     setSubmitted(false);
+    setStep(4);
+    setPlannerExpanded(true);
+  }, []);
+
+  const resetAll = useCallback(() => {
+    setServiceState(null);
+    setProperty(null);
+    setTimeline(null);
+    setRooms([]);
+    setStep(1);
+    setIsOpen(false);
+    setSubmitted(false);
+    setPlannerExpanded(false);
+    setName("");
+    setMobile("");
+    setLocality("");
+    setMessageState("");
+    setWhatsappConsent(false);
+    setPrivacyConsent(false);
   }, []);
 
   const value = useMemo<LeadContextValue>(
@@ -143,10 +286,12 @@ export function LeadProvider({ children }: { children: ReactNode }) {
       property,
       timeline,
       rooms,
+      message,
       step,
       isOpen,
       submitted,
       mode,
+      plannerExpanded,
       name,
       mobile,
       locality,
@@ -159,21 +304,27 @@ export function LeadProvider({ children }: { children: ReactNode }) {
       setTimeline,
       setRooms,
       setContact,
+      setMessage,
       setStep,
+      expandPlanner,
       goNext,
       goBack,
       markSubmitted,
-      resetSubmitted,
+      editSubmission,
+      resetAll,
+      getNextIncompleteStep,
     }),
     [
       service,
       property,
       timeline,
       rooms,
+      message,
       step,
       isOpen,
       submitted,
       mode,
+      plannerExpanded,
       name,
       mobile,
       locality,
@@ -182,11 +333,18 @@ export function LeadProvider({ children }: { children: ReactNode }) {
       openPlanner,
       closePlanner,
       setService,
+      setProperty,
+      setTimeline,
+      setRooms,
       setContact,
+      setMessage,
+      expandPlanner,
       goNext,
       goBack,
       markSubmitted,
-      resetSubmitted,
+      editSubmission,
+      resetAll,
+      getNextIncompleteStep,
     ]
   );
 

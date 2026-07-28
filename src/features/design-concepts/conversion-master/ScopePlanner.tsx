@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   CM_PLANNER,
   CM_SCOPE,
@@ -22,7 +22,6 @@ function labelOf(
 
 export function ScopePlanner() {
   const lead = useLead();
-  const [locality, setLocality] = useState(lead.locality);
 
   const summary = useMemo(() => {
     const service = labelOf(CM_PLANNER.services, lead.service);
@@ -43,11 +42,17 @@ export function ScopePlanner() {
       property ? `Property: ${property}` : null,
       rooms ? `Rooms / areas: ${rooms}` : null,
       timeline ? `Timeline: ${timeline}` : null,
-      locality.trim() ? `Locality: ${locality.trim()}` : null,
+      lead.locality.trim() ? `Locality: ${lead.locality.trim()}` : null,
     ].filter(Boolean);
 
     return parts.join(". ") + ".";
-  }, [lead.service, lead.property, lead.timeline, lead.rooms, locality]);
+  }, [
+    lead.service,
+    lead.property,
+    lead.timeline,
+    lead.rooms,
+    lead.locality,
+  ]);
 
   const toggleRoom = (id: CmRoomId) => {
     if (lead.rooms.includes(id)) {
@@ -77,10 +82,7 @@ export function ScopePlanner() {
             className="cm-scope__form"
             onSubmit={(event) => {
               event.preventDefault();
-              if (locality.trim()) {
-                lead.setContact({ locality: locality.trim() });
-              }
-              lead.openPlanner(4);
+              lead.openPlanner();
             }}
           >
             <fieldset className="cm-fieldset">
@@ -180,9 +182,13 @@ export function ScopePlanner() {
               </label>
               <input
                 id="cm-scope-locality"
+                name="locality"
                 type="text"
-                value={locality}
-                onChange={(event) => setLocality(event.target.value)}
+                autoComplete="address-level2"
+                value={lead.locality}
+                onChange={(event) =>
+                  lead.setContact({ locality: event.target.value })
+                }
               />
             </div>
 

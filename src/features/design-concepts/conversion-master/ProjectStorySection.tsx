@@ -1,6 +1,5 @@
 import Image from "next/image";
 import {
-  ARTWORK_PROVENANCE_NOTE,
   CM_SECTION_IDS,
   CM_STORY,
   MATERIAL_PRIMARY,
@@ -80,7 +79,6 @@ export function ProjectStorySection() {
         </div>
 
         <Reveal className="cm-story__note">
-          <p className="dc-provenance">{ARTWORK_PROVENANCE_NOTE}</p>
           <p className="dc-body">{CM_STORY.futureNote}</p>
           {MATERIAL_SUPPORTING.length > 0 ? (
             <p className="dc-sr-only">
