@@ -908,6 +908,7 @@ describe("Public Portfolio — Listing Pagination Contract", () => {
 import "../../../public-site/home-r4/__tests__/home-r4-production.test.ts";
 import "../../../public-site/home-r4/__tests__/plan-state.test.ts";
 import "../../../public-site/home-r4/__tests__/project-proof.test.ts";
+import "../../../public-site/home-r4/__tests__/r5-value.test.ts";
 
 {
   const harness = readFileSync(fileURLToPath(import.meta.url), "utf8");

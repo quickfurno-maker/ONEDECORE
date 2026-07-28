@@ -1,15 +1,21 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 import {
   PM_MATERIALS_COPY,
+  PM_MATERIAL_DECISION_STEPS,
   PM_MATERIAL_PRIMARY,
   PM_MATERIAL_SUPPORTING,
   PM_SECTION_IDS,
 } from "./content";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 
-/** Tactile highlight: one dominant detail plus two supporting studies. */
+/** Tactile materials gallery plus compact decision-guidance flow. */
 export function HomeMaterials() {
   const primary = PM_MATERIAL_PRIMARY;
+  const [stepIndex, setStepIndex] = useState(0);
+  const step = PM_MATERIAL_DECISION_STEPS[stepIndex]!;
 
   return (
     <section
@@ -67,6 +73,34 @@ export function HomeMaterials() {
             </Reveal>
           ))}
         </ul>
+
+        <Reveal className="pm-materials__decision" order={4}>
+          <h3 className="pm-h3">{PM_MATERIALS_COPY.decisionHeading}</h3>
+          <div
+            className="pm-materials__steps"
+            role="tablist"
+            aria-label="Material decision sequence"
+          >
+            {PM_MATERIAL_DECISION_STEPS.map((entry, index) => (
+              <button
+                key={entry.id}
+                type="button"
+                role="tab"
+                className="pm-materials__step"
+                aria-selected={index === stepIndex}
+                tabIndex={index === stepIndex ? 0 : -1}
+                data-active={index === stepIndex ? "" : undefined}
+                onClick={() => setStepIndex(index)}
+              >
+                <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                {entry.title}
+              </button>
+            ))}
+          </div>
+          <div className="pm-materials__stepPanel" role="tabpanel" key={step.id}>
+            <p className="pm-body">{step.body}</p>
+          </div>
+        </Reveal>
       </div>
     </section>
   );

@@ -20,17 +20,21 @@ export const PM_HREF = "/" as const;
 export const PM_SECTION_IDS = {
   vision: "vision",
   services: "services",
+  rooms: "rooms",
+  included: "included",
   projects: "projects",
   approach: "approach",
   process: "process",
   materials: "materials",
+  readiness: "readiness",
   faqs: "faqs",
   plan: "plan",
 } as const;
 
 export const PM_NAV_ITEMS = [
   { label: "Services", href: `#${PM_SECTION_IDS.services}` },
-  { label: "Projects", href: `#${PM_SECTION_IDS.projects}` },
+  { label: "Rooms", href: `#${PM_SECTION_IDS.rooms}` },
+  { label: "What's Included", href: `#${PM_SECTION_IDS.included}` },
   { label: "Process", href: `#${PM_SECTION_IDS.process}` },
   { label: "Materials", href: `#${PM_SECTION_IDS.materials}` },
   { label: "FAQs", href: `#${PM_SECTION_IDS.faqs}` },
@@ -38,7 +42,8 @@ export const PM_NAV_ITEMS = [
 
 export const PM_TRACKED_SECTIONS = [
   PM_SECTION_IDS.services,
-  PM_SECTION_IDS.projects,
+  PM_SECTION_IDS.rooms,
+  PM_SECTION_IDS.included,
   PM_SECTION_IDS.process,
   PM_SECTION_IDS.materials,
   PM_SECTION_IDS.faqs,
@@ -51,6 +56,9 @@ export const PM_CTA = {
   submit: "Copy My Interior Brief",
   projects: "View Projects",
   editDetails: "Review or edit my details",
+  buildBrief: "Build My Interior Brief",
+  reviewBrief: "Review My Interior Brief",
+  addArea: "Add this area to my plan",
 } as const;
 
 /* ------------------------------------------------------------------ assets */
@@ -245,10 +253,10 @@ export const PM_PLANNER = {
 /* -------------------------------------------------------------- proposition */
 
 export const PM_VISION = {
-  eyebrow: "The ONEDECORE approach",
-  heading: "One vision, carried through every room.",
-  body: "ONEDECORE brings complete home interiors, modular kitchens and custom wardrobes into a single coherent direction — from design through execution, installation and handover — for homes across Pune.",
-  pull: "Design and delivery are the same conversation, not two separate ones.",
+  eyebrow: "Philosophy",
+  heading: "Complete interiors, held as one direction.",
+  body: "ONEDECORE plans complete home interiors, modular kitchens and custom wardrobes for homes across Pune — so rooms, storage and finishes stay aligned from the first brief through handover.",
+  pull: "Planning, detailing and delivery stay in one conversation.",
   asset: PM_ASSETS.dusk,
 } as const;
 
@@ -324,27 +332,213 @@ export const PM_PROJECTS_COPY = {
   planLabel: "Start My Interior Plan",
 } as const;
 
+/* ----------------------------------------------------------- truth metrics */
+
+export const PM_METRICS = [
+  {
+    id: "services",
+    value: 3,
+    label: "Focused Interior Services",
+  },
+  {
+    id: "stages",
+    value: 4,
+    label: "Stages from Discovery to Handover",
+  },
+  {
+    id: "team",
+    value: 1,
+    label: "Coordinated Design and Delivery Team",
+  },
+] as const;
+
+export const PM_METRICS_COPY = {
+  eyebrow: "Operating model",
+  ariaLabel: "ONEDECORE operating model",
+} as const;
+
+/* ---------------------------------------------------------- room explorer */
+
+export const PM_ROOMS_COPY = {
+  eyebrow: "Room priorities",
+  heading: "Explore your home, room by room",
+  lede: "See how planning priorities change from one space to another while staying connected to one complete interior direction.",
+  inspirationNote:
+    "Inspiration artwork — not completed ONEDECORE project photography.",
+  addLabel: PM_CTA.addArea,
+  addedLabel: "Added to your plan",
+} as const;
+
+export const PM_ROOM_CATEGORIES = [
+  {
+    id: "living",
+    title: "Living",
+    goal: "Create a comfortable shared space that connects seating, movement, storage and lighting.",
+    priorities: [
+      "circulation and furniture planning",
+      "media, display and concealed storage",
+      "lighting, material transitions and visual balance",
+    ],
+    serviceId: "complete-home-interiors" as const,
+    serviceLabel: "Complete Home Interiors",
+    rooms: ["living"] as const,
+    asset: PM_ASSETS.hero,
+  },
+  {
+    id: "kitchen",
+    title: "Kitchen",
+    goal: "Plan everyday movement, storage and appliance needs as one working system.",
+    priorities: [
+      "work zones and movement",
+      "storage and appliance integration",
+      "material, lighting and maintenance decisions",
+    ],
+    serviceId: "modular-kitchens" as const,
+    serviceLabel: "Modular Kitchens",
+    rooms: ["kitchen"] as const,
+    asset: PM_ASSETS.modularKitchens,
+  },
+  {
+    id: "bedroom-storage",
+    title: "Bedroom storage",
+    goal: "Resolve wardrobes and storage around the room’s dimensions and everyday routine.",
+    priorities: [
+      "internal storage requirements",
+      "wardrobe proportion and access",
+      "material and lighting integration",
+    ],
+    serviceId: "custom-wardrobes" as const,
+    serviceLabel: "Custom Wardrobes",
+    rooms: ["bedrooms", "wardrobes"] as const,
+    asset: PM_ASSETS.customWardrobes,
+  },
+  {
+    id: "dining",
+    title: "Dining and shared spaces",
+    goal: "Keep dining and connecting areas visually and functionally aligned with the wider home.",
+    priorities: [
+      "movement between adjoining rooms",
+      "lighting and focal composition",
+      "storage, display and material continuity",
+    ],
+    serviceId: "complete-home-interiors" as const,
+    serviceLabel: "Complete Home Interiors",
+    rooms: ["dining"] as const,
+    asset: PM_ASSETS.completeHomeInteriors,
+  },
+] as const;
+
+/* -------------------------------------------------------- scope included */
+
+export const PM_SCOPE_COPY = {
+  eyebrow: "Project scope",
+  heading: "Everything your interior project needs, coordinated in one place",
+  lede: "The exact scope depends on the home and approved brief, but these are the decisions ONEDECORE brings into one connected interior journey.",
+  cta: PM_CTA.buildBrief,
+} as const;
+
+export const PM_SCOPE_AREAS = [
+  {
+    id: "space",
+    title: "Space and room planning",
+    body: "Layouts, movement and room priorities are considered against how the home will be used.",
+  },
+  {
+    id: "storage",
+    title: "Storage and functional planning",
+    body: "Wardrobes, kitchen storage and room-specific requirements are planned around daily routines.",
+  },
+  {
+    id: "materials",
+    title: "Material and finish selection",
+    body: "Materials, colours, finishes and transitions are considered as part of one wider composition.",
+  },
+  {
+    id: "detail",
+    title: "Detailed design coordination",
+    body: "Approved decisions are carried into the details needed to keep design and execution aligned.",
+  },
+  {
+    id: "execution",
+    title: "Execution and installation",
+    body: "The approved interior direction is carried through coordinated execution and installation.",
+  },
+  {
+    id: "handover",
+    title: "Final detailing and handover",
+    body: "The completed work is reviewed, refined and prepared for handover against the approved scope.",
+  },
+] as const;
+
 /* ---------------------------------------------------------------- approach */
 
 export const PM_APPROACH_COPY = {
-  eyebrow: "Why ONEDECORE",
-  heading: "One vision carried through every detail",
-  lede: "Spatial decisions, materials, storage and transitions stay connected to the wider interior direction rather than being resolved in isolation.",
+  eyebrow: "What to expect",
+  heading: "What you can expect from ONEDECORE",
+  lede: "Clear expectations for how planning, materials and delivery stay connected — without unverified promises.",
 } as const;
+
+export const PM_APPROACH_USPS = [
+  {
+    id: "team",
+    title: "One coordinated team",
+    body: "One interior direction is carried from planning through execution, installation and handover.",
+  },
+  {
+    id: "materials",
+    title: "Materials decided with you",
+    body: "Materials, finishes and room priorities are developed with you before they are carried into execution.",
+  },
+  {
+    id: "rooms",
+    title: "Room-by-room planning",
+    body: "Each space is considered individually while remaining connected to the wider interior direction.",
+  },
+  {
+    id: "connected",
+    title: "Design and delivery stay connected",
+    body: "The approved brief continues to guide the project as it moves from design into execution.",
+  },
+] as const;
+
+export const PM_APPROACH_DIAGRAM = [
+  "YOUR HOME",
+  "DESIGN DIRECTION",
+  "SPACE + STORAGE",
+  "MATERIALS + DETAILS",
+  "EXECUTION + INSTALLATION",
+  "HANDOVER",
+] as const;
 
 /* ----------------------------------------------------------------- process */
 
-const PROCESS_FOCUS: Record<string, readonly string[]> = {
-  discover: ["The home", "Requirements", "Priorities"],
-  define: ["Layouts", "Storage", "Design language"],
-  detail: ["Proportion", "Finish", "Function"],
-  deliver: ["Execution", "Installation", "Handover"],
+const PROCESS_SUBSTEPS: Record<string, readonly string[]> = {
+  discover: [
+    "understand the home",
+    "clarify everyday requirements",
+    "identify priorities and rooms in scope",
+  ],
+  define: [
+    "organise layouts and storage",
+    "establish the wider design direction",
+    "align the project brief",
+  ],
+  detail: [
+    "develop materials and finishes",
+    "refine proportion and functionality",
+    "carry approved decisions into coordinated details",
+  ],
+  deliver: [
+    "coordinate execution and installation",
+    "review final detailing",
+    "prepare the project for handover",
+  ],
 };
 
 export const PM_PROCESS_COPY = {
   eyebrow: "How it works",
-  heading: "A considered path from first conversation to handover",
-  lede: "Four stages carry the wider interior vision and its details through one coordinated journey. Step through them below.",
+  heading: "Four stages from first conversation to handover",
+  lede: "Move through each stage to see the concrete planning work that happens before execution begins.",
   cta: PM_CTA.open,
 } as const;
 
@@ -353,16 +547,45 @@ export const PM_PROCESS_STAGES = PROCESS_STEPS.map((step) => ({
   ordinal: step.ordinal,
   title: step.title,
   description: step.description,
-  focus: PROCESS_FOCUS[step.id] ?? [],
+  focus: PROCESS_SUBSTEPS[step.id] ?? [],
 }));
 
 /* --------------------------------------------------------------- materials */
 
 export const PM_MATERIALS_COPY = {
-  eyebrow: "Material story",
-  heading: "Materials considered as part of the wider composition",
-  lede: "Stone, timber, texture, light and shadow are considered together to shape a calm and coherent interior language.",
+  eyebrow: "Materials",
+  heading: "Materials considered within the wider home",
+  lede: "Stone, timber, texture and light are studied together so finishes support atmosphere and everyday use.",
+  decisionHeading: "How material decisions are made",
 } as const;
+
+export const PM_MATERIAL_DECISION_STEPS = [
+  {
+    id: "look",
+    title: "Look and feel",
+    body: "Define the atmosphere, colour direction and relationship between surfaces.",
+  },
+  {
+    id: "function",
+    title: "Functional requirement",
+    body: "Consider where the material is used, how it is touched and how the space works.",
+  },
+  {
+    id: "shortlist",
+    title: "Material shortlist",
+    body: "Compare suitable material and finish directions for the approved design.",
+  },
+  {
+    id: "approval",
+    title: "Finish approval",
+    body: "Record the selected direction before it moves into execution.",
+  },
+  {
+    id: "reference",
+    title: "Execution reference",
+    body: "Keep the approved material direction connected to the wider interior details.",
+  },
+] as const;
 
 export const PM_MATERIAL_PRIMARY = {
   id: "travertine-bronze",
@@ -389,6 +612,38 @@ export const PM_MATERIAL_SUPPORTING = [
   },
 ] as const;
 
+/* -------------------------------------------------------------- readiness */
+
+export const PM_READINESS_COPY = {
+  eyebrow: "Next step",
+  heading: "Is your home ready to begin?",
+  lede: "You do not need every answer today. Start with what you know and build a clearer brief step by step.",
+  checklist: [
+    { id: "service", label: "Service needed" },
+    { id: "property", label: "Property type" },
+    { id: "timeline", label: "Possession / timeline" },
+    { id: "rooms", label: "Rooms in scope" },
+    { id: "locality", label: "Pune locality" },
+  ],
+  states: {
+    exploring: {
+      label: "Exploring",
+      body: "Start with the service or room that matters most. Your plan can stay flexible.",
+      cta: PM_CTA.open,
+    },
+    planning: {
+      label: "Planning",
+      body: "You have enough direction to continue shaping the project brief.",
+      cta: PM_CTA.continuePlan,
+    },
+    "brief-ready": {
+      label: "Brief ready",
+      body: "Your core project direction is ready to review and copy.",
+      cta: PM_CTA.reviewBrief,
+    },
+  },
+} as const;
+
 /* --------------------------------------------------------------------- faq */
 
 export const PM_FAQ_COPY = {
@@ -405,7 +660,7 @@ export const PM_FAQS = [
   },
   {
     id: "areas",
-    question: "Which areas do you currently serve?",
+    question: "Which areas does ONEDECORE currently serve?",
     answer: "ONEDECORE designs and delivers interiors for homes across Pune.",
   },
   {
@@ -416,21 +671,45 @@ export const PM_FAQS = [
   },
   {
     id: "process-begin",
-    question: "How does the design process begin?",
+    question: "How does the process begin?",
     answer:
-      "It begins with Discover: understanding the home, everyday requirements, priorities and the direction you want the interiors to take.",
-  },
-  {
-    id: "see-work",
-    question: "Can I see completed work before deciding?",
-    answer:
-      "Yes. Published projects are available in the ONEDECORE portfolio, with a project detail page for each published entry.",
+      "It begins with Discover: understanding the home, everyday requirements, priorities and the direction you want the interiors to take. You can start that brief on this page.",
   },
   {
     id: "first-discussion",
     question: "What should I share for the first discussion?",
     answer:
-      "Share the service you need, your property type, possession timeline and a Pune locality. Room or area priorities help shape the brief.",
+      "Share the service you need, your property type, possession timeline and a Pune locality. Room or area priorities and optional notes help shape the brief.",
+  },
+  {
+    id: "materials",
+    question: "How are material decisions handled?",
+    answer:
+      "Material decisions move from look and feel and functional requirements to a shortlist, finish approval and an execution reference that stays connected to the wider interior details.",
+  },
+  {
+    id: "see-work",
+    question: "Can I see completed projects?",
+    answer:
+      "Published project pages will appear in the ONEDECORE portfolio as authentic completed-project media is approved.",
+  },
+  {
+    id: "submitted",
+    question: "Is anything submitted from this page?",
+    answer:
+      "No. Nothing is submitted from this page. You can review your plan and copy your interior brief to share privately. Secure lead intake will connect in a later release.",
+  },
+  {
+    id: "after-copy",
+    question: "What happens after I copy my interior brief?",
+    answer:
+      "You keep a written summary of your selected service, property, timeline, rooms and notes. Explore the portfolio, edit the plan anytime, and share the brief when you are ready — no booking is created here.",
+  },
+  {
+    id: "change-plan",
+    question: "Can I change my plan later?",
+    answer:
+      "Yes. Open the planner again, edit any step, and copy an updated brief whenever your priorities change.",
   },
 ] as const;
 
@@ -469,7 +748,8 @@ export const PM_FOOTER = {
   explore: [
     { label: "Portfolio", href: "/portfolio" },
     { label: "Services", href: `#${PM_SECTION_IDS.services}` },
-    { label: "Projects", href: `#${PM_SECTION_IDS.projects}` },
+    { label: "Rooms", href: `#${PM_SECTION_IDS.rooms}` },
+    { label: "What's Included", href: `#${PM_SECTION_IDS.included}` },
     { label: "Process", href: `#${PM_SECTION_IDS.process}` },
     { label: "Materials", href: `#${PM_SECTION_IDS.materials}` },
     { label: "FAQs", href: `#${PM_SECTION_IDS.faqs}` },

@@ -20,6 +20,7 @@ import {
   completedStepCount,
   getNextIncompleteStep as computeNextStep,
   planProgressPercent,
+  ensureRoom as ensureRoomIn,
   toggleRoom as toggleRoomIn,
   type PlanSnapshot,
 } from "./plan-state";
@@ -45,6 +46,7 @@ interface PlanApi extends PlanSnapshot {
   readonly setProperty: (property: PmPropertyId) => void;
   readonly setTimeline: (timeline: PmTimelineId) => void;
   readonly toggleRoom: (room: PmRoomId) => void;
+  readonly addRoom: (room: PmRoomId) => void;
   readonly setContact: (fields: Partial<PlanContactFields>) => void;
   readonly setMessage: (message: string) => void;
   readonly setStep: (step: PmStep) => void;
@@ -148,6 +150,10 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
     setRooms((current) => toggleRoomIn(current, room));
   }, []);
 
+  const addRoom = useCallback((room: PmRoomId) => {
+    setRooms((current) => ensureRoomIn(current, room));
+  }, []);
+
   const setContact = useCallback((fields: Partial<PlanContactFields>) => {
     if (fields.name !== undefined) setName(fields.name);
     if (fields.mobile !== undefined) setMobile(fields.mobile);
@@ -217,6 +223,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       setProperty,
       setTimeline,
       toggleRoom,
+      addRoom,
       setContact,
       setMessage,
       setStep,
@@ -239,6 +246,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       setProperty,
       setTimeline,
       toggleRoom,
+      addRoom,
       setContact,
       setMessage,
       setStep,

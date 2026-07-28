@@ -73,3 +73,33 @@ export function toggleRoom(
     ? rooms.filter((entry) => entry !== room)
     : [...rooms, room];
 }
+
+/** Add a room without removing an existing selection. */
+export function ensureRoom(
+  rooms: readonly PmRoomId[],
+  room: PmRoomId
+): readonly PmRoomId[] {
+  return rooms.includes(room) ? rooms : [...rooms, room];
+}
+
+export type ReadinessState = "exploring" | "planning" | "brief-ready";
+
+/**
+ * Neutral readiness from plan answers — not a score, AI rating, or lead status.
+ * Core answers counted: service, property, timeline, ≥1 room, non-empty locality.
+ */
+export function computeReadinessState(snapshot: PlanSnapshot): ReadinessState {
+  if (snapshot.service && snapshot.property && snapshot.timeline) {
+    return "brief-ready";
+  }
+
+  let core = 0;
+  if (snapshot.service) core += 1;
+  if (snapshot.property) core += 1;
+  if (snapshot.timeline) core += 1;
+  if (snapshot.rooms.length > 0) core += 1;
+  if (snapshot.locality.trim()) core += 1;
+
+  if (core <= 1) return "exploring";
+  return "planning";
+}
