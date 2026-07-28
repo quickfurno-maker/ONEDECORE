@@ -9,9 +9,9 @@ import {
 import { CONCEPTS } from "@/features/design-concepts/content/concepts";
 
 export const metadata: Metadata = {
-  title: "ONEDECORE — Phase 2F-R3 Concepts (internal review)",
+  title: "ONEDECORE — Phase 2F-R4 Concepts (internal review)",
   description:
-    "Conversion Master is the active owner-review direction. R2 concepts remain for historical comparison. Internal only.",
+    "Premium Motion Homepage is the active owner-review direction. R3 Conversion Master and the R2 themes remain for comparison. Internal only.",
   robots: {
     index: false,
     follow: false,
@@ -22,20 +22,24 @@ export const metadata: Metadata = {
 
 const REVIEW_STEPS = [
   {
-    title: "Start with Conversion Master",
-    body: "Open the active R3 direction first on a 1440 or 1280 wide window. Walk the full funnel once — hero planner, services, projects, scope, FAQ, and final form — then repeat on a phone.",
+    title: "Start with Premium Motion Homepage",
+    body: "Open the active R4 direction on a 1440 or 1280 wide window. Let the hero settle, then scroll the whole page once so every section reveal plays before you judge it. Repeat on a phone.",
   },
   {
-    title: "Exercise the lead planner",
-    body: "On desktop, use the inline hero planner. On mobile, open the bottom sheet from the nav CTA or sticky bar. Confirm shared state across entry points and that nothing auto-opens.",
+    title: "Exercise the interior plan",
+    body: "On desktop, pick a service in the hero card and watch it expand in place. On mobile, open the bottom sheet from the nav CTA or the sticky bar. The plan is shared, so a choice made in Services appears in the closing summary.",
   },
   {
-    title: "Compare R2 history only if needed",
-    body: "The three R2 concepts below are kept for side-by-side memory. They are not the active recommendation.",
+    title: "Judge the motion",
+    body: "Check the process stage walker, the FAQ accordion, the service selector crossfade, and the material reveals. Then enable reduced motion in your OS and confirm everything is still readable and complete.",
+  },
+  {
+    title: "Compare against R3 and R2 if useful",
+    body: "Conversion Master (R3.1) and the three R2 themes are kept below for memory. They are not the active recommendation.",
   },
   {
     title: "Record the decision",
-    body: "Capture approval, hybrid notes, or blockers in the owner decision document for Phase 2F-R3.",
+    body: "Capture approval, hybrid notes, or blockers in the owner decision document for Phase 2F-R4.",
   },
 ] as const;
 
@@ -74,15 +78,16 @@ export default function DesignConceptsIndexPage() {
 
       <header className="dcx-masthead">
         <div className="dc-container">
-          <span className="dc-review__tag">Phase 2F-R3 — internal</span>
+          <span className="dc-review__tag">Phase 2F-R4 — internal</span>
           <h1 className="dcx-masthead__title">
-            Conversion Master is the active owner-review direction
+            Premium Motion Homepage is the active owner-review direction
           </h1>
           <p className="dcx-masthead__lede">
-            Phase 2F-R3 ships one conversion-focused homepage prototype for
-            owner approval. The three R2 visual themes remain below as
-            historical comparison only. These routes are internal — not linked
-            from the public site — and carry noindex metadata.
+            Phase 2F-R4 ships one premium, motion-led conversion homepage
+            prototype for owner approval. Conversion Master (R3.1) and the three
+            R2 visual themes remain below for comparison only. These routes are
+            internal — not linked from the public site — and carry noindex
+            metadata.
           </p>
         </div>
       </header>
@@ -91,13 +96,80 @@ export default function DesignConceptsIndexPage() {
         <section className="dcx-section" aria-labelledby="dcx-active-title">
           <div className="dc-container">
             <h2 id="dcx-active-title" className="dc-h2">
-              Active — Conversion Master
+              Active — Premium Motion Homepage
+            </h2>
+            <p className="dc-lede" style={{ marginBottom: "1.5rem" }}>
+              A motion-led premium conversion homepage: a split hero with a
+              framed image stage and an inline interior-plan card, an
+              image-driven service selector, a stage walker for the process,
+              tactile material reveals, and one closing conversion panel.
+            </p>
+
+            <ul className="dcx-cards">
+              <li className="dcx-card">
+                <Link
+                  href="/design-concepts/premium-motion-homepage"
+                  className="dcx-card__media"
+                >
+                  <Image
+                    src="/marketing/r4/hero-living-warmth.webp"
+                    alt="Warm neutral living room with an oak slatted wall, cream curved seating and a round travertine table in raking daylight"
+                    width={1536}
+                    height={1024}
+                    sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
+                    priority
+                  />
+                  <span className="dcx-card__letter">R4</span>
+                </Link>
+
+                <div className="dcx-card__body">
+                  <h3 className="dcx-card__title">Premium Motion Homepage</h3>
+                  <p className="dcx-card__thesis">
+                    ACTIVE owner-review direction. Higher-contrast espresso and
+                    ivory palette, layered glass panels, and an app-like interior
+                    plan carried through one shared journey — local prototype
+                    state only.
+                  </p>
+
+                  <h4 className="dcx-card__heading">Dominant strengths</h4>
+                  <ul className="dcx-card__list">
+                    <li>Strongest hero impact and visual depth so far</li>
+                    <li>Interactive service selector, stage walker, and accordion</li>
+                    <li>One shared interior plan across every entry point</li>
+                  </ul>
+
+                  <h4 className="dcx-card__heading">Known trade-offs</h4>
+                  <ul className="dcx-card__list dcx-card__list--muted">
+                    <li>Lead intake is local preview — not production CRM yet</li>
+                    <li>Marketing artwork stands in until project photography exists</li>
+                    <li>More interaction states to maintain than R3</li>
+                  </ul>
+
+                  <p className="dcx-card__motion">
+                    Motion range 200–900ms (CSS only, no animation package)
+                  </p>
+
+                  <Link
+                    href="/design-concepts/premium-motion-homepage"
+                    className="dc-btn dc-btn--primary"
+                  >
+                    Open Premium Motion Homepage
+                  </Link>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="dcx-section" aria-labelledby="dcx-previous-title">
+          <div className="dc-container">
+            <h2 id="dcx-previous-title" className="dc-h2">
+              Previous — Conversion Master (R3.1)
             </h2>
             <p className="dc-lede" style={{ marginBottom: "1.5rem" }}>
               Warm Conversion Luxury: cinematic dark hero, ivory services and
               projects, charcoal process, tactile materials, and a final
-              consultation band — with a shared lead planner and mobile sticky
-              CTAs.
+              consultation band. Kept for comparison — superseded by R4.
             </p>
 
             <ul className="dcx-cards">
@@ -112,7 +184,6 @@ export default function DesignConceptsIndexPage() {
                     width={1920}
                     height={1280}
                     sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
-                    priority
                   />
                   <span className="dcx-card__letter">R3</span>
                 </Link>
@@ -120,9 +191,9 @@ export default function DesignConceptsIndexPage() {
                 <div className="dcx-card__body">
                   <h3 className="dcx-card__title">Conversion Master</h3>
                   <p className="dcx-card__thesis">
-                    ACTIVE owner-review direction. Premium conversion landing
-                    page with lead planner, portfolio proof, scope brief, FAQ,
-                    and consultation form — local prototype state only.
+                    The conversion architecture R4 builds on: shared lead
+                    planner, portfolio proof, scope brief, FAQ, and consultation
+                    form — local prototype state only.
                   </p>
 
                   <h4 className="dcx-card__heading">Dominant strengths</h4>
@@ -134,7 +205,7 @@ export default function DesignConceptsIndexPage() {
 
                   <h4 className="dcx-card__heading">Known trade-offs</h4>
                   <ul className="dcx-card__list dcx-card__list--muted">
-                    <li>Lead intake is local preview — not production CRM yet</li>
+                    <li>Visual depth and motion richness below the R4 bar</li>
                     <li>Before/after is storytelling fallback until CMS pairs exist</li>
                     <li>Budget bands omitted pending owner approval</li>
                   </ul>
@@ -143,7 +214,7 @@ export default function DesignConceptsIndexPage() {
 
                   <Link
                     href="/design-concepts/conversion-master"
-                    className="dc-btn dc-btn--primary"
+                    className="dc-btn dc-btn--ghost"
                   >
                     Open Conversion Master
                   </Link>
@@ -181,12 +252,21 @@ export default function DesignConceptsIndexPage() {
                 </li>
                 <li>
                   <Link
+                    href="/design-concepts/premium-motion-homepage"
+                    className="dc-textlink"
+                  >
+                    /design-concepts/premium-motion-homepage
+                  </Link>
+                  <span>ACTIVE — Premium Motion Homepage (R4)</span>
+                </li>
+                <li>
+                  <Link
                     href="/design-concepts/conversion-master"
                     className="dc-textlink"
                   >
                     /design-concepts/conversion-master
                   </Link>
-                  <span>ACTIVE — Conversion Master (R3)</span>
+                  <span>Previous — Conversion Master (R3.1)</span>
                 </li>
                 {CONCEPTS.map((concept) => (
                   <li key={concept.id}>
@@ -302,8 +382,8 @@ export default function DesignConceptsIndexPage() {
             </div>
 
             <p className="dcx-matrix__footnote">
-              R2 ratings are historical. Conversion Master (R3) is the active
-              direction for owner review.
+              R2 ratings are historical. Premium Motion Homepage (R4) is the
+              active direction for owner review.
             </p>
           </div>
         </section>
@@ -312,9 +392,9 @@ export default function DesignConceptsIndexPage() {
       <footer className="dcx-foot">
         <div className="dc-container">
           <p>
-            Phase 2F-R3 concept review. Committed only to the
-            phase-2f-coffee-luxe-redesign branch; never merged to main in preview
-            form.
+            Phase 2F-R4 concept review. Committed only to the
+            phase-2f-r4-premium-motion-homepage branch; never merged to main in
+            preview form.
           </p>
         </div>
       </footer>

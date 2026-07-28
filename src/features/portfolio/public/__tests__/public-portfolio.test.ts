@@ -911,4 +911,6 @@ import "../../../public-site/__tests__/public-site-c4.test.ts";
 import "../../../public-site/__tests__/public-site-c5b.test.ts";
 import "../../../design-concepts/__tests__/design-concepts-r2.test.ts";
 import "../../../design-concepts/__tests__/design-concepts-r3.test.ts";
+import "../../../design-concepts/__tests__/design-concepts-r4.test.ts";
 import "../../../design-concepts/conversion-master/__tests__/lead-state.test.ts";
+import "../../../design-concepts/premium-motion/__tests__/plan-state.test.ts";

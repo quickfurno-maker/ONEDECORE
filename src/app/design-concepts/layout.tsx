@@ -6,6 +6,7 @@ import "@/features/design-concepts/styles/cinematic.css";
 import "@/features/design-concepts/styles/architectural.css";
 import "@/features/design-concepts/styles/design-tech.css";
 import "@/features/design-concepts/conversion-master/styles/conversion-master.css";
+import "@/features/design-concepts/premium-motion/styles/premium-motion.css";
 
 /**
  * Phase 2F owner-review area (R2 concepts + R3 Conversion Master).

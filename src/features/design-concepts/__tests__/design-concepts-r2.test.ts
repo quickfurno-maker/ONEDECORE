@@ -128,6 +128,7 @@ describe("Design concepts R2 — preview isolation", () => {
       "/design-concepts/modern-architectural",
       "/design-concepts/luxury-design-tech",
       "/design-concepts/conversion-master",
+      "/design-concepts/premium-motion-homepage",
     ]);
     const allowedPrefixes = ["/portfolio/", "/marketing/"];
 
@@ -230,9 +231,15 @@ describe("Design concepts R2 — preview isolation", () => {
       "₹",
     ];
 
+    // R3 and R4 carry an opt-in WhatsApp consent checkbox, so the word itself is
+    // allowed there. Phone-number WhatsApp CTAs stay forbidden everywhere and are
+    // covered by the wa.me and whatsapp.com guards in the R3 and R4 suites.
+    const allowsConsentLabel = (file: string) =>
+      label(file).includes("conversion-master") ||
+      label(file).includes("premium-motion");
+
     for (const file of conceptSourceFiles()) {
       const source = read(file).toLowerCase();
-      const isConversionMaster = label(file).includes("conversion-master");
       for (const needle of forbidden) {
         assert.equal(
           source.includes(needle),
@@ -240,8 +247,7 @@ describe("Design concepts R2 — preview isolation", () => {
           `${label(file)} must not contain "${needle}"`
         );
       }
-      // Phone-number WhatsApp CTAs remain forbidden; consent labels are allowed in R3.
-      if (!isConversionMaster) {
+      if (!allowsConsentLabel(file)) {
         assert.equal(
           source.includes("whatsapp"),
           false,
@@ -537,6 +543,15 @@ describe("Design concepts R2 — typography and motion contract", () => {
       "src/features/design-concepts/conversion-master/ScopePlanner.tsx",
       "src/features/design-concepts/conversion-master/ServicesSection.tsx",
       "src/features/design-concepts/conversion-master/StickyBar.tsx",
+      "src/features/design-concepts/premium-motion/PlanContext.tsx",
+      "src/features/design-concepts/premium-motion/PmClose.tsx",
+      "src/features/design-concepts/premium-motion/PmFaq.tsx",
+      "src/features/design-concepts/premium-motion/PmHero.tsx",
+      "src/features/design-concepts/premium-motion/PmNav.tsx",
+      "src/features/design-concepts/premium-motion/PmPlanner.tsx",
+      "src/features/design-concepts/premium-motion/PmProcess.tsx",
+      "src/features/design-concepts/premium-motion/PmServices.tsx",
+      "src/features/design-concepts/premium-motion/PmSticky.tsx",
       "src/features/design-concepts/shared/ConceptNav.tsx",
       "src/features/design-concepts/shared/RevealRuntime.tsx",
     ]);
