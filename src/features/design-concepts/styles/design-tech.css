@@ -1,0 +1,795 @@
+/*
+ * Concept C — Luxury Design-Tech.
+ * Layered depth, modular blocks, the richest Portfolio treatment, and the most
+ * responsive interaction states. Sage sits alongside gold as a second accent.
+ */
+
+[data-concept="design-tech"] {
+  --dc-ink: #151211;
+  --dc-surface-1: #201917;
+  --dc-surface-2: #2d211e;
+  --dc-surface-3: #241d1a;
+  --dc-surface-4: #332622;
+
+  --dc-text: #fff8ec;
+  --dc-text-2: #e7d9c7;
+  --dc-text-3: #c8b69e;
+
+  --dc-gold: #d8a24a;
+  --dc-gold-light: #f0c36c;
+  --dc-sage: #8fa089;
+
+  --dc-border: rgba(255, 248, 236, 0.13);
+  --dc-border-strong: rgba(255, 248, 236, 0.28);
+  --dc-veil: rgba(255, 248, 236, 0.06);
+  --dc-veil-strong: rgba(255, 248, 236, 0.1);
+
+  --dc-radius: 16px;
+  --dc-radius-lg: 22px;
+
+  --dc-duration: 520ms;
+  --dc-duration-fast: 190ms;
+  --dc-reveal-distance: 18px;
+  --dc-reveal-step: 60ms;
+
+  background: var(--dc-ink);
+}
+
+[data-concept="design-tech"] .dc-nav__bar {
+  --dc-nav-h: 58px;
+  border-radius: 14px;
+  background: rgba(21, 18, 17, 0.8);
+}
+
+[data-concept="design-tech"] .dc-nav__link[data-active] .dc-nav__underline {
+  width: 22px;
+  background: var(--dc-sage);
+}
+
+[data-concept="design-tech"] .dc-nav__link:hover .dc-nav__underline {
+  background: var(--dc-gold);
+}
+
+/* ------------------------------------------------------------------ hero */
+
+[data-concept="design-tech"] .dt-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  min-height: 82svh;
+  padding-top: var(--dc-nav-clearance);
+  padding-bottom: 36px;
+  overflow: hidden;
+}
+
+[data-concept="design-tech"] .dt-hero__media {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+[data-concept="design-tech"] .dt-hero__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: dt-hero-settle 1200ms var(--dc-ease) both;
+}
+
+@keyframes dt-hero-settle {
+  from {
+    transform: scale(1.04);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+[data-concept="design-tech"] .dt-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(21, 18, 17, 0.86) 0%,
+      rgba(21, 18, 17, 0.4) 34%,
+      rgba(21, 18, 17, 0.72) 76%,
+      rgba(21, 18, 17, 0.96) 100%
+    );
+}
+
+[data-concept="design-tech"] .dt-hero__inner {
+  display: grid;
+  gap: 32px;
+  width: 100%;
+}
+
+/* The layered content panel is the concept's signature hero device. */
+[data-concept="design-tech"] .dt-hero__panel {
+  max-width: 700px;
+  padding: 30px 26px 32px;
+  border-radius: var(--dc-radius-lg);
+  border: 1px solid var(--dc-border);
+  background: rgba(32, 25, 23, 0.72);
+  box-shadow: var(--dc-shadow-deep);
+}
+
+@supports (backdrop-filter: blur(4px)) {
+  [data-concept="design-tech"] .dt-hero__panel {
+    backdrop-filter: blur(14px);
+  }
+}
+
+[data-concept="design-tech"] .dt-hero__title {
+  margin-top: 16px;
+  font-size: clamp(2.35rem, 1.1rem + 4vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1.01;
+  letter-spacing: -0.032em;
+  text-wrap: balance;
+}
+
+[data-concept="design-tech"] .dt-hero__lede {
+  margin: 18px 0 26px;
+  font-size: clamp(0.98rem, 0.94rem + 0.28vw, 1.12rem);
+  line-height: 1.6;
+  color: var(--dc-text-2);
+  max-width: 44ch;
+}
+
+[data-concept="design-tech"] .dt-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+[data-concept="design-tech"] .dt-hero__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--dc-border);
+}
+
+[data-concept="design-tech"] .dt-hero__chips li {
+  padding: 7px 14px;
+  border-radius: var(--dc-radius-pill);
+  border: 1px solid var(--dc-border);
+  background: var(--dc-veil);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--dc-text-2);
+}
+
+[data-concept="design-tech"] .dt-hero__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px 32px;
+}
+
+[data-concept="design-tech"] .dt-hero__next {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dc-text-2);
+  transition: color var(--dc-duration-fast) var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-hero__next:hover {
+  color: var(--dc-gold-light);
+}
+
+[data-concept="design-tech"] .dt-hero__nextRail {
+  display: block;
+  width: 2px;
+  height: 34px;
+  border-radius: 2px;
+  background: var(--dc-border-strong);
+  overflow: hidden;
+}
+
+[data-concept="design-tech"] .dt-hero__nextRail span {
+  display: block;
+  width: 100%;
+  height: 40%;
+  border-radius: 2px;
+  background: var(--dc-gold);
+  transform: translateY(-100%);
+  transition: transform 620ms var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-hero__next:hover .dt-hero__nextRail span,
+[data-concept="design-tech"] .dt-hero__next:focus-visible .dt-hero__nextRail span {
+  transform: translateY(150%);
+}
+
+@media (min-width: 1024px) {
+  [data-concept="design-tech"] .dt-hero {
+    min-height: 88svh;
+  }
+
+  [data-concept="design-tech"] .dt-hero__panel {
+    padding: 40px 40px 42px;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  [data-concept="design-tech"] .dt-hero {
+    min-height: auto;
+    padding-block: calc(var(--dc-nav-clearance) + 12px) 36px;
+  }
+}
+
+/* ----------------------------------------------------------- proposition */
+
+[data-concept="design-tech"] .dt-prop {
+  background: var(--dc-surface-1);
+}
+
+[data-concept="design-tech"] .dt-prop__block {
+  display: grid;
+  gap: 22px;
+  padding: 36px 28px 40px;
+  border-radius: var(--dc-radius-lg);
+  border: 1px solid var(--dc-border);
+  background: linear-gradient(
+    150deg,
+    rgba(45, 33, 30, 0.75) 0%,
+    rgba(32, 25, 23, 0.6) 100%
+  );
+  border-left: 3px solid var(--dc-sage);
+}
+
+[data-concept="design-tech"] .dt-prop__body {
+  font-size: clamp(1.02rem, 0.96rem + 0.4vw, 1.24rem);
+  line-height: 1.7;
+  color: var(--dc-text-2);
+  max-width: 62ch;
+}
+
+@media (min-width: 1024px) {
+  [data-concept="design-tech"] .dt-prop__block {
+    padding: 52px 56px 56px;
+  }
+}
+
+/* -------------------------------------------------------- section header */
+
+[data-concept="design-tech"] .dt-head {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 48px;
+  max-width: 740px;
+}
+
+[data-concept="design-tech"] .dt-head--split {
+  max-width: none;
+}
+
+@media (min-width: 1024px) {
+  [data-concept="design-tech"] .dt-head--split {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 56px;
+    align-items: end;
+  }
+}
+
+/* -------------------------------------------------------------- services */
+
+[data-concept="design-tech"] .dt-services {
+  background: var(--dc-ink);
+}
+
+[data-concept="design-tech"] .dt-services__grid {
+  display: grid;
+  gap: 22px;
+}
+
+[data-concept="design-tech"] .dt-module {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--dc-radius);
+  border: 1px solid var(--dc-border);
+  background: var(--dc-surface-1);
+  overflow: hidden;
+  transition:
+    transform var(--dc-duration-fast) var(--dc-ease),
+    border-color var(--dc-duration-fast) var(--dc-ease),
+    background-color var(--dc-duration-fast) var(--dc-ease),
+    box-shadow var(--dc-duration-fast) var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-module:hover,
+[data-concept="design-tech"] .dt-module:focus-within {
+  transform: translateY(-4px);
+  border-color: var(--dc-border-strong);
+  background: var(--dc-surface-3);
+  box-shadow: var(--dc-shadow-deep);
+}
+
+[data-concept="design-tech"] .dt-module__media {
+  position: relative;
+  aspect-ratio: 16 / 11;
+  overflow: hidden;
+}
+
+[data-concept="design-tech"] .dt-module__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 620ms var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-module:hover .dt-module__media img {
+  transform: scale(1.04);
+}
+
+/* Warm wash lifts on hover so the image reads brighter, not just larger. */
+[data-concept="design-tech"] .dt-module__sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(21, 18, 17, 0.42) 0%,
+    rgba(21, 18, 17, 0.16) 100%
+  );
+  transition: opacity var(--dc-duration-fast) var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-module:hover .dt-module__sheen {
+  opacity: 0.35;
+}
+
+[data-concept="design-tech"] .dt-module__body {
+  display: grid;
+  gap: 10px;
+  padding: 24px 22px 28px;
+}
+
+[data-concept="design-tech"] .dt-module__edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--dc-gold), var(--dc-sage));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 480ms var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-module:hover .dt-module__edge,
+[data-concept="design-tech"] .dt-module:focus-within .dt-module__edge {
+  transform: scaleX(1);
+}
+
+@media (min-width: 768px) {
+  [data-concept="design-tech"] .dt-services__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-concept="design-tech"] .dt-services__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 26px;
+  }
+}
+
+/* ------------------------------------------------------------- portfolio */
+
+[data-concept="design-tech"] .dt-work {
+  background: var(--dc-surface-1);
+}
+
+[data-concept="design-tech"] .dt-work__layout {
+  display: grid;
+  gap: 28px;
+}
+
+[data-concept="design-tech"] .dt-work__leadLink {
+  position: relative;
+  display: block;
+  border-radius: var(--dc-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--dc-border);
+  box-shadow: var(--dc-shadow-soft);
+  transition:
+    border-color var(--dc-duration-fast) var(--dc-ease),
+    box-shadow var(--dc-duration-fast) var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-work__leadLink:hover {
+  border-color: var(--dc-border-strong);
+  box-shadow: var(--dc-shadow-deep);
+}
+
+[data-concept="design-tech"] .dt-work__leadMedia {
+  display: block;
+  position: relative;
+  aspect-ratio: 4 / 3;
+}
+
+[data-concept="design-tech"] .dt-work__leadMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 680ms var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-work__leadLink:hover .dt-work__leadMedia img {
+  transform: scale(1.03);
+}
+
+[data-concept="design-tech"] .dt-work__leadScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(21, 18, 17, 0.18) 34%,
+    rgba(21, 18, 17, 0.92) 100%
+  );
+}
+
+[data-concept="design-tech"] .dt-work__leadCopy {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  gap: 10px;
+  padding: 26px 24px;
+}
+
+[data-concept="design-tech"] .dt-work__badge {
+  justify-self: start;
+  padding: 5px 12px;
+  border-radius: var(--dc-radius-pill);
+  border: 1px solid rgba(143, 160, 137, 0.5);
+  background: rgba(21, 18, 17, 0.6);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dc-sage);
+}
+
+[data-concept="design-tech"] .dt-work__leadTitle {
+  font-size: clamp(1.45rem, 1.1rem + 1.5vw, 2.35rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.022em;
+}
+
+[data-concept="design-tech"] .dt-work__reveal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+}
+
+[data-concept="design-tech"] .dt-work__meta {
+  font-size: 0.78rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dc-text-3);
+}
+
+/* Metadata cue fades in on pointer and keyboard focus alike. */
+[data-concept="design-tech"] .dt-work__cue {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dc-gold-light);
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity var(--dc-duration-fast) var(--dc-ease),
+    transform var(--dc-duration-fast) var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-work__leadLink:hover .dt-work__cue,
+[data-concept="design-tech"] .dt-work__leadLink:focus-visible .dt-work__cue {
+  opacity: 1;
+  transform: none;
+}
+
+[data-concept="design-tech"] .dt-work__list {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+[data-concept="design-tech"] .dt-work__row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  border-radius: var(--dc-radius);
+  border: 1px solid var(--dc-border);
+  background: var(--dc-surface-3);
+  transition:
+    transform var(--dc-duration-fast) var(--dc-ease),
+    border-color var(--dc-duration-fast) var(--dc-ease),
+    background-color var(--dc-duration-fast) var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-work__row:hover {
+  transform: translateY(-3px);
+  border-color: var(--dc-border-strong);
+  background: var(--dc-surface-4);
+}
+
+[data-concept="design-tech"] .dt-work__rowMedia {
+  display: block;
+  border-radius: 10px;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+}
+
+[data-concept="design-tech"] .dt-work__rowMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+[data-concept="design-tech"] .dt-work__rowCopy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+[data-concept="design-tech"] .dt-work__rowTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--dc-text);
+}
+
+[data-concept="design-tech"] .dt-work__rowArrow {
+  position: relative;
+  width: 20px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--dc-text-3);
+  transition:
+    background-color var(--dc-duration-fast) var(--dc-ease),
+    transform var(--dc-duration-fast) var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-work__row:hover .dt-work__rowArrow {
+  background: var(--dc-gold-light);
+  transform: translateX(4px);
+}
+
+[data-concept="design-tech"] .dt-work__empty {
+  display: grid;
+  gap: 12px;
+  padding: 52px 28px;
+  border-radius: var(--dc-radius-lg);
+  border: 1px dashed var(--dc-border-strong);
+  background: var(--dc-surface-3);
+}
+
+[data-concept="design-tech"] .dt-work__cta {
+  margin-top: 40px;
+}
+
+@media (min-width: 1024px) {
+  [data-concept="design-tech"] .dt-work__layout {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  [data-concept="design-tech"] .dt-work__leadCopy {
+    padding: 36px 34px 32px;
+  }
+}
+
+/* --------------------------------------------------------------- process */
+
+[data-concept="design-tech"] .dt-process {
+  background: var(--dc-ink);
+}
+
+[data-concept="design-tech"] .dt-process__track {
+  display: grid;
+  gap: 18px;
+}
+
+[data-concept="design-tech"] .dt-node {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 30px 24px 28px;
+  border-radius: var(--dc-radius);
+  border: 1px solid var(--dc-border);
+  background: var(--dc-surface-1);
+  transition: border-color var(--dc-duration-fast) var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-node:hover {
+  border-color: var(--dc-border-strong);
+}
+
+[data-concept="design-tech"] .dt-node__dot {
+  position: absolute;
+  top: -5px;
+  left: 24px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dc-gold);
+  box-shadow: 0 0 0 4px var(--dc-ink);
+}
+
+[data-concept="design-tech"] .dt-node__link {
+  position: absolute;
+  top: -1px;
+  left: 34px;
+  right: -18px;
+  height: 1px;
+  background: var(--dc-border);
+  display: none;
+}
+
+[data-concept="design-tech"] .dt-node:last-child .dt-node__link {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  [data-concept="design-tech"] .dt-process__track {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  [data-concept="design-tech"] .dt-node__link {
+    display: block;
+  }
+
+  [data-concept="design-tech"] .dt-node:last-child .dt-node__link {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------- materials */
+
+[data-concept="design-tech"] .dt-materials {
+  background: #100d0c;
+}
+
+[data-concept="design-tech"] .dt-materials__stage {
+  display: grid;
+  gap: 22px;
+}
+
+[data-concept="design-tech"] .dt-materials__column {
+  display: grid;
+  gap: 22px;
+}
+
+/* Double frame: a sage hairline outside a dark inset holds the artwork. */
+[data-concept="design-tech"] .dt-material__frame {
+  display: block;
+  position: relative;
+  padding: 8px;
+  border-radius: var(--dc-radius-lg);
+  border: 1px solid rgba(143, 160, 137, 0.24);
+  background: var(--dc-surface-1);
+  overflow: hidden;
+}
+
+[data-concept="design-tech"] .dt-material__frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 14px;
+  aspect-ratio: 3 / 2;
+  transition: transform 680ms var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-material:hover .dt-material__frame img {
+  transform: scale(1.03);
+}
+
+[data-concept="design-tech"] .dt-material figcaption {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+[data-concept="design-tech"] .dt-material__caption {
+  font-size: 0.92rem;
+  line-height: 1.58;
+  color: var(--dc-text-3);
+}
+
+[data-concept="design-tech"] .dt-materials__note {
+  margin-top: 28px;
+}
+
+@media (min-width: 900px) {
+  [data-concept="design-tech"] .dt-materials__stage {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  }
+
+  [data-concept="design-tech"] .dt-material--primary .dt-material__frame img {
+    aspect-ratio: 4 / 3;
+  }
+
+  [data-concept="design-tech"] .dt-materials__column .dt-material__frame img {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+/* ----------------------------------------------------------------- trust */
+
+[data-concept="design-tech"] .dt-trust {
+  background: var(--dc-surface-1);
+}
+
+[data-concept="design-tech"] .dt-trust__grid {
+  display: grid;
+  gap: 20px;
+}
+
+[data-concept="design-tech"] .dt-trust__module {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 30px 26px 34px;
+  border-radius: var(--dc-radius);
+  border: 1px solid var(--dc-border);
+  background: var(--dc-surface-3);
+  overflow: hidden;
+  transition:
+    transform var(--dc-duration-fast) var(--dc-ease),
+    border-color var(--dc-duration-fast) var(--dc-ease);
+}
+
+[data-concept="design-tech"] .dt-trust__module:hover {
+  transform: translateY(-4px);
+  border-color: rgba(143, 160, 137, 0.42);
+}
+
+[data-concept="design-tech"] .dt-trust__glyph {
+  position: absolute;
+  right: 18px;
+  bottom: 6px;
+  font-size: 3.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: rgba(143, 160, 137, 0.14);
+}
+
+@media (min-width: 900px) {
+  [data-concept="design-tech"] .dt-trust__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+  }
+}
+
+/* ---------------------------------------------------------------- footer */
+
+[data-concept="design-tech"] .dc-footer {
+  background: #100d0c;
+}
+
+[data-concept="design-tech"] .dc-footer__heading {
+  color: var(--dc-sage);
+}

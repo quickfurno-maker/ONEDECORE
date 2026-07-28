@@ -909,3 +909,4 @@ import "../../../public-site/__tests__/public-site-c2.test.ts";
 import "../../../public-site/__tests__/public-site-c3.test.ts";
 import "../../../public-site/__tests__/public-site-c4.test.ts";
 import "../../../public-site/__tests__/public-site-c5b.test.ts";
+import "../../../design-concepts/__tests__/design-concepts-r2.test.ts";

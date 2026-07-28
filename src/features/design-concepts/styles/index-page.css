@@ -1,0 +1,352 @@
+/*
+ * Concept comparison index at /design-concepts.
+ * Deliberately neutral chrome so it does not bias the three directions.
+ */
+
+[data-concept="index"] {
+  --dc-surface-1: #1d1817;
+  --dc-surface-2: #251e1c;
+  background: var(--dc-ink);
+  min-height: 100dvh;
+}
+
+[data-concept="index"] .dcx-masthead {
+  padding-block: 56px 44px;
+  border-bottom: 1px solid var(--dc-border);
+  background: linear-gradient(180deg, #1d1817 0%, var(--dc-ink) 100%);
+}
+
+[data-concept="index"] .dcx-masthead__title {
+  margin-top: 18px;
+  font-size: clamp(1.9rem, 1.2rem + 2.6vw, 3.1rem);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+}
+
+[data-concept="index"] .dcx-masthead__lede {
+  margin-top: 20px;
+  font-size: clamp(0.98rem, 0.94rem + 0.3vw, 1.1rem);
+  line-height: 1.68;
+  color: var(--dc-text-3);
+  max-width: 76ch;
+}
+
+[data-concept="index"] .dcx-section {
+  padding-block: 64px;
+}
+
+[data-concept="index"] .dcx-section--alt {
+  background: var(--dc-surface-1);
+  border-block: 1px solid var(--dc-border);
+}
+
+[data-concept="index"] .dcx-section .dc-h2 {
+  margin-bottom: 32px;
+}
+
+/* ----------------------------------------------------------- concept cards */
+
+[data-concept="index"] .dcx-cards {
+  display: grid;
+  gap: 24px;
+}
+
+[data-concept="index"] .dcx-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--dc-radius);
+  border: 1px solid var(--dc-border);
+  background: var(--dc-surface-1);
+  overflow: hidden;
+}
+
+[data-concept="index"] .dcx-card__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+}
+
+[data-concept="index"] .dcx-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 620ms var(--dc-ease);
+}
+
+[data-concept="index"] .dcx-card__media:hover img {
+  transform: scale(1.04);
+}
+
+[data-concept="index"] .dcx-card__letter {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(240, 195, 108, 0.5);
+  background: rgba(23, 19, 19, 0.78);
+  color: var(--dc-gold-light);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+[data-concept="index"] .dcx-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 22px 28px;
+  flex: 1;
+}
+
+[data-concept="index"] .dcx-card__title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.018em;
+}
+
+[data-concept="index"] .dcx-card__thesis {
+  font-size: 0.95rem;
+  line-height: 1.62;
+  color: var(--dc-text-2);
+}
+
+[data-concept="index"] .dcx-card__heading {
+  margin-top: 8px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dc-gold);
+}
+
+[data-concept="index"] .dcx-card__list {
+  display: grid;
+  gap: 8px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--dc-text-2);
+}
+
+[data-concept="index"] .dcx-card__list li {
+  position: relative;
+  padding-left: 18px;
+}
+
+[data-concept="index"] .dcx-card__list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 8px;
+  height: 1px;
+  background: var(--dc-gold);
+}
+
+[data-concept="index"] .dcx-card__list--muted {
+  color: var(--dc-text-3);
+}
+
+[data-concept="index"] .dcx-card__list--muted li::before {
+  background: var(--dc-text-3);
+}
+
+[data-concept="index"] .dcx-card__motion {
+  margin-top: 6px;
+  font-size: 0.76rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dc-text-3);
+}
+
+[data-concept="index"] .dcx-card .dc-btn {
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+@media (min-width: 768px) {
+  [data-concept="index"] .dcx-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  [data-concept="index"] .dcx-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ------------------------------------------------------------------ steps */
+
+[data-concept="index"] .dcx-steps {
+  display: grid;
+  gap: 20px;
+}
+
+[data-concept="index"] .dcx-step {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 24px 22px 26px;
+  border-radius: var(--dc-radius);
+  border: 1px solid var(--dc-border);
+  background: var(--dc-surface-2);
+}
+
+@media (min-width: 768px) {
+  [data-concept="index"] .dcx-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  [data-concept="index"] .dcx-steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+[data-concept="index"] .dcx-urls {
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--dc-border);
+}
+
+[data-concept="index"] .dcx-urls__list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+[data-concept="index"] .dcx-urls__list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  font-size: 0.9rem;
+  color: var(--dc-text-3);
+}
+
+/* ------------------------------------------------------------------ table */
+
+[data-concept="index"] .dcx-matrix__intro {
+  margin-top: -12px;
+  margin-bottom: 28px;
+  max-width: 78ch;
+}
+
+[data-concept="index"] .dcx-table__scroll {
+  overflow-x: auto;
+  border-radius: var(--dc-radius);
+  border: 1px solid var(--dc-border);
+}
+
+[data-concept="index"] .dcx-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  background: var(--dc-surface-1);
+}
+
+[data-concept="index"] .dcx-table th,
+[data-concept="index"] .dcx-table td {
+  text-align: left;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--dc-border);
+  vertical-align: top;
+}
+
+[data-concept="index"] .dcx-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--dc-surface-2);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dc-text-2);
+  white-space: nowrap;
+}
+
+[data-concept="index"] .dcx-table tbody tr:last-child th,
+[data-concept="index"] .dcx-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+[data-concept="index"] .dcx-table__category {
+  display: block;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--dc-text);
+}
+
+[data-concept="index"] .dcx-table__note {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--dc-text-3);
+  max-width: 42ch;
+}
+
+[data-concept="index"] .dcx-rating {
+  display: grid;
+  gap: 8px;
+  min-width: 96px;
+}
+
+[data-concept="index"] .dcx-rating__value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--dc-text);
+}
+
+[data-concept="index"] .dcx-rating__track {
+  display: block;
+  height: 6px;
+  border-radius: 6px;
+  background: rgba(255, 248, 236, 0.1);
+  overflow: hidden;
+}
+
+[data-concept="index"] .dcx-rating__fill {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--dc-gold);
+}
+
+/* Inverted categories are hatched so the meaning is not carried by hue alone. */
+[data-concept="index"] .dcx-rating__fill[data-inverted] {
+  background-color: #9a8f80;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(23, 19, 19, 0.55) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+[data-concept="index"] .dcx-matrix__footnote {
+  margin-top: 22px;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--dc-text-3);
+  max-width: 72ch;
+}
+
+/* ----------------------------------------------------------------- footer */
+
+[data-concept="index"] .dcx-foot {
+  padding-block: 32px 40px;
+  border-top: 1px solid var(--dc-border);
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--dc-text-3);
+}
