@@ -311,14 +311,17 @@ export const PM_SERVICE_CTA = PM_CTA.open;
 
 /* ---------------------------------------------------------------- projects */
 
+/** Frozen homepage pending-proof copy — do not soften or invent project claims. */
 export const PM_PROJECTS_COPY = {
-  eyebrow: FEATURED_PORTFOLIO_COPY.overline,
-  heading: FEATURED_PORTFOLIO_COPY.heading,
-  lede: FEATURED_PORTFOLIO_COPY.description,
-  emptyHeading: FEATURED_PORTFOLIO_COPY.emptyHeading,
-  emptyBody: FEATURED_PORTFOLIO_COPY.emptyBody,
-  allLabel: PM_CTA.projects,
+  eyebrow: "Selected work",
+  heading: "Project photography is being prepared.",
+  lede: "The portfolio layout is ready for published ONEDECORE projects. Authentic completed-project media will replace this state before launch.",
+  emptyHeading: "Project photography is being prepared.",
+  emptyBody:
+    "The portfolio layout is ready for published ONEDECORE projects. Authentic completed-project media will replace this state before launch.",
+  allLabel: "View Portfolio",
   allHref: "/portfolio",
+  planLabel: "Start My Interior Plan",
 } as const;
 
 /* ---------------------------------------------------------------- approach */

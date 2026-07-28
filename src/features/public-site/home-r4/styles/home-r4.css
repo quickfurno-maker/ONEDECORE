@@ -1826,6 +1826,7 @@
   gap: 14px;
   justify-items: start;
   background:
+    linear-gradient(135deg, rgba(154, 122, 78, 0.08), transparent 42%),
     linear-gradient(180deg, rgba(26, 20, 19, 0.04), rgba(26, 20, 19, 0.02)),
     rgba(255, 255, 255, 0.5);
   border-color: rgba(26, 20, 19, 0.12);
@@ -1835,6 +1836,25 @@
 
 [data-public-home-r4] .pm-projects__empty .pm-card__glow {
   opacity: 0.25;
+}
+
+[data-public-home-r4] .pm-projects__pending-visual {
+  width: min(100%, 640px);
+  margin-bottom: 4px;
+  color: rgba(106, 78, 48, 0.45);
+}
+
+[data-public-home-r4] .pm-projects__linework {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+[data-public-home-r4] .pm-projects__pending-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
 }
 
 [data-public-home-r4] .pm-project {

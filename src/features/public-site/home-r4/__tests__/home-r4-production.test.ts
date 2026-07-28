@@ -74,14 +74,37 @@ describe("home-r4 production guards", () => {
     }
   });
 
-  test("homepage uses getFeaturedProjects and remains indexable", () => {
+  test("homepage uses getFeaturedProjects exactly once and remains indexable", () => {
     const page = read(pagePath);
     assert.match(page, /getFeaturedProjects/);
+    assert.equal((page.match(/getFeaturedProjects\(/g) ?? []).length, 1);
     assert.match(page, /ProductionHomePage/);
     assert.doesNotMatch(page, /loadConceptFeatured/);
     assert.doesNotMatch(page, /design-concepts/);
     assert.doesNotMatch(page, /noindex/);
     assert.match(page, /index:\s*true/);
+  });
+
+  test("HomeProjects uses project-proof selector and pending copy", () => {
+    const projects = read(join(homeR4, "HomeProjects.tsx"));
+    const content = read(join(homeR4, "content.ts"));
+    assert.match(projects, /selectHomepageProjectProof/);
+    assert.doesNotMatch(
+      projects,
+      /featured\.filter\(\(card\) => Boolean\(card\.cover\?\.url\)\)/
+    );
+    assert.match(content, /Selected work/);
+    assert.match(content, /Project photography is being prepared\./);
+    assert.match(
+      content,
+      /The portfolio layout is ready for published ONEDECORE projects\. Authentic completed-project media will replace this state before launch\./
+    );
+    assert.match(content, /View Portfolio/);
+    assert.match(content, /Start My Interior Plan/);
+    assert.doesNotMatch(projects, /Published Featured Villa|Bandra, Mumbai|4 BHK Villa/);
+    assert.doesNotMatch(projects, /\/assets\/onedecore\/home\//);
+    assert.match(projects, /href=\{PM_PROJECTS_COPY\.allHref\}|href=\"\/portfolio\"/);
+    assert.match(projects, /openPlanner/);
   });
 
   test("does not keep design-concepts runtime tree", () => {

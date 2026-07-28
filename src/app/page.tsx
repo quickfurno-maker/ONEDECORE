@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { getFeaturedProjects } from "@/features/portfolio/public/public-portfolio-cache";
 import { publicSiteFontVariables } from "@/features/public-site/fonts";
 import { ProductionHomePage } from "@/features/public-site/home-r4/ProductionHomePage";

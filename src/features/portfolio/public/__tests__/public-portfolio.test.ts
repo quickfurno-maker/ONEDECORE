@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { test, describe } from "node:test";
 import {
   PORTFOLIO_SERVICE_LABELS,
@@ -905,6 +907,16 @@ describe("Public Portfolio — Listing Pagination Contract", () => {
 
 import "../../../public-site/home-r4/__tests__/home-r4-production.test.ts";
 import "../../../public-site/home-r4/__tests__/plan-state.test.ts";
+import "../../../public-site/home-r4/__tests__/project-proof.test.ts";
 
-import "../../../public-site/home-r4/__tests__/home-r4-production.test.ts";
-import "../../../public-site/home-r4/__tests__/plan-state.test.ts";
+{
+  const harness = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  const homeR4Imports = harness.match(
+    /import\s+["']\.\.\/\.\.\/\.\.\/public-site\/home-r4\/__tests__\/[^"']+["']/g
+  );
+  assert.equal(
+    homeR4Imports?.length,
+    new Set(homeR4Imports).size,
+    "home-r4 harness imports must not be duplicated"
+  );
+}

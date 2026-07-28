@@ -1,8 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import type { PublicPortfolioCard } from "@/features/portfolio/public/types";
-import { PM_PROJECTS_COPY, PM_SECTION_IDS } from "./content";
 import { Reveal } from "@/features/public-site/motion/Reveal";
+import { PM_PROJECTS_COPY, PM_SECTION_IDS } from "./content";
+import { usePlan } from "./PlanContext";
+import { selectHomepageProjectProof } from "./project-proof";
 
 interface HomeProjectsProps {
   readonly featured: readonly PublicPortfolioCard[];
@@ -22,9 +26,54 @@ function isLocalStorageUrl(url: string): boolean {
   return /127\.0\.0\.1|localhost/i.test(url);
 }
 
+function ProjectsPending() {
+  const { openPlanner } = usePlan();
+
+  return (
+    <Reveal className="pm-card pm-projects__empty" order={1}>
+      <span className="pm-card__glow" aria-hidden="true" />
+      <div className="pm-projects__pending-visual" aria-hidden="true">
+        <svg
+          className="pm-projects__linework"
+          viewBox="0 0 640 280"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect x="24" y="28" width="592" height="224" rx="4" stroke="currentColor" strokeWidth="1.25" />
+          <path d="M24 188H616" stroke="currentColor" strokeWidth="1" />
+          <path d="M216 28V252" stroke="currentColor" strokeWidth="1" />
+          <path d="M424 28V252" stroke="currentColor" strokeWidth="1" />
+          <path d="M24 108H216" stroke="currentColor" strokeWidth="1" />
+          <path d="M424 148H616" stroke="currentColor" strokeWidth="1" />
+          <circle cx="320" cy="118" r="34" stroke="currentColor" strokeWidth="1" />
+          <path d="M286 118H354" stroke="currentColor" strokeWidth="1" />
+          <path d="M320 84V152" stroke="currentColor" strokeWidth="1" />
+        </svg>
+      </div>
+      <h3 className="pm-h3">{PM_PROJECTS_COPY.emptyHeading}</h3>
+      <p className="pm-body">{PM_PROJECTS_COPY.emptyBody}</p>
+      <div className="pm-projects__pending-actions">
+        <Link
+          href={PM_PROJECTS_COPY.allHref}
+          className="dc-btn dc-btn--primary pm-btn--sheen"
+        >
+          {PM_PROJECTS_COPY.allLabel}
+        </Link>
+        <button
+          type="button"
+          className="dc-btn dc-btn--ghost"
+          onClick={() => openPlanner()}
+        >
+          {PM_PROJECTS_COPY.planLabel}
+        </button>
+      </div>
+    </Reveal>
+  );
+}
+
 export function HomeProjects({ featured }: HomeProjectsProps) {
-  const withCovers = featured.filter((card) => Boolean(card.cover?.url));
-  const [lead, ...rest] = withCovers;
+  const proof = selectHomepageProjectProof(featured);
+  const [lead, ...rest] = proof;
   const supporting = rest.slice(0, 4);
 
   return (
@@ -50,17 +99,7 @@ export function HomeProjects({ featured }: HomeProjectsProps) {
         </Reveal>
 
         {!lead ? (
-          <Reveal className="pm-card pm-projects__empty" order={1}>
-            <span className="pm-card__glow" aria-hidden="true" />
-            <h3 className="pm-h3">{PM_PROJECTS_COPY.emptyHeading}</h3>
-            <p className="pm-body">{PM_PROJECTS_COPY.emptyBody}</p>
-            <Link
-              href={PM_PROJECTS_COPY.allHref}
-              className="dc-btn dc-btn--primary pm-btn--sheen"
-            >
-              {PM_PROJECTS_COPY.allLabel}
-            </Link>
-          </Reveal>
+          <ProjectsPending />
         ) : (
           <>
             <Reveal className="pm-projects__lead" order={1}>
