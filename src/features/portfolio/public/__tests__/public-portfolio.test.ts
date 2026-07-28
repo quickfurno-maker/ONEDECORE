@@ -902,3 +902,9 @@ describe("Public Portfolio — Listing Pagination Contract", () => {
     assert.ok(fromCalls <= 3, `expected at most 3 requests, saw ${fromCalls}`);
   });
 });
+
+import "../../../public-site/home-r4/__tests__/home-r4-production.test.ts";
+import "../../../public-site/home-r4/__tests__/plan-state.test.ts";
+
+import "../../../public-site/home-r4/__tests__/home-r4-production.test.ts";
+import "../../../public-site/home-r4/__tests__/plan-state.test.ts";
