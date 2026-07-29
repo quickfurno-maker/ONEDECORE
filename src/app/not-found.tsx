@@ -1,24 +1,23 @@
 import Link from "next/link";
+import { PublicDarkShell } from "@/features/public-site/theme/PublicDarkShell";
 
 export default function NotFound() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-white dark:bg-neutral-900">
-      <div className="max-w-md space-y-4">
-        <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
-          404 — Page Not Found
-        </h1>
-        <p className="text-neutral-600 dark:text-neutral-400">
-          The requested page or resource could not be found.
-        </p>
-        <div className="pt-4">
-          <Link
-            href="/"
-            className="inline-flex items-center rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
-          >
-            Return Home
-          </Link>
+    <PublicDarkShell showChrome={false}>
+      <main className="od-state">
+        <div className="od-state__inner">
+          <h1>404 — Page Not Found</h1>
+          <p>The requested page or resource could not be found.</p>
+          <div className="od-state__actions">
+            <Link href="/" className="od-btn-primary">
+              Return Home
+            </Link>
+            <Link href="/portfolio" className="od-btn-ghost">
+              View Portfolio
+            </Link>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </PublicDarkShell>
   );
 }

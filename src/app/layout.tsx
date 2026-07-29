@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@/features/public-site/theme/public-dark-theme.css";
 import "@/features/public-site/home-r4/styles/home-foundation.css";
 import "@/features/public-site/home-r4/styles/home-r4.css";
 

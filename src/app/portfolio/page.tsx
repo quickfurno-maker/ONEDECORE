@@ -56,15 +56,11 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
   );
 
   return (
-    <main
-      id="portfolio-page-main"
-      className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
-    >
-      <header className="mb-10 space-y-3">
-        <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white sm:text-5xl">
-          Interior Design Portfolio
-        </h1>
-        <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-3xl">
+    <main id="portfolio-page-main" className="od-portfolio-main">
+      <header className="od-portfolio-header">
+        <p className="od-portfolio-eyebrow">ONEDECORE Portfolio</p>
+        <h1 className="od-portfolio-title">Interior Design Portfolio</h1>
+        <p className="od-portfolio-lede">
           {parsed.service
             ? `Showing projects for ${PORTFOLIO_SERVICE_LABELS[parsed.service]}`
             : "Explore our curated showcase of completed residential interior projects."}

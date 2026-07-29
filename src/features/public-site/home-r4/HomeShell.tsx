@@ -11,7 +11,7 @@ const MAIN_ID = "pm-main";
 /** Production homepage chrome: skip link, nav, main, sticky, footer, planner sheet. */
 export function HomeShell({ children }: { readonly children: ReactNode }) {
   return (
-    <div data-public-home-r4="">
+    <div data-public-home-r4="" data-public-dark-theme="">
       <HomeScrollProgress />
       <a className="dc-skip" href={`#${MAIN_ID}`}>
         Skip to content
