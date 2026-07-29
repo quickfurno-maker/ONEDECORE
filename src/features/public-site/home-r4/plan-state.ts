@@ -8,12 +8,14 @@ import type {
   PmStep,
   PmTimelineId,
 } from "./content.ts";
+import type { BudgetComfortId } from "./budget-config.ts";
 
 export interface PlanSnapshot {
   readonly service: PmServiceId | null;
   readonly property: PmPropertyId | null;
   readonly timeline: PmTimelineId | null;
   readonly rooms: readonly PmRoomId[];
+  readonly budgetComfort: BudgetComfortId | null;
   readonly name: string;
   readonly mobile: string;
   readonly locality: string;
@@ -23,7 +25,10 @@ export interface PlanSnapshot {
 }
 
 /** Clipboard-ready interior brief. Uses plan ids; no contact submission fields. */
-export function formatInteriorBrief(snapshot: PlanSnapshot): string {
+export function formatInteriorBrief(
+  snapshot: PlanSnapshot,
+  budgetLabel?: string | null
+): string {
   const rooms =
     snapshot.rooms.length > 0 ? snapshot.rooms.join(", ") : "Not selected";
 
@@ -33,6 +38,9 @@ export function formatInteriorBrief(snapshot: PlanSnapshot): string {
     `Property: ${snapshot.property ?? "Not selected"}`,
     `Timeline: ${snapshot.timeline ?? "Not selected"}`,
     `Rooms: ${rooms}`,
+    snapshot.budgetComfort && budgetLabel
+      ? `Budget comfort: ${budgetLabel}`
+      : null,
     `Locality: ${snapshot.locality.trim() || "Not selected"}`,
     snapshot.message.trim() ? `Notes: ${snapshot.message.trim()}` : null,
   ]

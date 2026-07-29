@@ -52,7 +52,7 @@ export function HomeRoomExplorer() {
 
   return (
     <section
-      id={PM_SECTION_IDS.rooms}
+      id={PM_SECTION_IDS.services}
       className="pm-section pm-rooms"
       aria-labelledby="pm-rooms-title"
     >
@@ -63,7 +63,7 @@ export function HomeRoomExplorer() {
             {PM_ROOMS_COPY.heading}
           </h2>
           <p className="pm-lede">{PM_ROOMS_COPY.lede}</p>
-          <p className="pm-rooms__note">{PM_ROOMS_COPY.inspirationNote}</p>
+          <p className="pm-rooms__note">{PM_ROOMS_COPY.compactNote}</p>
         </Reveal>
 
         <Reveal className="pm-rooms__shell" order={1}>
@@ -141,7 +141,7 @@ export function HomeRoomExplorer() {
 
         <noscript>
           <div className="pm-noscript">
-            <p>{PM_ROOMS_COPY.inspirationNote}</p>
+            <p>{PM_ROOMS_COPY.compactNote}</p>
             {PM_ROOM_CATEGORIES.map((room) => (
               <article key={room.id}>
                 <h3>{room.title}</h3>

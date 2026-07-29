@@ -6,7 +6,6 @@ import {
   PM_SECTION_IDS,
   PM_SERVICES,
   PM_SERVICES_COPY,
-  PM_SERVICE_CTA,
   type PmServiceId,
 } from "./content";
 import { usePlan } from "./PlanContext";
@@ -95,11 +94,13 @@ export function HomeServices() {
                 <dl className="pm-service__meta">
                   <div>
                     <dt>Includes</dt>
-                    <dd>{service.includes}</dd>
-                  </div>
-                  <div>
-                    <dt>Best for</dt>
-                    <dd>{service.bestFor}</dd>
+                    <dd>
+                      <ul className="pm-service__includesInline">
+                        {service.includes.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </dd>
                   </div>
                 </dl>
 
@@ -109,7 +110,7 @@ export function HomeServices() {
                   data-conversion-action="service-start-plan"
                   onClick={() => start(service.id)}
                 >
-                  {PM_SERVICE_CTA}
+                  {service.cta}
                 </button>
               </li>
             ))}

@@ -93,18 +93,26 @@ describe("home-r4 production guards", () => {
       projects,
       /featured\.filter\(\(card\) => Boolean\(card\.cover\?\.url\)\)/
     );
-    assert.match(content, /Selected work/);
-    assert.match(content, /Project photography is being prepared\./);
+    assert.match(content, /Our Work/);
+    assert.match(content, /Real ONEDECORE project stories are being prepared\./);
     assert.match(
       content,
-      /The portfolio layout is ready for published ONEDECORE projects\. Authentic completed-project media will replace this state before launch\./
+      /Authentic completed-project photography and case studies will appear here after final media approval\./
     );
     assert.match(content, /View Portfolio/);
-    assert.match(content, /Start My Interior Plan/);
+    assert.doesNotMatch(content, /Selected work/);
     assert.doesNotMatch(projects, /Published Featured Villa|Bandra, Mumbai|4 BHK Villa/);
     assert.doesNotMatch(projects, /\/assets\/onedecore\/home\//);
     assert.match(projects, /href=\{PM_PROJECTS_COPY\.allHref\}|href=\"\/portfolio\"/);
     assert.match(projects, /openPlanner/);
+  });
+
+  test("claims config is the single source for approved metrics", () => {
+    const content = read(join(homeR4, "content.ts"));
+    const claims = read(join(homeR4, "claims.ts"));
+    assert.match(content, /from "\.\/claims\.ts"/);
+    assert.match(claims, /projectsDelivered: 500/);
+    assert.match(claims, /No JSON-LD aggregateRating\/Review\/Warranty/);
   });
 
   test("does not keep design-concepts runtime tree", () => {

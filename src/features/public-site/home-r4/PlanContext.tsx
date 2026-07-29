@@ -8,8 +8,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { BudgetComfortId } from "./budget-config";
 import type {
-  HomePlannerMode,
   PmPropertyId,
   PmRoomId,
   PmServiceId,
@@ -41,7 +41,7 @@ export interface AddAreaToPlanInput {
 interface PlanApi extends PlanSnapshot {
   readonly step: PmStep;
   readonly isOpen: boolean;
-  readonly mode: HomePlannerMode;
+  readonly mode: "sheet";
   readonly submitted: boolean;
   readonly completedSteps: number;
   readonly progress: number;
@@ -53,6 +53,7 @@ interface PlanApi extends PlanSnapshot {
   readonly toggleRoom: (room: PmRoomId) => void;
   readonly addRoom: (room: PmRoomId) => void;
   readonly addAreaToPlanAndOpen: (input: AddAreaToPlanInput) => void;
+  readonly setBudgetComfort: (budget: BudgetComfortId | null) => void;
   readonly setContact: (fields: Partial<PlanContactFields>) => void;
   readonly setMessage: (message: string) => void;
   readonly setStep: (step: PmStep) => void;
@@ -66,14 +67,6 @@ interface PlanApi extends PlanSnapshot {
 
 const PlanCtx = createContext<PlanApi | null>(null);
 
-/** Matches the CSS breakpoint at which the inline planner card is available. */
-const INLINE_MIN_WIDTH = 1080;
-
-function currentMode(): HomePlannerMode {
-  if (typeof window === "undefined") return "sheet";
-  return window.innerWidth >= INLINE_MIN_WIDTH ? "inline" : "sheet";
-}
-
 /**
  * Single source of truth for the interior plan. Every CTA on the page routes
  * through `openPlanner`, so there is one journey, one submission path, and one
@@ -84,6 +77,8 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
   const [property, setPropertyState] = useState<PmPropertyId | null>(null);
   const [timeline, setTimelineState] = useState<PmTimelineId | null>(null);
   const [rooms, setRooms] = useState<readonly PmRoomId[]>([]);
+  const [budgetComfort, setBudgetComfortState] =
+    useState<BudgetComfortId | null>(null);
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [locality, setLocality] = useState("");
@@ -92,7 +87,6 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
   const [privacyConsent, setPrivacyConsent] = useState(false);
   const [step, setStepState] = useState<PmStep>(1);
   const [isOpen, setIsOpen] = useState(false);
-  const [mode, setMode] = useState<HomePlannerMode>("sheet");
   const [submitted, setSubmitted] = useState(false);
 
   const snapshot = useMemo<PlanSnapshot>(
@@ -101,6 +95,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       property,
       timeline,
       rooms,
+      budgetComfort,
       name,
       mobile,
       locality,
@@ -113,6 +108,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       property,
       timeline,
       rooms,
+      budgetComfort,
       name,
       mobile,
       locality,
@@ -129,7 +125,6 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
 
   const openPlanner = useCallback(
     (target?: PmStep) => {
-      setMode(currentMode());
       setStepState(target ?? computeNextStep(snapshot));
       setIsOpen(true);
     },
@@ -152,6 +147,10 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
     setTimelineState(next);
   }, []);
 
+  const setBudgetComfort = useCallback((next: BudgetComfortId | null) => {
+    setBudgetComfortState(next);
+  }, []);
+
   const toggleRoom = useCallback((room: PmRoomId) => {
     setRooms((current) => toggleRoomIn(current, room));
   }, []);
@@ -160,10 +159,6 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
     setRooms((current) => ensureRoomIn(current, room));
   }, []);
 
-  /**
-   * Atomically apply service/rooms, compute the next step from a prospective
-   * snapshot, then open the planner — never stale relative to the just-added area.
-   */
   const addAreaToPlanAndOpen = useCallback(
     (input: AddAreaToPlanInput) => {
       let nextRooms = snapshot.rooms;
@@ -179,7 +174,6 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       const target = computeNextStep(prospective);
       if (input.service) setServiceState(input.service);
       setRooms(nextRooms);
-      setMode(currentMode());
       setStepState(target);
       setIsOpen(true);
     },
@@ -229,6 +223,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
     setPropertyState(null);
     setTimelineState(null);
     setRooms([]);
+    setBudgetComfortState(null);
     setName("");
     setMobile("");
     setLocality("");
@@ -245,7 +240,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       ...snapshot,
       step,
       isOpen,
-      mode,
+      mode: "sheet",
       submitted,
       completedSteps: completedStepCount(snapshot),
       progress: planProgressPercent(snapshot),
@@ -257,6 +252,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       toggleRoom,
       addRoom,
       addAreaToPlanAndOpen,
+      setBudgetComfort,
       setContact,
       setMessage,
       setStep,
@@ -271,7 +267,6 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       snapshot,
       step,
       isOpen,
-      mode,
       submitted,
       openPlanner,
       closePlanner,
@@ -281,6 +276,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       toggleRoom,
       addRoom,
       addAreaToPlanAndOpen,
+      setBudgetComfort,
       setContact,
       setMessage,
       setStep,

@@ -25,6 +25,7 @@ function empty(): PlanSnapshot {
     property: null,
     timeline: null,
     rooms: [],
+    budgetComfort: null,
     name: "",
     mobile: "",
     locality: "",
@@ -81,18 +82,18 @@ describe("R5.1 atomic plan prospective steps", () => {
     assert.equal(completedStepCount(prospective), 4);
   });
 
-  test("PlanContext exposes addAreaToPlanAndOpen and RoomExplorer uses it", () => {
+  test("PlanContext exposes addAreaToPlanAndOpen and ServicesRooms uses it", () => {
     assert.match(read("PlanContext.tsx"), /addAreaToPlanAndOpen/);
     assert.match(read("PlanContext.tsx"), /prospective/);
-    assert.match(read("HomeRoomExplorer.tsx"), /addAreaToPlanAndOpen/);
+    assert.match(read("HomeServicesRooms.tsx"), /addAreaToPlanAndOpen/);
     assert.doesNotMatch(
-      read("HomeRoomExplorer.tsx"),
+      read("HomeServicesRooms.tsx"),
       /openPlanner\(getNextIncompleteStep\(\)\)/
     );
   });
 
   test("confirmation timer is cleaned up", () => {
-    const source = read("HomeRoomExplorer.tsx");
+    const source = read("HomeServicesRooms.tsx");
     assert.match(source, /timerRef/);
     assert.match(source, /clearTimeout/);
     assert.match(source, /return \(\) =>/);
@@ -108,28 +109,18 @@ describe("R5.1 tab semantics and wordmark", () => {
     assert.match(source, /\.focus\(/);
   });
 
-  for (const file of [
-    "HomeRoomExplorer.tsx",
-    "HomeScopeIncluded.tsx",
-    "HomeProcess.tsx",
-    "HomeMaterials.tsx",
-    "HomeApproach.tsx",
-  ]) {
-    test(`${file} uses roving tabs and stable panel`, () => {
-      const source = read(file);
-      assert.match(source, /useRovingTabs/);
-      assert.match(source, /panelId/);
-      assert.match(source, /aria-controls=\{panelId\}/);
-    });
-  }
+  test("HomeProcess.tsx uses roving tabs and stable panel", () => {
+    const source = read("HomeProcess.tsx");
+    assert.match(source, /useRovingTabs/);
+    assert.match(source, /panelId/);
+    assert.match(source, /aria-controls=\{panelId\}/);
+  });
 
-  test("Approach has four USP tabs and journey is not a tablist", () => {
-    const source = read("HomeApproach.tsx");
-    assert.match(source, /pm-approach__journey/);
-    assert.match(source, /role="tablist"/);
-    assert.match(source, /What you can expect/);
-    assert.match(source, /<ol className="pm-approach__journey"/);
-    assert.equal((source.match(/role="tab"/g) ?? []).length, 1);
+  test("HomeServicesRooms.tsx uses roving tabs for room explorer", () => {
+    const source = read("HomeServicesRooms.tsx");
+    assert.match(source, /useRovingTabs/);
+    assert.match(source, /panelId/);
+    assert.match(source, /aria-controls=\{panelId\}/);
   });
 
   test("OneDecoreWordmark is shared across nav drawer footer", () => {
@@ -143,38 +134,34 @@ describe("R5.1 tab semantics and wordmark", () => {
     assert.match(read("HomeNavigation.tsx"), /size="drawer"/);
   });
 
-  test("conversion hooks exist", () => {
+  test("R5.3 conversion hooks exist", () => {
     const blob =
       read("HomeHero.tsx") +
-      read("HomeServices.tsx") +
-      read("HomeRoomExplorer.tsx") +
-      read("HomeScopeIncluded.tsx") +
+      read("HomeServicesRooms.tsx") +
+      read("HomeBudgetEstimator.tsx") +
       read("HomeProcess.tsx") +
-      read("HomeReadiness.tsx") +
       read("HomePlan.tsx") +
       read("HomeStickyActions.tsx");
     for (const action of [
       "hero-start-plan",
       "service-start-plan",
-      "room-add",
-      "scope-build-brief",
+      "hero-estimate",
+      "estimator-refine",
       "process-start-plan",
-      "readiness-continue",
       "brief-copy",
-      "portfolio-view",
+      "sticky-estimate",
     ]) {
       assert.match(blob, new RegExp(action));
     }
   });
 
-  test("noscript fallbacks present for interactive sections", () => {
+  test("noscript fallbacks present for interactive R5.3 sections", () => {
     for (const file of [
-      "HomeRoomExplorer.tsx",
-      "HomeScopeIncluded.tsx",
-      "HomeApproach.tsx",
+      "HomeServicesRooms.tsx",
+      "HomeBudgetEstimator.tsx",
       "HomeProcess.tsx",
-      "HomeMaterials.tsx",
     ]) {
+      assert.equal(existsSync(join(home, file)), true, `${file} must exist`);
       assert.match(read(file), /<noscript>/);
     }
   });

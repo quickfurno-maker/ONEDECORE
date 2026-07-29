@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { PM_SCOPE_AREAS, PM_SCOPE_COPY, PM_SECTION_IDS } from "./content";
+import { PM_SCOPE_AREAS, PM_SCOPE_COPY } from "./content";
 import { usePlan } from "./PlanContext";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 import { useRovingTabs } from "./useRovingTabs";
@@ -20,7 +20,7 @@ export function HomeScopeIncluded() {
 
   return (
     <section
-      id={PM_SECTION_IDS.included}
+      id="included"
       className="pm-section pm-scope"
       aria-labelledby="pm-scope-title"
     >

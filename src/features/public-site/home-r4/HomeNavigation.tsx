@@ -19,7 +19,7 @@ export function HomeNavigation() {
   const drawerId = useId();
   const toggleRef = useRef<HTMLButtonElement | null>(null);
   const planLabel =
-    service || property || timeline ? PM_CTA.continuePlan : PM_CTA.open;
+    service || property || timeline ? PM_CTA.continuePlan : PM_CTA.openShort;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -63,7 +63,11 @@ export function HomeNavigation() {
   };
 
   return (
-    <header className="pm-nav" data-scrolled={scrolled ? "" : undefined}>
+    <header
+      className="pm-nav"
+      data-scrolled={scrolled ? "" : undefined}
+      data-drawer-open={open ? "" : undefined}
+    >
       <div className="pm-nav__bar">
         <OneDecoreWordmark size="nav" className="pm-nav__mark" />
 
@@ -92,7 +96,7 @@ export function HomeNavigation() {
           ) : null}
           <button
             type="button"
-            className="dc-btn pm-btn--nav pm-btn--sheen"
+            className="dc-btn pm-btn--nav pm-btn--sheen pm-nav__planCta pm-cta-short"
             data-conversion-action="nav-start-plan"
             onClick={() => {
               setOpen(false);

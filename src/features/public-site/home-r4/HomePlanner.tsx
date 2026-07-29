@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useCallback,
   useEffect,
   useId,
   useRef,
@@ -328,6 +327,53 @@ function PlannerBody({ idPrefix, onClose, compactHeader }: PlannerBodyProps) {
           <fieldset className="pm-fieldset">
             <legend className="pm-legend">{PM_PLANNER.steps[3]!.legend}</legend>
 
+            <fieldset className="pm-fieldset pm-fieldset--nested">
+              <legend className="pm-legend">
+                {PM_PLANNER.budgetComfortLegend}{" "}
+                <span className="pm-opt">optional</span>
+              </legend>
+              <div className="pm-options" data-columns="two">
+                {PM_PLANNER.budgetComfortOptions.map((option, index) => (
+                  <label
+                    key={option.id}
+                    className="pm-option"
+                    data-selected={
+                      plan.budgetComfort === option.id ? "" : undefined
+                    }
+                    style={{ "--pm-option-index": index } as React.CSSProperties}
+                  >
+                    <input
+                      type="radio"
+                      name={`${idPrefix}-budget`}
+                      value={option.id}
+                      checked={plan.budgetComfort === option.id}
+                      onChange={() => plan.setBudgetComfort(option.id)}
+                    />
+                    <span className="pm-option__tick" aria-hidden="true">
+                      <CheckIcon />
+                    </span>
+                    <span className="pm-option__label">{option.label}</span>
+                  </label>
+                ))}
+                <label
+                  className="pm-option"
+                  data-selected={plan.budgetComfort === null ? "" : undefined}
+                >
+                  <input
+                    type="radio"
+                    name={`${idPrefix}-budget`}
+                    value=""
+                    checked={plan.budgetComfort === null}
+                    onChange={() => plan.setBudgetComfort(null)}
+                  />
+                  <span className="pm-option__tick" aria-hidden="true">
+                    <CheckIcon />
+                  </span>
+                  <span className="pm-option__label">Prefer not to say</span>
+                </label>
+              </div>
+            </fieldset>
+
             <div className="pm-field">
               <label htmlFor={`${idPrefix}-locality`}>
                 {PM_PLANNER.localityLabel}{" "}
@@ -361,6 +407,8 @@ function PlannerBody({ idPrefix, onClose, compactHeader }: PlannerBodyProps) {
           </fieldset>
         ) : null}
       </div>
+
+      <p className="pm-planner__reassurance">{PM_PLANNER.reassurance}</p>
 
       <div className="pm-planner__actions">
         {plan.step > 1 ? (
@@ -464,12 +512,11 @@ function useSheetOverlay(open: boolean, closePlanner: () => void) {
 
 /** Bottom sheet used below the inline breakpoint. */
 export function HomePlannerSheet() {
-  const { isOpen, mode, closePlanner } = usePlan();
-  const open = isOpen && mode === "sheet";
-  const panelRef = useSheetOverlay(open, closePlanner);
+  const { isOpen, closePlanner } = usePlan();
+  const panelRef = useSheetOverlay(isOpen, closePlanner);
   const idPrefix = useId();
 
-  if (!open) return null;
+  if (!isOpen) return null;
 
   return (
     <div className="pm-sheet" data-open="">
@@ -493,88 +540,14 @@ export function HomePlannerSheet() {
   );
 }
 
-/**
- * Inline hero card. Collapsed it shows only the service choice; picking a
- * service expands the same shared flow in place.
- */
+/** @deprecated R5.3 — sheet-only planner; inline entry retained for compatibility. */
 export function HomePlannerInline() {
-  const plan = usePlan();
-  const idPrefix = useId();
-  const expanded = plan.isOpen && plan.mode === "inline";
-
-  const chooseService = useCallback(
-    (id: PmServiceId) => {
-      plan.setService(id);
-      plan.openPlanner(2);
-    },
-    [plan]
-  );
-
-  return (
-    <div className="pm-card pm-planner" data-expanded={expanded ? "" : undefined}>
-      <span className="pm-card__glow" aria-hidden="true" />
-      {expanded || plan.submitted ? (
-        <PlannerBody idPrefix={idPrefix} onClose={plan.closePlanner} />
-      ) : (
-        <div className="pm-planner__entry">
-          <p className="pm-planner__title">{PM_PLANNER.title}</p>
-          <p className="pm-planner__hint">{PM_PLANNER.entryHint}</p>
-          <PlanProgress compact />
-          <div className="pm-options" data-columns="auto">
-            {PM_PLANNER.services.map((option, index) => (
-              <button
-                key={option.id}
-                type="button"
-                className="pm-option pm-option--button"
-                data-selected={plan.service === option.id ? "" : undefined}
-                style={{ "--pm-option-index": index } as React.CSSProperties}
-                onClick={() => chooseService(option.id as PmServiceId)}
-              >
-                <span className="pm-option__tick" aria-hidden="true">
-                  <CheckIcon />
-                </span>
-                <span className="pm-option__label">{option.label}</span>
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="dc-btn dc-btn--primary pm-btn--sheen pm-planner__entryCta"
-            onClick={() => plan.openPlanner()}
-          >
-            {plan.service || plan.property || plan.timeline
-              ? PM_PLANNER.resumeLabel
-              : PM_PLANNER.continueLabel}
-            <ArrowIcon />
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  return null;
 }
 
-/** Compact entry block shown where the inline card is not available. */
+/** @deprecated R5.3 — sheet-only planner. */
 export function HomePlannerEntry() {
-  const { openPlanner, progress, service, property, timeline } = usePlan();
-  const hasProgress = Boolean(service || property || timeline);
-
-  return (
-    <button type="button" className="pm-entry" onClick={() => openPlanner()}>
-      <span className="pm-entry__body">
-        <span className="pm-entry__title">{PM_PLANNER.title}</span>
-        <span className="pm-entry__hint">{PM_PLANNER.entryHint}</span>
-      </span>
-      <span className="pm-entry__meta" aria-hidden="true">
-        {progress}%
-      </span>
-      <span className="pm-entry__ctaLabel">
-        {hasProgress ? PM_PLANNER.resumeLabel : PM_PLANNER.continueLabel}
-      </span>
-      <span className="pm-entry__go" aria-hidden="true">
-        <ArrowIcon />
-      </span>
-    </button>
-  );
+  return null;
 }
 
 /** Sheet is mounted once from HomeShell — do not duplicate hosts. */

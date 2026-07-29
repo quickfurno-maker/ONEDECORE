@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 interface VerifiedMetricCounterProps {
   readonly value: number;
+  readonly suffix?: string;
   readonly label: string;
   readonly durationMs?: number;
 }
@@ -23,12 +24,14 @@ function easeOutCubic(t: number): number {
  */
 export function VerifiedMetricCounter({
   value,
+  suffix = "",
   label,
-  durationMs = 1500,
+  durationMs = 2000,
 }: VerifiedMetricCounterProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const ranRef = useRef(false);
   const [display, setDisplay] = useState(value);
+  const visibleText = `${value}${suffix}`;
 
   useEffect(() => {
     const node = rootRef.current;
@@ -41,6 +44,7 @@ export function VerifiedMetricCounter({
 
     let frame = 0;
     let cancelled = false;
+    let startTimeout = 0;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -49,31 +53,34 @@ export function VerifiedMetricCounter({
         ranRef.current = true;
         observer.disconnect();
 
-        const start = performance.now();
-        let started = false;
+        startTimeout = window.setTimeout(() => {
+          const start = performance.now();
+          let started = false;
 
-        const tick = (now: number) => {
-          if (cancelled) return;
-          if (!started) {
-            started = true;
-            setDisplay(0);
-          }
-          const t = Math.min(1, (now - start) / durationMs);
-          setDisplay(Math.round(easeOutCubic(t) * value));
-          if (t < 1) {
-            frame = requestAnimationFrame(tick);
-          }
-        };
+          const tick = (now: number) => {
+            if (cancelled) return;
+            if (!started) {
+              started = true;
+              setDisplay(0);
+            }
+            const t = Math.min(1, (now - start) / durationMs);
+            setDisplay(Math.round(easeOutCubic(t) * value));
+            if (t < 1) {
+              frame = requestAnimationFrame(tick);
+            }
+          };
 
-        frame = requestAnimationFrame(tick);
+          frame = requestAnimationFrame(tick);
+        }, 200);
       },
-      { threshold: 0.45 }
+      { threshold: 0.4 }
     );
 
     observer.observe(node);
     return () => {
       cancelled = true;
       observer.disconnect();
+      if (startTimeout) window.clearTimeout(startTimeout);
       if (frame) cancelAnimationFrame(frame);
     };
   }, [durationMs, value]);
@@ -81,10 +88,11 @@ export function VerifiedMetricCounter({
   return (
     <div ref={rootRef} className="pm-metric">
       <p className="pm-metric__sr">
-        {value} {label}
+        {visibleText} {label}
       </p>
       <p className="pm-metric__value" aria-hidden="true">
         {display}
+        {suffix}
       </p>
       <p className="pm-metric__label" aria-hidden="true">
         {label}

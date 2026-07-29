@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PM_CLOSE, PM_PLANNER, PM_SECTION_IDS } from "./content";
+import { formatInteriorBrief } from "./plan-state";
 import { usePlan } from "./PlanContext";
 
 function labelOf(
@@ -16,11 +17,15 @@ function labelOf(
 /**
  * Final plan section — summary + clipboard brief export.
  * No production lead backend exists yet; do not collect contact for fake submit.
- * // Phase 7: replace Copy My Interior Brief with approved lead-intake contract.
  */
 export function HomePlan() {
   const plan = usePlan();
   const [copyState, setCopyState] = useState<"idle" | "ok" | "err">("idle");
+
+  const budgetLabel = labelOf(
+    PM_PLANNER.budgetComfortOptions,
+    plan.budgetComfort
+  );
 
   const rows = useMemo(() => {
     const rooms =
@@ -36,26 +41,20 @@ export function HomePlan() {
       { label: "Property", value: labelOf(PM_PLANNER.properties, plan.property) },
       { label: "Timeline", value: labelOf(PM_PLANNER.timelines, plan.timeline) },
       { label: "Rooms", value: rooms },
+      { label: "Budget", value: budgetLabel },
       { label: "Locality", value: plan.locality.trim() || null },
     ].filter((row) => row.value);
-  }, [plan.rooms, plan.service, plan.property, plan.timeline, plan.locality]);
+  }, [
+    plan.rooms,
+    plan.service,
+    plan.property,
+    plan.timeline,
+    plan.locality,
+    budgetLabel,
+  ]);
 
   const onCopy = async () => {
-    const text = [
-      "ONEDECORE — My Interior Brief",
-      `Service: ${labelOf(PM_PLANNER.services, plan.service) ?? "Not selected"}`,
-      `Property: ${labelOf(PM_PLANNER.properties, plan.property) ?? "Not selected"}`,
-      `Timeline: ${labelOf(PM_PLANNER.timelines, plan.timeline) ?? "Not selected"}`,
-      `Rooms: ${
-        plan.rooms.length > 0
-          ? plan.rooms.map((id) => labelOf(PM_PLANNER.rooms, id)).join(", ")
-          : "Not selected"
-      }`,
-      `Locality: ${plan.locality.trim() || "Not selected"}`,
-      plan.message.trim() ? `Notes: ${plan.message.trim()}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n");
+    const text = formatInteriorBrief(plan, budgetLabel);
     try {
       await navigator.clipboard.writeText(text);
       setCopyState("ok");
@@ -78,6 +77,7 @@ export function HomePlan() {
             {PM_CLOSE.heading}
           </h2>
           <p className="pm-lede">{PM_CLOSE.lede}</p>
+          <p className="pm-close__reassurance">{PM_CLOSE.reassurance}</p>
 
           <div className="pm-summary pm-summary--intro">
             <div className="pm-summary__head">
@@ -125,15 +125,16 @@ export function HomePlan() {
               <Link
                 href={PM_CLOSE.secondaryHref}
                 className="dc-btn dc-btn--ghost"
+                data-conversion-action="portfolio-view"
               >
                 {PM_CLOSE.secondaryLabel}
               </Link>
             </div>
             <p className="pm-lede" role="status" aria-live="polite">
               {copyState === "ok"
-                ? "Interior brief copied to your clipboard."
+                ? PM_CLOSE.copySuccess
                 : copyState === "err"
-                  ? "Could not copy automatically. Select your plan summary and copy manually."
+                  ? PM_CLOSE.copyFailure
                   : null}
             </p>
           </div>

@@ -7,7 +7,6 @@ import {
   PM_MATERIAL_DECISION_STEPS,
   PM_MATERIAL_PRIMARY,
   PM_MATERIAL_SUPPORTING,
-  PM_SECTION_IDS,
 } from "./content";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 import { useRovingTabs } from "./useRovingTabs";
@@ -26,7 +25,7 @@ export function HomeMaterials() {
 
   return (
     <section
-      id={PM_SECTION_IDS.materials}
+      id="materials"
       className="pm-section pm-materials"
       aria-labelledby="pm-materials-title"
     >

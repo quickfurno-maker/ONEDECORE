@@ -5,7 +5,6 @@ import {
   PM_APPROACH_COPY,
   PM_APPROACH_DIAGRAM,
   PM_APPROACH_USPS,
-  PM_SECTION_IDS,
 } from "./content";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 import { useRovingTabs } from "./useRovingTabs";
@@ -24,7 +23,7 @@ export function HomeApproach() {
 
   return (
     <section
-      id={PM_SECTION_IDS.approach}
+      id="approach"
       className="pm-section pm-approach"
       aria-labelledby="pm-approach-title"
     >

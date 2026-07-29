@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { PM_SECTION_IDS, PM_VISION } from "./content";
+import { PM_VISION } from "./content";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 
 const ASSET = PM_VISION.asset;
@@ -7,7 +7,7 @@ const ASSET = PM_VISION.asset;
 export function HomeVision() {
   return (
     <section
-      id={PM_SECTION_IDS.vision}
+      id="vision"
       className="pm-section pm-vision"
       aria-labelledby="pm-vision-title"
     >

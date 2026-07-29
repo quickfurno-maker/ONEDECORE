@@ -1,6 +1,6 @@
 "use client";
 
-import { PM_READINESS_COPY, PM_SECTION_IDS } from "./content";
+import { PM_READINESS_COPY } from "./content";
 import { computeReadinessState } from "./plan-state";
 import { usePlan } from "./PlanContext";
 import { Reveal } from "@/features/public-site/motion/Reveal";
@@ -20,7 +20,7 @@ export function HomeReadiness() {
 
   const onCta = () => {
     if (state === "brief-ready") {
-      const target = document.getElementById(PM_SECTION_IDS.plan);
+      const target = document.getElementById("plan");
       target?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
@@ -29,7 +29,7 @@ export function HomeReadiness() {
 
   return (
     <section
-      id={PM_SECTION_IDS.readiness}
+      id="readiness"
       className="pm-section pm-readiness"
       aria-labelledby="pm-readiness-title"
     >

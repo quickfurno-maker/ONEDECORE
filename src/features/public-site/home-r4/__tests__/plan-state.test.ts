@@ -18,6 +18,7 @@ function base(overrides: Partial<PlanSnapshot> = {}): PlanSnapshot {
     property: null,
     timeline: null,
     rooms: [],
+    budgetComfort: null,
     name: "",
     mobile: "",
     locality: "",
@@ -82,6 +83,7 @@ describe("formatInteriorBrief", () => {
     assert.match(text, /modular-kitchens/);
     assert.match(text, /Baner/);
     assert.doesNotMatch(text, /9876543210/);
+    assert.doesNotMatch(text, /Budget comfort:/);
   });
 });
 

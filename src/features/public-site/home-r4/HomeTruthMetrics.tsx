@@ -1,27 +1,24 @@
-import { PM_METRICS, PM_METRICS_COPY } from "./content";
-import { Reveal } from "@/features/public-site/motion/Reveal";
+import { PM_PROOF_COPY, PM_PROOF_METRICS } from "./content";
 import { VerifiedMetricCounter } from "./VerifiedMetricCounter";
 
-/** Verified operating-model strip — no project counts while proof mode is pending. */
+/** Owner-approved proof strip with animated counters. */
 export function HomeTruthMetrics() {
   return (
     <section
       className="pm-section pm-metrics"
-      aria-label={PM_METRICS_COPY.ariaLabel}
+      aria-label={PM_PROOF_COPY.ariaLabel}
     >
       <div className="dc-container">
-        <Reveal className="pm-metrics__eyebrow">
-          <p className="pm-eyebrow">{PM_METRICS_COPY.eyebrow}</p>
-        </Reveal>
-        <Reveal className="pm-metrics__strip" order={1}>
-          {PM_METRICS.map((metric) => (
+        <div className="pm-metrics__strip">
+          {PM_PROOF_METRICS.map((metric) => (
             <VerifiedMetricCounter
               key={metric.id}
               value={metric.value}
+              suffix={metric.suffix}
               label={metric.label}
             />
           ))}
-        </Reveal>
+        </div>
       </div>
     </section>
   );

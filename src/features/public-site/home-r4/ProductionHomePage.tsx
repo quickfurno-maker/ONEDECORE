@@ -1,40 +1,34 @@
 import type { PublicPortfolioCard } from "@/features/portfolio/public/types";
 import { PlanProvider } from "./PlanContext";
-import { HomeApproach } from "./HomeApproach";
+import { HomeBudgetEstimator } from "./HomeBudgetEstimator";
+import { HomeFactory } from "./HomeFactory";
 import { HomeFaq } from "./HomeFaq";
 import { HomeHero } from "./HomeHero";
-import { HomeMaterials } from "./HomeMaterials";
 import { HomePlan } from "./HomePlan";
 import { HomeProcess } from "./HomeProcess";
 import { HomeProjects } from "./HomeProjects";
-import { HomeReadiness } from "./HomeReadiness";
-import { HomeRoomExplorer } from "./HomeRoomExplorer";
-import { HomeScopeIncluded } from "./HomeScopeIncluded";
-import { HomeServices } from "./HomeServices";
+import { HomeServicesRooms } from "./HomeServicesRooms";
 import { HomeShell } from "./HomeShell";
 import { HomeTruthMetrics } from "./HomeTruthMetrics";
-import { HomeVision } from "./HomeVision";
+import { HomeWhy } from "./HomeWhy";
 
 interface ProductionHomePageProps {
   readonly featured: readonly PublicPortfolioCard[];
 }
 
-/** Production homepage composition — R5 homeowner value order. */
+/** Production homepage composition — R5.3 conversion master order. */
 export function ProductionHomePage({ featured }: ProductionHomePageProps) {
   return (
     <PlanProvider>
       <HomeShell>
         <HomeHero />
         <HomeTruthMetrics />
-        <HomeVision />
-        <HomeServices />
-        <HomeRoomExplorer />
-        <HomeScopeIncluded />
-        <HomeProjects featured={featured} />
-        <HomeApproach />
+        <HomeServicesRooms />
+        <HomeBudgetEstimator />
+        <HomeWhy />
+        <HomeFactory />
         <HomeProcess />
-        <HomeMaterials />
-        <HomeReadiness />
+        <HomeProjects featured={featured} />
         <HomeFaq />
         <HomePlan />
       </HomeShell>

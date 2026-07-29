@@ -50,18 +50,18 @@ function ProjectsPending() {
           <path d="M320 84V152" stroke="currentColor" strokeWidth="1" />
         </svg>
       </div>
-      <h3 className="pm-h3">{PM_PROJECTS_COPY.emptyHeading}</h3>
-      <p className="pm-body">{PM_PROJECTS_COPY.emptyBody}</p>
       <div className="pm-projects__pending-actions">
         <Link
           href={PM_PROJECTS_COPY.allHref}
           className="dc-btn dc-btn--primary pm-btn--sheen"
+          data-conversion-action="portfolio-view"
         >
           {PM_PROJECTS_COPY.allLabel}
         </Link>
         <button
           type="button"
           className="dc-btn dc-btn--ghost"
+          data-conversion-action="projects-start-plan"
           onClick={() => openPlanner()}
         >
           {PM_PROJECTS_COPY.planLabel}
@@ -75,6 +75,7 @@ export function HomeProjects({ featured }: HomeProjectsProps) {
   const proof = selectHomepageProjectProof(featured);
   const [lead, ...rest] = proof;
   const supporting = rest.slice(0, 4);
+  const pending = !lead;
 
   return (
     <section
@@ -83,25 +84,34 @@ export function HomeProjects({ featured }: HomeProjectsProps) {
       aria-labelledby="pm-projects-title"
     >
       <div className="dc-container">
-        <Reveal className="pm-head pm-head--split">
-          <div>
-            <p className="pm-eyebrow">{PM_PROJECTS_COPY.eyebrow}</p>
-            <h2 id="pm-projects-title" className="pm-h2">
-              {PM_PROJECTS_COPY.heading}
-            </h2>
-          </div>
-          <div className="pm-head__aside">
-            <p className="pm-lede">{PM_PROJECTS_COPY.lede}</p>
-            <Link href={PM_PROJECTS_COPY.allHref} className="pm-textlink">
-              {PM_PROJECTS_COPY.allLabel}
-            </Link>
-          </div>
-        </Reveal>
-
-        {!lead ? (
-          <ProjectsPending />
+        {pending ? (
+          <>
+            <Reveal className="pm-head">
+              <p className="pm-eyebrow">{PM_PROJECTS_COPY.eyebrow}</p>
+              <h2 id="pm-projects-title" className="pm-h2">
+                {PM_PROJECTS_COPY.heading}
+              </h2>
+              <p className="pm-lede">{PM_PROJECTS_COPY.lede}</p>
+            </Reveal>
+            <ProjectsPending />
+          </>
         ) : (
           <>
+            <Reveal className="pm-head pm-head--split">
+              <div>
+                <p className="pm-eyebrow">{PM_PROJECTS_COPY.eyebrow}</p>
+                <h2 id="pm-projects-title" className="pm-h2">
+                  {PM_PROJECTS_COPY.heading}
+                </h2>
+              </div>
+              <div className="pm-head__aside">
+                <p className="pm-lede">{PM_PROJECTS_COPY.lede}</p>
+                <Link href={PM_PROJECTS_COPY.allHref} className="pm-textlink">
+                  {PM_PROJECTS_COPY.allLabel}
+                </Link>
+              </div>
+            </Reveal>
+
             <Reveal className="pm-projects__lead" order={1}>
               <Link href={`/portfolio/${lead.slug}`} className="pm-project pm-project--lead">
                 <figure className="pm-project__media">
