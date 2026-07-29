@@ -54,7 +54,8 @@ describe("R5.5.1 PublicDarkShell a11y", () => {
     assert.match(source, /id="public-content"/);
     assert.match(source, /tabIndex=\{-1\}/);
     assert.match(source, /Get Price Estimate/);
-    assert.match(source, /aria-current="page"/);
+    assert.match(source, /aria-current=\{navCurrent === "portfolio" \? "page" : undefined\}/);
+    assert.match(source, /navCurrent = "portfolio"/);
   });
 });
 

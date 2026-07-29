@@ -3,15 +3,23 @@ import Link from "next/link";
 import { publicSiteFontVariables } from "@/features/public-site/fonts";
 import { OneDecoreWordmark } from "@/features/public-site/home-r4/OneDecoreWordmark";
 
+export type PublicChromeNavCurrent = "portfolio" | "none";
+
 interface PublicDarkShellProps {
   readonly children: ReactNode;
   readonly showChrome?: boolean;
+  /** Which primary nav item is current. Legal drafts use `"none"`. */
+  readonly navCurrent?: PublicChromeNavCurrent;
+  /** Optional compact footer note (e.g. draft-review disclaimer). */
+  readonly footerNote?: ReactNode;
 }
 
 /** Server-rendered public dark shell — no client theme runtime. */
 export function PublicDarkShell({
   children,
   showChrome = true,
+  navCurrent = "portfolio",
+  footerNote,
 }: PublicDarkShellProps) {
   return (
     <div
@@ -37,7 +45,7 @@ export function PublicDarkShell({
             <Link
               href="/portfolio"
               className="od-portfolio-chrome__link"
-              aria-current="page"
+              aria-current={navCurrent === "portfolio" ? "page" : undefined}
             >
               Portfolio
             </Link>
@@ -68,6 +76,9 @@ export function PublicDarkShell({
             {" · "}
             <Link href="/portfolio">Portfolio</Link>
           </p>
+          {footerNote ? (
+            <p className="od-portfolio-footer__note">{footerNote}</p>
+          ) : null}
         </footer>
       ) : null}
     </div>
