@@ -96,7 +96,7 @@ export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
     expandedNotice:
       "ONEDECORE may use your contact details for operational communication related to your enquiry or project — including scheduling, estimates, site visits, design discussions, proposals and delivery coordination. This is separate from optional marketing consent and from channel-specific WhatsApp permission.",
     purposeCode: "SERVICE_COMMUNICATION",
-    channels: ["email", "phone", "whatsapp", "in-person"],
+    channels: ["email", "phone", "in-person"],
     required: true,
     defaultChecked: false,
     status: CONSENT_REGISTRY_STATUS,
@@ -179,11 +179,78 @@ export const CONSENT_SEPARATION_RULES: readonly string[] = [
   "Marketing consent is optional and defaultChecked is false for all current versions.",
   "Privacy Policy and Terms acceptance do not constitute marketing consent.",
   "WhatsApp service communication requires separate channel-specific consent.",
+  "SERVICE_COMMUNICATION never independently authorises WhatsApp.",
+  "A WhatsApp service message requires both a valid service-communication purpose and active WHATSAPP_SERVICE channel permission.",
+  "WhatsApp service consent is not marketing consent; marketing WhatsApp requires MARKETING in addition to channel eligibility.",
   "AI assistance disclosure is transparency, not blanket automated-processing consent.",
   "Portfolio media reuse requires separate consent from general service enquiry consent.",
   "No bundled channel consent or vague third-party contact permissions.",
   "Future withdrawal must be as easy as granting consent.",
 ] as const;
+
+export type CommunicationChannelEligibility = "email" | "phone" | "whatsapp" | "in-person";
+
+export interface CommunicationChannelCheckInput {
+  readonly serviceCommunicationStatus: ConsentRecordStatus;
+  readonly channel: CommunicationChannelEligibility;
+  readonly channelConsentStatus: ConsentRecordStatus | null;
+  readonly marketingStatus?: ConsentRecordStatus | null;
+  readonly requireMarketing?: boolean;
+}
+
+/**
+ * Pure future contract: may a message be sent on a channel?
+ * WhatsApp requires service communication + WHATSAPP_SERVICE (channelConsentStatus).
+ * Marketing WhatsApp additionally requires MARKETING when requireMarketing is true.
+ */
+export function canUseCommunicationChannel(
+  input: CommunicationChannelCheckInput
+): boolean {
+  const { serviceCommunicationStatus, channel, channelConsentStatus } = input;
+
+  if (
+    serviceCommunicationStatus === "withdrawn" ||
+    serviceCommunicationStatus === "suppressed" ||
+    serviceCommunicationStatus === "expired"
+  ) {
+    return false;
+  }
+
+  if (serviceCommunicationStatus !== "granted") {
+    return false;
+  }
+
+  if (channel === "whatsapp") {
+    if (
+      channelConsentStatus == null ||
+      channelConsentStatus === "withdrawn" ||
+      channelConsentStatus === "suppressed" ||
+      channelConsentStatus === "expired"
+    ) {
+      return false;
+    }
+    if (channelConsentStatus !== "granted") {
+      return false;
+    }
+    if (input.requireMarketing) {
+      const marketing = input.marketingStatus;
+      if (marketing !== "granted") return false;
+    }
+    return true;
+  }
+
+  // email / phone / in-person: service communication purpose is sufficient for
+  // operational messages under an approved channel policy. Channel-specific
+  // WhatsApp permission is not inferred.
+  if (
+    channelConsentStatus === "withdrawn" ||
+    channelConsentStatus === "suppressed"
+  ) {
+    return false;
+  }
+
+  return true;
+}
 
 export function getConsentVersionByPurpose(
   purposeCode: ConsentPurposeCode,
@@ -197,4 +264,11 @@ export function marketingConsentIsOptional(
 ): boolean {
   const marketing = getConsentVersionByPurpose("MARKETING", versions);
   return marketing != null && !marketing.required && !marketing.defaultChecked;
+}
+
+export function serviceCommunicationExcludesWhatsApp(
+  versions: readonly ConsentVersion[] = CONSENT_VERSIONS
+): boolean {
+  const service = getConsentVersionByPurpose("SERVICE_COMMUNICATION", versions);
+  return Boolean(service && !service.channels.includes("whatsapp"));
 }

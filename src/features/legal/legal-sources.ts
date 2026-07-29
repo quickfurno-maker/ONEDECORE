@@ -1,17 +1,40 @@
 /**
- * Phase 3A1 — authoritative Indian DPDP legal source registry.
+ * Phase 3A1.1 — authoritative Indian DPDP legal source registry.
  * Records sources and staged commencement; does not claim compliance.
  */
 
 export const LEGAL_DPDP_READINESS_STATEMENT =
   "Designed for DPDP readiness; owner, operational and Indian legal-counsel review remain pending." as const;
 
+export const LEGAL_SOURCE_AUTHORITIES = [
+  "India Code",
+  "Ministry of Electronics and Information Technology (MeitY)",
+  "Gazette of India",
+] as const;
+
+export type LegalSourceAuthority = (typeof LEGAL_SOURCE_AUTHORITIES)[number];
+
+export type LegalSourceType =
+  | "primary-legislation"
+  | "subordinate-rules"
+  | "implementation-timeline"
+  | "corrigendum"
+  | "related-notification";
+
+export type LegalSourceStatus = "registered" | "linked-note" | "pending-official-url";
+
 export interface LegalSourceReference {
   readonly id: string;
   readonly title: string;
-  readonly publisher: string;
-  readonly url: string;
-  readonly notes?: readonly string[];
+  readonly authority: LegalSourceAuthority;
+  readonly publicationDate: string;
+  readonly sourceUrl: string;
+  readonly sourceType: LegalSourceType;
+  readonly jurisdiction: "India";
+  readonly implementationRelevance: string;
+  readonly reviewedAt: string;
+  readonly notes: readonly string[];
+  readonly status: LegalSourceStatus;
 }
 
 export interface DpdpCommencementStage {
@@ -21,25 +44,87 @@ export interface DpdpCommencementStage {
   readonly description: string;
 }
 
+/** MeitY Act & Policies document landing used for Rules and listed Enforcement Timeline. */
+export const MEITY_DPDP_RULES_LANDING_URL =
+  "https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa" as const;
+
 export const DPDP_ACT_2023: LegalSourceReference = {
   id: "dpdp-act-2023",
   title: "Digital Personal Data Protection Act, 2023",
-  publisher: "India Code",
-  url: "https://www.indiacode.nic.in/handle/123456789/22037",
+  authority: "India Code",
+  publicationDate: "2023-08-11",
+  sourceUrl: "https://www.indiacode.nic.in/handle/123456789/22037",
+  sourceType: "primary-legislation",
+  jurisdiction: "India",
+  implementationRelevance:
+    "Primary legislation governing digital personal data processing; ONEDECORE designs for future-effective obligations without claiming compliance.",
+  reviewedAt: "2026-07-29",
+  status: "registered",
   notes: [
-    "Primary legislation governing digital personal data processing in India.",
-    "ONEDECORE architecture is designed for future-effective obligations; compliance is not claimed.",
+    "Official India Code handle for the Act.",
+    "Publication date records Presidential assent date commonly associated with Act 22 of 2023; confirm exact Gazette particulars on India Code.",
   ],
 } as const;
 
 export const DPDP_RULES_2025: LegalSourceReference = {
   id: "dpdp-rules-2025",
   title: "Digital Personal Data Protection Rules, 2025",
-  publisher: "Ministry of Electronics and Information Technology (MeitY)",
-  url: "https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa",
+  authority: "Ministry of Electronics and Information Technology (MeitY)",
+  publicationDate: "2025-11-14",
+  sourceUrl: MEITY_DPDP_RULES_LANDING_URL,
+  sourceType: "subordinate-rules",
+  jurisdiction: "India",
+  implementationRelevance:
+    "Subordinate rules under the DPDP Act, including staged commencement for notice, consent, safeguards and related operational duties.",
+  reviewedAt: "2026-07-29",
+  status: "registered",
   notes: [
-    "Subordinate rules under the DPDP Act, 2023.",
-    "Staged commencement applies — see DPDP_COMMENCEMENT_STAGES.",
+    "Official MeitY document listing for the Digital Personal Data Protection Rules, 2025.",
+    "Publication date aligns with the November 2025 MeitY notification cluster (including G.S.R. 846(E) references); confirm exact Gazette imprint against the Official Gazette.",
+    "Linked: December 2025 corrigendum G.S.R. 892(E) — see registry entry dpdp-rules-2025-corrigendum.",
+  ],
+} as const;
+
+export const DPDP_ENFORCEMENT_TIMELINE: LegalSourceReference = {
+  id: "dpdp-enforcement-timeline-2025",
+  title: "Enforcement Timeline for the DPDP Act",
+  authority: "Ministry of Electronics and Information Technology (MeitY)",
+  publicationDate: "2025-11-14",
+  sourceUrl: MEITY_DPDP_RULES_LANDING_URL,
+  sourceType: "implementation-timeline",
+  jurisdiction: "India",
+  implementationRelevance:
+    "Official MeitY-listed enforcement timeline describing staged commencement of Act and Rules provisions; used to plan readiness ahead of applicable dates.",
+  reviewedAt: "2026-07-29",
+  status: "registered",
+  notes: [
+    "Distinct MeitY-listed document: Enforcement Timeline for the DPDP Act.",
+    "Shares the MeitY Digital Personal Data Protection Rules, 2025 document landing URL because MeitY lists the Timeline alongside the Rules on that page; this entry is not a duplicate of the Rules text.",
+    "Staged commencement recorded in DPDP_COMMENCEMENT_STAGES.",
+  ],
+} as const;
+
+/**
+ * Corrigendum to the DPDP Rules, 2025.
+ * Registered as a distinct source. Exact egazette PDF URL remains pending
+ * confirmation; MeitY Rules landing is retained as the parent listing context.
+ */
+export const DPDP_RULES_2025_CORRIGENDUM: LegalSourceReference = {
+  id: "dpdp-rules-2025-corrigendum",
+  title: "Corrigendum to the Digital Personal Data Protection Rules, 2025 (G.S.R. 892(E))",
+  authority: "Gazette of India",
+  publicationDate: "2025-12-11",
+  sourceUrl: MEITY_DPDP_RULES_LANDING_URL,
+  sourceType: "corrigendum",
+  jurisdiction: "India",
+  implementationRelevance:
+    "Clerical corrigendum to the notified Rules; does not replace staged commencement planning.",
+  reviewedAt: "2026-07-29",
+  status: "pending-official-url",
+  notes: [
+    "Notification number G.S.R. 892(E); December 2025 corrigendum to G.S.R. 846(E).",
+    "Exact Official Gazette PDF URL not hardcoded until an official India Code / egazette URL is verified without relying on secondary aggregators.",
+    "Parent listing context: MeitY Digital Personal Data Protection Rules, 2025 document page.",
   ],
 } as const;
 
@@ -47,9 +132,9 @@ export const DPDP_COMMENCEMENT_STAGES: readonly DpdpCommencementStage[] = [
   {
     id: "nov-2025-institutional",
     label: "November 2025 — institutional and procedural provisions",
-    timing: "November 2025",
+    timing: "November 2025 (notification cluster including 14 November 2025)",
     description:
-      "Specified institutional and procedural provisions under the DPDP framework commenced in November 2025.",
+      "Specified institutional and procedural provisions under the DPDP framework commenced in November 2025 per the Enforcement Timeline.",
   },
   {
     id: "rule-4-consent-manager",
@@ -68,7 +153,7 @@ export const DPDP_COMMENCEMENT_STAGES: readonly DpdpCommencementStage[] = [
 ] as const;
 
 export const MEITY_ENFORCEMENT_TIMELINE_NOTES: readonly string[] = [
-  "MeitY published the DPDP Act enforcement timeline in November 2025.",
+  "Enforcement Timeline for the DPDP Act is registered as LEGAL_SOURCE_REGISTRY entry dpdp-enforcement-timeline-2025.",
   "ONEDECORE is being designed for DPDP readiness ahead of applicable commencement dates.",
   "Final operational compliance requires owner decisions, processor contracts, and qualified Indian legal-counsel review.",
   LEGAL_DPDP_READINESS_STATEMENT,
@@ -77,7 +162,11 @@ export const MEITY_ENFORCEMENT_TIMELINE_NOTES: readonly string[] = [
 export const LEGAL_SOURCE_REGISTRY: readonly LegalSourceReference[] = [
   DPDP_ACT_2023,
   DPDP_RULES_2025,
+  DPDP_ENFORCEMENT_TIMELINE,
+  DPDP_RULES_2025_CORRIGENDUM,
 ] as const;
+
+export const LEGAL_SOURCE_REGISTRY_COUNT = LEGAL_SOURCE_REGISTRY.length;
 
 export const DPDP_CORE_PRINCIPLES: readonly string[] = [
   "Independent, clear and plain notice",
@@ -95,3 +184,13 @@ export const DPDP_CORE_PRINCIPLES: readonly string[] = [
   "Public privacy and grievance contact",
   "No dark-pattern consent",
 ] as const;
+
+export function isAllowlistedAuthority(authority: string): boolean {
+  return (LEGAL_SOURCE_AUTHORITIES as readonly string[]).includes(authority);
+}
+
+export function allSourcesHaveHttpsUrls(
+  sources: readonly LegalSourceReference[] = LEGAL_SOURCE_REGISTRY
+): boolean {
+  return sources.every((source) => /^https:\/\//i.test(source.sourceUrl));
+}

@@ -17,8 +17,9 @@ export const PRIVACY_POLICY_CONTENT: readonly LegalContentSection[] = [
     title: "Draft status",
     body: [
       "This Privacy Notice is a draft for owner and Indian legal counsel review. It is not yet effective.",
+      "ONEDECORE does not claim DPDP compliance at this draft stage.",
+      "Final compliance depends on applicable commencement, approved operational processes, processor contracts, implemented safeguards and qualified Indian legal review.",
       LEGAL_DPDP_READINESS_STATEMENT,
-      "ONEDECORE is not DPDP compliant and does not claim compliance through architecture alone.",
     ],
   },
   {

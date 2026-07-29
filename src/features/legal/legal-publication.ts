@@ -1,15 +1,23 @@
 /**
- * Phase 3A1 — legal publication gate.
- * Draft-review mode until owner and Indian legal counsel approve all mandatory fields.
+ * Phase 3A1.1 — legal publication and warranty readiness gates.
  */
 
 import {
   BUSINESS_IDENTITY,
+  getMissingCoreLegalPublicationFields,
   getMissingLegalPublicationFields,
+  getMissingWarrantyPublicationFields,
   hasPlaceholderText,
   type BusinessIdentity,
 } from "./business-identity.ts";
-import { WARRANTY_POLICY_STATUS } from "./warranty-policy.ts";
+import {
+  allWarrantyPeriodsPending,
+  WARRANTY_MATRIX_STATUS,
+} from "./warranty-matrix.ts";
+import {
+  WARRANTY_POLICY_STATUS,
+  type WarrantyPolicyStatus,
+} from "./warranty-policy.ts";
 
 export type LegalPublicationMode =
   | "draft-review"
@@ -34,15 +42,70 @@ export const LEGAL_ROUTE_PATHS = [
 
 export type LegalRoutePath = (typeof LEGAL_ROUTE_PATHS)[number];
 
-export interface LegalPublicationChecklist {
-  readonly getMissingIdentityFields?: () => readonly string[];
-  readonly isWarrantyApproved?: () => boolean;
-  readonly hasPlaceholderValues?: (identity: BusinessIdentity) => boolean;
+export interface WarrantyPublicationReadinessInput {
+  readonly status?: WarrantyPolicyStatus;
+  readonly matrixStatus?: typeof WARRANTY_MATRIX_STATUS;
+  readonly periodsPending?: boolean;
+  readonly matrixApproved?: boolean;
+  readonly legalReviewComplete?: boolean;
+  readonly identity?: BusinessIdentity;
 }
 
-const defaultChecklist: Required<LegalPublicationChecklist> = {
-  getMissingIdentityFields: () => getMissingLegalPublicationFields(),
-  isWarrantyApproved: () => WARRANTY_POLICY_STATUS === "owner-approved",
+/**
+ * Warranty is publication-ready only when status is owner-approved or published
+ * AND identity / matrix / period / legal-review gates are satisfied.
+ * Current production defaults remain pending → false.
+ */
+export function isWarrantyPublicationReady(
+  input: WarrantyPublicationReadinessInput = {}
+): boolean {
+  const status = input.status ?? WARRANTY_POLICY_STATUS;
+  if (status !== "owner-approved" && status !== "published") {
+    return false;
+  }
+
+  const identity = input.identity ?? BUSINESS_IDENTITY;
+  if (getMissingWarrantyPublicationFields(identity).length > 0) {
+    return false;
+  }
+
+  const periodsPending = input.periodsPending ?? allWarrantyPeriodsPending();
+  if (periodsPending) {
+    return false;
+  }
+
+  const matrixApproved =
+    input.matrixApproved ??
+    (input.matrixStatus ?? WARRANTY_MATRIX_STATUS) !==
+      "scope-pending-owner-approval";
+  if (!matrixApproved) {
+    return false;
+  }
+
+  const legalReviewComplete = input.legalReviewComplete ?? false;
+  if (!legalReviewComplete) {
+    return false;
+  }
+
+  return true;
+}
+
+export interface LegalPublicationChecklist {
+  readonly getMissingIdentityFields?: () => readonly string[];
+  readonly isWarrantyReady?: () => boolean;
+  readonly hasPlaceholderValues?: (identity: BusinessIdentity) => boolean;
+  /** @deprecated use isWarrantyReady — kept for older call sites */
+  readonly isWarrantyApproved?: () => boolean;
+}
+
+const defaultChecklist: Required<
+  Pick<
+    LegalPublicationChecklist,
+    "getMissingIdentityFields" | "isWarrantyReady" | "hasPlaceholderValues"
+  >
+> = {
+  getMissingIdentityFields: () => getMissingCoreLegalPublicationFields(),
+  isWarrantyReady: () => isWarrantyPublicationReady(),
   hasPlaceholderValues: (identity) => {
     const stringFields = [
       identity.legalEntityName,
@@ -54,9 +117,6 @@ const defaultChecklist: Required<LegalPublicationChecklist> = {
       identity.dataRightsRequestEmail,
       identity.warrantyClaimsEmail,
       identity.businessPhoneE164,
-      identity.WhatsAppBusinessPhoneE164,
-      identity.GSTIN,
-      identity.cinOrLlpin,
       identity.authorisedRepresentative,
       identity.grievanceContact,
       identity.jurisdictionClause,
@@ -75,13 +135,24 @@ export function isLegalDraftMode(
 
 export function getLegalRobots(
   mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
-): { readonly index: false; readonly follow: false } | { readonly index: true; readonly follow: true } {
+):
+  | { readonly index: false; readonly follow: false }
+  | { readonly index: true; readonly follow: true } {
   if (mode === "published") {
     return { index: true, follow: true };
   }
   return { index: false, follow: false };
 }
 
+/**
+ * Privacy/Terms/Data Rights publication gate.
+ * Warranty readiness is evaluated separately via isWarrantyPublicationReady /
+ * getMissingWarrantyPublicationFields — a published warranty must not dead-end
+ * core legal publication, and pending warranty must not silently pass.
+ *
+ * For full site policy pack publication that includes Warranty as effective,
+ * callers should also require isWarrantyPublicationReady().
+ */
 export function canPublishLegalPolicies(
   mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE,
   identity: BusinessIdentity = BUSINESS_IDENTITY,
@@ -91,17 +162,20 @@ export function canPublishLegalPolicies(
     return false;
   }
 
-  const resolved = { ...defaultChecklist, ...checklist };
+  const resolved = {
+    ...defaultChecklist,
+    ...checklist,
+    isWarrantyReady:
+      checklist.isWarrantyReady ??
+      checklist.isWarrantyApproved ??
+      defaultChecklist.isWarrantyReady,
+  };
 
   if (resolved.getMissingIdentityFields().length > 0) {
     return false;
   }
 
   if (resolved.hasPlaceholderValues(identity)) {
-    return false;
-  }
-
-  if (!resolved.isWarrantyApproved()) {
     return false;
   }
 
@@ -115,3 +189,21 @@ export function canPublishLegalPolicies(
 
   return mode === "published";
 }
+
+/**
+ * Effective Warranty page publication (separate from Privacy/Terms).
+ */
+export function canPublishWarrantyPolicy(
+  mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE,
+  input: WarrantyPublicationReadinessInput = {}
+): boolean {
+  if (mode === "draft-review") return false;
+  if (mode === "owner-approved") return false;
+  return isWarrantyPublicationReady(input);
+}
+
+export {
+  getMissingLegalPublicationFields,
+  getMissingCoreLegalPublicationFields,
+  getMissingWarrantyPublicationFields,
+};

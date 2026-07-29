@@ -148,6 +148,15 @@ describe("Phase 3A1 business identity gate", () => {
   test("no fake @onedecore.com emails in business-identity", () => {
     for (const [key, value] of Object.entries(BUSINESS_IDENTITY)) {
       if (key === "tradingName" || key === "serviceRegion") continue;
+      if (key === "gstinApplicability") {
+        assert.equal(value, "pending-owner-decision");
+        continue;
+      }
+      if (key === "contactRoleMapping") {
+        assert.equal(typeof value, "object");
+        assert.ok(value !== null);
+        continue;
+      }
       if (typeof value === "string") {
         assert.doesNotMatch(
           value,
