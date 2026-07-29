@@ -42,9 +42,19 @@ Supabase PostgreSQL serves as the sole authoritative database for all structured
 - **`portfolio_media_sources`:** Private master original photographs (`media_id`, `original_bucket`, `original_object_path`, `original_file_name`, `original_mime_type`, `original_file_size_bytes`, `checksum_sha256`, `uploaded_by`).
 
 ### 2.3 CRM & Lead Domain
-- **`leads`:** Lead entries (`id`, `full_name`, `phone`, `email`, `locality`, `property_type`, `budget_range`, `status`, `assigned_to`).
-- **`activities`:** Audit activity log (`id`, `lead_id`, `activity_type`, `notes`, `performed_by`, `created_at`).
-- **`site_visits`:** Scheduled measurement & site evaluation visits.
+
+**Phase 4A status:** implemented locally (migration `20260729162245_lead_intake_data_plane.sql`), pending managed apply, **not production active**.
+
+- **`contacts` / `contact_channels`:** CRM identity + normalized phone/email/WhatsApp channels (phone is the deterministic intake dedupe key; email never auto-merges).
+- **`leads`:** Planner-backed requirements, random `submission_reference`, status workflow.
+- **`consent_events`:** Append-only consent evidence.
+- **`lead_events`:** Append-only lead history.
+- **`lead_intake_requests`:** Idempotency + HMAC fingerprint ledger (no raw IP/UA/body).
+- **`submit_lead_intake`:** Service-role-only atomic RPC.
+- Public route `/api/public/lead-intake` exists but remains **disabled** in production truth.
+- Homepage does not submit.
+
+Previous conceptual sketch (`activities`, `site_visits`) remains future work.
 
 ### 2.4 Commercial Domain
 - **`quotations`:** Quotation records (`id`, `lead_id`, `version_number`, `subtotal`, `discount_amount`, `total_amount`, `status`).

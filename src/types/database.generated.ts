@@ -34,6 +34,349 @@ export type Database = {
   }
   public: {
     Tables: {
+      consent_events: {
+        Row: {
+          actor_type: string
+          channel: string
+          contact_id: string
+          copy_version: string
+          created_at: string
+          event_type: string
+          evidence: Json
+          id: string
+          intake_request_id: string | null
+          lead_id: string | null
+          locale: string
+          notice_version: string
+          occurred_at: string
+          purpose_code: string
+          source: string
+        }
+        Insert: {
+          actor_type: string
+          channel: string
+          contact_id: string
+          copy_version: string
+          created_at?: string
+          event_type: string
+          evidence?: Json
+          id?: string
+          intake_request_id?: string | null
+          lead_id?: string | null
+          locale?: string
+          notice_version: string
+          occurred_at?: string
+          purpose_code: string
+          source: string
+        }
+        Update: {
+          actor_type?: string
+          channel?: string
+          contact_id?: string
+          copy_version?: string
+          created_at?: string
+          event_type?: string
+          evidence?: Json
+          id?: string
+          intake_request_id?: string | null
+          lead_id?: string | null
+          locale?: string
+          notice_version?: string
+          occurred_at?: string
+          purpose_code?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consent_events_intake_request_id_fkey"
+            columns: ["intake_request_id"]
+            isOneToOne: false
+            referencedRelation: "lead_intake_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consent_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_channels: {
+        Row: {
+          address_normalized: string
+          channel_type: string
+          contact_id: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          status: string
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          address_normalized: string
+          channel_type: string
+          contact_id: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          address_normalized?: string
+          channel_type?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_channels_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          merged_into: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id?: string
+          merged_into?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          merged_into?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_merged_into_fkey"
+            columns: ["merged_into"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_events: {
+        Row: {
+          actor_id: string | null
+          actor_type: string
+          created_at: string
+          event_data: Json
+          event_type: string
+          id: string
+          lead_id: string
+          occurred_at: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_type: string
+          created_at?: string
+          event_data?: Json
+          event_type: string
+          id?: string
+          lead_id: string
+          occurred_at?: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_type?: string
+          created_at?: string
+          event_data?: Json
+          event_type?: string
+          id?: string
+          lead_id?: string
+          occurred_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_intake_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          lead_id: string | null
+          network_fingerprint_hash: string
+          outcome_code: string | null
+          phone_fingerprint_hash: string
+          request_hash: string
+          retry_after_seconds: number | null
+          status: string
+          submission_reference: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          lead_id?: string | null
+          network_fingerprint_hash: string
+          outcome_code?: string | null
+          phone_fingerprint_hash: string
+          request_hash: string
+          retry_after_seconds?: number | null
+          status: string
+          submission_reference?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          lead_id?: string | null
+          network_fingerprint_hash?: string
+          outcome_code?: string | null
+          phone_fingerprint_hash?: string
+          request_hash?: string
+          retry_after_seconds?: number | null
+          status?: string
+          submission_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_lead_intake_requests_lead"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          assigned_to: string | null
+          attribution: Json
+          budget_comfort_code: string | null
+          contact_id: string
+          created_at: string
+          estimate_snapshot: Json | null
+          id: string
+          landing_path: string
+          locality: string | null
+          message: string | null
+          planner_version: string
+          property_code: string
+          room_codes: string[]
+          service_code: string
+          source: string
+          status: string
+          submission_reference: string
+          submitted_email: string | null
+          submitted_name: string
+          timeline_code: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          attribution?: Json
+          budget_comfort_code?: string | null
+          contact_id: string
+          created_at?: string
+          estimate_snapshot?: Json | null
+          id?: string
+          landing_path: string
+          locality?: string | null
+          message?: string | null
+          planner_version: string
+          property_code: string
+          room_codes?: string[]
+          service_code: string
+          source?: string
+          status?: string
+          submission_reference?: string
+          submitted_email?: string | null
+          submitted_name: string
+          timeline_code: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          attribution?: Json
+          budget_comfort_code?: string | null
+          contact_id?: string
+          created_at?: string
+          estimate_snapshot?: Json | null
+          id?: string
+          landing_path?: string
+          locality?: string | null
+          message?: string | null
+          planner_version?: string
+          property_code?: string
+          room_codes?: string[]
+          service_code?: string
+          source?: string
+          status?: string
+          submission_reference?: string
+          submitted_email?: string | null
+          submitted_name?: string
+          timeline_code?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           code: string
@@ -441,6 +784,44 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      submit_lead_intake: {
+        Args: {
+          p_attribution: Json
+          p_budget_comfort_code: string
+          p_consent_marketing: boolean
+          p_consent_service_communication: boolean
+          p_consent_service_enquiry: boolean
+          p_consent_whatsapp: boolean
+          p_copy_marketing: string
+          p_copy_service_communication: string
+          p_copy_service_enquiry: string
+          p_copy_whatsapp: string
+          p_estimate_snapshot: Json
+          p_idempotency_key: string
+          p_landing_path: string
+          p_locality: string
+          p_message: string
+          p_network_fingerprint_hash: string
+          p_notice_version: string
+          p_phone_e164: string
+          p_phone_fingerprint_hash: string
+          p_planner_version: string
+          p_property_code: string
+          p_request_hash: string
+          p_room_codes: string[]
+          p_service_code: string
+          p_source: string
+          p_submitted_email: string
+          p_submitted_name: string
+          p_timeline_code: string
+        }
+        Returns: {
+          duplicate: boolean
+          outcome: string
+          retry_after_seconds: number
+          submission_reference: string
+        }[]
       }
     }
     Enums: {
