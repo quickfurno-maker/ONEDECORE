@@ -16,14 +16,16 @@ function read(name: string) {
 }
 
 describe("R5 truth metrics", () => {
-  test("exact public values are 3, 4 and 1", () => {
+  test("exact public values include 26+, 3, 4 and 1", () => {
     const content = read("content.ts");
+    assert.match(content, /value:\s*PM_PUNE_AREAS\.length|id: "areas"/);
     assert.match(content, /value:\s*3/);
     assert.match(content, /value:\s*4/);
     assert.match(content, /value:\s*1/);
     assert.match(content, /Focused Interior Services/);
-    assert.match(content, /Stages from Discovery to Handover/);
-    assert.match(content, /Coordinated Design and Delivery Team/);
+    assert.match(content, /Stages from Planning to Handover/);
+    assert.match(content, /Coordinated Design & Delivery Team/);
+    assert.match(content, /Pune Areas Covered/);
   });
 
   test("no project-count metric while proof pending", () => {

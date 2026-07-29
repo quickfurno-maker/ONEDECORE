@@ -49,6 +49,13 @@ export function HomeNavigation() {
   }, []);
 
   useEffect(() => {
+    const root = document.querySelector("[data-public-home-r4]");
+    if (!root) return;
+    if (open) root.setAttribute("data-drawer-open", "");
+    else root.removeAttribute("data-drawer-open");
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -92,7 +99,7 @@ export function HomeNavigation() {
           ) : null}
           <button
             type="button"
-            className="dc-btn pm-btn--nav pm-btn--sheen"
+            className="dc-btn pm-btn--nav pm-btn--sheen pm-nav__planCta"
             data-conversion-action="nav-start-plan"
             onClick={() => {
               setOpen(false);

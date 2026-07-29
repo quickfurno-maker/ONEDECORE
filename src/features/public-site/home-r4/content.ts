@@ -170,26 +170,65 @@ export const PM_ASSETS = {
 /* -------------------------------------------------------------------- hero */
 
 export const PM_HERO = {
-  eyebrow: "Interior design and build — Pune",
+  eyebrow: "Pune's Interior Design & Build Studio",
+  serviceLine:
+    "Complete Home Interiors · Modular Kitchens · Custom Wardrobes",
   /** Rendered as separate lines so the reveal can stagger by line. */
   titleLines: [
-    "Interiors designed,",
-    "built and handed over",
-    "by one team.",
+    { text: "Complete Home", emphasize: false },
+    { text: "Interiors,", emphasize: true },
+    { text: "Designed & Built", emphasize: false },
+    { text: "By Us", emphasize: false },
   ],
   /** Screen-reader and document-title safe single-line form of the H1. */
-  titlePlain: "Interiors designed, built and handed over by one team.",
-  lede: "Complete home interiors, modular kitchens and custom wardrobes — planned, detailed and delivered as one coordinated project for homes across Pune.",
+  titlePlain: "Complete Home Interiors, Designed & Built By Us",
+  lede: "From modular kitchens to complete home interiors — ONEDECORE plans, coordinates and installs everything. One team, one direction, less stress.",
   primaryCta: PM_CTA.open,
   secondaryCta: PM_CTA.projects,
   secondaryHref: "/portfolio",
-  assurances: [
-    "One team from first plan to final handover",
-    "Materials and finishes decided with you",
-    "Room-by-room planning for Pune homes",
-  ],
-  brandLine: SITE_CONFIG.tagline,
+  areasLabel: "Serving homeowners across Pune",
+  areasExpandLabel: "View all 26 Pune areas",
+  areasCollapseLabel: "Show fewer areas",
+  areasDesktopPreview: 8,
+  areasMobilePreview: 6,
 } as const;
+
+/** Owner-approved Pune service areas for this phase — exactly 26. */
+export const PM_PUNE_AREAS = [
+  "Kharadi",
+  "Viman Nagar",
+  "Baner",
+  "Wakad",
+  "Hinjewadi",
+  "Hadapsar",
+  "Koregaon Park",
+  "Aundh",
+  "Magarpatta",
+  "Kalyani Nagar",
+  "Pimple Saudagar",
+  "Balewadi",
+  "Undri",
+  "NIBM",
+  "Kothrud",
+  "Wagholi",
+  "Kondhwa",
+  "Sus Road",
+  "Pashan",
+  "Wanowrie",
+  "Vishrantwadi",
+  "Dhanori",
+  "Ambegaon",
+  "Punawale",
+  "Ravet",
+  "Tathawade",
+] as const;
+
+export const PM_HERO_CREDIBILITY = [
+  { value: "3", label: "Focused Services" },
+  { value: "4", label: "Stages to Handover" },
+  { value: String(PM_PUNE_AREAS.length), label: "Pune Areas Covered" },
+  { value: "1", label: "Coordinated Team" },
+] as const;
 
 /* ----------------------------------------------------------------- planner */
 
@@ -324,9 +363,6 @@ export const PM_PROJECTS_COPY = {
   eyebrow: "Selected work",
   heading: "Project photography is being prepared.",
   lede: "The portfolio layout is ready for published ONEDECORE projects. Authentic completed-project media will replace this state before launch.",
-  emptyHeading: "Project photography is being prepared.",
-  emptyBody:
-    "The portfolio layout is ready for published ONEDECORE projects. Authentic completed-project media will replace this state before launch.",
   allLabel: "View Portfolio",
   allHref: "/portfolio",
   planLabel: "Start My Interior Plan",
@@ -334,27 +370,36 @@ export const PM_PROJECTS_COPY = {
 
 /* ----------------------------------------------------------- truth metrics */
 
+/** Four-cell statistics strip — truthful ONEDECORE targets only. */
 export const PM_METRICS = [
+  {
+    id: "areas",
+    value: PM_PUNE_AREAS.length,
+    suffix: "+",
+    label: "Pune Areas Covered",
+  },
   {
     id: "services",
     value: 3,
+    suffix: "",
     label: "Focused Interior Services",
   },
   {
     id: "stages",
     value: 4,
-    label: "Stages from Discovery to Handover",
+    suffix: "",
+    label: "Stages from Planning to Handover",
   },
   {
     id: "team",
     value: 1,
-    label: "Coordinated Design and Delivery Team",
+    suffix: "",
+    label: "Coordinated Design & Delivery Team",
   },
 ] as const;
 
 export const PM_METRICS_COPY = {
-  eyebrow: "Operating model",
-  ariaLabel: "ONEDECORE operating model",
+  ariaLabel: "ONEDECORE operating facts",
 } as const;
 
 /* ---------------------------------------------------------- room explorer */
@@ -717,16 +762,23 @@ export const PM_FAQS = [
 
 export const PM_CLOSE = {
   eyebrow: "Your interior brief",
-  heading: "Ready to continue the conversation?",
-  lede: "Review your interior plan, copy the brief, or explore published projects.",
+  heading: "Take your interior plan with you.",
+  lede: "Review your selections, copy your brief, or continue exploring ONEDECORE projects.",
   summaryHeading: PM_PLANNER.summaryHeading,
   editLabel: "Edit plan",
   submitLabel: PM_CTA.submit,
   secondaryLabel: PM_CTA.projects,
   secondaryHref: "/portfolio",
   briefTitle: "Copy your interior brief",
-  briefBody:
-    "Nothing is submitted from this page. Copy your brief to share privately, or browse the portfolio. Secure lead intake will connect in a later release.",
+  briefBody: "Nothing is submitted from this page.",
+  reassurance: "Nothing is submitted from this page.",
+} as const;
+
+/** Short visible labels for narrow sticky CTAs — accessible name stays full. */
+export const PM_CTA_SHORT = {
+  open: "Start Plan",
+  continuePlan: "Continue Plan",
+  reviewBrief: "Review Brief",
 } as const;
 
 export const PM_STICKY = {

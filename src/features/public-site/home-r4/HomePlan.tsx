@@ -129,6 +129,7 @@ export function HomePlan() {
                 {PM_CLOSE.secondaryLabel}
               </Link>
             </div>
+            <p className="pm-close__reassure">{PM_CLOSE.reassurance}</p>
             <p className="pm-lede" role="status" aria-live="polite">
               {copyState === "ok"
                 ? "Interior brief copied to your clipboard."

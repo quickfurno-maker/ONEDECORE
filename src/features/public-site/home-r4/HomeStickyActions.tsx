@@ -2,19 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { PM_CTA, PM_STICKY } from "./content";
+import { PM_CTA, PM_CTA_SHORT, PM_STICKY } from "./content";
 import { usePlan } from "./PlanContext";
 
-/** Compact sticky conversion bar — state-aware, never covers final plan. */
+/** Compact sticky conversion bar — one dominant plan CTA after hero on mobile. */
 export function HomeStickyActions() {
   const { openPlanner, isOpen, service, property, timeline, getNextIncompleteStep } =
     usePlan();
   const [visible, setVisible] = useState(false);
-  const planLabel =
-    service || property || timeline ? PM_CTA.continuePlan : PM_STICKY.plan;
+  const started = Boolean(service || property || timeline);
+  const planLabel = started ? PM_CTA.continuePlan : PM_STICKY.plan;
+  const shortLabel = started ? PM_CTA_SHORT.continuePlan : PM_CTA_SHORT.open;
 
   useEffect(() => {
     const close = document.getElementById("plan");
+    const heroCta = document.querySelector("[data-hero-primary-cta]");
     let frame = 0;
     let pending = false;
 
@@ -23,13 +25,17 @@ export function HomeStickyActions() {
       pending = true;
       frame = requestAnimationFrame(() => {
         pending = false;
-        const pastHero = window.scrollY > 320;
+        const heroRect = heroCta?.getBoundingClientRect();
+        const heroVisible =
+          heroRect != null &&
+          heroRect.bottom > 72 &&
+          heroRect.top < window.innerHeight * 0.85;
         let overlapsClose = false;
         if (close) {
           const rect = close.getBoundingClientRect();
           overlapsClose = rect.top < window.innerHeight - 40;
         }
-        setVisible(pastHero && !overlapsClose);
+        setVisible(!heroVisible && !overlapsClose);
       });
     };
 
@@ -54,9 +60,13 @@ export function HomeStickyActions() {
         type="button"
         className="dc-btn dc-btn--primary pm-sticky__btn pm-btn--sheen"
         data-conversion-action="sticky-continue"
+        aria-label={planLabel}
         onClick={() => openPlanner(getNextIncompleteStep())}
       >
-        {planLabel}
+        <span className="pm-cta-full">{planLabel}</span>
+        <span className="pm-cta-short" aria-hidden="true">
+          {shortLabel}
+        </span>
       </button>
       <Link
         href="/portfolio"

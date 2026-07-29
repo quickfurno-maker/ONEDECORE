@@ -2,18 +2,26 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { PM_ASSETS, PM_HERO } from "./content";
+import { useId, useRef, useState } from "react";
+import {
+  PM_ASSETS,
+  PM_HERO,
+  PM_HERO_CREDIBILITY,
+  PM_PUNE_AREAS,
+} from "./content";
 import { usePlan } from "./PlanContext";
-import { HomePlannerEntry, HomePlannerInline } from "./HomePlanner";
 
 const HERO = PM_ASSETS.hero;
 
 /**
- * R4.1 hero — desktop split stage + compact planner; mobile full-bleed with
- * bottom-weighted copy/CTAs in the first viewport (Option A).
+ * Full-bleed hero — copy, credibility, areas, CTAs.
+ * Planner opens from CTA only (no inline card).
  */
 export function HomeHero() {
-  const { openPlanner } = usePlan();
+  const { openPlanner, getNextIncompleteStep } = usePlan();
+  const [areasOpen, setAreasOpen] = useState(false);
+  const areasId = useId();
+  const toggleRef = useRef<HTMLButtonElement | null>(null);
 
   return (
     <section className="pm-hero" aria-labelledby="pm-hero-title">
@@ -30,7 +38,7 @@ export function HomeHero() {
           sizes="100vw"
           quality={80}
           className="pm-hero__mediaImg"
-          style={{ objectPosition: HERO.mobileFocalPoint }}
+          style={{ objectPosition: HERO.focalPoint }}
         />
         <span className="pm-hero__mediaScrim" />
       </div>
@@ -42,26 +50,48 @@ export function HomeHero() {
             {PM_HERO.eyebrow}
           </p>
 
+          <p className="pm-hero__serviceLine">{PM_HERO.serviceLine}</p>
+
           <h1 id="pm-hero-title" className="pm-hero__title">
             {PM_HERO.titleLines.map((line, index) => (
               <span
-                key={line}
+                key={line.text}
                 className="pm-hero__line"
+                data-emphasis={line.emphasize ? "" : undefined}
                 style={{ "--pm-line": index } as React.CSSProperties}
               >
-                {line}
+                {line.text}
               </span>
             ))}
           </h1>
 
           <p className="pm-hero__lede">{PM_HERO.lede}</p>
 
+          <ul
+            className="pm-hero__credibility"
+            role="list"
+            aria-label="ONEDECORE operating facts"
+          >
+            {PM_HERO_CREDIBILITY.map((item) => (
+              <li key={item.label} className="pm-hero__credItem">
+                <span className="pm-hero__credCheck" aria-hidden="true">
+                  ✓
+                </span>
+                <span>
+                  <span className="pm-hero__credValue">{item.value}</span>{" "}
+                  {item.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+
           <div className="pm-hero__actions">
             <button
               type="button"
               className="dc-btn dc-btn--primary pm-btn--lg pm-btn--sheen"
               data-conversion-action="hero-start-plan"
-              onClick={() => openPlanner()}
+              data-hero-primary-cta=""
+              onClick={() => openPlanner(getNextIncompleteStep())}
             >
               {PM_HERO.primaryCta}
             </button>
@@ -74,50 +104,41 @@ export function HomeHero() {
             </Link>
           </div>
 
-          <ul className="pm-hero__assurances">
-            {PM_HERO.assurances.map((item, index) => (
-              <li
-                key={item}
-                style={{ "--pm-line": index } as React.CSSProperties}
-              >
-                <span className="pm-hero__assuranceMark" aria-hidden="true" />
-                {item}
-              </li>
-            ))}
-          </ul>
-
-          <div className="pm-hero__entryWrap">
-            <HomePlannerEntry />
-          </div>
-        </div>
-
-        <div className="pm-hero__stage">
-          <figure className="pm-stage">
-            <span className="pm-stage__frame" aria-hidden="true" />
-            <span className="pm-stage__sheen" aria-hidden="true" />
-            <Image
-              src={HERO.path}
-              alt={HERO.alt}
-              width={HERO.width}
-              height={HERO.height}
-              priority
-              fetchPriority="high"
-              sizes="(max-width: 1079px) 100vw, 46vw"
-              quality={80}
-              className="pm-stage__img"
-              style={{ objectPosition: HERO.focalPoint }}
-            />
-          </figure>
-
-          <div className="pm-hero__plannerWrap">
-            <HomePlannerInline />
+          <div className="pm-hero__areas">
+            <p className="pm-hero__areasLabel">{PM_HERO.areasLabel}</p>
+            <ul
+              id={areasId}
+              className="pm-hero__areaList"
+              data-expanded={areasOpen ? "" : undefined}
+            >
+              {PM_PUNE_AREAS.map((area) => (
+                <li key={area} className="pm-hero__areaPill">
+                  {area}
+                </li>
+              ))}
+            </ul>
+            <button
+              ref={toggleRef}
+              type="button"
+              className="pm-hero__areasToggle"
+              aria-expanded={areasOpen}
+              aria-controls={areasId}
+              onClick={() => setAreasOpen((value) => !value)}
+            >
+              {areasOpen ? PM_HERO.areasCollapseLabel : PM_HERO.areasExpandLabel}
+            </button>
+            <noscript>
+              <ul className="pm-hero__areaList pm-hero__areaList--noscript">
+                {PM_PUNE_AREAS.map((area) => (
+                  <li key={area} className="pm-hero__areaPill">
+                    {area}
+                  </li>
+                ))}
+              </ul>
+            </noscript>
           </div>
         </div>
       </div>
-
-      <p className="pm-hero__brand" aria-hidden="true">
-        {PM_HERO.brandLine}
-      </p>
     </section>
   );
 }

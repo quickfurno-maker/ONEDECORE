@@ -910,6 +910,7 @@ import "../../../public-site/home-r4/__tests__/plan-state.test.ts";
 import "../../../public-site/home-r4/__tests__/project-proof.test.ts";
 import "../../../public-site/home-r4/__tests__/r5-value.test.ts";
 import "../../../public-site/home-r4/__tests__/r5-1-polish.test.ts";
+import "../../../public-site/home-r4/__tests__/r5-2-visual.test.ts";
 
 {
   const harness = readFileSync(fileURLToPath(import.meta.url), "utf8");

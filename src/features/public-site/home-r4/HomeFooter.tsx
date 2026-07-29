@@ -9,7 +9,6 @@ export function HomeFooter() {
         <div className="pm-footer__grid">
           <div>
             <OneDecoreWordmark size="footer" />
-            <p className="pm-footer__tagline">{PM_FOOTER.tagline}</p>
             <p className="pm-footer__positioning">{PM_FOOTER.positioning}</p>
           </div>
 

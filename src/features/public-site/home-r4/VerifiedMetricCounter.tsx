@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 interface VerifiedMetricCounterProps {
   readonly value: number;
   readonly label: string;
+  readonly suffix?: string;
   readonly durationMs?: number;
+  readonly delayMs?: number;
 }
 
 function prefersReducedMotion(): boolean {
@@ -18,13 +20,15 @@ function easeOutCubic(t: number): number {
 }
 
 /**
- * Server-renders the final value; animates the visual digit once in view.
- * Screen readers use the final value + label; the animated span is aria-hidden.
+ * Count-up metric — SSR final accessible value; aria-hidden visual
+ * counts from 0 once in view (2000ms ease-out cubic, ~200ms delay, IO 0.4).
  */
 export function VerifiedMetricCounter({
   value,
   label,
-  durationMs = 1500,
+  suffix = "",
+  durationMs = 2000,
+  delayMs = 200,
 }: VerifiedMetricCounterProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const ranRef = useRef(false);
@@ -40,6 +44,7 @@ export function VerifiedMetricCounter({
     }
 
     let frame = 0;
+    let delayTimer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
 
     const observer = new IntersectionObserver(
@@ -49,42 +54,47 @@ export function VerifiedMetricCounter({
         ranRef.current = true;
         observer.disconnect();
 
-        const start = performance.now();
-        let started = false;
-
-        const tick = (now: number) => {
+        delayTimer = setTimeout(() => {
           if (cancelled) return;
-          if (!started) {
-            started = true;
-            setDisplay(0);
-          }
-          const t = Math.min(1, (now - start) / durationMs);
-          setDisplay(Math.round(easeOutCubic(t) * value));
-          if (t < 1) {
-            frame = requestAnimationFrame(tick);
-          }
-        };
+          setDisplay(0);
+          const start = performance.now();
 
-        frame = requestAnimationFrame(tick);
+          const tick = (now: number) => {
+            if (cancelled) return;
+            const t = Math.min(1, (now - start) / durationMs);
+            setDisplay(Math.round(easeOutCubic(t) * value));
+            if (t < 1) {
+              frame = requestAnimationFrame(tick);
+            } else {
+              setDisplay(value);
+            }
+          };
+
+          frame = requestAnimationFrame(tick);
+        }, delayMs);
       },
-      { threshold: 0.45 }
+      { threshold: 0.4 }
     );
 
     observer.observe(node);
     return () => {
       cancelled = true;
       observer.disconnect();
+      if (delayTimer) clearTimeout(delayTimer);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [durationMs, value]);
+  }, [delayMs, durationMs, value]);
+
+  const finalText = `${value}${suffix}`;
 
   return (
     <div ref={rootRef} className="pm-metric">
       <p className="pm-metric__sr">
-        {value} {label}
+        {finalText} {label}
       </p>
       <p className="pm-metric__value" aria-hidden="true">
         {display}
+        {suffix}
       </p>
       <p className="pm-metric__label" aria-hidden="true">
         {label}

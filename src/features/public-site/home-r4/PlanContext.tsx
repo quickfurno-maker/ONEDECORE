@@ -66,12 +66,9 @@ interface PlanApi extends PlanSnapshot {
 
 const PlanCtx = createContext<PlanApi | null>(null);
 
-/** Matches the CSS breakpoint at which the inline planner card is available. */
-const INLINE_MIN_WIDTH = 1080;
-
+/** R5.2: inline hero planner removed — planner always opens as sheet. */
 function currentMode(): HomePlannerMode {
-  if (typeof window === "undefined") return "sheet";
-  return window.innerWidth >= INLINE_MIN_WIDTH ? "inline" : "sheet";
+  return "sheet";
 }
 
 /**
