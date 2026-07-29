@@ -512,14 +512,24 @@ function useSheetOverlay(open: boolean, closePlanner: () => void) {
 
 /** Bottom sheet used below the inline breakpoint. */
 export function HomePlannerSheet() {
-  const { isOpen, closePlanner } = usePlan();
+  const plan = usePlan();
+  const { isOpen, closePlanner } = plan;
   const panelRef = useSheetOverlay(isOpen, closePlanner);
   const idPrefix = useId();
 
   if (!isOpen) return null;
 
   return (
-    <div className="pm-sheet" data-open="">
+    <div
+      className="pm-sheet"
+      data-open=""
+      data-plan-step={plan.step}
+      data-plan-service={plan.service ?? ""}
+      data-plan-property={plan.property ?? ""}
+      data-plan-rooms={plan.rooms.join(",")}
+      data-plan-budget={plan.budgetComfort ?? ""}
+      data-plan-estimate={plan.estimateSummary?.rangeLabel ?? ""}
+    >
       <button
         type="button"
         className="pm-sheet__scrim"

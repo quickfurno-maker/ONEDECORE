@@ -36,12 +36,20 @@ export function HomePlan() {
             .join(", ")
         : null;
 
+    const estimate = plan.estimateSummary;
+
     return [
       { label: "Service", value: labelOf(PM_PLANNER.services, plan.service) },
       { label: "Property", value: labelOf(PM_PLANNER.properties, plan.property) },
       { label: "Timeline", value: labelOf(PM_PLANNER.timelines, plan.timeline) },
       { label: "Rooms", value: rooms },
       { label: "Budget", value: budgetLabel },
+      {
+        label: "Indicative estimate",
+        value: estimate
+          ? `${estimate.rangeLabel} · ${estimate.serviceLabel} · ${estimate.sizeLabel} · ${estimate.finishLabel}`
+          : null,
+      },
       { label: "Locality", value: plan.locality.trim() || null },
     ].filter((row) => row.value);
   }, [
@@ -50,6 +58,7 @@ export function HomePlan() {
     plan.property,
     plan.timeline,
     plan.locality,
+    plan.estimateSummary,
     budgetLabel,
   ]);
 

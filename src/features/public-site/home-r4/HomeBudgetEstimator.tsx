@@ -5,46 +5,24 @@ import {
   ESTIMATOR_FINISHES,
   ESTIMATOR_SERVICES,
   computeEstimate,
-  suggestBudgetComfort,
   type EstimatorFinishId,
   type EstimatorServiceId,
 } from "./budget-config";
 import { PM_ESTIMATOR, PM_SECTION_IDS } from "./content";
+import {
+  NOSCRIPT_FINISH_GUIDANCE,
+  NOSCRIPT_PRICE_DISCLAIMER,
+  buildNoscriptPriceGuide,
+  mapEstimatorToPlanSelection,
+} from "./estimator-plan-map";
 import { usePlan } from "./PlanContext";
 import { Reveal } from "@/features/public-site/motion/Reveal";
-
-const SERVICE_TO_PLAN: Partial<
-  Record<EstimatorServiceId, "complete-home-interiors" | "modular-kitchens" | "custom-wardrobes">
-> = {
-  "complete-home": "complete-home-interiors",
-  "modular-kitchen": "modular-kitchens",
-  "custom-wardrobes": "custom-wardrobes",
-};
-
-const SIZE_TO_PROPERTY: Record<string, string> = {
-  "1bhk": "apartment-2bhk",
-  "2bhk": "apartment-2bhk",
-  "3bhk": "apartment-3bhk",
-  "4bhk": "apartment-4bhk-plus",
-  villa: "villa-rowhouse",
-  compact: "single-room",
-  "l-shape": "single-room",
-  parallel: "single-room",
-  "u-shape": "single-room",
-  island: "single-room",
-  "upto-6": "single-room",
-  "7-10": "single-room",
-  "11-15": "single-room",
-  "16-plus": "single-room",
-  living: "single-room",
-  bedroom: "single-room",
-  dining: "single-room",
-  study: "single-room",
-};
 
 function defaultSizeFor(serviceId: EstimatorServiceId): string {
   return ESTIMATOR_SERVICES.find((entry) => entry.id === serviceId)!.sizes[0]!.id;
 }
+
+const NOSCRIPT_GUIDE = buildNoscriptPriceGuide();
 
 export function HomeBudgetEstimator() {
   const plan = usePlan();
@@ -67,18 +45,10 @@ export function HomeBudgetEstimator() {
 
   const estimate = computeEstimate(serviceId, size.id, finishId);
 
-  const applyToPlan = () => {
-    const mappedService = SERVICE_TO_PLAN[serviceId];
-    if (mappedService) plan.setService(mappedService);
-    const mappedProperty = SIZE_TO_PROPERTY[size.id];
-    if (mappedProperty) {
-      plan.setProperty(mappedProperty as Parameters<typeof plan.setProperty>[0]);
-    }
-    if (estimate) {
-      const mid = (estimate.min + estimate.max) / 2;
-      plan.setBudgetComfort(suggestBudgetComfort(mid));
-    }
-    plan.openPlanner(plan.getNextIncompleteStep());
+  const applyCurrentEstimate = () => {
+    const selection = mapEstimatorToPlanSelection(serviceId, size.id, finishId);
+    if (!selection) return;
+    plan.applyEstimateToPlanAndOpen(selection);
   };
 
   return (
@@ -190,7 +160,7 @@ export function HomeBudgetEstimator() {
                 type="button"
                 className="dc-btn dc-btn--ghost"
                 data-conversion-action="estimator-refine"
-                onClick={applyToPlan}
+                onClick={applyCurrentEstimate}
               >
                 {PM_ESTIMATOR.refineCta}
               </button>
@@ -198,7 +168,7 @@ export function HomeBudgetEstimator() {
                 type="button"
                 className="dc-btn dc-btn--primary pm-btn--sheen"
                 data-conversion-action="estimator-start-plan"
-                onClick={() => plan.openPlanner(plan.getNextIncompleteStep())}
+                onClick={applyCurrentEstimate}
               >
                 {PM_ESTIMATOR.consultCta}
               </button>
@@ -207,22 +177,30 @@ export function HomeBudgetEstimator() {
         </Reveal>
 
         <noscript>
-          <div className="pm-noscript">
+          <div className="pm-noscript pm-estimator__noscript">
             <h3>{PM_ESTIMATOR.noscriptHeading}</h3>
             <p>{PM_ESTIMATOR.noscriptBody}</p>
-            {ESTIMATOR_SERVICES.map((entry) => (
-              <article key={entry.id}>
-                <h4>{entry.label}</h4>
+            {NOSCRIPT_GUIDE.map((entry) => (
+              <article key={entry.serviceLabel}>
+                <h4>{entry.serviceLabel}</h4>
                 <ul>
                   {entry.sizes.map((sizeEntry) => (
-                    <li key={sizeEntry.id}>
-                      {sizeEntry.label}: indicative planning ranges vary by finish
-                      level.
+                    <li key={sizeEntry.label}>
+                      {sizeEntry.label}: {sizeEntry.range}
                     </li>
                   ))}
                 </ul>
               </article>
             ))}
+            <h4>Finish levels</h4>
+            <ul>
+              {NOSCRIPT_FINISH_GUIDANCE.map((entry) => (
+                <li key={entry.id}>
+                  {entry.label}: {entry.factor}
+                </li>
+              ))}
+            </ul>
+            <p>{NOSCRIPT_PRICE_DISCLAIMER}</p>
           </div>
         </noscript>
       </div>

@@ -19,6 +19,7 @@ function base(overrides: Partial<PlanSnapshot> = {}): PlanSnapshot {
     timeline: null,
     rooms: [],
     budgetComfort: null,
+    estimateSummary: null,
     name: "",
     mobile: "",
     locality: "",

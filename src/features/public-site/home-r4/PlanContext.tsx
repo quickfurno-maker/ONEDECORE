@@ -16,12 +16,15 @@ import type {
   PmStep,
   PmTimelineId,
 } from "./content";
+import type { EstimatorPlanSelection } from "./estimator-plan-map";
+import { toEstimateSummary } from "./estimator-plan-map";
 import {
   completedStepCount,
   getNextIncompleteStep as computeNextStep,
   planProgressPercent,
   ensureRoom as ensureRoomIn,
   toggleRoom as toggleRoomIn,
+  type PlanEstimateSummary,
   type PlanSnapshot,
 } from "./plan-state";
 
@@ -53,6 +56,9 @@ interface PlanApi extends PlanSnapshot {
   readonly toggleRoom: (room: PmRoomId) => void;
   readonly addRoom: (room: PmRoomId) => void;
   readonly addAreaToPlanAndOpen: (input: AddAreaToPlanInput) => void;
+  readonly applyEstimateToPlanAndOpen: (
+    selection: EstimatorPlanSelection
+  ) => void;
   readonly setBudgetComfort: (budget: BudgetComfortId | null) => void;
   readonly setContact: (fields: Partial<PlanContactFields>) => void;
   readonly setMessage: (message: string) => void;
@@ -79,6 +85,8 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
   const [rooms, setRooms] = useState<readonly PmRoomId[]>([]);
   const [budgetComfort, setBudgetComfortState] =
     useState<BudgetComfortId | null>(null);
+  const [estimateSummary, setEstimateSummaryState] =
+    useState<PlanEstimateSummary | null>(null);
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [locality, setLocality] = useState("");
@@ -96,6 +104,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       timeline,
       rooms,
       budgetComfort,
+      estimateSummary,
       name,
       mobile,
       locality,
@@ -109,6 +118,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       timeline,
       rooms,
       budgetComfort,
+      estimateSummary,
       name,
       mobile,
       locality,
@@ -180,6 +190,38 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
     [snapshot]
   );
 
+  /**
+   * Atomically apply estimator selection, compute the next step from a
+   * prospective snapshot, then open the planner — never stale relative to
+   * the just-applied estimate.
+   */
+  const applyEstimateToPlanAndOpen = useCallback(
+    (selection: EstimatorPlanSelection) => {
+      let nextRooms = snapshot.rooms;
+      for (const room of selection.rooms) {
+        nextRooms = ensureRoomIn(nextRooms, room);
+      }
+      const nextSummary = toEstimateSummary(selection);
+      const prospective: PlanSnapshot = {
+        ...snapshot,
+        service: selection.service,
+        property: selection.property,
+        rooms: nextRooms,
+        budgetComfort: selection.budgetComfort,
+        estimateSummary: nextSummary,
+      };
+      const target = computeNextStep(prospective);
+      setServiceState(selection.service);
+      setPropertyState(selection.property);
+      setRooms(nextRooms);
+      setBudgetComfortState(selection.budgetComfort);
+      setEstimateSummaryState(nextSummary);
+      setStepState(target);
+      setIsOpen(true);
+    },
+    [snapshot]
+  );
+
   const setContact = useCallback((fields: Partial<PlanContactFields>) => {
     if (fields.name !== undefined) setName(fields.name);
     if (fields.mobile !== undefined) setMobile(fields.mobile);
@@ -224,6 +266,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
     setTimelineState(null);
     setRooms([]);
     setBudgetComfortState(null);
+    setEstimateSummaryState(null);
     setName("");
     setMobile("");
     setLocality("");
@@ -252,6 +295,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       toggleRoom,
       addRoom,
       addAreaToPlanAndOpen,
+      applyEstimateToPlanAndOpen,
       setBudgetComfort,
       setContact,
       setMessage,
@@ -276,6 +320,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       toggleRoom,
       addRoom,
       addAreaToPlanAndOpen,
+      applyEstimateToPlanAndOpen,
       setBudgetComfort,
       setContact,
       setMessage,

@@ -26,6 +26,7 @@ function empty(): PlanSnapshot {
     timeline: null,
     rooms: [],
     budgetComfort: null,
+    estimateSummary: null,
     name: "",
     mobile: "",
     locality: "",

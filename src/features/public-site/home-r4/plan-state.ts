@@ -10,12 +10,20 @@ import type {
 } from "./content.ts";
 import type { BudgetComfortId } from "./budget-config.ts";
 
+export interface PlanEstimateSummary {
+  readonly serviceLabel: string;
+  readonly sizeLabel: string;
+  readonly finishLabel: string;
+  readonly rangeLabel: string;
+}
+
 export interface PlanSnapshot {
   readonly service: PmServiceId | null;
   readonly property: PmPropertyId | null;
   readonly timeline: PmTimelineId | null;
   readonly rooms: readonly PmRoomId[];
   readonly budgetComfort: BudgetComfortId | null;
+  readonly estimateSummary: PlanEstimateSummary | null;
   readonly name: string;
   readonly mobile: string;
   readonly locality: string;
@@ -32,6 +40,15 @@ export function formatInteriorBrief(
   const rooms =
     snapshot.rooms.length > 0 ? snapshot.rooms.join(", ") : "Not selected";
 
+  const estimate = snapshot.estimateSummary;
+  const estimateLines = estimate
+    ? [
+        `Indicative estimate: ${estimate.rangeLabel}`,
+        `Estimate basis: ${estimate.serviceLabel} · ${estimate.sizeLabel} · ${estimate.finishLabel}`,
+        "Planning estimate only — not a final quotation.",
+      ]
+    : [];
+
   return [
     "ONEDECORE — My Interior Brief",
     `Service: ${snapshot.service ?? "Not selected"}`,
@@ -41,6 +58,7 @@ export function formatInteriorBrief(
     snapshot.budgetComfort && budgetLabel
       ? `Budget comfort: ${budgetLabel}`
       : null,
+    ...estimateLines,
     `Locality: ${snapshot.locality.trim() || "Not selected"}`,
     snapshot.message.trim() ? `Notes: ${snapshot.message.trim()}` : null,
   ]

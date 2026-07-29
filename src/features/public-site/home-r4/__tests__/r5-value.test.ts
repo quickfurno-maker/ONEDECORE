@@ -62,7 +62,7 @@ describe("R5.3 estimator", () => {
   test("estimator section exists with aria-live result", () => {
     const source = read("HomeBudgetEstimator.tsx");
     assert.match(source, /aria-live="polite"/);
-    assert.match(source, /setBudgetComfort/);
+    assert.match(source, /applyEstimateToPlanAndOpen/);
   });
 });
 

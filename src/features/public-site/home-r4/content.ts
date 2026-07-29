@@ -1,10 +1,12 @@
 ﻿/**
- * Production homepage "Premium Motion Conversion Homepage" — concept-isolated content.
+ * Production homepage content — R5.3 conversion master.
  *
- * Every string here is either factual ONEDECORE positioning or neutral product
- * language. Nothing may assert a number, a price, a promise, a quoted customer,
- * a contact channel, or a route that does not exist in this repository. The R4
- * guard suite enforces that list.
+ * Owner-approved commercial claims derive from claims.ts.
+ * Indicative planning prices derive from budget-config.ts.
+ * Project media remains truth-gated via HOME_PROJECT_PROOF_MODE.
+ * Do not invent customer quotes, contact routes, or project proof.
+ * Do not add unsupported structured data (aggregateRating / Review / Warranty)
+ * until public evidence URLs exist.
  */
 import { BUDGET_COMFORT_OPTIONS, type BudgetComfortId } from "./budget-config.ts";
 import { HOME_CLAIMS, HOME_CLAIM_COPY } from "./claims.ts";
@@ -241,6 +243,7 @@ export const PM_PLANNER = {
     { id: "custom-wardrobes", label: "Custom Wardrobe" },
   ],
   properties: [
+    { id: "apartment-1bhk", label: "1 BHK apartment" },
     { id: "apartment-2bhk", label: "2 BHK apartment" },
     { id: "apartment-3bhk", label: "3 BHK apartment" },
     { id: "apartment-4bhk-plus", label: "4 BHK or larger" },
@@ -506,7 +509,7 @@ export const PM_ESTIMATOR = {
   consultCta: PM_CTA.open,
   noscriptHeading: "Indicative planning ranges",
   noscriptBody:
-    "Use the interactive estimator with JavaScript enabled, or begin your interior plan to discuss scope with ONEDECORE.",
+    "Base planning ranges by service and size. Finish levels scale Essential (base), Premium (~1.30×) and Luxury (~1.65×).",
 } as const;
 
 /* ------------------------------------------------------------- why us */
