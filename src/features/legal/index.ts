@@ -14,11 +14,14 @@ export {
   getMissingWhatsAppActivationFields,
   hasCompleteBusinessIdentity,
   hasPlaceholderText,
+  isWhatsAppActivationReady,
   type BusinessEntityType,
   type BusinessIdentity,
   type GstinApplicability,
   type LeadIntakeActivationInput,
   type LegalContactRoleMapping,
+  type RegistrationIdentifierRequirement,
+  type WhatsAppActivationInput,
 } from "./business-identity.ts";
 
 export {

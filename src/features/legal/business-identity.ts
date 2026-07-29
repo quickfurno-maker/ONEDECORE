@@ -18,6 +18,17 @@ export type GstinApplicability =
   | "pending-owner-decision";
 
 /**
+ * Explicit registration-identifier requirement.
+ * `"other"` entity types must not assume CIN unless the owner classifies them as requiring one.
+ */
+export type RegistrationIdentifierRequirement =
+  | "cin"
+  | "llpin"
+  | "other-registration"
+  | "not-applicable"
+  | "pending-owner-decision";
+
+/**
  * Explicit owner-approved contact role mapping.
  * Do not silently decide that one mailbox serves multiple roles.
  */
@@ -50,6 +61,7 @@ export interface BusinessIdentity {
   readonly arbitrationDisputeClause: string | null;
   readonly legalCounselApprovalReference: string | null;
   readonly gstinApplicability: GstinApplicability;
+  readonly registrationIdentifierRequirement: RegistrationIdentifierRequirement;
   readonly contactRoleMapping: LegalContactRoleMapping;
 }
 
@@ -82,6 +94,7 @@ export const BUSINESS_IDENTITY: BusinessIdentity = {
   arbitrationDisputeClause: null,
   legalCounselApprovalReference: null,
   gstinApplicability: "pending-owner-decision",
+  registrationIdentifierRequirement: "pending-owner-decision",
   contactRoleMapping: DEFAULT_CONTACT_ROLE_MAPPING,
 } as const;
 
@@ -188,27 +201,106 @@ export function getMissingEntityRegistrationFields(
     pushMissing(missing, "GSTIN", identity.GSTIN);
   }
 
-  if (identity.entityType === "private-limited" || identity.entityType === "other") {
-    pushMissing(missing, "cinOrLlpin (CIN when applicable)", identity.cinOrLlpin);
-  } else if (identity.entityType === "llp") {
-    pushMissing(missing, "cinOrLlpin (LLPIN when applicable)", identity.cinOrLlpin);
+  // Proprietorship / partnership: no CIN/LLPIN requirement.
+  if (
+    identity.entityType === "proprietorship" ||
+    identity.entityType === "partnership"
+  ) {
+    return missing;
   }
-  // proprietorship / partnership: no CIN/LLPIN requirement
+
+  if (identity.entityType === "private-limited") {
+    pushMissing(missing, "cinOrLlpin (CIN when applicable)", identity.cinOrLlpin);
+    return missing;
+  }
+
+  if (identity.entityType === "llp") {
+    pushMissing(missing, "cinOrLlpin (LLPIN when applicable)", identity.cinOrLlpin);
+    return missing;
+  }
+
+  // entityType === "other" | null — never assume CIN.
+  // Owner must set registrationIdentifierRequirement explicitly.
+  if (identity.registrationIdentifierRequirement === "pending-owner-decision") {
+    missing.push("registrationIdentifierRequirement");
+  } else if (identity.registrationIdentifierRequirement === "cin") {
+    pushMissing(missing, "cinOrLlpin (CIN when applicable)", identity.cinOrLlpin);
+  } else if (identity.registrationIdentifierRequirement === "llpin") {
+    pushMissing(missing, "cinOrLlpin (LLPIN when applicable)", identity.cinOrLlpin);
+  } else if (identity.registrationIdentifierRequirement === "other-registration") {
+    pushMissing(
+      missing,
+      "cinOrLlpin (other registration identifier)",
+      identity.cinOrLlpin
+    );
+  }
+  // "not-applicable": no identifier required
 
   return missing;
 }
 
+export interface WhatsAppActivationInput {
+  readonly identity?: BusinessIdentity;
+  readonly whatsappConsentVersionApproved?: boolean;
+  readonly whatsappNoticeVersionApproved?: boolean;
+  readonly metaProcessorReviewComplete?: boolean;
+  readonly whatsappOptOutSuppressionWorkflowReady?: boolean;
+  readonly whatsappTemplatePolicyApproved?: boolean;
+  readonly serviceCommunicationPolicyApproved?: boolean;
+}
+
+/**
+ * WhatsApp activation requirements.
+ * Production defaults remain incomplete. A complete fixture can return [].
+ * Marketing approval is intentionally not required for service-only WhatsApp.
+ */
 export function getMissingWhatsAppActivationFields(
-  identity: BusinessIdentity = BUSINESS_IDENTITY
+  input: WhatsAppActivationInput | BusinessIdentity = {}
 ): readonly string[] {
+  // Backward-compatible: a bare BusinessIdentity was previously accepted.
+  const normalized: WhatsAppActivationInput =
+    input &&
+    typeof input === "object" &&
+    "tradingName" in input &&
+    "serviceRegion" in input
+      ? { identity: input as BusinessIdentity }
+      : (input as WhatsAppActivationInput);
+
+  const identity = normalized.identity ?? BUSINESS_IDENTITY;
   const missing: string[] = [];
-  pushMissing(missing, "WhatsAppBusinessPhoneE164", identity.WhatsAppBusinessPhoneE164);
-  missing.push("whatsappConsentVersionApproved");
-  missing.push("whatsappNoticeVersionApproved");
-  missing.push("metaProcessorReview");
-  missing.push("whatsappOptOutSuppressionWorkflow");
-  missing.push("whatsappTemplateCampaignPolicyApproval");
+
+  pushMissing(
+    missing,
+    "WhatsAppBusinessPhoneE164",
+    identity.WhatsAppBusinessPhoneE164
+  );
+
+  if (!normalized.whatsappConsentVersionApproved) {
+    missing.push("whatsappConsentVersionApproved");
+  }
+  if (!normalized.whatsappNoticeVersionApproved) {
+    missing.push("whatsappNoticeVersionApproved");
+  }
+  if (!normalized.metaProcessorReviewComplete) {
+    missing.push("metaProcessorReviewComplete");
+  }
+  if (!normalized.whatsappOptOutSuppressionWorkflowReady) {
+    missing.push("whatsappOptOutSuppressionWorkflowReady");
+  }
+  if (!normalized.whatsappTemplatePolicyApproved) {
+    missing.push("whatsappTemplatePolicyApproved");
+  }
+  if (!normalized.serviceCommunicationPolicyApproved) {
+    missing.push("serviceCommunicationPolicyApproved");
+  }
+
   return missing;
+}
+
+export function isWhatsAppActivationReady(
+  input: WhatsAppActivationInput = {}
+): boolean {
+  return getMissingWhatsAppActivationFields(input).length === 0;
 }
 
 export interface LeadIntakeActivationInput {

@@ -152,6 +152,10 @@ describe("Phase 3A1 business identity gate", () => {
         assert.equal(value, "pending-owner-decision");
         continue;
       }
+      if (key === "registrationIdentifierRequirement") {
+        assert.equal(value, "pending-owner-decision");
+        continue;
+      }
       if (key === "contactRoleMapping") {
         assert.equal(typeof value, "object");
         assert.ok(value !== null);

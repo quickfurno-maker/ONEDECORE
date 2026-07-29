@@ -31,3 +31,9 @@ Detailed coverage, exclusions, evidence requirements and claim procedures remain
 - No warranty claim submission endpoint on the current website
 - Warranty claim contact route: pending owner input
 - Final terms require owner approval and qualified Indian legal-counsel review before publication in effective mode
+
+## Publication gates (separate from Privacy/Terms)
+
+- Core Privacy/Terms/Data Rights gate: `canPublishLegalPolicies()` — does **not** require warranty readiness.
+- Warranty gate: `isWarrantyPublicationReady()` / `canPublishWarrantyPolicy()` — requires owner-approved or published status, identity, matrix approval, periods decided, and counsel review.
+- Current production defaults remain blocked for both gates.

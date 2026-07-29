@@ -1,5 +1,6 @@
 /**
- * Phase 3A1.1 — legal publication and warranty readiness gates.
+ * Phase 3A1.2 — legal publication and warranty readiness gates.
+ * Core Privacy/Terms/Data Rights publication is separate from warranty.
  */
 
 import {
@@ -90,42 +91,30 @@ export function isWarrantyPublicationReady(
   return true;
 }
 
+/** Core Privacy/Terms/Data Rights checklist — no warranty readiness fields. */
 export interface LegalPublicationChecklist {
   readonly getMissingIdentityFields?: () => readonly string[];
-  readonly isWarrantyReady?: () => boolean;
   readonly hasPlaceholderValues?: (identity: BusinessIdentity) => boolean;
-  /** @deprecated use isWarrantyReady — kept for older call sites */
-  readonly isWarrantyApproved?: () => boolean;
 }
 
-const defaultChecklist: Required<
-  Pick<
-    LegalPublicationChecklist,
-    "getMissingIdentityFields" | "isWarrantyReady" | "hasPlaceholderValues"
-  >
-> = {
-  getMissingIdentityFields: () => getMissingCoreLegalPublicationFields(),
-  isWarrantyReady: () => isWarrantyPublicationReady(),
-  hasPlaceholderValues: (identity) => {
-    const stringFields = [
-      identity.legalEntityName,
-      identity.registeredOfficeAddress,
-      identity.operatingOfficeAddress,
-      identity.businessEmail,
-      identity.privacyEmail,
-      identity.grievanceEmail,
-      identity.dataRightsRequestEmail,
-      identity.warrantyClaimsEmail,
-      identity.businessPhoneE164,
-      identity.authorisedRepresentative,
-      identity.grievanceContact,
-      identity.jurisdictionClause,
-      identity.arbitrationDisputeClause,
-      identity.legalCounselApprovalReference,
-    ];
-    return stringFields.some((field) => hasPlaceholderText(field));
-  },
-};
+function defaultHasPlaceholderValues(identity: BusinessIdentity): boolean {
+  const stringFields = [
+    identity.legalEntityName,
+    identity.registeredOfficeAddress,
+    identity.operatingOfficeAddress,
+    identity.businessEmail,
+    identity.privacyEmail,
+    identity.grievanceEmail,
+    identity.dataRightsRequestEmail,
+    identity.businessPhoneE164,
+    identity.authorisedRepresentative,
+    identity.grievanceContact,
+    identity.jurisdictionClause,
+    identity.arbitrationDisputeClause,
+    identity.legalCounselApprovalReference,
+  ];
+  return stringFields.some((field) => hasPlaceholderText(field));
+}
 
 export function isLegalDraftMode(
   mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
@@ -146,12 +135,8 @@ export function getLegalRobots(
 
 /**
  * Privacy/Terms/Data Rights publication gate.
- * Warranty readiness is evaluated separately via isWarrantyPublicationReady /
- * getMissingWarrantyPublicationFields — a published warranty must not dead-end
- * core legal publication, and pending warranty must not silently pass.
- *
- * For full site policy pack publication that includes Warranty as effective,
- * callers should also require isWarrantyPublicationReady().
+ * Does not depend on warranty readiness — use canPublishWarrantyPolicy() /
+ * isWarrantyPublicationReady() for the Warranty page.
  */
 export function canPublishLegalPolicies(
   mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE,
@@ -162,20 +147,19 @@ export function canPublishLegalPolicies(
     return false;
   }
 
-  const resolved = {
-    ...defaultChecklist,
-    ...checklist,
-    isWarrantyReady:
-      checklist.isWarrantyReady ??
-      checklist.isWarrantyApproved ??
-      defaultChecklist.isWarrantyReady,
-  };
+  // Always evaluate missing fields against the identity under review so a
+  // complete fixture can satisfy the gate (production defaults stay incomplete).
+  const getMissingIdentityFields =
+    checklist.getMissingIdentityFields ??
+    (() => getMissingCoreLegalPublicationFields(identity));
+  const hasPlaceholderValues =
+    checklist.hasPlaceholderValues ?? defaultHasPlaceholderValues;
 
-  if (resolved.getMissingIdentityFields().length > 0) {
+  if (getMissingIdentityFields().length > 0) {
     return false;
   }
 
-  if (resolved.hasPlaceholderValues(identity)) {
+  if (hasPlaceholderValues(identity)) {
     return false;
   }
 

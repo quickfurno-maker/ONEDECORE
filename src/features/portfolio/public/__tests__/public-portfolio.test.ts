@@ -918,6 +918,7 @@ import "../../../public-site/home-r4/__tests__/r5-5-1-dark-qa.test.ts";
 import "../../../public-site/home-r4/__tests__/r5-5-2-final-a11y.test.ts";
 import "../../../legal/__tests__/phase-3a1-legal-foundation.test.ts";
 import "../../../legal/__tests__/phase-3a1-1-contract-correction.test.ts";
+import "../../../legal/__tests__/phase-3a1-2-activation-gates.test.ts";
 
 {
   const harness = readFileSync(fileURLToPath(import.meta.url), "utf8");

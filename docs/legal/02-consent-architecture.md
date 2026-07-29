@@ -33,6 +33,19 @@ Each purpose has a versioned draft copy in `CONSENT_VERSIONS`.
 6. No bundled channel consent or vague third-party contact permissions.
 7. Future withdrawal must be as easy as granting consent.
 
+## Channel eligibility (`canUseCommunicationChannel`)
+
+Pure future contract (no live send path yet):
+
+| Scenario | Result |
+| --- | --- |
+| Service purpose withdrawn / suppressed / expired | false |
+| Operational email/phone/in-person + service granted + channel `null` | true |
+| Operational email/phone/in-person + channel expired / withdrawn / suppressed | false |
+| WhatsApp + channel `null` | false |
+| WhatsApp + channel granted (+ service granted) | true |
+| `requireMarketing: true` + marketing not granted / expired | false for every channel |
+
 ## Future record contract
 
 `ConsentRecordContract` type defines the intended evidence fields (consent ID, purpose, channel, copy version, withdrawal, campaign categories, actor). **Types only — no migrations.**

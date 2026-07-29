@@ -201,7 +201,7 @@ export interface CommunicationChannelCheckInput {
 /**
  * Pure future contract: may a message be sent on a channel?
  * WhatsApp requires service communication + WHATSAPP_SERVICE (channelConsentStatus).
- * Marketing WhatsApp additionally requires MARKETING when requireMarketing is true.
+ * When requireMarketing is true, MARKETING must be granted for every channel.
  */
 export function canUseCommunicationChannel(
   input: CommunicationChannelCheckInput
@@ -220,36 +220,47 @@ export function canUseCommunicationChannel(
     return false;
   }
 
-  if (channel === "whatsapp") {
+  if (input.requireMarketing) {
+    const marketing = input.marketingStatus;
     if (
-      channelConsentStatus == null ||
+      marketing == null ||
+      marketing === "withdrawn" ||
+      marketing === "suppressed" ||
+      marketing === "expired" ||
+      marketing !== "granted"
+    ) {
+      return false;
+    }
+  }
+
+  if (channel === "whatsapp") {
+    if (channelConsentStatus == null) {
+      return false;
+    }
+    if (
       channelConsentStatus === "withdrawn" ||
       channelConsentStatus === "suppressed" ||
       channelConsentStatus === "expired"
     ) {
       return false;
     }
-    if (channelConsentStatus !== "granted") {
-      return false;
-    }
-    if (input.requireMarketing) {
-      const marketing = input.marketingStatus;
-      if (marketing !== "granted") return false;
-    }
-    return true;
+    return channelConsentStatus === "granted";
   }
 
-  // email / phone / in-person: service communication purpose is sufficient for
-  // operational messages under an approved channel policy. Channel-specific
-  // WhatsApp permission is not inferred.
+  // email / phone / in-person:
+  // null channel status → allowed when service purpose is granted;
+  // granted → allowed; withdrawn / suppressed / expired → false.
+  if (channelConsentStatus == null) {
+    return true;
+  }
   if (
     channelConsentStatus === "withdrawn" ||
-    channelConsentStatus === "suppressed"
+    channelConsentStatus === "suppressed" ||
+    channelConsentStatus === "expired"
   ) {
     return false;
   }
-
-  return true;
+  return channelConsentStatus === "granted";
 }
 
 export function getConsentVersionByPurpose(

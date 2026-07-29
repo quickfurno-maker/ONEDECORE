@@ -148,6 +148,14 @@ describe("Phase 3A1.1 activation gates", () => {
         entityType: "llp",
       }).some((field) => field.includes("LLPIN"))
     );
+    assert.ok(
+      getMissingEntityRegistrationFields({
+        ...BUSINESS_IDENTITY,
+        gstinApplicability: "not-applicable",
+        entityType: "other",
+        registrationIdentifierRequirement: "pending-owner-decision",
+      }).includes("registrationIdentifierRequirement")
+    );
   });
 
   test("operating-address same-as-registered explicit path", () => {
