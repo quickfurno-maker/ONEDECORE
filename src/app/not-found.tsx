@@ -4,7 +4,7 @@ import { PublicDarkShell } from "@/features/public-site/theme/PublicDarkShell";
 export default function NotFound() {
   return (
     <PublicDarkShell showChrome={false}>
-      <main className="od-state">
+      <main className="od-state od-state--viewport">
         <div className="od-state__inner">
           <h1>404 — Page Not Found</h1>
           <p>The requested page or resource could not be found.</p>

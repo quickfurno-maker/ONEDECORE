@@ -7,7 +7,12 @@ export interface PortfolioCardProps {
   eagerImage?: boolean;
 }
 
+const CARD_SIZES =
+  "(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw";
+
 export function PortfolioCard({ card, eagerImage = false }: PortfolioCardProps) {
+  const hasMeta = Boolean(card.locationLabel || card.completionYear);
+
   return (
     <article id={`portfolio-card-${card.slug}`} className="od-card">
       <div className="od-card__media">
@@ -16,6 +21,7 @@ export function PortfolioCard({ card, eagerImage = false }: PortfolioCardProps) 
           alt={card.cover.altText}
           width={card.cover.width}
           height={card.cover.height}
+          sizes={CARD_SIZES}
           loading={eagerImage ? "eager" : "lazy"}
         />
         {card.isFeatured ? (
@@ -33,17 +39,22 @@ export function PortfolioCard({ card, eagerImage = false }: PortfolioCardProps) 
         </div>
 
         <h3 className="od-card__title">
-          <Link id={`portfolio-card-link-${card.slug}`} href={`/portfolio/${card.slug}`}>
+          <Link
+            id={`portfolio-card-link-${card.slug}`}
+            href={`/portfolio/${card.slug}`}
+          >
             {card.title}
           </Link>
         </h3>
 
         <p className="od-card__summary">{card.summary}</p>
 
-        <div className="od-card__meta">
-          {card.locationLabel ? <span>{card.locationLabel}</span> : <span />}
-          {card.completionYear ? <span>{card.completionYear}</span> : null}
-        </div>
+        {hasMeta ? (
+          <div className="od-card__meta">
+            {card.locationLabel ? <span>{card.locationLabel}</span> : null}
+            {card.completionYear ? <span>{card.completionYear}</span> : null}
+          </div>
+        ) : null}
       </div>
     </article>
   );

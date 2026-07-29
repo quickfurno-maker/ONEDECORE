@@ -34,6 +34,7 @@ export function PortfolioGallery({
                 alt={img.altText || `${projectTitle} photo ${index + 1}`}
                 width={img.width}
                 height={img.height}
+                sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
                 loading={index === 0 ? "eager" : "lazy"}
               />
             </div>

@@ -140,7 +140,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   };
 
   return (
-    <main id="project-detail-main" className="od-portfolio-main" style={{ maxWidth: "64rem" }}>
+    <main id="project-detail-main" className="od-portfolio-main od-portfolio-main--detail">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdGraph) }}
@@ -162,7 +162,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         </ol>
       </nav>
 
-      <header className="od-detail-header" style={{ marginTop: "28px" }}>
+      <header className="od-detail-header od-detail-section">
         <div className="od-card__services">
           {project.services.map((svc) => (
             <span key={svc.serviceCode} className="od-chip">
@@ -193,13 +193,16 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       </header>
 
       {project.description ? (
-        <section id="project-description-section" className="od-prose" style={{ marginTop: "40px" }}>
+        <section
+          id="project-description-section"
+          className="od-prose od-detail-section"
+        >
           <h2>Project Overview</h2>
           <div className="whitespace-pre-line">{project.description}</div>
         </section>
       ) : null}
 
-      <div style={{ marginTop: "40px" }}>
+      <div className="od-detail-gallery-wrap">
         <PortfolioGallery
           cover={project.cover}
           gallery={project.gallery}

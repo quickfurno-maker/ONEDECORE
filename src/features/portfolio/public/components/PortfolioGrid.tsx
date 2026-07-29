@@ -24,12 +24,17 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
 
   return (
     <div id="portfolio-grid-container" className="space-y-8">
-      <div id="portfolio-filter-tabs" className="od-portfolio-filters">
+      <nav
+        id="portfolio-filter-tabs"
+        className="od-portfolio-filters"
+        aria-label="Filter Portfolio by service"
+      >
         <Link
           id="portfolio-filter-all"
           href={buildUrl(1, null)}
           className="od-filter"
           data-active={!activeService ? "" : undefined}
+          aria-current={!activeService ? "page" : undefined}
         >
           All Projects
         </Link>
@@ -43,13 +48,14 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
                 href={buildUrl(1, code)}
                 className="od-filter"
                 data-active={isActive ? "" : undefined}
+                aria-current={isActive ? "page" : undefined}
               >
                 {PORTFOLIO_SERVICE_LABELS[code]}
               </Link>
             );
           }
         )}
-      </div>
+      </nav>
 
       {cards.length > 0 ? (
         <div id="portfolio-cards-grid" className="od-portfolio-grid">
