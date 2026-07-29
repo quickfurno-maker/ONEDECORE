@@ -14,7 +14,6 @@ import {
   LEAD_ROOM_CODES,
   LEAD_SERVICE_CODES,
   LEAD_TIMELINE_CODES,
-  MARKETING_COPY_VERSION,
   SERVICE_COMMUNICATION_COPY_VERSION,
   SERVICE_ENQUIRY_COPY_VERSION,
   WHATSAPP_COPY_VERSION,
@@ -25,9 +24,11 @@ import {
   type LeadTimelineCode,
   type ValidatedLeadIntake,
 } from "../contracts.ts";
+import { LEAD_INTAKE_MAX_BODY_BYTES } from "./bounded-request-body.ts";
 import { normalisePhoneToE164 } from "./phone-normalisation.ts";
+import { isSafeSameSitePath } from "./same-site-path.ts";
 
-export const LEAD_INTAKE_MAX_BODY_BYTES = 32 * 1024;
+export { LEAD_INTAKE_MAX_BODY_BYTES };
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -337,7 +338,15 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     return { ok: false, fields };
   }
 
-  const forbiddenConsent = ["aiAssistance", "portfolioMedia", "AI_ASSISTANCE_DISCLOSURE", "PORTFOLIO_MEDIA"];
+  const forbiddenConsent = [
+    "aiAssistance",
+    "portfolioMedia",
+    "AI_ASSISTANCE_DISCLOSURE",
+    "PORTFOLIO_MEDIA",
+    "marketing",
+    "marketingCopyVersion",
+    "serviceCommunication",
+  ];
   for (const key of Object.keys(input.consent)) {
     if (forbiddenConsent.includes(key)) {
       fields.push(`consent.${key}`);
@@ -348,13 +357,11 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     input.consent,
     new Set([
       "serviceEnquiry",
-      "serviceCommunication",
+      "serviceChannels",
       "whatsappService",
-      "marketing",
       "serviceEnquiryCopyVersion",
       "serviceCommunicationCopyVersion",
       "whatsappCopyVersion",
-      "marketingCopyVersion",
       "noticeVersion",
     ]),
     "consent",
@@ -364,8 +371,19 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
   if (input.consent.serviceEnquiry !== true) {
     fields.push("consent.serviceEnquiry");
   }
-  if (input.consent.serviceCommunication !== true) {
-    fields.push("consent.serviceCommunication");
+
+  if (!isPlainObject(input.consent.serviceChannels)) {
+    fields.push("consent.serviceChannels");
+  } else {
+    rejectUnknownKeys(
+      input.consent.serviceChannels,
+      new Set(["phone", "email"]),
+      "consent.serviceChannels",
+      fields
+    );
+    if (input.consent.serviceChannels.phone !== true) {
+      fields.push("consent.serviceChannels.phone");
+    }
   }
 
   const copyServiceEnquiry = asString(input.consent.serviceEnquiryCopyVersion);
@@ -385,9 +403,7 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
   }
 
   const consentWhatsapp = input.consent.whatsappService === true;
-  const consentMarketing = input.consent.marketing === true;
   let copyWhatsapp: string | null = null;
-  let copyMarketing: string | null = null;
 
   if (consentWhatsapp) {
     copyWhatsapp = asString(input.consent.whatsappCopyVersion);
@@ -398,13 +414,25 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     fields.push("consent.whatsappCopyVersion");
   }
 
-  if (consentMarketing) {
-    copyMarketing = asString(input.consent.marketingCopyVersion);
-    if (copyMarketing !== MARKETING_COPY_VERSION) {
-      fields.push("consent.marketingCopyVersion");
-    }
-  } else if (input.consent.marketingCopyVersion != null) {
-    fields.push("consent.marketingCopyVersion");
+  const emailChannelRequested =
+    isPlainObject(input.consent.serviceChannels) &&
+    input.consent.serviceChannels.email === true;
+  const emailChannelFalse =
+    isPlainObject(input.consent.serviceChannels) &&
+    input.consent.serviceChannels.email === false;
+
+  if (emailChannelFalse) {
+    fields.push("consent.serviceChannels.email");
+  }
+
+  // Email service communication requires both valid email and explicit permission.
+  if (emailChannelRequested && !email) {
+    fields.push("consent.serviceChannels.email");
+    fields.push("contact.email");
+  }
+  if (email && !emailChannelRequested) {
+    fields.push("consent.serviceChannels.email");
+    fields.push("contact.email");
   }
 
   if (!isPlainObject(input.attribution)) {
@@ -427,13 +455,7 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
   );
 
   const landingPath = asString(input.attribution.landingPath);
-  if (
-    !landingPath ||
-    !landingPath.startsWith("/") ||
-    landingPath.length > 500 ||
-    /\s/.test(landingPath) ||
-    landingPath.includes("://")
-  ) {
+  if (!landingPath || !isSafeSameSitePath(landingPath, 500)) {
     fields.push("attribution.landingPath");
   }
 
@@ -451,8 +473,12 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
       const val = asString(input.attribution[key]);
       if (!val || val.length > 200) {
         fields.push(`attribution.${key}`);
-      } else if (key === "referrerPath" && !val.startsWith("/")) {
-        fields.push(`attribution.${key}`);
+      } else if (key === "referrerPath") {
+        if (!isSafeSameSitePath(val, 200)) {
+          fields.push(`attribution.${key}`);
+        } else {
+          attribution[key] = val;
+        }
       } else {
         attribution[key] = normaliseWhitespace(val);
       }
@@ -509,12 +535,12 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
       message,
       landingPath: landingPath!,
       attribution,
+      consentServicePhone: true,
+      consentServiceEmail: emailChannelRequested,
       consentWhatsapp,
-      consentMarketing,
       copyServiceEnquiry: copyServiceEnquiry!,
       copyServiceCommunication: copyServiceCommunication!,
       copyWhatsapp,
-      copyMarketing,
       noticeVersion: noticeVersion!,
       formStartedAt: formStartedAt!,
     },

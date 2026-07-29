@@ -40,13 +40,12 @@ export async function callSubmitLeadIntakeRpc(
     p_attribution: args.validated.attribution,
     p_source: args.source,
     p_consent_service_enquiry: true,
-    p_consent_service_communication: true,
+    p_consent_service_phone: true,
+    p_consent_service_email: args.validated.consentServiceEmail,
     p_consent_whatsapp: args.validated.consentWhatsapp,
-    p_consent_marketing: args.validated.consentMarketing,
     p_copy_service_enquiry: args.validated.copyServiceEnquiry,
     p_copy_service_communication: args.validated.copyServiceCommunication,
     p_copy_whatsapp: (args.validated.copyWhatsapp ?? null) as string | null,
-    p_copy_marketing: (args.validated.copyMarketing ?? null) as string | null,
     p_notice_version: args.validated.noticeVersion,
   } as Database["public"]["Functions"]["submit_lead_intake"]["Args"]);
 

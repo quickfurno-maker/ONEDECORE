@@ -127,6 +127,7 @@ export {
 } from "./processor-register.ts";
 
 export {
+  PRIVACY_NOTICE_VERSION,
   PRIVACY_POLICY_CONTENT,
   type LegalContentSection as PrivacyPolicySection,
 } from "./privacy-policy-content.ts";

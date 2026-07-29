@@ -43,16 +43,17 @@ Supabase PostgreSQL serves as the sole authoritative database for all structured
 
 ### 2.3 CRM & Lead Domain
 
-**Phase 4A status:** implemented locally (migration `20260729162245_lead_intake_data_plane.sql`), pending managed apply, **not production active**.
+**Phase 4A / 4A.1 status:** implemented locally (migration `20260729162245_lead_intake_data_plane.sql` corrected in place for pre-apply security), pending managed apply, **not production active**.
 
-- **`contacts` / `contact_channels`:** CRM identity + normalized phone/email/WhatsApp channels (phone is the deterministic intake dedupe key; email never auto-merges).
-- **`leads`:** Planner-backed requirements, random `submission_reference`, status workflow.
-- **`consent_events`:** Append-only consent evidence.
-- **`lead_events`:** Append-only lead history.
-- **`lead_intake_requests`:** Idempotency + HMAC fingerprint ledger (no raw IP/UA/body).
+- **`contacts` / `contact_channels`:** CRM identity + normalized phone/email/WhatsApp channels (phone is the deterministic intake dedupe key; email never auto-merges; WhatsApp channel created only on explicit WhatsApp service consent).
+- **`leads`:** Planner-backed requirements, random `submission_reference`, status workflow; `assigned_to` FK `ON DELETE SET NULL`.
+- **`consent_events`:** Append-only, channel-specific consent evidence (marketing capture deferred).
+- **`lead_events`:** Append-only lead history; `actor_id` FK `ON DELETE SET NULL`.
+- **`lead_intake_requests`:** Idempotency + HMAC fingerprint ledger (no raw IP/UA/body); network rate limit serialised via advisory lock (order: idempotency → network → phone).
 - **`submit_lead_intake`:** Service-role-only atomic RPC.
-- Public route `/api/public/lead-intake` exists but remains **disabled** in production truth.
+- Public route `/api/public/lead-intake` exists but remains **disabled** in production truth; bodies are bounded-streamed (32 KiB).
 - Homepage does not submit.
+- Suppression enforcement deferred to Phase 5; `contact_suppressions` not created.
 
 Previous conceptual sketch (`activities`, `site_visits`) remains future work.
 

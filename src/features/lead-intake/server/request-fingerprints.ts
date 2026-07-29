@@ -21,6 +21,7 @@ export function fingerprintNetwork(
 /**
  * Canonical business payload for request hashing.
  * Excludes honeypot / transport noise. Field order is deterministic.
+ * Marketing is deferred; channel-specific service consent is hashed.
  */
 export function buildCanonicalRequestPayload(
   validated: ValidatedLeadIntake
@@ -28,10 +29,11 @@ export function buildCanonicalRequestPayload(
   const payload = {
     budgetComfort: validated.budgetComfort,
     consent: {
-      marketing: validated.consentMarketing,
-      marketingCopyVersion: validated.copyMarketing,
       noticeVersion: validated.noticeVersion,
-      serviceCommunication: true,
+      serviceChannels: {
+        email: validated.consentServiceEmail || undefined,
+        phone: true,
+      },
       serviceCommunicationCopyVersion: validated.copyServiceCommunication,
       serviceEnquiry: true,
       serviceEnquiryCopyVersion: validated.copyServiceEnquiry,

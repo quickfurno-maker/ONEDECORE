@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 4A Secure Lead Intake Data Plane pgTAP tests
 
 begin;
-select plan(56);
+select plan(68);
 
 -- Schema
 select has_table('public', 'contacts', 'contacts exists');
@@ -99,19 +99,63 @@ select ok(
   'submit_lead_intake has empty search_path'
 );
 select results_eq(
-  $$select has_function_privilege('anon', 'public.submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text,text)', 'execute')$$,
+  $$select has_function_privilege('anon', 'public.submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text)', 'execute')$$,
   array[false],
   'anon cannot execute submit_lead_intake'
 );
 select results_eq(
-  $$select has_function_privilege('authenticated', 'public.submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text,text)', 'execute')$$,
+  $$select has_function_privilege('authenticated', 'public.submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text)', 'execute')$$,
   array[false],
   'authenticated cannot execute submit_lead_intake'
 );
 select results_eq(
-  $$select has_function_privilege('service_role', 'public.submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text,text)', 'execute')$$,
+  $$select has_function_privilege('service_role', 'public.submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text)', 'execute')$$,
   array[true],
   'service_role can execute submit_lead_intake'
+);
+
+-- Advisory lock order embedded in function source
+select ok(
+  (
+    select position('lead-intake:idempotency:' in pg_get_functiondef(p.oid)) > 0
+       and position('lead-intake:network:' in pg_get_functiondef(p.oid)) > 0
+       and position('lead-intake:phone:' in pg_get_functiondef(p.oid)) > 0
+       and position('lead-intake:idempotency:' in pg_get_functiondef(p.oid))
+           < position('lead-intake:network:' in pg_get_functiondef(p.oid))
+       and position('lead-intake:network:' in pg_get_functiondef(p.oid))
+           < position('lead-intake:phone:' in pg_get_functiondef(p.oid))
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'submit_lead_intake'
+  ),
+  'advisory locks appear in order idempotency → network → phone'
+);
+
+-- FK ON DELETE SET NULL for assignment / actor references
+select results_eq(
+  $$select c.confdeltype::text
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_attribute a on a.attrelid = t.oid and a.attnum = any(c.conkey)
+    where t.relnamespace = 'public'::regnamespace
+      and t.relname = 'leads'
+      and a.attname = 'assigned_to'
+      and c.contype = 'f'$$,
+  array['n'],
+  'leads.assigned_to ON DELETE SET NULL'
+);
+select results_eq(
+  $$select c.confdeltype::text
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_attribute a on a.attrelid = t.oid and a.attnum = any(c.conkey)
+    where t.relnamespace = 'public'::regnamespace
+      and t.relname = 'lead_events'
+      and a.attname = 'actor_id'
+      and c.contype = 'f'$$,
+  array['n'],
+  'lead_events.actor_id ON DELETE SET NULL'
 );
 
 -- Anon table privileges
@@ -142,34 +186,33 @@ select throws_ok(
 -- Helper to call RPC as service_role via set role is limited in pgTAP; call as postgres (definer owner path still validates).
 create temporary table _rpc_result as
 select * from public.submit_lead_intake(
-  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
-  repeat('a', 64),
-  repeat('b', 64),
-  repeat('c', 64),
-  'home-r4-v1',
-  'Synthetic Person',
-  '+919876543210',
-  'synthetic@example.test',
-  'complete-home-interiors',
-  'apartment-2bhk',
-  'within-3-months',
-  array['living','kitchen']::text[],
-  '6-12l',
-  null,
-  'Koregaon Park',
-  'Synthetic brief',
-  '/',
-  '{}'::jsonb,
-  'local-test',
-  true,
-  true,
-  false,
-  false,
-  'service-enquiry-v0.1-draft',
-  'service-communication-v0.1-draft',
-  null,
-  null,
-  'privacy-notice-v0.1-draft'
+  p_idempotency_key => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+  p_request_hash => repeat('a', 64),
+  p_network_fingerprint_hash => repeat('b', 64),
+  p_phone_fingerprint_hash => repeat('c', 64),
+  p_planner_version => 'home-r4-v1',
+  p_submitted_name => 'Synthetic Person',
+  p_phone_e164 => '+919876543210',
+  p_submitted_email => 'synthetic@example.test',
+  p_service_code => 'complete-home-interiors',
+  p_property_code => 'apartment-2bhk',
+  p_timeline_code => 'within-3-months',
+  p_room_codes => array['living','kitchen']::text[],
+  p_budget_comfort_code => '6-12l',
+  p_estimate_snapshot => null,
+  p_locality => 'Koregaon Park',
+  p_message => 'Synthetic brief',
+  p_landing_path => '/',
+  p_attribution => '{}'::jsonb,
+  p_source => 'local-test',
+  p_consent_service_enquiry => true,
+  p_consent_service_phone => true,
+  p_consent_service_email => true,
+  p_consent_whatsapp => false,
+  p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+  p_copy_service_communication => 'service-communication-v0.1-draft',
+  p_copy_whatsapp => null,
+  p_notice_version => 'privacy-notice-v0.1-draft'
 );
 
 select results_eq(
@@ -201,13 +244,38 @@ select results_eq(
 );
 select results_eq(
   $$select count(*)::integer from public.consent_events where purpose_code in ('SERVICE_ENQUIRY','SERVICE_COMMUNICATION') and event_type = 'granted'$$,
-  array[2],
-  'required consent grants written'
+  array[3],
+  'required consent grants written (enquiry + phone + email)'
 );
 select results_eq(
-  $$select count(*)::integer from public.consent_events where purpose_code in ('WHATSAPP_SERVICE','MARKETING','AI_ASSISTANCE_DISCLOSURE','PORTFOLIO_MEDIA')$$,
+  $$select channel from public.consent_events where purpose_code = 'SERVICE_ENQUIRY'$$,
+  array['website-form'],
+  'SERVICE_ENQUIRY uses website-form channel'
+);
+select results_eq(
+  $$select array_agg(distinct channel order by channel) from public.consent_events where purpose_code = 'SERVICE_COMMUNICATION'$$,
+  $$select array['email','phone']::text[]$$,
+  'SERVICE_COMMUNICATION uses phone and email when consented'
+);
+select results_eq(
+  $$select count(*)::integer from public.consent_events where purpose_code = 'SERVICE_COMMUNICATION' and channel = 'website-form'$$,
   array[0],
-  'no optional/AI/media grants by default'
+  'SERVICE_COMMUNICATION never uses website-form channel'
+);
+select results_eq(
+  $$select count(*)::integer from public.consent_events where purpose_code = 'MARKETING'$$,
+  array[0],
+  'no MARKETING consent events from intake RPC'
+);
+select results_eq(
+  $$select count(*)::integer from public.consent_events where purpose_code in ('WHATSAPP_SERVICE','AI_ASSISTANCE_DISCLOSURE','PORTFOLIO_MEDIA')$$,
+  array[0],
+  'no optional WhatsApp/AI/media grants by default'
+);
+select results_eq(
+  $$select count(*)::integer from public.contact_channels where channel_type = 'whatsapp'$$,
+  array[0],
+  'no whatsapp channel when consent false'
 );
 select results_eq(
   $$select count(*)::integer from public.lead_events where event_type = 'lead.created'$$,
@@ -225,34 +293,33 @@ select results_eq(
 -- Idempotent replay
 create temporary table _rpc_replay as
 select * from public.submit_lead_intake(
-  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
-  repeat('a', 64),
-  repeat('b', 64),
-  repeat('c', 64),
-  'home-r4-v1',
-  'Synthetic Person',
-  '+919876543210',
-  'synthetic@example.test',
-  'complete-home-interiors',
-  'apartment-2bhk',
-  'within-3-months',
-  array['living','kitchen']::text[],
-  '6-12l',
-  null,
-  'Koregaon Park',
-  'Synthetic brief',
-  '/',
-  '{}'::jsonb,
-  'local-test',
-  true,
-  true,
-  false,
-  false,
-  'service-enquiry-v0.1-draft',
-  'service-communication-v0.1-draft',
-  null,
-  null,
-  'privacy-notice-v0.1-draft'
+  p_idempotency_key => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+  p_request_hash => repeat('a', 64),
+  p_network_fingerprint_hash => repeat('b', 64),
+  p_phone_fingerprint_hash => repeat('c', 64),
+  p_planner_version => 'home-r4-v1',
+  p_submitted_name => 'Synthetic Person',
+  p_phone_e164 => '+919876543210',
+  p_submitted_email => 'synthetic@example.test',
+  p_service_code => 'complete-home-interiors',
+  p_property_code => 'apartment-2bhk',
+  p_timeline_code => 'within-3-months',
+  p_room_codes => array['living','kitchen']::text[],
+  p_budget_comfort_code => '6-12l',
+  p_estimate_snapshot => null,
+  p_locality => 'Koregaon Park',
+  p_message => 'Synthetic brief',
+  p_landing_path => '/',
+  p_attribution => '{}'::jsonb,
+  p_source => 'local-test',
+  p_consent_service_enquiry => true,
+  p_consent_service_phone => true,
+  p_consent_service_email => true,
+  p_consent_whatsapp => false,
+  p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+  p_copy_service_communication => 'service-communication-v0.1-draft',
+  p_copy_whatsapp => null,
+  p_notice_version => 'privacy-notice-v0.1-draft'
 );
 
 select results_eq(
@@ -279,34 +346,33 @@ select results_eq(
 -- Conflict
 create temporary table _rpc_conflict as
 select * from public.submit_lead_intake(
-  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
-  repeat('d', 64),
-  repeat('b', 64),
-  repeat('c', 64),
-  'home-r4-v1',
-  'Synthetic Person',
-  '+919876543210',
-  'synthetic@example.test',
-  'complete-home-interiors',
-  'apartment-2bhk',
-  'within-3-months',
-  array['living','kitchen']::text[],
-  '6-12l',
-  null,
-  'Koregaon Park',
-  'Synthetic brief changed',
-  '/',
-  '{}'::jsonb,
-  'local-test',
-  true,
-  true,
-  false,
-  false,
-  'service-enquiry-v0.1-draft',
-  'service-communication-v0.1-draft',
-  null,
-  null,
-  'privacy-notice-v0.1-draft'
+  p_idempotency_key => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+  p_request_hash => repeat('d', 64),
+  p_network_fingerprint_hash => repeat('b', 64),
+  p_phone_fingerprint_hash => repeat('c', 64),
+  p_planner_version => 'home-r4-v1',
+  p_submitted_name => 'Synthetic Person',
+  p_phone_e164 => '+919876543210',
+  p_submitted_email => 'synthetic@example.test',
+  p_service_code => 'complete-home-interiors',
+  p_property_code => 'apartment-2bhk',
+  p_timeline_code => 'within-3-months',
+  p_room_codes => array['living','kitchen']::text[],
+  p_budget_comfort_code => '6-12l',
+  p_estimate_snapshot => null,
+  p_locality => 'Koregaon Park',
+  p_message => 'Synthetic brief changed',
+  p_landing_path => '/',
+  p_attribution => '{}'::jsonb,
+  p_source => 'local-test',
+  p_consent_service_enquiry => true,
+  p_consent_service_phone => true,
+  p_consent_service_email => true,
+  p_consent_whatsapp => false,
+  p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+  p_copy_service_communication => 'service-communication-v0.1-draft',
+  p_copy_whatsapp => null,
+  p_notice_version => 'privacy-notice-v0.1-draft'
 );
 
 select results_eq(
@@ -318,34 +384,33 @@ select results_eq(
 -- Duplicate phone reuses contact without overwriting name
 create temporary table _rpc_reuse as
 select * from public.submit_lead_intake(
-  'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
-  repeat('e', 64),
-  repeat('f', 64),
-  repeat('c', 64),
-  'home-r4-v1',
-  'Different Name Should Not Overwrite',
-  '+919876543210',
-  null,
-  'modular-kitchens',
-  'apartment-1bhk',
-  'ready-now',
-  array['kitchen']::text[],
-  null,
-  null,
-  null,
-  null,
-  '/',
-  '{}'::jsonb,
-  'local-test',
-  true,
-  true,
-  false,
-  false,
-  'service-enquiry-v0.1-draft',
-  'service-communication-v0.1-draft',
-  null,
-  null,
-  'privacy-notice-v0.1-draft'
+  p_idempotency_key => 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
+  p_request_hash => repeat('e', 64),
+  p_network_fingerprint_hash => repeat('f', 64),
+  p_phone_fingerprint_hash => repeat('c', 64),
+  p_planner_version => 'home-r4-v1',
+  p_submitted_name => 'Different Name Should Not Overwrite',
+  p_phone_e164 => '+919876543210',
+  p_submitted_email => null,
+  p_service_code => 'modular-kitchens',
+  p_property_code => 'apartment-1bhk',
+  p_timeline_code => 'ready-now',
+  p_room_codes => array['kitchen']::text[],
+  p_budget_comfort_code => null,
+  p_estimate_snapshot => null,
+  p_locality => null,
+  p_message => null,
+  p_landing_path => '/',
+  p_attribution => '{}'::jsonb,
+  p_source => 'local-test',
+  p_consent_service_enquiry => true,
+  p_consent_service_phone => true,
+  p_consent_service_email => false,
+  p_consent_whatsapp => false,
+  p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+  p_copy_service_communication => 'service-communication-v0.1-draft',
+  p_copy_whatsapp => null,
+  p_notice_version => 'privacy-notice-v0.1-draft'
 );
 
 select results_eq(
@@ -368,38 +433,42 @@ select results_eq(
   array[2],
   'second lead row exists'
 );
+select results_eq(
+  $$select count(*)::integer from public.consent_events where purpose_code = 'SERVICE_COMMUNICATION' and channel = 'phone' and lead_id = (select id from public.leads order by created_at desc limit 1)$$,
+  array[1],
+  'phone-only resubmission writes phone SERVICE_COMMUNICATION only'
+);
 
 -- Email does not merge contacts
 create temporary table _rpc_email as
 select * from public.submit_lead_intake(
-  'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid,
-  repeat('1', 64),
-  repeat('2', 64),
-  repeat('3', 64),
-  'home-r4-v1',
-  'Email Only Contact',
-  '+919811122233',
-  'synthetic@example.test',
-  'custom-wardrobes',
-  'single-room',
-  'exploring',
-  '{}'::text[],
-  null,
-  null,
-  null,
-  null,
-  '/',
-  '{}'::jsonb,
-  'local-test',
-  true,
-  true,
-  false,
-  false,
-  'service-enquiry-v0.1-draft',
-  'service-communication-v0.1-draft',
-  null,
-  null,
-  'privacy-notice-v0.1-draft'
+  p_idempotency_key => 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid,
+  p_request_hash => repeat('1', 64),
+  p_network_fingerprint_hash => repeat('2', 64),
+  p_phone_fingerprint_hash => repeat('3', 64),
+  p_planner_version => 'home-r4-v1',
+  p_submitted_name => 'Email Only Contact',
+  p_phone_e164 => '+919811122233',
+  p_submitted_email => 'synthetic@example.test',
+  p_service_code => 'custom-wardrobes',
+  p_property_code => 'single-room',
+  p_timeline_code => 'exploring',
+  p_room_codes => '{}'::text[],
+  p_budget_comfort_code => null,
+  p_estimate_snapshot => null,
+  p_locality => null,
+  p_message => null,
+  p_landing_path => '/',
+  p_attribution => '{}'::jsonb,
+  p_source => 'local-test',
+  p_consent_service_enquiry => true,
+  p_consent_service_phone => true,
+  p_consent_service_email => true,
+  p_consent_whatsapp => false,
+  p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+  p_copy_service_communication => 'service-communication-v0.1-draft',
+  p_copy_whatsapp => null,
+  p_notice_version => 'privacy-notice-v0.1-draft'
 );
 
 select results_eq(
@@ -408,37 +477,36 @@ select results_eq(
   'shared email does not merge contacts'
 );
 
--- Optional grant when explicitly true
+-- Optional WhatsApp grant + channel when explicitly true
 create temporary table _rpc_wa as
 select * from public.submit_lead_intake(
-  'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid,
-  repeat('4', 64),
-  repeat('5', 64),
-  repeat('6', 64),
-  'home-r4-v1',
-  'WhatsApp Opt In',
-  '+919822233344',
-  null,
-  'complete-home-interiors',
-  'apartment-3bhk',
-  '3-6-months',
-  array['living']::text[],
-  null,
-  null,
-  null,
-  null,
-  '/',
-  '{}'::jsonb,
-  'local-test',
-  true,
-  true,
-  true,
-  false,
-  'service-enquiry-v0.1-draft',
-  'service-communication-v0.1-draft',
-  'whatsapp-service-v0.1-draft',
-  null,
-  'privacy-notice-v0.1-draft'
+  p_idempotency_key => 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid,
+  p_request_hash => repeat('4', 64),
+  p_network_fingerprint_hash => repeat('5', 64),
+  p_phone_fingerprint_hash => repeat('6', 64),
+  p_planner_version => 'home-r4-v1',
+  p_submitted_name => 'WhatsApp Opt In',
+  p_phone_e164 => '+919822233344',
+  p_submitted_email => null,
+  p_service_code => 'complete-home-interiors',
+  p_property_code => 'apartment-3bhk',
+  p_timeline_code => '3-6-months',
+  p_room_codes => array['living']::text[],
+  p_budget_comfort_code => null,
+  p_estimate_snapshot => null,
+  p_locality => null,
+  p_message => null,
+  p_landing_path => '/',
+  p_attribution => '{}'::jsonb,
+  p_source => 'local-test',
+  p_consent_service_enquiry => true,
+  p_consent_service_phone => true,
+  p_consent_service_email => false,
+  p_consent_whatsapp => true,
+  p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+  p_copy_service_communication => 'service-communication-v0.1-draft',
+  p_copy_whatsapp => 'whatsapp-service-v0.1-draft',
+  p_notice_version => 'privacy-notice-v0.1-draft'
 );
 
 select results_eq(
@@ -446,22 +514,116 @@ select results_eq(
   array[1],
   'optional WhatsApp grant only when true'
 );
+select results_eq(
+  $$select count(*)::integer from public.contact_channels where channel_type = 'whatsapp' and address_normalized = '+919822233344'$$,
+  array[1],
+  'WhatsApp consent creates whatsapp contact channel'
+);
 
 -- Invalid allowlist rejected
 select throws_ok(
   $$select public.submit_lead_intake(
-    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'::uuid,
-    repeat('7', 64), repeat('8', 64), repeat('0', 64),
-    'home-r4-v1', 'Bad Service', '+919833344455', null,
-    'not-a-service', 'apartment-1bhk', 'ready-now', '{}'::text[],
-    null, null, null, null, '/', '{}'::jsonb, 'local-test',
-    true, true, false, false,
-    'service-enquiry-v0.1-draft', 'service-communication-v0.1-draft', null, null,
-    'privacy-notice-v0.1-draft'
+    p_idempotency_key => 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'::uuid,
+    p_request_hash => repeat('7', 64),
+    p_network_fingerprint_hash => repeat('8', 64),
+    p_phone_fingerprint_hash => repeat('0', 64),
+    p_planner_version => 'home-r4-v1',
+    p_submitted_name => 'Bad Service',
+    p_phone_e164 => '+919833344455',
+    p_submitted_email => null,
+    p_service_code => 'not-a-service',
+    p_property_code => 'apartment-1bhk',
+    p_timeline_code => 'ready-now',
+    p_room_codes => '{}'::text[],
+    p_budget_comfort_code => null,
+    p_estimate_snapshot => null,
+    p_locality => null,
+    p_message => null,
+    p_landing_path => '/',
+    p_attribution => '{}'::jsonb,
+    p_source => 'local-test',
+    p_consent_service_enquiry => true,
+    p_consent_service_phone => true,
+    p_consent_service_email => false,
+    p_consent_whatsapp => false,
+    p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+    p_copy_service_communication => 'service-communication-v0.1-draft',
+    p_copy_whatsapp => null,
+    p_notice_version => 'privacy-notice-v0.1-draft'
   )$$,
   '22023',
   null,
   'invalid service allowlist rejected'
+);
+
+-- landing_path rejects protocol-relative and backslash paths
+select throws_ok(
+  $$select public.submit_lead_intake(
+    p_idempotency_key => '11111111-1111-4111-8111-111111111111'::uuid,
+    p_request_hash => repeat('a1', 32),
+    p_network_fingerprint_hash => repeat('b1', 32),
+    p_phone_fingerprint_hash => repeat('c1', 32),
+    p_planner_version => 'home-r4-v1',
+    p_submitted_name => 'Bad Landing',
+    p_phone_e164 => '+919844455566',
+    p_submitted_email => null,
+    p_service_code => 'complete-home-interiors',
+    p_property_code => 'apartment-1bhk',
+    p_timeline_code => 'ready-now',
+    p_room_codes => '{}'::text[],
+    p_budget_comfort_code => null,
+    p_estimate_snapshot => null,
+    p_locality => null,
+    p_message => null,
+    p_landing_path => '//evil.example/path',
+    p_attribution => '{}'::jsonb,
+    p_source => 'local-test',
+    p_consent_service_enquiry => true,
+    p_consent_service_phone => true,
+    p_consent_service_email => false,
+    p_consent_whatsapp => false,
+    p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+    p_copy_service_communication => 'service-communication-v0.1-draft',
+    p_copy_whatsapp => null,
+    p_notice_version => 'privacy-notice-v0.1-draft'
+  )$$,
+  '22023',
+  null,
+  'landing_path rejects double-slash prefix'
+);
+select throws_ok(
+  $$select public.submit_lead_intake(
+    p_idempotency_key => '22222222-2222-4222-8222-222222222222'::uuid,
+    p_request_hash => repeat('a2', 32),
+    p_network_fingerprint_hash => repeat('b2', 32),
+    p_phone_fingerprint_hash => repeat('c2', 32),
+    p_planner_version => 'home-r4-v1',
+    p_submitted_name => 'Bad Landing Backslash',
+    p_phone_e164 => '+919855566677',
+    p_submitted_email => null,
+    p_service_code => 'complete-home-interiors',
+    p_property_code => 'apartment-1bhk',
+    p_timeline_code => 'ready-now',
+    p_room_codes => '{}'::text[],
+    p_budget_comfort_code => null,
+    p_estimate_snapshot => null,
+    p_locality => null,
+    p_message => null,
+    p_landing_path => '/path\segment',
+    p_attribution => '{}'::jsonb,
+    p_source => 'local-test',
+    p_consent_service_enquiry => true,
+    p_consent_service_phone => true,
+    p_consent_service_email => false,
+    p_consent_whatsapp => false,
+    p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+    p_copy_service_communication => 'service-communication-v0.1-draft',
+    p_copy_whatsapp => null,
+    p_notice_version => 'privacy-notice-v0.1-draft'
+  )$$,
+  '22023',
+  null,
+  'landing_path rejects backslash'
 );
 
 -- Append-only consent/lead events
@@ -504,22 +666,33 @@ begin
     v_phone := '+91980000000' || i::text;
     select outcome into v_outcome
     from public.submit_lead_intake(
-      v_key,
-      md5(i::text || 'req') || md5(i::text || 'req2'),
-      repeat('9', 64),
-      md5(i::text || 'phone') || md5(i::text || 'phone2'),
-      'home-r4-v1',
-      'Rate Limit Person',
-      v_phone,
-      null,
-      'complete-home-interiors',
-      'apartment-1bhk',
-      'ready-now',
-      '{}'::text[],
-      null, null, null, null, '/', '{}'::jsonb, 'local-test',
-      true, true, false, false,
-      'service-enquiry-v0.1-draft', 'service-communication-v0.1-draft', null, null,
-      'privacy-notice-v0.1-draft'
+      p_idempotency_key => v_key,
+      p_request_hash => md5(i::text || 'req') || md5(i::text || 'req2'),
+      p_network_fingerprint_hash => repeat('9', 64),
+      p_phone_fingerprint_hash => md5(i::text || 'phone') || md5(i::text || 'phone2'),
+      p_planner_version => 'home-r4-v1',
+      p_submitted_name => 'Rate Limit Person',
+      p_phone_e164 => v_phone,
+      p_submitted_email => null,
+      p_service_code => 'complete-home-interiors',
+      p_property_code => 'apartment-1bhk',
+      p_timeline_code => 'ready-now',
+      p_room_codes => '{}'::text[],
+      p_budget_comfort_code => null,
+      p_estimate_snapshot => null,
+      p_locality => null,
+      p_message => null,
+      p_landing_path => '/',
+      p_attribution => '{}'::jsonb,
+      p_source => 'local-test',
+      p_consent_service_enquiry => true,
+      p_consent_service_phone => true,
+      p_consent_service_email => false,
+      p_consent_whatsapp => false,
+      p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+      p_copy_service_communication => 'service-communication-v0.1-draft',
+      p_copy_whatsapp => null,
+      p_notice_version => 'privacy-notice-v0.1-draft'
     );
     if v_outcome is distinct from 'created' then
       raise exception 'rate-limit seed expected created, got %', v_outcome;
@@ -529,22 +702,33 @@ end $$;
 
 create temporary table _rpc_rate as
 select * from public.submit_lead_intake(
-  'f0000000-0000-4000-8000-000000000099'::uuid,
-  md5('rate-final-req') || md5('rate-final-req2'),
-  repeat('9', 64),
-  md5('rate-final-phone') || md5('rate-final-phone2'),
-  'home-r4-v1',
-  'Rate Limit Person',
-  '+919800000099',
-  null,
-  'complete-home-interiors',
-  'apartment-1bhk',
-  'ready-now',
-  '{}'::text[],
-  null, null, null, null, '/', '{}'::jsonb, 'local-test',
-  true, true, false, false,
-  'service-enquiry-v0.1-draft', 'service-communication-v0.1-draft', null, null,
-  'privacy-notice-v0.1-draft'
+  p_idempotency_key => 'f0000000-0000-4000-8000-000000000099'::uuid,
+  p_request_hash => md5('rate-final-req') || md5('rate-final-req2'),
+  p_network_fingerprint_hash => repeat('9', 64),
+  p_phone_fingerprint_hash => md5('rate-final-phone') || md5('rate-final-phone2'),
+  p_planner_version => 'home-r4-v1',
+  p_submitted_name => 'Rate Limit Person',
+  p_phone_e164 => '+919800000099',
+  p_submitted_email => null,
+  p_service_code => 'complete-home-interiors',
+  p_property_code => 'apartment-1bhk',
+  p_timeline_code => 'ready-now',
+  p_room_codes => '{}'::text[],
+  p_budget_comfort_code => null,
+  p_estimate_snapshot => null,
+  p_locality => null,
+  p_message => null,
+  p_landing_path => '/',
+  p_attribution => '{}'::jsonb,
+  p_source => 'local-test',
+  p_consent_service_enquiry => true,
+  p_consent_service_phone => true,
+  p_consent_service_email => false,
+  p_consent_whatsapp => false,
+  p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+  p_copy_service_communication => 'service-communication-v0.1-draft',
+  p_copy_whatsapp => null,
+  p_notice_version => 'privacy-notice-v0.1-draft'
 );
 
 select results_eq(

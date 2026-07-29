@@ -18,6 +18,8 @@ const MODE_VALUES = new Set<LeadIntakeMode>([
   "enabled",
 ]);
 
+const MANAGED_HOST = "lpurlfmpvriyvpkujvyl.supabase.co";
+
 function readOptional(
   env: NodeJS.ProcessEnv | Record<string, string | undefined>,
   name: string
@@ -31,6 +33,48 @@ function looksLikePublishableKey(key: string): boolean {
   return key.startsWith("sb_publishable_");
 }
 
+function safeUrlError(code: string): Error {
+  // Never include URL or key material in errors.
+  return new Error(`[ONEDECORE Lead Env] ${code}`);
+}
+
+/**
+ * True only for loopback Supabase URLs (local-test).
+ * Allows configured local port; rejects managed hosts and public IPs.
+ */
+export function isLoopbackSupabaseUrl(urlStr: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(urlStr);
+  } catch {
+    return false;
+  }
+  if (parsed.username || parsed.password) return false;
+  if (parsed.hash) return false;
+  if (parsed.hostname.includes("supabase.co")) return false;
+  const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  return host === "127.0.0.1" || host === "localhost" || host === "::1";
+}
+
+/**
+ * True only for the ONEDECORE managed Supabase project over HTTPS.
+ */
+export function isManagedOneDecoreSupabaseUrl(urlStr: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(urlStr);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:") return false;
+  if (parsed.username || parsed.password) return false;
+  if (parsed.hash) return false;
+  if (parsed.search) return false;
+  const path = parsed.pathname === "/" ? "" : parsed.pathname;
+  if (path !== "" && path !== "/") return false;
+  return parsed.hostname.toLowerCase() === MANAGED_HOST;
+}
+
 /**
  * Server-only lead-intake environment.
  * Never logs secret values. Defaults to disabled.
@@ -40,7 +84,7 @@ export function getLeadIntakeServerEnv(
 ): LeadIntakeServerEnv {
   const rawMode = (env.ONEDECORE_LEAD_INTAKE_MODE ?? "disabled").trim();
   if (!MODE_VALUES.has(rawMode as LeadIntakeMode)) {
-    throw new Error("[ONEDECORE Lead Env] Invalid ONEDECORE_LEAD_INTAKE_MODE.");
+    throw safeUrlError("Invalid ONEDECORE_LEAD_INTAKE_MODE.");
   }
   const mode = rawMode as LeadIntakeMode;
   const trustProxy = (env.ONEDECORE_TRUST_PROXY ?? "false").trim() === "true";
@@ -48,7 +92,7 @@ export function getLeadIntakeServerEnv(
   if (mode === "disabled") {
     return {
       mode,
-      supabaseUrl: readOptional(env, "NEXT_PUBLIC_SUPABASE_URL"),
+      supabaseUrl: null,
       serviceRoleKey: null,
       hashSecret: null,
       trustProxy,
@@ -56,29 +100,37 @@ export function getLeadIntakeServerEnv(
   }
 
   if (mode === "local-test" && env.NODE_ENV === "production") {
-    throw new Error(
-      "[ONEDECORE Lead Env] local-test mode is forbidden in production."
-    );
+    throw safeUrlError("local-test mode is forbidden in production.");
   }
 
   if (mode === "enabled") {
     const missing = getMissingLeadIntakeActivationFields();
     if (missing.length > 0) {
-      throw new Error(
-        "[ONEDECORE Lead Env] enabled mode blocked until lead activation gate is complete."
+      throw safeUrlError(
+        "enabled mode blocked until lead activation gate is complete."
       );
     }
     if (!trustProxy) {
-      throw new Error(
-        "[ONEDECORE Lead Env] enabled mode requires ONEDECORE_TRUST_PROXY=true with documented reverse-proxy header overwrite."
+      throw safeUrlError(
+        "enabled mode requires ONEDECORE_TRUST_PROXY=true with documented reverse-proxy header overwrite."
       );
     }
   }
 
   const supabaseUrl = readOptional(env, "NEXT_PUBLIC_SUPABASE_URL");
   if (!supabaseUrl) {
-    throw new Error(
-      "[ONEDECORE Lead Env] Missing NEXT_PUBLIC_SUPABASE_URL for server admin client."
+    throw safeUrlError("Missing NEXT_PUBLIC_SUPABASE_URL for server admin client.");
+  }
+
+  if (mode === "local-test" && !isLoopbackSupabaseUrl(supabaseUrl)) {
+    throw safeUrlError(
+      "local-test requires a loopback Supabase URL (127.0.0.1, localhost, or ::1)."
+    );
+  }
+
+  if (mode === "enabled" && !isManagedOneDecoreSupabaseUrl(supabaseUrl)) {
+    throw safeUrlError(
+      "enabled mode requires the managed ONEDECORE Supabase HTTPS project URL."
     );
   }
 
@@ -87,21 +139,19 @@ export function getLeadIntakeServerEnv(
   const publishable = readOptional(env, "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 
   if (!serviceRoleKey) {
-    throw new Error(
-      "[ONEDECORE Lead Env] SUPABASE_SERVICE_ROLE_KEY is required for this mode."
-    );
+    throw safeUrlError("SUPABASE_SERVICE_ROLE_KEY is required for this mode.");
   }
   if (
     looksLikePublishableKey(serviceRoleKey) ||
     (publishable != null && serviceRoleKey === publishable)
   ) {
-    throw new Error(
-      "[ONEDECORE Lead Env] Publishable/public key rejected in SUPABASE_SERVICE_ROLE_KEY slot."
+    throw safeUrlError(
+      "Publishable/public key rejected in SUPABASE_SERVICE_ROLE_KEY slot."
     );
   }
   if (!hashSecret || hashSecret.length < 32) {
-    throw new Error(
-      "[ONEDECORE Lead Env] ONEDECORE_LEAD_HASH_SECRET must be at least 32 characters."
+    throw safeUrlError(
+      "ONEDECORE_LEAD_HASH_SECRET must be at least 32 characters."
     );
   }
 

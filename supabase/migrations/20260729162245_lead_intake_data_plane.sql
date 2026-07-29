@@ -191,7 +191,7 @@ create table public.leads (
   planner_version text not null,
   landing_path text not null,
   attribution jsonb not null default '{}'::jsonb,
-  assigned_to uuid references public.profiles (id) on delete restrict,
+  assigned_to uuid references public.profiles (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
@@ -260,8 +260,12 @@ create table public.leads (
   constraint chk_leads_planner_version check (length(planner_version) between 1 and 80),
   constraint chk_leads_landing_path check (
     landing_path like '/%'
+    and left(landing_path, 2) <> '//'
     and length(landing_path) <= 500
     and landing_path !~ '[[:space:]]'
+    and landing_path !~ '[[:cntrl:]]'
+    and position(E'\\' in landing_path) = 0
+    and position('://' in landing_path) = 0
   ),
   constraint chk_leads_attribution_object check (
     jsonb_typeof(attribution) = 'object'
@@ -356,7 +360,7 @@ create table public.consent_events (
   )
 );
 
-comment on table public.consent_events is 'Append-only consent evidence. Phase 4A intake writes required SERVICE_ENQUIRY + SERVICE_COMMUNICATION grants; optional WhatsApp/marketing only when explicitly true.';
+comment on table public.consent_events is 'Append-only consent evidence. Phase 4A.1 intake writes SERVICE_ENQUIRY (website-form) plus channel-specific SERVICE_COMMUNICATION (phone required; email optional) and optional WHATSAPP_SERVICE. MARKETING capture deferred — channel-specific marketing is not accepted on the public intake contract.';
 
 create index idx_consent_events_contact on public.consent_events (contact_id, occurred_at desc);
 create index idx_consent_events_lead on public.consent_events (lead_id, occurred_at desc) where lead_id is not null;
@@ -392,7 +396,7 @@ create table public.lead_events (
   lead_id uuid not null references public.leads (id) on delete restrict,
   event_type text not null,
   actor_type text not null,
-  actor_id uuid references public.profiles (id) on delete restrict,
+  actor_id uuid references public.profiles (id) on delete set null,
   occurred_at timestamptz not null default now(),
   event_data jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
@@ -520,6 +524,12 @@ create policy "lead_intake_requests_select_audit"
 -- 9. Atomic service-role RPC
 -- =============================================================================
 
+-- Drop prior Phase 4A signature (marketing params) if replaying corrected migration.
+drop function if exists public.submit_lead_intake(
+  uuid, text, text, text, text, text, text, text, text, text, text, text[], text, jsonb, text, text, text, jsonb, text,
+  boolean, boolean, boolean, boolean, text, text, text, text, text
+);
+
 create or replace function public.submit_lead_intake(
   p_idempotency_key uuid,
   p_request_hash text,
@@ -541,13 +551,12 @@ create or replace function public.submit_lead_intake(
   p_attribution jsonb,
   p_source text,
   p_consent_service_enquiry boolean,
-  p_consent_service_communication boolean,
+  p_consent_service_phone boolean,
+  p_consent_service_email boolean,
   p_consent_whatsapp boolean,
-  p_consent_marketing boolean,
   p_copy_service_enquiry text,
   p_copy_service_communication text,
   p_copy_whatsapp text,
-  p_copy_marketing text,
   p_notice_version text
 )
 returns table (
@@ -648,8 +657,12 @@ begin
   end if;
   if p_landing_path is null
     or p_landing_path not like '/%'
+    or left(p_landing_path, 2) = '//'
     or length(p_landing_path) > 500
     or p_landing_path ~ '[[:space:]]'
+    or p_landing_path ~ '[[:cntrl:]]'
+    or position(E'\\' in p_landing_path) > 0
+    or position('://' in p_landing_path) > 0
   then
     raise exception 'validation: landing_path' using errcode = '22023';
   end if;
@@ -663,9 +676,17 @@ begin
     raise exception 'validation: source' using errcode = '22023';
   end if;
   if p_consent_service_enquiry is distinct from true
-    or p_consent_service_communication is distinct from true
+    or p_consent_service_phone is distinct from true
   then
     raise exception 'validation: required consent' using errcode = '22023';
+  end if;
+  if coalesce(p_consent_service_email, false) and (
+    p_submitted_email is null or length(trim(p_submitted_email)) < 3
+  ) then
+    raise exception 'validation: email service consent requires email' using errcode = '22023';
+  end if;
+  if p_submitted_email is not null and coalesce(p_consent_service_email, false) is not true then
+    raise exception 'validation: email requires serviceChannels.email' using errcode = '22023';
   end if;
   if p_copy_service_enquiry is null or length(p_copy_service_enquiry) < 1 then
     raise exception 'validation: copy_service_enquiry' using errcode = '22023';
@@ -676,18 +697,23 @@ begin
   if coalesce(p_consent_whatsapp, false) and (p_copy_whatsapp is null or length(p_copy_whatsapp) < 1) then
     raise exception 'validation: whatsapp copy version' using errcode = '22023';
   end if;
-  if coalesce(p_consent_marketing, false) and (p_copy_marketing is null or length(p_copy_marketing) < 1) then
-    raise exception 'validation: marketing copy version' using errcode = '22023';
-  end if;
   if p_notice_version is null or length(p_notice_version) < 1 then
     raise exception 'validation: notice_version' using errcode = '22023';
   end if;
 
-  -- 5. Advisory locks first (idempotency + phone)
-  perform pg_advisory_xact_lock(hashtextextended(p_idempotency_key::text, 0));
-  perform pg_advisory_xact_lock(hashtextextended(p_phone_fingerprint_hash, 1));
+  -- Advisory locks in fixed deadlock-safe order: idempotency → network → phone
+  -- Distinct namespaces via prefix; distinct seeds 0/1/2.
+  perform pg_advisory_xact_lock(
+    hashtextextended('lead-intake:idempotency:' || p_idempotency_key::text, 0)
+  );
+  perform pg_advisory_xact_lock(
+    hashtextextended('lead-intake:network:' || p_network_fingerprint_hash, 1)
+  );
+  perform pg_advisory_xact_lock(
+    hashtextextended('lead-intake:phone:' || p_phone_fingerprint_hash, 2)
+  );
 
-  -- 2–4. Resolve idempotency under lock
+  -- Resolve idempotency under lock
   select * into v_existing
   from public.lead_intake_requests
   where idempotency_key = p_idempotency_key
@@ -965,7 +991,7 @@ begin
   )
   returning id, public.leads.submission_reference into v_lead_id, v_submission_reference;
 
-  -- 13–14. Consent evidence
+  -- 13–14. Consent evidence (channel-specific; no website-form SERVICE_COMMUNICATION)
   insert into public.consent_events (
     contact_id, lead_id, intake_request_id, purpose_code, channel, event_type,
     copy_version, notice_version, source, locale, actor_type, evidence
@@ -979,12 +1005,53 @@ begin
     contact_id, lead_id, intake_request_id, purpose_code, channel, event_type,
     copy_version, notice_version, source, locale, actor_type, evidence
   ) values (
-    v_contact_id, v_lead_id, v_intake_id, 'SERVICE_COMMUNICATION', 'website-form', 'granted',
+    v_contact_id, v_lead_id, v_intake_id, 'SERVICE_COMMUNICATION', 'phone', 'granted',
     p_copy_service_communication, p_notice_version, p_source, 'en-IN', 'data-principal',
     jsonb_build_object('intakeRequestId', v_intake_id)
   );
 
+  if coalesce(p_consent_service_email, false) then
+    insert into public.consent_events (
+      contact_id, lead_id, intake_request_id, purpose_code, channel, event_type,
+      copy_version, notice_version, source, locale, actor_type, evidence
+    ) values (
+      v_contact_id, v_lead_id, v_intake_id, 'SERVICE_COMMUNICATION', 'email', 'granted',
+      p_copy_service_communication, p_notice_version, p_source, 'en-IN', 'data-principal',
+      jsonb_build_object('intakeRequestId', v_intake_id)
+    );
+  end if;
+
   if coalesce(p_consent_whatsapp, false) then
+    if not exists (
+      select 1
+      from public.contact_channels
+      where contact_id = v_contact_id
+        and channel_type = 'whatsapp'
+        and status = 'active'
+        and address_normalized = p_phone_e164
+    ) then
+      insert into public.contact_channels (
+        contact_id,
+        channel_type,
+        address_normalized,
+        status,
+        is_primary
+      ) values (
+        v_contact_id,
+        'whatsapp',
+        p_phone_e164,
+        'active',
+        not exists (
+          select 1
+          from public.contact_channels
+          where contact_id = v_contact_id
+            and channel_type = 'whatsapp'
+            and status = 'active'
+            and is_primary = true
+        )
+      );
+    end if;
+
     insert into public.consent_events (
       contact_id, lead_id, intake_request_id, purpose_code, channel, event_type,
       copy_version, notice_version, source, locale, actor_type, evidence
@@ -994,17 +1061,7 @@ begin
       jsonb_build_object('intakeRequestId', v_intake_id)
     );
   end if;
-
-  if coalesce(p_consent_marketing, false) then
-    insert into public.consent_events (
-      contact_id, lead_id, intake_request_id, purpose_code, channel, event_type,
-      copy_version, notice_version, source, locale, actor_type, evidence
-    ) values (
-      v_contact_id, v_lead_id, v_intake_id, 'MARKETING', 'website-form', 'granted',
-      p_copy_marketing, p_notice_version, p_source, 'en-IN', 'data-principal',
-      jsonb_build_object('intakeRequestId', v_intake_id)
-    );
-  end if;
+  -- MARKETING intentionally not written: channel-agnostic marketing is deferred.
 
   -- 15. lead.created event
   insert into public.lead_events (
@@ -1041,19 +1098,19 @@ end;
 $$;
 
 comment on function public.submit_lead_intake is
-  'Atomic service-role-only lead intake. Returns safe outcome fields only. Rate limits: OWNER_REVIEW_REQUIRED_BEFORE_PRODUCTION.';
+  'Atomic service-role-only lead intake. Advisory lock order: idempotency → network → phone. Marketing capture deferred. Rate limits: OWNER_REVIEW_REQUIRED_BEFORE_PRODUCTION. Suppression workflow deferred to Phase 5.';
 
 alter function public.submit_lead_intake(
   uuid, text, text, text, text, text, text, text, text, text, text, text[], text, jsonb, text, text, text, jsonb, text,
-  boolean, boolean, boolean, boolean, text, text, text, text, text
+  boolean, boolean, boolean, boolean, text, text, text, text
 ) owner to postgres;
 
 revoke all on function public.submit_lead_intake(
   uuid, text, text, text, text, text, text, text, text, text, text, text[], text, jsonb, text, text, text, jsonb, text,
-  boolean, boolean, boolean, boolean, text, text, text, text, text
+  boolean, boolean, boolean, boolean, text, text, text, text
 ) from public, anon, authenticated;
 
 grant execute on function public.submit_lead_intake(
   uuid, text, text, text, text, text, text, text, text, text, text, text[], text, jsonb, text, text, text, jsonb, text,
-  boolean, boolean, boolean, boolean, text, text, text, text, text
+  boolean, boolean, boolean, boolean, text, text, text, text
 ) to service_role;

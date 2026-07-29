@@ -1,63 +1,60 @@
 /**
- * Lead intake public/private contracts (shared types).
- * Runtime validation lives in server modules.
+ * Lead intake contracts — planner IDs and consent versions from canonical sources.
  */
 
+import {
+  CONSENT_VERSIONS,
+  getConsentVersionByPurpose,
+  type ConsentPurposeCode,
+} from "../legal/consent-registry.ts";
+import { PRIVACY_NOTICE_VERSION } from "../legal/privacy-policy-content.ts";
+import {
+  LEAD_BUDGET_COMFORT_CODES,
+  LEAD_PROPERTY_CODES,
+  LEAD_ROOM_CODES,
+  LEAD_SERVICE_CODES,
+  LEAD_TIMELINE_CODES,
+  type LeadBudgetComfortCode,
+  type LeadPropertyCode,
+  type LeadRoomCode,
+  type LeadServiceCode,
+  type LeadTimelineCode,
+} from "./planner-allowlist.ts";
+
+export {
+  LEAD_BUDGET_COMFORT_CODES,
+  LEAD_PROPERTY_CODES,
+  LEAD_ROOM_CODES,
+  LEAD_SERVICE_CODES,
+  LEAD_TIMELINE_CODES,
+};
+export type {
+  LeadBudgetComfortCode,
+  LeadPropertyCode,
+  LeadRoomCode,
+  LeadServiceCode,
+  LeadTimelineCode,
+};
+
 export const LEAD_INTAKE_PLANNER_VERSION = "home-r4-v1" as const;
-export const LEAD_INTAKE_NOTICE_VERSION = "privacy-notice-v0.1-draft" as const;
+export const LEAD_INTAKE_NOTICE_VERSION = PRIVACY_NOTICE_VERSION;
 
-export const LEAD_SERVICE_CODES = [
-  "complete-home-interiors",
-  "modular-kitchens",
-  "custom-wardrobes",
-] as const;
+function requireConsentVersion(purpose: ConsentPurposeCode): string {
+  const version = getConsentVersionByPurpose(purpose, CONSENT_VERSIONS);
+  if (!version?.version) {
+    throw new Error(
+      `[ONEDECORE Lead] Missing consent registry version for ${purpose}.`
+    );
+  }
+  return version.version;
+}
 
-export const LEAD_PROPERTY_CODES = [
-  "apartment-1bhk",
-  "apartment-2bhk",
-  "apartment-3bhk",
-  "apartment-4bhk-plus",
-  "villa-rowhouse",
-  "single-room",
-] as const;
-
-export const LEAD_TIMELINE_CODES = [
-  "ready-now",
-  "within-3-months",
-  "3-6-months",
-  "more-than-6-months",
-  "exploring",
-] as const;
-
-export const LEAD_ROOM_CODES = [
-  "living",
-  "kitchen",
-  "bedrooms",
-  "wardrobes",
-  "dining",
-  "other",
-] as const;
-
-export const LEAD_BUDGET_COMFORT_CODES = [
-  "under-3l",
-  "3-6l",
-  "6-12l",
-  "12-20l",
-  "20-30l",
-  "30l-plus",
-] as const;
-
-export type LeadServiceCode = (typeof LEAD_SERVICE_CODES)[number];
-export type LeadPropertyCode = (typeof LEAD_PROPERTY_CODES)[number];
-export type LeadTimelineCode = (typeof LEAD_TIMELINE_CODES)[number];
-export type LeadRoomCode = (typeof LEAD_ROOM_CODES)[number];
-export type LeadBudgetComfortCode = (typeof LEAD_BUDGET_COMFORT_CODES)[number];
-
-export const SERVICE_ENQUIRY_COPY_VERSION = "service-enquiry-v0.1-draft" as const;
-export const SERVICE_COMMUNICATION_COPY_VERSION =
-  "service-communication-v0.1-draft" as const;
-export const WHATSAPP_COPY_VERSION = "whatsapp-service-v0.1-draft" as const;
-export const MARKETING_COPY_VERSION = "marketing-v0.1-draft" as const;
+export const SERVICE_ENQUIRY_COPY_VERSION =
+  requireConsentVersion("SERVICE_ENQUIRY");
+export const SERVICE_COMMUNICATION_COPY_VERSION = requireConsentVersion(
+  "SERVICE_COMMUNICATION"
+);
+export const WHATSAPP_COPY_VERSION = requireConsentVersion("WHATSAPP_SERVICE");
 
 export interface LeadIntakeRequestBody {
   readonly idempotencyKey: string;
@@ -79,13 +76,14 @@ export interface LeadIntakeRequestBody {
   };
   readonly consent: {
     readonly serviceEnquiry: true;
-    readonly serviceCommunication: true;
+    readonly serviceChannels: {
+      readonly phone: true;
+      readonly email?: boolean;
+    };
     readonly whatsappService?: boolean;
-    readonly marketing?: boolean;
     readonly serviceEnquiryCopyVersion: string;
     readonly serviceCommunicationCopyVersion: string;
     readonly whatsappCopyVersion?: string;
-    readonly marketingCopyVersion?: string;
     readonly noticeVersion: string;
   };
   readonly attribution: {
@@ -134,12 +132,12 @@ export interface ValidatedLeadIntake {
   readonly message: string | null;
   readonly landingPath: string;
   readonly attribution: Record<string, string>;
+  readonly consentServicePhone: true;
+  readonly consentServiceEmail: boolean;
   readonly consentWhatsapp: boolean;
-  readonly consentMarketing: boolean;
   readonly copyServiceEnquiry: string;
   readonly copyServiceCommunication: string;
   readonly copyWhatsapp: string | null;
-  readonly copyMarketing: string | null;
   readonly noticeVersion: string;
   readonly formStartedAt: string;
 }

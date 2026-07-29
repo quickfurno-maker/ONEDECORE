@@ -5,6 +5,9 @@
 import { LEGAL_DPDP_READINESS_STATEMENT } from "./legal-publication.ts";
 import { BUSINESS_IDENTITY, getMissingLegalPublicationFields } from "./business-identity.ts";
 
+/** Canonical privacy notice version for consent evidence (draft-review). */
+export const PRIVACY_NOTICE_VERSION = "privacy-notice-v0.1-draft" as const;
+
 export interface LegalContentSection {
   readonly id: string;
   readonly title: string;

@@ -789,11 +789,10 @@ export type Database = {
         Args: {
           p_attribution: Json
           p_budget_comfort_code: string
-          p_consent_marketing: boolean
-          p_consent_service_communication: boolean
+          p_consent_service_email: boolean
           p_consent_service_enquiry: boolean
+          p_consent_service_phone: boolean
           p_consent_whatsapp: boolean
-          p_copy_marketing: string
           p_copy_service_communication: string
           p_copy_service_enquiry: string
           p_copy_whatsapp: string

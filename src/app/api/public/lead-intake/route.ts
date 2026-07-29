@@ -3,6 +3,7 @@ import "server-only";
 import { handleLeadIntakeRequest, safeLeadIntakeLog } from "../../../../features/lead-intake/server/lead-intake-runtime.ts";
 import { LeadIntakeError } from "../../../../features/lead-intake/server/lead-intake-errors.ts";
 import { getLeadIntakeMode } from "../../../../config/server-env.ts";
+import { readBoundedRequestBody } from "../../../../features/lead-intake/server/bounded-request-body.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,13 +34,29 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const host = request.headers.get("host");
-    const rawBody = await request.text();
+    const bodyResult = await readBoundedRequestBody(request);
+    if (!bodyResult.ok) {
+      const code =
+        bodyResult.code === "INVALID_CONTENT_LENGTH"
+          ? "INVALID_CONTENT_LENGTH"
+          : "BODY_TOO_LARGE";
+      const status = bodyResult.code === "BODY_TOO_LARGE" ? 413 : 400;
+      return jsonResponse(status, {
+        ok: false,
+        code,
+        message:
+          bodyResult.code === "BODY_TOO_LARGE"
+            ? "Request body too large."
+            : "Invalid Content-Length.",
+      });
+    }
+
     const result = await handleLeadIntakeRequest({
       method: "POST",
       contentType: request.headers.get("content-type"),
       origin: request.headers.get("origin"),
       host,
-      rawBody,
+      rawBody: bodyResult.text,
       remoteAddress:
         // Next does not expose socket reliably; local-test uses loopback default.
         null,
