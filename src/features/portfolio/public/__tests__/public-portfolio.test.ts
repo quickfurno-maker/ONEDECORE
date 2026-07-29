@@ -915,6 +915,7 @@ import "../../../public-site/home-r4/__tests__/r5-1-polish.test.ts";
 import "../../../public-site/home-r4/__tests__/r5-4-final.test.ts";
 import "../../../public-site/home-r4/__tests__/r5-5-dark-theme.test.ts";
 import "../../../public-site/home-r4/__tests__/r5-5-1-dark-qa.test.ts";
+import "../../../public-site/home-r4/__tests__/r5-5-2-final-a11y.test.ts";
 
 {
   const harness = readFileSync(fileURLToPath(import.meta.url), "utf8");

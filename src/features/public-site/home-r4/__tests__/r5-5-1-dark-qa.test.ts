@@ -21,6 +21,7 @@ describe("R5.5.1 Portfolio loading", () => {
     assert.equal(existsSync(path), true);
     const source = read(path);
     assert.match(source, /aria-busy="true"/);
+    assert.match(source, /role="status"/);
     assert.match(source, /Loading ONEDECORE Portfolio projects/);
     assert.match(source, /Loading Portfolio/);
     assert.match(source, /od-skeleton-card/);

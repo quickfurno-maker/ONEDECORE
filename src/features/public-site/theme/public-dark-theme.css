@@ -1010,3 +1010,24 @@ button.od-btn-primary {
   cursor: pointer;
   font: inherit;
 }
+
+/* ---- Forced colours focus fallback ---- */
+
+@media (forced-colors: active) {
+  [data-public-dark-theme] a:focus-visible,
+  [data-public-dark-theme] button:focus-visible,
+  [data-public-dark-theme] input:focus-visible,
+  [data-public-dark-theme] textarea:focus-visible,
+  [data-public-dark-theme] select:focus-visible,
+  [data-public-dark-theme] [tabindex]:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+    box-shadow: none;
+  }
+
+  .od-skip:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+    box-shadow: none;
+  }
+}
