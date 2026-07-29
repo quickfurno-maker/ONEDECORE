@@ -4,9 +4,22 @@ import Image from "next/image";
 import Link from "next/link";
 import type { PublicPortfolioCard } from "@/features/portfolio/public/types";
 import { Reveal } from "@/features/public-site/motion/Reveal";
-import { PM_PROJECTS_COPY, PM_SECTION_IDS } from "./content";
+import { PM_CTA } from "./content";
 import { usePlan } from "./PlanContext";
 import { selectHomepageProjectProof } from "./project-proof";
+
+/** Historical unused homepage projects block — not mounted by ProductionHomePage. */
+const PM_PROJECTS_COPY = {
+  eyebrow: "Portfolio Preview",
+  heading: "Project stories live on the ONEDECORE Portfolio.",
+  lede: "Authentic completed-project photography and case studies appear on /portfolio as final media is approved.",
+  emptyHeading: "Project stories live on the ONEDECORE Portfolio.",
+  emptyBody:
+    "Authentic completed-project photography and case studies appear on /portfolio as final media is approved.",
+  allLabel: PM_CTA.projects,
+  allHref: "/portfolio",
+  planLabel: PM_CTA.open,
+} as const;
 
 interface HomeProjectsProps {
   readonly featured: readonly PublicPortfolioCard[];
@@ -79,7 +92,7 @@ export function HomeProjects({ featured }: HomeProjectsProps) {
 
   return (
     <section
-      id={PM_SECTION_IDS.projects}
+      id="projects"
       className="pm-section pm-projects"
       aria-labelledby="pm-projects-title"
     >

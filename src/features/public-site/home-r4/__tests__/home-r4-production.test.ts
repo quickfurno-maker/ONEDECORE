@@ -74,37 +74,33 @@ describe("home-r4 production guards", () => {
     }
   });
 
-  test("homepage uses getFeaturedProjects exactly once and remains indexable", () => {
+  test("homepage is static and remains indexable without Portfolio fetch", () => {
     const page = read(pagePath);
-    assert.match(page, /getFeaturedProjects/);
-    assert.equal((page.match(/getFeaturedProjects\(/g) ?? []).length, 1);
+    assert.doesNotMatch(page, /getFeaturedProjects/);
+    assert.doesNotMatch(page, /force-dynamic/);
+    assert.doesNotMatch(page, /featured/);
     assert.match(page, /ProductionHomePage/);
     assert.doesNotMatch(page, /loadConceptFeatured/);
     assert.doesNotMatch(page, /design-concepts/);
     assert.doesNotMatch(page, /noindex/);
     assert.match(page, /index:\s*true/);
+    assert.match(page, /Complete Home Interiors in Pune/);
   });
 
-  test("HomeProjects uses project-proof selector and pending copy", () => {
-    const projects = read(join(homeR4, "HomeProjects.tsx"));
+  test("homepage no longer mounts HomeProjects or project-preview copy", () => {
+    const production = read(join(homeR4, "ProductionHomePage.tsx"));
     const content = read(join(homeR4, "content.ts"));
-    assert.match(projects, /selectHomepageProjectProof/);
+    assert.doesNotMatch(production, /HomeProjects/);
+    assert.doesNotMatch(production, /featured/);
+    assert.match(production, /HomeReviews/);
+    assert.doesNotMatch(content, /Our Work/);
+    assert.doesNotMatch(content, /Selected Work/);
     assert.doesNotMatch(
-      projects,
-      /featured\.filter\(\(card\) => Boolean\(card\.cover\?\.url\)\)/
-    );
-    assert.match(content, /Our Work/);
-    assert.match(content, /Real ONEDECORE project stories are being prepared\./);
-    assert.match(
       content,
-      /Authentic completed-project photography and case studies will appear here after final media approval\./
+      /Real ONEDECORE project stories are being prepared/
     );
     assert.match(content, /View Portfolio/);
-    assert.doesNotMatch(content, /Selected work/);
-    assert.doesNotMatch(projects, /Published Featured Villa|Bandra, Mumbai|4 BHK Villa/);
-    assert.doesNotMatch(projects, /\/assets\/onedecore\/home\//);
-    assert.match(projects, /href=\{PM_PROJECTS_COPY\.allHref\}|href=\"\/portfolio\"/);
-    assert.match(projects, /openPlanner/);
+    assert.match(content, /Client Reviews/);
   });
 
   test("claims config is the single source for approved metrics", () => {

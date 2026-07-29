@@ -1,23 +1,18 @@
 import type { Metadata } from "next";
-import { getFeaturedProjects } from "@/features/portfolio/public/public-portfolio-cache";
 import { publicSiteFontVariables } from "@/features/public-site/fonts";
 import { ProductionHomePage } from "@/features/public-site/home-r4/ProductionHomePage";
 
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = {
-  title: "ONEDECORE — One Vision. Complete Interiors.",
+  title: "ONEDECORE — Complete Home Interiors in Pune",
   description:
-    "ONEDECORE designs and delivers complete home interiors, modular kitchens and custom wardrobes for homes across Pune.",
+    "ONEDECORE designs, manufactures and installs complete home interiors, modular kitchens and custom wardrobes across Pune. Explore indicative pricing and start a free design consultation.",
   robots: { index: true, follow: true },
 };
 
-export default async function HomePage() {
-  const featured = await getFeaturedProjects();
-
+export default function HomePage() {
   return (
     <div className={publicSiteFontVariables}>
-      <ProductionHomePage featured={featured} />
+      <ProductionHomePage />
     </div>
   );
 }

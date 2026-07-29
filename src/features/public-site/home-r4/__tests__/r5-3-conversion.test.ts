@@ -116,7 +116,7 @@ describe("HOME_PUNE_AREAS", () => {
 });
 
 describe("ProductionHomePage section order", () => {
-  test("R5.3 conversion sequence", () => {
+  test("R5.4 conversion sequence with Reviews", () => {
     const page = read("ProductionHomePage.tsx");
     const body = page.slice(page.indexOf("return ("));
     const order = [
@@ -127,7 +127,7 @@ describe("ProductionHomePage section order", () => {
       "HomeWhy",
       "HomeFactory",
       "HomeProcess",
-      "HomeProjects",
+      "HomeReviews",
       "HomeFaq",
       "HomePlan",
     ];
@@ -137,5 +137,6 @@ describe("ProductionHomePage section order", () => {
       assert.ok(idx > last, name);
       last = idx;
     }
+    assert.doesNotMatch(body, /HomeProjects/);
   });
 });

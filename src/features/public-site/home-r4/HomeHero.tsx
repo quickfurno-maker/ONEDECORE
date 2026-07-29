@@ -10,16 +10,15 @@ import {
   PM_SECTION_IDS,
 } from "./content";
 import { usePlan } from "./PlanContext";
+import { scrollToHomeSection } from "./scroll-to-section";
 
 const HERO = PM_ASSETS.hero;
 
 function scrollToEstimate() {
-  const target = document.getElementById(PM_SECTION_IDS.estimate);
-  if (!target) return;
-  target.scrollIntoView({ behavior: "smooth", block: "start" });
-  queueMicrotask(() => {
-    target.querySelector<HTMLElement>("button, input, select, [href]")?.focus();
-  });
+  scrollToHomeSection(
+    PM_SECTION_IDS.estimate,
+    "button, input, select, [href]"
+  );
 }
 
 /**

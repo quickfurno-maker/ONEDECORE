@@ -78,6 +78,10 @@ export function HomeFactory() {
               ))}
             </ol>
           </div>
+
+          {"imageryNote" in PM_FACTORY && PM_FACTORY.imageryNote ? (
+            <p className="pm-factory__imageryNote">{PM_FACTORY.imageryNote}</p>
+          ) : null}
         </Reveal>
 
         <Reveal className="pm-card pm-factory__callout" order={3}>

@@ -25,7 +25,7 @@ function Chevron() {
  */
 export function HomeFaq() {
   const baseId = useId();
-  const [openId, setOpenId] = useState<string | null>(PM_FAQS[0]!.id);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   return (
     <section

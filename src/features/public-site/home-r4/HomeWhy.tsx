@@ -1,15 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { PM_SECTION_IDS, PM_WHY } from "./content";
 import { usePlan } from "./PlanContext";
+import { useRovingTabs } from "./useRovingTabs";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 
-/** Why ONEDECORE — six pillars in one architectural composition. */
+/** Why ONEDECORE — four pillars with roving tablist. */
 export function HomeWhy() {
+  const baseId = useId();
+  const panelId = `${baseId}-panel`;
   const { openPlanner } = usePlan();
   const [activeIndex, setActiveIndex] = useState(0);
   const active = PM_WHY.pillars[activeIndex]!;
+  const { setTabRef, onTabListKeyDown, activate } = useRovingTabs(
+    PM_WHY.pillars.length,
+    activeIndex,
+    setActiveIndex
+  );
 
   return (
     <section
@@ -36,32 +44,46 @@ export function HomeWhy() {
             />
           </div>
 
-          <ol className="pm-why__list">
+          <div
+            className="pm-why__tabs"
+            role="tablist"
+            aria-label="Why ONEDECORE pillars"
+            onKeyDown={onTabListKeyDown}
+          >
             {PM_WHY.pillars.map((pillar, index) => (
-              <li key={pillar.id}>
-                <button
-                  type="button"
-                  className="pm-why__item"
-                  data-active={index === activeIndex ? "" : undefined}
-                  aria-current={index === activeIndex ? "true" : undefined}
-                  onClick={() => setActiveIndex(index)}
-                >
-                  <span className="pm-why__index">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span className="pm-why__itemTitle">{pillar.title}</span>
-                </button>
-              </li>
+              <button
+                key={pillar.id}
+                ref={setTabRef(index)}
+                type="button"
+                role="tab"
+                id={`${baseId}-tab-${pillar.id}`}
+                aria-selected={index === activeIndex}
+                aria-controls={panelId}
+                tabIndex={index === activeIndex ? 0 : -1}
+                className="pm-why__item"
+                data-active={index === activeIndex ? "" : undefined}
+                onClick={() => activate(index)}
+              >
+                <span className="pm-why__index">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className="pm-why__itemTitle">{pillar.title}</span>
+              </button>
             ))}
-          </ol>
+          </div>
 
-          <article className="pm-why__panel">
+          <article
+            id={panelId}
+            role="tabpanel"
+            aria-labelledby={`${baseId}-tab-${active.id}`}
+            className="pm-why__panel"
+            tabIndex={0}
+          >
             <p className="pm-why__panelNum" aria-hidden="true">
               {String(activeIndex + 1).padStart(2, "0")}
             </p>
             <h3 className="pm-h3">{active.title}</h3>
             <p className="pm-body">{active.body}</p>
-            <p className="pm-why__satisfaction">{PM_WHY.satisfactionNote}</p>
           </article>
         </Reveal>
 
@@ -75,6 +97,19 @@ export function HomeWhy() {
             {PM_WHY.cta}
           </button>
         </Reveal>
+
+        <noscript>
+          <div className="pm-noscript">
+            {PM_WHY.pillars.map((pillar, index) => (
+              <article key={pillar.id}>
+                <h3>
+                  {String(index + 1).padStart(2, "0")} {pillar.title}
+                </h3>
+                <p>{pillar.body}</p>
+              </article>
+            ))}
+          </div>
+        </noscript>
       </div>
     </section>
   );

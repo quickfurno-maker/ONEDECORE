@@ -75,7 +75,7 @@ describe("R5.3 FAQ and composition", () => {
     assert.equal((content.match(/question:/g) ?? []).length, 10);
   });
 
-  test("production page order matches R5.3 architecture", () => {
+  test("production page order matches R5.4 architecture", () => {
     const page = read("ProductionHomePage.tsx");
     const body = page.slice(page.indexOf("return ("));
     const order = [
@@ -86,7 +86,7 @@ describe("R5.3 FAQ and composition", () => {
       "HomeWhy",
       "HomeFactory",
       "HomeProcess",
-      "HomeProjects",
+      "HomeReviews",
       "HomeFaq",
       "HomePlan",
     ];
@@ -96,6 +96,7 @@ describe("R5.3 FAQ and composition", () => {
       assert.ok(idx > last, name);
       last = idx;
     }
+    assert.doesNotMatch(body, /HomeProjects/);
   });
 
   test("project proof remains pending", () => {

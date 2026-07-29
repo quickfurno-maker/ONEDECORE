@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
   PM_CTA,
   PM_NAV_ITEMS,
@@ -10,7 +10,16 @@ import {
 import { usePlan } from "./PlanContext";
 import { OneDecoreWordmark } from "./OneDecoreWordmark";
 
-/** Floating nav: scroll condensation, active-section tracking, inert drawer. */
+const FOCUSABLE =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function getFocusables(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+    (node) => node.offsetParent !== null || node.getClientRects().length > 0
+  );
+}
+
+/** Floating nav: scroll condensation, active-section tracking, accessible drawer. */
 export function HomeNavigation() {
   const { openPlanner, progress, service, property, timeline } = usePlan();
   const [scrolled, setScrolled] = useState(false);
@@ -18,8 +27,19 @@ export function HomeNavigation() {
   const [open, setOpen] = useState(false);
   const drawerId = useId();
   const toggleRef = useRef<HTMLButtonElement | null>(null);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
   const planLabel =
     service || property || timeline ? PM_CTA.continuePlan : PM_CTA.openShort;
+
+  const close = useCallback(() => {
+    setOpen(false);
+    toggleRef.current?.focus();
+  }, []);
+
+  const openPlannerFromNav = useCallback(() => {
+    setOpen(false);
+    openPlanner();
+  }, [openPlanner]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -50,17 +70,62 @@ export function HomeNavigation() {
 
   useEffect(() => {
     if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open]);
 
-  const close = () => {
-    setOpen(false);
-    toggleRef.current?.focus();
-  };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const main = document.querySelector<HTMLElement>("main");
+    const sticky = document.querySelector<HTMLElement>(".pm-sticky");
+    const footer = document.querySelector<HTMLElement>(".pm-footer");
+    const inertTargets = [main, sticky, footer].filter(
+      (node): node is HTMLElement => node !== null
+    );
+
+    for (const target of inertTargets) {
+      if ("inert" in target) {
+        (target as HTMLElement & { inert: boolean }).inert = true;
+      }
+    }
+
+    const drawer = drawerRef.current;
+    const focusables = drawer ? getFocusables(drawer) : [];
+    focusables[0]?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+        return;
+      }
+
+      if (event.key !== "Tab" || focusables.length === 0) return;
+
+      const first = focusables[0]!;
+      const last = focusables[focusables.length - 1]!;
+
+      if (event.shiftKey) {
+        if (document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      for (const target of inertTargets) {
+        if ("inert" in target) {
+          (target as HTMLElement & { inert: boolean }).inert = false;
+        }
+      }
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [close, open]);
 
   return (
     <header
@@ -94,14 +159,18 @@ export function HomeNavigation() {
               {progress}%
             </span>
           ) : null}
+          <Link
+            href="/portfolio"
+            className="pm-nav__portfolio"
+            data-conversion-action="portfolio-view"
+          >
+            {PM_CTA.projects}
+          </Link>
           <button
             type="button"
             className="dc-btn pm-btn--nav pm-btn--sheen pm-nav__planCta pm-cta-short"
             data-conversion-action="nav-start-plan"
-            onClick={() => {
-              setOpen(false);
-              openPlanner();
-            }}
+            onClick={openPlannerFromNav}
           >
             {planLabel}
           </button>
@@ -131,11 +200,23 @@ export function HomeNavigation() {
       />
 
       <div
+        ref={drawerRef}
         id={drawerId}
         className="pm-drawer"
         data-open={open ? "" : undefined}
-        inert={!open}
+        role={open ? "dialog" : undefined}
+        aria-modal={open ? true : undefined}
+        aria-label="Homepage menu"
+        aria-hidden={open ? undefined : true}
       >
+        <button
+          type="button"
+          className="pm-drawer__close"
+          onClick={close}
+        >
+          Close menu
+        </button>
+
         <OneDecoreWordmark size="drawer" className="pm-drawer__mark" />
         <nav className="pm-drawer__nav" aria-label="Homepage sections, mobile">
           {PM_NAV_ITEMS.map((item, index) => (
@@ -163,10 +244,7 @@ export function HomeNavigation() {
           type="button"
           className="dc-btn dc-btn--primary pm-btn--sheen"
           data-conversion-action="nav-start-plan"
-          onClick={() => {
-            setOpen(false);
-            openPlanner();
-          }}
+          onClick={openPlannerFromNav}
         >
           {planLabel}
         </button>

@@ -9,7 +9,7 @@
  * until public evidence URLs exist.
  */
 import { BUDGET_COMFORT_OPTIONS, type BudgetComfortId } from "./budget-config.ts";
-import { HOME_CLAIMS, HOME_CLAIM_COPY } from "./claims.ts";
+import { HOME_CLAIMS } from "./claims.ts";
 import {
   FEATURED_PORTFOLIO_COPY,
   PROCESS_STEPS,
@@ -29,7 +29,7 @@ export const PM_SECTION_IDS = {
   why: "why",
   factory: "factory",
   process: "process",
-  projects: "projects",
+  reviews: "reviews",
   faqs: "faqs",
   plan: "plan",
 } as const;
@@ -39,7 +39,7 @@ export const PM_NAV_ITEMS = [
   { label: "Estimate", href: `#${PM_SECTION_IDS.estimate}` },
   { label: "Why ONEDECORE", href: `#${PM_SECTION_IDS.why}` },
   { label: "Process", href: `#${PM_SECTION_IDS.process}` },
-  { label: "Work", href: `#${PM_SECTION_IDS.projects}` },
+  { label: "Reviews", href: `#${PM_SECTION_IDS.reviews}` },
   { label: "FAQs", href: `#${PM_SECTION_IDS.faqs}` },
 ] as const;
 
@@ -48,7 +48,7 @@ export const PM_TRACKED_SECTIONS = [
   PM_SECTION_IDS.estimate,
   PM_SECTION_IDS.why,
   PM_SECTION_IDS.process,
-  PM_SECTION_IDS.projects,
+  PM_SECTION_IDS.reviews,
   PM_SECTION_IDS.faqs,
 ] as const;
 
@@ -214,9 +214,9 @@ export const PM_CREDIBILITY = [
     label: "Average Rating",
   },
   {
-    id: "reviews",
-    stat: `${HOME_CLAIMS.reviews}+`,
-    label: "Client Reviews",
+    id: "manufacturing",
+    stat: "Own",
+    label: "Manufacturing Unit",
   },
   {
     id: "warranty",
@@ -372,20 +372,6 @@ export const PM_SERVICES = SERVICE_CARDS.map((card) => {
 
 export const PM_SERVICE_CTA = PM_CTA.open;
 
-/* ---------------------------------------------------------------- projects */
-
-export const PM_PROJECTS_COPY = {
-  eyebrow: "Our Work",
-  heading: "Real ONEDECORE project stories are being prepared.",
-  lede: "Authentic completed-project photography and case studies will appear here after final media approval.",
-  emptyHeading: "Real ONEDECORE project stories are being prepared.",
-  emptyBody:
-    "Authentic completed-project photography and case studies will appear here after final media approval.",
-  allLabel: PM_CTA.projects,
-  allHref: "/portfolio",
-  planLabel: PM_CTA.open,
-} as const;
-
 /* ----------------------------------------------------------- proof strip */
 
 export const PM_PROOF_METRICS = [
@@ -396,22 +382,22 @@ export const PM_PROOF_METRICS = [
     label: "Projects Delivered",
   },
   {
-    id: "satisfaction",
-    value: HOME_CLAIMS.clientSatisfactionPercent,
-    suffix: "%",
-    label: "Client Satisfaction",
-  },
-  {
     id: "custom",
     value: HOME_CLAIMS.customDesignPercent,
     suffix: "%",
     label: "Custom Designs",
   },
   {
-    id: "warranty",
-    value: HOME_CLAIMS.warrantyYears,
+    id: "services",
+    value: 3,
     suffix: "",
-    label: "Year Warranty",
+    label: "Focused Interior Services",
+  },
+  {
+    id: "stages",
+    value: 4,
+    suffix: "",
+    label: "Stages to Handover",
   },
 ] as const;
 
@@ -518,7 +504,6 @@ export const PM_WHY = {
   eyebrow: "Why ONEDECORE",
   heading: "Why homeowners choose ONEDECORE",
   lede: "Interior projects become simpler when design, manufacturing and execution stay connected. ONEDECORE gives you one coordinated direction from the first plan to final handover.",
-  satisfactionNote: HOME_CLAIM_COPY.satisfaction,
   cta: PM_CTA.open,
   pillars: [
     {
@@ -533,23 +518,13 @@ export const PM_WHY = {
     },
     {
       id: "custom",
-      title: HOME_CLAIM_COPY.customDesigns,
+      title: "Custom Planning for Your Home",
       body: "Layouts, storage and finishes are planned around your home, lifestyle and preferences.",
     },
     {
-      id: "warranty",
-      title: HOME_CLAIM_COPY.warranty,
-      body: "Eligible modular furniture and interior work are supported by ONEDECORE’s 10-year warranty terms.",
-    },
-    {
-      id: "factory",
-      title: HOME_CLAIM_COPY.manufacturing,
-      body: "Factory-controlled production supports accuracy, finish consistency and tighter execution coordination.",
-    },
-    {
-      id: "consult",
-      title: HOME_CLAIM_COPY.freeConsultation,
-      body: "Begin with a no-obligation planning consultation to clarify scope, rooms, timeline and budget.",
+      id: "connected",
+      title: "Design, Manufacturing and Installation Stay Connected",
+      body: "Approved design intent stays linked through production references, installation and final handover.",
     },
   ],
 } as const;
@@ -594,7 +569,31 @@ export const PM_FACTORY = {
   calloutTitle: "10-Year Warranty Support",
   calloutBody:
     "Warranty coverage applies according to ONEDECORE’s approved written terms, product categories and exclusions.",
+  imageryNote:
+    "Material and process imagery is illustrative unless identified as authentic ONEDECORE factory media.",
   cta: PM_CTA.exploreScope,
+} as const;
+
+/* ----------------------------------------------------------- reviews */
+
+export const PM_REVIEWS = {
+  eyebrow: "Client Reviews",
+  heading: `Rated ${HOME_CLAIMS.rating}/5 by homeowners across Pune`,
+  body: `More than ${HOME_CLAIMS.reviews} client reviews reflect the confidence homeowners place in ONEDECORE’s custom planning, manufacturing control and coordinated interior delivery.`,
+  starLabel: `${HOME_CLAIMS.rating} out of 5 average rating`,
+  ratingCaption: "Average Client Rating",
+  reviewsCaption: "Client Reviews",
+  satisfactionCaption: "Client Satisfaction",
+  railLabel: "The ONEDECORE experience is built around",
+  railItems: [
+    "Clear planning before execution",
+    "Designs tailored to the home",
+    "Manufacturing kept connected to design",
+    "Installation and handover through one team",
+  ],
+  primaryCta: PM_CTA.open,
+  secondaryCta: PM_CTA.projects,
+  secondaryHref: "/portfolio",
 } as const;
 
 /* -------------------------------------------------------- scope included */
@@ -863,12 +862,6 @@ export const PM_FAQS = [
       "ONEDECORE offers 10-year warranty support on eligible modular furniture and interior work according to approved written terms and exclusions.",
   },
   {
-    id: "custom",
-    question: "Can every design be customised?",
-    answer:
-      "Yes. ONEDECORE plans layouts, storage, finishes and details around the home, requirements and preferences rather than forcing a fixed package.",
-  },
-  {
     id: "consultation",
     question: "Is the design consultation free?",
     answer:
@@ -881,10 +874,16 @@ export const PM_FAQS = [
       "ONEDECORE serves homes across Pune, including the listed 26 service areas.",
   },
   {
-    id: "see-work",
-    question: "Can I see completed projects?",
+    id: "reviews",
+    question: "How are ONEDECORE’s ratings and review count presented?",
     answer:
-      "Authentic ONEDECORE project photography and case studies are being prepared for publication. No unapproved media is presented as proof.",
+      "The homepage shows ONEDECORE’s owner-approved aggregate rating and review count. Individual review excerpts will only appear when their original source records are approved.",
+  },
+  {
+    id: "portfolio",
+    question: "Where can I explore ONEDECORE projects?",
+    answer:
+      "Visit the ONEDECORE Portfolio for published project pages. Authentic completed-project photography and case studies will be added as final media is approved.",
   },
   {
     id: "submitted",
@@ -898,8 +897,8 @@ export const PM_FAQS = [
 
 export const PM_CLOSE = {
   eyebrow: "Free consultation",
-  heading: "Start your free design consultation",
-  lede: "Tell us about your home, rooms, timeline and budget. Review your selections and take a clear interior brief with you.",
+  heading: "Your interior plan, ready to take forward",
+  lede: "Review your selections, copy the brief and continue exploring ONEDECORE when you are ready.",
   summaryHeading: PM_PLANNER.summaryHeading,
   editLabel: PM_CTA.editDetails,
   submitLabel: PM_CTA.submit,
@@ -909,7 +908,7 @@ export const PM_CLOSE = {
   briefBody:
     "Nothing is submitted from this page. Copy your brief to share privately, or browse the portfolio. Secure lead intake will connect in a later release.",
   reassurance:
-    "Free initial consultation · Nothing is submitted from this page · Edit anytime",
+    "Planning estimate only · Nothing is submitted from this page · Edit anytime",
   copySuccess: "Interior brief copied.",
   copyFailure:
     "We could not copy automatically. Select and copy the brief manually.",
@@ -939,6 +938,7 @@ export const PM_FOOTER = {
     { label: "Estimate", href: `#${PM_SECTION_IDS.estimate}` },
     { label: "Why ONEDECORE", href: `#${PM_SECTION_IDS.why}` },
     { label: "Process", href: `#${PM_SECTION_IDS.process}` },
+    { label: "Reviews", href: `#${PM_SECTION_IDS.reviews}` },
     { label: "FAQs", href: `#${PM_SECTION_IDS.faqs}` },
   ],
   rights: "All rights reserved.",

@@ -912,6 +912,7 @@ import "../../../public-site/home-r4/__tests__/r5-value.test.ts";
 import "../../../public-site/home-r4/__tests__/r5-3-conversion.test.ts";
 import "../../../public-site/home-r4/__tests__/r5-3-1-estimator.test.ts";
 import "../../../public-site/home-r4/__tests__/r5-1-polish.test.ts";
+import "../../../public-site/home-r4/__tests__/r5-4-final.test.ts";
 
 {
   const harness = readFileSync(fileURLToPath(import.meta.url), "utf8");
