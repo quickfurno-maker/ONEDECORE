@@ -1,7 +1,7 @@
 # Legal source registry — Phase 3A1.1
 
-Authoritative Indian DPDP references for ONEDECORE legal architecture.  
-Code mirror: `src/features/legal/legal-sources.ts`  
+Authoritative Indian DPDP references for ONEDECORE legal architecture.
+Code mirror: `src/features/legal/legal-sources.ts`
 **Registry count: 4** (must match `LEGAL_SOURCE_REGISTRY_COUNT`).
 
 ## Allowlisted authorities

@@ -33,7 +33,6 @@ import {
 } from "../legal-publication.ts";
 import {
   canUseCommunicationChannel,
-  CONSENT_VERSIONS,
   getConsentVersionByPurpose,
   marketingConsentIsOptional,
   serviceCommunicationExcludesWhatsApp,
