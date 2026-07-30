@@ -270,6 +270,68 @@ export function getConsentVersionByPurpose(
   return versions.find((version) => version.purposeCode === purposeCode);
 }
 
+/**
+ * Explicit current-version IDs for activation selection.
+ * Exactly one version ID per purpose. Do not infer from first-array match.
+ * Status may remain draft-review; this mapping does not approve or publish.
+ */
+export const CURRENT_CONSENT_VERSION_IDS: Readonly<
+  Record<ConsentPurposeCode, string>
+> = {
+  SERVICE_ENQUIRY: "service-enquiry-v0.1-draft",
+  SERVICE_COMMUNICATION: "service-communication-v0.1-draft",
+  WHATSAPP_SERVICE: "whatsapp-service-v0.1-draft",
+  MARKETING: "marketing-v0.1-draft",
+  AI_ASSISTANCE_DISCLOSURE: "ai-assistance-disclosure-v0.1-draft",
+  PORTFOLIO_MEDIA: "portfolio-media-v0.1-draft",
+};
+
+/**
+ * Resolve the explicitly mapped current consent version for a purpose.
+ * Throws when the mapping is missing, points at the wrong purpose, duplicates,
+ * or cannot be found in the registry.
+ */
+export function getCurrentConsentVersionByPurpose(
+  purposeCode: ConsentPurposeCode,
+  versions: readonly ConsentVersion[] = CONSENT_VERSIONS,
+  currentIds: Readonly<Record<ConsentPurposeCode, string>> = CURRENT_CONSENT_VERSION_IDS
+): ConsentVersion {
+  const mappedId = currentIds[purposeCode];
+  if (!mappedId) {
+    throw new Error(
+      `[ONEDECORE Consent] Missing current version mapping for ${purposeCode}.`
+    );
+  }
+
+  const idValues = Object.values(currentIds);
+  if (new Set(idValues).size !== idValues.length) {
+    throw new Error(
+      "[ONEDECORE Consent] Duplicate current consent version IDs in mapping."
+    );
+  }
+
+  const matches = versions.filter((version) => version.version === mappedId);
+  if (matches.length === 0) {
+    throw new Error(
+      `[ONEDECORE Consent] Current version ${mappedId} not found for ${purposeCode}.`
+    );
+  }
+  if (matches.length > 1) {
+    throw new Error(
+      `[ONEDECORE Consent] Duplicate registry entries for version ${mappedId}.`
+    );
+  }
+
+  const version = matches[0]!;
+  if (version.purposeCode !== purposeCode) {
+    throw new Error(
+      `[ONEDECORE Consent] Current version ${mappedId} has purpose ${version.purposeCode}, expected ${purposeCode}.`
+    );
+  }
+
+  return version;
+}
+
 export function marketingConsentIsOptional(
   versions: readonly ConsentVersion[] = CONSENT_VERSIONS
 ): boolean {

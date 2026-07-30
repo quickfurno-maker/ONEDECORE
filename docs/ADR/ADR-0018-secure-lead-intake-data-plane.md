@@ -1,7 +1,7 @@
 # ADR-0018: Secure Lead Intake Data Plane
 
-**Status:** Accepted (Phase 4A — local foundation; Phase 4A.1 pre-apply security correction; managed apply pending)
-**Date:** July 29, 2026 (corrected July 30, 2026 — Phase 4A.1)
+**Status:** Accepted (Phase 4A foundation; Phase 4A.1 pre-apply correction; Phase 4B1 managed migration 9 applied; Phase 4B2 activation readiness — public form gated disabled)
+**Date:** July 29, 2026 (corrected July 30, 2026 — Phase 4A.1; Phase 4B2 July 30, 2026)
 **Deciders:** Owner / Security Architect
 
 
@@ -23,16 +23,18 @@ ONEDECORE requires CRM-ready lead persistence before public form wiring. Legal a
 - Lead history is append-only events.
 - Idempotency and rate limits are enforced inside the RPC under a fixed advisory-lock order: **idempotency → network → phone** (deadlock-safe).
 - Network/phone/request fingerprints are HMAC-SHA-256 only — no raw IP/user-agent storage.
-- Public Route Handler defaults to `disabled` (HTTP 503). `local-test` requires loopback Supabase URL only (`127.0.0.1` / `localhost` / `::1`); managed hosts are rejected before admin-client creation. `enabled` requires the managed HTTPS project host plus completed legal activation and trusted-proxy approval.
+- Public Route Handler defaults to `disabled` (HTTP 503). `local-test` requires a **strict** loopback Supabase URL: protocol `http:`, host `127.0.0.1` / `localhost` / `::1`, explicit valid port, root path only, no credentials/query/fragment. Managed hosts are rejected before admin-client creation. `enabled` requires the managed HTTPS project host plus completed legal activation and trusted-proxy approval.
 - Request bodies are read with a **bounded stream** (32 KiB UTF-8 bytes); Content-Length alone is never trusted.
 - Staff FKs (`leads.assigned_to`, `lead_events.actor_id`) use `ON DELETE SET NULL`.
-- Consent / notice versions and planner IDs derive from the legal registry and planner allowlists — not duplicated independent strings.
-- Attribution paths are same-site hardened (`/` only; reject `//`, `\`, schemes, control characters).
+- Consent / notice versions use an **explicit current-version map** (`CURRENT_CONSENT_VERSION_IDS`) — not first-array-match selection. Status may remain `draft-review`.
+- `serviceChannels.email` is typed `email?: true` (omit or true only).
+- Attribution paths are same-site hardened (`/` only; reject `//`, `\`, schemes, control characters, malformed percent-encoding, encoded `/` and `\`).
+- Phase 4B2 adds covering indexes for advisor FK findings and a dual-gated public form (`NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE` default `copy-only`; server remains default `disabled`).
 - Phase 4A RPC is **not** complete suppression enforcement. Production remains blocked until Phase 5 defines how `contacts.status = do_not_contact` interacts with a new explicit service enquiry. No WhatsApp/campaign send may rely only on contact status. `contact_suppressions` remains deferred — no weak placeholder.
 
 ## Consequences
 
-- LOCAL migrations = 9, REMOTE = 8 until Phase 4B managed review/apply.
-- Homepage remains planner/copy-only (“Nothing is submitted”).
+- After Phase 4B2 managed apply: LOCAL migrations = 10, REMOTE = 10.
+- Homepage default remains planner/copy-only (“Nothing is submitted”).
 - CRM UI, WhatsApp API, Groq, n8n, and campaigns are out of scope.
-- Phase 4A.1 edits the unapplied ninth migration in place; no migration 10.
+- Public collection stays disabled until owner/legal activation runbook gates are complete.

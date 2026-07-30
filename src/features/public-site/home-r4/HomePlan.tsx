@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { HomeLeadCapture } from "../../lead-intake/public/HomeLeadCapture.tsx";
+import { getLeadFormMode } from "../../lead-intake/public/lead-form-mode.ts";
 import { PM_CLOSE, PM_PLANNER, PM_SECTION_IDS } from "./content";
 import { formatInteriorBrief } from "./plan-state";
 import { usePlan } from "./PlanContext";
@@ -20,6 +22,7 @@ function labelOf(
  */
 export function HomePlan() {
   const plan = usePlan();
+  const leadFormMode = getLeadFormMode();
   const [copyState, setCopyState] = useState<"idle" | "ok" | "err">("idle");
 
   const budgetLabel = labelOf(
@@ -146,6 +149,9 @@ export function HomePlan() {
                   ? PM_CLOSE.copyFailure
                   : null}
             </p>
+            {leadFormMode !== "copy-only" ? (
+              <HomeLeadCapture mode={leadFormMode} />
+            ) : null}
           </div>
         </div>
       </div>
