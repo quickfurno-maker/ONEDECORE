@@ -54,6 +54,7 @@
 | **DEC-0044** | Public lead intake remains disabled by default post-4B2 merge; activation requires Phase 5F separate authority | LOCKED | Prevents accidental public collection before legal/owner gates | No | Phase 5A | N/A |
 | **DEC-0045** | CRM workflow states documented as state graphs with explicit branch/terminal semantics (not misleading serial chains) | LOCKED | Prevents implementation of impossible linear transitions | No | Phase 5A | Serial diagram wording |
 | **DEC-0046** | Phase 5E configures targets and non-commercial reporting only; authoritative achievement activates in Phase 7B | LOCKED | Prevents fabricated or stub performance metrics before quotation acceptance exists | No | Phase 5A | Phase 5E stub achievement |
+| **DEC-0047** | Phase 5B CRM foundation implemented locally (migration 11): assignment-scoped RLS, source catalogue, RPC-only pipeline mutations; legacy roles retained without user remapping; sales targets deferred to 5E | LOCKED | Establishes auditable CRM data plane without managed apply or public activation | No | Phase 5B | N/A |
 
 ---
 
@@ -71,3 +72,4 @@
 - [ADR-0020: Closed-Won Project Handover Invariants](ADR/ADR-0020-closed-won-project-handover-invariants.md)
 - [ADR-0021: Groq Copilot and WhatsApp Boundary](ADR/ADR-0021-groq-copilot-and-whatsapp-boundary.md)
 - [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
+- [Phase 5B Audit](audits/phase-5b-crm-identity-core-foundation.md)

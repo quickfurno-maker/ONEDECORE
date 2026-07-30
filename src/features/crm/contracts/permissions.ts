@@ -1,0 +1,121 @@
+/**
+ * Phase 5B CRM role and permission constants — aligned with
+ * `20260730184426_crm_identity_core_foundation.sql`.
+ */
+
+export const CRM_PERMISSION_CODES = [
+  "leads.read",
+  "leads.read_all",
+  "leads.read_assigned",
+  "leads.manage",
+  "leads.assign",
+  "leads.transition",
+  "consents.read",
+  "lead_intake.audit",
+  "sources.read",
+  "sources.manage",
+  "crm.notes.manage",
+  "crm.follow_ups.manage",
+  "crm.activities.read",
+] as const;
+
+export type CrmPermissionCode = (typeof CRM_PERMISSION_CODES)[number];
+
+/** Canonical Phase 5B operational roles. */
+export const CRM_ROLE_CODES = [
+  "super_admin",
+  "sales_manager",
+  "sales_executive",
+  "project_manager",
+  "designer",
+] as const;
+
+export type CrmRoleCode = (typeof CRM_ROLE_CODES)[number];
+
+/** Legacy seed roles retained for existing assignments. */
+export const CRM_LEGACY_ROLE_CODES = [
+  "management",
+  "sales",
+  "project_operations",
+] as const;
+
+export type CrmLegacyRoleCode = (typeof CRM_LEGACY_ROLE_CODES)[number];
+
+export type CrmOperationalRoleCode = CrmRoleCode | CrmLegacyRoleCode;
+
+export const CRM_ASSIGNMENT_METHODS = [
+  "manual",
+  "manager",
+  "super_admin",
+  "source_rule",
+  "system",
+] as const;
+
+export type CrmAssignmentMethod = (typeof CRM_ASSIGNMENT_METHODS)[number];
+
+/** Permission grants mirrored from the Phase 5B migration role_permissions block. */
+export const CRM_ROLE_PERMISSIONS: Readonly<
+  Record<CrmOperationalRoleCode, readonly CrmPermissionCode[]>
+> = {
+  super_admin: [
+    "leads.read",
+    "leads.read_all",
+    "leads.read_assigned",
+    "leads.manage",
+    "leads.assign",
+    "leads.transition",
+    "consents.read",
+    "lead_intake.audit",
+    "sources.read",
+    "sources.manage",
+    "crm.notes.manage",
+    "crm.follow_ups.manage",
+    "crm.activities.read",
+  ],
+  management: [
+    "leads.read",
+    "leads.read_all",
+    "leads.manage",
+    "leads.assign",
+    "leads.transition",
+    "consents.read",
+    "lead_intake.audit",
+    "sources.read",
+    "crm.notes.manage",
+    "crm.follow_ups.manage",
+    "crm.activities.read",
+  ],
+  sales_manager: [
+    "leads.read_all",
+    "leads.manage",
+    "leads.assign",
+    "leads.transition",
+    "consents.read",
+    "sources.read",
+    "crm.notes.manage",
+    "crm.follow_ups.manage",
+    "crm.activities.read",
+  ],
+  sales: [
+    "leads.read_assigned",
+    "leads.manage",
+    "leads.transition",
+    "consents.read",
+    "sources.read",
+    "crm.notes.manage",
+    "crm.follow_ups.manage",
+    "crm.activities.read",
+  ],
+  sales_executive: [
+    "leads.read_assigned",
+    "leads.transition",
+    "consents.read",
+    "sources.read",
+    "crm.notes.manage",
+    "crm.follow_ups.manage",
+    "crm.activities.read",
+  ],
+  project_manager: [],
+  designer: [],
+  project_operations: [],
+};

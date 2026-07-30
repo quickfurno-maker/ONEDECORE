@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 5B (July 31, 2026)
+- Migration 11 (`20260730184426_crm_identity_core_foundation.sql`): five-role RBAC extension, controlled lead-source catalogue (21 seeds), pipeline status reconciliation, assignment/status RPCs, collaboration tables, assignment-scoped RLS.
+- pgTAP `05_crm_identity_core_foundation_test.sql` (37 tests); updated identity/lead intake regression expectations.
+- Server-only CRM foundation under `src/features/crm/` (permissions, stages, DTOs, repository, transition adapters, tests).
+- Phase 5B audit and governance doc updates.
+- **Local only** — managed Supabase remains at migrations 1–10; no PR merge, deployment, or public lead activation.
+
 ### Added - Phase 5A (July 30, 2026)
 - Froze CRM & Operations architecture: five-role authorization model, lead sources, manual/bulk import rules, source-based assignment (no round-robin), sales targets, quotation lifecycle, Closed-Won → PM handover invariants, design workflow, project execution stages, WhatsApp/Groq/campaign boundaries.
 - Added ADR-0019 (five-role CRM authorization), ADR-0020 (Closed-Won handover), ADR-0021 (Groq copilot and WhatsApp boundary).

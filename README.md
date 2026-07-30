@@ -4,8 +4,8 @@
 
 ONEDECORE is a premium interior-business operating system for Pune, India — combining a production public website and portfolio with a planned sales, quotation, project execution, design, WhatsApp, and marketing CRM backbone.
 
-**Current phase:** Phase 5A — CRM & Operations Architecture Freeze (documentation only).
-**Next implementation:** Phase 5B — CRM Identity, Authorization & Core Data Foundation.
+**Current phase:** Phase 5B — CRM Identity, Authorization & Core Data Foundation (local implementation complete; not applied to managed Supabase).
+**Next implementation:** Phase 5C — CRM UI shell / lead workspace (per roadmap).
 
 ---
 

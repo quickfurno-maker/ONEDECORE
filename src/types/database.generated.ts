@@ -189,6 +189,152 @@ export type Database = {
           },
         ]
       }
+      lead_activities: {
+        Row: {
+          activity_type: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          lead_id: string
+          metadata: Json
+          occurred_at: string
+          reference_id: string | null
+          summary: string
+        }
+        Insert: {
+          activity_type: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          lead_id: string
+          metadata?: Json
+          occurred_at?: string
+          reference_id?: string | null
+          summary: string
+        }
+        Update: {
+          activity_type?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string
+          metadata?: Json
+          occurred_at?: string
+          reference_id?: string | null
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_activities_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_assignment_history: {
+        Row: {
+          actor_id: string
+          assignment_method: string
+          id: string
+          lead_id: string
+          metadata: Json
+          new_assignee: string | null
+          occurred_at: string
+          previous_assignee: string | null
+          reason: string | null
+        }
+        Insert: {
+          actor_id: string
+          assignment_method: string
+          id?: string
+          lead_id: string
+          metadata?: Json
+          new_assignee?: string | null
+          occurred_at?: string
+          previous_assignee?: string | null
+          reason?: string | null
+        }
+        Update: {
+          actor_id?: string
+          assignment_method?: string
+          id?: string
+          lead_id?: string
+          metadata?: Json
+          new_assignee?: string | null
+          occurred_at?: string
+          previous_assignee?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_assignment_history_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_assignment_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_assignment_history_new_assignee_fkey"
+            columns: ["new_assignee"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_assignment_history_previous_assignee_fkey"
+            columns: ["previous_assignee"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_closure_reasons: {
+        Row: {
+          code: string
+          created_at: string
+          display_name: string
+          display_order: number
+          id: string
+          is_active: boolean
+          requires_note: boolean
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          display_name: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          requires_note?: boolean
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          display_name?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          requires_note?: boolean
+        }
+        Relationships: []
+      }
       lead_events: {
         Row: {
           actor_id: string | null
@@ -233,6 +379,87 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_follow_ups: {
+        Row: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          due_at: string
+          id: string
+          lead_id: string
+          outcome: string | null
+          owner_id: string
+          status: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by: string
+          due_at: string
+          id?: string
+          lead_id: string
+          outcome?: string | null
+          owner_id: string
+          status?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string
+          due_at?: string
+          id?: string
+          lead_id?: string
+          outcome?: string | null
+          owner_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_follow_ups_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_follow_ups_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_follow_ups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_follow_ups_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_follow_ups_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -290,19 +517,179 @@ export type Database = {
           },
         ]
       }
+      lead_notes: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string
+          id: string
+          lead_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by: string
+          id?: string
+          lead_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          lead_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_notes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_source_touchpoints: {
+        Row: {
+          campaign_reference: string | null
+          created_at: string
+          id: string
+          lead_id: string
+          metadata: Json
+          occurred_at: string
+          recorded_by: string | null
+          source_detail: string | null
+          source_id: string
+          touchpoint_kind: string
+        }
+        Insert: {
+          campaign_reference?: string | null
+          created_at?: string
+          id?: string
+          lead_id: string
+          metadata?: Json
+          occurred_at?: string
+          recorded_by?: string | null
+          source_detail?: string | null
+          source_id: string
+          touchpoint_kind?: string
+        }
+        Update: {
+          campaign_reference?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string
+          metadata?: Json
+          occurred_at?: string
+          recorded_by?: string | null
+          source_detail?: string | null
+          source_id?: string
+          touchpoint_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_source_touchpoints_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_source_touchpoints_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_source_touchpoints_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "lead_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_sources: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_name: string
+          display_order: number
+          id: string
+          is_active: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_name: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_name?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_sources_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_sources_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           assigned_to: string | null
           attribution: Json
           budget_comfort_code: string | null
+          closed_lost_note: string | null
+          closed_lost_reason_id: string | null
           contact_id: string
           created_at: string
+          entry_method: string
           estimate_snapshot: Json | null
           id: string
           landing_path: string
           locality: string | null
           message: string | null
+          on_hold_reason: string | null
+          on_hold_since: string | null
           planner_version: string
+          primary_source_id: string
           property_code: string
           room_codes: string[]
           service_code: string
@@ -318,14 +705,20 @@ export type Database = {
           assigned_to?: string | null
           attribution?: Json
           budget_comfort_code?: string | null
+          closed_lost_note?: string | null
+          closed_lost_reason_id?: string | null
           contact_id: string
           created_at?: string
+          entry_method: string
           estimate_snapshot?: Json | null
           id?: string
           landing_path: string
           locality?: string | null
           message?: string | null
+          on_hold_reason?: string | null
+          on_hold_since?: string | null
           planner_version: string
+          primary_source_id: string
           property_code: string
           room_codes?: string[]
           service_code: string
@@ -341,14 +734,20 @@ export type Database = {
           assigned_to?: string | null
           attribution?: Json
           budget_comfort_code?: string | null
+          closed_lost_note?: string | null
+          closed_lost_reason_id?: string | null
           contact_id?: string
           created_at?: string
+          entry_method?: string
           estimate_snapshot?: Json | null
           id?: string
           landing_path?: string
           locality?: string | null
           message?: string | null
+          on_hold_reason?: string | null
+          on_hold_since?: string | null
           planner_version?: string
+          primary_source_id?: string
           property_code?: string
           room_codes?: string[]
           service_code?: string
@@ -362,6 +761,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_leads_closed_lost_reason"
+            columns: ["closed_lost_reason_id"]
+            isOneToOne: false
+            referencedRelation: "lead_closure_reasons"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "leads_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
@@ -373,6 +779,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_primary_source_id_fkey"
+            columns: ["primary_source_id"]
+            isOneToOne: false
+            referencedRelation: "lead_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -738,6 +1151,49 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_lead: {
+        Args: {
+          p_assignee_id: string
+          p_lead_id: string
+          p_method?: string
+          p_reason?: string
+        }
+        Returns: {
+          assigned_to: string | null
+          attribution: Json
+          budget_comfort_code: string | null
+          closed_lost_note: string | null
+          closed_lost_reason_id: string | null
+          contact_id: string
+          created_at: string
+          entry_method: string
+          estimate_snapshot: Json | null
+          id: string
+          landing_path: string
+          locality: string | null
+          message: string | null
+          on_hold_reason: string | null
+          on_hold_since: string | null
+          planner_version: string
+          primary_source_id: string
+          property_code: string
+          room_codes: string[]
+          service_code: string
+          source: string
+          status: string
+          submission_reference: string
+          submitted_email: string | null
+          submitted_name: string
+          timeline_code: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       authorize: { Args: { requested_permission: string }; Returns: boolean }
       replace_portfolio_project_services: {
         Args: {
@@ -821,6 +1277,49 @@ export type Database = {
           retry_after_seconds: number
           submission_reference: string
         }[]
+      }
+      transition_lead_status: {
+        Args: {
+          p_closure_reason_code?: string
+          p_lead_id: string
+          p_new_status: string
+          p_reason?: string
+        }
+        Returns: {
+          assigned_to: string | null
+          attribution: Json
+          budget_comfort_code: string | null
+          closed_lost_note: string | null
+          closed_lost_reason_id: string | null
+          contact_id: string
+          created_at: string
+          entry_method: string
+          estimate_snapshot: Json | null
+          id: string
+          landing_path: string
+          locality: string | null
+          message: string | null
+          on_hold_reason: string | null
+          on_hold_since: string | null
+          planner_version: string
+          primary_source_id: string
+          property_code: string
+          room_codes: string[]
+          service_code: string
+          source: string
+          status: string
+          submission_reference: string
+          submitted_email: string | null
+          submitted_name: string
+          timeline_code: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
