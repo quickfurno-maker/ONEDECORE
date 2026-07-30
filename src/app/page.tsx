@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getLeadFormMode } from "@/features/lead-intake/public/lead-form-mode";
 import { publicSiteFontVariables } from "@/features/public-site/fonts";
 import { ProductionHomePage } from "@/features/public-site/home-r4/ProductionHomePage";
 
@@ -10,9 +11,10 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
+  const leadFormMode = getLeadFormMode();
   return (
     <div className={publicSiteFontVariables}>
-      <ProductionHomePage />
+      <ProductionHomePage leadFormMode={leadFormMode} />
     </div>
   );
 }

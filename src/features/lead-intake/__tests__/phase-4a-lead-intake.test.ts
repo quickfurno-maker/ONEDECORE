@@ -957,8 +957,12 @@ describe("Phase 4A homepage and server-only guards", () => {
     }
     const homePlan = readFileSync(join(home, "HomePlan.tsx"), "utf8");
     assert.doesNotMatch(homePlan, /\/api\/public\/lead-intake/);
-    assert.match(homePlan, /getLeadFormMode/);
+    assert.match(homePlan, /leadFormMode/);
     assert.match(homePlan, /copy-only/);
+
+    const page = readFileSync(join(root, "src/app/page.tsx"), "utf8");
+    assert.match(page, /getLeadFormMode/);
+    assert.match(page, /leadFormMode/);
 
     const capture = readFileSync(
       join(root, "src/features/lead-intake/public/HomeLeadCapture.tsx"),

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { HomeLeadCapture } from "../../lead-intake/public/HomeLeadCapture.tsx";
-import { getLeadFormMode } from "../../lead-intake/public/lead-form-mode.ts";
+import type { LeadFormMode } from "../../lead-intake/public/lead-form-mode.ts";
 import { PM_CLOSE, PM_PLANNER, PM_SECTION_IDS } from "./content";
 import { formatInteriorBrief } from "./plan-state";
 import { usePlan } from "./PlanContext";
@@ -18,11 +18,14 @@ function labelOf(
 
 /**
  * Final plan section — summary + clipboard brief export.
- * No production lead backend exists yet; do not collect contact for fake submit.
+ * Lead form mode is resolved on the server and passed in to avoid SSR/client drift.
  */
-export function HomePlan() {
+export function HomePlan({
+  leadFormMode,
+}: {
+  readonly leadFormMode: LeadFormMode;
+}) {
   const plan = usePlan();
-  const leadFormMode = getLeadFormMode();
   const [copyState, setCopyState] = useState<"idle" | "ok" | "err">("idle");
 
   const budgetLabel = labelOf(
