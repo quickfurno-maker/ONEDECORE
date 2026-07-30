@@ -1007,8 +1007,11 @@ describe("Phase 4A homepage and server-only guards", () => {
 
   test("slash route remains static in app page", () => {
     const page = readFileSync(join(root, "src/app/page.tsx"), "utf8");
-    assert.doesNotMatch(page, /lead-intake/);
+    assert.doesNotMatch(page, /api\/public\/lead-intake/);
+    assert.doesNotMatch(page, /submitLeadIntake/);
     assert.doesNotMatch(page, /export const dynamic\s*=\s*["']force-dynamic["']/);
+    assert.match(page, /getLeadFormMode/);
+    assert.match(page, /leadFormMode=\{leadFormMode\}/);
   });
 
   test("suppression safety note is documented and unenforced in Phase 4A RPC", () => {
