@@ -414,16 +414,18 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     fields.push("consent.whatsappCopyVersion");
   }
 
-  const emailChannelRequested =
+  const emailChannelRaw =
     isPlainObject(input.consent.serviceChannels) &&
-    input.consent.serviceChannels.email === true;
-  const emailChannelFalse =
-    isPlainObject(input.consent.serviceChannels) &&
-    input.consent.serviceChannels.email === false;
+    "email" in input.consent.serviceChannels
+      ? input.consent.serviceChannels.email
+      : undefined;
 
-  if (emailChannelFalse) {
+  // email?: true — omit or true only; false and other values are invalid.
+  if (emailChannelRaw !== undefined && emailChannelRaw !== true) {
     fields.push("consent.serviceChannels.email");
   }
+
+  const emailChannelRequested = emailChannelRaw === true;
 
   // Email service communication requires both valid email and explicit permission.
   if (emailChannelRequested && !email) {

@@ -39,8 +39,9 @@ function safeUrlError(code: string): Error {
 }
 
 /**
- * True only for loopback Supabase URLs (local-test).
- * Allows configured local port; rejects managed hosts and public IPs.
+ * True only for strict loopback Supabase URLs (local-test).
+ * Requires http:, loopback host, explicit valid port, root path only.
+ * Rejects remote/managed hosts, credentials, query, fragment, and ambiguous URLs.
  */
 export function isLoopbackSupabaseUrl(urlStr: string): boolean {
   let parsed: URL;
@@ -49,9 +50,17 @@ export function isLoopbackSupabaseUrl(urlStr: string): boolean {
   } catch {
     return false;
   }
+  if (parsed.protocol !== "http:") return false;
   if (parsed.username || parsed.password) return false;
+  if (parsed.search) return false;
   if (parsed.hash) return false;
-  if (parsed.hostname.includes("supabase.co")) return false;
+  const path = parsed.pathname === "/" ? "/" : parsed.pathname;
+  if (path !== "/" && path !== "") return false;
+  if (!parsed.port) return false;
+  const portNum = Number(parsed.port);
+  if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535) {
+    return false;
+  }
   const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   return host === "127.0.0.1" || host === "localhost" || host === "::1";
 }

@@ -30,7 +30,8 @@ describe("R5.4 static homepage", () => {
     assert.doesNotMatch(page, /force-dynamic/);
     assert.doesNotMatch(page, /async function/);
     assert.match(page, /export default function HomePage/);
-    assert.match(page, /<ProductionHomePage \/>/);
+    assert.match(page, /getLeadFormMode/);
+    assert.match(page, /<ProductionHomePage leadFormMode=\{leadFormMode\} \/>/);
   });
 
   test("ProductionHomePage has no featured prop or HomeProjects", () => {

@@ -41,7 +41,7 @@ import {
   LEAD_INTAKE_MAX_BODY_BYTES,
   readBoundedRequestBody,
 } from "../server/bounded-request-body.ts";
-import { isSafeSameSitePath } from "../server/same-site-path.ts";
+import { isSafeSameSitePath } from "../same-site-path.ts";
 import {
   CONSENT_VERSIONS,
   getConsentVersionByPurpose,
@@ -201,6 +201,10 @@ describe("Phase 4A.1 local-test URL isolation", () => {
     assert.equal(isLoopbackSupabaseUrl("http://127.0.0.1:54321"), true);
     assert.equal(isLoopbackSupabaseUrl("http://localhost:54321"), true);
     assert.equal(isLoopbackSupabaseUrl("http://[::1]:54321"), true);
+    assert.equal(isLoopbackSupabaseUrl("http://127.0.0.1"), false);
+    assert.equal(isLoopbackSupabaseUrl("https://127.0.0.1:54321"), false);
+    assert.equal(isLoopbackSupabaseUrl("http://127.0.0.1:54321/path"), false);
+    assert.equal(isLoopbackSupabaseUrl("http://127.0.0.1:54321?x=1"), false);
     assert.equal(isLoopbackSupabaseUrl(MANAGED), false);
     assert.equal(isLoopbackSupabaseUrl("https://evil.supabase.co"), false);
     assert.equal(isLoopbackSupabaseUrl("http://192.168.1.1:54321"), false);
@@ -564,6 +568,31 @@ describe("Phase 4A.1 same-site path hardening", () => {
       );
     }
   });
+
+  test("rejects encoded slash, backslash, controls and malformed percent encoding", () => {
+    for (const landingPath of [
+      "/%2f",
+      "/%2Fevil",
+      "/ok%5c",
+      "/ok%5C",
+      "/%00",
+      "/%0a",
+      "/%7f",
+      "/%zz",
+      "/%2",
+      "/100%",
+      "/%2fevil",
+    ]) {
+      assert.equal(isSafeSameSitePath(landingPath), false, landingPath);
+      assert.equal(
+        validateLeadIntakePayload(
+          basePayload({ attribution: { landingPath } })
+        ).ok,
+        false,
+        landingPath
+      );
+    }
+  });
 });
 
 describe("Phase 4A.1 bounded request body", () => {
@@ -914,19 +943,40 @@ describe("Phase 4A route runtime", () => {
 });
 
 describe("Phase 4A homepage and server-only guards", () => {
-  test("homepage has no intake fetch and copy flow unchanged", () => {
+  test("homepage copy flow unchanged; intake fetch only in gated capture module", () => {
     const home = join(root, "src/features/public-site/home-r4");
-    const files = [
+    const copyOnlySources = [
       "HomePlanner.tsx",
-      "HomePlan.tsx",
       "PlanContext.tsx",
       "content.ts",
     ];
-    for (const file of files) {
+    for (const file of copyOnlySources) {
       const src = readFileSync(join(home, file), "utf8");
       assert.doesNotMatch(src, /\/api\/public\/lead-intake/);
       assert.doesNotMatch(src, /lead-intake/);
     }
+    const homePlan = readFileSync(join(home, "HomePlan.tsx"), "utf8");
+    assert.doesNotMatch(homePlan, /\/api\/public\/lead-intake/);
+    assert.match(homePlan, /leadFormMode/);
+    assert.match(homePlan, /copy-only/);
+
+    const page = readFileSync(join(root, "src/app/page.tsx"), "utf8");
+    assert.match(page, /getLeadFormMode/);
+    assert.match(page, /leadFormMode/);
+
+    const capture = readFileSync(
+      join(root, "src/features/lead-intake/public/HomeLeadCapture.tsx"),
+      "utf8"
+    );
+    assert.match(capture, /submitLeadIntake/);
+    assert.match(capture, /copy-only/);
+
+    const client = readFileSync(
+      join(root, "src/features/lead-intake/public/lead-intake-client.ts"),
+      "utf8"
+    );
+    assert.match(client, /\/api\/public\/lead-intake/);
+
     const content = readFileSync(join(home, "content.ts"), "utf8");
     assert.match(content, /Nothing is submitted/);
     assert.match(content, /Copy My Interior Brief/);
@@ -947,6 +997,7 @@ describe("Phase 4A homepage and server-only guards", () => {
     }
     const example = readFileSync(join(root, ".env.example"), "utf8");
     assert.match(example, /ONEDECORE_LEAD_INTAKE_MODE=/);
+    assert.match(example, /NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE=/);
     assert.match(example, /SUPABASE_SERVICE_ROLE_KEY=/);
     assert.match(example, /ONEDECORE_LEAD_HASH_SECRET=/);
     assert.doesNotMatch(example, /SUPABASE_SECRET_KEY=/);
@@ -956,8 +1007,11 @@ describe("Phase 4A homepage and server-only guards", () => {
 
   test("slash route remains static in app page", () => {
     const page = readFileSync(join(root, "src/app/page.tsx"), "utf8");
-    assert.doesNotMatch(page, /lead-intake/);
+    assert.doesNotMatch(page, /api\/public\/lead-intake/);
+    assert.doesNotMatch(page, /submitLeadIntake/);
     assert.doesNotMatch(page, /export const dynamic\s*=\s*["']force-dynamic["']/);
+    assert.match(page, /getLeadFormMode/);
+    assert.match(page, /leadFormMode=\{leadFormMode\}/);
   });
 
   test("suppression safety note is documented and unenforced in Phase 4A RPC", () => {

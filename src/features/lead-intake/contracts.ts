@@ -3,8 +3,7 @@
  */
 
 import {
-  CONSENT_VERSIONS,
-  getConsentVersionByPurpose,
+  getCurrentConsentVersionByPurpose,
   type ConsentPurposeCode,
 } from "../legal/consent-registry.ts";
 import { PRIVACY_NOTICE_VERSION } from "../legal/privacy-policy-content.ts";
@@ -39,22 +38,17 @@ export type {
 export const LEAD_INTAKE_PLANNER_VERSION = "home-r4-v1" as const;
 export const LEAD_INTAKE_NOTICE_VERSION = PRIVACY_NOTICE_VERSION;
 
-function requireConsentVersion(purpose: ConsentPurposeCode): string {
-  const version = getConsentVersionByPurpose(purpose, CONSENT_VERSIONS);
-  if (!version?.version) {
-    throw new Error(
-      `[ONEDECORE Lead] Missing consent registry version for ${purpose}.`
-    );
-  }
-  return version.version;
+function requireCurrentConsentVersion(purpose: ConsentPurposeCode): string {
+  return getCurrentConsentVersionByPurpose(purpose).version;
 }
 
 export const SERVICE_ENQUIRY_COPY_VERSION =
-  requireConsentVersion("SERVICE_ENQUIRY");
-export const SERVICE_COMMUNICATION_COPY_VERSION = requireConsentVersion(
+  requireCurrentConsentVersion("SERVICE_ENQUIRY");
+export const SERVICE_COMMUNICATION_COPY_VERSION = requireCurrentConsentVersion(
   "SERVICE_COMMUNICATION"
 );
-export const WHATSAPP_COPY_VERSION = requireConsentVersion("WHATSAPP_SERVICE");
+export const WHATSAPP_COPY_VERSION =
+  requireCurrentConsentVersion("WHATSAPP_SERVICE");
 
 export interface LeadIntakeRequestBody {
   readonly idempotencyKey: string;
@@ -78,7 +72,8 @@ export interface LeadIntakeRequestBody {
     readonly serviceEnquiry: true;
     readonly serviceChannels: {
       readonly phone: true;
-      readonly email?: boolean;
+      /** Present only when email service communication is granted. */
+      readonly email?: true;
     };
     readonly whatsappService?: boolean;
     readonly serviceEnquiryCopyVersion: string;
