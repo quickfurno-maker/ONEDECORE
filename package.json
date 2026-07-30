@@ -19,7 +19,7 @@
     "db:lint": "supabase db lint --local --level warning",
     "db:test": "supabase test db",
     "check:db": "npm run db:lint && npm run db:test",
-    "test:app": "node --experimental-strip-types --test src/features/portfolio/server/__tests__/portfolio-media.test.ts src/features/portfolio/server/__tests__/portfolio-rpc-rest.test.ts src/features/portfolio/public/__tests__/public-portfolio.test.ts",
+    "test:app": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/portfolio/server/__tests__/portfolio-media.test.ts src/features/portfolio/server/__tests__/portfolio-rpc-rest.test.ts src/features/portfolio/public/__tests__/public-portfolio.test.ts src/features/lead-intake/__tests__/phase-4a-lead-intake.test.ts",
     "test:image": "node --experimental-strip-types --test src/features/portfolio/server/__tests__/portfolio-image-pipeline.test.ts"
   },
   "dependencies": {

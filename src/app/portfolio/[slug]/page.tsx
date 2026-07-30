@@ -140,94 +140,75 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   };
 
   return (
-    <main id="project-detail-main" className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-12">
-      {/* JSON-LD Script */}
+    <main id="project-detail-main" className="od-portfolio-main od-portfolio-main--detail">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdGraph) }}
       />
 
-      {/* Breadcrumb Navigation */}
-      <nav id="detail-breadcrumb" aria-label="Breadcrumb" className="text-xs text-neutral-500 dark:text-neutral-400">
-        <ol className="flex items-center gap-2">
+      <nav id="detail-breadcrumb" aria-label="Breadcrumb" className="od-breadcrumb">
+        <ol>
           <li>
-            <Link href="/" className="hover:text-neutral-900 dark:hover:text-white">
-              Home
-            </Link>
+            <Link href="/">Home</Link>
           </li>
-          <li>/</li>
+          <li aria-hidden="true">/</li>
           <li>
-            <Link href="/portfolio" className="hover:text-neutral-900 dark:hover:text-white">
-              Portfolio
-            </Link>
+            <Link href="/portfolio">Portfolio</Link>
           </li>
-          <li>/</li>
-          <li className="font-semibold text-neutral-900 dark:text-white truncate max-w-xs">
+          <li aria-hidden="true">/</li>
+          <li aria-current="page" className="truncate max-w-xs">
             {project.title}
           </li>
         </ol>
       </nav>
 
-      {/* Header */}
-      <header className="space-y-4">
-        <div className="flex flex-wrap gap-2">
+      <header className="od-detail-header od-detail-section">
+        <div className="od-card__services">
           {project.services.map((svc) => (
-            <span
-              key={svc.serviceCode}
-              className="rounded-md bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200"
-            >
+            <span key={svc.serviceCode} className="od-chip">
               {svc.serviceLabel}
             </span>
           ))}
         </div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white sm:text-5xl">
-          {project.title}
-        </h1>
-        <p className="text-xl text-neutral-600 dark:text-neutral-300 leading-relaxed">
-          {project.summary}
-        </p>
+        <h1 className="od-detail-title">{project.title}</h1>
+        <p className="od-detail-summary">{project.summary}</p>
 
-        {/* Project Metadata Specs */}
-        <div className="flex flex-wrap items-center gap-6 pt-4 text-sm text-neutral-600 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-800">
-          {project.locationLabel && (
+        <div className="od-detail-meta">
+          {project.locationLabel ? (
             <div>
-              <span className="font-medium text-neutral-900 dark:text-white">Location:</span>{" "}
-              {project.locationLabel}
+              <strong>Location:</strong> {project.locationLabel}
             </div>
-          )}
-          {project.propertyType && (
+          ) : null}
+          {project.propertyType ? (
             <div>
-              <span className="font-medium text-neutral-900 dark:text-white">Property Type:</span>{" "}
-              {project.propertyType}
+              <strong>Property Type:</strong> {project.propertyType}
             </div>
-          )}
-          {project.completionYear && (
+          ) : null}
+          {project.completionYear ? (
             <div>
-              <span className="font-medium text-neutral-900 dark:text-white">Completed:</span>{" "}
-              {project.completionYear}
+              <strong>Completed:</strong> {project.completionYear}
             </div>
-          )}
+          ) : null}
         </div>
       </header>
 
-      {/* Main Description */}
-      {project.description && (
-        <section id="project-description-section" className="prose prose-neutral dark:prose-invert max-w-none">
-          <h2 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white mb-4">
-            Project Overview
-          </h2>
-          <div className="text-neutral-700 dark:text-neutral-300 whitespace-pre-line leading-relaxed">
-            {project.description}
-          </div>
+      {project.description ? (
+        <section
+          id="project-description-section"
+          className="od-prose od-detail-section"
+        >
+          <h2>Project Overview</h2>
+          <div className="whitespace-pre-line">{project.description}</div>
         </section>
-      )}
+      ) : null}
 
-      {/* Gallery */}
-      <PortfolioGallery
-        cover={project.cover}
-        gallery={project.gallery}
-        projectTitle={project.title}
-      />
+      <div className="od-detail-gallery-wrap">
+        <PortfolioGallery
+          cover={project.cover}
+          gallery={project.gallery}
+          projectTitle={project.title}
+        />
+      </div>
     </main>
   );
 }
