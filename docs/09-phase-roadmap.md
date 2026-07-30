@@ -54,9 +54,9 @@ Phase 5D ──► Bulk Import Approval & Source-Based Assignment
     │         • Super Admin direct import + source rules + Unassigned fallback
     │         • No round-robin
     ▼
-Phase 5E ──► Sales Targets, Performance & CRM Reporting
-    │         • Executive personal targets; manager team targets
-    │         • Append-only target history; authoritative metrics
+Phase 5E ──► Sales Target Configuration & CRM Reporting Foundation
+    │         • Target assignments, history, lock/reopen, role visibility
+    │         • Non-commercial CRM reporting; achievement inactive until 7B
     ▼
 Phase 5F ──► Controlled Public Lead Activation Gate
     │         • Owner/legal/proxy/secrets/monitoring/rollback evidence required
@@ -71,8 +71,10 @@ Phase 6C ──► Groq Human-Controlled Copilot
 Phase 7A ──► Commercial Quotation Data Foundation
     ▼
 Phase 7B ──► Quotation Workflow, Premium PDF & Acceptance
+    │         • Activates authoritative accepted-quotation target achievement
     ▼
 Phase 8A ──► Closed-Won Project Conversion & PM Handover
+    │         • Optional project-value reconciliation (no double counting)
     ▼
 Phase 8B ──► Designer Assignment & Design Collaboration
     ▼
@@ -110,9 +112,9 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Dependencies:** 5C.
 
 ### Phase 5E
-- **Objective:** Monthly targets and performance reporting from authoritative quotation data.
-- **Exit gate:** Target history append-only; manager team-only targets enforced.
-- **Dependencies:** 5C (quotation metrics may stub until Phase 7).
+- **Objective:** Monthly target configuration, append-only target history, lock/reopen controls, role visibility, and non-commercial CRM performance reporting.
+- **Exit gate:** Target configuration/history/permissions and non-commercial CRM reporting proven; **commercial achievement explicitly inactive** (displayed unavailable/not activated).
+- **Dependencies:** 5C.
 
 ### Phase 5F
 - **Objective:** Controlled public lead activation only after legal/owner evidence.
@@ -121,6 +123,16 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 
 ### Phases 6–9
 See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020–0021.
+
+### Phase 7B
+- **Objective:** Quotation workflow, premium PDF, client acceptance.
+- **Exit gate:** Authoritative accepted-quotation revenue and Closed-Won achievement calculations proven and tested.
+- **Dependencies:** 7A.
+
+### Phase 8A
+- **Objective:** Closed-Won project conversion and PM handover.
+- **Exit gate:** Project-value reconciliation (when used) proven without double counting against quotation acceptance.
+- **Dependencies:** 7B.
 
 ### Phase 10
 - **Objective:** Security hardening, full E2E, performance budgets, Hostinger VPS deployment.
@@ -136,6 +148,8 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 4. No Groq copilot (6C) before message persistence (6A).
 5. No campaigns (9A/9B) before consent/suppression foundation.
 6. ERP modules remain out of scope for all phases (ADR-0005).
+7. Authoritative target achievement requires Phase 7B (quotation acceptance); Phase 5E configures targets only.
+8. Project-value reconciliation (Phase 8A) must not double-count quotation acceptance.
 
 ---
 

@@ -85,21 +85,34 @@ Historical seed roles (`management`, `sales`, `project_operations`) do not match
 - Automated source-based assignment: Super Admin configures rules (primary: source; optional service/locality/budget); target must be active and eligible; invalid/missing rule → Unassigned queue; never random executive; manual override remains audited.
 - **Round-robin excluded.**
 
-### Lead pipeline (locked)
+### Lead pipeline (locked — state graph, not a single line)
 
-`New` → `Assigned` → `Contacted` → `Qualified` → `Consultation Scheduled` → `Proposal Sent` → `Negotiation` → `Closed-Won` → `Closed-Lost` → `On Hold`.
+**Primary active progression:**
 
-- Closed-Lost requires reason.
-- Closed-Won requires an accepted authoritative quotation.
-- Every transition and reopening audited.
-- No project from Closed-Lost or incomplete sales states.
+```
+New → Assigned → Contacted → Qualified → Consultation Scheduled → Proposal Sent → Negotiation
+```
+
+**Branch transitions (from permitted active stages unless noted):**
+
+| State | Type | Rules |
+| :--- | :--- | :--- |
+| **Closed-Won** | Terminal success | Requires an **Accepted authoritative quotation**. Project creation occurs **only** from Closed-Won. Must not transition to Closed-Lost or On Hold as the normal next state. |
+| **Closed-Lost** | Terminal loss | Reachable from any permitted active stage; **reason required**. No project creation. |
+| **On Hold** | Non-terminal pause | Reachable from permitted active stages; resumes only through an **audited transition** to a permitted active stage. |
+
+**Reopening:** Any terminal state (Closed-Won, Closed-Lost) requires an explicit audited transition with reason and must follow the future transition policy.
+
+Every transition and reopening is audited. No project from Closed-Lost or incomplete sales states.
 
 ### Monthly targets
 
 - Only Super Admin sets, revises, locks, or reopens.
-- Sales Executive: personal monthly revenue + Closed-Won count.
+- Sales Executive: personal monthly revenue target + Closed-Won count target (configuration only in Phase 5E).
 - Sales Manager: team monthly revenue + team Closed-Won count only (no separate personal target in V1).
-- Achievement from accepted quotation / confirmed project value, not self-report.
+- **Phase 5E:** Target configuration, history, lock/reopen, and non-commercial CRM reporting only. Revenue and Closed-Won **achievement** display as unavailable/not activated until Phase 7B (accepted-quotation source). No manual self-reported achievement; no placeholder numbers presented as real performance.
+- **Phase 7B:** Activates authoritative quotation-accepted revenue and Closed-Won achievement calculations.
+- **Phase 8A (optional):** Project-value reconciliation when business chooses project value as authoritative measure; no double counting with quotation acceptance.
 - Target changes append-only with old/new value, actor, time, reason.
 
 ### Premium role-aware CRM information architecture (document only — not built in 5A)

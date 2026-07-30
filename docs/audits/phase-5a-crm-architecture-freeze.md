@@ -69,8 +69,11 @@ Executive: rejected. Manager: batch → Super Admin approval. Super Admin: direc
 ### Assignment
 Manual by Manager/Admin; source-based rules by Super Admin; Unassigned fallback; **no round-robin**.
 
-### Pipeline
-`New` → `Assigned` → `Contacted` → `Qualified` → `Consultation Scheduled` → `Proposal Sent` → `Negotiation` → `Closed-Won` / `Closed-Lost` / `On Hold`. Closed-Won requires Accepted quotation.
+### Pipeline (state graph)
+
+Primary active progression: `New` → `Assigned` → `Contacted` → `Qualified` → `Consultation Scheduled` → `Proposal Sent` → `Negotiation`.
+
+Branches (not sequential): **Closed-Won** (terminal; Accepted quotation required), **Closed-Lost** (terminal; reason), **On Hold** (non-terminal pause). Project creation only from Closed-Won. See ADR-0019.
 
 ---
 
@@ -126,7 +129,7 @@ Activation requires separate explicit authority (Phase 5F).
 | **5B** | CRM Identity, Authorization & Core Data Foundation |
 | **5C** | Lead Workspace & Premium Role-Aware CRM |
 | **5D** | Bulk Import Approval & Source-Based Assignment |
-| **5E** | Sales Targets, Performance & CRM Reporting |
+| **5E** | Sales Target Configuration & CRM Reporting Foundation (achievement inactive until 7B) |
 | **5F** | Controlled Public Lead Activation Gate |
 | **6A** | Meta WhatsApp Data & Webhook Foundation |
 | **6B** | Premium Shared Inbox & Controlled Outbound Messaging |
@@ -153,6 +156,8 @@ Activation requires separate explicit authority (Phase 5F).
 | Autonomous AI exclusion = all AI excluded | Human-controlled Groq copilot planned (Phase 6C) |
 | Phase 4B2 exclusions permanent for all future work | 4B2 scoped public activation only; CRM/ops proceed in Phase 5+ |
 | Won tied to advance payment | Closed-Won requires Accepted quotation |
+| Serial pipeline/quotation/design diagrams | Corrected to state-graph semantics (independent review) |
+| Phase 5E authoritative achievement before 7B | Achievement inactive in 5E; activated in 7B |
 | Intake/WhatsApp/Groq/campaigns live | Explicitly not live; defaults disabled |
 
 Historical phase audits preserved unchanged.
@@ -175,7 +180,23 @@ Updated: README, `00`–`10` governance docs (except `03`/`04` portfolio-specifi
 
 ---
 
-## 14. Next Phase Entry Gate (5B)
+## 15. Independent Review Correction (July 30, 2026)
+
+Independent remote review found the Phase 5A branch documentation-only and correctly one commit ahead of main, but identified misleading **serial arrow diagrams** for lead, quotation, design, and project workflows, and premature Phase 5E authoritative achievement claims.
+
+**Corrections applied (same branch, new commit):**
+- Lead pipeline: state graph with terminal (Closed-Won, Closed-Lost) and non-terminal (On Hold) branches — not a single line.
+- Quotation lifecycle: main path + alternative outcomes (Accepted/Rejected/Expired) + revision loop.
+- Design and project execution: hold/cancel as branches from active stages, not post-completion serial tails.
+- Phase 5E: target configuration and non-commercial reporting only; authoritative achievement deferred to Phase 7B (quotation acceptance) and optional Phase 8A (project value, no double counting).
+
+**Unchanged:** Locked business decisions, five-role model, assignment rules, public intake disabled defaults.
+
+**No code, migrations, database changes, deployment, or public activation in this correction.**
+
+---
+
+## 16. Next Phase Entry Gate (5B)
 
 Phase 5B may begin when:
 

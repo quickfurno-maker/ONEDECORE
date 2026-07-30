@@ -42,21 +42,21 @@ ONEDECORE delivers a premium architectural public presence and a disciplined int
 - Manual leads (executive self-assign one at a time; manager flexible; admin override).
 - Bulk import with manager → Super Admin approval chain.
 - Source-based assignment rules (no round-robin).
-- Pipeline: `New` → `Assigned` → `Contacted` → `Qualified` → `Consultation Scheduled` → `Proposal Sent` → `Negotiation` → `Closed-Won` / `Closed-Lost` / `On Hold`.
+- Pipeline state graph: primary active progression `New` → … → `Negotiation`; branches to **Closed-Won** (terminal; requires Accepted quotation), **Closed-Lost** (terminal; reason), **On Hold** (non-terminal pause). Not a single serial line — see ADR-0019.
 - Role-aware premium CRM navigation (documented in Phase 5A audit).
-- Monthly targets: executive personal; manager team-only in V1.
+- Monthly target **configuration** (Phase 5E); authoritative achievement activation deferred to Phase 7B/8A.
 
 ### 3.2 Commercial Quotation Engine (Phase 7)
 - Lead/client/property linkage; room sections and line items.
 - Materials, measurements, tax, discount, validity, inclusions/exclusions, payment schedule.
 - Immutable versions; premium PDF; auditable acceptance.
-- Lifecycle: Draft through Accepted/Rejected/Expired.
+- Lifecycle state graph: main path Draft → … → Sent; branches Accepted / Rejected / Expired; revision loop — see ADR-0020.
 - Closed-Won requires Accepted quotation.
 
 ### 3.3 Project Execution & Design (Phase 8)
 - Closed-Won → project creation → PM assignment (Manager/Admin) → PM acceptance → execution.
 - One primary PM; one Lead Designer + Supporting Designers (manual assignment).
-- Design workflow and project execution stages per ADR-0020.
+- Design and project execution as **state graphs** with hold/cancel/revision branches — see ADR-0020 (not serial post-completion tails).
 - PM coordinates execution; designers handle design deliverables.
 
 ### 3.4 Meta WhatsApp Integration (Phase 6)

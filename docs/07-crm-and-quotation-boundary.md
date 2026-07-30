@@ -8,31 +8,40 @@
 
 ## 1. CRM Pipeline Workflow (Locked — Phase 5C+)
 
-```
-[New] ──► [Assigned] ──► [Contacted] ──► [Qualified] ──► [Consultation Scheduled]
-                                                              │
-                    [Closed-Won] ◄── [Negotiation] ◄── [Proposal Sent] ◄┘
-                         │
-                         ▼
-              (Requires Accepted Quotation)
-                         │
-                         ▼
-              Project: Awaiting PM Assignment
+**Primary active progression:**
 
-[Closed-Lost] ◄── (from any active stage; reason required)
-[On Hold]     ◄── (temporary pause; audited)
 ```
+New → Assigned → Contacted → Qualified → Consultation Scheduled → Proposal Sent → Negotiation
+```
+
+**State graph (branches — not a single serial line):**
+
+```
+                              ┌──► Closed-Won (terminal; requires Accepted quotation)
+                              │         └──► Project creation (Phase 8A only)
+Negotiation ──┬──► On Hold ───┤              (Awaiting PM Assignment)
+              │    (pause)    │
+              │    resume     ├──► Closed-Lost (terminal; reason required)
+              │               │
+(any active) ─┴───────────────┘
+```
+
+| State | Type | Rules |
+| :--- | :--- | :--- |
+| **Closed-Won** | Terminal success | Requires Accepted authoritative quotation. Project creation **only** from Closed-Won. Must not normally transition to Closed-Lost or On Hold. |
+| **Closed-Lost** | Terminal loss | From any permitted active stage; reason required. No project. |
+| **On Hold** | Non-terminal pause | From permitted active stages; resumes via audited transition to permitted active stage. |
+
+Reopening a terminal state requires explicit audited transition with reason.
 
 ### 1.1 Stage Rules
 - **New:** Intake, manual entry, import, or WhatsApp-origin lead created.
 - **Assigned:** Owner assigned (manual or source rule); Sales Executive sees only assigned leads.
-- **Contacted / Qualified / Consultation Scheduled / Proposal Sent / Negotiation:** Standard sales progression; all transitions audited.
-- **Closed-Won:** Requires an **Accepted authoritative quotation** (not advance payment alone).
-- **Closed-Lost:** Mandatory reason; no project creation.
-- **On Hold:** Audited pause; reopening audited.
-- **Reopening** from terminal states requires audited transition with reason.
+- **Contacted / Qualified / Consultation Scheduled / Proposal Sent / Negotiation:** Standard active progression; all transitions audited.
+- See state graph above for Closed-Won, Closed-Lost, and On Hold branch semantics.
 
 ### 1.2 Role Boundaries (Summary)
+
 | Action | Super Admin | Sales Manager | Sales Executive | PM | Designer |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | View all leads | ✓ | ✓ | — | — | — |
@@ -80,8 +89,22 @@ Website; Website Planner; Google Organic; Google Ads; Google Business Profile; I
 - Warranty references without unverified claims.
 - Immutable versions; premium PDF; auditable acceptance acknowledgement.
 
-### 3.2 Lifecycle
-`Draft` → `Submitted for Approval` → `Approved` → `Sent` → `Viewed` → `Revision Requested` → `Revised` → `Accepted` → `Rejected` → `Expired`.
+### 3.2 Lifecycle (state graph)
+
+**Main path:** `Draft` → `Submitted for Approval` → `Approved` → `Sent`
+
+**Observed:** `Viewed` may occur after Sent without forcing the next outcome.
+
+**Alternative outcomes:**
+
+| Outcome | Type | Rules |
+| :--- | :--- | :--- |
+| **Accepted** | Terminal (version) | Authoritative for Closed-Won; cannot become Rejected or Expired |
+| **Rejected** | Terminal (version) | Rejection of that version |
+| **Expired** | Terminal (version) | Validity lapsed; must not override an already accepted version |
+| **Revision Requested → Revised** | Loop | New immutable version → Submitted for Approval again |
+
+See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md) for full contract.
 
 ### 3.3 Approval Authority
 - Sales Executive: drafts for own leads only.
@@ -114,13 +137,23 @@ See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md).
 
 ## 5. Monthly Sales Targets (Phase 5E — Planned)
 
-| Role | Target scope (V1) |
+**Phase 5E — Sales Target Configuration & CRM Reporting Foundation**
+
+| Role | Target configuration (V1) |
 | :--- | :--- |
-| Sales Executive | Personal monthly revenue + Closed-Won count |
+| Sales Executive | Personal monthly revenue target + Closed-Won count target |
 | Sales Manager | **Team** monthly revenue + team Closed-Won count only |
 | Super Admin | Sets, revises, locks, reopens all targets |
 
-Achievement from accepted quotation / confirmed project value. Target changes append-only.
+**Scope in Phase 5E:**
+- Target assignments, append-only target history, lock/reopen controls, role visibility.
+- Non-commercial CRM performance reporting (activity, pipeline movement, follow-ups).
+- Revenue and Closed-Won **achievement** display as **unavailable / not activated** until Phase 7B.
+- No manual self-reported revenue achievement. No placeholder numbers presented as real performance.
+
+**Phase 7B:** Activates authoritative quotation-accepted revenue and Closed-Won achievement calculations.
+
+**Phase 8A (optional):** Project-value reconciliation when business chooses project value as authoritative measure; no double counting with quotation acceptance.
 
 ---
 

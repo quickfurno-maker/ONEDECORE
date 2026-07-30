@@ -33,9 +33,70 @@ Phase 4B2 delivered a disabled public intake path only. No CRM workspace, quotat
 - Advance payment alone is not sufficient to mark Closed-Won or create an execution project.
 - Sales Executive may draft quotations for own leads only; Sales Manager approves within configured owner policy; Super Admin has audited override/catalogue/discount/void authority.
 
-### Quotation lifecycle (future — Phase 7)
+### Quotation lifecycle (future — Phase 7 — state graph)
 
-`Draft` → `Submitted for Approval` → `Approved` → `Sent` → `Viewed` → `Revision Requested` → `Revised` → `Accepted` → `Rejected` → `Expired`.
+**Main path:**
+
+```
+Draft → Submitted for Approval → Approved → Sent
+```
+
+**Observed/interaction state:**
+
+- **Viewed** may occur after Sent without forcing the next outcome.
+
+**Alternative outcomes** (after an approved/sent quotation):
+
+| Outcome | Type | Rules |
+| :--- | :--- | :--- |
+| **Accepted** | Terminal (version) | Authoritative for Closed-Won. Cannot then become Rejected or Expired. Only one accepted authoritative version drives a given Closed-Won conversion unless a later formal commercial-change workflow is separately designed. |
+| **Rejected** | Terminal (version) | Client or business rejection of that version. |
+| **Expired** | Terminal (version) | Validity lapsed without acceptance. Must not silently override an already accepted version. |
+| **Revision Requested → Revised Draft/New Version** | Loop | Returns to Draft (or new immutable version) → Submitted for Approval again. Old versions remain immutable. |
+
+### Design workflow (future — Phase 8B — state graph)
+
+**Main path:**
+
+```
+Brief Received → Measurement Pending → Measurement Completed → Concept Design
+  → Internal Review → Client Review → Client Approved → Production Drawings
+  → Production Ready → Design Completed
+```
+
+**Branches:**
+
+| State | Type | Rules |
+| :--- | :--- | :--- |
+| **Revision Required** | Loop | May branch from Internal Review or Client Review; loops back to the appropriate design stage. |
+| **Design On Hold** | Non-terminal pause | From permitted active stages; resumes through audited transition. Not a post-completion step. |
+| **Design Completed** | Terminal | Approved design package complete. |
+
+- Files/deliverables versioned; never silently overwritten.
+- Production Ready requires Lead Designer approval and evidence.
+- Client approvals require evidence.
+- PM remains primary execution coordinator.
+
+### Project execution stages (future — Phase 8C — state graph)
+
+**Main path:**
+
+```
+Project Created → Site Measurement → Design Development → Design Approval
+  → Material Finalisation → Production → Ready for Dispatch → Delivery
+  → Installation → Snag Resolution → Handover → Completed
+```
+
+**Branches:**
+
+| State | Type | Rules |
+| :--- | :--- | :--- |
+| **On Hold** | Non-terminal pause | From permitted active (non-completed) stages; reason required; resumes through audited transition. Completed must not normally transition to On Hold. |
+| **Cancelled** | Terminal alternative | From permitted non-completed stages; authority and reason required. |
+
+- PM updates permitted stages on assigned projects only.
+- Important transitions require evidence/reason per Phase 8 contract.
+- Sales Executive sees high-level status for projects from own won leads but cannot control execution.
 
 ### Locked Closed-Won → project flow
 
@@ -62,23 +123,6 @@ Phase 4B2 delivered a disabled public intake path only. No CRM workspace, quotat
 - Designers cannot self-assign.
 - All assignment changes audited.
 
-### Design workflow (future — Phase 8B)
-
-`Brief Received` → `Measurement Pending` → `Measurement Completed` → `Concept Design` → `Internal Review` → `Client Review` → `Revision Required` → `Client Approved` → `Production Drawings` → `Production Ready` → `Design On Hold` → `Design Completed`.
-
-- Files/deliverables versioned; never silently overwritten.
-- Production Ready requires Lead Designer approval.
-- Client approvals require evidence.
-- PM remains primary execution coordinator.
-
-### Project execution stages (future — Phase 8C)
-
-`Project Created` → `Site Measurement` → `Design Development` → `Design Approval` → `Material Finalisation` → `Production` → `Ready for Dispatch` → `Delivery` → `Installation` → `Snag Resolution` → `Handover` → `Completed` → `On Hold` → `Cancelled`.
-
-- PM updates permitted stages on assigned projects only.
-- Important transitions require evidence/reason.
-- Sales Executive sees high-level status for projects from own won leads but cannot control execution.
-
 ### Explicit exclusions (unchanged No-ERP)
 
 No accounting ledger/GST filing, procurement/PO, inventory/warehouse, labour attendance/dispatch, vendor payment ledger, or autonomous operational control.
@@ -99,8 +143,8 @@ No accounting ledger/GST filing, procurement/PO, inventory/warehouse, labour att
 
 ### Implementation phases
 
-- **Phase 7A/7B:** Quotation data foundation, workflow, PDF, acceptance.
-- **Phase 8A:** Closed-Won conversion and PM handover.
+- **Phase 7A/7B:** Quotation data foundation, workflow, PDF, acceptance; **7B activates authoritative target achievement from accepted quotations**.
+- **Phase 8A:** Closed-Won conversion and PM handover; optional project-value reconciliation without double counting.
 - **Phase 8B:** Designer assignment and design collaboration.
 - **Phase 8C:** Project execution workspace.
 

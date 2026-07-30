@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reconciled roadmap through Phase 10 with completed Phases 1A–4B2 baseline and forward phases 5B–10.
 - Updated governance docs (`00`–`10`), README, decision register (DEC-0037–0044), and Phase 5A audit.
 - **Documentation only** — no application code, migrations, Supabase changes, deployment, or public lead activation.
+- **Independent review correction:** State-graph semantics for lead/quotation/design/project workflows; Phase 5E achievement dependency corrected to Phase 7B/8A.
 
 ### Added - Phase 4B2 (July 30, 2026)
 - Migration 10: lead intake covering indexes + pgTAP `04_lead_intake_covering_indexes_test.sql`.
