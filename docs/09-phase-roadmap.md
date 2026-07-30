@@ -1,91 +1,147 @@
-# 09 — PHASE IMPLEMENTATION ROADMAP (PHASES 1–10)
+# 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap Baseline  
-**Current Phase:** Phase 2E3 Public Portfolio Experience Complete (Ready for Phase 3)
+**Document Status:** Locked Roadmap (reconciled July 30, 2026)
+**Current Phase:** Phase 5A — CRM & Operations Architecture Freeze
+**Next Implementation Phase:** Phase 5B — CRM Identity, Authorization & Core Data Foundation
 
 ---
 
-## 1. Master Phase Roadmap
+## 1. Completed Baseline (Repository Evidence)
 
 ```
-Phase 1A: Read-Only Project Baseline Audit (COMPLETED)
-   │
-   ▼
-Phase 1B: Architecture, Scope & Decision Freeze (COMPLETED)
-   │
-   ▼
-Phase 1C: Documentation Baseline & Clean Git Setup (COMPLETED)
-   │
-   ▼
-Phase 2A: Next.js 16.2.11 Engineering Scaffold & Quality Baseline (COMPLETED)
-   │
-   ▼
-Phase 2B: Supabase SSR Connection Foundation & Wrappers (COMPLETED)
-   │
-   ▼
-Phase 2C / 2C1 / 2C2 / 2C3: Remote Identity & RBAC Migration Deployed, Event Trigger Hardened, Index Added (COMPLETED)
-   │
-   ▼
-Phase 2D1: Staff Auth Foundation, public.authorize RPC, Proxy Guard & Admin Shell (COMPLETED)
-   │
-   ▼
-Phase 2D2: Active Staff Authorization Hardening & First Super Admin Bootstrap (COMPLETED)
-   │
-   ▼
-Phase 2E1 / 2E1A: Portfolio Data & Media Storage Foundation & RLS Privilege Hardening (COMPLETED)
-   │
-   ▼
-Phase 2E2 / 2E2A: Portfolio Admin CMS, Secure Media Pipeline, Storage Orphan Purge & RPC Exposure Hardening (COMPLETED)
-   │
-   ▼
-Phase 2E3A: Public Portfolio Experience & SEO Architecture Freeze (COMPLETED)
-   │
-   ▼
-Phase 2E3B / 2E3C / 2E3D: Public Portfolio Implementation, Remote E2E & Merge Closeout (COMPLETED)
-   │
-   ▼
-Phase 3: Design System Foundation
-   │
-   ▼
-Phase 4: Cinematic Public Homepage & Consultation Lead Form
-   │
-   ▼
-Phase 5: Dedicated Portfolio Page, Case Studies & Internal CMS
-   │
-   ▼
-Phase 6: Service Pages, Process, Craftsmanship & Pune SEO Engine
-   │
-   ▼
-Phase 7: Internal CRM Foundation, Lead Management & Role Access
-   │
-   ▼
-Phase 8: Commercial Quotation Engine & Versioning System
-   │
-   ▼
-Phase 9: Meta WhatsApp Cloud API Integration & n8n Automation
-   │
-   ▼
-Phase 10: Security Hardening, E2E Testing & Hostinger VPS Deployment
+Phase 1A: Read-Only Project Baseline Audit ───────────────────────── COMPLETED
+Phase 1B: Architecture, Scope & Decision Freeze ──────────────────── COMPLETED
+Phase 1C: Documentation Baseline & Clean Git Setup ───────────────── COMPLETED
+Phase 2A: Next.js Engineering Scaffold & Quality Baseline ────────── COMPLETED
+Phase 2B: Supabase SSR Connection Foundation ─────────────────────── COMPLETED
+Phase 2C / 2C1 / 2C2 / 2C3: Identity & RBAC (remote deployed) ─────── COMPLETED
+Phase 2D1: Staff Auth, authorize RPC, Proxy Guard & Admin Shell ──── COMPLETED
+Phase 2D2: Active Staff Authorization & Super Admin Bootstrap ────── COMPLETED
+Phase 2E1 / 2E1A: Portfolio Data & Media Storage Foundation ──────── COMPLETED
+Phase 2E2 / 2E2A: Portfolio Admin CMS & Secure Media Pipeline ───── COMPLETED
+Phase 2E3A / 2E3B / 2E3C / 2E3D: Public Portfolio Experience ─────── COMPLETED
+Phase 3: Premium Public Site, Design & Legal Presentation Foundation ─ COMPLETED*
+Phase 4A: Secure Lead Intake Data Plane ──────────────────────────── COMPLETED
+Phase 4A.1: Pre-Apply Security Correction ────────────────────────── COMPLETED
+Phase 4B1: Managed Migration 9 Apply & Verification ────────────── COMPLETED
+Phase 4B2: Migration 10, Dual-Gated Public Form, Activation Readiness COMPLETED**
+```
+
+\*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
+\*\*Public intake **not activated**; defaults remain `copy-only` + server `disabled`.
+
+---
+
+## 2. Forward Roadmap
+
+```
+Phase 5A ──► CRM & Operations Architecture Freeze [CURRENT — docs only]
+    │
+    ▼
+Phase 5B ──► CRM Identity, Authorization & Core Data Foundation
+    │         • Extend RBAC for five roles
+    │         • Core schemas/RLS: sources, touchpoints, assignments, notes,
+    │           follow-ups, activities, stages, targets
+    │         • DB tests + server repositories
+    ▼
+Phase 5C ──► Lead Workspace & Premium Role-Aware CRM
+    │         • Role-specific admin navigation/dashboards
+    │         • Lead list/detail, filters, notes, follow-ups, timeline
+    │         • Manual lead creation + duplicate-safe flows
+    ▼
+Phase 5D ──► Bulk Import Approval & Source-Based Assignment
+    │         • CSV/XLSX import batches, mapping, preview, manager approval
+    │         • Super Admin direct import + source rules + Unassigned fallback
+    │         • No round-robin
+    ▼
+Phase 5E ──► Sales Targets, Performance & CRM Reporting
+    │         • Executive personal targets; manager team targets
+    │         • Append-only target history; authoritative metrics
+    ▼
+Phase 5F ──► Controlled Public Lead Activation Gate
+    │         • Owner/legal/proxy/secrets/monitoring/rollback evidence required
+    │         • Separate explicit authorization only
+    ▼
+Phase 6A ──► Meta WhatsApp Data & Webhook Foundation
+    ▼
+Phase 6B ──► Premium Shared Inbox & Controlled Outbound Messaging
+    ▼
+Phase 6C ──► Groq Human-Controlled Copilot
+    ▼
+Phase 7A ──► Commercial Quotation Data Foundation
+    ▼
+Phase 7B ──► Quotation Workflow, Premium PDF & Acceptance
+    ▼
+Phase 8A ──► Closed-Won Project Conversion & PM Handover
+    ▼
+Phase 8B ──► Designer Assignment & Design Collaboration
+    ▼
+Phase 8C ──► Project Execution Workspace
+    ▼
+Phase 9A ──► Campaign Consent, Audience & Approval Foundation
+    ▼
+Phase 9B ──► Campaign Execution, Replies & Attribution
+    ▼
+Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 ```
 
 ---
 
-## 2. Phase Objectives & Exit Gates
+## 3. Phase Objectives & Exit Gates
 
-- **Phase 1 (A/B/C):** Governance, audit, architecture freeze, documentation baseline, clean Git init.
-- **Phase 2:** Scaffold Next.js 16.x stable, configure TypeScript, set up local Supabase CLI, draft database migrations, create RLS policies.
-- **Phase 3:** Build design system primitives, color tokens, typography showroom, responsive layout shells.
-- **Phase 4:** Build cinematic homepage, signature project carousel, interactive consultation lead booking form.
-- **Phase 5:** Build public `/portfolio`, room tag filters, case-study pages (`/portfolio/[slug]`), internal CMS (`/admin/portfolio`).
-- **Phase 6:** Build core service pages, process guide, craftsmanship spotlight, Pune locality SEO pages.
-- **Phase 7:** Build CRM portal (`/admin/leads`), lead pipeline views, activity tracking, role-based permissions.
-- **Phase 8:** Build commercial quotation builder (`/admin/quotations`), itemized pricing, version history, quote acceptance portal.
-- **Phase 9:** Build verified Meta WhatsApp webhook endpoints, template triggers, n8n async outbox dispatcher.
-- **Phase 10:** Comprehensive security audit, Lighthouse performance optimization, E2E test suites, Hostinger VPS deployment.
+### Phase 5A (Current)
+- **Objective:** Reconcile truth/PRD/architecture/data/security/boundary docs; lock roles, visibility, workflows, invariants; ADRs + audit.
+- **Exit gate:** Owner approval of architecture freeze; no code/migrations.
+- **Deliverables:** ADR-0019, ADR-0020, ADR-0021; updated governance docs; Phase 5A audit.
+
+### Phase 5B
+- **Objective:** Five-role RBAC extension; core CRM schemas with RLS; server repositories; pgTAP coverage.
+- **Exit gate:** All CRM core tables RLS-tested; legacy role remap migration applied locally; `npm run check` + `check:db` green.
+- **Dependencies:** 5A approved.
+
+### Phase 5C
+- **Objective:** Premium role-aware CRM UI for leads (not WhatsApp/quotations/projects).
+- **Exit gate:** Executive isolation proven via RLS tests; manual lead + duplicate flows E2E locally.
+- **Dependencies:** 5B.
+
+### Phase 5D
+- **Objective:** Bulk import approval chain; source-based assignment rules.
+- **Exit gate:** Manager cannot approve own batch; executive bulk rejected; Unassigned fallback verified.
+- **Dependencies:** 5C.
+
+### Phase 5E
+- **Objective:** Monthly targets and performance reporting from authoritative quotation data.
+- **Exit gate:** Target history append-only; manager team-only targets enforced.
+- **Dependencies:** 5C (quotation metrics may stub until Phase 7).
+
+### Phase 5F
+- **Objective:** Controlled public lead activation only after legal/owner evidence.
+- **Exit gate:** Separate owner authorization; rollback runbook exercised.
+- **Dependencies:** 4B2 merged; legal gates complete.
+
+### Phases 6–9
+See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020–0021.
+
+### Phase 10
+- **Objective:** Security hardening, full E2E, performance budgets, Hostinger VPS deployment.
+- **Exit gate:** Production deployment authorized separately; all prior phase exit gates met.
 
 ---
 
-## 3. Related Governance Documents
+## 4. Dependency Rules
+
+1. No public lead activation (5F) before legal/owner gates and 4B2 readiness evidence.
+2. No Closed-Won project conversion (8A) before quotation acceptance (7B).
+3. No WhatsApp outbound (6B) before webhook foundation (6A) and consent records.
+4. No Groq copilot (6C) before message persistence (6A).
+5. No campaigns (9A/9B) before consent/suppression foundation.
+6. ERP modules remain out of scope for all phases (ADR-0005).
+
+---
+
+## 5. Related Governance Documents
 
 - [Project Truth](00-project-truth.md)
+- [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
 - [Decision Register](10-decision-register.md)
+- [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)

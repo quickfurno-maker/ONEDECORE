@@ -1,70 +1,117 @@
 # 01 — PRODUCT REQUIREMENTS DOCUMENT (PRD)
 
-**Document Status:** Locked PRD Baseline  
-**Scope:** ONEDECORE Version 1  
-**Target Market:** Pune, India  
+**Document Status:** Locked PRD Baseline (reconciled Phase 5A, July 30, 2026)
+**Scope:** ONEDECORE Version 1 Operating System
+**Target Market:** Pune, India
 
 ---
 
 ## 1. Product Vision & Goals
 
-ONEDECORE is built to deliver a premium architectural experience for high-end residential interior clients in Pune. The web application balances an editorial public presence with a disciplined internal CRM for lead conversion, quotation management, and client onboarding.
+ONEDECORE delivers a premium architectural public presence and a disciplined internal operating system for sales, quotations, project execution, design collaboration, and consent-controlled communication — without ERP scope creep.
 
 ---
 
-## 2. Included Product Capabilities (V1 Scope)
+## 2. Live Capabilities (Merged)
 
 ### 2.1 Premium Public Website
-- **Cinematic Homepage:** High-impact visual positioning, selected signature project highlights, 4-step execution narrative, and consultation lead capture.
-- **Service Pages:** Dedicated landing pages for Complete Home Interiors, Modular Kitchens, and Custom Wardrobes.
-- **Geo-Targeted Landing Pages:** Location-specific landing pages for Pune key areas (e.g., Baner, Koregaon Park, Kharadi, Wakad, Kothrud).
-- **Lead Booking & Consultation:** Interactive consultation request form with explicit Meta WhatsApp opt-in consent.
+- Production homepage with interior planner, indicative estimator, and legal pages.
+- **Lead form:** dual-gated (`copy-only` default); server intake **disabled**; no public collection without Phase 5F authorization.
 
 ### 2.2 Dedicated Portfolio System
-- **Main Listing (`/portfolio`):** Faceted filtering by Service (`complete-home`, `modular-kitchen`, `custom-wardrobe`) and Room Tags (`living-room`, `kitchen`, `bedroom`, `wardrobe`, `dining`, `foyer`, `study`, `tv-unit`, `utility`, `other`).
-- **Project Case Studies (`/portfolio/[slug]`):** Individual project storytelling pages with verified ONEDECORE project origin records, before/after comparisons, and high-res media galleries.
-- **CMS Management (`/admin/portfolio`):** Internal 6-state workflow (Draft -> Review -> Approved -> Published -> Unpublished -> Archived).
+- Public listing (`/portfolio`), detail routes (`/portfolio/[slug]`), CMS (`/admin/portfolio`).
+- Six-state publication workflow with database-controlled guards.
 
-### 2.3 Internal Administrative CRM (`/admin`)
-- **Lead Lifecycle Management:** Track leads through pipeline stages (`New Lead` -> `Contacted` -> `Qualified` -> `Consultation` -> `Site Visit` -> `Design Discussion` -> `Estimate` -> `Negotiation` -> `Won / Lost`).
-- **Activity & SLA Tracking:** Log calls, emails, site visits, and consultation notes with auditable timelines.
-- **Configurable Qualification:** Dynamic lead scoring criteria; initial thresholds configurable by Management.
-- **Flexible Exit Boundaries:** Leads can transition to `Lost` from any active stage with a mandatory reason log.
+### 2.3 Staff Authentication & RBAC Foundation
+- Invitation-only email/password (`/auth/login`).
+- `public.authorize(permission_code)` with active-profile enforcement.
+- Portfolio permissions live; CRM permissions partially seeded (`leads.read`, `leads.manage` on `super_admin` only in migration 9).
 
-### 2.4 Commercial Quotation Engine
-- **Itemized Estimation:** Builder for line-item room estimates with version history (`v1`, `v2`).
-- **Approval Guardrails:** Configurable discount threshold triggers a mandatory Management review lock state.
-- **Client Acceptance Acknowledgement:** Secure online quote preview with client acceptance recording (immutable document hash, timestamp, client ID, IP log).
-
-### 2.5 Meta WhatsApp Integration & n8n Automation
-- **Official Meta Cloud API:** Verified server endpoint for inbound/outbound WhatsApp message logs and consent tracking.
-- **n8n Async Event Dispatcher:** Stateless automation bus triggered after database persistence for internal staff notifications and SLA breach alerts.
+### 2.4 Secure Lead Intake Data Plane (Schema Only — Not Publicly Active)
+- Contacts, leads, consent events, intake requests, `submit_lead_intake` RPC.
+- Migration 10 covering indexes applied managed 10/10.
+- Public route exists; production defaults **disabled**.
 
 ---
 
-## 3. Explicit Exclusions (V1 No-ERP Boundary)
+## 3. Planned Product Capabilities (Phase 5B+)
 
-To preserve focus and maintain technical stability, the following modules are explicitly excluded from Version 1:
+### 3.1 Internal CRM & Lead Operations (Phase 5B–5E)
+- Five-role model: Super Admin, Sales Manager, Sales Executive, Project Manager, Designer.
+- Controlled lead sources and touchpoints.
+- Manual leads (executive self-assign one at a time; manager flexible; admin override).
+- Bulk import with manager → Super Admin approval chain.
+- Source-based assignment rules (no round-robin).
+- Pipeline: `New` → `Assigned` → `Contacted` → `Qualified` → `Consultation Scheduled` → `Proposal Sent` → `Negotiation` → `Closed-Won` / `Closed-Lost` / `On Hold`.
+- Role-aware premium CRM navigation (documented in Phase 5A audit).
+- Monthly targets: executive personal; manager team-only in V1.
 
-- **Accounting & General Ledger:** No double-entry accounting or GST filing systems (Deferred to external software).
-- **Procurement & POs:** No raw material vendor ordering or purchase order tracking.
-- **Inventory & Warehouse:** No stock level tracking or warehouse barcode scanning.
-- **Labor & Site Scheduling:** No daily worker attendance or complex construction labor dispatching.
-- **Autonomous AI Chatbots:** No unmonitored AI agents responding to leads over WhatsApp.
+### 3.2 Commercial Quotation Engine (Phase 7)
+- Lead/client/property linkage; room sections and line items.
+- Materials, measurements, tax, discount, validity, inclusions/exclusions, payment schedule.
+- Immutable versions; premium PDF; auditable acceptance.
+- Lifecycle: Draft through Accepted/Rejected/Expired.
+- Closed-Won requires Accepted quotation.
+
+### 3.3 Project Execution & Design (Phase 8)
+- Closed-Won → project creation → PM assignment (Manager/Admin) → PM acceptance → execution.
+- One primary PM; one Lead Designer + Supporting Designers (manual assignment).
+- Design workflow and project execution stages per ADR-0020.
+- PM coordinates execution; designers handle design deliverables.
+
+### 3.4 Meta WhatsApp Integration (Phase 6)
+- Official Cloud API; verified webhook; idempotent persistence.
+- Role-scoped shared inbox; consent and opt-out enforcement.
+- No unofficial WhatsApp Web automation.
+
+### 3.5 Groq Human-Controlled Copilot (Phase 6C)
+- Provider-independent adapter; Groq initial provider.
+- Draft assistance only; human approval required; full audit trail.
+- No autonomous sends, assignments, approvals, or DB credentials.
+
+### 3.6 Marketing Campaigns (Phase 9)
+- Super Admin approval mandatory for manager drafts.
+- Consent, suppression, template eligibility required.
+- No executive bulk messaging; no fabricated consent.
+
+### 3.7 Controlled n8n Automation
+- Async notification bus after database persistence.
+- n8n does not own lead, message, or project state.
+
+### 3.8 Controlled Public Lead Activation (Phase 5F)
+- Separate owner/legal authorization after readiness evidence.
+- Not part of Phase 5A or default configuration.
 
 ---
 
-## 4. Non-Functional Requirements
+## 4. Explicit Exclusions (No-ERP Boundary)
 
-- **Performance:** Core Web Vitals targets: Lighthouse Performance ≥ 90, LCP < 2.5s, CLS < 0.1 on mobile 4G.
-- **Security:** 100% RLS coverage on API-exposed Supabase tables; zero anonymous access to CRM/private data.
-- **Privacy:** Data minimization for customer PII; explicit opt-in consent for WhatsApp messaging.
+The following remain **out of scope** for all Version 1 phases:
+
+- Accounting & general ledger / GST filing
+- Procurement & purchase orders
+- Inventory & warehouse management
+- Labour attendance & site dispatch
+- Autonomous AI sales agents or unsupervised WhatsApp bots
+- Accountant, site supervisor, factory manager, installer, procurement, inventory, labour-dispatch **roles**
+
+Project Manager and Designer roles **are in scope** for execution and design collaboration (ADR-0020).
 
 ---
 
-## 5. Related Governance Documents
+## 5. Non-Functional Requirements
+
+- **Performance:** Core Web Vitals targets per Phase 2F performance budget when applicable.
+- **Security:** 100% RLS on API-exposed tables; no anonymous CRM access; server-only mutations.
+- **Privacy:** Data minimization; explicit consent for WhatsApp and campaigns; duplicate checks must not leak cross-executive PII.
+- **Auditability:** Append-only business history; no hard-delete of material records.
+
+---
+
+## 6. Related Governance Documents
 
 - [Project Truth](00-project-truth.md)
-- [Public Site & Sitemap](03-public-site-and-sitemap.md)
 - [CRM & Quotation Boundary](07-crm-and-quotation-boundary.md)
+- [Phase Roadmap](09-phase-roadmap.md)
+- [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0005: Version 1 No-ERP Boundary](ADR/ADR-0005-version-1-no-erp-boundary.md)

@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 5A (July 30, 2026)
+- Froze CRM & Operations architecture: five-role authorization model, lead sources, manual/bulk import rules, source-based assignment (no round-robin), sales targets, quotation lifecycle, Closed-Won → PM handover invariants, design workflow, project execution stages, WhatsApp/Groq/campaign boundaries.
+- Added ADR-0019 (five-role CRM authorization), ADR-0020 (Closed-Won handover), ADR-0021 (Groq copilot and WhatsApp boundary).
+- Reconciled roadmap through Phase 10 with completed Phases 1A–4B2 baseline and forward phases 5B–10.
+- Updated governance docs (`00`–`10`), README, decision register (DEC-0037–0044), and Phase 5A audit.
+- **Documentation only** — no application code, migrations, Supabase changes, deployment, or public lead activation.
+
+### Added - Phase 4B2 (July 30, 2026)
+- Migration 10: lead intake covering indexes + pgTAP `04_lead_intake_covering_indexes_test.sql`.
+- Dual-gated public lead form (`copy-only` default); server intake remains `disabled`.
+- `HomeLeadCapture`, consent selector hardening, plan adapter, idempotency client, runbooks, Phase 4B2 tests.
+- Merged to `main`; public activation still disabled.
+
 ### Added - Phase 2E3 (July 27, 2026)
 - Delivered public Portfolio experience: homepage featured section, paginated listing (`/portfolio`), dynamic detail routes (`/portfolio/[slug]`), `robots.ts`, and `sitemap.ts` (`205cb8deb081f68802589ab420bbb67b3f62e885`).
 - Added central site identity (`src/config/site.ts`) with canonical domain `https://onedecore.in` (no invented legal name).

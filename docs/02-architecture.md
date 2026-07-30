@@ -1,10 +1,11 @@
 # 02 — TECHNICAL ARCHITECTURE AND REPOSITORY SPECIFICATION
 
-**Document Status:** Locked Architecture Baseline  
-**Pattern:** Modular Monolith  
-**Framework Target:** Next.js 16.x stable (pinned during Phase 2)  
-**Database Target:** Supabase PostgreSQL  
-**Route Prefix:** Internal CRM uses `/admin`  
+**Document Status:** Locked Architecture Baseline (reconciled Phase 5A, July 30, 2026)
+**Pattern:** Modular Monolith
+**Framework:** Next.js 16.2.11
+**Database:** Supabase PostgreSQL
+**Route Prefix:** Internal CRM uses `/admin`
+**Current Phase:** 5A documentation freeze; next implementation 5B
 
 ---
 
@@ -18,7 +19,7 @@ ONEDECORE is architected as a clean, single modular monolith. The system enforce
 │                                                                        │
 │  ┌───────────────────────┐                  ┌──────────────────────┐   │
 │  │ Public Routes         │                  │ Admin CRM Routes     │   │
-│  │ (src/app/(public)/...)│                  │ (src/app/(admin)/...)│   │
+│  │ (src/app/...)         │                  │ (src/app/admin/...)  │   │
 │  └───────────┬───────────┘                  └───────────┬──────────┘   │
 │              │                                          │              │
 │              ▼                                          ▼              │
@@ -73,10 +74,14 @@ OneDecore/
     │   ├── public/            # Public web components
     │   └── crm/               # CRM administrative components
     ├── features/              # Feature-owned business modules
-    │   ├── portfolio/         # Portfolio presentation & state logic
-    │   ├── leads/             # Lead management & pipeline rules
-    │   ├── quotations/        # Commercial quote builder & calculations
-    │   └── whatsapp/          # Messaging components & conversation views
+    │   ├── portfolio/         # Portfolio (live)
+    │   ├── lead-intake/       # Public intake + data plane (schema live; route disabled)
+    │   ├── public-site/       # Premium homepage (live)
+    │   ├── crm/               # CRM workspace (planned Phase 5C+)
+    │   ├── quotations/        # Commercial quotes (planned Phase 7)
+    │   ├── projects/          # Execution (planned Phase 8)
+    │   ├── whatsapp/          # Messaging (planned Phase 6)
+    │   └── ai-copilot/        # Human-controlled AI (planned Phase 6C)
     ├── server/                # Server-only modules
     │   ├── db/                # Supabase server & admin client factories
     │   ├── repositories/      # Server-side data access objects
@@ -107,3 +112,28 @@ OneDecore/
 - [ADR-0006: Public and Admin Route Separation](ADR/ADR-0006-public-and-admin-route-separation.md)
 - [ADR-0009: Public Security Invoker Authorization RPC Wrapper](ADR/ADR-0009-public-invoker-authorization-rpc.md)
 - [ADR-0010: Staff-Only Password Authentication and Admin Route Protection](ADR/ADR-0010-staff-only-password-authentication.md)
+- [ADR-0018: Secure Lead Intake Data Plane](ADR/ADR-0018-secure-lead-intake-data-plane.md)
+- [ADR-0019: Five-Role CRM Authorization Model](ADR/ADR-0019-five-role-crm-authorization-model.md)
+- [ADR-0020: Closed-Won Project Handover Invariants](ADR/ADR-0020-closed-won-project-handover-invariants.md)
+- [ADR-0021: Groq Copilot and Official WhatsApp Boundary](ADR/ADR-0021-groq-copilot-and-whatsapp-boundary.md)
+
+---
+
+## 5. CRM Operating-System Architecture (Phase 5A Freeze)
+
+Phase 5A locks the following cross-cutting patterns for future implementation:
+
+| Concern | Pattern |
+| :--- | :--- |
+| Authorization | `public.authorize` + RLS row scoping; UI is not security |
+| Lead visibility | Executive: assigned only; Manager/Admin: all + unassigned queue |
+| Assignment | Manual (Manager/Admin) + source rules (Super Admin); no round-robin |
+| Import | Private batches; manager approval; Super Admin direct import |
+| Commercial truth | Accepted quotation required for Closed-Won |
+| Handover | PM assignment → PM acceptance before execution |
+| Design staffing | One Lead Designer + Supporting Designers; manual only |
+| AI | Provider adapter; human approval; structured outputs; audit |
+| WhatsApp | Official API; persist then automate; consent required |
+| Campaigns | Approval chain; suppression; no fabricated consent |
+
+No CRM workspace, WhatsApp, Groq, quotation, or project modules are implemented in Phase 5A.

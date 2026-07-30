@@ -1,8 +1,8 @@
 # 06 — SECURITY, PRIVACY AND ROW LEVEL SECURITY (RLS) POLICIES
 
-**Document Status:** Locked Security Baseline  
-**RLS Target:** 100% Coverage on API-Exposed Application Tables  
-**Default Access:** Anonymous Access Denied for Private Schemas  
+**Document Status:** Locked Security Baseline (reconciled Phase 5A, July 30, 2026)
+**RLS Target:** 100% Coverage on API-Exposed Application Tables
+**Default Access:** Anonymous Access Denied for Private Schemas
 
 ---
 
@@ -100,9 +100,42 @@ Following mandatory corrections in Phase 1B, RLS policies are applied to all API
 
 ---
 
-## 7. Related Governance Documents
+## 7. Phase 5A CRM Security Contracts (Planned Implementation — Phase 5B+)
+
+The following security requirements are **locked in architecture** and must be enforced via RLS + server authorization when CRM modules are implemented:
+
+| Requirement | Enforcement |
+| :--- | :--- |
+| Sales Executive lead isolation | RLS: `assigned_to = auth.uid()` (or equivalent ownership FK) |
+| Sales Manager / Super Admin visibility | RLS policy branch on role permission |
+| PM project isolation | RLS: assigned PM only |
+| Designer project isolation | RLS: explicit designer assignment only |
+| No anonymous CRM access | `REVOKE ALL` from `anon`; server routes for public intake only |
+| No service-role in browser | Server-only repositories and API routes |
+| Append-only audit | Triggers forbidding UPDATE/DELETE on consent, events, target history |
+| Active staff only | Existing `profiles.status = 'active'` in `private.has_permission` |
+| Private import files | Non-public storage bucket; signed URLs; checksum metadata |
+| Duplicate check PII scope | Server-side scoped query; never return other executive's lead rows |
+| No PM/Designer access before assignment | RLS denies until assignment row exists |
+| No silent assignment/state changes | All mutations via audited server actions/RPCs |
+| No hard-delete of business history | Soft-archive or append-only correction pattern |
+| Campaign eligibility | Consent + suppression check before recipient inclusion |
+| AI isolation | No DB credentials to AI provider; structured output validation only |
+
+**UI hiding is not authorization.** Every CRM surface must assume hostile client manipulation.
+
+### Lead Intake (Phase 4A/4B — current)
+- Public route disabled by default (`503 LEAD_INTAKE_DISABLED`).
+- Service-role-only `submit_lead_intake` RPC; anon/authenticated denied on lead tables.
+- Bounded request body (32 KiB); same-site origin enforcement.
+
+---
+
+## 8. Related Governance Documents
 
 - [Supabase Data Domains](05-supabase-data-domains.md)
+- [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
+- [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
 - [ADR-0011: Portfolio Publication Model](ADR/ADR-0011-portfolio-publication-model.md)
 - [ADR-0012: Two-Bucket Media Architecture](ADR/ADR-0012-private-originals-public-derivatives.md)
 - [ADR-0013: Server-Side Portfolio Image Processing Pipeline](ADR/ADR-0013-server-side-portfolio-image-processing.md)

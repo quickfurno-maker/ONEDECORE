@@ -44,6 +44,14 @@
 | **DEC-0034** | Outcome A RLS verification & tag-based cache revalidation for public portfolio performance | LOCKED | Confirms existing RLS policies safely permit public read access to published items (zero migration) and invalidates Next.js cache tags on CMS edit | No | Phase 2E3A | N/A |
 | **DEC-0035** | Public portfolio delivery without route-level loading boundary; true HTTP 404 for invalid public portfolio requests | LOCKED | Whole-route Suspense loading shell committed HTTP 200 before notFound() could set status; removed loading.tsx to preserve true 404 semantics | No | Phase 2E3B | N/A |
 | **DEC-0036** | Database-side displayable filtering before bounded listing pagination (12 cards/page) | LOCKED | Prevents malformed projects from occupying page slots and hiding valid published projects from paginated results | No | Phase 2E3B | N/A |
+| **DEC-0037** | Phase 5A Five-Role CRM Authorization Model (`super_admin`, `sales_manager`, `sales_executive`, `project_manager`, `designer`) | LOCKED | Locks owner-approved operating roles with RLS-enforced isolation; excludes ERP operational roles | No | Phase 5A | Legacy PRD role names |
+| **DEC-0038** | Closed-Won requires Accepted quotation before project creation; PM acceptance before execution | LOCKED | Prevents premature operations without commercial truth and PM accountability | No | Phase 5A | Prior advance-payment wording |
+| **DEC-0039** | Source-based lead assignment with Unassigned fallback; round-robin excluded | LOCKED | Predictable routing without random executive assignment | No | Phase 5A | N/A |
+| **DEC-0040** | Sales Manager bulk import requires Super Admin approval; Super Admin direct import without secondary approval | LOCKED | Reduces import risk while preserving admin operational speed | No | Phase 5A | N/A |
+| **DEC-0041** | Sales Manager monthly targets are team-only in V1 (no separate personal target) | LOCKED | Aligns manager metrics with team performance responsibility | No | Phase 5A | N/A |
+| **DEC-0042** | Groq human-controlled copilot only; provider-independent adapter; no autonomous business mutations | LOCKED | Permits AI assistance without autonomous sales/ops risk | No | Phase 5A | N/A |
+| **DEC-0043** | Official Meta WhatsApp Cloud API only; unofficial Web automation prohibited | LOCKED | Meta policy compliance and deliverability | No | Phase 5A | N/A |
+| **DEC-0044** | Public lead intake remains disabled by default post-4B2 merge; activation requires Phase 5F separate authority | LOCKED | Prevents accidental public collection before legal/owner gates | No | Phase 5A | N/A |
 
 ---
 
@@ -57,3 +65,7 @@
 - [ADR-0015: Private Definer Status Transition Helper Pattern](ADR/ADR-0015-private-definer-status-transition-helper.md)
 - [ADR-0016: Public Portfolio Data Delivery Architecture](ADR/ADR-0016-public-portfolio-data-delivery.md)
 - [ADR-0017: Public Portfolio Cache & Revalidation Strategy](ADR/ADR-0017-public-portfolio-cache-and-revalidation.md)
+- [ADR-0019: Five-Role CRM Authorization Model](ADR/ADR-0019-five-role-crm-authorization-model.md)
+- [ADR-0020: Closed-Won Project Handover Invariants](ADR/ADR-0020-closed-won-project-handover-invariants.md)
+- [ADR-0021: Groq Copilot and WhatsApp Boundary](ADR/ADR-0021-groq-copilot-and-whatsapp-boundary.md)
+- [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
