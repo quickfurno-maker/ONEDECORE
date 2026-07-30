@@ -1,17 +1,18 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline  
-**Project Name:** ONEDECORE  
-**Tagline:** One Vision. Complete Interiors.  
-**Domain:** `onedecore.in`  
-**Initial Market:** Pune, India  
-**Deployment Target:** Hostinger VPS  
+**Document Status:** Locked Governance Baseline (reconciled Phase 5A, July 30, 2026)
+**Project Name:** ONEDECORE
+**Tagline:** One Vision. Complete Interiors.
+**Domain:** `onedecore.in`
+**Initial Market:** Pune, India
+**Deployment Target:** Hostinger VPS
+**Current Phase:** Phase 5A — CRM & Operations Architecture Freeze (documentation only)
 
 ---
 
 ## 1. Executive Summary & Purpose
 
-This document defines the immutable business identity, project boundaries, and governance rules for ONEDECORE. All technical implementations in subsequent phases must adhere strictly to the rules established here.
+This document defines the immutable business identity, project boundaries, and governance rules for ONEDECORE. All technical implementations must adhere strictly to the rules established here and in linked ADRs.
 
 ---
 
@@ -29,53 +30,91 @@ This document defines the immutable business identity, project boundaries, and g
 
 ---
 
-## 3. Product Layers
+## 3. Product Architecture Domains
 
-ONEDECORE operates across five distinct product layers:
+ONEDECORE is an integrated operating system spanning multiple product domains. **Merged and live capabilities** are distinguished from **planned modules** in Section 4.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ 1. Premium Public Website (Architectural Presentation)  │
+│ 1. Premium Public Website & Legal Presentation          │
 ├─────────────────────────────────────────────────────────┤
-│ 2. Dedicated Portfolio System (/portfolio & Case Studies)│
+│ 2. Dedicated Portfolio System (/portfolio)            │
 ├─────────────────────────────────────────────────────────┤
-│ 3. Sales & Client CRM (/admin Internal Application)     │
+│ 3. Secure Public Lead Intake (dual-gated; disabled)     │
 ├─────────────────────────────────────────────────────────┤
-│ 4. Meta WhatsApp Cloud API (Verified Communication)     │
+│ 4. Sales & Operations CRM (/admin — planned workspace)  │
 ├─────────────────────────────────────────────────────────┤
-│ 5. Controlled n8n Workflows (Async Event Automation)    │
+│ 5. Commercial Quotation System (planned)              │
+├─────────────────────────────────────────────────────────┤
+│ 6. Project Execution & Design Collaboration (planned)   │
+├─────────────────────────────────────────────────────────┤
+│ 7. Official Meta WhatsApp Cloud API (planned)         │
+├─────────────────────────────────────────────────────────┤
+│ 8. Human-Controlled Groq Copilot (planned)            │
+├─────────────────────────────────────────────────────────┤
+│ 9. Marketing Campaigns with Consent Controls (planned)│
+├─────────────────────────────────────────────────────────┤
+│ 10. Controlled n8n Workflows (async notification bus)  │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 4. Master Governance Rules & Mandatory Corrections
+## 4. Current Merged Capabilities vs Planned Modules
 
-1. **Next.js Version Target:** Phase 2 will target the current vetted stable Next.js 16.x release (pinned during Phase 2 setup). Next.js 15 is not used.
+### Live today (merged to `main`)
+
+| Capability | Status |
+| :--- | :--- |
+| Premium public homepage (R4/R5 production) | Live |
+| Public portfolio listing & detail (`/portfolio`) | Live |
+| Portfolio admin CMS (`/admin/portfolio`) | Live |
+| Staff auth (invitation-only email/password) | Live |
+| Database-backed RBAC (`public.authorize`) | Live — legacy seed roles; five-role remap in Phase 5B |
+| Lead intake data plane (migrations 9–10) | Schema live; **public route disabled by default** |
+| Public lead form UI | **Merged; default `copy-only`; server `disabled`** |
+
+### Planned — not live (Phase 5B+)
+
+CRM workspace, manual/bulk leads, source-based assignment, sales targets, WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, public lead activation, production deployment.
+
+**Do not claim planned modules are live.**
+
+---
+
+## 5. Master Governance Rules & Mandatory Corrections
+
+1. **Next.js Version Target:** Next.js 16.x (pinned `16.2.11` in Phase 2A).
 2. **Supabase Source of Truth:** Supabase PostgreSQL is the sole permanent database for structured application data.
-3. **Database-Before-Automation (Lead Persistence):** Valid public web form submissions are validated and persisted to Supabase *before* n8n webhooks or notification routines trigger. An n8n outage must never result in lost lead data.
-4. **Meta WhatsApp Webhook Termination:** Inbound Meta WhatsApp webhooks terminate at a verified ONEDECORE server endpoint, persist message state to Supabase idempotently, and only then trigger optional n8n/staff alerts. Unofficial WhatsApp Web scraping is strictly prohibited.
-5. **Benchmark Integrity:** "₹100-crore" is strictly an internal architectural quality and design perception benchmark. It must never appear publicly as a financial, revenue, valuation, or project volume claim.
-6. **No Unverified Business Claims:** The codebase and public pages must never feature unverified claims regarding in-house factories, studio tours, specific hardware brands (e.g., Hettich, Blum, Hafele), warranty durations, GST numbers, fake client metrics, or fake testimonials.
-7. **Storage Separation:** Master portfolio original assets are kept in private storage. Only approved, optimized web derivatives are exposed publicly. Private CRM/client documents use strict RLS and signed URLs.
-8. **Configurable CRM Thresholds:** Qualification thresholds, response SLAs, and discount approval percentages are configurable policies and remain unset until owner approval. No hardcoded 10% discount rule.
-9. **Auditable Quote Acknowledgement:** Client quotation acceptance is logged as an auditable acknowledgement (hash, timestamp, IP, client ID), not automatically a legal e-signature.
-10. **Admin Route Prefix:** All internal CRM routes use the `/admin` prefix (e.g., `/admin/dashboard`, `/admin/leads`, `/admin/quotations`).
+3. **Database-Before-Automation:** Valid submissions and inbound messages persist to Supabase *before* n8n or outbound notifications.
+4. **Meta WhatsApp:** Official Cloud API only; webhooks terminate at verified ONEDECORE endpoint; unofficial WhatsApp Web automation prohibited.
+5. **Groq AI:** Human-controlled copilot only; no autonomous sends, status changes, or direct DB access.
+6. **Benchmark Integrity:** "₹100-crore" is an internal quality benchmark only — never a public financial claim.
+7. **No Unverified Business Claims:** No invented factories, warranties, metrics, or testimonials.
+8. **Storage Separation:** Private masters vs public derivatives; CRM documents via RLS and signed URLs.
+9. **Configurable CRM Thresholds:** Qualification, SLAs, and discount approval remain owner-configurable policies.
+10. **Auditable Quote Acknowledgement:** Client acceptance is logged evidence, not automatic legal e-signature.
+11. **Admin Route Prefix:** Internal routes use `/admin`.
+12. **Five-Role CRM Model:** `super_admin`, `sales_manager`, `sales_executive`, `project_manager`, `designer` — see ADR-0019.
+13. **Closed-Won Invariant:** Requires Accepted quotation before project creation — see ADR-0020.
+14. **Public Lead Intake:** Defaults remain disabled; activation requires separate owner authority (Phase 5F).
 
 ---
 
-## 5. Decision Classification Summary
+## 6. Decision Classification Summary
 
-- **[LOCKED]:** Core brand identity, 5 product layers, Supabase source of truth, separate portfolio system, Hostinger VPS deployment target, single modular monolith repository (`src/`), `/admin` route prefix.
-- **[RECOMMENDED — OWNER APPROVAL REQUIRED]:** Typography pairing (*Playfair Display* + *Plus Jakarta Sans*), initial Pune geo-landing locations, visual design tokens.
-- **[DEFERRED / NOT IN V1]:** Full ERP modules (accounting, procurement, inventory, labor scheduling, autonomous AI sales chatbots).
-- **[OPEN RISK]:** Sourcing high-res verified Pune project photography; Meta WhatsApp template approval timelines.
+- **[LOCKED]:** Brand identity, Supabase source of truth, `/admin` prefix, five-role CRM model, No-ERP boundary, RLS on exposed tables, official WhatsApp only, human-controlled AI only, disabled public intake defaults.
+- **[RECOMMENDED — OWNER APPROVAL REQUIRED]:** Typography pairing, Pune geo-landing expansion, visual tokens.
+- **[DEFERRED / NOT IN V1 ERP]:** Accounting, procurement, inventory, labour dispatch, autonomous AI agents.
+- **[OPEN RISK]:** Verified project photography; Meta template approval timelines; legal gates for public intake activation.
 
 ---
 
-## 6. Related Governance Documents
+## 7. Related Governance Documents
 
 - [Product Requirements](01-product-requirements.md)
 - [Architecture & Repository Structure](02-architecture.md)
+- [Phase Roadmap](09-phase-roadmap.md)
 - [Decision Register](10-decision-register.md)
-- [ADR-0002: Supabase Source of Truth](ADR/ADR-0002-supabase-source-of-truth.md)
+- [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
+- [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
