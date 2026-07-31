@@ -45,8 +45,15 @@ Use conventional commit messages with descriptive scopes:
 Before submitting code:
 - Ensure TypeScript compiles cleanly with zero errors (`tsc --noEmit`).
 - Verify ESLint and Prettier formatting rules pass.
-- Run local Supabase RLS test suites.
+- Run `npm run check`, `npm run test:app`, and `npm run test:image`.
+- Run `npm run db:reset` and `npm run check:db` against **local Supabase only** (never managed).
 - Confirm zero secrets or API keys are present in code or commit history.
+
+Pull requests targeting `main` are verified by the **ONEDECORE Quality Gate** GitHub Actions workflow (`.github/workflows/quality-gate.yml`):
+- **Application Quality** — `npm ci`, `npm run check`, `npm run test:app`, `npm run test:image`
+- **Database Quality** — isolated local Supabase (`supabase start` → `npm run db:reset` → `npm run check:db`)
+
+The workflow uses CI-safe local Supabase placeholders for the Next.js build only; it does not require repository secrets or connect to managed Supabase. Owner browser QA scripts remain a separate manual gate.
 
 ---
 
