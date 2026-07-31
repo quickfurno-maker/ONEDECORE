@@ -9,7 +9,10 @@ import test, { describe } from "node:test";
 const root = process.cwd();
 const theme = join(root, "src/features/public-site/theme");
 const portfolioApp = join(root, "src/app/portfolio");
-const evidence = join(root, "onedecore-chatgpt/phase-2f-r5-5-2-final-a11y");
+const canonicalEvidenceLedger = join(
+  root,
+  "docs/audits/phase-2f-r5-5-2-final-a11y-evidence-truth-ledger.md"
+);
 
 function read(path: string) {
   return readFileSync(path, "utf8");
@@ -67,10 +70,18 @@ describe("R5.5.2 evidence truth and no fake fixtures", () => {
     assert.match(cache, /queryPaginatedProjects|getPaginatedProjects|unstable_cache/);
   });
 
+  test("canonical evidence ledger exists in tracked docs path", () => {
+    assert.equal(existsSync(canonicalEvidenceLedger), true);
+    assert.doesNotMatch(
+      canonicalEvidenceLedger,
+      /onedecore-chatgpt/i,
+      "ledger path must not depend on ignored local workspace"
+    );
+  });
+
   test("evidence ledger marks card/detail/gallery as visual pending", () => {
-    const ledger = join(evidence, "03-evidence-truth-ledger.md");
-    assert.equal(existsSync(ledger), true);
-    const text = read(ledger);
+    assert.equal(existsSync(canonicalEvidenceLedger), true);
+    const text = read(canonicalEvidenceLedger);
     assert.match(text, /SOURCE VERIFIED, VISUAL PENDING REAL CONTENT/i);
     assert.match(text, /Real Portfolio card layout/i);
     assert.match(text, /gallery/i);

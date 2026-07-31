@@ -149,3 +149,22 @@ These satisfy `getPublicSupabaseEnv()` during `next build` without weakening pro
 ## Recommended next action
 
 Owner review → commit on `phase-ci-1-github-actions-foundation` → push → open PR → merge to `main` → enable branch protection requiring `ONEDECORE Quality Gate` before Phase 5C2A merge.
+
+## First remote run (PR #6)
+
+| Item | Result |
+|---|---|
+| Run ID | `30627241612` |
+| Tested SHA | `4fa7e2154dc234f55d16c1b935acd01b0698bec9` |
+| Database Quality | **PASS** — local Supabase start, `db:reset`, `check:db`, cleanup |
+| Application Quality | **FAIL** — `npm run check` passed; application tests 346/347 |
+
+**Root cause:** `r5-5-2-final-a11y.test.ts` (imported by `public-portfolio.test.ts`) required `onedecore-chatgpt/phase-2f-r5-5-2-final-a11y/03-evidence-truth-ledger.md`, which exists only in the owner's ignored local workspace and is not present in a clean Git checkout.
+
+**Correction (repository reproducibility, not workflow weakening):**
+
+- Canonical ledger tracked at `docs/audits/phase-2f-r5-5-2-final-a11y-evidence-truth-ledger.md`
+- Test updated to resolve the tracked path only (no conditional skip, no CI bypass)
+- Focused assertion that the canonical path exists and does not reference `onedecore-chatgpt`
+
+**Rerun result:** Recorded after correction commit push and new workflow completion.

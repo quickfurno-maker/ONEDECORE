@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Phase CI-1 reproducibility (July 31, 2026)
+- Track canonical R5.5.2 accessibility evidence ledger at `docs/audits/phase-2f-r5-5-2-final-a11y-evidence-truth-ledger.md`; update `r5-5-2-final-a11y.test.ts` to use the tracked path so clean CI checkouts pass without ignored `onedecore-chatgpt` artifacts.
+
 ### Added - Phase CI-1 (July 31, 2026)
 - GitHub Actions workflow `.github/workflows/quality-gate.yml` (`ONEDECORE Quality Gate`): application job (`npm run check`, `test:app`, `test:image`) and database job (local `supabase start` → `db:reset` → `check:db` → `supabase stop`).
 - Triggers on `pull_request` to `main`, `push` to `main`, and `workflow_dispatch`; `contents: read` only; no secrets or managed Supabase connectivity.
