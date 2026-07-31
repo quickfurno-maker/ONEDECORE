@@ -1,6 +1,6 @@
 # 07 — CRM PIPELINE AND COMMERCIAL QUOTATION BOUNDARY
 
-**Document Status:** Locked CRM & Quotation Baseline (reconciled Phase 5A, July 30, 2026)
+**Document Status:** Locked CRM & Quotation Baseline (reconciled Phase 5B, July 31, 2026)
 **Internal Prefix:** `/admin`
 **Implementation Status:** Architecture frozen; **CRM workspace not yet built**
 

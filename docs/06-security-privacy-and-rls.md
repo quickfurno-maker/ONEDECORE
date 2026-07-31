@@ -1,6 +1,6 @@
 # 06 — SECURITY, PRIVACY AND ROW LEVEL SECURITY (RLS) POLICIES
 
-**Document Status:** Locked Security Baseline (reconciled Phase 5A, July 30, 2026)
+**Document Status:** Locked Security Baseline (reconciled Phase 5B, July 31, 2026)
 **RLS Target:** 100% Coverage on API-Exposed Application Tables
 **Default Access:** Anonymous Access Denied for Private Schemas
 
@@ -100,7 +100,15 @@ Following mandatory corrections in Phase 1B, RLS policies are applied to all API
 
 ---
 
-## 7. Phase 5A CRM Security Contracts (Planned Implementation — Phase 5B+)
+## 7. Phase 5B CRM Security Implementation (Local — migration 11)
+
+- **Executive isolation:** `leads.read_assigned` + `private.crm_can_view_lead(assigned_to)` row predicates; unassigned leads invisible to executives.
+- **Manager breadth:** `leads.read_all` sees all sales leads and unassigned queue.
+- **Direct bypass denied:** `REVOKE UPDATE (status, assigned_to)`; trigger blocks pipeline mutation outside RPCs (`onedecore.crm_transition` session flag).
+- **RPC pattern:** `public.assign_lead` / `public.transition_lead_status` (INVOKER) → private DEFINER impls; `auth.uid()` actor; `closed_won` raises `P0001`.
+- **Append-only:** touchpoints, assignment history, notes, activities protected by triggers.
+
+## 8. Phase 5A CRM Security Contracts (Architecture Reference)
 
 The following security requirements are **locked in architecture** and must be enforced via RLS + server authorization when CRM modules are implemented:
 

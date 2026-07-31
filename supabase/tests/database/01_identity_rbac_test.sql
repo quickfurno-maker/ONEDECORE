@@ -47,15 +47,15 @@ select results_eq(
 -- 4. Verify seeded system roles count and is_system flag
 select results_eq(
   'select count(*)::integer from public.roles where is_system = true',
-  array[6],
-  'Should have exactly 6 seeded system roles with is_system = true'
+  array[9],
+  'Should have exactly 9 seeded system roles with is_system = true (6 legacy + 3 Phase 5B canonical)'
 );
 
 -- 5. Verify seeded system permissions count and is_system flag
 select results_eq(
   'select count(*)::integer from public.permissions where is_system = true',
-  array[12],
-  'Should have exactly 12 seeded system permissions (6 foundation + 2 portfolio + 4 lead intake) with is_system = true'
+  array[21],
+  'Should have exactly 21 seeded system permissions (6 foundation + 2 portfolio + 4 lead intake + 9 Phase 5B CRM) with is_system = true'
 );
 
 -- 6. Verify user_roles starts empty
@@ -104,8 +104,8 @@ select results_eq(
 -- 10. Verify authorized application tables count
 select results_eq(
   'select count(*)::integer from information_schema.tables where table_schema = ''public'' and table_type = ''BASE TABLE''',
-  array[15],
-  'Public schema must contain exactly the 15 authorized application tables (identity + portfolio + lead intake)'
+  array[22],
+  'Public schema must contain exactly the 22 authorized application tables (identity + portfolio + lead intake + Phase 5B CRM)'
 );
 
 -- 11. Phase 2C3 — rls_auto_enable existence and security properties

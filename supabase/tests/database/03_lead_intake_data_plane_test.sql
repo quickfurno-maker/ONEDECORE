@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 4A Secure Lead Intake Data Plane pgTAP tests
 
 begin;
-select plan(68);
+select plan(70);
 
 -- Schema
 select has_table('public', 'contacts', 'contacts exists');
@@ -66,9 +66,9 @@ select results_eq(
   'management mapped to all lead permissions'
 );
 select results_eq(
-  $$select count(*)::integer from public.role_permissions rp join public.roles r on r.id = rp.role_id join public.permissions p on p.id = rp.permission_id where r.code = 'sales' and p.code in ('leads.read','leads.manage','consents.read')$$,
+  $$select count(*)::integer from public.role_permissions rp join public.roles r on r.id = rp.role_id join public.permissions p on p.id = rp.permission_id where r.code = 'sales' and p.code in ('leads.read_assigned','leads.manage','consents.read')$$,
   array[3],
-  'sales mapped to leads/consents read-manage'
+  'sales mapped to assignment-scoped leads/consents (leads.read removed in Phase 5B)'
 );
 select results_eq(
   $$select count(*)::integer from public.role_permissions rp join public.roles r on r.id = rp.role_id join public.permissions p on p.id = rp.permission_id where r.code in ('designer','project_operations','content_manager') and p.code in ('leads.read','leads.manage','consents.read','lead_intake.audit')$$,
@@ -281,6 +281,18 @@ select results_eq(
   $$select count(*)::integer from public.lead_events where event_type = 'lead.created'$$,
   array[1],
   'one lead.created event'
+);
+
+select results_eq(
+  $$select ls.code from public.leads l join public.lead_sources ls on ls.id = l.primary_source_id order by l.created_at desc limit 1$$,
+  array['website_planner'],
+  'local-test intake maps to authoritative website_planner primary source'
+);
+
+select results_eq(
+  $$select entry_method from public.leads order by created_at desc limit 1$$,
+  array['local_test'],
+  'entry_method distinguishes local-test transport from marketing source'
 );
 
 -- Safe return fields only
