@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase CI-1 (July 31, 2026)
+- GitHub Actions workflow `.github/workflows/quality-gate.yml` (`ONEDECORE Quality Gate`): application job (`npm run check`, `test:app`, `test:image`) and database job (local `supabase start` → `db:reset` → `check:db` → `supabase stop`).
+- Triggers on `pull_request` to `main`, `push` to `main`, and `workflow_dispatch`; `contents: read` only; no secrets or managed Supabase connectivity.
+- Phase CI-1 audit (`docs/audits/phase-ci-1-github-actions-foundation.md`).
+- Satisfies Phase 5C2A merge-gate prerequisite once merged; no deployment or managed migration application.
+
 ### Added - Phase 5C1 (July 31, 2026)
 - Migration 12 (`20260731120000_crm_workspace_access_foundation.sql`): grants `admin.access` to canonical `sales_manager` and `sales_executive`; adds narrow `list_crm_assignable_executives()` RPC without relaxing `profiles` RLS.
 - Premium read-only CRM workspace under `/admin/crm` with role-aware navigation, lead list filters/pagination, and lead detail sections (overview, contact, source, assignment, timeline, notes, follow-ups, consent summary).
