@@ -1197,6 +1197,14 @@ export type Database = {
         }
       }
       authorize: { Args: { requested_permission: string }; Returns: boolean }
+      list_crm_assignable_executives: {
+        Args: never
+        Returns: {
+          display_name: string
+          role_code: string
+          user_id: string
+        }[]
+      }
       cancel_lead_follow_up: {
         Args: { p_follow_up_id: string; p_outcome?: string }
         Returns: {

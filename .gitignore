@@ -4,6 +4,7 @@
 
 # Next.js & Build Output
 /.next/
+.artifacts/
 /out/
 /build
 /dist

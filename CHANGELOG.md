@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 5C1 (July 31, 2026)
+- Migration 12 (`20260731120000_crm_workspace_access_foundation.sql`): grants `admin.access` to canonical `sales_manager` and `sales_executive`; adds narrow `list_crm_assignable_executives()` RPC without relaxing `profiles` RLS.
+- Premium read-only CRM workspace under `/admin/crm` with role-aware navigation, lead list filters/pagination, and lead detail sections (overview, contact, source, assignment, timeline, notes, follow-ups, consent summary).
+- CRM server authorization (`crm-auth.ts`), query layer, contracts, components, pgTAP `06_crm_workspace_access_foundation_test.sql` (15 tests), and application tests `phase-5c1-crm-workspace.test.ts`.
+- **Local only** — managed Supabase remains at migrations 1–11; no PR merge, deployment, managed migration application, or public lead activation.
+
 ### Fixed - Phase 5B final pre-integration hardening (July 31, 2026)
 - Follow-up permission separation (`crm.follow_ups.manage` required for complete/cancel); follow-up owner eligibility helper; inactive-source write rejection; fail-closed legacy lead-state precondition; Closed-Lost table invariant; On-Hold `on_hold_previous_status` resume model; note column-level INSERT hardening.
 - Expanded pgTAP `05_crm_identity_core_foundation_test.sql` to 76 tests (259 total); updated lead stage contracts.

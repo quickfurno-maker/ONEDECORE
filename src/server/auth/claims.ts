@@ -44,9 +44,29 @@ export async function getClaims(): Promise<VerifiedClaims | null> {
     requested_permission: "admin.access",
   });
 
+  const { data: hasLeadsReadAll } = await supabase.rpc("authorize", {
+    requested_permission: "leads.read_all",
+  });
+
+  const { data: hasLeadsReadAssigned } = await supabase.rpc("authorize", {
+    requested_permission: "leads.read_assigned",
+  });
+
+  const { data: hasSourcesRead } = await supabase.rpc("authorize", {
+    requested_permission: "sources.read",
+  });
+
+  const { data: hasCrmActivitiesRead } = await supabase.rpc("authorize", {
+    requested_permission: "crm.activities.read",
+  });
+
   if (hasManage === true) permissions.push("portfolio.manage");
   if (hasRead === true) permissions.push("portfolio.read");
   if (hasAdminAccess === true) permissions.push("admin.access");
+  if (hasLeadsReadAll === true) permissions.push("leads.read_all");
+  if (hasLeadsReadAssigned === true) permissions.push("leads.read_assigned");
+  if (hasSourcesRead === true) permissions.push("sources.read");
+  if (hasCrmActivitiesRead === true) permissions.push("crm.activities.read");
 
   return {
     userId: staff.userId,

@@ -65,6 +65,9 @@ function sampleLeadRow(overrides: Partial<CrmLeadListRow> = {}): CrmLeadListRow 
     service_code: "complete-home-interiors",
     locality: "Koregaon Park",
     assigned_to: null,
+    entry_method: "public_form",
+    primary_source_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    lead_sources: { display_name: "Website" },
     created_at: "2026-07-30T10:00:00.000Z",
     updated_at: "2026-07-30T10:00:00.000Z",
     ...overrides,
@@ -300,7 +303,7 @@ describe("Phase 5B CRM lead list DTO minimization", () => {
 
   test("repository select list stays aligned with list row contract", () => {
     const repoSrc = readFileSync(
-      join(root, "src/features/crm/server/crm-lead-repository.ts"),
+      join(root, "src/features/crm/server/crm-lead-queries.ts"),
       "utf8"
     );
     assert.match(repoSrc, /CRM_LEAD_LIST_SELECT/);
