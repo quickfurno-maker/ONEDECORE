@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Phase 5B final pre-integration hardening (July 31, 2026)
+- Follow-up permission separation (`crm.follow_ups.manage` required for complete/cancel); follow-up owner eligibility helper; inactive-source write rejection; fail-closed legacy lead-state precondition; Closed-Lost table invariant; On-Hold `on_hold_previous_status` resume model; note column-level INSERT hardening.
+- Expanded pgTAP `05_crm_identity_core_foundation_test.sql` to 76 tests (259 total); updated lead stage contracts.
+- **Local only** — managed Supabase remains at migrations 1–10; no PR merge, deployment, or public lead activation.
+
 ### Fixed - Phase 5B security correction (July 31, 2026)
 - Corrected migration 11 in place: `crm_can_mutate_lead` cross-lead authorization bug; follow-up lifecycle RPCs; source catalogue historical resolution and Super Admin mutation RPCs; assignment method derivation; `new`/`assigned` invariants; activity log completeness.
 - Expanded pgTAP `05_crm_identity_core_foundation_test.sql` to 39 tests (222 total); updated CRM contracts/adapters and generated types.

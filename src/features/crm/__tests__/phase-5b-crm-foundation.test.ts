@@ -36,7 +36,6 @@ const root = process.cwd();
 
 const MIGRATION_TRANSITIONS: ReadonlyArray<readonly [LeadStageCode, LeadStageCode]> =
   [
-    ["new", "contacted"],
     ["new", "closed_lost"],
     ["new", "on_hold"],
     ["assigned", "contacted"],
@@ -56,11 +55,6 @@ const MIGRATION_TRANSITIONS: ReadonlyArray<readonly [LeadStageCode, LeadStageCod
     ["proposal_sent", "on_hold"],
     ["negotiation", "closed_lost"],
     ["negotiation", "on_hold"],
-    ["on_hold", "contacted"],
-    ["on_hold", "qualified"],
-    ["on_hold", "consultation_scheduled"],
-    ["on_hold", "proposal_sent"],
-    ["on_hold", "negotiation"],
   ];
 
 function sampleLeadRow(overrides: Partial<CrmLeadListRow> = {}): CrmLeadListRow {

@@ -166,25 +166,33 @@ alter table public.leads
   add column if not exists closed_lost_reason_id uuid,
   add column if not exists closed_lost_note text,
   add column if not exists on_hold_reason text,
-  add column if not exists on_hold_since timestamptz;
+  add column if not exists on_hold_since timestamptz,
+  add column if not exists on_hold_previous_status text;
 
 comment on column public.leads.source is
   'Legacy intake transport code (website-planner, local-test). Authoritative marketing source is primary_source_id.';
 comment on column public.leads.entry_method is
   'How the lead entered CRM (public_intake, local_test, manual, import). Distinct from marketing source.';
+comment on column public.leads.on_hold_previous_status is
+  'Exact active stage recorded when entering on_hold. Resume reconciles new/assigned with assigned_to.';
 
--- Map legacy statuses before replacing constraint
-update public.leads set status = case status
-  when 'won' then 'closed_won'
-  when 'lost' then 'closed_lost'
-  when 'dormant' then 'on_hold'
-  when 'do_not_contact' then 'closed_lost'
-  when 'site_visit_scheduled' then 'consultation_scheduled'
-  else status
+-- Fail closed: managed apply requires empty operational lead state (documented pre-apply query)
+do $$
+declare
+  v_legacy_count integer;
+begin
+  select count(*) into v_legacy_count
+  from public.leads
+  where status <> 'new'
+     or assigned_to is not null;
+
+  if v_legacy_count > 0 then
+    raise exception
+      'MIGRATION_11_LEGACY_LEAD_STATE_DETECTED: % lead(s) have non-new status or assignment. Owner action required before applying CRM migration 11. Pre-apply check: select id, status, assigned_to from public.leads where status <> ''new'' or assigned_to is not null;',
+      v_legacy_count;
+  end if;
 end;
-
-update public.leads set status = 'assigned'
-where assigned_to is not null and status = 'new';
+$$;
 
 -- Backfill primary source from legacy transport codes
 update public.leads l
@@ -236,8 +244,38 @@ alter table public.leads add constraint chk_leads_closed_lost_note check (
   closed_lost_note is null or length(trim(closed_lost_note)) between 3 and 1000
 );
 
+alter table public.leads add constraint chk_leads_closed_lost_invariant check (
+  (
+    status = 'closed_lost'
+    and closed_lost_reason_id is not null
+    and closed_lost_note is not null
+    and length(trim(closed_lost_note)) between 3 and 1000
+  )
+  or (
+    status <> 'closed_lost'
+    and closed_lost_reason_id is null
+    and closed_lost_note is null
+  )
+);
+
 alter table public.leads add constraint chk_leads_on_hold_reason check (
   on_hold_reason is null or length(trim(on_hold_reason)) between 3 and 500
+);
+
+alter table public.leads add constraint chk_leads_on_hold_previous_status check (
+  (
+    status = 'on_hold'
+    and on_hold_previous_status is not null
+    and on_hold_previous_status <> 'on_hold'
+    and on_hold_previous_status in (
+      'new', 'assigned', 'contacted', 'qualified',
+      'consultation_scheduled', 'proposal_sent', 'negotiation'
+    )
+  )
+  or (
+    status <> 'on_hold'
+    and on_hold_previous_status is null
+  )
 );
 
 create index idx_leads_primary_source on public.leads (primary_source_id);
@@ -580,16 +618,82 @@ as $$
   );
 $$;
 
+create or replace function private.crm_is_eligible_follow_up_owner(p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.profiles pr
+    join public.user_roles ur on ur.user_id = pr.id
+    join public.roles r on r.id = ur.role_id
+    where pr.id = p_user_id
+      and pr.status = 'active'
+      and r.is_active = true
+      and r.code in (
+        'super_admin',
+        'sales_manager',
+        'management',
+        'sales_executive',
+        'sales'
+      )
+  );
+$$;
+
+create or replace function private.crm_can_view_lead_by_id(p_lead_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.leads l
+    where l.id = p_lead_id
+      and (select private.crm_can_view_lead(l.assigned_to))
+  );
+$$;
+
+create or replace function private.crm_resolve_on_hold_resume_stage(
+  p_previous_status text,
+  p_assigned_to uuid
+)
+returns text
+language plpgsql
+immutable
+set search_path = ''
+as $$
+begin
+  if p_previous_status in ('new', 'assigned') then
+    if p_assigned_to is null then
+      return 'new';
+    end if;
+    return 'assigned';
+  end if;
+  return p_previous_status;
+end;
+$$;
+
 revoke all on function private.crm_has_broad_lead_read() from public, anon;
 revoke all on function private.crm_can_view_lead(uuid) from public, anon;
 revoke all on function private.crm_can_view_contact(uuid) from public, anon;
 revoke all on function private.crm_can_mutate_lead(uuid) from public, anon;
 revoke all on function private.crm_is_assignable_sales_user(uuid) from public, anon;
+revoke all on function private.crm_is_eligible_follow_up_owner(uuid) from public, anon;
+revoke all on function private.crm_can_view_lead_by_id(uuid) from public, anon;
+revoke all on function private.crm_resolve_on_hold_resume_stage(text, uuid) from public, anon;
 grant execute on function private.crm_has_broad_lead_read() to authenticated;
 grant execute on function private.crm_can_view_lead(uuid) to authenticated;
 grant execute on function private.crm_can_view_contact(uuid) to authenticated;
 grant execute on function private.crm_can_mutate_lead(uuid) to authenticated;
 grant execute on function private.crm_is_assignable_sales_user(uuid) to authenticated;
+grant execute on function private.crm_is_eligible_follow_up_owner(uuid) to authenticated;
+grant execute on function private.crm_can_view_lead_by_id(uuid) to authenticated;
+grant execute on function private.crm_resolve_on_hold_resume_stage(text, uuid) to authenticated;
 
 -- =============================================================================
 -- Append-only / bypass-prevention triggers
@@ -621,6 +725,7 @@ begin
     or NEW.closed_lost_note is distinct from OLD.closed_lost_note
     or NEW.on_hold_reason is distinct from OLD.on_hold_reason
     or NEW.on_hold_since is distinct from OLD.on_hold_since
+    or NEW.on_hold_previous_status is distinct from OLD.on_hold_previous_status
   ) then
     raise exception 'Direct lead pipeline mutation forbidden; use CRM RPCs'
       using errcode = '42501';
@@ -649,9 +754,23 @@ begin
       when 'website-planner' then 'website_planner'
       when 'local-test' then 'website_planner'
       else 'manual_entry'
-    end;
+    end
+      and ls.is_active = true;
+    if v_source_id is null then
+      raise exception 'INACTIVE_OR_UNKNOWN_SOURCE'
+        using errcode = '22023', hint = 'Active lead source required for new leads';
+    end if;
     NEW.primary_source_id := v_source_id;
+  elsif not exists (
+    select 1
+    from public.lead_sources ls
+    where ls.id = NEW.primary_source_id
+      and ls.is_active = true
+  ) then
+    raise exception 'INACTIVE_SOURCE_NOT_SELECTABLE'
+      using errcode = '22023', hint = 'Inactive sources may not be selected for new leads';
   end if;
+
   if NEW.entry_method is null then
     NEW.entry_method := case NEW.source
       when 'website-planner' then 'public_intake'
@@ -691,6 +810,29 @@ $$;
 create trigger trg_leads_after_insert_touchpoint
   after insert on public.leads
   for each row execute function private.trg_leads_after_insert_touchpoint();
+
+create or replace function private.trg_touchpoint_before_insert_active_source()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if not exists (
+    select 1
+    from public.lead_sources ls
+    where ls.id = NEW.source_id
+      and ls.is_active = true
+  ) then
+    raise exception 'INACTIVE_SOURCE_NOT_SELECTABLE'
+      using errcode = '22023', hint = 'Inactive sources may not be used for new touchpoints';
+  end if;
+  return NEW;
+end;
+$$;
+
+create trigger trg_touchpoint_before_insert_active_source
+  before insert on public.lead_source_touchpoints
+  for each row execute function private.trg_touchpoint_before_insert_active_source();
 
 -- Prevent duplicate touchpoint from backfill + trigger on fresh DB reset order: backfill runs before triggers on existing only
 
@@ -732,6 +874,7 @@ begin
     raise exception 'Authentication required' using errcode = '42501';
   end if;
   NEW.created_by := auth.uid();
+  NEW.created_at := now();
   return NEW;
 end;
 $$;
@@ -773,6 +916,7 @@ revoke execute on function private.forbid_append_only_mutation() from public, an
 revoke execute on function private.forbid_direct_lead_owner_status_update() from public, anon, authenticated;
 revoke execute on function private.trg_leads_before_insert_source_enrichment() from public, anon, authenticated;
 revoke execute on function private.trg_leads_after_insert_touchpoint() from public, anon, authenticated;
+revoke execute on function private.trg_touchpoint_before_insert_active_source() from public, anon, authenticated;
 revoke execute on function private.lead_notes_set_creator() from public, anon, authenticated;
 revoke execute on function private.trg_lead_notes_after_insert_activity() from public, anon, authenticated;
 revoke all on function private.crm_derive_human_assignment_method() from public, anon;
@@ -891,6 +1035,8 @@ declare
   v_lead public.leads%rowtype;
   v_old text;
   v_reason_id uuid;
+  v_resume text;
+  v_hold_previous text;
   v_allowed boolean := false;
 begin
   v_actor := auth.uid();
@@ -900,10 +1046,6 @@ begin
 
   if not (select public.authorize('leads.transition')) then
     raise exception 'Permission denied to transition lead status' using errcode = '42501';
-  end if;
-
-  if p_new_status in ('new', 'assigned') then
-    raise exception 'Status % must be changed via assign_lead only', p_new_status using errcode = '22023';
   end if;
 
   if p_new_status = 'closed_won' then
@@ -921,6 +1063,11 @@ begin
   end if;
 
   v_old := v_lead.status;
+
+  if p_new_status in ('new', 'assigned') and v_old <> 'on_hold' then
+    raise exception 'Status % must be changed via assign_lead only', p_new_status using errcode = '22023';
+  end if;
+
   if v_old = p_new_status then
     return v_lead;
   end if;
@@ -929,24 +1076,51 @@ begin
     raise exception 'Terminal lead status cannot be changed in Phase 5B' using errcode = '22023';
   end if;
 
-  v_allowed := case
-    when v_old = 'new' and p_new_status in ('contacted', 'closed_lost', 'on_hold') then true
-    when v_old = 'assigned' and p_new_status in ('contacted', 'closed_lost', 'on_hold') then true
-    when v_old = 'contacted' and p_new_status in ('qualified', 'closed_lost', 'on_hold') then true
-    when v_old = 'qualified' and p_new_status in ('consultation_scheduled', 'closed_lost', 'on_hold') then true
-    when v_old = 'consultation_scheduled' and p_new_status in ('proposal_sent', 'closed_lost', 'on_hold') then true
-    when v_old = 'proposal_sent' and p_new_status in ('negotiation', 'closed_lost', 'on_hold') then true
-    when v_old = 'negotiation' and p_new_status in ('closed_lost', 'on_hold') then true
-    when v_old = 'on_hold' and p_new_status in ('contacted', 'qualified', 'consultation_scheduled', 'proposal_sent', 'negotiation') then true
-    else false
-  end;
+  if v_old = 'on_hold' then
+    v_hold_previous := v_lead.on_hold_previous_status;
+    v_resume := private.crm_resolve_on_hold_resume_stage(
+      v_hold_previous,
+      v_lead.assigned_to
+    );
+    if p_new_status <> v_resume then
+      raise exception 'On-hold lead may resume only to prior stage %, not %', v_resume, p_new_status
+        using errcode = '22023';
+    end if;
+    if v_resume = 'new' and v_lead.assigned_to is not null then
+      raise exception 'On-hold resume to new requires assigned_to IS NULL' using errcode = '22023';
+    end if;
+    if v_resume = 'assigned' and v_lead.assigned_to is null then
+      raise exception 'On-hold resume to assigned requires assigned_to IS NOT NULL' using errcode = '22023';
+    end if;
+    v_allowed := true;
+  elsif p_new_status = 'on_hold' then
+    if nullif(trim(coalesce(p_reason, '')), '') is null then
+      raise exception 'On-hold requires a bounded reason' using errcode = '22023';
+    end if;
+    v_allowed := v_old in (
+      'new', 'assigned', 'contacted', 'qualified',
+      'consultation_scheduled', 'proposal_sent', 'negotiation'
+    );
+  else
+    v_allowed := case
+      when v_old = 'new' and p_new_status in ('closed_lost', 'on_hold') then true
+      when v_old = 'assigned' and p_new_status in ('contacted', 'closed_lost', 'on_hold') then true
+      when v_old = 'contacted' and p_new_status in ('qualified', 'closed_lost', 'on_hold') then true
+      when v_old = 'qualified' and p_new_status in ('consultation_scheduled', 'closed_lost', 'on_hold') then true
+      when v_old = 'consultation_scheduled' and p_new_status in ('proposal_sent', 'closed_lost', 'on_hold') then true
+      when v_old = 'proposal_sent' and p_new_status in ('negotiation', 'closed_lost', 'on_hold') then true
+      when v_old = 'negotiation' and p_new_status in ('closed_lost', 'on_hold') then true
+      else false
+    end;
+  end if;
 
   if not v_allowed then
     raise exception 'Invalid lead status transition: % -> %', v_old, p_new_status using errcode = '22023';
   end if;
 
   if p_new_status = 'closed_lost' then
-    if nullif(trim(coalesce(p_reason, '')), '') is null then
+    if nullif(trim(coalesce(p_reason, '')), '') is null
+      or length(trim(coalesce(p_reason, ''))) < 3 then
       raise exception 'CLOSED_LOST_REQUIRES_REASON' using errcode = '22023';
     end if;
     if p_closure_reason_code is not null then
@@ -964,8 +1138,9 @@ begin
 
   update public.leads
   set status = p_new_status,
-      closed_lost_reason_id = case when p_new_status = 'closed_lost' then v_reason_id else closed_lost_reason_id end,
-      closed_lost_note = case when p_new_status = 'closed_lost' then nullif(trim(p_reason), '') else closed_lost_note end,
+      closed_lost_reason_id = case when p_new_status = 'closed_lost' then v_reason_id else null end,
+      closed_lost_note = case when p_new_status = 'closed_lost' then nullif(trim(p_reason), '') else null end,
+      on_hold_previous_status = case when p_new_status = 'on_hold' then v_old else null end,
       on_hold_reason = case when p_new_status = 'on_hold' then nullif(trim(p_reason), '') else null end,
       on_hold_since = case when p_new_status = 'on_hold' then now() else null end,
       updated_at = now()
@@ -980,7 +1155,12 @@ begin
          else 'lead.status_changed' end,
     v_actor,
     'staff',
-    jsonb_build_object('from', v_old, 'to', p_new_status, 'reason', p_reason)
+    jsonb_build_object(
+      'from', v_old,
+      'to', p_new_status,
+      'reason', p_reason,
+      'previousStage', case when v_old = 'on_hold' then v_hold_previous else null end
+    )
   );
 
   insert into public.lead_activities (lead_id, activity_type, actor_id, summary, metadata)
@@ -1027,8 +1207,8 @@ begin
 
   if (select private.crm_has_broad_lead_read()) then
     v_owner := coalesce(p_owner_id, v_actor);
-    if not (select private.crm_is_assignable_sales_user(v_owner)) then
-      raise exception 'Follow-up owner must be an active eligible sales user' using errcode = '22023';
+    if not (select private.crm_is_eligible_follow_up_owner(v_owner)) then
+      raise exception 'Follow-up owner must be an active eligible CRM user' using errcode = '22023';
     end if;
   else
     v_owner := v_actor;
@@ -1076,12 +1256,16 @@ begin
     raise exception 'Authentication required' using errcode = '42501';
   end if;
 
+  if not (select public.authorize('crm.follow_ups.manage')) then
+    raise exception 'Permission denied to manage follow-ups' using errcode = '42501';
+  end if;
+
   select * into v_row from public.lead_follow_ups where id = p_follow_up_id for update;
   if not found then
     raise exception 'Follow-up % not found', p_follow_up_id using errcode = 'P0002';
   end if;
 
-  if not (select private.crm_can_mutate_lead(v_row.lead_id)) then
+  if not (select private.crm_can_view_lead_by_id(v_row.lead_id)) then
     raise exception 'Lead not visible for follow-up completion' using errcode = '42501';
   end if;
 
@@ -1129,12 +1313,16 @@ begin
     raise exception 'Authentication required' using errcode = '42501';
   end if;
 
+  if not (select public.authorize('crm.follow_ups.manage')) then
+    raise exception 'Permission denied to manage follow-ups' using errcode = '42501';
+  end if;
+
   select * into v_row from public.lead_follow_ups where id = p_follow_up_id for update;
   if not found then
     raise exception 'Follow-up % not found', p_follow_up_id using errcode = 'P0002';
   end if;
 
-  if not (select private.crm_can_mutate_lead(v_row.lead_id)) then
+  if not (select private.crm_can_view_lead_by_id(v_row.lead_id)) then
     raise exception 'Lead not visible for follow-up cancellation' using errcode = '42501';
   end if;
 
@@ -1431,8 +1619,8 @@ grant select on table public.lead_closure_reasons to authenticated;
 grant select on table public.lead_source_touchpoints to authenticated;
 grant select on table public.lead_assignment_history to authenticated;
 grant select on table public.lead_notes to authenticated;
+grant insert (lead_id, body) on table public.lead_notes to authenticated;
 grant select on table public.lead_follow_ups to authenticated;
-grant select, insert on table public.lead_notes to authenticated;
 grant select on table public.lead_activities to authenticated;
 
 -- Replace broad lead-domain policies

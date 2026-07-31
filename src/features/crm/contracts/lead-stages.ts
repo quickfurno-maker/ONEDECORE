@@ -4,6 +4,9 @@
  *
  * `new` and `assigned` are owned exclusively by `assign_lead`; they are not
  * valid targets for `transition_lead_status`.
+ *
+ * `on_hold` resume targets are dynamic (recorded `on_hold_previous_status` with
+ * new/assigned reconciliation); only pause edges are listed statically here.
  */
 
 export const LEAD_STAGE_CODES = [
@@ -34,24 +37,19 @@ export const PHASE_5B_BLOCKED_TARGET_STAGES = ["closed_won", "assigned", "new"] 
 /**
  * Allowed transitions from each stage via transition_lead_status only.
  * Terminal stages have no outgoing edges.
+ * On-hold resume is dynamic and not enumerated here.
  */
 export const LEAD_STAGE_TRANSITIONS: Readonly<
   Record<LeadStageCode, readonly LeadStageCode[]>
 > = {
-  new: ["contacted", "closed_lost", "on_hold"],
+  new: ["closed_lost", "on_hold"],
   assigned: ["contacted", "closed_lost", "on_hold"],
   contacted: ["qualified", "closed_lost", "on_hold"],
   qualified: ["consultation_scheduled", "closed_lost", "on_hold"],
   consultation_scheduled: ["proposal_sent", "closed_lost", "on_hold"],
   proposal_sent: ["negotiation", "closed_lost", "on_hold"],
   negotiation: ["closed_lost", "on_hold"],
-  on_hold: [
-    "contacted",
-    "qualified",
-    "consultation_scheduled",
-    "proposal_sent",
-    "negotiation",
-  ],
+  on_hold: [],
   closed_won: [],
   closed_lost: [],
 };

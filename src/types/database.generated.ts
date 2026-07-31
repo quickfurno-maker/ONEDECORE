@@ -689,6 +689,7 @@ export type Database = {
           landing_path: string
           locality: string | null
           message: string | null
+          on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
           planner_version: string
@@ -718,6 +719,7 @@ export type Database = {
           landing_path: string
           locality?: string | null
           message?: string | null
+          on_hold_previous_status?: string | null
           on_hold_reason?: string | null
           on_hold_since?: string | null
           planner_version: string
@@ -747,6 +749,7 @@ export type Database = {
           landing_path?: string
           locality?: string | null
           message?: string | null
+          on_hold_previous_status?: string | null
           on_hold_reason?: string | null
           on_hold_since?: string | null
           planner_version?: string
@@ -1170,6 +1173,7 @@ export type Database = {
           landing_path: string
           locality: string | null
           message: string | null
+          on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
           planner_version: string
@@ -1393,6 +1397,7 @@ export type Database = {
           landing_path: string
           locality: string | null
           message: string | null
+          on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
           planner_version: string
