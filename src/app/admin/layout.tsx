@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireStaffPermission } from "@/server/auth";
+import { hasAnyCrmLeadReadPermission } from "@/features/crm/server/crm-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +13,12 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await requireStaffPermission("admin.access", "/admin");
+  const showCrmLink = await hasAnyCrmLeadReadPermission();
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
-      <header className="border-b border-neutral-800 bg-neutral-900/80 px-6 py-4 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
+      <header className="border-b border-neutral-800 bg-neutral-900/80 px-4 py-4 backdrop-blur-md sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center space-x-3">
             <span className="font-serif text-lg font-bold tracking-tight text-neutral-50">
               ONEDECORE
@@ -26,23 +28,34 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </span>
           </div>
 
-          <nav className="flex items-center space-x-6">
+          <nav
+            aria-label="Admin"
+            className="flex flex-wrap items-center gap-3 sm:gap-6"
+          >
             <Link
               href="/admin"
-              className="text-xs font-medium text-neutral-300 hover:text-white transition"
+              className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
             >
               Dashboard
             </Link>
             <Link
               href="/admin/portfolio"
-              className="text-xs font-medium text-neutral-300 hover:text-white transition"
+              className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
             >
               Portfolio CMS
             </Link>
+            {showCrmLink ? (
+              <Link
+                href="/admin/crm/leads"
+                className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+              >
+                CRM
+              </Link>
+            ) : null}
           </nav>
 
-          <div className="flex items-center space-x-4">
-            <div className="text-right">
+          <div className="flex items-center justify-between gap-4 lg:justify-end">
+            <div className="text-left lg:text-right">
               <span className="block text-[11px] uppercase tracking-wider text-neutral-500">
                 Staff Identity
               </span>
@@ -54,7 +67,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <form action="/auth/signout" method="POST">
               <button
                 type="submit"
-                className="rounded border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-neutral-300 transition-colors hover:border-amber-400 hover:text-amber-400"
+                className="min-h-11 rounded border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-neutral-300 transition-colors hover:border-amber-400 hover:text-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
               >
                 Sign Out
               </button>
@@ -64,7 +77,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       </header>
 
       <div className="flex-1">
-        <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">{children}</div>
       </div>
     </div>
   );
