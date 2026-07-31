@@ -104,6 +104,7 @@ create table public.lead_sources (
   description text,
   display_order smallint not null default 0,
   is_active boolean not null default true,
+  is_system boolean not null default false,
   created_by uuid references public.profiles (id) on delete set null,
   updated_by uuid references public.profiles (id) on delete set null,
   created_at timestamptz not null default now(),
@@ -150,7 +151,10 @@ insert into public.lead_sources (code, display_name, display_order) values
 on conflict (code) do update set
   display_name = excluded.display_name,
   display_order = excluded.display_order,
-  is_active = true;
+  is_active = true,
+  is_system = true;
+
+update public.lead_sources set is_system = true;
 
 -- =============================================================================
 -- Lead pipeline reconciliation columns + authoritative primary source
@@ -216,6 +220,12 @@ alter table public.leads add constraint chk_leads_status check (
     'closed_lost',
     'on_hold'
   )
+);
+
+alter table public.leads add constraint chk_leads_status_assignment_invariant check (
+  (status = 'assigned' and assigned_to is not null)
+  or (status = 'new' and assigned_to is null)
+  or status not in ('new', 'assigned')
 );
 
 alter table public.leads add constraint chk_leads_entry_method check (
@@ -511,24 +521,44 @@ as $$
     from public.leads l
     where l.id = p_lead_id
       and (
-        (select private.crm_has_broad_lead_read())
-        and (
-          (select public.authorize('leads.manage'))
-          or (select public.authorize('leads.transition'))
-          or (select public.authorize('crm.notes.manage'))
-          or (select public.authorize('crm.follow_ups.manage'))
+        (
+          (select private.crm_has_broad_lead_read())
+          and (
+            (select public.authorize('leads.manage'))
+            or (select public.authorize('leads.transition'))
+            or (select public.authorize('crm.notes.manage'))
+            or (select public.authorize('crm.follow_ups.manage'))
+          )
         )
-      )
-      or (
-        (select public.authorize('leads.read_assigned'))
-        and l.assigned_to = (select auth.uid())
-        and (
-          (select public.authorize('leads.transition'))
-          or (select public.authorize('crm.notes.manage'))
-          or (select public.authorize('crm.follow_ups.manage'))
+        or (
+          (select public.authorize('leads.read_assigned'))
+          and l.assigned_to = (select auth.uid())
+          and (
+            (select public.authorize('leads.transition'))
+            or (select public.authorize('crm.notes.manage'))
+            or (select public.authorize('crm.follow_ups.manage'))
+          )
         )
       )
   );
+$$;
+
+create or replace function private.crm_derive_human_assignment_method()
+returns text
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if (select private.has_role('super_admin')) then
+    return 'super_admin';
+  end if;
+  if (select private.has_role('sales_manager')) or (select private.has_role('management')) then
+    return 'manager';
+  end if;
+  return 'manual';
+end;
 $$;
 
 create or replace function private.crm_is_assignable_sales_user(p_user_id uuid)
@@ -710,33 +740,43 @@ create trigger trg_lead_notes_set_creator
   before insert on public.lead_notes
   for each row execute function private.lead_notes_set_creator();
 
-create or replace function private.lead_follow_ups_set_creator()
+create or replace function private.trg_lead_notes_after_insert_activity()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $$
 begin
-  if auth.uid() is null then
-    raise exception 'Authentication required' using errcode = '42501';
-  end if;
-  NEW.created_by := auth.uid();
-  if NEW.owner_id is null then
-    NEW.owner_id := auth.uid();
-  end if;
+  insert into public.lead_activities (
+    lead_id, activity_type, reference_id, actor_id, summary, metadata
+  ) values (
+    NEW.lead_id,
+    'note.created',
+    NEW.id,
+    NEW.created_by,
+    left(trim(NEW.body), 120),
+    jsonb_build_object('noteId', NEW.id)
+  );
   return NEW;
 end;
 $$;
 
-create trigger trg_lead_follow_ups_set_creator
-  before insert on public.lead_follow_ups
-  for each row execute function private.lead_follow_ups_set_creator();
+create trigger trg_lead_notes_after_insert_activity
+  after insert on public.lead_notes
+  for each row execute function private.trg_lead_notes_after_insert_activity();
+
+create trigger trg_lead_sources_no_delete
+  before delete on public.lead_sources
+  for each row execute function private.forbid_append_only_mutation();
 
 revoke execute on function private.forbid_append_only_mutation() from public, anon, authenticated;
 revoke execute on function private.forbid_direct_lead_owner_status_update() from public, anon, authenticated;
 revoke execute on function private.trg_leads_before_insert_source_enrichment() from public, anon, authenticated;
 revoke execute on function private.trg_leads_after_insert_touchpoint() from public, anon, authenticated;
 revoke execute on function private.lead_notes_set_creator() from public, anon, authenticated;
-revoke execute on function private.lead_follow_ups_set_creator() from public, anon, authenticated;
+revoke execute on function private.trg_lead_notes_after_insert_activity() from public, anon, authenticated;
+revoke all on function private.crm_derive_human_assignment_method() from public, anon;
+grant execute on function private.crm_derive_human_assignment_method() to authenticated;
 
 -- =============================================================================
 -- F. Assignment + status transition RPCs (INVOKER wrapper + DEFINER impl)
@@ -745,7 +785,6 @@ revoke execute on function private.lead_follow_ups_set_creator() from public, an
 create or replace function private.assign_lead_impl(
   p_lead_id uuid,
   p_assignee_id uuid,
-  p_method text,
   p_reason text default null
 )
 returns public.leads
@@ -758,6 +797,7 @@ declare
   v_lead public.leads%rowtype;
   v_prev uuid;
   v_method text;
+  v_history_id uuid;
 begin
   v_actor := auth.uid();
   if v_actor is null then
@@ -772,10 +812,7 @@ begin
     raise exception 'Assignee is not an active eligible sales user' using errcode = '22023';
   end if;
 
-  v_method := coalesce(nullif(trim(p_method), ''), 'manual');
-  if v_method not in ('manual', 'manager', 'super_admin', 'source_rule', 'system') then
-    raise exception 'Invalid assignment method: %', v_method using errcode = '22023';
-  end if;
+  v_method := private.crm_derive_human_assignment_method();
 
   select * into v_lead from public.leads where id = p_lead_id for update;
   if not found then
@@ -804,7 +841,8 @@ begin
     lead_id, previous_assignee, new_assignee, assignment_method, actor_id, reason
   ) values (
     p_lead_id, v_prev, p_assignee_id, v_method, v_actor, nullif(trim(coalesce(p_reason, '')), '')
-  );
+  )
+  returning id into v_history_id;
 
   insert into public.lead_events (lead_id, event_type, actor_id, actor_type, event_data)
   values (
@@ -820,20 +858,17 @@ begin
   );
 
   insert into public.lead_activities (lead_id, activity_type, reference_id, actor_id, summary, metadata)
-  select
+  values (
     p_lead_id,
     'assignment.changed',
-    lah.id,
+    v_history_id,
     v_actor,
     case
       when p_assignee_id is null then 'Lead unassigned'
       else 'Lead assigned'
     end,
-    jsonb_build_object('previousAssignee', v_prev, 'newAssignee', p_assignee_id)
-  from public.lead_assignment_history lah
-  where lah.lead_id = p_lead_id
-  order by lah.occurred_at desc
-  limit 1;
+    jsonb_build_object('previousAssignee', v_prev, 'newAssignee', p_assignee_id, 'method', v_method)
+  );
 
   perform set_config('onedecore.crm_transition', '0', true);
   return v_lead;
@@ -867,6 +902,10 @@ begin
     raise exception 'Permission denied to transition lead status' using errcode = '42501';
   end if;
 
+  if p_new_status in ('new', 'assigned') then
+    raise exception 'Status % must be changed via assign_lead only', p_new_status using errcode = '22023';
+  end if;
+
   if p_new_status = 'closed_won' then
     raise exception 'CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE'
       using errcode = 'P0001', hint = 'Phase 7B quotation acceptance required';
@@ -891,14 +930,14 @@ begin
   end if;
 
   v_allowed := case
-    when v_old = 'new' and p_new_status in ('assigned', 'contacted', 'closed_lost', 'on_hold') then true
-    when v_old = 'assigned' and p_new_status in ('contacted', 'closed_lost', 'on_hold', 'new') then true
+    when v_old = 'new' and p_new_status in ('contacted', 'closed_lost', 'on_hold') then true
+    when v_old = 'assigned' and p_new_status in ('contacted', 'closed_lost', 'on_hold') then true
     when v_old = 'contacted' and p_new_status in ('qualified', 'closed_lost', 'on_hold') then true
     when v_old = 'qualified' and p_new_status in ('consultation_scheduled', 'closed_lost', 'on_hold') then true
     when v_old = 'consultation_scheduled' and p_new_status in ('proposal_sent', 'closed_lost', 'on_hold') then true
     when v_old = 'proposal_sent' and p_new_status in ('negotiation', 'closed_lost', 'on_hold') then true
     when v_old = 'negotiation' and p_new_status in ('closed_lost', 'on_hold') then true
-    when v_old = 'on_hold' and p_new_status in ('new', 'assigned', 'contacted', 'qualified', 'consultation_scheduled', 'proposal_sent', 'negotiation') then true
+    when v_old = 'on_hold' and p_new_status in ('contacted', 'qualified', 'consultation_scheduled', 'proposal_sent', 'negotiation') then true
     else false
   end;
 
@@ -958,10 +997,261 @@ begin
 end;
 $$;
 
+create or replace function private.create_lead_follow_up_impl(
+  p_lead_id uuid,
+  p_due_at timestamptz,
+  p_owner_id uuid default null
+)
+returns public.lead_follow_ups
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid;
+  v_owner uuid;
+  v_row public.lead_follow_ups%rowtype;
+begin
+  v_actor := auth.uid();
+  if v_actor is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  if not (select public.authorize('crm.follow_ups.manage')) then
+    raise exception 'Permission denied to manage follow-ups' using errcode = '42501';
+  end if;
+
+  if not (select private.crm_can_mutate_lead(p_lead_id)) then
+    raise exception 'Lead not visible for follow-up creation' using errcode = '42501';
+  end if;
+
+  if (select private.crm_has_broad_lead_read()) then
+    v_owner := coalesce(p_owner_id, v_actor);
+    if not (select private.crm_is_assignable_sales_user(v_owner)) then
+      raise exception 'Follow-up owner must be an active eligible sales user' using errcode = '22023';
+    end if;
+  else
+    v_owner := v_actor;
+    if p_owner_id is not null and p_owner_id is distinct from v_actor then
+      raise exception 'Sales executives may only create self-owned follow-ups' using errcode = '42501';
+    end if;
+  end if;
+
+  insert into public.lead_follow_ups (
+    lead_id, owner_id, due_at, status, created_by
+  ) values (
+    p_lead_id, v_owner, p_due_at, 'open', v_actor
+  )
+  returning * into v_row;
+
+  insert into public.lead_activities (lead_id, activity_type, reference_id, actor_id, summary, metadata)
+  values (
+    p_lead_id,
+    'follow_up.scheduled',
+    v_row.id,
+    v_actor,
+    'Follow-up scheduled',
+    jsonb_build_object('dueAt', p_due_at, 'ownerId', v_owner)
+  );
+
+  return v_row;
+end;
+$$;
+
+create or replace function private.complete_lead_follow_up_impl(
+  p_follow_up_id uuid,
+  p_outcome text default null
+)
+returns public.lead_follow_ups
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid;
+  v_row public.lead_follow_ups%rowtype;
+begin
+  v_actor := auth.uid();
+  if v_actor is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  select * into v_row from public.lead_follow_ups where id = p_follow_up_id for update;
+  if not found then
+    raise exception 'Follow-up % not found', p_follow_up_id using errcode = 'P0002';
+  end if;
+
+  if not (select private.crm_can_mutate_lead(v_row.lead_id)) then
+    raise exception 'Lead not visible for follow-up completion' using errcode = '42501';
+  end if;
+
+  if v_row.status <> 'open' then
+    raise exception 'Only open follow-ups can be completed' using errcode = '22023';
+  end if;
+
+  update public.lead_follow_ups
+  set status = 'completed',
+      outcome = nullif(trim(coalesce(p_outcome, '')), ''),
+      completed_by = v_actor,
+      completed_at = now()
+  where id = p_follow_up_id
+  returning * into v_row;
+
+  insert into public.lead_activities (lead_id, activity_type, reference_id, actor_id, summary, metadata)
+  values (
+    v_row.lead_id,
+    'follow_up.completed',
+    v_row.id,
+    v_actor,
+    'Follow-up completed',
+    jsonb_build_object('outcome', v_row.outcome)
+  );
+
+  return v_row;
+end;
+$$;
+
+create or replace function private.cancel_lead_follow_up_impl(
+  p_follow_up_id uuid,
+  p_outcome text default null
+)
+returns public.lead_follow_ups
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid;
+  v_row public.lead_follow_ups%rowtype;
+begin
+  v_actor := auth.uid();
+  if v_actor is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  select * into v_row from public.lead_follow_ups where id = p_follow_up_id for update;
+  if not found then
+    raise exception 'Follow-up % not found', p_follow_up_id using errcode = 'P0002';
+  end if;
+
+  if not (select private.crm_can_mutate_lead(v_row.lead_id)) then
+    raise exception 'Lead not visible for follow-up cancellation' using errcode = '42501';
+  end if;
+
+  if v_row.status <> 'open' then
+    raise exception 'Only open follow-ups can be cancelled' using errcode = '22023';
+  end if;
+
+  update public.lead_follow_ups
+  set status = 'cancelled',
+      outcome = nullif(trim(coalesce(p_outcome, '')), ''),
+      cancelled_by = v_actor,
+      cancelled_at = now()
+  where id = p_follow_up_id
+  returning * into v_row;
+
+  insert into public.lead_activities (lead_id, activity_type, reference_id, actor_id, summary, metadata)
+  values (
+    v_row.lead_id,
+    'follow_up.cancelled',
+    v_row.id,
+    v_actor,
+    'Follow-up cancelled',
+    jsonb_build_object('outcome', v_row.outcome)
+  );
+
+  return v_row;
+end;
+$$;
+
+create or replace function private.create_lead_source_impl(
+  p_code text,
+  p_display_name text,
+  p_description text default null,
+  p_display_order smallint default 0
+)
+returns public.lead_sources
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid;
+  v_row public.lead_sources%rowtype;
+begin
+  v_actor := auth.uid();
+  if v_actor is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  if not (select public.authorize('sources.manage')) then
+    raise exception 'Permission denied to manage lead sources' using errcode = '42501';
+  end if;
+
+  insert into public.lead_sources (
+    code, display_name, description, display_order, is_active, is_system, created_by, updated_by
+  ) values (
+    p_code,
+    p_display_name,
+    p_description,
+    coalesce(p_display_order, 0),
+    true,
+    false,
+    v_actor,
+    v_actor
+  )
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+
+create or replace function private.update_lead_source_impl(
+  p_source_id uuid,
+  p_display_name text default null,
+  p_description text default null,
+  p_display_order smallint default null,
+  p_is_active boolean default null
+)
+returns public.lead_sources
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid;
+  v_row public.lead_sources%rowtype;
+begin
+  v_actor := auth.uid();
+  if v_actor is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  if not (select public.authorize('sources.manage')) then
+    raise exception 'Permission denied to manage lead sources' using errcode = '42501';
+  end if;
+
+  update public.lead_sources
+  set display_name = coalesce(nullif(trim(p_display_name), ''), display_name),
+      description = coalesce(p_description, description),
+      display_order = coalesce(p_display_order, display_order),
+      is_active = coalesce(p_is_active, is_active),
+      updated_by = v_actor,
+      updated_at = now()
+  where id = p_source_id
+  returning * into v_row;
+
+  if not found then
+    raise exception 'Lead source % not found', p_source_id using errcode = 'P0002';
+  end if;
+
+  return v_row;
+end;
+$$;
+
 create or replace function public.assign_lead(
   p_lead_id uuid,
   p_assignee_id uuid,
-  p_method text default 'manual',
   p_reason text default null
 )
 returns public.leads
@@ -970,7 +1260,7 @@ security invoker
 set search_path = ''
 as $$
 begin
-  return private.assign_lead_impl(p_lead_id, p_assignee_id, p_method, p_reason);
+  return private.assign_lead_impl(p_lead_id, p_assignee_id, p_reason);
 end;
 $$;
 
@@ -990,19 +1280,127 @@ begin
 end;
 $$;
 
-alter function private.assign_lead_impl(uuid, uuid, text, text) owner to postgres;
-alter function private.transition_lead_status_impl(uuid, text, text, text) owner to postgres;
-alter function public.assign_lead(uuid, uuid, text, text) owner to postgres;
-alter function public.transition_lead_status(uuid, text, text, text) owner to postgres;
+create or replace function public.create_lead_follow_up(
+  p_lead_id uuid,
+  p_due_at timestamptz,
+  p_owner_id uuid default null
+)
+returns public.lead_follow_ups
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  return private.create_lead_follow_up_impl(p_lead_id, p_due_at, p_owner_id);
+end;
+$$;
 
-revoke all on function private.assign_lead_impl(uuid, uuid, text, text) from public, anon;
+create or replace function public.complete_lead_follow_up(
+  p_follow_up_id uuid,
+  p_outcome text default null
+)
+returns public.lead_follow_ups
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  return private.complete_lead_follow_up_impl(p_follow_up_id, p_outcome);
+end;
+$$;
+
+create or replace function public.cancel_lead_follow_up(
+  p_follow_up_id uuid,
+  p_outcome text default null
+)
+returns public.lead_follow_ups
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  return private.cancel_lead_follow_up_impl(p_follow_up_id, p_outcome);
+end;
+$$;
+
+create or replace function public.create_lead_source(
+  p_code text,
+  p_display_name text,
+  p_description text default null,
+  p_display_order smallint default 0
+)
+returns public.lead_sources
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  return private.create_lead_source_impl(p_code, p_display_name, p_description, p_display_order);
+end;
+$$;
+
+create or replace function public.update_lead_source(
+  p_source_id uuid,
+  p_display_name text default null,
+  p_description text default null,
+  p_display_order smallint default null,
+  p_is_active boolean default null
+)
+returns public.lead_sources
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  return private.update_lead_source_impl(p_source_id, p_display_name, p_description, p_display_order, p_is_active);
+end;
+$$;
+
+alter function private.assign_lead_impl(uuid, uuid, text) owner to postgres;
+alter function private.transition_lead_status_impl(uuid, text, text, text) owner to postgres;
+alter function private.create_lead_follow_up_impl(uuid, timestamptz, uuid) owner to postgres;
+alter function private.complete_lead_follow_up_impl(uuid, text) owner to postgres;
+alter function private.cancel_lead_follow_up_impl(uuid, text) owner to postgres;
+alter function private.create_lead_source_impl(text, text, text, smallint) owner to postgres;
+alter function private.update_lead_source_impl(uuid, text, text, smallint, boolean) owner to postgres;
+alter function private.crm_derive_human_assignment_method() owner to postgres;
+alter function public.assign_lead(uuid, uuid, text) owner to postgres;
+alter function public.transition_lead_status(uuid, text, text, text) owner to postgres;
+alter function public.create_lead_follow_up(uuid, timestamptz, uuid) owner to postgres;
+alter function public.complete_lead_follow_up(uuid, text) owner to postgres;
+alter function public.cancel_lead_follow_up(uuid, text) owner to postgres;
+alter function public.create_lead_source(text, text, text, smallint) owner to postgres;
+alter function public.update_lead_source(uuid, text, text, smallint, boolean) owner to postgres;
+
+revoke all on function private.assign_lead_impl(uuid, uuid, text) from public, anon;
 revoke all on function private.transition_lead_status_impl(uuid, text, text, text) from public, anon;
-grant execute on function private.assign_lead_impl(uuid, uuid, text, text) to authenticated;
+revoke all on function private.create_lead_follow_up_impl(uuid, timestamptz, uuid) from public, anon;
+revoke all on function private.complete_lead_follow_up_impl(uuid, text) from public, anon;
+revoke all on function private.cancel_lead_follow_up_impl(uuid, text) from public, anon;
+revoke all on function private.create_lead_source_impl(text, text, text, smallint) from public, anon;
+revoke all on function private.update_lead_source_impl(uuid, text, text, smallint, boolean) from public, anon;
+revoke all on function private.crm_derive_human_assignment_method() from public, anon;
+grant execute on function private.assign_lead_impl(uuid, uuid, text) to authenticated;
 grant execute on function private.transition_lead_status_impl(uuid, text, text, text) to authenticated;
-revoke all on function public.assign_lead(uuid, uuid, text, text) from public, anon;
+grant execute on function private.create_lead_follow_up_impl(uuid, timestamptz, uuid) to authenticated;
+grant execute on function private.complete_lead_follow_up_impl(uuid, text) to authenticated;
+grant execute on function private.cancel_lead_follow_up_impl(uuid, text) to authenticated;
+grant execute on function private.create_lead_source_impl(text, text, text, smallint) to authenticated;
+grant execute on function private.update_lead_source_impl(uuid, text, text, smallint, boolean) to authenticated;
+revoke all on function public.assign_lead(uuid, uuid, text) from public, anon;
 revoke all on function public.transition_lead_status(uuid, text, text, text) from public, anon;
-grant execute on function public.assign_lead(uuid, uuid, text, text) to authenticated;
+revoke all on function public.create_lead_follow_up(uuid, timestamptz, uuid) from public, anon;
+revoke all on function public.complete_lead_follow_up(uuid, text) from public, anon;
+revoke all on function public.cancel_lead_follow_up(uuid, text) from public, anon;
+revoke all on function public.create_lead_source(text, text, text, smallint) from public, anon;
+revoke all on function public.update_lead_source(uuid, text, text, smallint, boolean) from public, anon;
+grant execute on function public.assign_lead(uuid, uuid, text) to authenticated;
 grant execute on function public.transition_lead_status(uuid, text, text, text) to authenticated;
+grant execute on function public.create_lead_follow_up(uuid, timestamptz, uuid) to authenticated;
+grant execute on function public.complete_lead_follow_up(uuid, text) to authenticated;
+grant execute on function public.cancel_lead_follow_up(uuid, text) to authenticated;
+grant execute on function public.create_lead_source(text, text, text, smallint) to authenticated;
+grant execute on function public.update_lead_source(uuid, text, text, smallint, boolean) to authenticated;
 
 -- =============================================================================
 -- I. RLS + grants for new tables and corrected lead-domain policies
@@ -1033,7 +1431,7 @@ grant select on table public.lead_closure_reasons to authenticated;
 grant select on table public.lead_source_touchpoints to authenticated;
 grant select on table public.lead_assignment_history to authenticated;
 grant select on table public.lead_notes to authenticated;
-grant select, insert, update on table public.lead_follow_ups to authenticated;
+grant select on table public.lead_follow_ups to authenticated;
 grant select, insert on table public.lead_notes to authenticated;
 grant select on table public.lead_activities to authenticated;
 
@@ -1084,17 +1482,12 @@ create policy lead_events_select_crm_scoped
     )
   );
 
-create policy lead_sources_select_active
-  on public.lead_sources for select to authenticated
-  using (
-    (select public.authorize('sources.read'))
-    and (is_active = true or (select public.authorize('sources.manage')))
-  );
+drop policy if exists lead_sources_manage_super_admin on public.lead_sources;
+drop policy if exists lead_sources_select_active on public.lead_sources;
 
-create policy lead_sources_manage_super_admin
-  on public.lead_sources for all to authenticated
-  using ((select public.authorize('sources.manage')))
-  with check ((select public.authorize('sources.manage')));
+create policy lead_sources_select_catalogue
+  on public.lead_sources for select to authenticated
+  using ((select public.authorize('sources.read')) or (select public.authorize('sources.manage')));
 
 create policy lead_closure_reasons_select
   on public.lead_closure_reasons for select to authenticated
@@ -1145,24 +1538,6 @@ create policy lead_follow_ups_select
       where l.id = lead_follow_ups.lead_id
         and (select private.crm_can_view_lead(l.assigned_to))
     )
-  );
-
-create policy lead_follow_ups_insert
-  on public.lead_follow_ups for insert to authenticated
-  with check (
-    (select public.authorize('crm.follow_ups.manage'))
-    and (select private.crm_can_mutate_lead(lead_id))
-  );
-
-create policy lead_follow_ups_update_lifecycle
-  on public.lead_follow_ups for update to authenticated
-  using (
-    (select public.authorize('crm.follow_ups.manage'))
-    and (select private.crm_can_mutate_lead(lead_id))
-  )
-  with check (
-    (select public.authorize('crm.follow_ups.manage'))
-    and (select private.crm_can_mutate_lead(lead_id))
   );
 
 create policy lead_activities_select

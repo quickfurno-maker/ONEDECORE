@@ -627,6 +627,7 @@ export type Database = {
           display_order: number
           id: string
           is_active: boolean
+          is_system: boolean
           updated_at: string
           updated_by: string | null
         }
@@ -639,6 +640,7 @@ export type Database = {
           display_order?: number
           id?: string
           is_active?: boolean
+          is_system?: boolean
           updated_at?: string
           updated_by?: string | null
         }
@@ -651,6 +653,7 @@ export type Database = {
           display_order?: number
           id?: string
           is_active?: boolean
+          is_system?: boolean
           updated_at?: string
           updated_by?: string | null
         }
@@ -1152,12 +1155,7 @@ export type Database = {
     }
     Functions: {
       assign_lead: {
-        Args: {
-          p_assignee_id: string
-          p_lead_id: string
-          p_method?: string
-          p_reason?: string
-        }
+        Args: { p_assignee_id: string; p_lead_id: string; p_reason?: string }
         Returns: {
           assigned_to: string | null
           attribution: Json
@@ -1195,6 +1193,102 @@ export type Database = {
         }
       }
       authorize: { Args: { requested_permission: string }; Returns: boolean }
+      cancel_lead_follow_up: {
+        Args: { p_follow_up_id: string; p_outcome?: string }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          due_at: string
+          id: string
+          lead_id: string
+          outcome: string | null
+          owner_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_follow_ups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      complete_lead_follow_up: {
+        Args: { p_follow_up_id: string; p_outcome?: string }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          due_at: string
+          id: string
+          lead_id: string
+          outcome: string | null
+          owner_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_follow_ups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_lead_follow_up: {
+        Args: { p_due_at: string; p_lead_id: string; p_owner_id?: string }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          due_at: string
+          id: string
+          lead_id: string
+          outcome: string | null
+          owner_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_follow_ups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_lead_source: {
+        Args: {
+          p_code: string
+          p_description?: string
+          p_display_name: string
+          p_display_order?: number
+        }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_name: string
+          display_order: number
+          id: string
+          is_active: boolean
+          is_system: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_sources"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       replace_portfolio_project_services: {
         Args: {
           requested_project_id: string
@@ -1317,6 +1411,34 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "leads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_lead_source: {
+        Args: {
+          p_description?: string
+          p_display_name?: string
+          p_display_order?: number
+          p_is_active?: boolean
+          p_source_id: string
+        }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_name: string
+          display_order: number
+          id: string
+          is_active: boolean
+          is_system: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_sources"
           isOneToOne: true
           isSetofReturn: false
         }

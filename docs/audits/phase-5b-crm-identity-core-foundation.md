@@ -84,8 +84,8 @@ Synthetic users in `05_crm_identity_core_foundation_test.sql` prove:
 | Gate | Result |
 |------|--------|
 | `npm run check` | PASS |
-| `npm run check:db` | PASS (220 pgTAP tests) |
-| `npm run test:app` | PASS (312 tests) |
+| `npm run check:db` | PASS (222 pgTAP tests) |
+| `npm run test:app` | PASS (313 tests) |
 | `npm run test:image` | PASS (17 tests) |
 | `npm run build` | PASS |
 | Public-site diff | EMPTY |
@@ -93,7 +93,67 @@ Synthetic users in `05_crm_identity_core_foundation_test.sql` prove:
 
 ---
 
-## 6. Residual risks
+## 6. Independent security review correction
+
+**Correction commit:** post-`a1568cdb` on the same branch; migration 11 corrected in place (no migration 12).
+
+### 6.1 `crm_can_mutate_lead` authorization bug
+
+The original helper grouped `AND`/`OR` so `p_lead_id` constrained the broad-reader branch but not the assigned-reader branch. An executive who owned any lead could satisfy the predicate while targeting another executive’s lead UUID. The prior pgTAP case used an attacker with **zero** assigned leads, so the defect was not exercised.
+
+**Fix:** explicit parentheses and a single target-row predicate on every branch. **Tests:** two executives each own a different lead; cross-executive note, follow-up, and status mutations fail with no side effects; target IDs passed via session-stored UUIDs so RLS-hidden subqueries cannot turn writes into no-ops.
+
+### 6.2 Follow-up lifecycle hardening
+
+Broad authenticated `UPDATE` on `lead_follow_ups` allowed spoofing `owner_id`, `created_by`, `completed_by`, `cancelled_by`, and lifecycle timestamps. Direct DML and permissive RLS policies were removed.
+
+**Fix:** `create_lead_follow_up`, `complete_lead_follow_up`, `cancel_lead_follow_up` (SECURITY INVOKER wrappers + private SECURITY DEFINER impls). Actor fields derived from `auth.uid()`; terminal `completed`/`cancelled` enforced; owner assignment validated against active eligible sales staff; executives default to self-ownership unless policy permits manager/admin assignment.
+
+### 6.3 Lead source historical resolution and mutation
+
+`sources.read` previously exposed only active catalogue rows, so historical leads referencing inactive sources could not be resolved. `sources.manage` policy could not mutate because only `SELECT` was granted.
+
+**Fix:** catalogue `SELECT` for `sources.read` includes active and inactive rows; UI may filter active for new selection. Mutation only via `create_lead_source` / `update_lead_source` RPCs (Super Admin only); `created_by`/`updated_by` derived; stable `code` immutable; `is_system` seeds protected; hard delete blocked by trigger.
+
+### 6.4 Assignment method derivation
+
+`assign_lead` accepted caller-supplied `p_method`, allowing managers to record `system` or `source_rule`.
+
+**Fix:** `p_method` removed from public RPC. `private.crm_derive_human_assignment_method()` records `super_admin`, `manager`, or `manual` from the authenticated actor. Reserved methods `system` and `source_rule` are unavailable through the human RPC.
+
+### 6.5 `new` / `assigned` pipeline invariants
+
+`transition_lead_status` permitted `new` ↔ `assigned` without changing `assigned_to` or writing assignment history.
+
+**Fix:** `chk_leads_status_assignment_invariant` constraint (`assigned` requires `assigned_to IS NOT NULL`; `new` requires `assigned_to IS NULL`); `transition_lead_status` rejects `new` and `assigned` targets; `assign_lead` remains authoritative for ownership and exactly one assignment-history row per assignment event.
+
+### 6.6 Activity log completeness
+
+Only assignment and status changes wrote `lead_activities` rows.
+
+**Fix:** `note.created` on note insert; `follow_up.scheduled` / `follow_up.completed` / `follow_up.cancelled` from follow-up RPCs; assignment activity links the exact `lead_assignment_history.id` via `INSERT … RETURNING`, not latest-by-timestamp lookup. Failed/cross-executive operations write no activity.
+
+### 6.7 Revised test count
+
+| Suite | Count |
+|-------|-------|
+| pgTAP baseline (01–04) | 183 |
+| pgTAP Phase 5B (05) | 39 |
+| **pgTAP total** | **222** |
+| Application tests | 313 |
+| Image pipeline | 17 |
+
+### 6.8 Unchanged managed / public / deployment truth
+
+- Managed Supabase remains at migrations 1–10 only.
+- Migration 11 not applied to managed Supabase.
+- Public lead intake RPC behavior unchanged.
+- Homepage and public-site files unchanged.
+- No PR opened; no merge; no deployment or public CRM activation.
+
+---
+
+## 7. Residual risks
 
 - Legacy `management` users retain broad access until manually remapped to `sales_manager`.
 - `closed_won` guard is RPC-level only until quotation acceptance table exists (Phase 7B).
@@ -102,7 +162,7 @@ Synthetic users in `05_crm_identity_core_foundation_test.sql` prove:
 
 ---
 
-## 7. Evidence
+## 8. Evidence
 
 Local bundle: `.artifacts/phase-5b-crm-identity-core-foundation-evidence.zip` (git-ignored).
 

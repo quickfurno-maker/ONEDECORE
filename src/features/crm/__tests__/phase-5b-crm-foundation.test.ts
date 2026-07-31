@@ -7,18 +7,21 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
 import {
-  CRM_ASSIGNMENT_METHODS,
+  CRM_HUMAN_ASSIGNMENT_METHODS,
   CRM_LEGACY_ROLE_CODES,
   CRM_PERMISSION_CODES,
+  CRM_RESERVED_ASSIGNMENT_METHODS,
   CRM_ROLE_CODES,
   CRM_ROLE_PERMISSIONS,
 } from "../contracts/permissions.ts";
 import {
+  ASSIGNMENT_OWNED_STAGES,
   LEAD_STAGE_CODES,
   LEAD_STAGE_TRANSITIONS,
   PHASE_5B_BLOCKED_TARGET_STAGES,
   TERMINAL_LEAD_STAGES,
   getAllowedLeadTransitions,
+  isAssignmentOwnedStage,
   isLeadTransitionAllowed,
   isTerminalLeadStage,
   type LeadStageCode,
@@ -33,14 +36,12 @@ const root = process.cwd();
 
 const MIGRATION_TRANSITIONS: ReadonlyArray<readonly [LeadStageCode, LeadStageCode]> =
   [
-    ["new", "assigned"],
     ["new", "contacted"],
     ["new", "closed_lost"],
     ["new", "on_hold"],
     ["assigned", "contacted"],
     ["assigned", "closed_lost"],
     ["assigned", "on_hold"],
-    ["assigned", "new"],
     ["contacted", "qualified"],
     ["contacted", "closed_lost"],
     ["contacted", "on_hold"],
@@ -55,8 +56,6 @@ const MIGRATION_TRANSITIONS: ReadonlyArray<readonly [LeadStageCode, LeadStageCod
     ["proposal_sent", "on_hold"],
     ["negotiation", "closed_lost"],
     ["negotiation", "on_hold"],
-    ["on_hold", "new"],
-    ["on_hold", "assigned"],
     ["on_hold", "contacted"],
     ["on_hold", "qualified"],
     ["on_hold", "consultation_scheduled"],
@@ -121,14 +120,29 @@ describe("Phase 5B CRM permission constants", () => {
     assert.deepEqual(CRM_ROLE_PERMISSIONS.project_operations, []);
   });
 
-  test("assignment methods match RPC constraint", () => {
-    assert.deepEqual([...CRM_ASSIGNMENT_METHODS], [
+  test("human and reserved assignment methods are documented", () => {
+    assert.deepEqual([...CRM_HUMAN_ASSIGNMENT_METHODS], [
       "manual",
       "manager",
       "super_admin",
+    ]);
+    assert.deepEqual([...CRM_RESERVED_ASSIGNMENT_METHODS], [
       "source_rule",
       "system",
     ]);
+  });
+
+  test("assignment-owned stages are not transition targets", () => {
+    for (const stage of ASSIGNMENT_OWNED_STAGES) {
+      assert.equal(isAssignmentOwnedStage(stage), true);
+      for (const from of LEAD_STAGE_CODES) {
+        assert.equal(
+          isLeadTransitionAllowed(from, stage),
+          false,
+          `${stage} must not be reachable via transition_lead_status`
+        );
+      }
+    }
   });
 });
 
@@ -177,7 +191,11 @@ describe("Phase 5B CRM lead stage graph", () => {
       );
     }
 
-    assert.deepEqual([...PHASE_5B_BLOCKED_TARGET_STAGES], ["closed_won"]);
+    assert.deepEqual([...PHASE_5B_BLOCKED_TARGET_STAGES], [
+      "closed_won",
+      "assigned",
+      "new",
+    ]);
   });
 
   test("transition map is internally consistent", () => {

@@ -43,15 +43,28 @@ export type CrmLegacyRoleCode = (typeof CRM_LEGACY_ROLE_CODES)[number];
 
 export type CrmOperationalRoleCode = CrmRoleCode | CrmLegacyRoleCode;
 
-export const CRM_ASSIGNMENT_METHODS = [
+/** Methods recorded for human assignment RPC calls (derived server-side). */
+export const CRM_HUMAN_ASSIGNMENT_METHODS = [
   "manual",
   "manager",
   "super_admin",
+] as const;
+
+export type CrmHumanAssignmentMethod =
+  (typeof CRM_HUMAN_ASSIGNMENT_METHODS)[number];
+
+/** Reserved for future private/system assignment paths — not accepted from clients. */
+export const CRM_RESERVED_ASSIGNMENT_METHODS = [
   "source_rule",
   "system",
 ] as const;
 
-export type CrmAssignmentMethod = (typeof CRM_ASSIGNMENT_METHODS)[number];
+export type CrmReservedAssignmentMethod =
+  (typeof CRM_RESERVED_ASSIGNMENT_METHODS)[number];
+
+export type CrmAssignmentMethod =
+  | CrmHumanAssignmentMethod
+  | CrmReservedAssignmentMethod;
 
 /** Permission grants mirrored from the Phase 5B migration role_permissions block. */
 export const CRM_ROLE_PERMISSIONS: Readonly<

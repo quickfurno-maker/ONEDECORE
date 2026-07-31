@@ -9,9 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Phase 5B security correction (July 31, 2026)
+- Corrected migration 11 in place: `crm_can_mutate_lead` cross-lead authorization bug; follow-up lifecycle RPCs; source catalogue historical resolution and Super Admin mutation RPCs; assignment method derivation; `new`/`assigned` invariants; activity log completeness.
+- Expanded pgTAP `05_crm_identity_core_foundation_test.sql` to 39 tests (222 total); updated CRM contracts/adapters and generated types.
+- **Local only** — managed Supabase remains at migrations 1–10; no PR merge, deployment, or public lead activation.
+
 ### Added - Phase 5B (July 31, 2026)
 - Migration 11 (`20260730184426_crm_identity_core_foundation.sql`): five-role RBAC extension, controlled lead-source catalogue (21 seeds), pipeline status reconciliation, assignment/status RPCs, collaboration tables, assignment-scoped RLS.
-- pgTAP `05_crm_identity_core_foundation_test.sql` (37 tests); updated identity/lead intake regression expectations.
+- pgTAP `05_crm_identity_core_foundation_test.sql` (39 tests after security correction); updated identity/lead intake regression expectations.
 - Server-only CRM foundation under `src/features/crm/` (permissions, stages, DTOs, repository, transition adapters, tests).
 - Phase 5B audit and governance doc updates.
 - **Local only** — managed Supabase remains at migrations 1–10; no PR merge, deployment, or public lead activation.
