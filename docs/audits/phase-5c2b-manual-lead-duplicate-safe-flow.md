@@ -1,12 +1,18 @@
-﻿# Phase 5C2B â€” Manual Lead Creation & Duplicate-Safe Flow Audit
+﻿# Phase 5C2B — Manual Lead Creation & Duplicate-Safe Flow Audit
 
-**Status:** **IMPLEMENTATION COMPLETE â€” LOCAL ONLY â€” AWAITING OWNER REVIEW**
+**Status:** **IMPLEMENTATION COMPLETE — PR #9 OPEN — EXACT-HEAD CI GREEN — AWAITING OWNER MERGE REVIEW**
 **Branch:** `phase-5c2b-manual-lead-duplicate-safe-flow`
+**Feature SHA:** `874583ed53310e663b67a59be21988df21fa4411`
 **Baseline SHA:** `b499c246863ae4a5c658c31a5f80ddbd11adf9c0`
-**Migration:** 14 (`20260801140000_crm_manual_lead_duplicate_safe_flow.sql`) â€” **local Docker only**
-**Managed Supabase:** migrations **1â€“13** unchanged
+**PR:** #9
+**PR CI:** run `30698833667` — SUCCESS on `874583ed53310e663b67a59be21988df21fa4411`
+**Migration:** 14 — repository/local only; NOT managed
+**Managed Supabase:** migrations 1–13 aligned
 **Deployment:** none
 **Public lead intake:** inactive (copy-only default)
+**Phase 5C:** IN PROGRESS
+**Phase 5C2C:** NOT STARTED
+**Phase 5D:** NOT STARTED
 
 ## Scope
 
@@ -16,10 +22,10 @@ Single governed CRM capability: role-aware manual lead creation with privacy-saf
 
 | Decision | Implementation |
 |----------|----------------|
-| **A â€” Active duplicate** | Hard block for all roles; no override path in preview or create RPC |
-| **B â€” Recent similar (30 days)** | Soft block; `leads.duplicate_override` for super_admin, sales_manager, management only; reason 10â€“500 chars; audited |
-| **C â€” Consent** | No consent events on manual create; UI notice; no waiver/checkbox |
-| **D â€” One at a time** | One lead per RPC/form submission; no workload cap |
+| **A — Active duplicate** | Hard block for all roles; no override path in preview or create RPC |
+| **B — Recent similar (30 days)** | Soft block; `leads.duplicate_override` for super_admin, sales_manager, management only; reason 10–500 chars; audited |
+| **C — Consent** | No consent events on manual create; UI notice; no waiver/checkbox |
+| **D — One at a time** | One lead per RPC/form submission; no workload cap |
 
 ## Duplicate similarity (v1)
 
@@ -33,7 +39,7 @@ Preview RPC returns only `outcome_code`, `can_create`, `can_override`, `existing
 
 - Permissions: `leads.create`, `leads.duplicate_override`
 - Schema: conditional planner-field nullability for `entry_method = 'manual'`; `source` adds `manual-crm`
-- RPCs: `public.check_manual_lead_duplicate`, `public.create_manual_lead` (invoker wrappers â†’ private definer impl)
+- RPCs: `public.check_manual_lead_duplicate`, `public.create_manual_lead` (invoker wrappers → private definer impl)
 - Activity type: `lead.manual_created`
 - Security: revoke PUBLIC/anon; authenticated EXECUTE only; no broad INSERT grants
 
@@ -46,8 +52,8 @@ Preview RPC returns only `outcome_code`, `can_create`, `can_override`, `existing
 | management (legacy) | yes | manager-compatible | yes |
 | sales_executive | yes | forced self | no |
 | sales (legacy) | yes | executive-compatible | no |
-| project_manager | no | â€” | no |
-| designer | no | â€” | no |
+| project_manager | no | — | no |
+| designer | no | — | no |
 
 Initial status: `new` if unassigned, `assigned` if assignee set.
 
@@ -55,21 +61,21 @@ Initial status: `new` if unassigned, `assigned` if assignee set.
 
 ```
 /admin/crm/leads/new (Server Component)
-  â†’ requireCrmCreateAccess
-  â†’ ManualLeadForm (client)
-    â†’ Server Actions (preview / create)
-      â†’ crm-manual-lead-service
-        â†’ authenticated Supabase SSR client
-          â†’ public INVOKER RPC
-            â†’ private DEFINER implementation
+  → requireCrmCreateAccess
+  → ManualLeadForm (client)
+    → Server Actions (preview / create)
+      → crm-manual-lead-service
+        → authenticated Supabase SSR client
+          → public INVOKER RPC
+            → private DEFINER implementation
 ```
 
 No service-role client. No browser direct RPC or table INSERT.
 
 ## Routes & UI
 
-- **New:** `/admin/crm/leads/new` â€” form, duplicate preview, role-specific assignee controls, consent notice
-- **Updated:** `/admin/crm/leads` â€” "New lead" link when `canCreateLeads`
+- **New:** `/admin/crm/leads/new` — form, duplicate preview, role-specific assignee controls, consent notice
+- **Updated:** `/admin/crm/leads` — "New lead" link when `canCreateLeads`
 
 ## Test & QA results (local)
 
@@ -81,14 +87,19 @@ No service-role client. No browser direct RPC or table INSERT.
 | `npm run db:reset` | PASS (migration 14 applied) |
 | `npm run check:db` | **350** pgTAP tests PASS (baseline 289 + 61 in file 08) |
 | `phase-5c2b-owner-qa.mjs` | **20/20** PASS |
-| `phase-5c2b-browser-qa.mjs` | **21/21** PASS (5 roles Ã— 4 viewports + duplicate flow) |
+| `phase-5c2b-browser-qa.mjs` | **21/21** PASS (5 roles × 4 viewports + duplicate flow) |
+| exact-head PR CI (run `30698833667`) | SUCCESS on `874583ed53310e663b67a59be21988df21fa4411` |
 | `git diff --check` | PASS |
+
+Browser QA roles: super_admin, sales_manager, sales_executive, project_manager, designer.
+Browser QA viewports: 1440, 768, 390, 360.
+Legacy management/sales remain DB/Owner-QA compatibility coverage (not browser matrix roles).
 
 Artifacts: `.artifacts/phase-5c2b/` (gitignored)
 
 ## Managed migration status
 
-**LOCAL ONLY.** Do not `db push --linked` until separate owner authorization after PR merge.
+**REPOSITORY/LOCAL ONLY.** Migration 14 is not applied to managed Supabase. Do not `db push --linked` until separate owner authorization after PR merge.
 
 ## Phase boundaries
 
@@ -104,4 +115,4 @@ Artifacts: `.artifacts/phase-5c2b/` (gitignored)
 
 ## Owner-review recommendation
 
-Approve for commit/PR after spot-check of duplicate privacy UX and executive self-assign flow. Managed migration 14 apply remains a **separate** post-merge step.
+PR #9 is ready for owner merge review after this documentation correction and exact-head CI revalidation. Managed migration 14 apply remains a **separate** post-merge authorization.

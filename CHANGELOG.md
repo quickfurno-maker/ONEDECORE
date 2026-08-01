@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migration 14 (`20260801140000_crm_manual_lead_duplicate_safe_flow.sql`): `leads.create` and `leads.duplicate_override` permissions; conditional manual-entry schema relaxations; `check_manual_lead_duplicate` and `create_manual_lead` RPCs with concurrency-safe duplicate enforcement and privacy-safe preview.
 - Manual lead server layer (`manual-lead-contracts.ts`, `crm-manual-lead-service.ts`, `crm-manual-lead-actions.ts`), UI (`/admin/crm/leads/new`, `ManualLeadForm`, `ManualLeadDuplicateNotice`), and leads list "New lead" action.
 - pgTAP `08_crm_manual_lead_duplicate_safe_flow_test.sql` (61 tests); application tests `phase-5c2b-manual-lead.test.ts`; local QA scripts `phase-5c2b-owner-qa.mjs` and `phase-5c2b-browser-qa.mjs`.
-- **Local only** — not committed/pushed/applied to managed Supabase pending owner review.
+- **PR #9 open; exact-head CI green** — migration 14 remains repository/local only and is not applied to managed Supabase; managed remains at migrations 1–13; no deployment or public lead activation.
 
 ### Changed — Phase DB-2 / CRM Managed Database Alignment (August 1, 2026)
 - Phase 5C2A PR #7 merged to protected main (`01254ee2ffde65a4e410361663aba2fb55e9dbe4`).
