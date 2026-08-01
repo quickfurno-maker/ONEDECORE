@@ -1,12 +1,12 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (reconciled Phase 5A, July 30, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced post DB-2, August 1, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 5A — CRM & Operations Architecture Freeze (documentation only)
+**Current Phase:** Phase 5C — Lead Workspace & Premium Role-Aware CRM (**in progress**)
 
 ---
 
@@ -42,7 +42,7 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 ├─────────────────────────────────────────────────────────┤
 │ 3. Secure Public Lead Intake (dual-gated; disabled)     │
 ├─────────────────────────────────────────────────────────┤
-│ 4. Sales & Operations CRM (/admin — planned workspace)  │
+│ 4. Sales & Operations CRM (/admin/crm — partial on main) │
 ├─────────────────────────────────────────────────────────┤
 │ 5. Commercial Quotation System (planned)              │
 ├─────────────────────────────────────────────────────────┤
@@ -62,23 +62,36 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 
 ## 4. Current Merged Capabilities vs Planned Modules
 
-### Live today (merged to `main`)
+### Merged to protected main
 
 | Capability | Status |
 | :--- | :--- |
-| Premium public homepage (R4/R5 production) | Live |
-| Public portfolio listing & detail (`/portfolio`) | Live |
-| Portfolio admin CMS (`/admin/portfolio`) | Live |
-| Staff auth (invitation-only email/password) | Live |
-| Database-backed RBAC (`public.authorize`) | Live — legacy seed roles; five-role remap in Phase 5B |
-| Lead intake data plane (migrations 9–10) | Schema live; **public route disabled by default** |
+| Premium public homepage (R4/R5 production) | Merged on `main` |
+| Public portfolio listing & detail (`/portfolio`) | Merged on `main` |
+| Portfolio admin CMS (`/admin/portfolio`) | Merged on `main` |
+| Staff auth (invitation-only email/password) | Merged on `main` |
+| Database-backed RBAC (`public.authorize`) | Merged on `main`; five-role CRM extension (Phase 5B) merged |
+| CRM read-only workspace (`/admin/crm`) | Merged on `main` (Phase 5C1) |
+| Lead assignment mutations (assign/reassign/safe-unassign) | Merged on `main` (Phase 5C2A) |
+| Lead intake data plane (migrations 9–10) | Schema merged; **public route disabled by default** |
 | Public lead form UI | **Merged; default `copy-only`; server `disabled`** |
 
-### Planned — not live (Phase 5B+)
+### Managed database applied (not production deployment)
 
-CRM workspace, manual/bulk leads, source-based assignment, sales targets, WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, public lead activation, production deployment.
+| Capability | Status |
+| :--- | :--- |
+| CRM identity & core data (migration 11) | Applied managed August 1, 2026 |
+| CRM workspace access (migration 12) | Applied managed August 1, 2026 |
+| Assignment mutation hardening (migration 13) | Applied managed August 1, 2026 |
+| Managed migration alignment | **1–13** on OneDecore (`lpurlfmpvriyvpkujvyl`) |
 
-**Do not claim planned modules are live.**
+CRM is **partially implemented** on protected main with database foundation applied; **production deployment pending** (Phase 10).
+
+### Planned — not live
+
+Remaining Phase 5C scope, manual/bulk leads, source-based assignment rules, sales targets, WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, public lead activation, production deployment.
+
+**Do not claim planned modules are live or production-deployed.**
 
 ---
 

@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (reconciled July 30, 2026)
-**Current Phase:** Phase 5B — CRM Identity, Authorization & Core Data Foundation (local complete)
-**Next Implementation Phase:** Phase 5C — CRM workspace UI (per roadmap)
+**Document Status:** Locked Roadmap (truth-synced post DB-2, August 1, 2026)
+**Current Phase:** Phase 5C — Lead Workspace & Premium Role-Aware CRM (**in progress**)
+**Next Implementation Phase:** Remaining Phase 5C lead-workspace mutation/collaboration scope (next subphase preflight)
 
 ---
 
@@ -25,6 +25,11 @@ Phase 4A: Secure Lead Intake Data Plane ─────────────�
 Phase 4A.1: Pre-Apply Security Correction ────────────────────────── COMPLETED
 Phase 4B1: Managed Migration 9 Apply & Verification ────────────── COMPLETED
 Phase 4B2: Migration 10, Dual-Gated Public Form, Activation Readiness COMPLETED**
+Phase 5A: CRM & Operations Architecture Freeze ───────────────────── COMPLETED
+Phase 5B: CRM Identity, Authorization & Core Data Foundation ─────── COMPLETED
+Phase 5C1: Premium Read-Only CRM Workspace ─────────────────────── COMPLETED
+Phase 5C2A: Lead Assignment Mutations ───────────────────────────── COMPLETED
+Phase DB-2: Managed Migrations 11–13 Apply (OneDecore Supabase) ─── COMPLETED
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -35,19 +40,17 @@ Phase 4B2: Migration 10, Dual-Gated Public Form, Activation Readiness COMPLETED*
 ## 2. Forward Roadmap
 
 ```
-Phase 5A ──► CRM & Operations Architecture Freeze [CURRENT — docs only]
+Phase 5A ──► CRM & Operations Architecture Freeze [COMPLETED]
     │
     ▼
-Phase 5B ──► CRM Identity, Authorization & Core Data Foundation
-    │         • Extend RBAC for five roles
-    │         • Core schemas/RLS: sources, touchpoints, assignments, notes,
-    │           follow-ups, activities, stages, targets
-    │         • DB tests + server repositories
+Phase 5B ──► CRM Identity, Authorization & Core Data Foundation [COMPLETED]
+    │
     ▼
-Phase 5C ──► Lead Workspace & Premium Role-Aware CRM
-    │         • Role-specific admin navigation/dashboards
-    │         • Lead list/detail, filters, notes, follow-ups, timeline
-    │         • Manual lead creation + duplicate-safe flows
+Phase 5C ──► Lead Workspace & Premium Role-Aware CRM [IN PROGRESS]
+    │         • 5C1: read-only workspace — COMPLETED
+    │         • 5C2A: assignment mutations — COMPLETED
+    │         • Remaining: manual lead creation, duplicate-safe flows,
+    │           further collaboration mutations (next subphase)
     ▼
 Phase 5D ──► Bulk Import Approval & Source-Based Assignment
     │         • CSV/XLSX import batches, mapping, preview, manager approval
@@ -91,17 +94,28 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 
 ## 3. Phase Objectives & Exit Gates
 
-### Phase 5A (Current)
+### Phase 5A (Completed)
 - **Objective:** Reconcile truth/PRD/architecture/data/security/boundary docs; lock roles, visibility, workflows, invariants; ADRs + audit.
 - **Exit gate:** Owner approval of architecture freeze; no code/migrations.
 - **Deliverables:** ADR-0019, ADR-0020, ADR-0021; updated governance docs; Phase 5A audit.
 
-### Phase 5B
+### Phase 5B (Completed)
 - **Objective:** Five-role RBAC extension; core CRM schemas with RLS; server repositories; pgTAP coverage.
 - **Exit gate:** All CRM core tables RLS-tested; legacy role remap migration applied locally; `npm run check` + `check:db` green.
 - **Dependencies:** 5A approved.
+- **Managed apply:** Migration 11 applied August 1, 2026 (with 12–13 in ordered DB-2 push).
 
-### Phase 5C
+### Phase 5C1 (Completed)
+- **Objective:** Premium read-only CRM workspace under `/admin/crm`.
+- **Exit gate:** Role-aware navigation, lead list/detail, RLS-backed reads; migration 12 applied managed.
+- **Dependencies:** 5B.
+
+### Phase 5C2A (Completed)
+- **Objective:** Assign, reassign, and safe-unassign via hardened `assign_lead` RPC.
+- **Exit gate:** PR #7 merged; migration 13 applied managed; full QA green.
+- **Dependencies:** 5C1.
+
+### Phase 5C (In progress — overall exit gate not met)
 - **Objective:** Premium role-aware CRM UI for leads (not WhatsApp/quotations/projects).
 - **Exit gate:** Executive isolation proven via RLS tests; manual lead + duplicate flows E2E locally.
 - **Dependencies:** 5B.

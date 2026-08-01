@@ -1,9 +1,11 @@
 # Phase 5C1 Audit — Premium Role-Aware CRM Shell and Read-Only Lead Workspace
 
+> **Current outcome (August 1, 2026):** Phase 5C1 is **closed**. Implementation merged to protected main (PR #5). Migration 12 applied to managed OneDecore Supabase on 2026-08-01 as part of ordered migrations 11→12→13 (Phase DB-2). Managed Supabase is at migrations **1–13**. Application is **not production-deployed**. Public lead intake remains inactive.
+
 **Date:** July 31, 2026
 **Branch:** `phase-5c-lead-workspace-premium-crm`
 **Baseline:** `8493e8f70e9cf933c773c504336e7c9e5553cff4`
-**Status:** Implementation complete (local only)
+**Status:** Implementation complete (historical — see current-outcome addendum above)
 
 ## Scope delivered
 
@@ -31,11 +33,13 @@
 - No public-site or portfolio redesign
 - No public lead activation
 
-## Managed Supabase status
+## Managed Supabase status (historical — superseded)
 
-Managed project remains at migrations 1–11. Migration 12 is local-only.
+At implementation time: managed project at migrations 1–11; migration 12 local-only.
 
-## Recommended next action
+**Superseded by Phase DB-2 (2026-08-01):** migrations 11, 12, and 13 applied to managed OneDecore (`lpurlfmpvriyvpkujvyl`); remote history aligned 1–13.
+
+## Recommended next action (historical)
 
 Owner review complete. Application tests: 347/347. Database tests: 272/272. Local owner QA:
 
@@ -44,4 +48,4 @@ PHASE_5C1_QA_PASSWORD='<local-only>' node scripts/phase-5c1-owner-qa.mjs
 PHASE_5C1_QA_PASSWORD='<local-only>' PHASE_5C1_BASE_URL=http://localhost:3000 node scripts/phase-5c1-browser-qa.mjs
 ```
 
-Authorize push/PR and managed migration planning for Phase 5C2 mutation slices.
+Phase 5C2 mutation slices were authorized after this audit; Phase 5C2A subsequently merged (PR #7).

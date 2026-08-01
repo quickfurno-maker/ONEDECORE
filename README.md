@@ -4,8 +4,8 @@
 
 ONEDECORE is a premium interior-business operating system for Pune, India — combining a production public website and portfolio with a planned sales, quotation, project execution, design, WhatsApp, and marketing CRM backbone.
 
-**Current phase:** Phase 5B — CRM Identity, Authorization & Core Data Foundation (local implementation complete; not applied to managed Supabase).
-**Next implementation:** Phase 5C — CRM UI shell / lead workspace (per roadmap).
+**Current phase:** Phase 5C — Lead Workspace & Premium Role-Aware CRM (**in progress**).
+**Next implementation:** Remaining Phase 5C lead-workspace mutation/collaboration scope, to be frozen in the next subphase preflight.
 
 ---
 
@@ -16,28 +16,33 @@ ONEDECORE is a premium interior-business operating system for Pune, India — co
 - **Domain:** `onedecore.in`
 - **Initial Launch Market:** Pune, India
 - **Core Services:** Complete Home Interiors · Modular Kitchens · Custom Wardrobes
-- **Deployment Target:** Hostinger VPS (not yet deployed)
+- **Deployment Target:** Hostinger VPS — **application not yet production-deployed** (Phase 10)
 - **Repository:** Independent from QuickFurno and Jarvis
 
 ---
 
 ## 2. What Is Live vs Planned
 
-### Live on `main` (merged)
+### Merged on protected main / database-ready
 
 | Capability | Notes |
 | :--- | :--- |
-| Premium public homepage (R4/R5) | Production homepage with planner and estimator |
+| Premium public homepage (R4/R5) | Merged on `main`; not production-deployed |
 | Public portfolio | `/portfolio`, `/portfolio/[slug]`, SEO, sitemap |
 | Portfolio admin CMS | `/admin/portfolio` with secure media pipeline |
 | Staff authentication | Invitation-only email/password; Proxy session guard |
 | Database RBAC | `public.authorize`, active-profile enforcement |
-| Lead intake **schema** | Migrations 9–10 applied (managed 10/10) |
+| CRM identity & data foundation (Phase 5B) | Migration 11 — merged; managed applied |
+| CRM read-only workspace (Phase 5C1) | `/admin/crm` — merged; managed migration 12 applied |
+| Lead assignment mutations (Phase 5C2A) | Assign/reassign/safe-unassign — merged; managed migration 13 applied |
+| Lead intake **schema** | Migrations 9–10; managed aligned through 13 |
 | Public lead form | **Merged; default `copy-only`; server `disabled`** |
 
-### Planned — not live
+Managed Supabase (**OneDecore**, `lpurlfmpvriyvpkujvyl`): migrations **1–13** aligned (August 1, 2026).
 
-CRM workspace, manual/bulk leads, source-based assignment, sales targets, WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, public lead activation, production deployment.
+### Not yet complete
+
+Remaining Phase 5C scope (manual lead creation, duplicate-safe flows, further collaboration mutations), Phase 5D+ (bulk import, targets, WhatsApp, quotations, projects, campaigns), public lead activation, and **production deployment** (Phase 10).
 
 See [Phase Roadmap](docs/09-phase-roadmap.md) and [Phase 5A Audit](docs/audits/phase-5a-crm-architecture-freeze.md).
 
@@ -85,7 +90,7 @@ Five locked V1 staff roles: `super_admin`, `sales_manager`, `sales_executive`, `
 
 - **Framework:** Next.js 16.2.11 · React 19 · TypeScript 5 · Tailwind CSS v4
 - **Node:** 24.x LTS (`>=24 <25`) · npm 11.16.0
-- **Database:** Supabase (`lpurlfmpvriyvpkujvyl`, Mumbai) · 10 migrations applied
+- **Database:** Supabase (`lpurlfmpvriyvpkujvyl`, Mumbai) · **13 migrations applied** (managed aligned)
 - **Quality gates:** `npm run check` · `npm run check:db`
 - **Contributions:** [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md)
 

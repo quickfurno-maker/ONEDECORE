@@ -1,5 +1,7 @@
 # Phase 5B — CRM Identity, Authorization & Core Data Foundation Audit
 
+> **Current note (August 1, 2026):** Phase 5B is **complete**. Migration 11 applied to managed OneDecore Supabase on 2026-08-01 (with migrations 12–13 in ordered Phase DB-2 push). Managed migration state is **1–13**. Application is **not production-deployed**. The managed-state lines below are historical implementation-time records.
+
 **Date:** 2026-07-31  
 **Branch:** `phase-5b-crm-identity-core-foundation`  
 **Base SHA:** `ad2044f2ddb7bc906445e6c7f61bf39ccf82ca2d`  

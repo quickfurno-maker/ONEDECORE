@@ -1,5 +1,7 @@
 # Phase CI-1 Audit — GitHub Actions Quality-Gate Foundation
 
+> **Current note (August 1, 2026):** Phase CI-1 and Phase 5C2A (PR #7) are merged. Protected `main` requires **ONEDECORE Quality Gate**; PR #7 head CI and merge-commit `01254ee` CI both **PASS**. Managed OneDecore Supabase is at migrations **1–13** (Phase DB-2). CI uses local Supabase only; it does not connect to managed Supabase.
+
 **Date:** July 31, 2026
 **Branch:** `phase-ci-1-github-actions-foundation`
 **Baseline:** `4edda152bf8ed6ef3911b0e17e620f626c77dc7f`
@@ -94,7 +96,7 @@ The database job:
 - Stops and removes local containers in an `always()` cleanup step
 - Does not persist database volumes between workflow runs
 
-Migration 12 is applied **locally in CI only**. Managed Supabase remains unchanged.
+Migration 12+ is applied **locally in CI only** via `db reset`. At CI-1 implementation time managed Supabase was unchanged; managed migrations 11–13 were applied separately in Phase DB-2 (August 1, 2026).
 
 ## Environment variables (application job only)
 

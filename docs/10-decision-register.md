@@ -55,6 +55,7 @@
 | **DEC-0045** | CRM workflow states documented as state graphs with explicit branch/terminal semantics (not misleading serial chains) | LOCKED | Prevents implementation of impossible linear transitions | No | Phase 5A | Serial diagram wording |
 | **DEC-0046** | Phase 5E configures targets and non-commercial reporting only; authoritative achievement activates in Phase 7B | LOCKED | Prevents fabricated or stub performance metrics before quotation acceptance exists | No | Phase 5A | Phase 5E stub achievement |
 | **DEC-0047** | Phase 5B CRM foundation implemented locally (migration 11): assignment-scoped RLS, source catalogue, RPC-only pipeline mutations; legacy roles retained without user remapping; sales targets deferred to 5E | LOCKED | Establishes auditable CRM data plane without managed apply or public activation | No | Phase 5B | N/A |
+| **DEC-0048** | Managed CRM migrations 11–13 applied to OneDecore Supabase (`lpurlfmpvriyvpkujvyl`) on 2026-08-01 in ordered push; remote history aligned 1–13; no production application deployment; public lead intake remains inactive | LOCKED | Records authoritative managed database state after Phase DB-2 | No | Phase DB-2 | N/A |
 
 ---
 
