@@ -214,5 +214,3 @@ export async function createManualLeadAction(
     };
   }
 }
-
-export { INITIAL_STATE as MANUAL_LEAD_INITIAL_ACTION_STATE };

@@ -15,7 +15,6 @@ import { MANUAL_LEAD_CATALOG_LABELS } from "../../contracts/manual-lead-contract
 import {
   createManualLeadAction,
   previewManualLeadDuplicateAction,
-  MANUAL_LEAD_INITIAL_ACTION_STATE,
   type ManualLeadActionState,
 } from "../../server/crm-manual-lead-actions.ts";
 import { ManualLeadDuplicateNotice } from "./ManualLeadDuplicateNotice.tsx";
@@ -31,6 +30,11 @@ const fieldClassName =
   "mt-1 block w-full min-h-11 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400";
 
 const labelClassName = "text-sm font-medium text-neutral-200";
+
+const MANUAL_LEAD_INITIAL_ACTION_STATE: ManualLeadActionState = {
+  success: false,
+  message: "",
+};
 
 function canSubmitAfterPreview(
   preview: ManualLeadActionState["duplicatePreview"] | undefined,

@@ -161,4 +161,37 @@ describe("Phase 5C2B server architecture", () => {
     assert.match(errorsSrc, /CONTACT_IDENTITY_CONFLICT/);
     assert.match(errorsSrc, /DUPLICATE_OVERRIDE_REQUIRED/);
   });
+
+  test("manual lead server-action module exports async functions only", () => {
+    const actionsSrc = readFileSync(
+      join(root, "src/features/crm/server/crm-manual-lead-actions.ts"),
+      "utf8"
+    );
+
+    assert.match(actionsSrc, /"use server"/);
+    assert.doesNotMatch(
+      actionsSrc,
+      /MANUAL_LEAD_INITIAL_ACTION_STATE/
+    );
+    assert.doesNotMatch(actionsSrc, /export\s*\{/);
+
+    const runtimeValueExports = [
+      ...actionsSrc.matchAll(
+        /export\s+(?:const|let|var|class|enum|type(?!\s+\w+\s*=)|function(?!\s+async))\s+/g
+      ),
+    ];
+    assert.equal(
+      runtimeValueExports.length,
+      0,
+      `unexpected runtime exports: ${runtimeValueExports.map((match) => match[0]).join(", ")}`
+    );
+
+    const asyncActionExports =
+      actionsSrc.match(/export\s+async\s+function\s+\w+/g) ?? [];
+    assert.ok(asyncActionExports.length >= 2);
+    assert.deepEqual(
+      new Set(asyncActionExports.map((entry) => entry.replace(/export\s+async\s+function\s+/, ""))),
+      new Set(["previewManualLeadDuplicateAction", "createManualLeadAction"])
+    );
+  });
 });
