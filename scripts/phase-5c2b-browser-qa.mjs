@@ -165,6 +165,53 @@ function shouldSkipC1Seed() {
   return flag === "1" || flag.toLowerCase() === "true";
 }
 
+function attachServerActionFailureGuards(page) {
+  const failures = [];
+
+  page.on("response", (response) => {
+    const request = response.request();
+    if (
+      request.method() === "POST" &&
+      /\/admin\/crm\/leads\/new/.test(response.url()) &&
+      response.status() >= 500
+    ) {
+      failures.push(`HTTP ${response.status()} on ${response.url()}`);
+    }
+  });
+
+  page.on("console", (message) => {
+    const text = message.text();
+    if (
+      /use server.*only export async functions/i.test(text) ||
+      /invalid-use-server-value/i.test(text)
+    ) {
+      failures.push(text);
+    }
+  });
+
+  page.on("pageerror", (error) => {
+    if (/use server.*only export async functions/i.test(error.message)) {
+      failures.push(error.message);
+    }
+  });
+
+  return failures;
+}
+
+async function submitDuplicateCheck(flowPage) {
+  await flowPage.locator('input[name="submittedName"]').fill("Owner QA Browser Lead");
+  await flowPage.locator('input[name="phone"]').fill("+919810000050");
+  const responsePromise = flowPage.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/admin\/crm\/leads\/new/.test(response.url()),
+    { timeout: 60000 }
+  );
+  await flowPage.getByRole("button", { name: /check duplicates/i }).click();
+  const response = await responsePromise;
+  return response;
+}
+
 async function main() {
   fs.mkdirSync(artifactsDir, { recursive: true });
   if (!shouldSkipC1Seed()) {
@@ -274,18 +321,26 @@ async function main() {
   const flowContext = await browser.newContext({ reducedMotion: "reduce" });
   const flowPage = await flowContext.newPage();
   await flowPage.setViewportSize({ width: 1440, height: 900 });
+  const serverActionFailures = attachServerActionFailureGuards(flowPage);
 
   await login(flowPage, "owner-qa-mgr@example.test", flowContext);
   await openNewLeadPage(flowPage);
-  await flowPage.locator('input[name="submittedName"]').fill("Owner QA Browser Lead");
-  await flowPage.locator('input[name="phone"]').fill("+919810000050");
-  await flowPage.getByRole("button", { name: /check duplicates/i }).click();
-  await flowPage.waitForTimeout(1500);
-  const previewStatus = await flowPage.locator('[role="status"], [role="alert"]').count();
+  const duplicateResponse = await submitDuplicateCheck(flowPage);
+  await flowPage
+    .getByText(/no similar active or recent enquiry was found/i)
+    .first()
+    .waitFor({ timeout: 60000 });
+  const previewPass =
+    duplicateResponse.status() < 400 &&
+    serverActionFailures.length === 0;
   report.push({
     kind: "duplicate-preview-flow",
-    pass: previewStatus > 0,
-    detail: previewStatus > 0 ? "duplicate notice rendered" : "missing preview notice",
+    pass: previewPass,
+    detail: previewPass
+      ? "duplicate preview POST succeeded"
+      : `duplicate preview failed (status=${duplicateResponse.status()}, failures=${serverActionFailures.join("; ") || "missing success notice"})`,
+    responseStatus: duplicateResponse.status(),
+    serverActionFailures,
   });
 
   await flowContext.close();
