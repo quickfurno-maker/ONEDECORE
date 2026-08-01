@@ -25,11 +25,11 @@ export function LeadDetailSourcePanel({ source }: LeadDetailSourcePanelProps) {
         </div>
         <div>
           <dt className="text-xs text-neutral-500">Landing path</dt>
-          <dd className="mt-1 text-sm text-neutral-100">{source.landingPath}</dd>
+          <dd className="mt-1 text-sm text-neutral-100">{source.landingPath ?? "—"}</dd>
         </div>
         <div>
           <dt className="text-xs text-neutral-500">Planner version</dt>
-          <dd className="mt-1 text-sm text-neutral-100">{source.plannerVersion}</dd>
+          <dd className="mt-1 text-sm text-neutral-100">{source.plannerVersion ?? "—"}</dd>
         </div>
         <div>
           <dt className="text-xs text-neutral-500">Attribution summary</dt>

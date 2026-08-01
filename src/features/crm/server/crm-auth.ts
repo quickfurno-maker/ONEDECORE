@@ -8,7 +8,7 @@ import {
   hasCrmLeadReadAccess,
   type CrmAccessContext,
 } from "../contracts/crm-access.ts";
-import { probeCrmPermissions, probeCanAssignLeads } from "./crm-permissions.ts";
+import { probeCrmPermissions, probeCanAssignLeads, probeManualLeadPermissions } from "./crm-permissions.ts";
 
 export type CrmAccessResolution =
   | { readonly kind: "granted"; readonly context: CrmAccessContext }
@@ -42,6 +42,7 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
 
   const permissions = await probeCrmPermissions();
   const canAssignLeads = await probeCanAssignLeads();
+  const manualLeadPermissions = await probeManualLeadPermissions();
   const context: CrmAccessContext = {
     userId: staff.userId,
     email: staff.email,
@@ -51,6 +52,9 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
     canReadActivities: permissions["crm.activities.read"],
     canReadConsents: permissions["consents.read"],
     canAssignLeads,
+    canCreateLeads: manualLeadPermissions.canCreateLeads,
+    canOverrideLeadDuplicate: manualLeadPermissions.canOverrideLeadDuplicate,
+    canManageLeadSources: manualLeadPermissions.canManageLeadSources,
   };
 
   if (!hasCrmLeadReadAccess(context)) {
@@ -84,6 +88,31 @@ export async function requireCrmReadAccess(
   }
 
   if (resolution.kind === "denied") {
+    redirect("/auth/forbidden");
+  }
+
+  return resolution.context;
+}
+
+export async function requireCrmCreateAccess(
+  currentPath: string = "/admin/crm/leads/new"
+): Promise<CrmAccessContext> {
+  const resolution = await resolveCrmAccess();
+
+  if (resolution.kind === "unauthenticated") {
+    const safeNext = getSafeAdminRedirect(currentPath);
+    const loginUrl =
+      safeNext !== "/admin"
+        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
+        : "/auth/login";
+    redirect(loginUrl);
+  }
+
+  if (resolution.kind === "inactive") {
+    redirect("/auth/forbidden");
+  }
+
+  if (resolution.kind === "denied" || !resolution.context.canCreateLeads) {
     redirect("/auth/forbidden");
   }
 

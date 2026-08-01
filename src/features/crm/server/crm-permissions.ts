@@ -51,3 +51,35 @@ export async function probeCanAssignLeads(): Promise<boolean> {
 
   return !error && data === true;
 }
+
+export interface ManualLeadPermissionProbeResult {
+  readonly canCreateLeads: boolean;
+  readonly canOverrideLeadDuplicate: boolean;
+  readonly canManageLeadSources: boolean;
+}
+
+export async function probeManualLeadPermissions(): Promise<ManualLeadPermissionProbeResult> {
+  const supabase = await createClient();
+  const codes = [
+    "leads.create",
+    "leads.duplicate_override",
+    "sources.manage",
+  ] as const;
+
+  const entries = await Promise.all(
+    codes.map(async (code) => {
+      const { data, error } = await supabase.rpc("authorize", {
+        requested_permission: code,
+      });
+      return [code, !error && data === true] as const;
+    })
+  );
+
+  const map = Object.fromEntries(entries) as Record<(typeof codes)[number], boolean>;
+
+  return {
+    canCreateLeads: map["leads.create"],
+    canOverrideLeadDuplicate: map["leads.duplicate_override"],
+    canManageLeadSources: map["sources.manage"],
+  };
+}

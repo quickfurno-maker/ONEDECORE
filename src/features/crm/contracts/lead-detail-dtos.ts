@@ -52,8 +52,8 @@ export interface CrmLeadDetailSourceTouchpoint {
 
 export interface CrmLeadDetailSourcePanel {
   readonly primarySourceLabel: string;
-  readonly landingPath: string;
-  readonly plannerVersion: string;
+  readonly landingPath: string | null;
+  readonly plannerVersion: string | null;
   readonly attributionSummary: string | null;
   readonly touchpoints: readonly CrmLeadDetailSourceTouchpoint[];
 }

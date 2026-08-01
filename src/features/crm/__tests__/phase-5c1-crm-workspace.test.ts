@@ -98,6 +98,9 @@ describe("Phase 5C1 CRM authorization contracts", () => {
         canReadActivities: true,
         canReadConsents: true,
         canAssignLeads: false,
+        canCreateLeads: false,
+        canOverrideLeadDuplicate: false,
+        canManageLeadSources: false,
       }),
       true
     );
@@ -111,6 +114,9 @@ describe("Phase 5C1 CRM authorization contracts", () => {
         canReadActivities: true,
         canReadConsents: true,
         canAssignLeads: false,
+        canCreateLeads: false,
+        canOverrideLeadDuplicate: false,
+        canManageLeadSources: false,
       }),
       true
     );
@@ -124,6 +130,9 @@ describe("Phase 5C1 CRM authorization contracts", () => {
         canReadActivities: false,
         canReadConsents: false,
         canAssignLeads: false,
+        canCreateLeads: false,
+        canOverrideLeadDuplicate: false,
+        canManageLeadSources: false,
       }),
       false
     );

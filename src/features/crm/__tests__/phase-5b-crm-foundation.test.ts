@@ -75,20 +75,28 @@ function sampleLeadRow(overrides: Partial<CrmLeadListRow> = {}): CrmLeadListRow 
 }
 
 describe("Phase 5B CRM permission constants", () => {
-  test("permission catalogue matches migration insert block", () => {
-    const migration = readFileSync(
+  test("permission catalogue matches migration insert blocks", () => {
+    const migration11 = readFileSync(
       join(
         root,
         "supabase/migrations/20260730184426_crm_identity_core_foundation.sql"
       ),
       "utf8"
     );
+    const migration14 = readFileSync(
+      join(
+        root,
+        "supabase/migrations/20260801140000_crm_manual_lead_duplicate_safe_flow.sql"
+      ),
+      "utf8"
+    );
+    const migrationSql = `${migration11}\n${migration14}`;
 
     for (const code of CRM_PERMISSION_CODES) {
-      assert.match(migration, new RegExp(`'${code}'`));
+      assert.match(migrationSql, new RegExp(`'${code}'`));
     }
 
-    assert.equal(CRM_PERMISSION_CODES.length, 13);
+    assert.equal(CRM_PERMISSION_CODES.length, 15);
   });
 
   test("canonical and legacy role codes are declared", () => {
