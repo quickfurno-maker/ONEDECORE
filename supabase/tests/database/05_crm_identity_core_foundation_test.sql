@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 5B CRM Identity & Core Foundation pgTAP tests (final hardening)
 
 begin;
-select plan(76);
+select plan(77);
 
 -- Schema objects
 select has_table('public', 'lead_sources', 'lead_sources exists');
@@ -397,6 +397,12 @@ select results_eq(
   'failed resume writes no additional resumed event'
 );
 
+select results_eq(
+  $$select status::text from public.transition_lead_status(current_setting('test.lead_beta_id')::uuid, 'new', null, null)$$,
+  array['new'],
+  'new on hold resumes to new before assigned hold prep'
+);
+
 select public.assign_lead(current_setting('test.lead_beta_id')::uuid, 'a4444444-4444-4444-4444-444444444444'::uuid, 'assigned hold prep');
 
 select results_eq(
@@ -412,13 +418,12 @@ select throws_ok(
   'assigned on hold cannot resume to contacted without prior contacted stage'
 );
 
--- Unassign contacted lead preserves later stage
-select public.assign_lead(current_setting('test.lead_alpha_id')::uuid, null, 'manager unassign contacted');
-
-select results_eq(
-  $$select status::text, assigned_to is null from public.leads where id = current_setting('test.lead_alpha_id')::uuid$$,
-  $$values ('contacted'::text, true)$$,
-  'unassigning contacted lead preserves contacted stage'
+-- Progressed-stage unassignment is rejected in Phase 5C2A
+select throws_ok(
+  $$select public.assign_lead(current_setting('test.lead_alpha_id')::uuid, null, 'manager unassign contacted')$$,
+  '22023',
+  null,
+  'unassigning contacted lead is rejected'
 );
 
 -- Follow-up permission separation (notes-only synthetic role)
@@ -755,7 +760,7 @@ select throws_ok(
 reset role;
 
 select results_eq(
-  $$select has_function_privilege('authenticated', 'public.assign_lead(uuid,uuid,text)', 'execute')$$,
+  $$select has_function_privilege('authenticated', 'public.assign_lead(uuid,uuid,text,uuid,timestamptz,boolean)', 'execute')$$,
   array[true],
   'authenticated can execute assign_lead wrapper'
 );

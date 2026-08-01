@@ -12,6 +12,9 @@ interface AssignLeadRpcArgs {
   readonly p_lead_id: string;
   readonly p_assignee_id: string | null;
   readonly p_reason: string | null;
+  readonly p_expected_assignee: string | null;
+  readonly p_expected_updated_at: string | null;
+  readonly p_enforce_expected_state: boolean;
 }
 
 interface TransitionLeadStatusRpcArgs {
@@ -76,6 +79,9 @@ export interface AssignLeadInput {
   readonly leadId: string;
   readonly assigneeId: string | null;
   readonly reason?: string | null;
+  readonly expectedAssigneeId?: string | null;
+  readonly expectedUpdatedAt?: string | null;
+  readonly enforceExpectedState?: boolean;
 }
 
 export interface TransitionLeadStatusInput {
@@ -129,6 +135,9 @@ export async function callAssignLead(
     p_lead_id: input.leadId,
     p_assignee_id: input.assigneeId,
     p_reason: input.reason ?? null,
+    p_expected_assignee: input.expectedAssigneeId ?? null,
+    p_expected_updated_at: input.expectedUpdatedAt ?? null,
+    p_enforce_expected_state: input.enforceExpectedState ?? false,
   });
 
   if (error) {

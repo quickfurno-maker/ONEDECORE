@@ -39,3 +39,15 @@ export async function hasAnyCrmLeadReadPermission(): Promise<boolean> {
   const permissions = await probeCrmPermissions();
   return permissions["leads.read_all"] || permissions["leads.read_assigned"];
 }
+
+/**
+ * Probes `leads.assign` for the authenticated staff session.
+ */
+export async function probeCanAssignLeads(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("authorize", {
+    requested_permission: "leads.assign",
+  });
+
+  return !error && data === true;
+}
