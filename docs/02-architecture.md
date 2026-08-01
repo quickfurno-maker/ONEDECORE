@@ -1,11 +1,11 @@
 # 02 — TECHNICAL ARCHITECTURE AND REPOSITORY SPECIFICATION
 
-**Document Status:** Locked Architecture Baseline (reconciled Phase 5A, July 30, 2026)
+**Document Status:** Locked Architecture Baseline (truth-synced post DB-2, August 1, 2026)
 **Pattern:** Modular Monolith
 **Framework:** Next.js 16.2.11
 **Database:** Supabase PostgreSQL
 **Route Prefix:** Internal CRM uses `/admin`
-**Current Phase:** 5A documentation freeze; next implementation 5B
+**Current Phase:** 5C in progress (5C1 and 5C2A complete on main; managed migrations 11–13 applied)
 
 ---
 
@@ -77,7 +77,7 @@ OneDecore/
     │   ├── portfolio/         # Portfolio (live)
     │   ├── lead-intake/       # Public intake + data plane (schema live; route disabled)
     │   ├── public-site/       # Premium homepage (live)
-    │   ├── crm/               # CRM workspace (planned Phase 5C+)
+    │   ├── crm/               # CRM workspace (partial — 5C1 read + 5C2A assignment on main)
     │   ├── quotations/        # Commercial quotes (planned Phase 7)
     │   ├── projects/          # Execution (planned Phase 8)
     │   ├── whatsapp/          # Messaging (planned Phase 6)

@@ -1,9 +1,9 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (reconciled Phase 5B, July 31, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced post DB-2, August 1, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
-**Migrations Applied (Managed):** 10 / 10
+**Migrations Applied (Managed):** 13 / 13
 
 ---
 
@@ -17,7 +17,7 @@
 ├─────────────────────────────────────────────────────────┤
 │ 3. Lead Intake Domain (contacts, leads, consent, intake)│ LIVE (schema); public route DISABLED
 ├─────────────────────────────────────────────────────────┤
-│ 4. CRM Operations Domain (sources, assignments, notes, etc.) │ **LOCAL Phase 5B** (migration 11; not on managed)
+│ 4. CRM Operations Domain (sources, assignments, notes, etc.) │ LIVE (migrations 11–13 managed)
 ├─────────────────────────────────────────────────────────┤
 │ 5. Commercial Domain (quotations, versions, acceptance) │ PLANNED Phase 7
 ├─────────────────────────────────────────────────────────┤
@@ -40,8 +40,8 @@
 ### 2.1 Identity Domain
 - **`profiles`:** Staff profiles linked to `auth.users`; `status` must be `active` for authorization.
 - **`roles` / `permissions` / `role_permissions` / `user_roles`:** Database-backed RBAC.
-- **Legacy seed roles:** retained; canonical additions `sales_manager`, `sales_executive`, `project_manager` (migration 11 local).
-- **Phase 5B tables (local):** `lead_sources`, `lead_closure_reasons`, `lead_source_touchpoints`, `lead_assignment_history`, `lead_notes`, `lead_follow_ups`, `lead_activities`; `leads.primary_source_id`, `leads.entry_method`.
+- **Legacy seed roles:** retained; canonical additions `sales_manager`, `sales_executive`, `project_manager` (migrations 11–13 managed).
+- **CRM tables (managed):** `lead_sources`, `lead_closure_reasons`, `lead_source_touchpoints`, `lead_assignment_history`, `lead_notes`, `lead_follow_ups`, `lead_activities`; `leads.primary_source_id`, `leads.entry_method`.
 - **`public.authorize(text)`:** SECURITY INVOKER wrapper to `private.has_permission()`.
 
 ### 2.2 Portfolio Domain (Phase 2E1+)

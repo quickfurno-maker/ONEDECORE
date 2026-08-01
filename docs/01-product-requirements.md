@@ -1,6 +1,6 @@
 # 01 — PRODUCT REQUIREMENTS DOCUMENT (PRD)
 
-**Document Status:** Locked PRD Baseline (reconciled Phase 5A, July 30, 2026)
+**Document Status:** Locked PRD Baseline (truth-synced post DB-2, August 1, 2026)
 **Scope:** ONEDECORE Version 1 Operating System
 **Target Market:** Pune, India
 
@@ -25,12 +25,18 @@ ONEDECORE delivers a premium architectural public presence and a disciplined int
 ### 2.3 Staff Authentication & RBAC Foundation
 - Invitation-only email/password (`/auth/login`).
 - `public.authorize(permission_code)` with active-profile enforcement.
-- Portfolio permissions live; CRM permissions partially seeded (`leads.read`, `leads.manage` on `super_admin` only in migration 9).
+- Portfolio permissions live; CRM permissions extended (Phase 5B–5C2A merged; managed migrations 11–13 applied).
 
 ### 2.4 Secure Lead Intake Data Plane (Schema Only — Not Publicly Active)
 - Contacts, leads, consent events, intake requests, `submit_lead_intake` RPC.
-- Migration 10 covering indexes applied managed 10/10.
+- Migration 10 covering indexes applied; managed aligned through migration 13.
 - Public route exists; production defaults **disabled**.
+
+### 2.5 Partial CRM Workspace (Merged — Not Production-Deployed)
+- Read-only lead workspace under `/admin/crm` (Phase 5C1).
+- Lead assignment mutations: assign, reassign, safe-unassign (Phase 5C2A).
+- Managed database foundation applied; application not deployed to Hostinger VPS.
+- Manual lead creation, duplicate-safe flows, and remaining Phase 5C scope **not complete**.
 
 ---
 

@@ -1,6 +1,6 @@
 # Phase 5C2A — Lead Assignment Mutations Audit
 
-**Status:** Local implementation complete — not merged, not deployed, managed migration 13 not applied remotely.
+**Status:** **COMPLETE** — PR #7 merged (head `be93880d94c9ae7efd258e11a5a19c73309b408f`; merge commit `01254ee2ffde65a4e410361663aba2fb55e9dbe4`, 2026-08-01T04:19:23Z). Migrations 11–13 applied to managed OneDecore Supabase (2026-08-01). Application **not production-deployed**. Public lead intake **inactive**.
 
 ## Scope
 
@@ -65,17 +65,23 @@ public.assign_lead(
 - `crm-assignment-actions.ts` → server actions with `revalidatePath` on success
 - No service role, no direct `leads` updates, no optimistic UI
 
-## Local verification
+## Final verification (protected main @ `01254ee`)
 
 | Gate | Result |
 |------|--------|
-| `npm run check` | pending final run |
-| Application tests | 361 expected after Phase 5C2A file |
-| Database tests | 289 (includes 16 in test 07) |
-| Owner QA | `scripts/phase-5c2a-owner-qa.mjs` |
-| Browser QA | `scripts/phase-5c2a-browser-qa.mjs` |
+| `npm run check` | PASS |
+| Application tests | 363/363 PASS |
+| Image tests | 17/17 PASS |
+| Database tests | 289/289 PASS |
+| Owner RPC/RLS QA | 22/22 PASS |
+| Browser QA | 31/31 PASS |
+| Six roles × four viewports | 24/24 PASS |
+| PR-head CI (Quality Gate) | PASS |
+| Merge-commit main CI | PASS |
+| Managed migrations 11–13 | Applied; post-apply dry-run clean |
+| Production deployment | **Not authorized / not performed** |
 
 ## Non-goals
 
 - Status transitions, notes, follow-up mutations, manual lead creation
-- Managed Supabase apply, deployment, public lead-intake activation
+- Production deployment, public lead-intake activation
