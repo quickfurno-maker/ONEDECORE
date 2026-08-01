@@ -10,6 +10,7 @@ export interface CrmAccessContext {
   readonly canReadSources: boolean;
   readonly canReadActivities: boolean;
   readonly canReadConsents: boolean;
+  readonly canAssignLeads: boolean;
 }
 
 export function hasCrmLeadReadAccess(context: CrmAccessContext): boolean {

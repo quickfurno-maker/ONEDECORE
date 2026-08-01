@@ -1158,7 +1158,14 @@ export type Database = {
     }
     Functions: {
       assign_lead: {
-        Args: { p_assignee_id: string; p_lead_id: string; p_reason?: string }
+        Args: {
+          p_assignee_id: string
+          p_enforce_expected_state?: boolean
+          p_expected_assignee?: string
+          p_expected_updated_at?: string
+          p_lead_id: string
+          p_reason?: string
+        }
         Returns: {
           assigned_to: string | null
           attribution: Json
@@ -1197,14 +1204,6 @@ export type Database = {
         }
       }
       authorize: { Args: { requested_permission: string }; Returns: boolean }
-      list_crm_assignable_executives: {
-        Args: never
-        Returns: {
-          display_name: string
-          role_code: string
-          user_id: string
-        }[]
-      }
       cancel_lead_follow_up: {
         Args: { p_follow_up_id: string; p_outcome?: string }
         Returns: {
@@ -1300,6 +1299,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      list_crm_assignable_executives: {
+        Args: never
+        Returns: {
+          display_name: string
+          role_code: string
+          user_id: string
+        }[]
       }
       replace_portfolio_project_services: {
         Args: {

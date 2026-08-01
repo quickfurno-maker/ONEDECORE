@@ -16,12 +16,14 @@ import { LeadDetailTimeline } from "@/features/crm/components/leads/LeadDetailTi
 import { LeadStatusBadge } from "@/features/crm/components/leads/LeadStatusBadge";
 import type { LeadStageCode } from "@/features/crm/contracts/lead-stages";
 import { getLeadDetailForCurrentUser } from "@/features/crm/server/crm-lead-repository";
+import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
+import { fetchCrmAssigneeDirectory } from "@/features/crm/server/crm-lead-queries";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Lead Detail | ONEDECORE CRM",
-  description: "Read-only CRM lead detail workspace.",
+  description: "CRM lead detail workspace with assignment controls for authorized staff.",
 };
 
 interface CrmLeadDetailPageProps {
@@ -30,17 +32,23 @@ interface CrmLeadDetailPageProps {
 
 export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPageProps) {
   const { leadId } = await params;
+  const context = await getCrmAccessContext();
   const lead = await getLeadDetailForCurrentUser(leadId);
 
   if (!lead) {
     notFound();
   }
 
+  const assigneeDirectory =
+    context?.canAssignLeads && context.canReadBroad
+      ? await fetchCrmAssigneeDirectory(context)
+      : [];
+
   return (
     <div className="space-y-6">
       <CrmPageHeader
         title={lead.overview.submittedName}
-        description="Read-only lead workspace. Mutation controls are intentionally unavailable in Phase 5C1."
+        description="Lead workspace with read-only CRM sections and assignment controls for authorized staff."
         actions={
           <Link
             href="/admin/crm/leads"
@@ -66,7 +74,14 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
         <LeadDetailOverview overview={lead.overview} />
         <LeadDetailContact contact={lead.contact} />
         <LeadDetailSourcePanel source={lead.source} />
-        <LeadDetailAssignmentPanel assignment={lead.assignment} />
+        <LeadDetailAssignmentPanel
+          assignment={lead.assignment}
+          leadId={lead.id}
+          leadStatus={lead.overview.status as LeadStageCode}
+          leadUpdatedAt={lead.overview.updatedAt}
+          canAssignLeads={context?.canAssignLeads ?? false}
+          assigneeDirectory={assigneeDirectory}
+        />
         <LeadDetailTimeline timeline={lead.timeline} />
         <LeadDetailNotes notes={lead.notes} />
         <LeadDetailFollowUps followUps={lead.followUps} />

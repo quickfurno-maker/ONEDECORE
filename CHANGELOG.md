@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 5C2A (July 31, 2026)
+- Migration 13 (`20260731143050_crm_assignment_mutation_hardening.sql`): hardened `assign_lead` with visibility, expected-state concurrency, safe unassign lifecycle, terminal guard, and open-follow-up ownership safety.
+- Assignment server layer (`assignment-contracts.ts`, `crm-assignment-service.ts`, `crm-assignment-actions.ts`), `LeadAssignmentDialog`, and authorized controls on `LeadDetailAssignmentPanel`.
+- pgTAP `07_crm_assignment_mutations_test.sql` (16 tests); application tests `phase-5c2a-assignment-mutations.test.ts`; local QA scripts `phase-5c2a-owner-qa.mjs` and `phase-5c2a-browser-qa.mjs`.
+- **Local only** — not merged; managed Supabase remains at migrations 1–11 remotely; migration 13 not applied remotely; no deployment.
+
 ### Fixed - Phase CI-1 reproducibility (July 31, 2026)
 - Track canonical R5.5.2 accessibility evidence ledger at `docs/audits/phase-2f-r5-5-2-final-a11y-evidence-truth-ledger.md`; update `r5-5-2-final-a11y.test.ts` to use the tracked path so clean CI checkouts pass without ignored `onedecore-chatgpt` artifacts.
 

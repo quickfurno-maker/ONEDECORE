@@ -97,6 +97,7 @@ describe("Phase 5C1 CRM authorization contracts", () => {
         canReadSources: true,
         canReadActivities: true,
         canReadConsents: true,
+        canAssignLeads: false,
       }),
       true
     );
@@ -109,6 +110,7 @@ describe("Phase 5C1 CRM authorization contracts", () => {
         canReadSources: true,
         canReadActivities: true,
         canReadConsents: true,
+        canAssignLeads: false,
       }),
       true
     );
@@ -121,6 +123,7 @@ describe("Phase 5C1 CRM authorization contracts", () => {
         canReadSources: false,
         canReadActivities: false,
         canReadConsents: false,
+        canAssignLeads: false,
       }),
       false
     );
@@ -253,10 +256,14 @@ describe("Phase 5C1 route and UI contracts", () => {
     assert.match(layoutSrc, /\/admin\/crm\/leads/);
   });
 
-  test("detail workspace does not render mutation controls", () => {
+  test("detail workspace does not render mutation controls except assignment panel", () => {
     const detailComponents = readdirSync(
       join(root, "src/features/crm/components/leads")
-    ).filter((name) => name.startsWith("LeadDetail"));
+    ).filter(
+      (name) =>
+        name.startsWith("LeadDetail") &&
+        name !== "LeadDetailAssignmentPanel.tsx"
+    );
 
     for (const fileName of detailComponents) {
       const src = readFileSync(

@@ -6,6 +6,8 @@ export type CrmErrorCode =
   | "LEAD_NOT_FOUND"
   | "INVALID_TRANSITION"
   | "INVALID_ASSIGNMENT"
+  | "ASSIGNMENT_CONFLICT"
+  | "OPEN_FOLLOW_UPS_BLOCK_ASSIGNMENT"
   | "VALIDATION_FAILED"
   | "RPC_FAILED";
 
@@ -34,7 +36,10 @@ export function crmErrorFromPostgresMessage(
 ): CrmError {
   const normalised = message.toLowerCase();
 
-  if (normalised.includes("authentication required")) {
+  if (
+    normalised.includes("crm_assignment_auth_required") ||
+    normalised.includes("authentication required")
+  ) {
     return new CrmError({
       code: "AUTH_REQUIRED",
       message: "Authentication required",
@@ -44,6 +49,7 @@ export function crmErrorFromPostgresMessage(
   }
 
   if (
+    normalised.includes("crm_assignment_permission_denied") ||
     normalised.includes("permission denied") ||
     normalised.includes("not visible")
   ) {
@@ -55,11 +61,34 @@ export function crmErrorFromPostgresMessage(
     });
   }
 
-  if (normalised.includes("not found")) {
+  if (
+    normalised.includes("crm_assignment_lead_not_found") ||
+    normalised.includes("not found")
+  ) {
     return new CrmError({
       code: "LEAD_NOT_FOUND",
       message: "Lead not found",
       httpStatus: 404,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_assignment_stale")) {
+    return new CrmError({
+      code: "ASSIGNMENT_CONFLICT",
+      message:
+        "This lead was updated by someone else. Refresh the page and review the current assignment before trying again.",
+      httpStatus: 409,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_assignment_open_follow_ups")) {
+    return new CrmError({
+      code: "OPEN_FOLLOW_UPS_BLOCK_ASSIGNMENT",
+      message:
+        "Open follow-ups must be resolved before this assignment change can proceed.",
+      httpStatus: 422,
       details: message,
     });
   }
@@ -76,7 +105,8 @@ export function crmErrorFromPostgresMessage(
   if (
     normalised.includes("closed_won_requires_quotation_acceptance") ||
     normalised.includes("closed_lost_requires_reason") ||
-    normalised.includes("terminal lead status")
+    normalised.includes("terminal lead status") ||
+    normalised.includes("crm_assignment_terminal")
   ) {
     return new CrmError({
       code: "INVALID_TRANSITION",
@@ -87,6 +117,10 @@ export function crmErrorFromPostgresMessage(
   }
 
   if (
+    normalised.includes("crm_assignment_target_invalid") ||
+    normalised.includes("crm_assignment_unsafe_unassign") ||
+    normalised.includes("crm_assignment_reason_required") ||
+    normalised.includes("crm_assignment_reason_invalid") ||
     normalised.includes("assignee is not an active eligible sales user") ||
     normalised.includes("invalid assignment method")
   ) {

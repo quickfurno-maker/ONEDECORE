@@ -8,7 +8,7 @@ import {
   hasCrmLeadReadAccess,
   type CrmAccessContext,
 } from "../contracts/crm-access.ts";
-import { probeCrmPermissions } from "./crm-permissions.ts";
+import { probeCrmPermissions, probeCanAssignLeads } from "./crm-permissions.ts";
 
 export type CrmAccessResolution =
   | { readonly kind: "granted"; readonly context: CrmAccessContext }
@@ -41,6 +41,7 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
   }
 
   const permissions = await probeCrmPermissions();
+  const canAssignLeads = await probeCanAssignLeads();
   const context: CrmAccessContext = {
     userId: staff.userId,
     email: staff.email,
@@ -49,6 +50,7 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
     canReadSources: permissions["sources.read"],
     canReadActivities: permissions["crm.activities.read"],
     canReadConsents: permissions["consents.read"],
+    canAssignLeads,
   };
 
   if (!hasCrmLeadReadAccess(context)) {
