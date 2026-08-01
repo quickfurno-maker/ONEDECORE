@@ -1,11 +1,12 @@
 ﻿# Phase 5C2B — Manual Lead Creation & Duplicate-Safe Flow Audit
 
-**Status:** **IMPLEMENTATION COMPLETE — PR #9 OPEN — EXACT-HEAD CI GREEN — AWAITING OWNER MERGE REVIEW**
+**Status:** **IMPLEMENTATION COMPLETE — PR #9 OPEN — AWAITING OWNER MERGE REVIEW**
 **Branch:** `phase-5c2b-manual-lead-duplicate-safe-flow`
-**Feature SHA:** `874583ed53310e663b67a59be21988df21fa4411`
+**Implementation commit:** `874583ed53310e663b67a59be21988df21fa4411`
 **Baseline SHA:** `b499c246863ae4a5c658c31a5f80ddbd11adf9c0`
 **PR:** #9
-**PR CI:** run `30698833667` — SUCCESS on `874583ed53310e663b67a59be21988df21fa4411`
+**Implementation-commit CI:** run `30698833667` — SUCCESS on implementation commit `874583ed53310e663b67a59be21988df21fa4411`
+**Merge-gate CI:** the current PR-head Quality Gate is verified in GitHub immediately before merge and is intentionally not pinned in this in-PR audit to avoid self-referential stale SHA/run metadata.
 **Migration:** 14 — repository/local only; NOT managed
 **Managed Supabase:** migrations 1–13 aligned
 **Deployment:** none
@@ -88,7 +89,8 @@ No service-role client. No browser direct RPC or table INSERT.
 | `npm run check:db` | **350** pgTAP tests PASS (baseline 289 + 61 in file 08) |
 | `phase-5c2b-owner-qa.mjs` | **20/20** PASS |
 | `phase-5c2b-browser-qa.mjs` | **21/21** PASS (5 roles × 4 viewports + duplicate flow) |
-| exact-head PR CI (run `30698833667`) | SUCCESS on `874583ed53310e663b67a59be21988df21fa4411` |
+| implementation-commit PR CI (run `30698833667`) | SUCCESS on `874583ed53310e663b67a59be21988df21fa4411` |
+| merge-gate PR-head CI | Verified externally in GitHub immediately before merge |
 | `git diff --check` | PASS |
 
 Browser QA roles: super_admin, sales_manager, sales_executive, project_manager, designer.
@@ -115,4 +117,4 @@ Artifacts: `.artifacts/phase-5c2b/` (gitignored)
 
 ## Owner-review recommendation
 
-PR #9 is ready for owner merge review after this documentation correction and exact-head CI revalidation. Managed migration 14 apply remains a **separate** post-merge authorization.
+PR #9 is ready for owner merge review once the current PR-head protected Quality Gate is green and no unresolved review thread exists. Managed migration 14 apply remains a **separate** post-merge authorization.
