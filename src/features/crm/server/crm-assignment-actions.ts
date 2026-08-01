@@ -42,6 +42,26 @@ function parseNullableUuid(value: FormDataEntryValue | null): string | null {
   return raw;
 }
 
+function toAssignmentActionCode(
+  code: string
+): LeadAssignmentActionState["code"] {
+  switch (code) {
+    case "AUTH_REQUIRED":
+    case "PERMISSION_DENIED":
+    case "LEAD_NOT_FOUND":
+    case "INVALID_ASSIGNMENT":
+    case "ASSIGNMENT_CONFLICT":
+    case "OPEN_FOLLOW_UPS_BLOCK_ASSIGNMENT":
+    case "VALIDATION_FAILED":
+    case "RPC_FAILED":
+      return code;
+    case "INVALID_TRANSITION":
+      return "INVALID_ASSIGNMENT";
+    default:
+      return "RPC_FAILED";
+  }
+}
+
 export async function assignLeadAction(
   _previousState: LeadAssignmentActionState,
   formData: FormData
@@ -99,10 +119,9 @@ export async function assignLeadAction(
       return {
         success: false,
         message: error.message,
-        code:
-          error.code === "INVALID_TRANSITION"
-            ? "INVALID_ASSIGNMENT"
-            : error.code,
+        code: toAssignmentActionCode(
+          error.code === "INVALID_TRANSITION" ? "INVALID_ASSIGNMENT" : error.code
+        ),
         fieldErrors,
       };
     }
@@ -114,10 +133,9 @@ export async function assignLeadAction(
     return {
       success: false,
       message: mapped.message,
-      code:
-        mapped.code === "INVALID_TRANSITION"
-          ? "INVALID_ASSIGNMENT"
-          : mapped.code,
+      code: toAssignmentActionCode(
+        mapped.code === "INVALID_TRANSITION" ? "INVALID_ASSIGNMENT" : mapped.code
+      ),
       fieldErrors: emptyFieldErrors(),
     };
   }

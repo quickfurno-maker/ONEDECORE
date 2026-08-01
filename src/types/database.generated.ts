@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       consent_events: {
@@ -686,13 +661,13 @@ export type Database = {
           entry_method: string
           estimate_snapshot: Json | null
           id: string
-          landing_path: string
+          landing_path: string | null
           locality: string | null
           message: string | null
           on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
-          planner_version: string
+          planner_version: string | null
           primary_source_id: string
           property_code: string
           room_codes: string[]
@@ -716,13 +691,13 @@ export type Database = {
           entry_method: string
           estimate_snapshot?: Json | null
           id?: string
-          landing_path: string
+          landing_path?: string | null
           locality?: string | null
           message?: string | null
           on_hold_previous_status?: string | null
           on_hold_reason?: string | null
           on_hold_since?: string | null
-          planner_version: string
+          planner_version?: string | null
           primary_source_id: string
           property_code: string
           room_codes?: string[]
@@ -746,13 +721,13 @@ export type Database = {
           entry_method?: string
           estimate_snapshot?: Json | null
           id?: string
-          landing_path?: string
+          landing_path?: string | null
           locality?: string | null
           message?: string | null
           on_hold_previous_status?: string | null
           on_hold_reason?: string | null
           on_hold_since?: string | null
-          planner_version?: string
+          planner_version?: string | null
           primary_source_id?: string
           property_code?: string
           room_codes?: string[]
@@ -1177,13 +1152,13 @@ export type Database = {
           entry_method: string
           estimate_snapshot: Json | null
           id: string
-          landing_path: string
+          landing_path: string | null
           locality: string | null
           message: string | null
           on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
-          planner_version: string
+          planner_version: string | null
           primary_source_id: string
           property_code: string
           room_codes: string[]
@@ -1226,6 +1201,21 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      check_manual_lead_duplicate: {
+        Args: {
+          p_email: string
+          p_locality: string
+          p_phone: string
+          p_property_code: string
+          p_service_code: string
+        }
+        Returns: {
+          can_create: boolean
+          can_override: boolean
+          existing_lead_id: string
+          outcome_code: string
+        }[]
       }
       complete_lead_follow_up: {
         Args: { p_follow_up_id: string; p_outcome?: string }
@@ -1296,6 +1286,61 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "lead_sources"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_manual_lead: {
+        Args: {
+          p_assignee_id?: string
+          p_budget_comfort_code?: string
+          p_duplicate_override?: boolean
+          p_duplicate_override_reason?: string
+          p_email: string
+          p_locality?: string
+          p_message?: string
+          p_phone: string
+          p_primary_source_id: string
+          p_property_code: string
+          p_room_codes?: string[]
+          p_service_code: string
+          p_source_detail?: string
+          p_submitted_name: string
+          p_timeline_code: string
+        }
+        Returns: {
+          assigned_to: string | null
+          attribution: Json
+          budget_comfort_code: string | null
+          closed_lost_note: string | null
+          closed_lost_reason_id: string | null
+          contact_id: string
+          created_at: string
+          entry_method: string
+          estimate_snapshot: Json | null
+          id: string
+          landing_path: string | null
+          locality: string | null
+          message: string | null
+          on_hold_previous_status: string | null
+          on_hold_reason: string | null
+          on_hold_since: string | null
+          planner_version: string | null
+          primary_source_id: string
+          property_code: string
+          room_codes: string[]
+          service_code: string
+          source: string
+          status: string
+          submission_reference: string
+          submitted_email: string | null
+          submitted_name: string
+          timeline_code: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leads"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1409,13 +1454,13 @@ export type Database = {
           entry_method: string
           estimate_snapshot: Json | null
           id: string
-          landing_path: string
+          landing_path: string | null
           locality: string | null
           message: string | null
           on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
-          planner_version: string
+          planner_version: string | null
           primary_source_id: string
           property_code: string
           room_codes: string[]
@@ -1591,9 +1636,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

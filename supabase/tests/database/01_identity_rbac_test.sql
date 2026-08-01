@@ -54,8 +54,8 @@ select results_eq(
 -- 5. Verify seeded system permissions count and is_system flag
 select results_eq(
   'select count(*)::integer from public.permissions where is_system = true',
-  array[21],
-  'Should have exactly 21 seeded system permissions (6 foundation + 2 portfolio + 4 lead intake + 9 Phase 5B CRM) with is_system = true'
+  array[23],
+  'Should have exactly 23 seeded system permissions (6 foundation + 2 portfolio + 4 lead intake + 9 Phase 5B CRM + 2 Phase 5C2B manual lead) with is_system = true'
 );
 
 -- 6. Verify user_roles starts empty

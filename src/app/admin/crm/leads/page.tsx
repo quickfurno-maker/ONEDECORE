@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CrmPageHeader } from "@/features/crm/components/shell/CrmPageHeader";
 import { LeadListCards } from "@/features/crm/components/leads/LeadListCards";
 import { LeadListEmpty } from "@/features/crm/components/leads/LeadListEmpty";
@@ -44,6 +45,16 @@ export default async function CrmLeadsPage({ searchParams }: CrmLeadsPageProps) 
       <CrmPageHeader
         title="Leads"
         description="Read-only operational lead queue with role-scoped visibility enforced by database RLS."
+        actions={
+          context.canCreateLeads ? (
+            <Link
+              href="/admin/crm/leads/new"
+              className="inline-flex min-h-11 items-center rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
+            >
+              New lead
+            </Link>
+          ) : null
+        }
       />
 
       <LeadListFilters
