@@ -18,6 +18,8 @@ export type CrmErrorCode =
   | "INVALID_ASSIGNEE"
   | "INACTIVE_SOURCE"
   | "LEAD_CREATE_FAILED"
+  | "FOLLOW_UP_NOT_FOUND"
+  | "FOLLOW_UP_NOT_OPEN"
   | "RPC_FAILED";
 
 export class CrmError extends Error {
@@ -71,6 +73,18 @@ export function crmErrorFromPostgresMessage(
   }
 
   if (
+    normalised.includes("follow-up") &&
+    normalised.includes("not found")
+  ) {
+    return new CrmError({
+      code: "FOLLOW_UP_NOT_FOUND",
+      message: "Follow-up not found.",
+      httpStatus: 404,
+      details: message,
+    });
+  }
+
+  if (
     normalised.includes("crm_assignment_lead_not_found") ||
     normalised.includes("not found")
   ) {
@@ -106,6 +120,72 @@ export function crmErrorFromPostgresMessage(
     return new CrmError({
       code: "INVALID_TRANSITION",
       message: "Invalid lead status transition",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (
+    normalised.includes("on-hold requires") ||
+    normalised.includes("on-hold lead may resume")
+  ) {
+    return new CrmError({
+      code: "VALIDATION_FAILED",
+      message: "On-hold reason or resume target is invalid.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (
+    normalised.includes("invalid closure reason code") ||
+    normalised.includes("closed_lost_requires_reason")
+  ) {
+    return new CrmError({
+      code: "VALIDATION_FAILED",
+      message: "Closed-lost reason or note is invalid.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("only open follow-ups can be")) {
+    return new CrmError({
+      code: "FOLLOW_UP_NOT_OPEN",
+      message: "Only open follow-ups can be updated.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (
+    normalised.includes("permission denied to manage follow-ups") ||
+    normalised.includes("permission denied to transition lead status")
+  ) {
+    return new CrmError({
+      code: "PERMISSION_DENIED",
+      message: "Permission denied",
+      httpStatus: 403,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("invalid owner")) {
+    return new CrmError({
+      code: "VALIDATION_FAILED",
+      message: "Follow-up owner selection is invalid.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (
+    normalised.includes("append-only") ||
+    normalised.includes("lead_notes")
+  ) {
+    return new CrmError({
+      code: "VALIDATION_FAILED",
+      message: "Note could not be saved.",
       httpStatus: 422,
       details: message,
     });

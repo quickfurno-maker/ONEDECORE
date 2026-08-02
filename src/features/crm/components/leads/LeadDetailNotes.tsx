@@ -1,7 +1,11 @@
 import type { CrmLeadDetailNote } from "../../contracts/lead-detail-dtos.ts";
+import { LeadNoteComposer } from "./LeadNoteComposer.tsx";
 
 interface LeadDetailNotesProps {
   readonly notes: readonly CrmLeadDetailNote[];
+  readonly leadId: string;
+  readonly canManageLeadNotes: boolean;
+  readonly showComposer: boolean;
 }
 
 function formatTimestamp(value: string): string {
@@ -11,7 +15,12 @@ function formatTimestamp(value: string): string {
   }).format(new Date(value));
 }
 
-export function LeadDetailNotes({ notes }: LeadDetailNotesProps) {
+export function LeadDetailNotes({
+  notes,
+  leadId,
+  canManageLeadNotes,
+  showComposer,
+}: LeadDetailNotesProps) {
   return (
     <section className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-5">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
@@ -37,6 +46,10 @@ export function LeadDetailNotes({ notes }: LeadDetailNotesProps) {
           ))}
         </ul>
       )}
+
+      {canManageLeadNotes && showComposer ? (
+        <LeadNoteComposer leadId={leadId} />
+      ) : null}
     </section>
   );
 }

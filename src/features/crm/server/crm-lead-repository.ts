@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { CrmLeadDetail } from "../contracts/lead-detail-dtos.ts";
 import type { CrmLeadListItem } from "../contracts/lead-dtos.ts";
+import { resolveOnHoldResumeStage } from "../contracts/lifecycle-contracts.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 import type {
   LeadListPageResult,
@@ -94,6 +95,7 @@ export async function getLeadDetailForCurrentUser(
       assigned_to,
       on_hold_reason,
       on_hold_since,
+      on_hold_previous_status,
       closed_lost_note,
       closed_lost_reason_id,
       created_at,
@@ -295,6 +297,7 @@ export async function getLeadDetailForCurrentUser(
     })),
     followUps: (followUpsResult.data ?? []).map((followUp) => ({
       id: followUp.id,
+      ownerId: followUp.owner_id,
       ownerLabel: labelForUser(followUp.owner_id) ?? "Staff member",
       dueAt: followUp.due_at,
       status: followUp.status,
@@ -314,6 +317,17 @@ export async function getLeadDetailForCurrentUser(
     statusSummary: {
       onHoldReason: lead.status === "on_hold" ? lead.on_hold_reason : null,
       onHoldSince: lead.status === "on_hold" ? lead.on_hold_since : null,
+      onHoldPreviousStatus:
+        lead.status === "on_hold"
+          ? (lead.on_hold_previous_status as LeadStageCode | null)
+          : null,
+      resumeTargetStatus:
+        lead.status === "on_hold"
+          ? resolveOnHoldResumeStage(
+              lead.on_hold_previous_status,
+              lead.assigned_to
+            )
+          : null,
       closedLostReasonLabel:
         lead.status === "closed_lost"
           ? lead.lead_closure_reasons?.display_name ?? null

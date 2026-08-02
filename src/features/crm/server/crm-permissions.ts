@@ -58,6 +58,38 @@ export interface ManualLeadPermissionProbeResult {
   readonly canManageLeadSources: boolean;
 }
 
+export interface LifecycleMutationPermissionProbeResult {
+  readonly canTransitionLeads: boolean;
+  readonly canManageLeadNotes: boolean;
+  readonly canManageLeadFollowUps: boolean;
+}
+
+export async function probeLifecycleMutationPermissions(): Promise<LifecycleMutationPermissionProbeResult> {
+  const supabase = await createClient();
+  const codes = [
+    "leads.transition",
+    "crm.notes.manage",
+    "crm.follow_ups.manage",
+  ] as const;
+
+  const entries = await Promise.all(
+    codes.map(async (code) => {
+      const { data, error } = await supabase.rpc("authorize", {
+        requested_permission: code,
+      });
+      return [code, !error && data === true] as const;
+    })
+  );
+
+  const map = Object.fromEntries(entries) as Record<(typeof codes)[number], boolean>;
+
+  return {
+    canTransitionLeads: map["leads.transition"],
+    canManageLeadNotes: map["crm.notes.manage"],
+    canManageLeadFollowUps: map["crm.follow_ups.manage"],
+  };
+}
+
 export async function probeManualLeadPermissions(): Promise<ManualLeadPermissionProbeResult> {
   const supabase = await createClient();
   const codes = [

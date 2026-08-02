@@ -89,8 +89,14 @@ export interface CrmLeadDetailNote {
   readonly authorLabel: string;
 }
 
+export interface CrmLeadClosureReasonOption {
+  readonly code: string;
+  readonly displayName: string;
+}
+
 export interface CrmLeadDetailFollowUp {
   readonly id: string;
+  readonly ownerId: string;
   readonly ownerLabel: string;
   readonly dueAt: string;
   readonly status: string;
@@ -112,6 +118,8 @@ export interface CrmLeadDetailConsentSummaryItem {
 export interface CrmLeadDetailStatusSummary {
   readonly onHoldReason: string | null;
   readonly onHoldSince: string | null;
+  readonly onHoldPreviousStatus: LeadStageCode | null;
+  readonly resumeTargetStatus: LeadStageCode | null;
   readonly closedLostReasonLabel: string | null;
   readonly closedLostNote: string | null;
 }
