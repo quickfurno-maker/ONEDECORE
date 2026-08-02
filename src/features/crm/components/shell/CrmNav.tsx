@@ -1,17 +1,36 @@
 import Link from "next/link";
 
-const CRM_NAV_ITEMS = [
-  { href: "/admin/crm/leads", label: "Leads" },
-] as const;
-
 interface CrmNavProps {
   readonly currentPath: string;
+  readonly showImports?: boolean;
+  readonly showAssignmentRules?: boolean;
 }
 
-export function CrmNav({ currentPath }: CrmNavProps) {
+const BASE_NAV_ITEMS = [{ href: "/admin/crm/leads", label: "Leads" }] as const;
+
+export function CrmNav({
+  currentPath,
+  showImports = false,
+  showAssignmentRules = false,
+}: CrmNavProps) {
+  const items = [
+    ...BASE_NAV_ITEMS,
+    ...(showImports
+      ? [{ href: "/admin/crm/imports", label: "Imports" } as const]
+      : []),
+    ...(showAssignmentRules
+      ? [
+          {
+            href: "/admin/crm/settings/assignment-rules",
+            label: "Assignment Rules",
+          } as const,
+        ]
+      : []),
+  ];
+
   return (
     <nav aria-label="CRM workspace" className="flex flex-wrap gap-2">
-      {CRM_NAV_ITEMS.map((item) => {
+      {items.map((item) => {
         const isActive = currentPath.startsWith(item.href);
         return (
           <Link

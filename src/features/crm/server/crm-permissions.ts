@@ -90,6 +90,38 @@ export async function probeLifecycleMutationPermissions(): Promise<LifecycleMuta
   };
 }
 
+export interface BulkImportPermissionProbeResult {
+  readonly canBulkImportLeads: boolean;
+  readonly canApproveLeadImports: boolean;
+  readonly canManageLeadAssignmentRules: boolean;
+}
+
+export async function probeBulkImportPermissions(): Promise<BulkImportPermissionProbeResult> {
+  const supabase = await createClient();
+  const codes = [
+    "leads.bulk_import",
+    "leads.bulk_import_approve",
+    "leads.assignment_rules.manage",
+  ] as const;
+
+  const entries = await Promise.all(
+    codes.map(async (code) => {
+      const { data, error } = await supabase.rpc("authorize", {
+        requested_permission: code,
+      });
+      return [code, !error && data === true] as const;
+    })
+  );
+
+  const map = Object.fromEntries(entries) as Record<(typeof codes)[number], boolean>;
+
+  return {
+    canBulkImportLeads: map["leads.bulk_import"],
+    canApproveLeadImports: map["leads.bulk_import_approve"],
+    canManageLeadAssignmentRules: map["leads.assignment_rules.manage"],
+  };
+}
+
 export async function probeManualLeadPermissions(): Promise<ManualLeadPermissionProbeResult> {
   const supabase = await createClient();
   const codes = [

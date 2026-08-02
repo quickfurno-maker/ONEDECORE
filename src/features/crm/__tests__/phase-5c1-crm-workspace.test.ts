@@ -104,6 +104,9 @@ describe("Phase 5C1 CRM authorization contracts", () => {
         canTransitionLeads: false,
         canManageLeadNotes: false,
         canManageLeadFollowUps: false,
+        canBulkImportLeads: false,
+        canApproveLeadImports: false,
+        canManageLeadAssignmentRules: false,
       }),
       true
     );
@@ -123,6 +126,9 @@ describe("Phase 5C1 CRM authorization contracts", () => {
         canTransitionLeads: false,
         canManageLeadNotes: false,
         canManageLeadFollowUps: false,
+        canBulkImportLeads: false,
+        canApproveLeadImports: false,
+        canManageLeadAssignmentRules: false,
       }),
       true
     );
@@ -142,6 +148,9 @@ describe("Phase 5C1 CRM authorization contracts", () => {
         canTransitionLeads: false,
         canManageLeadNotes: false,
         canManageLeadFollowUps: false,
+        canBulkImportLeads: false,
+        canApproveLeadImports: false,
+        canManageLeadAssignmentRules: false,
       }),
       false
     );

@@ -9,11 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 5D (August 2, 2026 — local only)
+- Migration 15 (`20260802140000_crm_bulk_import_source_assignment_foundation.sql`): bulk import batches/rows/events, assignment rules, 12 public RPCs, RLS hardening.
+- Application layer: import contracts/parser/services/actions/queries, assignment rule contracts/services/actions, extended CRM auth/permissions/errors.
+- CRM UI: `/admin/crm/imports` (list, wizard, detail), `/admin/crm/settings/assignment-rules`, nav capability flags.
+- Owner corrections: imported leads use `entry_method=import`, `source=bulk-import`.
+- Local QA: `phase-5d-owner-qa.mjs` (~27 assertions), `phase-5d-browser-qa.mjs` (Playwright + runtime CSV/XLSX fixtures).
+- Audit: `docs/audits/phase-5d-bulk-import-source-assignment.md`.
+- **Local only** — migration 15 not applied to managed Supabase; no production deployment.
+
 ### Added - Phase 5C Closeout (August 2, 2026)
 - Integrated closeout audit (`docs/audits/phase-5c-closeout.md`): role matrix, assignment, manual-lead/duplicate, lifecycle, and cross-slice integration verified against local migrations 1–14.
-- Truth-sync: managed Supabase at migrations **1–14** (M14 applied Phase DB-3B); 5C2A/5C2B/5C2C merged to protected main; Phase 5C implementation slices complete pending closeout doc PR merge.
+- Truth-sync: managed Supabase at migrations **1–14** (M14 applied Phase DB-3B); 5C2A/5C2B/5C2C merged to protected main; Phase 5C **COMPLETE**.
 - Closeout gates: app **397/397**, image **17/17**, DB **350/350**, 5C2B Owner QA **20/20**, 5C2C Owner QA **19/19**, 5C2B Browser QA **21/21**, 5C2C Browser QA **14/14**.
-- **No deployment**; public intake inactive; Closed-Won blocked until Phase 7B; Phase 5D not started.
+- **No deployment**; public intake inactive; Closed-Won blocked until Phase 7B; Phase 5D in progress (local only).
 
 ### Added - Phase 5C2C (August 2, 2026)
 - Lifecycle collaboration mutations: controlled status transitions, on-hold/resume, closed-lost, notes, follow-up create/complete/cancel (`crm-lifecycle-*`, lead detail UI islands).
