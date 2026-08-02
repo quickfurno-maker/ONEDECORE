@@ -5,7 +5,7 @@
 **Framework:** Next.js 16.2.11
 **Database:** Supabase PostgreSQL
 **Route Prefix:** Internal CRM uses `/admin`
-**Current Phase:** 5C in progress (5C1 and 5C2A complete on main; managed migrations 11–13 applied)
+**Current Phase:** 5C implementation complete on main (5C1, 5C2A, 5C2B, 5C2C merged; managed migrations 1–14 applied)
 
 ---
 

@@ -25,7 +25,7 @@ ONEDECORE delivers a premium architectural public presence and a disciplined int
 ### 2.3 Staff Authentication & RBAC Foundation
 - Invitation-only email/password (`/auth/login`).
 - `public.authorize(permission_code)` with active-profile enforcement.
-- Portfolio permissions live; CRM permissions extended (Phase 5B–5C2A merged; managed migrations 11–13 applied).
+- Portfolio permissions live; CRM permissions extended through Phase 5C2C merged; managed migrations 1–14 applied.
 
 ### 2.4 Secure Lead Intake Data Plane (Schema Only — Not Publicly Active)
 - Contacts, leads, consent events, intake requests, `submit_lead_intake` RPC.

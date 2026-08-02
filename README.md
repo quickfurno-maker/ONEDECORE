@@ -4,8 +4,8 @@
 
 ONEDECORE is a premium interior-business operating system for Pune, India — combining a production public website and portfolio with a planned sales, quotation, project execution, design, WhatsApp, and marketing CRM backbone.
 
-**Current phase:** Phase 5C — Lead Workspace & Premium Role-Aware CRM (**in progress**).
-**Next implementation:** Remaining Phase 5C lead-workspace mutation/collaboration scope, to be frozen in the next subphase preflight.
+**Current phase:** Phase 5C — Lead Workspace & Premium Role-Aware CRM (**implementation complete**; closeout doc PR pending merge).
+**Next implementation:** Phase 5D (bulk import / sales targets) — **not started**; requires separate owner authorization after Phase 5C closeout PR merges.
 
 ---
 
@@ -35,14 +35,16 @@ ONEDECORE is a premium interior-business operating system for Pune, India — co
 | CRM identity & data foundation (Phase 5B) | Migration 11 — merged; managed applied |
 | CRM read-only workspace (Phase 5C1) | `/admin/crm` — merged; managed migration 12 applied |
 | Lead assignment mutations (Phase 5C2A) | Assign/reassign/safe-unassign — merged; managed migration 13 applied |
-| Lead intake **schema** | Migrations 9–10; managed aligned through 13 |
+| Manual lead creation (Phase 5C2B) | Duplicate-safe flow — merged; managed migration 14 applied |
+| Lifecycle collaboration (Phase 5C2C) | Status/note/follow-up mutations — merged (PR #11) |
+| Lead intake **schema** | Migrations 9–10; managed aligned through 14 |
 | Public lead form | **Merged; default `copy-only`; server `disabled`** |
 
-Managed Supabase (**OneDecore**, `lpurlfmpvriyvpkujvyl`): migrations **1–13** aligned (August 1, 2026).
+Managed Supabase (**OneDecore**, `lpurlfmpvriyvpkujvyl`): migrations **1–14** aligned (M14 applied August 2, 2026).
 
 ### Not yet complete
 
-Remaining Phase 5C scope (manual lead creation, duplicate-safe flows, further collaboration mutations), Phase 5D+ (bulk import, targets, WhatsApp, quotations, projects, campaigns), public lead activation, and **production deployment** (Phase 10).
+Phase 5D+ (bulk import, targets, WhatsApp, quotations, projects, campaigns), public lead activation, and **production deployment** (Phase 10).
 
 See [Phase Roadmap](docs/09-phase-roadmap.md) and [Phase 5A Audit](docs/audits/phase-5a-crm-architecture-freeze.md).
 

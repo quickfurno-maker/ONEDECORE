@@ -17,7 +17,7 @@
 ├─────────────────────────────────────────────────────────┤
 │ 3. Lead Intake Domain (contacts, leads, consent, intake)│ LIVE (schema); public route DISABLED
 ├─────────────────────────────────────────────────────────┤
-│ 4. CRM Operations Domain (sources, assignments, notes, etc.) │ LIVE (migrations 11–13 managed)
+│ 4. CRM Operations Domain (sources, assignments, notes, etc.) │ LIVE (migrations 1–14 managed)
 ├─────────────────────────────────────────────────────────┤
 │ 5. Commercial Domain (quotations, versions, acceptance) │ PLANNED Phase 7
 ├─────────────────────────────────────────────────────────┤
@@ -40,7 +40,7 @@
 ### 2.1 Identity Domain
 - **`profiles`:** Staff profiles linked to `auth.users`; `status` must be `active` for authorization.
 - **`roles` / `permissions` / `role_permissions` / `user_roles`:** Database-backed RBAC.
-- **Legacy seed roles:** retained; canonical additions `sales_manager`, `sales_executive`, `project_manager` (migrations 11–13 managed).
+- **Legacy seed roles:** retained; canonical additions `sales_manager`, `sales_executive`, `project_manager` (migrations 11–14 managed).
 - **CRM tables (managed):** `lead_sources`, `lead_closure_reasons`, `lead_source_touchpoints`, `lead_assignment_history`, `lead_notes`, `lead_follow_ups`, `lead_activities`; `leads.primary_source_id`, `leads.entry_method`.
 - **`public.authorize(text)`:** SECURITY INVOKER wrapper to `private.has_permission()`.
 

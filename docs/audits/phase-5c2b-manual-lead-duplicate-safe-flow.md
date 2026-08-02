@@ -1,6 +1,8 @@
 ﻿# Phase 5C2B — Manual Lead Creation & Duplicate-Safe Flow Audit
 
-**Audit state:** **IMPLEMENTATION COMPLETE — PRE-MERGE REVIEW COMPLETE**
+> **Current state (August 2, 2026):** Phase 5C2B is **merged** to protected main (PR #10 + H1 hotfix). Migration 14 is **applied** to managed OneDecore Supabase (Phase DB-3B, 2026-08-02). Managed migrations **1–14** aligned. Phase 5C2C lifecycle mutations merged separately (PR #11). Application **not production-deployed**. Public lead intake **inactive**.
+
+**Audit state:** **IMPLEMENTATION COMPLETE — MERGED**
 
 Live PR/merge status and the merge-gate PR-head Quality Gate are verified in GitHub; this in-repo audit intentionally does not pin ephemeral open/merged state.
 
@@ -10,12 +12,12 @@ Live PR/merge status and the merge-gate PR-head Quality Gate are verified in Git
 **PR:** #9
 **Implementation-commit CI:** run `30698833667` — SUCCESS on implementation commit `874583ed53310e663b67a59be21988df21fa4411`
 **Merge-gate CI:** the current PR-head Quality Gate is verified in GitHub immediately before merge and is intentionally not pinned in this in-PR audit to avoid self-referential stale SHA/run metadata.
-**Migration:** 14 — repository/local only; NOT managed
-**Managed Supabase:** migrations 1–13 aligned
+**Migration:** 14 — applied managed (Phase DB-3B, 2026-08-02)
+**Managed Supabase:** migrations 1–14 aligned
 **Deployment:** none
 **Public lead intake:** inactive (copy-only default)
-**Phase 5C:** IN PROGRESS
-**Phase 5C2C:** NOT STARTED
+**Phase 5C:** implementation slices complete — closeout audit passed (doc PR pending merge)
+**Phase 5C2C:** MERGED (PR #11)
 **Phase 5D:** NOT STARTED
 
 ## Scope
@@ -104,11 +106,11 @@ Artifacts: `.artifacts/phase-5c2b/` (gitignored)
 
 ## Managed migration status
 
-**REPOSITORY/LOCAL ONLY.** Migration 14 is not applied to managed Supabase. Do not `db push --linked` until separate owner authorization after PR merge.
+**APPLIED MANAGED (Phase DB-3B, 2026-08-02).** Migration 14 aligned on OneDecore (`lpurlfmpvriyvpkujvyl`). Historical pre-apply notes below remain accurate for the implementation window.
 
 ## Phase boundaries
 
-- **5C2C:** not implemented (no status/note/follow-up mutation UI)
+- **5C2C:** merged (PR #11) — lifecycle/status/note/follow-up mutations
 - **5D:** not implemented (no bulk/import)
 - **Public intake:** regression suite unchanged; no activation
 

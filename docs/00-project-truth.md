@@ -1,12 +1,12 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced post DB-2, August 1, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced post Phase 5C closeout audit, August 2, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 5C — Lead Workspace & Premium Role-Aware CRM (**in progress**)
+**Current Phase:** Phase 5C — Lead Workspace & Premium Role-Aware CRM (**implementation complete**; closeout doc PR pending merge)
 
 ---
 
@@ -72,7 +72,9 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Staff auth (invitation-only email/password) | Merged on `main` |
 | Database-backed RBAC (`public.authorize`) | Merged on `main`; five-role CRM extension (Phase 5B) merged |
 | CRM read-only workspace (`/admin/crm`) | Merged on `main` (Phase 5C1) |
-| Lead assignment mutations (assign/reassign/safe-unassign) | Merged on `main` (Phase 5C2A) |
+| Lead assignment mutations (Phase 5C2A) | Merged on `main` |
+| Manual lead creation (Phase 5C2B) | Merged on `main` |
+| Lifecycle collaboration (Phase 5C2C) | Merged on `main` (PR #11) |
 | Lead intake data plane (migrations 9–10) | Schema merged; **public route disabled by default** |
 | Public lead form UI | **Merged; default `copy-only`; server `disabled`** |
 
@@ -83,13 +85,14 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | CRM identity & core data (migration 11) | Applied managed August 1, 2026 |
 | CRM workspace access (migration 12) | Applied managed August 1, 2026 |
 | Assignment mutation hardening (migration 13) | Applied managed August 1, 2026 |
-| Managed migration alignment | **1–13** on OneDecore (`lpurlfmpvriyvpkujvyl`) |
+| Manual lead duplicate-safe flow (migration 14) | Applied managed August 2, 2026 (Phase DB-3B) |
+| Managed migration alignment | **1–14** on OneDecore (`lpurlfmpvriyvpkujvyl`) |
 
-CRM is **partially implemented** on protected main with database foundation applied; **production deployment pending** (Phase 10).
+CRM workspace mutation slices (5C2A–5C2C) are **merged on protected main** with database foundation applied; **production deployment pending** (Phase 10).
 
 ### Planned — not live
 
-Remaining Phase 5C scope, manual/bulk leads, source-based assignment rules, sales targets, WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, public lead activation, production deployment.
+Phase 5D+ (bulk import, targets), WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, public lead activation, production deployment.
 
 **Do not claim planned modules are live or production-deployed.**
 
