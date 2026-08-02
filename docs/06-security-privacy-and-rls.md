@@ -100,7 +100,7 @@ Following mandatory corrections in Phase 1B, RLS policies are applied to all API
 
 ---
 
-## 7. Phase 5B CRM Security Implementation (Managed — migrations 11–13 applied 2026-08-01)
+## 7. Phase 5B CRM Security Implementation (Managed — migrations 11–14 applied 2026-08-01/02)
 
 - **Executive isolation:** `leads.read_assigned` + `private.crm_can_view_lead(assigned_to)` row predicates; unassigned leads invisible to executives.
 - **Manager breadth:** `leads.read_all` sees all sales leads and unassigned queue.

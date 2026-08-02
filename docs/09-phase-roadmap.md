@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post DB-2, August 1, 2026)
-**Current Phase:** Phase 5C — Lead Workspace & Premium Role-Aware CRM (**in progress**)
-**Next Implementation Phase:** Remaining Phase 5C lead-workspace mutation/collaboration scope (next subphase preflight)
+**Document Status:** Locked Roadmap (truth-synced post Phase 5C closeout audit, August 2, 2026)
+**Current Phase:** Phase 5C — Lead Workspace & Premium Role-Aware CRM (**implementation complete**; closeout doc PR pending merge)
+**Next Implementation Phase:** Phase 5D — Bulk Import & Sales Targets (**not started**)
 
 ---
 
@@ -29,7 +29,11 @@ Phase 5A: CRM & Operations Architecture Freeze ───────────
 Phase 5B: CRM Identity, Authorization & Core Data Foundation ─────── COMPLETED
 Phase 5C1: Premium Read-Only CRM Workspace ─────────────────────── COMPLETED
 Phase 5C2A: Lead Assignment Mutations ───────────────────────────── COMPLETED
+Phase 5C2B: Manual Lead Creation & Duplicate-Safe Flow ───────────── COMPLETED
+Phase 5C2C: Lifecycle Collaboration Mutations ───────────────────── COMPLETED
 Phase DB-2: Managed Migrations 11–13 Apply (OneDecore Supabase) ─── COMPLETED
+Phase DB-3B: Managed Migration 14 Apply (OneDecore Supabase) ─────── COMPLETED
+Phase 5C-Closeout: Integrated CRM Invariant Audit ─────────────────── AUDIT PASSED (doc PR pending)
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.

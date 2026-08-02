@@ -9,11 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 5C Closeout (August 2, 2026)
+- Integrated closeout audit (`docs/audits/phase-5c-closeout.md`): role matrix, assignment, manual-lead/duplicate, lifecycle, and cross-slice integration verified against local migrations 1–14.
+- Truth-sync: managed Supabase at migrations **1–14** (M14 applied Phase DB-3B); 5C2A/5C2B/5C2C merged to protected main; Phase 5C implementation slices complete pending closeout doc PR merge.
+- Closeout gates: app **397/397**, image **17/17**, DB **350/350**, 5C2B Owner QA **20/20**, 5C2C Owner QA **19/19**, 5C2B Browser QA **21/21**, 5C2C Browser QA **14/14**.
+- **No deployment**; public intake inactive; Closed-Won blocked until Phase 7B; Phase 5D not started.
+
+### Added - Phase 5C2C (August 2, 2026)
+- Lifecycle collaboration mutations: controlled status transitions, on-hold/resume, closed-lost, notes, follow-up create/complete/cancel (`crm-lifecycle-*`, lead detail UI islands).
+- Application tests `phase-5c2c-lifecycle-collaboration.test.ts` (+20); Owner QA `phase-5c2c-owner-qa.mjs`; Browser QA `phase-5c2c-browser-qa.mjs`.
+- **Merged to protected main (PR #11)** — merge commit `095358ef5ad6552c45e9f533da2fb07bcb079b03`; push-to-main CI SUCCESS; no new migration.
+
+### Changed - Phase DB-3B (August 2, 2026)
+- Migration 14 (`20260801140000_crm_manual_lead_duplicate_safe_flow.sql`) applied to managed OneDecore Supabase (`lpurlfmpvriyvpkujvyl`).
+- Remote migration history aligned **1–14**; post-apply dry-run up to date; remote schema lint clean.
+- Fresh WALG backup gate passed (DB-3A); **no production application deployment**; public lead intake remains inactive.
+
 ### Added - Phase 5C2B (August 1, 2026)
 - Migration 14 (`20260801140000_crm_manual_lead_duplicate_safe_flow.sql`): `leads.create` and `leads.duplicate_override` permissions; conditional manual-entry schema relaxations; `check_manual_lead_duplicate` and `create_manual_lead` RPCs with concurrency-safe duplicate enforcement and privacy-safe preview.
 - Manual lead server layer (`manual-lead-contracts.ts`, `crm-manual-lead-service.ts`, `crm-manual-lead-actions.ts`), UI (`/admin/crm/leads/new`, `ManualLeadForm`, `ManualLeadDuplicateNotice`), and leads list "New lead" action.
 - pgTAP `08_crm_manual_lead_duplicate_safe_flow_test.sql` (61 tests); application tests `phase-5c2b-manual-lead.test.ts`; local QA scripts `phase-5c2b-owner-qa.mjs` and `phase-5c2b-browser-qa.mjs`.
-- **PR #9 pre-merge review gate completed** — implementation and protected CI were reviewed on the feature branch; migration 14 remains repository/local only and is not applied to managed Supabase; managed remains at migrations 1–13; no deployment or public lead activation.
+- **Merged to protected main (PR #10 + H1 hotfix)** — historical note at merge time: migration 14 was repository-only; M14 applied managed August 2, 2026 (Phase DB-3B).
 
 ### Changed — Phase DB-2 / CRM Managed Database Alignment (August 1, 2026)
 - Phase 5C2A PR #7 merged to protected main (`01254ee2ffde65a4e410361663aba2fb55e9dbe4`).
