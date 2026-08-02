@@ -14,16 +14,22 @@ import { LeadDetailOverview } from "@/features/crm/components/leads/LeadDetailOv
 import { LeadDetailSourcePanel } from "@/features/crm/components/leads/LeadDetailSourcePanel";
 import { LeadDetailTimeline } from "@/features/crm/components/leads/LeadDetailTimeline";
 import { LeadStatusBadge } from "@/features/crm/components/leads/LeadStatusBadge";
+import { LeadStatusTransitionPanel } from "@/features/crm/components/leads/LeadStatusTransitionPanel";
 import type { LeadStageCode } from "@/features/crm/contracts/lead-stages";
+import { isTerminalLeadStage } from "@/features/crm/contracts/lead-stages";
 import { getLeadDetailForCurrentUser } from "@/features/crm/server/crm-lead-repository";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
-import { fetchCrmAssigneeDirectory } from "@/features/crm/server/crm-lead-queries";
+import {
+  fetchActiveLeadClosureReasons,
+  fetchCrmAssigneeDirectory,
+} from "@/features/crm/server/crm-lead-queries";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Lead Detail | ONEDECORE CRM",
-  description: "CRM lead detail workspace with assignment controls for authorized staff.",
+  description:
+    "CRM lead detail workspace with assignment and lifecycle collaboration controls for authorized staff.",
 };
 
 interface CrmLeadDetailPageProps {
@@ -39,16 +45,24 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
     notFound();
   }
 
-  const assigneeDirectory =
-    context?.canAssignLeads && context.canReadBroad
-      ? await fetchCrmAssigneeDirectory(context)
-      : [];
+  const leadStatus = lead.overview.status as LeadStageCode;
+  const isTerminal = isTerminalLeadStage(leadStatus);
+  const needsDirectory =
+    context?.canReadBroad &&
+    (context.canAssignLeads || context.canManageLeadFollowUps);
+
+  const [assigneeDirectory, closureReasons] = await Promise.all([
+    needsDirectory ? fetchCrmAssigneeDirectory(context!) : Promise.resolve([]),
+    context?.canTransitionLeads
+      ? fetchActiveLeadClosureReasons()
+      : Promise.resolve([]),
+  ]);
 
   return (
     <div className="space-y-6">
       <CrmPageHeader
         title={lead.overview.submittedName}
-        description="Lead workspace with read-only CRM sections and assignment controls for authorized staff."
+        description="Lead workspace with assignment controls and lifecycle collaboration for authorized staff."
         actions={
           <Link
             href="/admin/crm/leads"
@@ -60,7 +74,7 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
       />
 
       <div className="flex flex-wrap items-center gap-3">
-        <LeadStatusBadge status={lead.overview.status as LeadStageCode} />
+        <LeadStatusBadge status={leadStatus} />
         <span className="text-sm text-neutral-400">
           Updated{" "}
           {new Intl.DateTimeFormat("en-IN", {
@@ -70,6 +84,14 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
         </span>
       </div>
 
+      <LeadStatusTransitionPanel
+        leadId={lead.id}
+        currentStatus={leadStatus}
+        resumeTargetStatus={lead.statusSummary.resumeTargetStatus}
+        canTransitionLeads={context?.canTransitionLeads ?? false}
+        closureReasons={closureReasons}
+      />
+
       <div className="grid gap-6 xl:grid-cols-2">
         <LeadDetailOverview overview={lead.overview} />
         <LeadDetailContact contact={lead.contact} />
@@ -77,14 +99,26 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
         <LeadDetailAssignmentPanel
           assignment={lead.assignment}
           leadId={lead.id}
-          leadStatus={lead.overview.status as LeadStageCode}
+          leadStatus={leadStatus}
           leadUpdatedAt={lead.overview.updatedAt}
           canAssignLeads={context?.canAssignLeads ?? false}
           assigneeDirectory={assigneeDirectory}
         />
         <LeadDetailTimeline timeline={lead.timeline} />
-        <LeadDetailNotes notes={lead.notes} />
-        <LeadDetailFollowUps followUps={lead.followUps} />
+        <LeadDetailNotes
+          notes={lead.notes}
+          leadId={lead.id}
+          canManageLeadNotes={context?.canManageLeadNotes ?? false}
+          showComposer={!isTerminal}
+        />
+        <LeadDetailFollowUps
+          leadId={lead.id}
+          followUps={lead.followUps}
+          canManageLeadFollowUps={context?.canManageLeadFollowUps ?? false}
+          canChooseFollowUpOwner={context?.canReadBroad ?? false}
+          showComposer={!isTerminal}
+          assigneeDirectory={assigneeDirectory}
+        />
         <LeadDetailConsentSummary items={lead.consentSummary} />
         <LeadDetailStatusSummary summary={lead.statusSummary} />
       </div>

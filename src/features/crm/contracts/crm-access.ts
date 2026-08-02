@@ -14,6 +14,9 @@ export interface CrmAccessContext {
   readonly canCreateLeads: boolean;
   readonly canOverrideLeadDuplicate: boolean;
   readonly canManageLeadSources: boolean;
+  readonly canTransitionLeads: boolean;
+  readonly canManageLeadNotes: boolean;
+  readonly canManageLeadFollowUps: boolean;
 }
 
 export function hasCrmLeadReadAccess(context: CrmAccessContext): boolean {

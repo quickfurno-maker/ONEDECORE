@@ -8,7 +8,12 @@ import {
   hasCrmLeadReadAccess,
   type CrmAccessContext,
 } from "../contracts/crm-access.ts";
-import { probeCrmPermissions, probeCanAssignLeads, probeManualLeadPermissions } from "./crm-permissions.ts";
+import {
+  probeCrmPermissions,
+  probeCanAssignLeads,
+  probeLifecycleMutationPermissions,
+  probeManualLeadPermissions,
+} from "./crm-permissions.ts";
 
 export type CrmAccessResolution =
   | { readonly kind: "granted"; readonly context: CrmAccessContext }
@@ -42,7 +47,10 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
 
   const permissions = await probeCrmPermissions();
   const canAssignLeads = await probeCanAssignLeads();
-  const manualLeadPermissions = await probeManualLeadPermissions();
+  const [manualLeadPermissions, lifecyclePermissions] = await Promise.all([
+    probeManualLeadPermissions(),
+    probeLifecycleMutationPermissions(),
+  ]);
   const context: CrmAccessContext = {
     userId: staff.userId,
     email: staff.email,
@@ -55,6 +63,9 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
     canCreateLeads: manualLeadPermissions.canCreateLeads,
     canOverrideLeadDuplicate: manualLeadPermissions.canOverrideLeadDuplicate,
     canManageLeadSources: manualLeadPermissions.canManageLeadSources,
+    canTransitionLeads: lifecyclePermissions.canTransitionLeads,
+    canManageLeadNotes: lifecyclePermissions.canManageLeadNotes,
+    canManageLeadFollowUps: lifecyclePermissions.canManageLeadFollowUps,
   };
 
   if (!hasCrmLeadReadAccess(context)) {

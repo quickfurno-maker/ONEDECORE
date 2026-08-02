@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { CrmAccessContext } from "../contracts/crm-access.ts";
 import type {
   CrmAssigneeDirectoryEntry,
+  CrmLeadClosureReasonOption,
   CrmLeadSourceOption,
 } from "../contracts/lead-detail-dtos.ts";
 import {
@@ -101,6 +102,27 @@ export async function fetchActiveLeadSources(): Promise<
 
   return (data ?? []).map((row) => ({
     id: row.id,
+    code: row.code,
+    displayName: row.display_name,
+  }));
+}
+
+export async function fetchActiveLeadClosureReasons(): Promise<
+  readonly CrmLeadClosureReasonOption[]
+> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lead_closure_reasons")
+    .select("code, display_name")
+    .eq("is_active", true)
+    .order("display_order", { ascending: true })
+    .order("display_name", { ascending: true });
+
+  if (error) {
+    throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+  }
+
+  return (data ?? []).map((row) => ({
     code: row.code,
     displayName: row.display_name,
   }));
