@@ -1,12 +1,12 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced post Phase 5C closeout audit, August 2, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced post Phase 5C closeout, August 2, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 5C — Lead Workspace & Premium Role-Aware CRM (**implementation complete**; closeout doc PR pending merge)
+**Current Phase:** Phase 5D — Bulk Import & Source-Based Assignment (**IN PROGRESS — local only**)
 
 ---
 
@@ -92,7 +92,7 @@ CRM workspace mutation slices (5C2A–5C2C) are **merged on protected main** wit
 
 ### Planned — not live
 
-Phase 5D+ (bulk import, targets), WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, public lead activation, production deployment.
+Phase 5E+ (targets), WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, public lead activation, production deployment.
 
 **Do not claim planned modules are live or production-deployed.**
 

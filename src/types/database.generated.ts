@@ -280,6 +280,80 @@ export type Database = {
           },
         ]
       }
+      lead_assignment_rules: {
+        Row: {
+          budget_comfort_code: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          locality_normalized: string | null
+          priority: number
+          service_code: string | null
+          source_id: string
+          target_user_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          budget_comfort_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          locality_normalized?: string | null
+          priority: number
+          service_code?: string | null
+          source_id: string
+          target_user_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          budget_comfort_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          locality_normalized?: string | null
+          priority?: number
+          service_code?: string | null
+          source_id?: string
+          target_user_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_assignment_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_assignment_rules_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "lead_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_assignment_rules_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_assignment_rules_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_closure_reasons: {
         Row: {
           code: string
@@ -433,6 +507,315 @@ export type Database = {
           {
             foreignKeyName: "lead_follow_ups_owner_id_fkey"
             columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_import_batches: {
+        Row: {
+          approval_kind: string | null
+          approved_at: string | null
+          approved_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_request_id: string
+          created_at: string
+          created_by: string
+          default_source_id: string | null
+          duplicate_blocked_rows: number
+          failed_rows: number
+          file_sha256: string
+          file_size_bytes: number
+          file_type: string
+          header_fingerprint: string | null
+          id: string
+          import_completed_at: string | null
+          import_started_at: string | null
+          importable_rows: number
+          imported_rows: number
+          invalid_rows: number
+          mapping: Json
+          original_filename: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          validation_revision: number
+          worksheet_name: string | null
+        }
+        Insert: {
+          approval_kind?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_request_id: string
+          created_at?: string
+          created_by: string
+          default_source_id?: string | null
+          duplicate_blocked_rows?: number
+          failed_rows?: number
+          file_sha256: string
+          file_size_bytes: number
+          file_type: string
+          header_fingerprint?: string | null
+          id?: string
+          import_completed_at?: string | null
+          import_started_at?: string | null
+          importable_rows?: number
+          imported_rows?: number
+          invalid_rows?: number
+          mapping?: Json
+          original_filename: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string | null
+          total_rows?: number
+          updated_at?: string
+          valid_rows?: number
+          validation_revision?: number
+          worksheet_name?: string | null
+        }
+        Update: {
+          approval_kind?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_request_id?: string
+          created_at?: string
+          created_by?: string
+          default_source_id?: string | null
+          duplicate_blocked_rows?: number
+          failed_rows?: number
+          file_sha256?: string
+          file_size_bytes?: number
+          file_type?: string
+          header_fingerprint?: string | null
+          id?: string
+          import_completed_at?: string | null
+          import_started_at?: string | null
+          importable_rows?: number
+          imported_rows?: number
+          invalid_rows?: number
+          mapping?: Json
+          original_filename?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string | null
+          total_rows?: number
+          updated_at?: string
+          valid_rows?: number
+          validation_revision?: number
+          worksheet_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_import_batches_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_import_batches_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_import_batches_default_source_id_fkey"
+            columns: ["default_source_id"]
+            isOneToOne: false
+            referencedRelation: "lead_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_import_batches_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_import_events: {
+        Row: {
+          actor_id: string | null
+          batch_id: string
+          event_at: string
+          event_type: string
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          actor_id?: string | null
+          batch_id: string
+          event_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+        }
+        Update: {
+          actor_id?: string | null
+          batch_id?: string
+          event_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_import_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_import_events_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "lead_import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_import_rows: {
+        Row: {
+          assignment_resolution_code: string | null
+          assignment_rule_id: string | null
+          batch_id: string
+          budget_comfort_code: string | null
+          created_at: string
+          duplicate_outcome: string | null
+          email: string | null
+          id: string
+          import_error_code: string | null
+          import_status: string
+          lead_id: string | null
+          locality: string | null
+          message: string | null
+          phone: string | null
+          primary_source_id: string | null
+          property_code: string
+          resolved_assignee_id: string | null
+          room_codes: string[]
+          row_number: number
+          service_code: string
+          source_detail: string | null
+          submitted_name: string
+          timeline_code: string
+          updated_at: string
+          validation_errors: Json
+          validation_status: string
+        }
+        Insert: {
+          assignment_resolution_code?: string | null
+          assignment_rule_id?: string | null
+          batch_id: string
+          budget_comfort_code?: string | null
+          created_at?: string
+          duplicate_outcome?: string | null
+          email?: string | null
+          id?: string
+          import_error_code?: string | null
+          import_status?: string
+          lead_id?: string | null
+          locality?: string | null
+          message?: string | null
+          phone?: string | null
+          primary_source_id?: string | null
+          property_code: string
+          resolved_assignee_id?: string | null
+          room_codes?: string[]
+          row_number: number
+          service_code: string
+          source_detail?: string | null
+          submitted_name: string
+          timeline_code: string
+          updated_at?: string
+          validation_errors?: Json
+          validation_status?: string
+        }
+        Update: {
+          assignment_resolution_code?: string | null
+          assignment_rule_id?: string | null
+          batch_id?: string
+          budget_comfort_code?: string | null
+          created_at?: string
+          duplicate_outcome?: string | null
+          email?: string | null
+          id?: string
+          import_error_code?: string | null
+          import_status?: string
+          lead_id?: string | null
+          locality?: string | null
+          message?: string | null
+          phone?: string | null
+          primary_source_id?: string | null
+          property_code?: string
+          resolved_assignee_id?: string | null
+          room_codes?: string[]
+          row_number?: number
+          service_code?: string
+          source_detail?: string | null
+          submitted_name?: string
+          timeline_code?: string
+          updated_at?: string
+          validation_errors?: Json
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_lead_import_rows_assignment_rule"
+            columns: ["assignment_rule_id"]
+            isOneToOne: false
+            referencedRelation: "lead_assignment_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_import_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "lead_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_import_rows_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_import_rows_primary_source_id_fkey"
+            columns: ["primary_source_id"]
+            isOneToOne: false
+            referencedRelation: "lead_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_import_rows_resolved_assignee_id_fkey"
+            columns: ["resolved_assignee_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1132,6 +1515,50 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_lead_import_batch: {
+        Args: { p_batch_id: string; p_expected_revision: number }
+        Returns: {
+          approval_kind: string | null
+          approved_at: string | null
+          approved_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_request_id: string
+          created_at: string
+          created_by: string
+          default_source_id: string | null
+          duplicate_blocked_rows: number
+          failed_rows: number
+          file_sha256: string
+          file_size_bytes: number
+          file_type: string
+          header_fingerprint: string | null
+          id: string
+          import_completed_at: string | null
+          import_started_at: string | null
+          importable_rows: number
+          imported_rows: number
+          invalid_rows: number
+          mapping: Json
+          original_filename: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          validation_revision: number
+          worksheet_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_import_batches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       assign_lead: {
         Args: {
           p_assignee_id: string
@@ -1202,6 +1629,50 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancel_lead_import_batch: {
+        Args: { p_batch_id: string }
+        Returns: {
+          approval_kind: string | null
+          approved_at: string | null
+          approved_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_request_id: string
+          created_at: string
+          created_by: string
+          default_source_id: string | null
+          duplicate_blocked_rows: number
+          failed_rows: number
+          file_sha256: string
+          file_size_bytes: number
+          file_type: string
+          header_fingerprint: string | null
+          id: string
+          import_completed_at: string | null
+          import_started_at: string | null
+          importable_rows: number
+          imported_rows: number
+          invalid_rows: number
+          mapping: Json
+          original_filename: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          validation_revision: number
+          worksheet_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_import_batches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       check_manual_lead_duplicate: {
         Args: {
           p_email: string
@@ -1240,6 +1711,80 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      confirm_lead_import_batch_direct: {
+        Args: { p_batch_id: string; p_expected_revision: number }
+        Returns: {
+          approval_kind: string | null
+          approved_at: string | null
+          approved_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_request_id: string
+          created_at: string
+          created_by: string
+          default_source_id: string | null
+          duplicate_blocked_rows: number
+          failed_rows: number
+          file_sha256: string
+          file_size_bytes: number
+          file_type: string
+          header_fingerprint: string | null
+          id: string
+          import_completed_at: string | null
+          import_started_at: string | null
+          importable_rows: number
+          imported_rows: number
+          invalid_rows: number
+          mapping: Json
+          original_filename: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          validation_revision: number
+          worksheet_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_import_batches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_lead_assignment_rule: {
+        Args: {
+          p_budget_comfort_code?: string
+          p_locality?: string
+          p_priority: number
+          p_service_code?: string
+          p_source_id: string
+          p_target_user_id: string
+        }
+        Returns: {
+          budget_comfort_code: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          locality_normalized: string | null
+          priority: number
+          service_code: string | null
+          source_id: string
+          target_user_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_assignment_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_lead_follow_up: {
         Args: { p_due_at: string; p_lead_id: string; p_owner_id?: string }
         Returns: {
@@ -1259,6 +1804,59 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "lead_follow_ups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_lead_import_batch: {
+        Args: {
+          p_client_request_id: string
+          p_default_source_id?: string
+          p_file_sha256: string
+          p_file_size_bytes: number
+          p_file_type: string
+          p_header_fingerprint?: string
+          p_original_filename: string
+          p_worksheet_name?: string
+        }
+        Returns: {
+          approval_kind: string | null
+          approved_at: string | null
+          approved_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_request_id: string
+          created_at: string
+          created_by: string
+          default_source_id: string | null
+          duplicate_blocked_rows: number
+          failed_rows: number
+          file_sha256: string
+          file_size_bytes: number
+          file_type: string
+          header_fingerprint: string | null
+          id: string
+          import_completed_at: string | null
+          import_started_at: string | null
+          importable_rows: number
+          imported_rows: number
+          invalid_rows: number
+          mapping: Json
+          original_filename: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          validation_revision: number
+          worksheet_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_import_batches"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1353,6 +1951,154 @@ export type Database = {
           user_id: string
         }[]
       }
+      process_lead_import_batch: {
+        Args: {
+          p_batch_id: string
+          p_expected_revision: number
+          p_max_rows?: number
+        }
+        Returns: Json
+      }
+      reject_lead_import_batch: {
+        Args: {
+          p_batch_id: string
+          p_expected_revision: number
+          p_rejection_reason: string
+        }
+        Returns: {
+          approval_kind: string | null
+          approved_at: string | null
+          approved_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_request_id: string
+          created_at: string
+          created_by: string
+          default_source_id: string | null
+          duplicate_blocked_rows: number
+          failed_rows: number
+          file_sha256: string
+          file_size_bytes: number
+          file_type: string
+          header_fingerprint: string | null
+          id: string
+          import_completed_at: string | null
+          import_started_at: string | null
+          importable_rows: number
+          imported_rows: number
+          invalid_rows: number
+          mapping: Json
+          original_filename: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          validation_revision: number
+          worksheet_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_import_batches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      replace_lead_import_mapping: {
+        Args: {
+          p_batch_id: string
+          p_default_source_id?: string
+          p_mapping: Json
+        }
+        Returns: {
+          approval_kind: string | null
+          approved_at: string | null
+          approved_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_request_id: string
+          created_at: string
+          created_by: string
+          default_source_id: string | null
+          duplicate_blocked_rows: number
+          failed_rows: number
+          file_sha256: string
+          file_size_bytes: number
+          file_type: string
+          header_fingerprint: string | null
+          id: string
+          import_completed_at: string | null
+          import_started_at: string | null
+          importable_rows: number
+          imported_rows: number
+          invalid_rows: number
+          mapping: Json
+          original_filename: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          validation_revision: number
+          worksheet_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_import_batches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      replace_lead_import_rows: {
+        Args: { p_batch_id: string; p_rows: Json }
+        Returns: {
+          approval_kind: string | null
+          approved_at: string | null
+          approved_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_request_id: string
+          created_at: string
+          created_by: string
+          default_source_id: string | null
+          duplicate_blocked_rows: number
+          failed_rows: number
+          file_sha256: string
+          file_size_bytes: number
+          file_type: string
+          header_fingerprint: string | null
+          id: string
+          import_completed_at: string | null
+          import_started_at: string | null
+          importable_rows: number
+          imported_rows: number
+          invalid_rows: number
+          mapping: Json
+          original_filename: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          validation_revision: number
+          worksheet_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_import_batches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       replace_portfolio_project_services: {
         Args: {
           requested_project_id: string
@@ -1368,6 +2114,29 @@ export type Database = {
           to: "portfolio_project_services"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      set_lead_assignment_rule_active: {
+        Args: { p_is_active: boolean; p_rule_id: string }
+        Returns: {
+          budget_comfort_code: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          locality_normalized: string | null
+          priority: number
+          service_code: string | null
+          source_id: string
+          target_user_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_assignment_rules"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       set_portfolio_project_status: {
@@ -1395,6 +2164,50 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "portfolio_projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_lead_import_batch: {
+        Args: { p_batch_id: string; p_expected_revision: number }
+        Returns: {
+          approval_kind: string | null
+          approved_at: string | null
+          approved_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_request_id: string
+          created_at: string
+          created_by: string
+          default_source_id: string | null
+          duplicate_blocked_rows: number
+          failed_rows: number
+          file_sha256: string
+          file_size_bytes: number
+          file_type: string
+          header_fingerprint: string | null
+          id: string
+          import_completed_at: string | null
+          import_started_at: string | null
+          importable_rows: number
+          imported_rows: number
+          invalid_rows: number
+          mapping: Json
+          original_filename: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          validation_revision: number
+          worksheet_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_import_batches"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1480,6 +2293,36 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_lead_assignment_rule: {
+        Args: {
+          p_budget_comfort_code?: string
+          p_locality?: string
+          p_priority?: number
+          p_rule_id: string
+          p_service_code?: string
+          p_target_user_id?: string
+        }
+        Returns: {
+          budget_comfort_code: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          locality_normalized: string | null
+          priority: number
+          service_code: string | null
+          source_id: string
+          target_user_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_assignment_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_lead_source: {
         Args: {
           p_description?: string
@@ -1504,6 +2347,50 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "lead_sources"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      validate_lead_import_batch: {
+        Args: { p_batch_id: string }
+        Returns: {
+          approval_kind: string | null
+          approved_at: string | null
+          approved_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_request_id: string
+          created_at: string
+          created_by: string
+          default_source_id: string | null
+          duplicate_blocked_rows: number
+          failed_rows: number
+          file_sha256: string
+          file_size_bytes: number
+          file_type: string
+          header_fingerprint: string | null
+          id: string
+          import_completed_at: string | null
+          import_started_at: string | null
+          importable_rows: number
+          imported_rows: number
+          invalid_rows: number
+          mapping: Json
+          original_filename: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          validation_revision: number
+          worksheet_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_import_batches"
           isOneToOne: true
           isSetofReturn: false
         }

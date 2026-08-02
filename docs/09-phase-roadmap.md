@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 5C closeout audit, August 2, 2026)
-**Current Phase:** Phase 5C — Lead Workspace & Premium Role-Aware CRM (**implementation complete**; closeout doc PR pending merge)
-**Next Implementation Phase:** Phase 5D — Bulk Import & Sales Targets (**not started**)
+**Document Status:** Locked Roadmap (truth-synced post Phase 5C closeout, August 2, 2026)
+**Current Phase:** Phase 5D — Bulk Import & Source-Based Assignment (**IN PROGRESS — local only**)
+**Next Implementation Phase:** Phase 5E — Sales Targets & Performance Reporting (**not started**)
 
 ---
 
@@ -124,9 +124,9 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Exit gate:** Executive isolation proven via RLS tests; manual lead + duplicate flows E2E locally.
 - **Dependencies:** 5B.
 
-### Phase 5D
+### Phase 5D (In progress — local only)
 - **Objective:** Bulk import approval chain; source-based assignment rules.
-- **Exit gate:** Manager cannot approve own batch; executive bulk rejected; Unassigned fallback verified.
+- **Exit gate:** Manager cannot approve own batch; executive bulk rejected; Unassigned fallback verified; imported leads use `entry_method=import` and `source=bulk-import`.
 - **Dependencies:** 5C.
 
 ### Phase 5E

@@ -20,6 +20,35 @@ export type CrmErrorCode =
   | "LEAD_CREATE_FAILED"
   | "FOLLOW_UP_NOT_FOUND"
   | "FOLLOW_UP_NOT_OPEN"
+  | "IMPORT_AUTH_REQUIRED"
+  | "IMPORT_PERMISSION_DENIED"
+  | "IMPORT_BATCH_NOT_FOUND"
+  | "IMPORT_BATCH_ACCESS_DENIED"
+  | "IMPORT_BATCH_NOT_EDITABLE"
+  | "IMPORT_BATCH_NOT_VALIDATABLE"
+  | "IMPORT_BATCH_NOT_SUBMITTABLE"
+  | "IMPORT_BATCH_NOT_APPROVABLE"
+  | "IMPORT_BATCH_NOT_REJECTABLE"
+  | "IMPORT_BATCH_NOT_CONFIRMABLE"
+  | "IMPORT_BATCH_NOT_CANCELLABLE"
+  | "IMPORT_BATCH_NOT_PROCESSABLE"
+  | "IMPORT_STALE_REVISION"
+  | "IMPORT_INVALID_MAPPING"
+  | "IMPORT_INVALID_ROWS"
+  | "IMPORT_NO_IMPORTABLE_ROWS"
+  | "IMPORT_APPROVE_DENIED"
+  | "IMPORT_APPROVER_CANNOT_BE_CREATOR"
+  | "IMPORT_DIRECT_CONFIRM_SA_ONLY"
+  | "IMPORT_FILE_TOO_LARGE"
+  | "IMPORT_TOO_MANY_ROWS"
+  | "IMPORT_TOO_MANY_COLUMNS"
+  | "IMPORT_EMPTY_FILE"
+  | "IMPORT_FORMULA_REJECTED"
+  | "IMPORT_INVALID_FILE_TYPE"
+  | "ASSIGNMENT_RULE_AUTH_REQUIRED"
+  | "ASSIGNMENT_RULE_PERMISSION_DENIED"
+  | "ASSIGNMENT_RULE_NOT_FOUND"
+  | "ASSIGNMENT_RULE_INVALID"
   | "RPC_FAILED";
 
 export class CrmError extends Error {
@@ -41,6 +70,7 @@ export class CrmError extends Error {
   }
 }
 
+/** Maps Postgres tokens such as CRM_IMPORT_* and CRM_ASSIGNMENT_RULE_* to app errors. */
 export function crmErrorFromPostgresMessage(
   message: string,
   fallbackCode: CrmErrorCode = "RPC_FAILED"
@@ -315,6 +345,246 @@ export function crmErrorFromPostgresMessage(
       code: "LEAD_CREATE_FAILED",
       message: "Manual lead creation failed.",
       httpStatus: 500,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_auth_required")) {
+    return new CrmError({
+      code: "IMPORT_AUTH_REQUIRED",
+      message: "Authentication required",
+      httpStatus: 401,
+      details: message,
+    });
+  }
+
+  if (
+    normalised.includes("crm_import_permission_denied") ||
+    normalised.includes("crm_import_batch_access_denied") ||
+    normalised.includes("crm_import_cancel_denied")
+  ) {
+    return new CrmError({
+      code: "IMPORT_PERMISSION_DENIED",
+      message: "Permission denied",
+      httpStatus: 403,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_approve_denied")) {
+    return new CrmError({
+      code: "IMPORT_APPROVE_DENIED",
+      message: "You are not allowed to approve import batches.",
+      httpStatus: 403,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_approver_cannot_be_creator")) {
+    return new CrmError({
+      code: "IMPORT_APPROVER_CANNOT_BE_CREATOR",
+      message: "You cannot approve an import batch you created.",
+      httpStatus: 403,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_direct_confirm_sa_only")) {
+    return new CrmError({
+      code: "IMPORT_DIRECT_CONFIRM_SA_ONLY",
+      message: "Only super admins can confirm direct imports.",
+      httpStatus: 403,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_batch_not_found")) {
+    return new CrmError({
+      code: "IMPORT_BATCH_NOT_FOUND",
+      message: "Import batch not found.",
+      httpStatus: 404,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_stale_revision")) {
+    return new CrmError({
+      code: "IMPORT_STALE_REVISION",
+      message:
+        "This import batch was updated elsewhere. Refresh and try again.",
+      httpStatus: 409,
+      details: message,
+    });
+  }
+
+  if (
+    normalised.includes("active_duplicate") ||
+    normalised.includes("crm_import_contact_identity_conflict")
+  ) {
+    return new CrmError({
+      code: "ACTIVE_DUPLICATE",
+      message: "Duplicate lead blocked for import.",
+      httpStatus: 409,
+      details: message,
+    });
+  }
+
+  if (
+    normalised.includes("crm_import_invalid_mapping") ||
+    normalised.includes("crm_import_invalid_mapping_key") ||
+    normalised.includes("crm_import_invalid_mapping_field")
+  ) {
+    return new CrmError({
+      code: "IMPORT_INVALID_MAPPING",
+      message: "Column mapping is invalid.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (
+    normalised.includes("crm_import_invalid_rows_payload") ||
+    normalised.includes("crm_import_row_count_out_of_bounds")
+  ) {
+    return new CrmError({
+      code: "IMPORT_INVALID_ROWS",
+      message: "Import rows payload is invalid.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_no_importable_rows")) {
+    return new CrmError({
+      code: "IMPORT_NO_IMPORTABLE_ROWS",
+      message: "No importable rows are available for submission.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_batch_not_editable")) {
+    return new CrmError({
+      code: "IMPORT_BATCH_NOT_EDITABLE",
+      message: "This import batch can no longer be edited.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_batch_not_validatable")) {
+    return new CrmError({
+      code: "IMPORT_BATCH_NOT_VALIDATABLE",
+      message: "This import batch cannot be validated in its current state.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_batch_not_submittable")) {
+    return new CrmError({
+      code: "IMPORT_BATCH_NOT_SUBMITTABLE",
+      message: "This import batch cannot be submitted for approval.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_batch_not_approvable")) {
+    return new CrmError({
+      code: "IMPORT_BATCH_NOT_APPROVABLE",
+      message: "This import batch cannot be approved.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_batch_not_rejectable")) {
+    return new CrmError({
+      code: "IMPORT_BATCH_NOT_REJECTABLE",
+      message: "This import batch cannot be rejected.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_batch_not_confirmable")) {
+    return new CrmError({
+      code: "IMPORT_BATCH_NOT_CONFIRMABLE",
+      message: "This import batch cannot be confirmed for direct import.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_batch_not_cancellable")) {
+    return new CrmError({
+      code: "IMPORT_BATCH_NOT_CANCELLABLE",
+      message: "This import batch cannot be cancelled.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_import_batch_not_processable")) {
+    return new CrmError({
+      code: "IMPORT_BATCH_NOT_PROCESSABLE",
+      message: "This import batch cannot be processed.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (
+    normalised.includes("crm_import_invalid_file_type") ||
+    normalised.includes("crm_import_invalid_file_size") ||
+    normalised.includes("crm_import_invalid_file_sha256")
+  ) {
+    return new CrmError({
+      code: "IMPORT_INVALID_FILE_TYPE",
+      message: "Import file metadata is invalid.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_assignment_rule_auth_required")) {
+    return new CrmError({
+      code: "ASSIGNMENT_RULE_AUTH_REQUIRED",
+      message: "Authentication required",
+      httpStatus: 401,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_assignment_rule_permission_denied")) {
+    return new CrmError({
+      code: "ASSIGNMENT_RULE_PERMISSION_DENIED",
+      message: "Permission denied",
+      httpStatus: 403,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_assignment_rule_not_found")) {
+    return new CrmError({
+      code: "ASSIGNMENT_RULE_NOT_FOUND",
+      message: "Assignment rule not found.",
+      httpStatus: 404,
+      details: message,
+    });
+  }
+
+  if (
+    normalised.includes("crm_assignment_rule_invalid") ||
+    normalised.includes("crm_assignment_rule_invalid_source") ||
+    normalised.includes("crm_assignment_rule_invalid_target") ||
+    normalised.includes("crm_assignment_rule_invalid_priority")
+  ) {
+    return new CrmError({
+      code: "ASSIGNMENT_RULE_INVALID",
+      message: "Assignment rule details are invalid.",
+      httpStatus: 422,
       details: message,
     });
   }

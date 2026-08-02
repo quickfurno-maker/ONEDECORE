@@ -34,7 +34,11 @@ export default async function CrmLayout({ children }: { children: ReactNode }) {
       >
         Skip to CRM content
       </a>
-      <CrmNav currentPath="/admin/crm/leads" />
+      <CrmNav
+        currentPath="/admin/crm"
+        showImports={resolution.context.canBulkImportLeads}
+        showAssignmentRules={resolution.context.canManageLeadAssignmentRules}
+      />
       <div id="crm-main-content">{children}</div>
     </div>
   );
