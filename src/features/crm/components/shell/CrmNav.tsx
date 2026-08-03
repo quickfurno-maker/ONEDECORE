@@ -4,6 +4,10 @@ interface CrmNavProps {
   readonly currentPath: string;
   readonly showImports?: boolean;
   readonly showAssignmentRules?: boolean;
+  readonly showTargets?: boolean;
+  readonly showReports?: boolean;
+  readonly targetsLabel?: string;
+  readonly reportsLabel?: string;
 }
 
 const BASE_NAV_ITEMS = [{ href: "/admin/crm/leads", label: "Leads" }] as const;
@@ -12,9 +16,19 @@ export function CrmNav({
   currentPath,
   showImports = false,
   showAssignmentRules = false,
+  showTargets = false,
+  showReports = false,
+  targetsLabel = "Sales Targets",
+  reportsLabel = "Reports",
 }: CrmNavProps) {
   const items = [
     ...BASE_NAV_ITEMS,
+    ...(showTargets
+      ? [{ href: "/admin/crm/targets", label: targetsLabel } as const]
+      : []),
+    ...(showReports
+      ? [{ href: "/admin/crm/reports", label: reportsLabel } as const]
+      : []),
     ...(showImports
       ? [{ href: "/admin/crm/imports", label: "Imports" } as const]
       : []),

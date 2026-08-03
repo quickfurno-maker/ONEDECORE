@@ -38,6 +38,17 @@ export default async function CrmLayout({ children }: { children: ReactNode }) {
         currentPath="/admin/crm"
         showImports={resolution.context.canBulkImportLeads}
         showAssignmentRules={resolution.context.canManageLeadAssignmentRules}
+        showTargets={resolution.context.canReadSalesTargets}
+        showReports={resolution.context.canReadCrmReporting}
+        targetsLabel={
+          resolution.context.canManageSalesTargets ||
+          resolution.context.canReadBroad
+            ? "Sales Targets"
+            : "My Target"
+        }
+        reportsLabel={
+          resolution.context.canReadBroad ? "Reports" : "My Performance"
+        }
       />
       <div id="crm-main-content">{children}</div>
     </div>

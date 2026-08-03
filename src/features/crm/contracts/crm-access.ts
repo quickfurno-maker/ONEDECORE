@@ -20,6 +20,9 @@ export interface CrmAccessContext {
   readonly canBulkImportLeads: boolean;
   readonly canApproveLeadImports: boolean;
   readonly canManageLeadAssignmentRules: boolean;
+  readonly canReadSalesTargets: boolean;
+  readonly canManageSalesTargets: boolean;
+  readonly canReadCrmReporting: boolean;
 }
 
 export function hasCrmLeadReadAccess(context: CrmAccessContext): boolean {

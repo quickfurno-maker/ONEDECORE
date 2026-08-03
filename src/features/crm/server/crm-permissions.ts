@@ -122,6 +122,38 @@ export async function probeBulkImportPermissions(): Promise<BulkImportPermission
   };
 }
 
+export interface SalesTargetPermissionProbeResult {
+  readonly canReadSalesTargets: boolean;
+  readonly canManageSalesTargets: boolean;
+  readonly canReadCrmReporting: boolean;
+}
+
+export async function probeSalesTargetPermissions(): Promise<SalesTargetPermissionProbeResult> {
+  const supabase = await createClient();
+  const codes = [
+    "sales_targets.read",
+    "sales_targets.manage",
+    "crm.reporting.read",
+  ] as const;
+
+  const entries = await Promise.all(
+    codes.map(async (code) => {
+      const { data, error } = await supabase.rpc("authorize", {
+        requested_permission: code,
+      });
+      return [code, !error && data === true] as const;
+    })
+  );
+
+  const map = Object.fromEntries(entries) as Record<(typeof codes)[number], boolean>;
+
+  return {
+    canReadSalesTargets: map["sales_targets.read"],
+    canManageSalesTargets: map["sales_targets.manage"],
+    canReadCrmReporting: map["crm.reporting.read"],
+  };
+}
+
 export async function probeManualLeadPermissions(): Promise<ManualLeadPermissionProbeResult> {
   const supabase = await createClient();
   const codes = [

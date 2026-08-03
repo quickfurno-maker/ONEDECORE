@@ -22,6 +22,9 @@ export const CRM_PERMISSION_CODES = [
   "leads.bulk_import",
   "leads.bulk_import_approve",
   "leads.assignment_rules.manage",
+  "sales_targets.read",
+  "sales_targets.manage",
+  "crm.reporting.read",
 ] as const;
 
 export type CrmPermissionCode = (typeof CRM_PERMISSION_CODES)[number];
@@ -94,6 +97,9 @@ export const CRM_ROLE_PERMISSIONS: Readonly<
     "leads.bulk_import",
     "leads.bulk_import_approve",
     "leads.assignment_rules.manage",
+    "sales_targets.read",
+    "sales_targets.manage",
+    "crm.reporting.read",
   ],
   management: [
     "leads.read",
@@ -110,6 +116,8 @@ export const CRM_ROLE_PERMISSIONS: Readonly<
     "crm.follow_ups.manage",
     "crm.activities.read",
     "leads.bulk_import",
+    "sales_targets.read",
+    "crm.reporting.read",
   ],
   sales_manager: [
     "leads.read_all",
@@ -124,6 +132,8 @@ export const CRM_ROLE_PERMISSIONS: Readonly<
     "crm.follow_ups.manage",
     "crm.activities.read",
     "leads.bulk_import",
+    "sales_targets.read",
+    "crm.reporting.read",
   ],
   sales: [
     "leads.read_assigned",
@@ -135,6 +145,8 @@ export const CRM_ROLE_PERMISSIONS: Readonly<
     "crm.notes.manage",
     "crm.follow_ups.manage",
     "crm.activities.read",
+    "sales_targets.read",
+    "crm.reporting.read",
   ],
   sales_executive: [
     "leads.read_assigned",
@@ -145,6 +157,8 @@ export const CRM_ROLE_PERMISSIONS: Readonly<
     "crm.notes.manage",
     "crm.follow_ups.manage",
     "crm.activities.read",
+    "sales_targets.read",
+    "crm.reporting.read",
   ],
   project_manager: [],
   designer: [],
