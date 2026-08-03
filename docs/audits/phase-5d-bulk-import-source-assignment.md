@@ -1,8 +1,8 @@
-# Phase 5D — Bulk Import & Source-Based Assignment
+# Phase 5D — Bulk Import & Source-Based Assignment (Implementation Record)
 
-**Audit state:** IN PROGRESS (local only)
+**Historical note:** This document records the **local implementation** phase. For authoritative closeout evidence (managed M15 apply, DB-4A-X recovery exception, exit gate), see [Phase 5D Closeout](phase-5d-bulk-import-source-assignment-closeout.md).
 
-**Date:** August 2, 2026
+**Implementation date:** August 2, 2026
 **Migration:** 15 — `20260802140000_crm_bulk_import_source_assignment_foundation.sql`
 
 ---
@@ -73,30 +73,20 @@ Phase 5D adds staged bulk lead import with manager submission / super-admin appr
 
 ---
 
-## 4. Local QA
+## 4. Local QA (implementation)
 
-```bash
-PHASE_5C1_QA_PASSWORD='<local-only>' node scripts/phase-5d-owner-qa.mjs
-PHASE_5C1_QA_PASSWORD='<local-only>' PHASE_5D_BASE_URL=http://localhost:3000 node scripts/phase-5d-browser-qa.mjs
-```
+| Suite | Result |
+| :--- | :--- |
+| Application | 418/418 |
+| Image | 17/17 |
+| Database | 434/434 |
+| Owner QA | 24/24 |
+| Browser QA | 32/32 |
 
-Owner QA (~27 assertions): permissions, batch lifecycle, owner corrections, assignment rules, rejection/cancel guards.
-
-Browser QA: nav visibility by role, imports wizard upload, assignment rules page (super admin).
-
----
-
-## 5. Exit gate checklist
-
-- [ ] Manager cannot approve own batch
-- [ ] Sales executive bulk import denied
-- [ ] Unassigned fallback when no rule match
-- [ ] Imported leads use `entry_method=import` and `source=bulk-import`
-- [ ] Local owner + browser QA green
-- [ ] Managed migration 15 not applied (local only)
+XLSX H1: header mapping mismatch corrected before merge.
 
 ---
 
-## 6. Status
+## 5. Status at implementation merge
 
-**Phase 5D:** application layer implemented locally; migration 15 present in repo; managed deployment pending.
+Application merged to protected main (PR #13). Managed migration 15 applied separately via Phase DB-4B (August 3, 2026). See closeout audit for managed evidence.
