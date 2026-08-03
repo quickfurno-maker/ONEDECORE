@@ -49,6 +49,14 @@ export type CrmErrorCode =
   | "ASSIGNMENT_RULE_PERMISSION_DENIED"
   | "ASSIGNMENT_RULE_NOT_FOUND"
   | "ASSIGNMENT_RULE_INVALID"
+  | "SALES_TARGET_AUTH_REQUIRED"
+  | "SALES_TARGET_PERMISSION_DENIED"
+  | "SALES_TARGET_NOT_FOUND"
+  | "SALES_TARGET_INVALID"
+  | "SALES_TARGET_DUPLICATE"
+  | "SALES_TARGET_REVISION_MISMATCH"
+  | "CRM_REPORTING_AUTH_REQUIRED"
+  | "CRM_REPORTING_PERMISSION_DENIED"
   | "RPC_FAILED";
 
 export class CrmError extends Error {
@@ -584,6 +592,64 @@ export function crmErrorFromPostgresMessage(
     return new CrmError({
       code: "ASSIGNMENT_RULE_INVALID",
       message: "Assignment rule details are invalid.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_sales_target_auth_required")) {
+    return new CrmError({
+      code: "SALES_TARGET_AUTH_REQUIRED",
+      message: "Authentication required",
+      httpStatus: 401,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_sales_target_permission_denied")) {
+    return new CrmError({
+      code: "SALES_TARGET_PERMISSION_DENIED",
+      message: "Permission denied",
+      httpStatus: 403,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_sales_target_not_found")) {
+    return new CrmError({
+      code: "SALES_TARGET_NOT_FOUND",
+      message: "Sales target not found.",
+      httpStatus: 404,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_sales_target_duplicate")) {
+    return new CrmError({
+      code: "SALES_TARGET_DUPLICATE",
+      message: "A target already exists for this month and scope.",
+      httpStatus: 409,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("crm_sales_target_revision_mismatch")) {
+    return new CrmError({
+      code: "SALES_TARGET_REVISION_MISMATCH",
+      message: "This target was updated elsewhere. Refresh and try again.",
+      httpStatus: 409,
+      details: message,
+    });
+  }
+
+  if (
+    normalised.includes("crm_sales_target_invalid") ||
+    normalised.includes("crm_sales_target_month_not_first_day") ||
+    normalised.includes("crm_sales_target_ineligible_executive")
+  ) {
+    return new CrmError({
+      code: "SALES_TARGET_INVALID",
+      message: "Sales target details are invalid.",
       httpStatus: 422,
       details: message,
     });

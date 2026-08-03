@@ -14,6 +14,7 @@ import {
   probeBulkImportPermissions,
   probeLifecycleMutationPermissions,
   probeManualLeadPermissions,
+  probeSalesTargetPermissions,
 } from "./crm-permissions.ts";
 
 export type CrmAccessResolution =
@@ -48,11 +49,12 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
 
   const permissions = await probeCrmPermissions();
   const canAssignLeads = await probeCanAssignLeads();
-  const [manualLeadPermissions, lifecyclePermissions, bulkImportPermissions] =
+  const [manualLeadPermissions, lifecyclePermissions, bulkImportPermissions, salesTargetPermissions] =
     await Promise.all([
       probeManualLeadPermissions(),
       probeLifecycleMutationPermissions(),
       probeBulkImportPermissions(),
+      probeSalesTargetPermissions(),
     ]);
   const context: CrmAccessContext = {
     userId: staff.userId,
@@ -73,6 +75,9 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
     canApproveLeadImports: bulkImportPermissions.canApproveLeadImports,
     canManageLeadAssignmentRules:
       bulkImportPermissions.canManageLeadAssignmentRules,
+    canReadSalesTargets: salesTargetPermissions.canReadSalesTargets,
+    canManageSalesTargets: salesTargetPermissions.canManageSalesTargets,
+    canReadCrmReporting: salesTargetPermissions.canReadCrmReporting,
   };
 
   if (!hasCrmLeadReadAccess(context)) {
@@ -190,6 +195,56 @@ export async function requireCrmAssignmentRuleAccess(
     resolution.kind === "denied" ||
     !resolution.context.canManageLeadAssignmentRules
   ) {
+    redirect("/auth/forbidden");
+  }
+
+  return resolution.context;
+}
+
+export async function requireCrmSalesTargetsAccess(
+  currentPath: string = "/admin/crm/targets"
+): Promise<CrmAccessContext> {
+  const resolution = await resolveCrmAccess();
+
+  if (resolution.kind === "unauthenticated") {
+    const safeNext = getSafeAdminRedirect(currentPath);
+    const loginUrl =
+      safeNext !== "/admin"
+        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
+        : "/auth/login";
+    redirect(loginUrl);
+  }
+
+  if (resolution.kind === "inactive") {
+    redirect("/auth/forbidden");
+  }
+
+  if (resolution.kind === "denied" || !resolution.context.canReadSalesTargets) {
+    redirect("/auth/forbidden");
+  }
+
+  return resolution.context;
+}
+
+export async function requireCrmReportingAccess(
+  currentPath: string = "/admin/crm/reports"
+): Promise<CrmAccessContext> {
+  const resolution = await resolveCrmAccess();
+
+  if (resolution.kind === "unauthenticated") {
+    const safeNext = getSafeAdminRedirect(currentPath);
+    const loginUrl =
+      safeNext !== "/admin"
+        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
+        : "/auth/login";
+    redirect(loginUrl);
+  }
+
+  if (resolution.kind === "inactive") {
+    redirect("/auth/forbidden");
+  }
+
+  if (resolution.kind === "denied" || !resolution.context.canReadCrmReporting) {
     redirect("/auth/forbidden");
   }
 

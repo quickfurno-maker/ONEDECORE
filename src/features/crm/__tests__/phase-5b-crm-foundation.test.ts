@@ -97,13 +97,20 @@ describe("Phase 5B CRM permission constants", () => {
       ),
       "utf8"
     );
-    const migrationSql = `${migration11}\n${migration14}\n${migration15}`;
+    const migration16 = readFileSync(
+      join(
+        root,
+        "supabase/migrations/20260803140000_crm_sales_targets_reporting_foundation.sql"
+      ),
+      "utf8"
+    );
+    const migrationSql = `${migration11}\n${migration14}\n${migration15}\n${migration16}`;
 
     for (const code of CRM_PERMISSION_CODES) {
       assert.match(migrationSql, new RegExp(`'${code}'`));
     }
 
-    assert.equal(CRM_PERMISSION_CODES.length, 18);
+    assert.equal(CRM_PERMISSION_CODES.length, 21);
   });
 
   test("canonical and legacy role codes are declared", () => {
