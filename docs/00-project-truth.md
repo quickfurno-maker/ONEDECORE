@@ -1,12 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced post Phase 5C closeout, August 2, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced post Phase 5D closeout, August 3, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 5D — Bulk Import & Source-Based Assignment (**IN PROGRESS — local only**)
+**Current Phase:** Phase 5D — Bulk Import & Source-Based Assignment (**COMPLETE** — closeout PR pending merge)
+**Next Implementation Phase:** Phase 5E — Sales Targets & CRM Reporting (**5E-B not started**)
 
 ---
 
@@ -86,13 +87,14 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | CRM workspace access (migration 12) | Applied managed August 1, 2026 |
 | Assignment mutation hardening (migration 13) | Applied managed August 1, 2026 |
 | Manual lead duplicate-safe flow (migration 14) | Applied managed August 2, 2026 (Phase DB-3B) |
-| Managed migration alignment | **1–14** on OneDecore (`lpurlfmpvriyvpkujvyl`) |
+| Bulk import & source assignment (migration 15) | Applied managed August 3, 2026 (Phase DB-4B) |
+| Managed migration alignment | **1–15** on OneDecore (`lpurlfmpvriyvpkujvyl`) |
 
-CRM workspace mutation slices (5C2A–5C2C) are **merged on protected main** with database foundation applied; **production deployment pending** (Phase 10).
+CRM workspace mutation slices (5C2A–5C2C) and Phase 5D bulk import are **merged on protected main** with managed database foundation through M15; **production deployment pending** (Phase 10).
 
 ### Planned — not live
 
-Phase 5E+ (targets), WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, public lead activation, production deployment.
+Phase 5E-B+ (targets reporting implementation), WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, Landing Page Lab (Phase 9B — roadmap-locked, not implemented), public lead activation (Phase 5F), production deployment.
 
 **Do not claim planned modules are live or production-deployed.**
 

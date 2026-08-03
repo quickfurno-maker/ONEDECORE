@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 5C closeout, August 2, 2026)
-**Current Phase:** Phase 5D — Bulk Import & Source-Based Assignment (**IN PROGRESS — local only**)
-**Next Implementation Phase:** Phase 5E — Sales Targets & Performance Reporting (**not started**)
+**Document Status:** Locked Roadmap (truth-synced post Phase 5D closeout, August 3, 2026)
+**Current Phase:** Phase 5D — Bulk Import & Source-Based Assignment (**COMPLETE** — closeout PR pending merge)
+**Next Implementation Phase:** Phase 5E — Sales Targets & Performance Reporting (**5E-B not started**)
 
 ---
 
@@ -31,9 +31,14 @@ Phase 5C1: Premium Read-Only CRM Workspace ────────────�
 Phase 5C2A: Lead Assignment Mutations ───────────────────────────── COMPLETED
 Phase 5C2B: Manual Lead Creation & Duplicate-Safe Flow ───────────── COMPLETED
 Phase 5C2C: Lifecycle Collaboration Mutations ───────────────────── COMPLETED
+Phase 5C-Closeout: Integrated CRM Invariant Audit ─────────────────── COMPLETED
 Phase DB-2: Managed Migrations 11–13 Apply (OneDecore Supabase) ─── COMPLETED
 Phase DB-3B: Managed Migration 14 Apply (OneDecore Supabase) ─────── COMPLETED
-Phase 5C-Closeout: Integrated CRM Invariant Audit ─────────────────── AUDIT PASSED (doc PR pending)
+Phase 5D: Bulk Import Approval & Source-Based Assignment ─────────── COMPLETED
+  • Implementation merged (PR #13)
+  • Migration 15 applied managed (Phase DB-4B, August 3, 2026)
+  • Closeout truth-sync: current PR
+Phase DB-4A-X / DB-4B: M15 logical recovery checkpoint + managed apply ─ COMPLETED
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -50,24 +55,27 @@ Phase 5A ──► CRM & Operations Architecture Freeze [COMPLETED]
 Phase 5B ──► CRM Identity, Authorization & Core Data Foundation [COMPLETED]
     │
     ▼
-Phase 5C ──► Lead Workspace & Premium Role-Aware CRM [IN PROGRESS]
-    │         • 5C1: read-only workspace — COMPLETED
-    │         • 5C2A: assignment mutations — COMPLETED
-    │         • Remaining: manual lead creation, duplicate-safe flows,
-    │           further collaboration mutations (next subphase)
+Phase 5C ──► Lead Workspace & Premium Role-Aware CRM [COMPLETED]
+    │         • 5C1: read-only workspace
+    │         • 5C2A: assignment mutations
+    │         • 5C2B: manual lead + duplicate-safe flow
+    │         • 5C2C: lifecycle collaboration
     ▼
-Phase 5D ──► Bulk Import Approval & Source-Based Assignment
+Phase 5D ──► Bulk Import Approval & Source-Based Assignment [COMPLETED]
     │         • CSV/XLSX import batches, mapping, preview, manager approval
     │         • Super Admin direct import + source rules + Unassigned fallback
-    │         • No round-robin
+    │         • No round-robin; M15 applied managed
     ▼
-Phase 5E ──► Sales Target Configuration & CRM Reporting Foundation
+Phase 5E ──► Sales Target Configuration & CRM Reporting Foundation [NEXT]
+    │         • 5E-A: architecture preflight frozen
+    │         • 5E-B: implementation not started
     │         • Target assignments, history, lock/reopen, role visibility
     │         • Non-commercial CRM reporting; achievement inactive until 7B
     ▼
 Phase 5F ──► Controlled Public Lead Activation Gate
+    │         • 5F-A: architecture/evidence preflight frozen separately
+    │         • Public intake remains inactive; legal/evidence/Phase 10 gates remain
     │         • Owner/legal/proxy/secrets/monitoring/rollback evidence required
-    │         • Separate explicit authorization only
     ▼
 Phase 6A ──► Meta WhatsApp Data & Webhook Foundation
     ▼
@@ -89,57 +97,52 @@ Phase 8C ──► Project Execution Workspace
     ▼
 Phase 9A ──► Campaign Consent, Audience & Approval Foundation
     ▼
-Phase 9B ──► Campaign Execution, Replies & Attribution
+Phase 9B ──► Landing Page Lab & Experimentation [ROADMAP-LOCKED — NOT IMPLEMENTED]
+    │         • Landing page factory; reusable structured blocks
+    │         • Campaign-specific variants; preview/publish/pause/archive
+    │         • A/B/C experiments; UTM attribution; fbclid/gclid preservation
+    │         • CRM lead-quality linkage; variant analytics; experiment history
+    │         • Role-aware admin access; CRM/Supabase remains source of truth
+    ▼
+Phase 9C ──► Campaign Execution, Attribution & Conversion Feedback [NOT IMPLEMENTED]
+    │         • Meta/Google campaign execution integrations (where approved)
+    │         • Server-side conversion feedback; QualifiedLead / ConsultationScheduled / ProposalSent
+    │         • Authoritative later commercial conversion; attribution comparison
+    │         • Cost per lead / qualified lead / later commercial conversion; no double counting
     ▼
 Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 ```
+
+**Landing Page Lab principles (9B):** Structured blocks (not unrestricted drag-and-drop V1); optimize for qualified outcomes; public submissions reuse controlled intake architecture; no fabricated marketing consent; production use remains Phase 10 gated.
 
 ---
 
 ## 3. Phase Objectives & Exit Gates
 
-### Phase 5A (Completed)
-- **Objective:** Reconcile truth/PRD/architecture/data/security/boundary docs; lock roles, visibility, workflows, invariants; ADRs + audit.
-- **Exit gate:** Owner approval of architecture freeze; no code/migrations.
-- **Deliverables:** ADR-0019, ADR-0020, ADR-0021; updated governance docs; Phase 5A audit.
-
-### Phase 5B (Completed)
-- **Objective:** Five-role RBAC extension; core CRM schemas with RLS; server repositories; pgTAP coverage.
-- **Exit gate:** All CRM core tables RLS-tested; legacy role remap migration applied locally; `npm run check` + `check:db` green.
-- **Dependencies:** 5A approved.
-- **Managed apply:** Migration 11 applied August 1, 2026 (with 12–13 in ordered DB-2 push).
-
-### Phase 5C1 (Completed)
-- **Objective:** Premium read-only CRM workspace under `/admin/crm`.
-- **Exit gate:** Role-aware navigation, lead list/detail, RLS-backed reads; migration 12 applied managed.
-- **Dependencies:** 5B.
-
-### Phase 5C2A (Completed)
-- **Objective:** Assign, reassign, and safe-unassign via hardened `assign_lead` RPC.
-- **Exit gate:** PR #7 merged; migration 13 applied managed; full QA green.
-- **Dependencies:** 5C1.
-
-### Phase 5C (In progress — overall exit gate not met)
+### Phase 5C (Completed)
 - **Objective:** Premium role-aware CRM UI for leads (not WhatsApp/quotations/projects).
-- **Exit gate:** Executive isolation proven via RLS tests; manual lead + duplicate flows E2E locally.
+- **Exit gate:** Executive isolation proven; manual lead + duplicate + lifecycle flows E2E; closeout merged.
 - **Dependencies:** 5B.
 
-### Phase 5D (In progress — local only)
+### Phase 5D (Completed)
 - **Objective:** Bulk import approval chain; source-based assignment rules.
-- **Exit gate:** Manager cannot approve own batch; executive bulk rejected; Unassigned fallback verified; imported leads use `entry_method=import` and `source=bulk-import`.
+- **Exit gate:** Manager cannot approve own batch; executive bulk rejected; Unassigned fallback verified; imported leads use `entry_method=import` and `source=bulk-import`; M15 applied managed.
 - **Dependencies:** 5C.
+- **Closeout:** [Phase 5D Closeout Audit](audits/phase-5d-bulk-import-source-assignment-closeout.md)
 
-### Phase 5E
+### Phase 5E (Next — not started)
 - **Objective:** Monthly target configuration, append-only target history, lock/reopen controls, role visibility, and non-commercial CRM performance reporting.
-- **Exit gate:** Target configuration/history/permissions and non-commercial CRM reporting proven; **commercial achievement explicitly inactive** (displayed unavailable/not activated).
-- **Dependencies:** 5C.
+- **Exit gate:** Target configuration/history/permissions and non-commercial CRM reporting proven; **commercial achievement explicitly inactive** (displayed unavailable/not activated until Phase 7B).
+- **Dependencies:** 5D closeout merge; owner authorization for 5E-B.
+- **Preflight:** Phase 5E-A architecture frozen (migration 16 planned).
 
 ### Phase 5F
 - **Objective:** Controlled public lead activation only after legal/owner evidence.
-- **Exit gate:** Separate owner authorization; rollback runbook exercised.
+- **Exit gate:** Separate owner authorization; 5F-A architecture/evidence preflight completed; legal/Phase 10 gates remain; rollback runbook exercised.
 - **Dependencies:** 4B2 merged; legal gates complete.
+- **Status:** Public intake **inactive** (`copy-only` / `disabled` defaults).
 
-### Phases 6–9
+### Phases 6–8
 See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020–0021.
 
 ### Phase 7B
@@ -150,7 +153,14 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 ### Phase 8A
 - **Objective:** Closed-Won project conversion and PM handover.
 - **Exit gate:** Project-value reconciliation (when used) proven without double counting against quotation acceptance.
-- **Dependencies:** 7B.
+- **Dependencies:** 7B. **Closed-Won remains blocked until 7B.**
+
+### Phase 9B (Landing Page Lab)
+- **Status:** Owner-approved roadmap placement; **not implemented** (no routes/schema/integrations).
+- **Dependencies:** 9A consent foundation; production use Phase 10 gated.
+
+### Phase 9C
+- **Status:** Roadmap-locked; **not implemented**. No Meta/Google campaign execution live.
 
 ### Phase 10
 - **Objective:** Security hardening, full E2E, performance budgets, Hostinger VPS deployment.
@@ -164,16 +174,18 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 2. No Closed-Won project conversion (8A) before quotation acceptance (7B).
 3. No WhatsApp outbound (6B) before webhook foundation (6A) and consent records.
 4. No Groq copilot (6C) before message persistence (6A).
-5. No campaigns (9A/9B) before consent/suppression foundation.
+5. No campaigns (9A/9B/9C) before consent/suppression foundation.
 6. ERP modules remain out of scope for all phases (ADR-0005).
 7. Authoritative target achievement requires Phase 7B (quotation acceptance); Phase 5E configures targets only.
 8. Project-value reconciliation (Phase 8A) must not double-count quotation acceptance.
+9. Landing Page Lab (9B) does not move earlier than roadmap sequence; production use requires Phase 10.
 
 ---
 
 ## 5. Related Governance Documents
 
 - [Project Truth](00-project-truth.md)
+- [Phase 5D Closeout Audit](audits/phase-5d-bulk-import-source-assignment-closeout.md)
 - [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
 - [Decision Register](10-decision-register.md)
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)

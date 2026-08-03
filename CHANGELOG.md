@@ -9,14 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - Phase 5D (August 2, 2026 — local only)
-- Migration 15 (`20260802140000_crm_bulk_import_source_assignment_foundation.sql`): bulk import batches/rows/events, assignment rules, 12 public RPCs, RLS hardening.
+### Added - Phase 5D Closeout (August 3, 2026)
+- Phase 5D **COMPLETE**: bulk import approval chain + deterministic source-based assignment; implementation merged (PR #13); managed migration 15 applied (Phase DB-4B).
+- Managed Supabase aligned **M1–M15** on OneDecore (`lpurlfmpvriyvpkujvyl`); post-apply dry-run up to date; managed lint clean.
+- One-time M15 logical recovery checkpoint (DB-4A-X) documented; scheduled physical backup still delayed — exception M15-only; M16+ resumes normal physical-backup gate.
+- Closeout audit: `docs/audits/phase-5d-bulk-import-source-assignment-closeout.md`; decisions DEC-0050, DEC-0051 (Landing Page Lab roadmap lock).
+- **No production deployment**; public intake inactive; Closed-Won blocked until Phase 7B; Phase 5E-B next (not started).
+
+### Added - Phase 5D (August 2, 2026 — implementation)
+- Migration 15 (`20260802140000_crm_bulk_import_source_assignment_foundation.sql`): bulk import batches/rows/events, assignment rules, 13 public RPCs, RLS hardening.
 - Application layer: import contracts/parser/services/actions/queries, assignment rule contracts/services/actions, extended CRM auth/permissions/errors.
 - CRM UI: `/admin/crm/imports` (list, wizard, detail), `/admin/crm/settings/assignment-rules`, nav capability flags.
 - Owner corrections: imported leads use `entry_method=import`, `source=bulk-import`.
-- Local QA: `phase-5d-owner-qa.mjs` (~27 assertions), `phase-5d-browser-qa.mjs` (Playwright + runtime CSV/XLSX fixtures).
+- QA: app 418/418, image 17/17, DB 434/434, owner 24/24, browser 32/32.
 - Audit: `docs/audits/phase-5d-bulk-import-source-assignment.md`.
-- **Local only** — migration 15 not applied to managed Supabase; no production deployment.
 
 ### Added - Phase 5C Closeout (August 2, 2026)
 - Integrated closeout audit (`docs/audits/phase-5c-closeout.md`): role matrix, assignment, manual-lead/duplicate, lifecycle, and cross-slice integration verified against local migrations 1–14.
