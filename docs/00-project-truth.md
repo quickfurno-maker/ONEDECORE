@@ -1,13 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced post Phase 5E closeout, August 3, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced post Phase 5F closeout, August 4, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 5E — Sales Targets & CRM Reporting (**COMPLETE** — closeout PR pending merge)
-**Next Implementation Phase:** Phase 5F — Controlled Public Lead Activation Gate (**not started** — separate owner authorization required)
+**Current Phase:** Phase 5F — Controlled Public Lead Activation Gate (**READY TO CLOSE** — formally COMPLETE after closeout PR merge)
+**Next Implementation Phase:** Phase 6A — Meta WhatsApp Data & Webhook Foundation (**NOT STARTED**)
 
 ---
 
@@ -89,9 +89,18 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Manual lead duplicate-safe flow (migration 14) | Applied managed August 2, 2026 (Phase DB-3B) |
 | Bulk import & source assignment (migration 15) | Applied managed August 3, 2026 (Phase DB-4B) |
 | Sales targets & CRM reporting (migration 16) | Applied managed August 3, 2026 (Phase DB-5B) |
-| Managed migration alignment | **1–16** on OneDecore (`lpurlfmpvriyvpkujvyl`) |
+| Controlled public lead activation hardening (migration 17) | Applied managed August 4, 2026 (Phase DB-6B) |
+| Managed migration alignment | **1–17** on OneDecore (`lpurlfmpvriyvpkujvyl`) |
 
-CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, and Phase 5E targets/reporting are **merged on protected main** with managed database foundation through M16; targets/reporting remain **internal/pre-production**; **production deployment pending** (Phase 10).
+CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, and Phase 5F identity hardening are **merged on protected main** with managed database foundation through M17; **production deployment pending** (Phase 10); **public intake remains inactive**.
+
+### Phase 5F truth
+
+- Implementation merged (PR #17, merge SHA `2e3f3322b35865c7661a0abeeaa7f0823ed8a593`); managed M17 applied and verified (DB-6B).
+- M17 SHA `B8F5B75AC6EE64DE1E9ABD571A215FF3AABE6F54D98EFE1F8BBEF679871A0FC6`.
+- Normalized-phone identity reuses active/suppressed contact; DNC and suppressed phone preserved; ambiguous identity fails safely; `::1` loopback hardening complete.
+- **Public intake inactive** (`copy-only` / `disabled`); production activation remains Phase 10 only.
+- Phase 5F formally **COMPLETE** only after this closeout governance PR merges.
 
 ### Phase 5E truth
 
@@ -102,14 +111,14 @@ CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, and Phase 5E 
 
 ### Recovery truth
 
+- **DB-6A** physical recovery Route A for M17: backup ID `1281893546` (`2026-08-03T19:53:32.414Z`, COMPLETED, WALG) — valid **pre-M17** recovery point used to authorize DB-6B managed apply.
 - **DB-5A-L** fresh verified logical checkpoint accepted for M16 (capture window 2026-08-03T13:31:24Z–13:33:32Z); package outside Git (`DB5A-L-20260803T133124Z`).
-- Scheduled physical backup still delayed (newest verified: `2026-08-01T19:54:53.794Z`, pre-M15).
-- Logical checkpoint is **not equivalent** to physical backup/PITR; auth/storage platform restoration limitation documented.
-- **Before Phase 10 production activation**, fresh physical backup or active PITR is mandatory.
+- Backup `1281893546` does **not** permanently satisfy Phase 10 — it predates M17 managed state.
+- **Before Phase 10 production activation**, a **current** fresh physical backup or qualified active PITR recovery point appropriate to then-current managed state is mandatory.
 
 ### Planned — not live
 
-Phase 5F public lead activation implementation, WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, Landing Page Lab (Phase 9B — roadmap-locked, not implemented), production deployment.
+WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, Landing Page Lab (Phase 9B — roadmap-locked, not implemented), **public lead activation**, production deployment.
 
 **Do not claim planned modules are live or production-deployed.**
 
@@ -130,7 +139,7 @@ Phase 5F public lead activation implementation, WhatsApp inbox, Groq copilot, qu
 11. **Admin Route Prefix:** Internal routes use `/admin`.
 12. **Five-Role CRM Model:** `super_admin`, `sales_manager`, `sales_executive`, `project_manager`, `designer` — see ADR-0019.
 13. **Closed-Won Invariant:** Requires Accepted quotation before project creation — see ADR-0020.
-14. **Public Lead Intake:** Defaults remain disabled; activation requires separate owner authority (Phase 5F).
+14. **Public Lead Intake:** Defaults remain disabled (`copy-only` / `disabled`); M17 identity hardening applied managed; **production activation requires Phase 10** with current backup/PITR and separate owner authority.
 
 ---
 

@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 5E closeout, August 3, 2026)
-**Current Phase:** Phase 5E — Sales Targets & CRM Reporting (**COMPLETE** — closeout PR pending merge)
-**Next Implementation Phase:** Phase 5F — Controlled Public Lead Activation Gate (**not started**)
+**Document Status:** Locked Roadmap (truth-synced post Phase 5F closeout, August 4, 2026)
+**Current Phase:** Phase 5F — Controlled Public Lead Activation Gate (**READY TO CLOSE** — formally COMPLETE after closeout PR merge)
+**Next Implementation Phase:** Phase 6A — Meta WhatsApp Data & Webhook Foundation (**NOT STARTED**)
 
 ---
 
@@ -47,6 +47,15 @@ Phase 5E: Sales Target Configuration & CRM Reporting Foundation ───── 
   • DB-5B: managed M16 apply complete
   • Closeout truth-sync: current PR
 Phase DB-5A-L / DB-5B: M16 logical recovery checkpoint + managed apply ─ COMPLETED
+Phase 5F: Controlled Public Lead Activation Gate ─────────────────── READY TO CLOSE
+  • 5F-A: architecture/evidence preflight frozen
+  • 5F-B: implementation complete (PR #17 merged)
+  • 5F-C: PR gate complete
+  • H1: real browser/mobile QA PASS
+  • DB-6A: physical recovery Route A (backup 1281893546)
+  • DB-6B: managed M17 apply complete
+  • Closeout truth-sync: current PR
+Phase DB-6A / DB-6B: M17 physical recovery readiness + managed apply ─ COMPLETED
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -79,12 +88,12 @@ Phase 5E ──► Sales Target Configuration & CRM Reporting Foundation [COMPLE
     │         • SA-only mutation; role-scoped reads; non-commercial reporting
     │         • M16 applied managed; achievement inactive until 7B
     ▼
-Phase 5F ──► Controlled Public Lead Activation Gate [NEXT — NOT STARTED]
-    │         • 5F-A: architecture/evidence preflight frozen separately
-    │         • Public intake remains inactive; legal/evidence/Phase 10 gates remain
-    │         • Owner/legal/proxy/secrets/monitoring/rollback evidence required
+Phase 5F ──► Controlled Public Lead Activation Gate [READY TO CLOSE — closeout PR pending]
+    │         • 5F-A: architecture/evidence preflight frozen
+    │         • 5F-B/C: implementation merged; M17 applied managed
+    │         • Public intake remains inactive; Phase 10 gates remain
     ▼
-Phase 6A ──► Meta WhatsApp Data & Webhook Foundation
+Phase 6A ──► Meta WhatsApp Data & Webhook Foundation [NEXT — NOT STARTED]
     ▼
 Phase 6B ──► Premium Shared Inbox & Controlled Outbound Messaging
     ▼
@@ -143,13 +152,20 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Dependencies:** 5D complete; PR #15 merged; DB-5A-L + DB-5B complete.
 - **Closeout:** [Phase 5E Closeout Audit](audits/phase-5e-sales-targets-reporting-closeout.md)
 
-### Phase 5F (Next — not started)
-- **Objective:** Controlled public lead activation only after legal/owner evidence.
-- **Exit gate:** Separate owner authorization; 5F-A architecture/evidence preflight completed; legal/Phase 10 gates remain; rollback runbook exercised.
-- **Dependencies:** 4B2 merged; legal gates complete.
-- **Status:** Public intake **inactive** (`copy-only` / `disabled` defaults).
+### Phase 5F (Ready to close — closeout PR pending)
+- **Objective:** Controlled public lead activation hardening (identity, DNC, loopback); **not** production activation.
+- **Exit gate:** PR #17 merged; M17 applied managed (DB-6B); DB-6A physical recovery Route A; H1 browser QA PASS; governance closeout PR merges.
+- **Dependencies:** 4B2 merged; 5F-A preflight complete.
+- **Status:** Public intake **inactive** (`copy-only` / `disabled`); production activation Phase 10 only.
+- **Closeout:** `docs/audits/phase-5f-controlled-public-lead-activation-closeout.md`
 
-### Phases 6–8
+### Phase 6A (Next — not started)
+- **Objective:** Meta WhatsApp data model and verified webhook foundation.
+- **Exit gate:** Webhook signature verification, idempotent persistence, consent boundary documented.
+- **Dependencies:** Phase 5F closeout merged.
+- **Status:** **NOT STARTED**.
+
+### Phases 6B–8
 See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020–0021.
 
 ### Phase 7B
@@ -177,7 +193,7 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 
 ## 4. Dependency Rules
 
-1. No public lead activation (5F) before legal/owner gates and 4B2 readiness evidence.
+1. No public lead **production activation** before Phase 10 gates (legal/owner/backup/PITR); Phase 5F hardening does not enable intake.
 2. No Closed-Won project conversion (8A) before quotation acceptance (7B).
 3. No WhatsApp outbound (6B) before webhook foundation (6A) and consent records.
 4. No Groq copilot (6C) before message persistence (6A).
