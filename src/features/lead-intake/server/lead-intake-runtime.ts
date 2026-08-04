@@ -63,9 +63,52 @@ function assertSameOrigin(origin: string | null, host: string | null): void {
   }
 }
 
+/** Parse HTTP Host header to canonical hostname (loopback recognition only). */
+export function parseLocalTestHostname(host: string | null): string | null {
+  if (!host) {
+    return null;
+  }
+
+  const raw = host.trim().toLowerCase();
+  if (!raw) {
+    return null;
+  }
+
+  const bracketed = raw.match(/^\[([^\]]+)\](?::\d+)?$/);
+  if (bracketed) {
+    return bracketed[1] ?? null;
+  }
+
+  const lastColon = raw.lastIndexOf(":");
+  if (lastColon > 0) {
+    const portPart = raw.slice(lastColon + 1);
+    if (/^\d+$/.test(portPart)) {
+      const hostname = raw.slice(0, lastColon);
+      if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") {
+        return hostname;
+      }
+      if (hostname.includes(".")) {
+        return hostname;
+      }
+    }
+  }
+
+  return raw;
+}
+
+export function isLocalTestHost(host: string | null): boolean {
+  const hostname = parseLocalTestHostname(host);
+  if (!hostname) {
+    return false;
+  }
+
+  return (
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
+  );
+}
+
 function assertLocalTestHost(host: string | null): void {
-  const h = (host ?? "").split(":")[0]?.toLowerCase();
-  if (h !== "localhost" && h !== "127.0.0.1") {
+  if (!isLocalTestHost(host)) {
     throw new LeadIntakeError({
       code: "LOCAL_TEST_HOST_REQUIRED",
       message: "local-test mode is limited to localhost.",
