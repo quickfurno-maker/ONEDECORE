@@ -25,11 +25,14 @@ import {
   META_WEBHOOK_OBJECT,
   normalizeMetaWebhookPayload,
   normalizeWaIdToE164,
+  computeEventHash,
 } from "../server/meta-webhook-contract.ts";
+import { canonicalJsonSerialize } from "../server/meta-webhook-canonical-json.ts";
 import {
   handleMetaWebhookPost,
   handleMetaWebhookVerification,
   MetaWebhookError,
+  validateMetaWebhookJsonContentType,
 } from "../server/meta-webhook-ingest.ts";
 
 const root = process.cwd();
@@ -631,5 +634,152 @@ describe("Phase 6A route artifact", () => {
     assert.equal(routeSource.includes('dynamic = "force-dynamic"'), true);
     assert.equal(routeSource.includes("export async function GET"), true);
     assert.equal(routeSource.includes("export async function POST"), true);
+  });
+
+  test("route source applies mode and content-type before body read", () => {
+    const routeSource = readFileSync(
+      join(root, "src/app/api/webhooks/meta/whatsapp/route.ts"),
+      "utf8"
+    );
+    const postStart = routeSource.indexOf("export async function POST");
+    const postSource = routeSource.slice(postStart);
+    const modeIdx = postSource.indexOf("assertMetaWebhookPostActive");
+    const contentTypeIdx = postSource.indexOf("validateMetaWebhookJsonContentType");
+    const bodyIdx = postSource.indexOf("readBoundedRawBody(");
+    const signedIdx = postSource.indexOf("handleMetaWebhookSignedBody(");
+    assert.ok(modeIdx >= 0 && contentTypeIdx > modeIdx);
+    assert.ok(bodyIdx > contentTypeIdx);
+    assert.ok(signedIdx > bodyIdx);
+  });
+});
+
+describe("Phase 6A H1 route gate order", () => {
+  async function importPostRoute() {
+    return import("../../../app/api/webhooks/meta/whatsapp/route.ts");
+  }
+
+  test("disabled mode rejects before body handling", async () => {
+    const previousMode = process.env.ONEDECORE_WHATSAPP_WEBHOOK_MODE;
+    process.env.ONEDECORE_WHATSAPP_WEBHOOK_MODE = "disabled";
+    try {
+      const { POST } = await importPostRoute();
+      const response = await POST(
+        new Request("http://localhost/api/webhooks/meta/whatsapp", {
+          method: "POST",
+          headers: {
+            host: "localhost:3000",
+            "content-type": "application/json",
+            "content-length": "999999",
+          },
+        })
+      );
+      assert.equal(response.status, 503);
+      const body = await response.json() as { code?: string };
+      assert.equal(body.code, "WEBHOOK_DISABLED");
+    } finally {
+      process.env.ONEDECORE_WHATSAPP_WEBHOOK_MODE = previousMode;
+    }
+  });
+
+  test("wrong content-type rejects before body handling", async () => {
+    assert.throws(
+      () => validateMetaWebhookJsonContentType("text/plain"),
+      (error: unknown) =>
+        error instanceof MetaWebhookError && error.httpStatus === 400
+    );
+
+    const saved = {
+      mode: process.env.ONEDECORE_WHATSAPP_WEBHOOK_MODE,
+      url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      key: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      verify: process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+      secret: process.env.META_WHATSAPP_APP_SECRET,
+    };
+    Object.assign(process.env, localEnv());
+    try {
+      const { POST } = await importPostRoute();
+      const response = await POST(
+        new Request("http://localhost/api/webhooks/meta/whatsapp", {
+          method: "POST",
+          headers: {
+            host: "localhost:3000",
+            "content-type": "text/plain",
+            "content-length": "999999",
+          },
+          body: "ignored",
+        })
+      );
+      assert.equal(response.status, 400);
+    } finally {
+      process.env.ONEDECORE_WHATSAPP_WEBHOOK_MODE = saved.mode;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = saved.url;
+      process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key;
+      process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN = saved.verify;
+      process.env.META_WHATSAPP_APP_SECRET = saved.secret;
+    }
+  });
+
+  test("valid content-type with oversized Content-Length returns 413", async () => {
+    const saved = {
+      mode: process.env.ONEDECORE_WHATSAPP_WEBHOOK_MODE,
+      url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      key: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      verify: process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+      secret: process.env.META_WHATSAPP_APP_SECRET,
+    };
+    Object.assign(process.env, localEnv());
+    try {
+      const { POST } = await importPostRoute();
+      const response = await POST(
+        new Request("http://localhost/api/webhooks/meta/whatsapp", {
+          method: "POST",
+          headers: {
+            host: "localhost:3000",
+            "content-type": "application/json",
+            "content-length": String(META_WEBHOOK_MAX_BODY_BYTES + 1),
+          },
+          body: "{}",
+        })
+      );
+      assert.equal(response.status, 413);
+    } finally {
+      process.env.ONEDECORE_WHATSAPP_WEBHOOK_MODE = saved.mode;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = saved.url;
+      process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key;
+      process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN = saved.verify;
+      process.env.META_WHATSAPP_APP_SECRET = saved.secret;
+    }
+  });
+});
+
+describe("Phase 6A H1 canonical event hash", () => {
+  test("equivalent nested key order yields same event_hash", () => {
+    const left = {
+      kind: "inbound_message" as const,
+      content: { z: 1, a: 2 },
+      details: { y: true, x: false },
+    };
+    const right = {
+      kind: "inbound_message" as const,
+      content: { a: 2, z: 1 },
+      details: { x: false, y: true },
+    };
+    assert.equal(computeEventHash(left), computeEventHash(right));
+    assert.notEqual(
+      canonicalJsonSerialize(left.content),
+      JSON.stringify(left.content)
+    );
+  });
+
+  test("different normalized values yield different event_hash", () => {
+    const base = {
+      kind: "message_status" as const,
+      details: { a: 1, b: 2 },
+    };
+    const changed = {
+      kind: "message_status" as const,
+      details: { a: 1, b: 3 },
+    };
+    assert.notEqual(computeEventHash(base), computeEventHash(changed));
   });
 });

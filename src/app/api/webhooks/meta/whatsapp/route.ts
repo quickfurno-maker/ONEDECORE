@@ -1,13 +1,18 @@
 import "server-only";
 
 import {
-  handleMetaWebhookPost,
+  handleMetaWebhookSignedBody,
   handleMetaWebhookVerification,
   MetaWebhookError,
+  assertMetaWebhookPostActive,
   safeMetaWebhookLog,
+  validateMetaWebhookJsonContentType,
 } from "../../../../../features/whatsapp/server/meta-webhook-ingest.ts";
 import { readBoundedRawBody } from "../../../../../features/whatsapp/server/meta-webhook-body.ts";
-import { getMetaWebhookMode } from "../../../../../features/whatsapp/server/meta-webhook-env.ts";
+import {
+  getMetaWebhookMode,
+  getMetaWebhookServerEnv,
+} from "../../../../../features/whatsapp/server/meta-webhook-env.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -119,6 +124,9 @@ export async function GET(request: Request): Promise<Response> {
 export async function POST(request: Request): Promise<Response> {
   const started = Date.now();
   let mode: ReturnType<typeof getMetaWebhookMode> | "unknown" = "unknown";
+  const host = request.headers.get("host");
+  const contentType = request.headers.get("content-type");
+
   try {
     mode = getMetaWebhookMode();
   } catch {
@@ -126,6 +134,18 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
+    if (mode === "disabled") {
+      throw new MetaWebhookError({
+        code: "WEBHOOK_DISABLED",
+        message: "WhatsApp webhook is disabled.",
+        httpStatus: 503,
+      });
+    }
+
+    const env = getMetaWebhookServerEnv();
+    assertMetaWebhookPostActive(env, host, process.env.NODE_ENV);
+    validateMetaWebhookJsonContentType(contentType);
+
     const bodyResult = await readBoundedRawBody(request);
     if (!bodyResult.ok) {
       const status = bodyResult.code === "BODY_TOO_LARGE" ? 413 : 400;
@@ -139,11 +159,11 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
 
-    const result = await handleMetaWebhookPost({
-      contentType: request.headers.get("content-type"),
+    const result = await handleMetaWebhookSignedBody({
+      env,
       signatureHeader: request.headers.get("x-hub-signature-256"),
       rawBody: bodyResult.bytes,
-      host: request.headers.get("host"),
+      host,
       nodeEnv: process.env.NODE_ENV,
     });
 

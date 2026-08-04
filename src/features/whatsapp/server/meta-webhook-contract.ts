@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
+import { canonicalJsonSerialize } from "./meta-webhook-canonical-json.ts";
 
 export const META_WEBHOOK_OBJECT = "whatsapp_business_account";
 
@@ -80,10 +81,14 @@ function asString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-function canonicalHash(payload: Record<string, unknown>): string {
+export function computeEventHash(payload: Record<string, unknown>): string {
   return createHash("sha256")
-    .update(JSON.stringify(payload))
+    .update(canonicalJsonSerialize(payload))
     .digest("hex");
+}
+
+function canonicalHash(payload: Record<string, unknown>): string {
+  return computeEventHash(payload);
 }
 
 function mapMessageType(providerType: string): NormalizedMessageType {

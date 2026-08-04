@@ -349,7 +349,19 @@ as $$
 declare
   v_business_account_id uuid;
   v_phone_number_id uuid;
+  v_existing_waba_id text;
 begin
+  select b.waba_id
+  into v_existing_waba_id
+  from public.whatsapp_phone_numbers p
+  inner join public.whatsapp_business_accounts b on b.id = p.business_account_id
+  where p.phone_number_id = p_phone_number_id;
+
+  if found and v_existing_waba_id <> p_waba_id then
+    raise exception 'webhook:conflict phone_number_id bound to different waba'
+      using errcode = '23505';
+  end if;
+
   insert into public.whatsapp_business_accounts (provider, waba_id, status)
   values ('meta', p_waba_id, 'active')
   on conflict (waba_id) do update
@@ -384,7 +396,21 @@ begin
             then public.whatsapp_phone_numbers.status
           else 'active'
         end
+  where public.whatsapp_phone_numbers.business_account_id = v_business_account_id
   returning id into v_phone_number_id;
+
+  if v_phone_number_id is null then
+    select p.id
+    into v_phone_number_id
+    from public.whatsapp_phone_numbers p
+    where p.phone_number_id = p_phone_number_id
+      and p.business_account_id = v_business_account_id;
+  end if;
+
+  if v_phone_number_id is null then
+    raise exception 'webhook:conflict phone_number_id bound to different waba'
+      using errcode = '23505';
+  end if;
 
   return query select v_business_account_id, v_phone_number_id;
 end;

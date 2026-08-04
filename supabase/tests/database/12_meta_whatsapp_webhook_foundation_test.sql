@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 6A — Meta WhatsApp webhook foundation pgTAP tests
 
 begin;
-select plan(39);
+select plan(44);
 
 -- Schema presence
 select ok(
@@ -333,6 +333,75 @@ select ok(
       and p.proname = 'transition_lead_status'
   ),
   'transition_lead_status RPC remains'
+);
+
+-- WABA/phone binding: same phone + same WABA remains valid
+select lives_ok(
+  $$select * from public.ingest_meta_whatsapp_message(
+    p_event_key => 'msg:1001:wamid.SAMEWABA',
+    p_event_hash => repeat('9', 64),
+    p_envelope_hash => repeat('0', 64),
+    p_waba_id => '9001',
+    p_phone_number_id => '1001',
+    p_display_phone_number => '+919876543210',
+    p_provider_message_id => 'wamid.SAMEWABA',
+    p_customer_e164 => '+919111222333',
+    p_recipient_e164 => '+919876543210',
+    p_display_name_snapshot => null,
+    p_provider_message_type => 'text',
+    p_normalized_message_type => 'text',
+    p_body_text => 'same waba refresh',
+    p_content => '{}'::jsonb,
+    p_context_provider_message_id => null,
+    p_provider_timestamp => '2026-08-04T10:05:30+00:00'::timestamptz
+  )$$,
+  'same phone + same WABA refresh succeeds'
+);
+
+-- Cross-binding rejection
+select throws_ok(
+  $$select * from public.ingest_meta_whatsapp_message(
+    p_event_key => 'msg:1001:wamid.CROSSBIND',
+    p_event_hash => repeat('7', 64),
+    p_envelope_hash => repeat('8', 64),
+    p_waba_id => '9002',
+    p_phone_number_id => '1001',
+    p_display_phone_number => '+919876543210',
+    p_provider_message_id => 'wamid.CROSSBIND',
+    p_customer_e164 => '+919111222333',
+    p_recipient_e164 => '+919876543210',
+    p_display_name_snapshot => null,
+    p_provider_message_type => 'text',
+    p_normalized_message_type => 'text',
+    p_body_text => 'cross-bind attempt',
+    p_content => '{}'::jsonb,
+    p_context_provider_message_id => null,
+    p_provider_timestamp => '2026-08-04T10:05:00+00:00'::timestamptz
+  )$$,
+  '23505',
+  'webhook:conflict phone_number_id bound to different waba',
+  'cross-binding phone_number_id under different WABA fails deterministically'
+);
+
+select results_eq(
+  $$select b.waba_id
+    from public.whatsapp_phone_numbers p
+    inner join public.whatsapp_business_accounts b on b.id = p.business_account_id
+    where p.phone_number_id = '1001'$$,
+  array['9001'],
+  'original phone-to-WABA binding remains unchanged after cross-bind failure'
+);
+
+select results_eq(
+  $$select count(*)::integer from public.whatsapp_messages where provider_message_id = 'wamid.CROSSBIND'$$,
+  array[0],
+  'cross-bind failure writes no message row'
+);
+
+select results_eq(
+  $$select count(*)::integer from public.whatsapp_webhook_events where provider_message_id = 'wamid.CROSSBIND'$$,
+  array[0],
+  'cross-bind failure writes no webhook ledger row'
 );
 
 select * from finish();

@@ -1,9 +1,9 @@
 # Phase 6A — Meta WhatsApp Data & Webhook Foundation Audit
 
-**Status:** Implementation complete — PR gate only (NOT marked phase-complete until owner merge + managed M18 apply)  
+**Status:** H1 corrections complete — PR gate revalidation (NOT marked phase-complete until owner merge + managed M18 apply)  
 **Base SHA:** `65fb9946af1e88e267ddf7dfe847ebb18983fed8`  
 **Branch:** `phase-6a-meta-whatsapp-webhook-foundation`  
-**Date:** 2026-08-04
+**Date:** 2026-08-04 (H1 owner review corrections)
 
 ---
 
@@ -40,7 +40,18 @@ Payload object: `whatsapp_business_account`. Logical fields: `messages`, `status
 | Mode env | `ONEDECORE_WHATSAPP_WEBHOOK_MODE` (`disabled` \| `local-test` \| `enabled`) |
 | Default mode | `disabled` |
 | Body cap | 512 KiB |
-| Raw-body order | mode → content-type → bounded raw read → signature → JSON parse → normalize → RPC |
+
+### POST gate order (implemented + tested)
+
+1. **Mode / fail-closed** (`getMetaWebhookMode` → `getMetaWebhookServerEnv` → `assertMetaWebhookPostActive`)
+2. **Content-Type** (`validateMetaWebhookJsonContentType` — `application/json` only)
+3. **Bounded raw body read** (`readBoundedRawBody`, 512 KiB cap)
+4. **Signature verification** (`verifyMetaWebhookSignature` on exact bytes)
+5. **JSON parse**
+6. **Normalize events**
+7. **Service-role RPC persistence** (`handleMetaWebhookSignedBody`)
+
+Disabled mode returns **503** before body consumption. Wrong Content-Type returns **400** before body read.
 
 ### GET responses
 
@@ -66,12 +77,23 @@ Payload object: `whatsapp_business_account`. Logical fields: `messages`, `status
 ## Signature & idempotency
 
 - HMAC-SHA256 over exact raw POST bytes; `timingSafeEqual` comparison
-- `event_key`: deterministic logical provider identifier
-- `event_hash`: SHA-256 of canonical normalized event JSON
-- `envelope_hash`: SHA-256 of exact raw webhook body
+- `event_key`: deterministic logical provider identifier (unchanged semantics)
+- `event_hash`: SHA-256 of **recursively canonicalized** normalized event JSON (sorted object keys at every nesting level; array order preserved)
+- `envelope_hash`: SHA-256 of exact raw webhook body (never canonicalized)
 - Same `event_key` + same `event_hash` → duplicate success
 - Same `event_key` + different `event_hash` → deterministic conflict (`23505`)
 - No raw body logging or persistence
+
+---
+
+## WABA / phone binding invariant (H1-3)
+
+`private.whatsapp_upsert_waba_phone` enforces:
+
+- Existing `phone_number_id` may only be reused with its existing `waba_id`
+- Cross-WABA rebinding fails closed (`23505`, `webhook:conflict phone_number_id bound to different waba`)
+- No partial conversation/message/webhook ledger on cross-bind failure
+- Same-WABA metadata refresh remains idempotent
 
 ---
 
@@ -80,8 +102,10 @@ Payload object: `whatsapp_business_account`. Logical fields: `messages`, `status
 | Item | Value |
 | --- | --- |
 | Filename | `supabase/migrations/20260804150000_meta_whatsapp_data_webhook_foundation.sql` |
-| SHA-256 | `53A601F235E8441CED8D35E3235B1E27A377FF1FA66006C3191B954555D596D4` |
+| Original SHA-256 | `53A601F235E8441CED8D35E3235B1E27A377FF1FA66006C3191B954555D596D4` |
+| **Corrected SHA-256** | `43AF93C6CF8CF7067A1CFFED6C1232614E2CA6A4C63C37184B0D6A8B7351F098` |
 | Managed apply | **NOT APPLIED** (repository/PR only) |
+| M1–M17 | Byte-for-byte unchanged |
 
 ### Tables
 
@@ -122,6 +146,17 @@ Outbound eligibility deferred to Phase 6B.
 
 ---
 
+## Application test coverage (H1-1)
+
+Permanent `npm run test:app` includes:
+
+- `src/features/lead-intake/__tests__/phase-5f-b-controlled-activation.test.ts` (**Phase 5F**)
+- `src/features/whatsapp/__tests__/phase-6a-meta-webhook.test.ts` (**Phase 6A**)
+
+Post-H1 exact result: **503 tests, 503 pass, 0 fail**.
+
+---
+
 ## Explicit non-actions
 
 - No live Meta callback registration
@@ -135,32 +170,23 @@ Outbound eligibility deferred to Phase 6B.
 
 ---
 
-## QA evidence
+## QA evidence (post-H1)
 
 | Gate | Result |
 | --- | --- |
 | Local `db:reset` M1–M18 | PASS |
-| pgTAP | 12 files, **521** assertions, PASS |
+| pgTAP | 12 files, **526** assertions, PASS |
 | DB lint | No warnings/errors |
 | `npm run check` | PASS |
-| App tests | **463** tests, PASS (includes Phase 6A suite) |
-| Route QA (handler import) | GET 200/403, POST 200/401, duplicate 200 |
-
-### Route QA summary
-
-- GET correct verify → 200 challenge
-- GET wrong token → 403
-- POST valid signed fixture → 200 persisted
-- POST invalid signature → 401
-- POST duplicate → 200 `duplicate`
-- Local DB: WhatsApp rows created; contacts/leads/consent counts unchanged
+| `npm run test:app` | **503** tests, PASS (Phase 5F + Phase 6A suites execute) |
+| Route gate order | Source-order + functional disabled/content-type/413 tests |
 
 ---
 
 ## Next steps
 
-1. Owner PR merge review
+1. Owner PR merge authorization
 2. Separate managed M18 recovery/apply gate (fresh backup/PITR required — backup `1281893546` is pre-M17 and insufficient)
 3. Phase 6B: shared inbox + controlled outbound (after 6A merge + M18 apply)
 
-**Phase 6A audit status:** PR READY — not marked COMPLETE until owner merge.
+**Phase 6A audit status:** H1 PR READY — not marked COMPLETE until owner merge.

@@ -105,7 +105,7 @@ function isLocalTestHost(host: string | null): boolean {
   );
 }
 
-function assertWebhookActive(
+export function assertMetaWebhookPostActive(
   env: MetaWebhookServerEnv,
   host: string | null,
   nodeEnv: string | undefined
@@ -133,6 +133,26 @@ function assertWebhookActive(
       });
     }
   }
+}
+
+export function validateMetaWebhookJsonContentType(
+  contentType: string | null
+): void {
+  if (!(contentType ?? "").toLowerCase().startsWith("application/json")) {
+    throw new MetaWebhookError({
+      code: "UNSUPPORTED_MEDIA_TYPE",
+      message: "application/json required.",
+      httpStatus: 400,
+    });
+  }
+}
+
+function assertWebhookActive(
+  env: MetaWebhookServerEnv,
+  host: string | null,
+  nodeEnv: string | undefined
+): void {
+  assertMetaWebhookPostActive(env, host, nodeEnv);
 }
 
 function resolveAppSecret(env: MetaWebhookServerEnv): string {
@@ -336,26 +356,21 @@ async function persistEvent(
   return persistMessageStatus(client, event, envelopeHash);
 }
 
-export async function handleMetaWebhookPost(
-  request: MetaWebhookPostRequest,
+export interface MetaWebhookSignedBodyRequest {
+  readonly env: MetaWebhookServerEnv;
+  readonly signatureHeader: string | null;
+  readonly rawBody: Uint8Array;
+  readonly host: string | null;
+  readonly nodeEnv: string | undefined;
+}
+
+export async function handleMetaWebhookSignedBody(
+  request: MetaWebhookSignedBodyRequest,
   deps: MetaWebhookRuntimeDeps = {}
 ): Promise<MetaWebhookHandlerResult> {
   const correlationId = newCorrelationId();
-  const getEnv = deps.getEnv ?? getMetaWebhookServerEnv;
   const createAdmin = deps.createAdminClient ?? createWebhookAdminClient;
-
-  const env = getEnv();
-  assertWebhookActive(env, request.host, request.nodeEnv);
-
-  const contentType = (request.contentType ?? "").toLowerCase();
-  if (!contentType.startsWith("application/json")) {
-    throw new MetaWebhookError({
-      code: "UNSUPPORTED_MEDIA_TYPE",
-      message: "application/json required.",
-      httpStatus: 400,
-      correlationId,
-    });
-  }
+  const env = request.env;
 
   const appSecret = resolveAppSecret(env);
   const signature = verifyMetaWebhookSignature(
@@ -427,6 +442,27 @@ export async function handleMetaWebhookPost(
     outcome: lastOutcome,
     eventCount: normalized.events.length,
   };
+}
+
+export async function handleMetaWebhookPost(
+  request: MetaWebhookPostRequest,
+  deps: MetaWebhookRuntimeDeps = {}
+): Promise<MetaWebhookHandlerResult> {
+  const getEnv = deps.getEnv ?? getMetaWebhookServerEnv;
+  const env = getEnv();
+  assertWebhookActive(env, request.host, request.nodeEnv);
+  validateMetaWebhookJsonContentType(request.contentType);
+
+  return handleMetaWebhookSignedBody(
+    {
+      env,
+      signatureHeader: request.signatureHeader,
+      rawBody: request.rawBody,
+      host: request.host,
+      nodeEnv: request.nodeEnv,
+    },
+    deps
+  );
 }
 
 export function safeMetaWebhookLog(input: {
