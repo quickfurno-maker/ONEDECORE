@@ -4,8 +4,9 @@
 
 ONEDECORE is a premium interior-business operating system for Pune, India — combining a production public website and portfolio with a planned sales, quotation, project execution, design, WhatsApp, and marketing CRM backbone.
 
-**Current phase:** Phase 5E — Sales Targets & CRM Reporting (**COMPLETE** after closeout PR merge).
-**Next implementation:** Phase 5F — Controlled Public Lead Activation Gate (**not started**; architecture/evidence preflight exists; separate owner authorization required; production activation cannot occur before Phase 10).
+**Current phase:** Phase 5F — Controlled Public Lead Activation Gate (**READY TO CLOSE** — formally COMPLETE after closeout PR merge).
+**Next implementation:** Phase 6A — Meta WhatsApp Data & Webhook Foundation (**NOT STARTED**).
+**Public intake:** inactive (`copy-only` browser gate; server `disabled`). **Production activation:** Phase 10 only.
 
 ---
 
@@ -39,14 +40,15 @@ ONEDECORE is a premium interior-business operating system for Pune, India — co
 | Lifecycle collaboration (Phase 5C2C) | Status/note/follow-up mutations — merged (PR #11) |
 | Bulk import & source assignment (Phase 5D) | Merged; managed migration 15 applied |
 | Sales targets & CRM reporting (Phase 5E) | Merged; managed migration 16 applied; internal/pre-production |
-| Lead intake **schema** | Migrations 9–10; managed aligned through 16 |
+| Lead intake **schema** | Migrations 9–10; identity hardening M17 applied managed |
 | Public lead form | **Merged; default `copy-only`; server `disabled`** |
+| Controlled public lead activation hardening (Phase 5F) | Merged (PR #17); M17 applied managed August 4, 2026; **public intake inactive** |
 
-Managed Supabase (**OneDecore**, `lpurlfmpvriyvpkujvyl`): migrations **1–16** aligned (M16 applied August 3, 2026).
+Managed Supabase (**OneDecore**, `lpurlfmpvriyvpkujvyl`): migrations **1–17** aligned (M17 applied August 4, 2026).
 
 ### Not yet complete
 
-Phase 5F implementation/evidence closure, WhatsApp (Phase 6), quotations (Phase 7), project conversion/execution (Phase 8), Landing Page Lab (Phase 9B — roadmap-locked, not implemented), public lead activation, and **production deployment** (Phase 10).
+Phase 5F formal closeout merge (this governance PR), WhatsApp (Phase 6), quotations (Phase 7), project conversion/execution (Phase 8), Landing Page Lab (Phase 9B — roadmap-locked, not implemented), **public lead activation**, and **production deployment** (Phase 10).
 
 See [Phase Roadmap](docs/09-phase-roadmap.md) and [Phase 5A Audit](docs/audits/phase-5a-crm-architecture-freeze.md).
 
@@ -94,7 +96,7 @@ Five locked V1 staff roles: `super_admin`, `sales_manager`, `sales_executive`, `
 
 - **Framework:** Next.js 16.2.11 · React 19 · TypeScript 5 · Tailwind CSS v4
 - **Node:** 24.x LTS (`>=24 <25`) · npm 11.16.0
-- **Database:** Supabase (`lpurlfmpvriyvpkujvyl`, Mumbai) · **16 migrations applied** (managed aligned)
+- **Database:** Supabase (`lpurlfmpvriyvpkujvyl`, Mumbai) · **17 migrations applied** (managed aligned)
 - **Quality gates:** `npm run check` · `npm run check:db`
 - **Contributions:** [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md)
 

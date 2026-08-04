@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 5F Closeout (August 4, 2026)
+- Phase 5F **READY TO CLOSE** (formally COMPLETE after this closeout PR merges): controlled public lead activation hardening implemented; PR #17 merged; managed migration 17 applied and verified (Phase DB-6B).
+- Protected-main merge SHA `2e3f3322b35865c7661a0abeeaa7f0823ed8a593`; M17 `20260804140000_controlled_public_lead_activation_hardening.sql` SHA `B8F5B75AC6EE64DE1E9ABD571A215FF3AABE6F54D98EFE1F8BBEF679871A0FC6`.
+- Managed Supabase aligned **M1–M17** on OneDecore (`lpurlfmpvriyvpkujvyl`); normalized-phone identity reuses active/suppressed contact identity; DNC preserved; suppressed phone state preserved; ambiguous identity fails safely (`contact_identity_conflict`); IPv6 loopback `::1` hardening completed.
+- DB-6A physical recovery Route A: backup ID `1281893546` (`2026-08-03T19:53:32.414Z`, COMPLETED, WALG) — valid pre-M17 recovery point; **does not permanently satisfy Phase 10** (fresh physical backup or qualified PITR required before production activation).
+- DB-6B apply window 2026-08-04T06:41:03Z–06:41:13Z; 28/28 public application table row counts unchanged; RBAC 29/90/2; RLS 28 tables / 52 policies unchanged.
+- H1 browser/mobile QA PASS (desktop 1440×900, mobile 390×844; zero normal intake POSTs; disabled endpoint 503 `LEAD_INTAKE_DISABLED`).
+- Closeout audit: `docs/audits/phase-5f-controlled-public-lead-activation-closeout.md`; decisions DEC-0054, DEC-0055.
+- **No production deployment**; public intake remains inactive (`copy-only` / `disabled`); Closed-Won blocked until Phase 7B; Phase 6A next (not started).
+
+### Added - Phase 5F (August 4, 2026 — implementation)
+- Migration 17 (`20260804140000_controlled_public_lead_activation_hardening.sql`): `private.resolve_lead_intake_contact_by_phone`; `submit_lead_intake` identity hardening for DNC/suppressed-phone re-enquiry; loopback `::1` runtime hardening.
+- pgTAP `11_controlled_public_lead_activation_test.sql`; app tests `phase-5f-b-controlled-activation.test.ts`.
+- QA: DB 482/482, app 430/430 + 34 Phase 5F-B tests, H1 browser/mobile PASS.
+- **Merged to protected main (PR #17)** — merge commit `2e3f3322b35865c7661a0abeeaa7f0823ed8a593`; M17 applied managed August 4, 2026 (Phase DB-6B).
+- Audit: `docs/audits/phase-5f-controlled-public-lead-activation.md`.
+
 ### Added - Phase 5E Closeout (August 3, 2026)
 - Phase 5E **COMPLETE**: sales target configuration, immutable target history, role-scoped reads, non-commercial CRM reporting; implementation merged (PR #15); managed migration 16 applied (Phase DB-5B).
 - Protected-main merge SHA `4340a669e6dcf107081097c1edc2b79a113e36cd`; M16 `20260803140000_crm_sales_targets_reporting_foundation.sql` SHA `777A0DDB77910B7BB9A069048B10B40CE48144D5FB1D34E714875CFF0F972A58`.
