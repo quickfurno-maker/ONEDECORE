@@ -1,13 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced post Phase 5D closeout, August 3, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced post Phase 5E closeout, August 3, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 5D — Bulk Import & Source-Based Assignment (**COMPLETE** — closeout PR pending merge)
-**Next Implementation Phase:** Phase 5E — Sales Targets & CRM Reporting (**5E-B not started**)
+**Current Phase:** Phase 5E — Sales Targets & CRM Reporting (**COMPLETE** — closeout PR pending merge)
+**Next Implementation Phase:** Phase 5F — Controlled Public Lead Activation Gate (**not started** — separate owner authorization required)
 
 ---
 
@@ -88,13 +88,28 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Assignment mutation hardening (migration 13) | Applied managed August 1, 2026 |
 | Manual lead duplicate-safe flow (migration 14) | Applied managed August 2, 2026 (Phase DB-3B) |
 | Bulk import & source assignment (migration 15) | Applied managed August 3, 2026 (Phase DB-4B) |
-| Managed migration alignment | **1–15** on OneDecore (`lpurlfmpvriyvpkujvyl`) |
+| Sales targets & CRM reporting (migration 16) | Applied managed August 3, 2026 (Phase DB-5B) |
+| Managed migration alignment | **1–16** on OneDecore (`lpurlfmpvriyvpkujvyl`) |
 
-CRM workspace mutation slices (5C2A–5C2C) and Phase 5D bulk import are **merged on protected main** with managed database foundation through M15; **production deployment pending** (Phase 10).
+CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, and Phase 5E targets/reporting are **merged on protected main** with managed database foundation through M16; targets/reporting remain **internal/pre-production**; **production deployment pending** (Phase 10).
+
+### Phase 5E truth
+
+- Implementation merged (PR #15); managed M16 applied.
+- Target configuration + immutable history live in managed schema; SA-only mutation; role-scoped reads.
+- Non-commercial CRM reporting only; **achievement inactive** until accepted quotation (Phase 7B); no stored achieved/attainment/forecast/variance fields.
+- **No deployment**; public intake inactive.
+
+### Recovery truth
+
+- **DB-5A-L** fresh verified logical checkpoint accepted for M16 (capture window 2026-08-03T13:31:24Z–13:33:32Z); package outside Git (`DB5A-L-20260803T133124Z`).
+- Scheduled physical backup still delayed (newest verified: `2026-08-01T19:54:53.794Z`, pre-M15).
+- Logical checkpoint is **not equivalent** to physical backup/PITR; auth/storage platform restoration limitation documented.
+- **Before Phase 10 production activation**, fresh physical backup or active PITR is mandatory.
 
 ### Planned — not live
 
-Phase 5E-B+ (targets reporting implementation), WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, Landing Page Lab (Phase 9B — roadmap-locked, not implemented), public lead activation (Phase 5F), production deployment.
+Phase 5F public lead activation implementation, WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, Landing Page Lab (Phase 9B — roadmap-locked, not implemented), production deployment.
 
 **Do not claim planned modules are live or production-deployed.**
 

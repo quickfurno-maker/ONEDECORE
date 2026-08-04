@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 5D closeout, August 3, 2026)
-**Current Phase:** Phase 5D — Bulk Import & Source-Based Assignment (**COMPLETE** — closeout PR pending merge)
-**Next Implementation Phase:** Phase 5E — Sales Targets & Performance Reporting (**5E-B not started**)
+**Document Status:** Locked Roadmap (truth-synced post Phase 5E closeout, August 3, 2026)
+**Current Phase:** Phase 5E — Sales Targets & CRM Reporting (**COMPLETE** — closeout PR pending merge)
+**Next Implementation Phase:** Phase 5F — Controlled Public Lead Activation Gate (**not started**)
 
 ---
 
@@ -39,6 +39,14 @@ Phase 5D: Bulk Import Approval & Source-Based Assignment ───────�
   • Migration 15 applied managed (Phase DB-4B, August 3, 2026)
   • Closeout truth-sync: current PR
 Phase DB-4A-X / DB-4B: M15 logical recovery checkpoint + managed apply ─ COMPLETED
+Phase 5E: Sales Target Configuration & CRM Reporting Foundation ───── COMPLETED
+  • 5E-A: architecture preflight frozen
+  • 5E-B: implementation complete (PR #15 merged)
+  • 5E-C: PR gate complete
+  • DB-5A-L: verified logical recovery checkpoint accepted
+  • DB-5B: managed M16 apply complete
+  • Closeout truth-sync: current PR
+Phase DB-5A-L / DB-5B: M16 logical recovery checkpoint + managed apply ─ COMPLETED
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -66,13 +74,12 @@ Phase 5D ──► Bulk Import Approval & Source-Based Assignment [COMPLETED]
     │         • Super Admin direct import + source rules + Unassigned fallback
     │         • No round-robin; M15 applied managed
     ▼
-Phase 5E ──► Sales Target Configuration & CRM Reporting Foundation [NEXT]
-    │         • 5E-A: architecture preflight frozen
-    │         • 5E-B: implementation not started
-    │         • Target assignments, history, lock/reopen, role visibility
-    │         • Non-commercial CRM reporting; achievement inactive until 7B
+Phase 5E ──► Sales Target Configuration & CRM Reporting Foundation [COMPLETED]
+    │         • Monthly target config, append-only history, lock/reopen
+    │         • SA-only mutation; role-scoped reads; non-commercial reporting
+    │         • M16 applied managed; achievement inactive until 7B
     ▼
-Phase 5F ──► Controlled Public Lead Activation Gate
+Phase 5F ──► Controlled Public Lead Activation Gate [NEXT — NOT STARTED]
     │         • 5F-A: architecture/evidence preflight frozen separately
     │         • Public intake remains inactive; legal/evidence/Phase 10 gates remain
     │         • Owner/legal/proxy/secrets/monitoring/rollback evidence required
@@ -130,13 +137,13 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Dependencies:** 5C.
 - **Closeout:** [Phase 5D Closeout Audit](audits/phase-5d-bulk-import-source-assignment-closeout.md)
 
-### Phase 5E (Next — not started)
+### Phase 5E (Completed)
 - **Objective:** Monthly target configuration, append-only target history, lock/reopen controls, role visibility, and non-commercial CRM performance reporting.
-- **Exit gate:** Target configuration/history/permissions and non-commercial CRM reporting proven; **commercial achievement explicitly inactive** (displayed unavailable/not activated until Phase 7B).
-- **Dependencies:** 5D closeout merge; owner authorization for 5E-B.
-- **Preflight:** Phase 5E-A architecture frozen (migration 16 planned).
+- **Exit gate:** Target configuration/history/permissions and non-commercial CRM reporting proven; M16 applied managed; **commercial achievement explicitly inactive** until Phase 7B.
+- **Dependencies:** 5D complete; PR #15 merged; DB-5A-L + DB-5B complete.
+- **Closeout:** [Phase 5E Closeout Audit](audits/phase-5e-sales-targets-reporting-closeout.md)
 
-### Phase 5F
+### Phase 5F (Next — not started)
 - **Objective:** Controlled public lead activation only after legal/owner evidence.
 - **Exit gate:** Separate owner authorization; 5F-A architecture/evidence preflight completed; legal/Phase 10 gates remain; rollback runbook exercised.
 - **Dependencies:** 4B2 merged; legal gates complete.

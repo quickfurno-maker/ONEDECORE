@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 5E Closeout (August 3, 2026)
+- Phase 5E **COMPLETE**: sales target configuration, immutable target history, role-scoped reads, non-commercial CRM reporting; implementation merged (PR #15); managed migration 16 applied (Phase DB-5B).
+- Protected-main merge SHA `4340a669e6dcf107081097c1edc2b79a113e36cd`; M16 `20260803140000_crm_sales_targets_reporting_foundation.sql` SHA `777A0DDB77910B7BB9A069048B10B40CE48144D5FB1D34E714875CFF0F972A58`.
+- Managed Supabase aligned **M1–M16** on OneDecore (`lpurlfmpvriyvpkujvyl`); SA-only target mutation; achievement inactive until Phase 7B; no stored achieved/attainment/forecast/variance fields.
+- Routes: `/admin/crm/targets`, `/admin/crm/reports`; QA DB 458/458, app 430/430, owner 19/19, browser 31/31.
+- DB-5A-L verified logical recovery checkpoint accepted for M16 (fresh capture; 26/26 public application table row-count match); physical backup still delayed — fresh physical backup or active PITR mandatory before Phase 10 production activation.
+- Closeout audit: `docs/audits/phase-5e-sales-targets-reporting-closeout.md`; decisions DEC-0052, DEC-0053.
+- **No production deployment**; public intake inactive; Closed-Won blocked until Phase 7B; Phase 5F next (not started).
+
+### Added - Phase 5E (August 3, 2026 — implementation)
+- Migration 16 (`20260803140000_crm_sales_targets_reporting_foundation.sql`): `sales_targets`, `sales_target_events`, permissions, RLS, four public INVOKER RPC wrappers, reporting index.
+- Application layer: target/reporting contracts, services, actions, queries, `/admin/crm/targets` and `/admin/crm/reports` UI.
+- QA: DB 458/458, app 430/430, owner 19/19, browser 31/31.
+- **Merged to protected main (PR #15)** — merge commit `4340a669e6dcf107081097c1edc2b79a113e36cd`; M16 applied managed August 3, 2026 (Phase DB-5B).
+- Audit: `docs/audits/phase-5e-sales-targets-reporting.md`.
+
 ### Added - Phase 5D Closeout (August 3, 2026)
 - Phase 5D **COMPLETE**: bulk import approval chain + deterministic source-based assignment; implementation merged (PR #13); managed migration 15 applied (Phase DB-4B).
 - Managed Supabase aligned **M1–M15** on OneDecore (`lpurlfmpvriyvpkujvyl`); post-apply dry-run up to date; managed lint clean.
