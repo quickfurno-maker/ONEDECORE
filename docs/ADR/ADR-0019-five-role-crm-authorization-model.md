@@ -33,11 +33,13 @@ Historical seed roles (`management`, `sales`, `project_operations`) do not match
 
 | Role | Scope summary |
 | :--- | :--- |
-| `super_admin` | Complete operational control except erasing immutable audit history. Manages staff, permissions, sources, assignment rules, imports, targets, quotation overrides, project/design assignments, campaigns, reports, audit. |
-| `sales_manager` | All sales leads/conversations and unassigned queue. Create/assign/reassign leads. Submit bulk imports (Super Admin approval required). Approve quotations within policy. Assign/reassign PM and Designers after project exists. Draft campaigns (cannot approve own). Team-only monthly targets in V1. |
-| `sales_executive` | Assigned leads only. One manual lead at a time (self-assigned). No bulk upload, reassignment, unassigned queue, quotation approval, project staff assignment, campaigns, targets, or user management. |
+| `super_admin` | Complete operational control except erasing immutable audit history. Manages staff, permissions, sources, assignment rules, imports, targets, quotation hard commercial bounds and exceptional void/revoke controls, project/design assignments, campaigns, reports, and audit. May create/edit/finalize/send quotations across sales scope. No ordinary quotation approval step exists in V1. |
+| `sales_manager` | All sales leads/conversations and unassigned queue. Create/assign/reassign leads. Submit bulk imports (Super Admin approval required). Create/edit/finalize/send quotations across authorized sales scope; no internal quotation approval step in V1. Assign/reassign PM and Designers after project exists. Draft campaigns (cannot approve own). Team-only monthly targets in V1. |
+| `sales_executive` | Assigned leads only. One manual lead at a time (self-assigned). May create, edit, finalize/freeze, and send quotations for currently assigned leads through the controlled Phase 7/Phase 6B path. No bulk upload, reassignment, unassigned queue, cross-executive quotation access, project staff assignment, campaigns, targets, or user management. |
 | `project_manager` | Assigned projects only. Accept handover; update permitted milestones, notes, files, delays, snags. Cannot assign/reassign PMs or Designers, change commercial truth, or manage leads/campaigns/targets/staff. |
 | `designer` | Explicitly assigned projects only. Exactly one Lead Designer plus zero or more Supporting Designers per project. Lead Designer coordinates design and production-ready approval. Cannot self-assign, add/replace staff, change PM, or make pricing/commercial commitments. |
+
+Quotation finalization/send authority is governed by [ADR-0022](ADR-0022-v1-direct-quotation-finalization-and-send.md). ONEDECORE V1 does not use an internal quotation approval workflow.
 
 ### Authentication
 
@@ -147,4 +149,5 @@ Documented nav surfaces per role (Command Centre, Leads, WhatsApp Inbox, Follow-
 - [ADR-0008: Database-Backed RBAC](ADR-0008-database-backed-rbac.md)
 - [ADR-0009: Public Invoker Authorization RPC](ADR-0009-public-invoker-authorization-rpc.md)
 - [ADR-0018: Secure Lead Intake Data Plane](ADR-0018-secure-lead-intake-data-plane.md)
+- [ADR-0022: V1 Direct Quotation Finalization and Send Authority](ADR-0022-v1-direct-quotation-finalization-and-send.md)
 - [Phase 5A Audit](../audits/phase-5a-crm-architecture-freeze.md)
