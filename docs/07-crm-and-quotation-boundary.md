@@ -49,7 +49,7 @@ Reopening a terminal state requires explicit audited transition with reason.
 | Manual lead (one) | ✓ | ✓ | ✓ (self-assign) | — | — |
 | Bulk import | ✓ direct | submit | — | — | — |
 | Assign/reassign lead | ✓ | ✓ | — | — | — |
-| Approve quotation | override | policy | — | — | — |
+| Create/finalize/send quotation (assigned lead) | ✓ | broad scope | ✓ (own assigned) | — | — |
 | Assign PM | ✓ | ✓ | — | — | — |
 | Assign Designer | ✓ | ✓ | — | — | — |
 
@@ -91,29 +91,31 @@ Website; Website Planner; Google Organic; Google Ads; Google Business Profile; I
 
 ### 3.2 Lifecycle (state graph)
 
-**Main path:** `Draft` → `Submitted for Approval` → `Approved` → `Sent`
+**Main path:** `Draft` → `Finalized/Frozen` → `Sent`
 
 **Observed:** `Viewed` may occur after Sent without forcing the next outcome.
 
-**Alternative outcomes:**
+**Client interaction / outcomes:**
 
 | Outcome | Type | Rules |
 | :--- | :--- | :--- |
 | **Accepted** | Terminal (version) | Authoritative for Closed-Won; cannot become Rejected or Expired |
 | **Rejected** | Terminal (version) | Rejection of that version |
 | **Expired** | Terminal (version) | Validity lapsed; must not override an already accepted version |
-| **Revision Requested → Revised** | Loop | New immutable version → Submitted for Approval again |
+| **Revision Requested → Revised** | Loop | Staff creates one new mutable draft version; full finalize/send cycle for new version (no internal approval) |
 
-See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md) for full contract.
+See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md) and [ADR-0022](ADR/ADR-0022-v1-direct-quotation-finalization-and-send.md).
 
-### 3.3 Approval Authority
-- Sales Executive: drafts for own leads only.
-- Sales Manager: approves within configured owner policy.
-- Super Admin: audited override, catalogue, discount, void authority.
-- **Closed-Won requires Accepted quotation.**
+### 3.3 Quotation Authority (V1 — no internal approval)
+
+- **Sales Executive:** create, edit draft, finalize/freeze, generate PDF (planned), and send for **currently assigned** leads only.
+- **Sales Manager:** broad sales-scope create/edit/finalize/send; audit/history; controlled revoke/reissue when implemented. **No quotation approval action.**
+- **Super Admin:** full commercial administrative scope; configure hard commercial bounds (when implemented); audited void/revoke. **No ordinary quotation approval step.**
+- **Project Manager / Designer:** no Phase 7 quotation mutation or send authority.
+- **Closed-Won requires Accepted quotation** (unchanged).
 
 ### 3.4 Client Acceptance
-Auditable acknowledgement (hash, timestamp, client identifier, IP) — not automatic legal e-signature.
+Auditable acknowledgement (hash, timestamp, client identifier, privacy-safe keyed network fingerprint if network evidence is needed) — **not** raw IP persistence; not automatic legal e-signature.
 
 ---
 
@@ -151,7 +153,7 @@ See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md).
 - Revenue and Closed-Won **achievement** display as **unavailable / not activated** until Phase 7B.
 - No manual self-reported revenue achievement. No placeholder numbers presented as real performance.
 
-**Phase 7B:** Activates authoritative quotation-accepted revenue and Closed-Won achievement calculations.
+**Phase 7B:** Activates authoritative quotation-accepted revenue (`taxable_base_paise`; GST excluded from sales achievement) and Closed-Won achievement calculations.
 
 **Phase 8A (optional):** Project-value reconciliation when business chooses project value as authoritative measure; no double counting with quotation acceptance.
 
@@ -167,5 +169,6 @@ CRM and project execution exclude: accounting ledgers, vendor POs, inventory, la
 
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0020: Closed-Won Handover](ADR/ADR-0020-closed-won-project-handover-invariants.md)
+- [ADR-0022: V1 Direct Quotation Finalization and Send](ADR/ADR-0022-v1-direct-quotation-finalization-and-send.md)
 - [Product Requirements](01-product-requirements.md)
 - [ADR-0005: Version 1 No-ERP Boundary](ADR/ADR-0005-version-1-no-erp-boundary.md)

@@ -99,10 +99,11 @@ Phase 6B ──► Premium Shared Inbox & Controlled Outbound Messaging
     ▼
 Phase 6C ──► Groq Human-Controlled Copilot
     ▼
-Phase 7A ──► Commercial Quotation Data Foundation
+Phase 7A ──► Commercial Quotation Data & Draft Foundation
     ▼
-Phase 7B ──► Quotation Workflow, Premium PDF & Acceptance
-    │         • Activates authoritative accepted-quotation target achievement
+Phase 7B ──► Quotation Finalization, Premium PDF, Secure Delivery & Client Acceptance
+    │         • No internal quotation approval (ADR-0022)
+    │         • Activates authoritative accepted-quotation target achievement (`taxable_base_paise`)
     ▼
 Phase 8A ──► Closed-Won Project Conversion & PM Handover
     │         • Optional project-value reconciliation (no double counting)
@@ -168,9 +169,14 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 ### Phases 6B–8
 See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020–0021.
 
+### Phase 7A
+- **Objective:** Commercial quotation data and draft foundation (planned).
+- **Exit gate:** Draft editor, canonical money calculation, one-mutable-draft invariant, RLS foundation proven.
+- **Dependencies:** Phase 6 sequencing per owner roadmap.
+
 ### Phase 7B
-- **Objective:** Quotation workflow, premium PDF, client acceptance.
-- **Exit gate:** Authoritative accepted-quotation revenue and Closed-Won achievement calculations proven and tested.
+- **Objective:** Quotation finalization (no internal approval), premium PDF, secure delivery via Phase 6B, client acceptance.
+- **Exit gate:** Authoritative accepted-quotation revenue (`taxable_base_paise`) and Closed-Won achievement calculations proven and tested.
 - **Dependencies:** 7A.
 
 ### Phase 8A

@@ -116,6 +116,7 @@ OneDecore/
 - [ADR-0019: Five-Role CRM Authorization Model](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0020: Closed-Won Project Handover Invariants](ADR/ADR-0020-closed-won-project-handover-invariants.md)
 - [ADR-0021: Groq Copilot and Official WhatsApp Boundary](ADR/ADR-0021-groq-copilot-and-whatsapp-boundary.md)
+- [ADR-0022: V1 Direct Quotation Finalization and Send Authority](ADR/ADR-0022-v1-direct-quotation-finalization-and-send.md)
 
 ---
 
@@ -130,6 +131,7 @@ Phase 5A locks the following cross-cutting patterns for future implementation:
 | Assignment | Manual (Manager/Admin) + source rules (Super Admin); no round-robin |
 | Import | Private batches; manager approval; Super Admin direct import |
 | Commercial truth | Accepted quotation required for Closed-Won |
+| Quotation workflow (planned Phase 7) | Draft → Finalized/Frozen → Sent → client outcomes; **no internal approval**; SE finalize/send for assigned lead; Phase 6B `WHATSAPP_SERVICE` send boundary — ADR-0022 |
 | Handover | PM assignment → PM acceptance before execution |
 | Design staffing | One Lead Designer + Supporting Designers; manual only |
 | AI | Provider adapter; human approval; structured outputs; audit |

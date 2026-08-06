@@ -5,6 +5,8 @@
 **Deciders:** Business Owner, Senior Product Architect  
 **Technical Scope:** Sales-to-Operations Handover (Phase 5A freeze)
 
+> **Partial supersession (August 6, 2026):** Quotation **approval** portions of this ADR are superseded by [ADR-0022: V1 Direct Quotation Finalization and Send Authority](ADR-0022-v1-direct-quotation-finalization-and-send.md). Current V1 quotation workflow is **Draft → Finalized/Frozen → Sent** (no internal Submitted for Approval / Approved states). All **Closed-Won, PM handover, Designer assignment, Phase 8 execution/design, and No-ERP invariants** below remain accepted unless explicitly noted in ADR-0022.
+
 ---
 
 ## Context and Problem Statement
@@ -31,28 +33,30 @@ Phase 4B2 delivered a disabled public intake path only. No CRM workspace, quotat
 
 - **Closed-Won requires an Accepted authoritative quotation** (immutable version with auditable acceptance acknowledgement).
 - Advance payment alone is not sufficient to mark Closed-Won or create an execution project.
-- Sales Executive may draft quotations for own leads only; Sales Manager approves within configured owner policy; Super Admin has audited override/catalogue/discount/void authority.
+- Sales Executive may create, finalize, and send quotations for **currently assigned** leads without manager approval (see ADR-0022). Sales Manager and Super Admin have broad-scope finalize/send authority within sales scope. Super Admin retains audited override/catalogue/discount/void authority.
 
 ### Quotation lifecycle (future — Phase 7 — state graph)
 
-**Main path:**
+> **Historical note:** This section originally described Draft → Submitted for Approval → Approved → Sent. **Current V1 governance** is defined in ADR-0022.
+
+**Current V1 main path:**
 
 ```
-Draft → Submitted for Approval → Approved → Sent
+Draft → Finalized/Frozen → Sent
 ```
 
 **Observed/interaction state:**
 
 - **Viewed** may occur after Sent without forcing the next outcome.
 
-**Alternative outcomes** (after an approved/sent quotation):
+**Alternative outcomes** (after a finalized/sent quotation):
 
 | Outcome | Type | Rules |
 | :--- | :--- | :--- |
 | **Accepted** | Terminal (version) | Authoritative for Closed-Won. Cannot then become Rejected or Expired. Only one accepted authoritative version drives a given Closed-Won conversion unless a later formal commercial-change workflow is separately designed. |
 | **Rejected** | Terminal (version) | Client or business rejection of that version. |
 | **Expired** | Terminal (version) | Validity lapsed without acceptance. Must not silently override an already accepted version. |
-| **Revision Requested → Revised Draft/New Version** | Loop | Returns to Draft (or new immutable version) → Submitted for Approval again. Old versions remain immutable. |
+| **Revision Requested → Revised Draft/New Version** | Loop | Staff creates one new mutable draft version; prior finalized versions remain immutable. Full finalize/send cycle for the new version (no internal approval). |
 
 ### Design workflow (future — Phase 8B — state graph)
 
@@ -143,7 +147,7 @@ No accounting ledger/GST filing, procurement/PO, inventory/warehouse, labour att
 
 ### Implementation phases
 
-- **Phase 7A/7B:** Quotation data foundation, workflow, PDF, acceptance; **7B activates authoritative target achievement from accepted quotations**.
+- **Phase 7A/7B:** Quotation data foundation, finalize/send workflow (no internal approval — ADR-0022), PDF, acceptance; **7B activates authoritative target achievement from accepted quotations** (`taxable_base_paise`; GST excluded from achievement).
 - **Phase 8A:** Closed-Won conversion and PM handover; optional project-value reconciliation without double counting.
 - **Phase 8B:** Designer assignment and design collaboration.
 - **Phase 8C:** Project execution workspace.
@@ -154,4 +158,5 @@ No accounting ledger/GST filing, procurement/PO, inventory/warehouse, labour att
 
 - [ADR-0005: Version 1 No-ERP Boundary](ADR-0005-version-1-no-erp-boundary.md)
 - [ADR-0019: Five-Role CRM Authorization Model](ADR-0019-five-role-crm-authorization-model.md)
+- [ADR-0022: V1 Direct Quotation Finalization and Send Authority](ADR-0022-v1-direct-quotation-finalization-and-send.md)
 - [CRM & Quotation Boundary](../07-crm-and-quotation-boundary.md)
