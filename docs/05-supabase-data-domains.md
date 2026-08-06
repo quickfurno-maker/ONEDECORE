@@ -87,10 +87,16 @@ Exact SQL identifiers deferred to Phase 5B implementation checkpoint. Naming mus
 ### 3.2 Commercial (Phase 7)
 | Concept | Purpose |
 | :--- | :--- |
-| `quotations` / `quotation_versions` | Immutable versioned commercial documents |
+| `quotations` / `quotation_versions` | Versioned commercial documents; finalized versions immutable |
 | `quotation_sections` / `quotation_line_items` | Room/area line structure |
-| `quotation_approvals` | Manager policy approvals |
-| `quotation_acceptances` | Client acknowledgement evidence |
+| `quotation_payment_schedule_items` | Payment schedule reconciled to `grand_total_paise` |
+| `quotation_version_terms` / `quotation_events` | Terms and append-only audit |
+| `quotation_pdf_documents` | Authoritative PDF per finalized version (planned 7B) |
+| `quotation_access_grants` / `quotation_client_events` | Secure client view and outcomes (planned 7B) |
+| `quotation_delivery_events` | Send/delivery audit via Phase 6B boundary (planned 7B) |
+| `quotation_acceptances` | Client acknowledgement evidence (planned 7B) |
+
+**Not in V1:** `quotation_approvals`, `quotation_approval_policies`, `quotations.approve` — see ADR-0022.
 
 ### 3.3 Project & Design (Phase 8)
 | Concept | Purpose |

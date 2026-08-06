@@ -55,9 +55,11 @@ ONEDECORE delivers a premium architectural public presence and a disciplined int
 ### 3.2 Commercial Quotation Engine (Phase 7)
 - Lead/client/property linkage; room sections and line items.
 - Materials, measurements, tax, discount, validity, inclusions/exclusions, payment schedule.
-- Immutable versions; premium PDF; auditable acceptance.
-- Lifecycle state graph: main path Draft → … → Sent; branches Accepted / Rejected / Expired; revision loop — see ADR-0020.
-- Closed-Won requires Accepted quotation.
+- Immutable finalized versions; premium PDF; auditable client acceptance.
+- **V1 has no internal quotation approval:** assigned Sales Executive may create, finalize/freeze, and send quotations for currently assigned leads without Sales Manager or Super Admin approval (see ADR-0022).
+- Lifecycle state graph: main path **Draft → Finalized/Frozen → Sent**; client outcomes Viewed / Accepted / Rejected / Expired; revision loop creates new draft — see ADR-0020 and ADR-0022.
+- Send uses Phase 6B controlled `WHATSAPP_SERVICE` outbound (planned); Phase 7 does not call Meta directly.
+- Closed-Won requires Accepted quotation (unchanged).
 
 ### 3.3 Project Execution & Design (Phase 8)
 - Closed-Won → project creation → PM assignment (Manager/Admin) → PM acceptance → execution.

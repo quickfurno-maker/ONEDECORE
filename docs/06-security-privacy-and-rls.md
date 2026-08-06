@@ -129,6 +129,10 @@ The following security requirements are **locked in architecture** and must be e
 | No hard-delete of business history | Soft-archive or append-only correction pattern |
 | Campaign eligibility | Consent + suppression check before recipient inclusion |
 | AI isolation | No DB credentials to AI provider; structured output validation only |
+| Quotation executive scope (planned Phase 7) | RLS + RPC: Sales Executive read/create/edit/finalize/send only for `leads.assigned_to = auth.uid()` |
+| Quotation manager/admin scope (planned Phase 7) | Broad sales-scope finalize/send; Super Admin void/admin; **no `quotations.approve` permission** |
+| Quotation PM/Designer (planned Phase 7) | Denied Phase 7 quotation mutation/send |
+| Quotation send boundary (planned Phase 7B) | Phase 6B `WHATSAPP_SERVICE` controlled outbound only; DNC/consent/template gates independent of quotation domain |
 
 **UI hiding is not authorization.** Every CRM surface must assume hostile client manipulation.
 
