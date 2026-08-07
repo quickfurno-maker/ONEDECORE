@@ -150,7 +150,7 @@ export function KritiAssistPanel({
       {display?.insertableDraft || editedDraft ? (
         <KritiDraftEditor
           draftText={editedDraft ?? display?.insertableDraft ?? ""}
-          onChange={setEditedDraft}
+          onChange={(value) => setEditedDraft(value)}
         />
       ) : null}
 
