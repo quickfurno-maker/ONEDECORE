@@ -35,7 +35,7 @@
     "test:phase-8-shell": "node --experimental-strip-types --test src/features/projects/__tests__/phase-8-workspace-shell.test.ts",
     "test:phase-9-p0": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/marketing/__tests__/phase-9-p0-contracts.test.ts",
     "test:phase-9a": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/marketing/__tests__/phase-9-p0-contracts.test.ts src/features/marketing/__tests__/phase-9a-campaign-governance.test.ts",
-    "test:phase-9a": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/marketing/__tests__/phase-9-p0-contracts.test.ts src/features/marketing/__tests__/phase-9a-campaign-governance.test.ts",
+    "test:phase-9b": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/marketing/__tests__/phase-9-p0-contracts.test.ts src/features/landing-lab/__tests__/phase-9b-landing-lab.test.ts",
     "qa:phase-6b-integrated-local": "node scripts/phase-6b-integrated-local-e2e.mjs",
     "test:phase-5c2c": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/crm/__tests__/phase-5c2c-lifecycle-collaboration.test.ts",
     "qa:phase-5c2c-owner": "node scripts/phase-5c2c-owner-qa.mjs",
