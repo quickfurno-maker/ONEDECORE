@@ -2,7 +2,7 @@
 
 **Document Status:** Locked Roadmap (truth-synced post Phase 6A closeout, August 7, 2026)
 **Current Phase:** Phase 6A — Meta WhatsApp Data & Webhook Foundation (**COMPLETE**)
-**Next Implementation Phase:** Phase 6B — Premium Shared Inbox & Controlled Outbound Messaging (**runtime NOT STARTED**)
+**Next Implementation Phase:** Phase 6B — Premium Shared Inbox & Controlled Outbound Messaging (**B1 repository foundation in PR; managed M19 not applied; runtime NOT STARTED**)
 
 ---
 
@@ -173,9 +173,10 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Status:** **COMPLETE** — foundation managed only. **No deployment**; **no production Meta callback/token**; **no outbound WhatsApp**; **no n8n/Kriti activation**; **public intake inactive**. CRM consent (`contacts` / `contact_channels` / `consent_events`) remains authoritative; M18 does not grant `MARKETING` consent or fabricate consent from inbound messages.
 - **Closeout:** `docs/audits/phase-6a-meta-whatsapp-data-webhook-foundation.md`
 
-### Phase 6B (Next — runtime not started)
+### Phase 6B (Next — B1 repository foundation; runtime not started)
 - **Objective:** Premium shared inbox and controlled outbound messaging (`WHATSAPP_SERVICE` boundary).
-- **Exit gate:** Role-scoped inbox, controlled outbound, consent/DNC/template gates — **not yet implemented**.
+- **B1 repository (M19):** Inbox permissions, current-assignment access resolver, durable send-intent/idempotency foundation — **repository only; managed apply pending**.
+- **Exit gate:** Role-scoped inbox, controlled outbound, consent/DNC/template gates — **runtime/UI/provider dispatch not yet implemented**.
 - **Dependencies:** Phase 6A complete (M18 managed).
 - **Status:** Architecture may be frozen in ignored artifacts; **runtime NOT STARTED**. No M19 allocated in Phase 6A closeout.
 
