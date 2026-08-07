@@ -276,7 +276,7 @@ describe("Phase 9A lifecycle transitions", () => {
 
 describe("Phase 9A campaign draft validators", () => {
   test("draft without creative fails validation", () => {
-    assert.match(validateCampaignDraftConfig(SAMPLE_CAMPAIGN_DRAFT), /creative/i);
+    assert.match(validateCampaignDraftConfig(SAMPLE_CAMPAIGN_DRAFT) ?? "", /creative/i);
   });
 });
 
