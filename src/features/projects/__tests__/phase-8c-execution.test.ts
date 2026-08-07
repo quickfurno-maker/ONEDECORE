@@ -9,6 +9,7 @@ import { describe, test } from "node:test";
 import {
   EXECUTION_MAIN_PATH_STATES,
   getNextMainPathState,
+  type ExecutionState,
 } from "../execution/contracts/execution-states.ts";
 import {
   canTransitionExecutionState,
@@ -65,7 +66,7 @@ describe("Phase 8C execution main path", () => {
   });
 
   test("allows adjacent forward transitions with evidence when required", () => {
-    let state = EXECUTION_MAIN_PATH_STATES[0];
+    let state: ExecutionState = EXECUTION_MAIN_PATH_STATES[0];
     for (let index = 1; index < EXECUTION_MAIN_PATH_STATES.length; index += 1) {
       const next = EXECUTION_MAIN_PATH_STATES[index];
       const needsEvidence = next !== "design_development" && next !== "production";
