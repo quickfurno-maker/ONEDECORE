@@ -12,6 +12,7 @@ import type {
   MissingInformationOutput,
   NextActionSuggestionsOutput,
   ObjectionSuggestionsOutput,
+  ProjectUpdateDraftOutput,
   QuotationWordingDraftOutput,
   ServiceReplyDraftOutput,
 } from "../contracts/task-schemas.ts";
