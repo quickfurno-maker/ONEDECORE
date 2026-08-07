@@ -12,3 +12,4 @@ export * from "./activity.ts";
 export * from "./client-update.ts";
 export * from "./commercial.ts";
 export * from "./permissions.ts";
+export * from "./design-states.ts";
