@@ -31,6 +31,7 @@
     "test:phase-8-p0": "node --experimental-strip-types --test src/features/projects/__tests__/phase-8-p0-contracts.test.ts",
     "test:phase-8a": "node --experimental-strip-types --test src/features/projects/__tests__/phase-8-p0-contracts.test.ts src/features/projects/__tests__/phase-8a-handover.test.ts",
     "test:phase-8b": "node --experimental-strip-types --test src/features/projects/__tests__/phase-8b-design.test.ts",
+    "test:phase-8c": "node --experimental-strip-types --test src/features/projects/__tests__/phase-8-p0-contracts.test.ts src/features/projects/__tests__/phase-8c-execution.test.ts",
     "qa:phase-6b-integrated-local": "node scripts/phase-6b-integrated-local-e2e.mjs",
     "test:phase-5c2c": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/crm/__tests__/phase-5c2c-lifecycle-collaboration.test.ts",
     "qa:phase-5c2c-owner": "node scripts/phase-5c2c-owner-qa.mjs",
