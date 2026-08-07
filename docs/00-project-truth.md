@@ -1,13 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced post Phase 5F closeout, August 4, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced post Phase 6A closeout, August 7, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 5F — Controlled Public Lead Activation Gate (**READY TO CLOSE** — formally COMPLETE after closeout PR merge)
-**Next Implementation Phase:** Phase 6A — Meta WhatsApp Data & Webhook Foundation (**NOT STARTED**)
+**Current Phase:** Phase 6A — Meta WhatsApp Data & Webhook Foundation (**COMPLETE**)
+**Next Implementation Phase:** Phase 6B — Premium Shared Inbox & Controlled Outbound Messaging (**runtime NOT STARTED**)
 
 ---
 
@@ -49,7 +49,7 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 ├─────────────────────────────────────────────────────────┤
 │ 6. Project Execution & Design Collaboration (planned)   │
 ├─────────────────────────────────────────────────────────┤
-│ 7. Official Meta WhatsApp Cloud API (planned)         │
+│ 7. Official Meta WhatsApp Cloud API (foundation managed; not activated) │
 ├─────────────────────────────────────────────────────────┤
 │ 8. Human-Controlled Groq Copilot (planned)            │
 ├─────────────────────────────────────────────────────────┤
@@ -90,9 +90,10 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Bulk import & source assignment (migration 15) | Applied managed August 3, 2026 (Phase DB-4B) |
 | Sales targets & CRM reporting (migration 16) | Applied managed August 3, 2026 (Phase DB-5B) |
 | Controlled public lead activation hardening (migration 17) | Applied managed August 4, 2026 (Phase DB-6B) |
-| Managed migration alignment | **1–17** on OneDecore (`lpurlfmpvriyvpkujvyl`) |
+| Meta WhatsApp data & webhook foundation (migration 18) | Applied managed August 7, 2026 (Phase DB-7B) |
+| Managed migration alignment | **1–18** on OneDecore (`lpurlfmpvriyvpkujvyl`); **no M19+** |
 
-CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, and Phase 5F identity hardening are **merged on protected main** with managed database foundation through M17; **production deployment pending** (Phase 10); **public intake remains inactive**.
+CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, Phase 5F identity hardening, and Phase 6A WhatsApp foundation are **merged on protected main** with managed database foundation through M18; **production deployment pending** (Phase 10); **public intake remains inactive**; **WhatsApp not production-activated**.
 
 ### Phase 5F truth
 
@@ -100,7 +101,16 @@ CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targ
 - M17 SHA `B8F5B75AC6EE64DE1E9ABD571A215FF3AABE6F54D98EFE1F8BBEF679871A0FC6`.
 - Normalized-phone identity reuses active/suppressed contact; DNC and suppressed phone preserved; ambiguous identity fails safely; `::1` loopback hardening complete.
 - **Public intake inactive** (`copy-only` / `disabled`); production activation remains Phase 10 only.
-- Phase 5F formally **COMPLETE** only after this closeout governance PR merges.
+- Phase 5F formally **COMPLETE** (closeout merged).
+
+### Phase 6A truth
+
+- Repository implementation merged; managed M18 applied and verified (DB-7B, August 7, 2026).
+- M18 SHA `43AF93C6CF8CF7067A1CFFED6C1232614E2CA6A4C63C37184B0D6A8B7351F098`.
+- Managed foundation: seven WhatsApp tables (RLS-enabled, zero rows at apply); service-role-only ingest RPCs; private hardened helpers; append-only webhook/status event protection.
+- **CRM consent remains authoritative** (`contacts`, `contact_channels`, `consent_events` with purpose distinctions `SERVICE_ENQUIRY`, `SERVICE_COMMUNICATION`, `WHATSAPP_SERVICE`, `MARKETING`). M18 does **not** create a parallel WhatsApp consent store, grant marketing consent, clear DNC, or auto-create/link CRM contacts or leads from inbound messages.
+- **No production deployment**; **no Meta callback/token activation**; **no outbound WhatsApp**; **no n8n activation**; **no Kriti runtime**; **public intake inactive**.
+- Phase 6B runtime (shared inbox + controlled outbound) remains **NOT STARTED**.
 
 ### Phase 5E truth
 
@@ -112,13 +122,14 @@ CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targ
 ### Recovery truth
 
 - **DB-6A** physical recovery Route A for M17: backup ID `1281893546` (`2026-08-03T19:53:32.414Z`, COMPLETED, WALG) — valid **pre-M17** recovery point used to authorize DB-6B managed apply.
+- **DB-7A-R2 / DB-7B** physical recovery Route A for M18: backup ID `1306358570` (`2026-08-06T19:54:47.134Z`, COMPLETED, WALG) — pre-M18 recovery point used to authorize DB-7B managed apply; PITR remained disabled at apply time.
 - **DB-5A-L** fresh verified logical checkpoint accepted for M16 (capture window 2026-08-03T13:31:24Z–13:33:32Z); package outside Git (`DB5A-L-20260803T133124Z`).
-- Backup `1281893546` does **not** permanently satisfy Phase 10 — it predates M17 managed state.
-- **Before Phase 10 production activation**, a **current** fresh physical backup or qualified active PITR recovery point appropriate to then-current managed state is mandatory.
+- Backups `1281893546` and `1306358570` do **not** permanently satisfy Phase 10 — each predates subsequent managed state.
+- **Before Phase 10 production activation**, a **current** fresh physical backup or qualified active PITR recovery point appropriate to then-current managed state is mandatory (DEC-0053 per migration).
 
 ### Planned — not live
 
-WhatsApp inbox, Groq copilot, quotations, project execution, designer workflows, marketing campaigns, Landing Page Lab (Phase 9B — roadmap-locked, not implemented), **public lead activation**, production deployment.
+WhatsApp shared inbox/outbound runtime (Phase 6B), Groq copilot runtime (Phase 6C), quotations, project execution, designer workflows, marketing campaigns, Landing Page Lab (Phase 9B — roadmap-locked, not implemented), **public lead activation**, production deployment, **Meta production webhook/callback activation**.
 
 **Do not claim planned modules are live or production-deployed.**
 
