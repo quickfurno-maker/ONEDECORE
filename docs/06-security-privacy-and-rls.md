@@ -69,7 +69,9 @@ Following mandatory corrections in Phase 1B, RLS policies are applied to all API
 
 ## 4. Privacy & Consent Safeguards
 
-- **WhatsApp Consent:** Opt-in consent logged with timestamp and source IP during web form submission. Opt-out request (`STOP`) immediately updates consent status to `false`.
+- **CRM consent authority:** `contacts`, `contact_channels`, and append-only `consent_events` are the sole consent store. Purpose codes include `SERVICE_ENQUIRY`, `SERVICE_COMMUNICATION`, `WHATSAPP_SERVICE`, and `MARKETING`. A service enquiry or inbound service-communication message is **not** `MARKETING` consent. DNC/suppression truth remains on CRM contact/channel records.
+- **Phase 6A (M18) boundary:** WhatsApp foundation tables store message/webhook audit data only. M18 does **not** create a parallel WhatsApp consent store, grant `MARKETING` consent, clear DNC, fabricate consent from inbound messages, or auto-create/link CRM contacts or leads.
+- **Public lead intake consent:** Opt-in consent logged with timestamp during controlled web form submission when intake is enabled (currently **inactive**). Opt-out request (`STOP`) must update CRM consent/suppression truth via governed flows — not inferred by M18 schema alone.
 - **PII Protection:** Customer names, phone numbers, and addresses masked in non-essential CRM administrative views.
 - **Audit Trails:** All sensitive mutations (role changes, discount overrides, lead status changes) logged to `system_audit_logs`.
 
@@ -140,6 +142,17 @@ The following security requirements are **locked in architecture** and must be e
 - Public route disabled by default (`503 LEAD_INTAKE_DISABLED`).
 - Service-role-only `submit_lead_intake` RPC; anon/authenticated denied on lead tables.
 - Bounded request body (32 KiB); same-site origin enforcement.
+
+## 9. Phase 6A WhatsApp Foundation Security (Managed — migration 18 applied 2026-08-07)
+
+- **Seven WhatsApp tables:** RLS enabled on all (`whatsapp_business_accounts`, `whatsapp_phone_numbers`, `whatsapp_conversations`, `whatsapp_messages`, `whatsapp_message_status_events`, `whatsapp_webhook_events`, `whatsapp_templates`).
+- **Direct client table access denied:** `REVOKE ALL` from `public`, `anon`, and `authenticated` on all seven tables.
+- **Ingest RPCs:** `ingest_meta_whatsapp_message` and `ingest_meta_whatsapp_status` are `SECURITY DEFINER`, `SET search_path = ''`, owner `postgres`; `EXECUTE` granted to `service_role` only (revoked from `public`, `anon`, `authenticated`).
+- **Private helpers:** `private.whatsapp_assert_hash`, `private.whatsapp_check_webhook_replay`, `private.whatsapp_upsert_waba_phone` hardened with `search_path = ''`; not exposed to browser clients.
+- **Append-only audit:** `whatsapp_webhook_events` and `whatsapp_message_status_events` protected by no-update/no-delete triggers.
+- **Payload minimization:** Webhook persistence uses hashed/event-key fields per M18 design — raw webhook payloads are not stored as authoritative business fields.
+- **No provider secrets in DB:** Meta access tokens and app secrets remain server environment configuration only.
+- **Activation boundary:** Managed schema only — no production Meta callback, outbound messaging, or n8n correctness dependency.
 
 ---
 

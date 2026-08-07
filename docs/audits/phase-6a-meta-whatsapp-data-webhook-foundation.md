@@ -1,9 +1,9 @@
 # Phase 6A — Meta WhatsApp Data & Webhook Foundation Audit
 
-**Status:** H1 corrections complete — PR gate revalidation (NOT marked phase-complete until owner merge + managed M18 apply)  
-**Base SHA:** `65fb9946af1e88e267ddf7dfe847ebb18983fed8`  
-**Branch:** `phase-6a-meta-whatsapp-webhook-foundation`  
-**Date:** 2026-08-04 (H1 owner review corrections)
+**Status:** **COMPLETE** — repository implementation merged; managed M18 applied and verified (DB-7B, 2026-08-07); governance closeout truth-sync in progress
+**Protected main at closeout:** `7c598c73ef6cefc05e05a118d1d59f4e57ec7e62`
+**Managed migration:** M18 (`43AF93C6CF8CF7067A1CFFED6C1232614E2CA6A4C63C37184B0D6A8B7351F098`)
+**Date:** 2026-08-04 (implementation); 2026-08-07 (managed apply + closeout)
 
 ---
 
@@ -183,10 +183,24 @@ Post-H1 exact result: **503 tests, 503 pass, 0 fail**.
 
 ---
 
+## DB-7B managed apply (August 7, 2026)
+
+| Item | Value |
+| --- | --- |
+| Recovery | DB-7A-R2 Route A — backup `1306358570` (`2026-08-06T19:54:47.134Z`) |
+| Apply window | `2026-08-07T02:28:37Z` – `2026-08-07T02:28:47Z` |
+| Post-apply migrations | M1–M18 aligned; no M19+ |
+| New tables | 7 WhatsApp tables; all zero rows at apply; RLS enabled |
+| Pre-existing data | Unchanged |
+
+**Activation boundary:** No deployment; no Meta callback/token; no outbound; no n8n/Kriti; public intake inactive.
+
+---
+
 ## Next steps
 
-1. Owner PR merge authorization
-2. Separate managed M18 recovery/apply gate (fresh backup/PITR required — backup `1281893546` is pre-M17 and insufficient)
-3. Phase 6B: shared inbox + controlled outbound (after 6A merge + M18 apply)
+1. Phase 6A governance closeout PR merge (this truth-sync)
+2. **Phase 6B implementation** — shared inbox + controlled outbound (`WHATSAPP_SERVICE`); runtime NOT STARTED
+3. Fresh post-M18 recovery point before any future managed migration (DEC-0053)
 
-**Phase 6A audit status:** H1 PR READY — not marked COMPLETE until owner merge.
+**Phase 6A audit status:** **COMPLETE** (managed foundation verified; production activation remains separate gates).

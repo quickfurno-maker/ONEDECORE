@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 5F closeout, August 4, 2026)
-**Current Phase:** Phase 5F — Controlled Public Lead Activation Gate (**READY TO CLOSE** — formally COMPLETE after closeout PR merge)
-**Next Implementation Phase:** Phase 6A — Meta WhatsApp Data & Webhook Foundation (**NOT STARTED**)
+**Document Status:** Locked Roadmap (truth-synced post Phase 6A closeout, August 7, 2026)
+**Current Phase:** Phase 6A — Meta WhatsApp Data & Webhook Foundation (**COMPLETE**)
+**Next Implementation Phase:** Phase 6B — Premium Shared Inbox & Controlled Outbound Messaging (**runtime NOT STARTED**)
 
 ---
 
@@ -56,6 +56,12 @@ Phase 5F: Controlled Public Lead Activation Gate ──────────�
   • DB-6B: managed M17 apply complete
   • Closeout truth-sync: current PR
 Phase DB-6A / DB-6B: M17 physical recovery readiness + managed apply ─ COMPLETED
+Phase 6A: Meta WhatsApp Data & Webhook Foundation ─────────────────── COMPLETED
+  • 6A implementation merged; M18 applied managed (DB-7B, August 7, 2026)
+  • DB-7A-R2: physical recovery Route A (backup 1306358570)
+  • Foundation only — no deployment; no Meta callback/token; no outbound; no n8n/Kriti activation
+  • Closeout truth-sync: current PR
+Phase DB-7A-R2 / DB-7B: M18 physical recovery readiness + managed apply ─ COMPLETED
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -88,14 +94,14 @@ Phase 5E ──► Sales Target Configuration & CRM Reporting Foundation [COMPLE
     │         • SA-only mutation; role-scoped reads; non-commercial reporting
     │         • M16 applied managed; achievement inactive until 7B
     ▼
-Phase 5F ──► Controlled Public Lead Activation Gate [READY TO CLOSE — closeout PR pending]
-    │         • 5F-A: architecture/evidence preflight frozen
-    │         • 5F-B/C: implementation merged; M17 applied managed
-    │         • Public intake remains inactive; Phase 10 gates remain
+Phase 5F ──► Controlled Public Lead Activation Gate [COMPLETED]
+    │         • M17 applied managed; public intake remains inactive
     ▼
-Phase 6A ──► Meta WhatsApp Data & Webhook Foundation [NEXT — NOT STARTED]
+Phase 6A ──► Meta WhatsApp Data & Webhook Foundation [COMPLETED]
+    │         • M18 foundation managed; webhook ingestion schema only
+    │         • No production Meta callback/token/outbound activation
     ▼
-Phase 6B ──► Premium Shared Inbox & Controlled Outbound Messaging
+Phase 6B ──► Premium Shared Inbox & Controlled Outbound Messaging [NEXT — runtime NOT STARTED]
     ▼
 Phase 6C ──► Groq Human-Controlled Copilot
     ▼
@@ -153,20 +159,31 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Dependencies:** 5D complete; PR #15 merged; DB-5A-L + DB-5B complete.
 - **Closeout:** [Phase 5E Closeout Audit](audits/phase-5e-sales-targets-reporting-closeout.md)
 
-### Phase 5F (Ready to close — closeout PR pending)
+### Phase 5F (Completed)
 - **Objective:** Controlled public lead activation hardening (identity, DNC, loopback); **not** production activation.
-- **Exit gate:** PR #17 merged; M17 applied managed (DB-6B); DB-6A physical recovery Route A; H1 browser QA PASS; governance closeout PR merges.
+- **Exit gate:** PR #17 merged; M17 applied managed (DB-6B); DB-6A physical recovery Route A; H1 browser QA PASS; governance closeout merged.
 - **Dependencies:** 4B2 merged; 5F-A preflight complete.
 - **Status:** Public intake **inactive** (`copy-only` / `disabled`); production activation Phase 10 only.
 - **Closeout:** `docs/audits/phase-5f-controlled-public-lead-activation-closeout.md`
 
-### Phase 6A (Next — not started)
-- **Objective:** Meta WhatsApp data model and verified webhook foundation.
-- **Exit gate:** Webhook signature verification, idempotent persistence, consent boundary documented.
+### Phase 6A (Completed)
+- **Objective:** Meta WhatsApp data model and verified webhook **foundation** (managed schema + server ingest RPCs).
+- **Exit gate:** M18 applied managed (DB-7B); seven tables RLS-enabled; service-role-only ingest RPCs; private helpers hardened; pre-existing business data unchanged; consent boundary documented.
 - **Dependencies:** Phase 5F closeout merged.
-- **Status:** **NOT STARTED**.
+- **Status:** **COMPLETE** — foundation managed only. **No deployment**; **no production Meta callback/token**; **no outbound WhatsApp**; **no n8n/Kriti activation**; **public intake inactive**. CRM consent (`contacts` / `contact_channels` / `consent_events`) remains authoritative; M18 does not grant `MARKETING` consent or fabricate consent from inbound messages.
+- **Closeout:** `docs/audits/phase-6a-meta-whatsapp-data-webhook-foundation.md`
 
-### Phases 6B–8
+### Phase 6B (Next — runtime not started)
+- **Objective:** Premium shared inbox and controlled outbound messaging (`WHATSAPP_SERVICE` boundary).
+- **Exit gate:** Role-scoped inbox, controlled outbound, consent/DNC/template gates — **not yet implemented**.
+- **Dependencies:** Phase 6A complete (M18 managed).
+- **Status:** Architecture may be frozen in ignored artifacts; **runtime NOT STARTED**. No M19 allocated in Phase 6A closeout.
+
+### Phase 6C (Architecture frozen / runtime not started)
+- **Objective:** Groq human-controlled copilot (summarize, draft, suggest, explain only).
+- **Status:** **NOT STARTED** — no production Kriti runtime; no autonomous send or mutation.
+
+### Phases 7–8
 See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020–0021.
 
 ### Phase 7A

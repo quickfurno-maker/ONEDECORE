@@ -1,9 +1,9 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (truth-synced post DB-2, August 1, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced post Phase 6A / DB-7B, August 7, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
-**Migrations Applied (Managed):** 13 / 13
+**Migrations Applied (Managed):** 18 / 18 (M1–M18; no M19+)
 
 ---
 
@@ -23,7 +23,7 @@
 ├─────────────────────────────────────────────────────────┤
 │ 6. Project & Design Domain (projects, milestones, design)  │ PLANNED Phase 8
 ├─────────────────────────────────────────────────────────┤
-│ 7. Communication Domain (WhatsApp, templates, opt-out)    │ PLANNED Phase 6
+│ 7. Communication Domain (WhatsApp foundation managed — Phase 6A) │ FOUNDATION ONLY
 ├─────────────────────────────────────────────────────────┤
 │ 8. AI Copilot Domain (requests, suggestions, approvals) │ PLANNED Phase 6C
 ├─────────────────────────────────────────────────────────┤
@@ -62,6 +62,23 @@
 - Public route `/api/public/lead-intake` exists; **defaults disabled** (`ONEDECORE_LEAD_INTAKE_MODE` empty/disabled).
 - Homepage form default: **`copy-only`** (`NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE`).
 - `contact_suppressions` not yet created (deferred).
+
+### 2.4 WhatsApp Foundation Domain (Phase 6A — migration 18 managed)
+
+**Migration 18:** `20260804150000_meta_whatsapp_data_webhook_foundation.sql` (applied managed August 7, 2026)
+
+**Public tables (RLS-enabled; no direct `anon`/`authenticated` table access):**
+- `whatsapp_business_accounts`, `whatsapp_phone_numbers`, `whatsapp_conversations`, `whatsapp_messages`, `whatsapp_message_status_events`, `whatsapp_webhook_events`, `whatsapp_templates`
+
+**Public service-role-only ingest RPCs:**
+- `ingest_meta_whatsapp_message`, `ingest_meta_whatsapp_status`
+
+**Private helpers (hardened `search_path`; not client-exposed):**
+- `private.whatsapp_assert_hash`, `private.whatsapp_check_webhook_replay`, `private.whatsapp_upsert_waba_phone`
+
+**Consent boundary:** CRM `contacts` / `contact_channels` / `consent_events` remain the **only** consent authority. Purpose codes include `SERVICE_ENQUIRY`, `SERVICE_COMMUNICATION`, `WHATSAPP_SERVICE`, and `MARKETING`. M18 does **not** create a parallel WhatsApp consent store, grant `MARKETING` consent, clear DNC, or auto-create/link CRM contacts or leads from inbound messages. A service enquiry or inbound service message is **not** marketing consent.
+
+**Activation boundary:** Schema foundation only — no production Meta callback, token, outbound messaging, shared inbox UI, or n8n correctness dependency.
 
 ---
 
@@ -111,12 +128,15 @@ Exact SQL identifiers deferred to Phase 5B implementation checkpoint. Naming mus
 | `project_delays` / `project_snags` | Operational issue tracking |
 | `client_decisions` | Documented client approvals |
 
-### 3.4 Communication (Phase 6)
+### 3.4 Communication (Phase 6A foundation + Phase 6B runtime)
 | Concept | Purpose |
 | :--- | :--- |
-| `whatsapp_conversations` / `whatsapp_messages` | Official API message store |
-| `whatsapp_templates` / `whatsapp_delivery_events` | Template and delivery state |
-| `whatsapp_consent_records` / `whatsapp_opt_outs` | Consent and suppression |
+| `whatsapp_business_accounts` / `whatsapp_phone_numbers` | WABA and phone registry (**M18 managed**) |
+| `whatsapp_conversations` / `whatsapp_messages` | Official API message store (**M18 managed**) |
+| `whatsapp_message_status_events` / `whatsapp_webhook_events` | Delivery/webhook audit (**M18 managed**; append-only triggers) |
+| `whatsapp_templates` | Template registry (**M18 managed**) |
+| Shared inbox UI + controlled outbound | **Phase 6B runtime — NOT STARTED** |
+| CRM consent / DNC | **`consent_events` + `contact_channels` — authoritative; not duplicated in M18** |
 
 ### 3.5 AI Copilot (Phase 6C)
 | Concept | Purpose |
