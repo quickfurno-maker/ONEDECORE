@@ -1,0 +1,18 @@
+{
+  "frozenAtMain": "2a2ec82e7889a3acda8d82a0d174772d64e40a26",
+  "canonicalization": "utf8-lf-normalized-sha256",
+  "migrations": {
+    "M19": {
+      "path": "supabase/migrations/20260805140000_whatsapp_shared_inbox_send_intent_foundation.sql",
+      "sha256": "77C8C994C8C391C1E5423584740FDAA1DA9D38064898FC1DEA0CDB99A41BB7F4"
+    },
+    "M20": {
+      "path": "supabase/migrations/20260807140000_whatsapp_shared_inbox_read_model_foundation.sql",
+      "sha256": "A80BAB2FE5E0C7E5E2B986839573AC8881C773EF49A81B8A15EF9EB7CF5A05EB"
+    },
+    "M21": {
+      "path": "supabase/migrations/20260808140000_whatsapp_provider_dispatch_foundation.sql",
+      "sha256": "15178D62677667CD49B08DCA9D2D9907A2AF2F24C658A56CF3ACC1D73F9900DE"
+    }
+  }
+}
