@@ -28,3 +28,11 @@ C0 shared quotation domain contracts for parallel Lane C (commercial engine) and
 ## Contracts introduced
 
 `src/features/quotations/contracts/` — money, line items, discount, tax, lifecycle, reference, calculation I/O, snapshot, client decision, validation, display model.
+
+## Lane C (PR 7-PC)
+
+Pure calculation engine, validation, lifecycle transitions, HTML PDF renderer, synthetic fixtures.
+
+## Lane D (PR 7-PD)
+
+Premium quotation editor/preview/client decision UI components with in-memory adapter — no routes, no persistence.
