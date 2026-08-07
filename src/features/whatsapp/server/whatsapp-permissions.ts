@@ -34,3 +34,8 @@ export async function probeWhatsappInboxPermissions(): Promise<WhatsappInboxPerm
     "whatsapp.inbox.manage": canManage,
   };
 }
+
+export async function hasAnyWhatsappInboxReadPermission(): Promise<boolean> {
+  const permissions = await probeWhatsappInboxPermissions();
+  return permissions["whatsapp.inbox.read"];
+}

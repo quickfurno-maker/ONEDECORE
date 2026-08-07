@@ -104,3 +104,25 @@ export function parseInboxMessageListQuery(
     ),
   };
 }
+
+export function hasInboxListActiveFilters(query: InboxListQuery): boolean {
+  return query.q !== null || query.linkFilter !== "all";
+}
+
+export type InboxListPaginationMeta = {
+  readonly page: number;
+  readonly totalPages: number;
+  readonly hasPreviousPage: boolean;
+  readonly hasNextPage: boolean;
+};
+
+export function toInboxListPaginationMeta(
+  result: InboxListPageResult<unknown>
+): InboxListPaginationMeta {
+  return {
+    page: result.page,
+    totalPages: result.totalPages,
+    hasPreviousPage: result.page > 1,
+    hasNextPage: result.page < result.totalPages,
+  };
+}

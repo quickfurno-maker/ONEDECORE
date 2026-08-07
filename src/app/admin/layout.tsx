@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireStaffPermission } from "@/server/auth";
 import { hasAnyCrmLeadReadPermission } from "@/features/crm/server/crm-permissions";
+import { hasAnyWhatsappInboxReadPermission } from "@/features/whatsapp/server/whatsapp-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await requireStaffPermission("admin.access", "/admin");
   const showCrmLink = await hasAnyCrmLeadReadPermission();
+  const showWhatsappLink = await hasAnyWhatsappInboxReadPermission();
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
@@ -50,6 +52,14 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
               >
                 CRM
+              </Link>
+            ) : null}
+            {showWhatsappLink ? (
+              <Link
+                href="/admin/whatsapp/inbox"
+                className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+              >
+                WhatsApp Inbox
               </Link>
             ) : null}
           </nav>
