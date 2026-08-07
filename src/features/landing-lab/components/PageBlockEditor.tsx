@@ -27,8 +27,10 @@ function renderBlockSummary(block: LandingBlock): string {
       return block.headline;
     case "footer":
       return block.legalLine;
-    default:
-      return block.type;
+    default: {
+      const _exhaustive: never = block;
+      return _exhaustive;
+    }
   }
 }
 
