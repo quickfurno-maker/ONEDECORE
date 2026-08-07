@@ -22,6 +22,7 @@ export const WHATSAPP_SEND_INTENT_LIFECYCLE_STATUSES = [
   "eligible",
   "ineligible",
   "cancelled",
+  "dispatch_pending",
   "dispatch_bound",
 ] as const;
 
