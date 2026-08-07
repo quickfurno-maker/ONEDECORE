@@ -14,7 +14,10 @@ const MODE_VALUES = new Set<KritiProviderMode>(["disabled", "local-test", "enabl
 const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 const DEFAULT_TIMEOUT_MS = 30_000;
 
-function readOptional(env: NodeJS.ProcessEnv, name: string): string | null {
+function readOptional(
+  env: NodeJS.ProcessEnv | Record<string, string | undefined>,
+  name: string
+): string | null {
   const value = env[name];
   if (value == null || value.trim() === "") return null;
   return value.trim();
