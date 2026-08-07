@@ -18,14 +18,14 @@ import { WHATSAPP_SERVICE_PURPOSE_CODE } from "../contracts/inbox-permissions.ts
 const root = process.cwd();
 
 const FROZEN_HASHES = {
-  M19: "ACC743F9D6E73961F4AC18589374D81DB4FD43D5FAB6713A21328EBD2A1CC82C",
-  M20: "38DF4251D0F4DE6C86288F23323947175294814A06AC13EAF570577F7EF6F825",
-  M21: "13EF6B7D33CB4740DCBE98AA61C04311041E3E74C9EA5B3E93A1C54B3BE540DA",
+  M19: "77C8C994C8C391C1E5423584740FDAA1DA9D38064898FC1DEA0CDB99A41BB7F4",
+  M20: "A80BAB2FE5E0C7E5E2B986839573AC8881C773EF49A81B8A15EF9EB7CF5A05EB",
+  M21: "15178D62677667CD49B08DCA9D2D9907A2AF2F24C658A56CF3ACC1D73F9900DE",
 } as const;
 
 function sha256File(relPath: string): string {
-  const bytes = readFileSync(join(root, relPath));
-  return createHash("sha256").update(bytes).digest("hex").toUpperCase();
+  const normalized = readFileSync(join(root, relPath), "utf8").replace(/\r\n/g, "\n");
+  return createHash("sha256").update(normalized, "utf8").digest("hex").toUpperCase();
 }
 
 function localTestEnv(): WhatsappOutboundServerEnv {
