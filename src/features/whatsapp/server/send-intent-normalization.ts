@@ -3,7 +3,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { WHATSAPP_SERVICE_PURPOSE_CODE } from "./inbox-permissions.ts";
+import { WHATSAPP_SERVICE_PURPOSE_CODE } from "../contracts/inbox-permissions.ts";
 
 export const WHATSAPP_SEND_BODY_MAX_LENGTH = 4096;
 
