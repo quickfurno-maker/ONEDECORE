@@ -63,15 +63,16 @@ export function InboxComposer({ conversationId, canUse }: InboxComposerProps) {
         </label>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-neutral-500">
-            Creates a durable pre-dispatch send intent only. No provider send
-            occurs in Phase 6B-B3.
+            Records a WHATSAPP_SERVICE send intent and, when outbound dispatch is
+            enabled for this environment, binds provider evidence without
+            fabricating delivery or read status.
           </p>
           <button
             type="submit"
             disabled={pending}
             className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
           >
-            {pending ? "Recording…" : "Record service send request"}
+            {pending ? "Sending…" : "Send service message"}
           </button>
         </div>
         <ComposerFeedback state={state} />

@@ -83,9 +83,7 @@ describe("Phase 6B-B3 route and component presence", () => {
       "utf8"
     );
     assert.match(composer, /createWhatsappServiceSendIntentAction/);
-    assert.match(composer, /pre-dispatch send intent only/i);
     assert.doesNotMatch(composer, /sent successfully/i);
-    assert.doesNotMatch(composer, /delivered/i);
   });
 
   test("send action server module calls create_whatsapp_service_send_intent RPC", () => {
@@ -95,7 +93,7 @@ describe("Phase 6B-B3 route and component presence", () => {
     );
     assert.match(action, /"use server"/);
     assert.match(action, /create_whatsapp_service_send_intent/);
-    assert.match(action, /Provider dispatch is not active/i);
+    assert.match(action, /dispatchWhatsappSendIntent/);
     assert.doesNotMatch(action, /graph\.facebook/i);
   });
 

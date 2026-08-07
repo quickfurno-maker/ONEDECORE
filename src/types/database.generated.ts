@@ -1891,6 +1891,62 @@ export type Database = {
           },
         ]
       }
+      whatsapp_provider_dispatch_attempts: {
+        Row: {
+          attempt_number: number
+          completed_at: string | null
+          created_at: string
+          error_class: string | null
+          http_status: number | null
+          id: string
+          provider_attempt_key: string
+          provider_code: string
+          provider_message_id: string | null
+          request_snapshot: Json
+          response_snapshot: Json
+          send_intent_id: string
+          status: string
+        }
+        Insert: {
+          attempt_number: number
+          completed_at?: string | null
+          created_at?: string
+          error_class?: string | null
+          http_status?: number | null
+          id?: string
+          provider_attempt_key: string
+          provider_code: string
+          provider_message_id?: string | null
+          request_snapshot?: Json
+          response_snapshot?: Json
+          send_intent_id: string
+          status?: string
+        }
+        Update: {
+          attempt_number?: number
+          completed_at?: string | null
+          created_at?: string
+          error_class?: string | null
+          http_status?: number | null
+          id?: string
+          provider_attempt_key?: string
+          provider_code?: string
+          provider_message_id?: string | null
+          request_snapshot?: Json
+          response_snapshot?: Json
+          send_intent_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_provider_dispatch_attempts_send_intent_id_fkey"
+            columns: ["send_intent_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_send_intents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_send_intent_events: {
         Row: {
           actor_id: string | null
@@ -2207,6 +2263,19 @@ export type Database = {
         }
       }
       authorize: { Args: { requested_permission: string }; Returns: boolean }
+      bind_whatsapp_send_intent_dispatch: {
+        Args: {
+          p_dispatch_attempt_id: string
+          p_provider_message_id: string
+          p_provider_timestamp?: string
+        }
+        Returns: {
+          outbound_message_id: string
+          outcome_code: string
+          provider_message_id: string
+          send_intent_id: string
+        }[]
+      }
       cancel_lead_follow_up: {
         Args: { p_follow_up_id: string; p_outcome?: string }
         Returns: {
@@ -2287,6 +2356,24 @@ export type Database = {
           can_override: boolean
           existing_lead_id: string
           outcome_code: string
+        }[]
+      }
+      claim_whatsapp_send_intent_for_dispatch: {
+        Args: {
+          p_provider_attempt_key: string
+          p_provider_code: string
+          p_send_intent_id: string
+        }
+        Returns: {
+          body_text: string
+          conversation_id: string
+          customer_e164: string
+          dispatch_attempt_id: string
+          outcome_code: string
+          phone_number_id: string
+          requested_by: string
+          send_intent_id: string
+          sender_e164: string
         }[]
       }
       complete_lead_follow_up: {
@@ -2700,6 +2787,28 @@ export type Database = {
           p_max_rows?: number
         }
         Returns: Json
+      }
+      reconcile_whatsapp_dispatch_attempt: {
+        Args: { p_dispatch_attempt_id: string; p_provider_message_id: string }
+        Returns: {
+          outbound_message_id: string
+          outcome_code: string
+          send_intent_id: string
+        }[]
+      }
+      record_whatsapp_dispatch_attempt_outcome: {
+        Args: {
+          p_dispatch_attempt_id: string
+          p_error_class?: string
+          p_http_status?: number
+          p_response_snapshot?: Json
+          p_status: string
+        }
+        Returns: {
+          lifecycle_status: string
+          outcome_code: string
+          send_intent_id: string
+        }[]
       }
       reject_lead_import_batch: {
         Args: {

@@ -1,5 +1,5 @@
 /**
- * WhatsApp inbox send-intent action state (pre-dispatch only).
+ * WhatsApp inbox send-intent action state (intent + optional dispatch outcome).
  */
 
 export type WhatsappSendActionState = {
@@ -7,6 +7,8 @@ export type WhatsappSendActionState = {
   readonly message: string;
   readonly code?: string;
   readonly intentId?: string;
+  readonly dispatchOutcome?: string;
+  readonly providerMessageId?: string;
 };
 
 export const INITIAL_WHATSAPP_SEND_ACTION_STATE: WhatsappSendActionState = {

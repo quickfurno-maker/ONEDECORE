@@ -17,6 +17,8 @@ import {
   whatsappInboxErrorFromPostgresMessage,
 } from "./whatsapp-inbox-errors.ts";
 import { canCurrentUserAccessConversation } from "./whatsapp-inbox-queries.ts";
+import { dispatchWhatsappSendIntent } from "./whatsapp-dispatch-service.ts";
+import { getWhatsappOutboundMode } from "./whatsapp-outbound-env.ts";
 
 function toSendActionState(error: unknown): WhatsappSendActionState {
   if (error instanceof WhatsappInboxError) {
@@ -94,11 +96,60 @@ export async function createWhatsappServiceSendIntentAction(
     revalidatePath(`/admin/whatsapp/inbox/${conversationId}`);
     revalidatePath("/admin/whatsapp/inbox");
 
+    const intentId = data?.id ?? undefined;
+    const outboundMode = getWhatsappOutboundMode();
+
+    if (outboundMode === "disabled" || !intentId) {
+      return {
+        success: true,
+        message:
+          "Service send request recorded. Provider dispatch is disabled in this environment.",
+        intentId,
+        dispatchOutcome: "disabled",
+      };
+    }
+
+    const dispatchResult = await dispatchWhatsappSendIntent(intentId);
+
+    if (dispatchResult.outcome === "bound") {
+      return {
+        success: true,
+        message: dispatchResult.message,
+        intentId,
+        dispatchOutcome: dispatchResult.outcome,
+        providerMessageId: dispatchResult.providerMessageId,
+      };
+    }
+
+    if (dispatchResult.outcome === "already_bound") {
+      return {
+        success: true,
+        message: dispatchResult.message,
+        intentId,
+        dispatchOutcome: dispatchResult.outcome,
+        providerMessageId: dispatchResult.providerMessageId,
+      };
+    }
+
+    if (dispatchResult.outcome === "ambiguous") {
+      return {
+        success: false,
+        message: dispatchResult.message,
+        code: "DISPATCH_AMBIGUOUS",
+        intentId,
+        dispatchOutcome: dispatchResult.outcome,
+      };
+    }
+
     return {
-      success: true,
+      success: outboundMode === "local-test" ? false : true,
       message:
-        "Service send request recorded. Provider dispatch is not active in this phase.",
-      intentId: data?.id ?? undefined,
+        dispatchResult.outcome === "failed"
+          ? dispatchResult.message
+          : "Service send request recorded. Provider dispatch is disabled in this environment.",
+      code: dispatchResult.outcome === "failed" ? "DISPATCH_FAILED" : undefined,
+      intentId,
+      dispatchOutcome: dispatchResult.outcome,
     };
   } catch (error) {
     return toSendActionState(error);
