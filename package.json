@@ -23,6 +23,7 @@
     "test:phase-6b-integrated": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/whatsapp/__tests__/phase-6b-integrated-matrix.test.ts src/features/whatsapp/__tests__/phase-6b-b1-send-intent-foundation.test.ts src/features/whatsapp/__tests__/phase-6b-b2-inbox-read-model.test.ts src/features/whatsapp/__tests__/phase-6b-b3-inbox-ui.test.ts src/features/whatsapp/__tests__/phase-6b-b4-provider-dispatch.test.ts",
     "test:phase-7-c0": "node --experimental-strip-types --test src/features/quotations/__tests__/phase-7-c0-contracts.test.ts",
     "test:phase-7-lane-c": "node --experimental-strip-types --test src/features/quotations/__tests__/phase-7-c0-contracts.test.ts src/features/quotations/__tests__/phase-7-lane-c-domain.test.ts src/features/quotations/__tests__/phase-7-lane-c-pdf.test.ts",
+    "test:phase-7-lane-d": "node --experimental-strip-types --test src/features/quotations/__tests__/phase-7-c0-contracts.test.ts src/features/quotations/__tests__/phase-7-lane-d-ui.test.ts",
     "qa:phase-6b-integrated-local": "node scripts/phase-6b-integrated-local-e2e.mjs",
     "test:phase-5c2c": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/crm/__tests__/phase-5c2c-lifecycle-collaboration.test.ts",
     "qa:phase-5c2c-owner": "node scripts/phase-5c2c-owner-qa.mjs",
