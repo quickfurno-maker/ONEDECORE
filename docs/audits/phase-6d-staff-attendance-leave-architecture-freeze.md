@@ -442,5 +442,6 @@ Phase 6C remains **waiting only** for post-M21 recovery before managed M22 apply
 ## Related
 
 - [ADR-0023](../ADR/ADR-0023-staff-attendance-leave-architecture.md)
+- [Phase 6D implementation contract freeze](phase-6d-implementation-contract-freeze.md)
 - [Phase 6D roadmap lock](phase-6d-roadmap-lock.md)
 - [DEC-0059](../10-decision-register.md)
