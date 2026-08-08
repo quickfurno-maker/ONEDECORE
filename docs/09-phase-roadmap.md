@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
 **Document Status:** Locked Roadmap (truth-synced post Phase 6B closeout, August 8, 2026)
-**Current Phase:** Phase 6B — Premium Shared Inbox & Controlled Outbound Messaging (**COMPLETE — managed foundation**)
-**Next Implementation Phase:** Phase 6C — Groq Human-Controlled Copilot (**formal runtime NOT STARTED**)
+**Current Phase:** Phase 6C — Groq Human-Controlled Copilot (**formal runtime IN PROGRESS**)
+**Next Roadmap Phase after 6C:** Phase 6D — Staff Administration, Attendance & Leave (**roadmap-locked; NOT STARTED**)
 
 ---
 
@@ -112,7 +112,11 @@ Phase 6B ──► Premium Shared Inbox & Controlled Outbound Messaging [COMPLET
     │         • M19–M21 managed; inbox/send-intent/dispatch foundations
     │         • No production Meta callback/token/outbound activation
     ▼
-Phase 6C ──► Groq Human-Controlled Copilot [NEXT — formal runtime NOT STARTED]
+Phase 6C ──► Groq Human-Controlled Copilot [IN PROGRESS — formal runtime]
+    │         • K0–K3 prebuild merged; M22 persistence + staff runtime pending
+    ▼
+Phase 6D ──► Staff Administration, Attendance & Leave [NEXT after 6C — NOT STARTED]
+    │         • Roadmap-locked only; no schema/routes/runtime in Phase 6C
     ▼
 Phase 7A ──► Commercial Quotation Data & Draft Foundation
     ▼
@@ -189,9 +193,14 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Status:** **COMPLETE** — managed foundation + repository application. **No deployment**; **no production Meta callback/token**; **no real outbound**; **public intake inactive**.
 - **Closeout:** `docs/audits/phase-6b-managed-alignment-closeout.md`
 
-### Phase 6C (Next — formal runtime not started)
-- **Objective:** Groq human-controlled copilot (summarize, draft, suggest, explain only).
-- **Status:** **NOT STARTED** — no production Kriti runtime; no autonomous send or mutation.
+### Phase 6C (In progress — formal runtime)
+- **Objective:** Groq human-controlled copilot (summarize, draft, suggest, explain only); append-only audit persistence; staff-authorized CRM/WhatsApp context.
+- **Prebuild:** K0–K3 merged (contracts, provider, context/safety, UI components).
+- **Status:** Formal persistence (M22), staff API runtime, and internal UI wiring **in progress**. Provider default **disabled**; no production Groq activation.
+
+### Phase 6D (Next after 6C — roadmap-locked only)
+- **Objective:** Staff administration, attendance, leave, and holiday calendar (see `docs/audits/phase-6d-roadmap-lock.md`).
+- **Status:** **NOT STARTED** — governance lock only; no schema, routes, or runtime in Phase 6C mission.
 
 ### Phases 7–8
 See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020–0021.
