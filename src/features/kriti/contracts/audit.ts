@@ -35,11 +35,26 @@ export interface KritiDismissAuditEvent {
   readonly occurredAt: string;
 }
 
+export interface KritiRequestFailedAuditEvent {
+  readonly eventType: "kriti.request_failed";
+  readonly requestId: string;
+  readonly code: KritiErrorCode;
+  readonly occurredAt: string;
+}
+
+export interface KritiRetryAuditEvent {
+  readonly eventType: "kriti.retry";
+  readonly requestId: string;
+  readonly occurredAt: string;
+}
+
 export type KritiAuditEvent =
   | KritiRequestAuditEvent
   | KritiSuggestionAuditEvent
   | KritiHumanUseAuditEvent
-  | KritiDismissAuditEvent;
+  | KritiDismissAuditEvent
+  | KritiRequestFailedAuditEvent
+  | KritiRetryAuditEvent;
 
 export interface KritiAuditSink {
   readonly record: (event: KritiAuditEvent) => Promise<void>;

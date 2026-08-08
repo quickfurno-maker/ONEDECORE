@@ -68,15 +68,14 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     );
   });
 
-  test("repository has exactly 21 migrations (no unexpected M22+)", () => {
+  test("repository has M1–M21 frozen plus Phase 6C M22 only (no M23+)", () => {
     const files = readdirSync(join(root, "supabase/migrations")).filter((f) =>
       f.endsWith(".sql")
     );
-    assert.equal(files.length, 21);
-    assert.equal(
-      files.some((f) => f.startsWith("20260809")),
-      false
-    );
+    assert.equal(files.length, 22);
+    const phase6c = files.filter((f) => f.startsWith("20260809"));
+    assert.equal(phase6c.length, 1);
+    assert.match(phase6c[0] ?? "", /kriti_audit_persistence_foundation/);
   });
 });
 
