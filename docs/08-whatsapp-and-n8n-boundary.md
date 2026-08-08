@@ -1,10 +1,10 @@
 # 08 — META WHATSAPP, GROQ AI AND N8N AUTOMATION BOUNDARY
 
-**Document Status:** Locked Integration Baseline (truth-synced Phase 6A closeout, August 7, 2026)
+**Document Status:** Locked Integration Baseline (truth-synced Phase 6B closeout, August 8, 2026)
 **WhatsApp API:** Official Meta WhatsApp Cloud API Only
 **AI Provider:** Groq behind provider-independent adapter (planned Phase 6C)
 **n8n Role:** Stateless Async Event Bus & Notification Relay
-**Implementation Status:** **M18 foundation managed** — **not production-activated** (no Meta callback/token/outbound; no n8n/Kriti runtime)
+**Implementation Status:** **M18–M21 foundation managed** — **not production-activated** (no Meta callback/token/outbound; no n8n/Kriti runtime)
 
 ---
 
@@ -12,7 +12,7 @@
 
 **Phase 6A (COMPLETE — foundation managed):** Migration 18 applied managed August 7, 2026. Seven RLS-enabled tables, service-role-only ingest RPCs, private hardened helpers, append-only webhook/status events. **No production Meta callback, token, outbound messaging, or deployment.**
 
-**Phase 6B (NOT STARTED):** Shared inbox UI and controlled outbound (`WHATSAPP_SERVICE` only; marketing outreach blocked until Phase 9).
+**Phase 6B (COMPLETE — managed foundation; not production-activated):** M19–M21 applied managed August 8, 2026. Role-scoped inbox read model, durable `WHATSAPP_SERVICE` send-intent/idempotency, service-role-only provider dispatch boundary. Repository admin inbox UI and local-test dispatch exist; **no production Meta callback/token; no real customer outbound; no deployment.**
 
 ```
                    ┌────────────────────────────┐
@@ -38,9 +38,9 @@
                    └────────────────────────────┘
 ```
 
-### 1.1 Contracts (Phase 6A managed + Phase 6B runtime pending)
+### 1.1 Contracts (Phase 6A + 6B managed foundations)
 - **Phase 6A (managed):** Idempotent webhook/message persistence foundation; hash/event-key replay protection; cross-WABA fail-closed phone binding; **CRM consent not fabricated** — `consent_events` purposes (`SERVICE_ENQUIRY`, `SERVICE_COMMUNICATION`, `WHATSAPP_SERVICE`, `MARKETING`) remain authoritative on CRM tables.
-- **Phase 6B (pending):** Verified production webhook route activation; role-scoped shared inbox; controlled outbound under `WHATSAPP_SERVICE`; assigned lead replies → assigned executive; unknown/unassigned → manager/admin queue.
+- **Phase 6B (managed):** Current-assignment inbox access resolver; scoped authenticated SELECT on conversations/messages; durable send-intent with idempotency; `WHATSAPP_SERVICE` only (MARKETING blocked); DNC/consent/service-window/template gates on dispatch path; service-role-only claim/bind/outcome/reconcile RPCs. **Production webhook route activation and real outbound remain Phase 10 gated.**
 
 ### 1.2 Prohibited
 - Unofficial WhatsApp Web scraping or browser automation.

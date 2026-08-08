@@ -1,8 +1,8 @@
 # Phase 6B-B1 — Shared Inbox Authorization & Send-Intent Foundation Audit
 
-**Status:** Repository foundation (M19) — pending managed apply  
+**Status:** Managed apply **COMPLETE** (August 8, 2026)
 **Migration:** `20260805140000_whatsapp_shared_inbox_send_intent_foundation.sql`  
-**Managed OneDecore:** Remains M1–M18 until explicit owner authorization and DEC-0053 recovery readiness for M19
+**Managed OneDecore:** M1–M21 aligned (`lpurlfmpvriyvpkujvyl`)
 
 ## Scope delivered (B1)
 
@@ -25,7 +25,4 @@
 
 ## Next step
 
-1. Migration-specific DEC-0053 recovery readiness for M19  
-2. Separate explicit owner authorization  
-3. Apply exactly M19 to managed OneDecore  
-4. Continue Phase 6B runtime (B2/B3)
+Phase 6B managed alignment complete. See `phase-6b-managed-alignment-closeout.md`.

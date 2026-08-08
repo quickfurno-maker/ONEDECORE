@@ -1,9 +1,9 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (truth-synced post Phase 6A / DB-7B, August 7, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced post Phase 6B / DB-8B, August 8, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
-**Migrations Applied (Managed):** 18 / 18 (M1–M18; no M19+)
+**Migrations Applied (Managed):** 21 / 21 (M1–M21; no M22+)
 
 ---
 
@@ -23,7 +23,7 @@
 ├─────────────────────────────────────────────────────────┤
 │ 6. Project & Design Domain (projects, milestones, design)  │ PLANNED Phase 8
 ├─────────────────────────────────────────────────────────┤
-│ 7. Communication Domain (WhatsApp foundation managed — Phase 6A) │ FOUNDATION ONLY
+│ 7. Communication Domain (WhatsApp foundation + Phase 6B inbox/send/dispatch managed) │ FOUNDATION MANAGED
 ├─────────────────────────────────────────────────────────┤
 │ 8. AI Copilot Domain (requests, suggestions, approvals) │ PLANNED Phase 6C
 ├─────────────────────────────────────────────────────────┤
