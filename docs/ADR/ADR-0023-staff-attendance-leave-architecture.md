@@ -219,5 +219,6 @@ See `docs/audits/phase-6d-staff-attendance-leave-architecture-freeze.md` § Impl
 ## Related
 
 - [Phase 6D architecture freeze audit](../audits/phase-6d-staff-attendance-leave-architecture-freeze.md)
+- [Phase 6D implementation contract freeze](../audits/phase-6d-implementation-contract-freeze.md)
 - [Phase 6D roadmap lock](../audits/phase-6d-roadmap-lock.md)
 - [DEC-0059](../10-decision-register.md)
