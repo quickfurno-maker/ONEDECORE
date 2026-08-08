@@ -64,6 +64,14 @@ export async function runKritiTask(
   });
 
   if (!providerOutcome.ok) {
+    if (audit) {
+      await audit.record({
+        eventType: "kriti.request_failed",
+        requestId: request.requestId,
+        code: providerOutcome.error.code,
+        occurredAt: new Date().toISOString(),
+      });
+    }
     return { ok: false, requestId: request.requestId, error: providerOutcome.error };
   }
 
@@ -71,19 +79,37 @@ export async function runKritiTask(
   try {
     parsed = JSON.parse(providerOutcome.response.rawJson);
   } catch {
+    const error = createKritiError("KRITI_INVALID_OUTPUT", "Provider output was not valid JSON.", false);
+    if (audit) {
+      await audit.record({
+        eventType: "kriti.request_failed",
+        requestId: request.requestId,
+        code: error.code,
+        occurredAt: new Date().toISOString(),
+      });
+    }
     return {
       ok: false,
       requestId: request.requestId,
-      error: createKritiError("KRITI_INVALID_OUTPUT", "Provider output was not valid JSON.", false),
+      error,
     };
   }
 
   const structured = validateKritiStructuredOutput(request.taskType, parsed);
   if (!structured) {
+    const error = createKritiError("KRITI_INVALID_OUTPUT", "Provider output failed schema validation.", false);
+    if (audit) {
+      await audit.record({
+        eventType: "kriti.request_failed",
+        requestId: request.requestId,
+        code: error.code,
+        occurredAt: new Date().toISOString(),
+      });
+    }
     return {
       ok: false,
       requestId: request.requestId,
-      error: createKritiError("KRITI_INVALID_OUTPUT", "Provider output failed schema validation.", false),
+      error,
     };
   }
 

@@ -104,8 +104,8 @@ select results_eq(
 -- 10. Verify authorized application tables count
 select results_eq(
   'select count(*)::integer from information_schema.tables where table_schema = ''public'' and table_type = ''BASE TABLE''',
-  array[38],
-  'Public schema must contain exactly the 38 authorized application tables (identity + portfolio + lead intake + Phase 5B CRM + Phase 5D bulk import + Phase 5E sales targets + Phase 6A WhatsApp + Phase 6B send-intent + Phase 6B dispatch)'
+  array[40],
+  'Public schema must contain exactly the 40 authorized application tables (identity + portfolio + lead intake + Phase 5B CRM + Phase 5D bulk import + Phase 5E sales targets + Phase 6A WhatsApp + Phase 6B send-intent + Phase 6B dispatch + Phase 6C Kriti)'
 );
 
 -- 11. Phase 2C3 — rls_auto_enable existence and security properties

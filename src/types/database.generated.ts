@@ -189,6 +189,107 @@ export type Database = {
           },
         ]
       }
+      kriti_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          details: Json
+          error_code: string | null
+          event_type: string
+          id: string
+          run_id: string
+          usage_metadata: Json | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          error_code?: string | null
+          event_type: string
+          id?: string
+          run_id: string
+          usage_metadata?: Json | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          error_code?: string | null
+          event_type?: string
+          id?: string
+          run_id?: string
+          usage_metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kriti_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kriti_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "kriti_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kriti_runs: {
+        Row: {
+          actor_id: string
+          context_digest: string
+          context_provenance: Json
+          created_at: string
+          id: string
+          model_name: string | null
+          provider_code: string | null
+          provider_mode: string
+          status: string
+          target_id: string | null
+          target_type: string | null
+          task_type: string
+        }
+        Insert: {
+          actor_id: string
+          context_digest: string
+          context_provenance?: Json
+          created_at?: string
+          id: string
+          model_name?: string | null
+          provider_code?: string | null
+          provider_mode: string
+          status?: string
+          target_id?: string | null
+          target_type?: string | null
+          task_type: string
+        }
+        Update: {
+          actor_id?: string
+          context_digest?: string
+          context_provenance?: Json
+          created_at?: string
+          id?: string
+          model_name?: string | null
+          provider_code?: string | null
+          provider_mode?: string
+          status?: string
+          target_id?: string | null
+          target_type?: string | null
+          task_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kriti_runs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_activities: {
         Row: {
           activity_type: string
@@ -2172,6 +2273,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      append_kriti_audit_event: {
+        Args: {
+          p_details?: Json
+          p_error_code?: string | null
+          p_event_type: string
+          p_run_id: string
+          p_run_status?: string | null
+          p_usage_metadata?: Json | null
+        }
+        Returns: string
+      }
       approve_lead_import_batch: {
         Args: { p_batch_id: string; p_expected_revision: number }
         Returns: {
@@ -3078,6 +3190,20 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      start_kriti_run: {
+        Args: {
+          p_context_digest: string
+          p_context_provenance?: Json
+          p_model_name?: string | null
+          p_provider_code?: string | null
+          p_provider_mode: string
+          p_run_id: string
+          p_target_id?: string | null
+          p_target_type?: string | null
+          p_task_type: string
+        }
+        Returns: string
       }
       submit_lead_import_batch: {
         Args: { p_batch_id: string; p_expected_revision: number }

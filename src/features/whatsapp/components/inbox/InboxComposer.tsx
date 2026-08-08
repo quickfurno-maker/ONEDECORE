@@ -10,15 +10,21 @@ import {
 interface InboxComposerProps {
   readonly conversationId: string;
   readonly canUse: boolean;
+  readonly textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 
-export function InboxComposer({ conversationId, canUse }: InboxComposerProps) {
+export function InboxComposer({
+  conversationId,
+  canUse,
+  textareaRef: externalTextareaRef,
+}: InboxComposerProps) {
   const idempotencyKey = useMemo(() => crypto.randomUUID(), []);
   const [state, formAction, pending] = useActionState(
     createWhatsappServiceSendIntentAction,
     INITIAL_WHATSAPP_SEND_ACTION_STATE
   );
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const internalTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = externalTextareaRef ?? internalTextareaRef;
 
   useEffect(() => {
     if (state.success) {

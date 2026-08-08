@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { InboxComposer } from "@/features/whatsapp/components/inbox/InboxComposer";
+import { InboxComposerSection } from "@/features/whatsapp/components/inbox/InboxComposerSection";
 import { InboxManualRefreshButton } from "@/features/whatsapp/components/inbox/InboxManualRefreshButton";
 import { InboxThread } from "@/features/whatsapp/components/inbox/InboxThread";
 import { WhatsappPageHeader } from "@/features/whatsapp/components/shell/WhatsappPageHeader";
@@ -90,7 +90,11 @@ export default async function WhatsappConversationPage({
       </div>
 
       <InboxThread messages={detail.messages} />
-      <InboxComposer conversationId={conversationId} canUse={canUse} />
+      <InboxComposerSection
+        conversationId={conversationId}
+        canRead={canRead}
+        canUse={canUse}
+      />
     </div>
   );
 }
