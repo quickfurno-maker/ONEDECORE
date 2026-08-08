@@ -198,9 +198,10 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Prebuild:** K0–K3 merged (contracts, provider, context/safety, UI components).
 - **Status:** Formal persistence (M22), staff API runtime, and internal UI wiring **in progress**. Provider default **disabled**; no production Groq activation.
 
-### Phase 6D (Next after 6C — roadmap-locked only)
+### Phase 6D (Next after 6C — roadmap-locked; preflight frozen)
 - **Objective:** Staff administration, attendance, leave, and holiday calendar (see `docs/audits/phase-6d-roadmap-lock.md`).
-- **Status:** **NOT STARTED** — governance lock only; no schema, routes, or runtime in Phase 6C mission.
+- **Architecture freeze:** [Phase 6D preflight audit](audits/phase-6d-staff-attendance-leave-architecture-freeze.md), [ADR-0023](ADR/ADR-0023-staff-attendance-leave-architecture.md).
+- **Status:** **NOT STARTED** — preflight/architecture complete; no schema, routes, or runtime.
 
 ### Phases 7–8
 See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020–0021.
@@ -254,3 +255,6 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
 - [Decision Register](10-decision-register.md)
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
+- [Phase 6D roadmap lock](audits/phase-6d-roadmap-lock.md)
+- [Phase 6D architecture freeze](audits/phase-6d-staff-attendance-leave-architecture-freeze.md)
+- [ADR-0023: Staff attendance architecture](ADR/ADR-0023-staff-attendance-leave-architecture.md)

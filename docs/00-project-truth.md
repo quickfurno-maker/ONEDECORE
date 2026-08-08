@@ -7,7 +7,7 @@
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
 **Current Phase:** Phase 6C — Groq Human-Controlled Copilot (**formal runtime IN PROGRESS**)
-**Next Roadmap Phase after 6C:** Phase 6D — Staff Administration, Attendance & Leave (**roadmap-locked; NOT STARTED**)
+**Next Roadmap Phase after 6C:** Phase 6D — Staff Administration, Attendance & Leave (**preflight frozen; runtime NOT STARTED**)
 
 ---
 
