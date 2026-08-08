@@ -135,7 +135,7 @@ Phase 5A locks the following cross-cutting patterns for future implementation:
 | Handover | PM assignment → PM acceptance before execution |
 | Design staffing | One Lead Designer + Supporting Designers; manual only |
 | AI | Provider adapter; human approval; structured outputs; audit |
-| WhatsApp | Official API; M18 managed foundation (ingest RPCs, RLS tables); outbound/inbox Phase 6B; CRM consent authoritative |
+| WhatsApp | Official API; M18–M21 managed foundation (ingest, inbox read, send-intent, service-role dispatch); CRM consent authoritative; **not production-activated** |
 | Campaigns | Approval chain; suppression; no fabricated consent |
 
-Phase 6A delivers managed WhatsApp **data/webhook foundation only** (migration 18). Shared inbox, controlled outbound, Groq copilot runtime, quotation, and project modules remain **not implemented** as application/runtime features.
+Phase 6A delivers managed WhatsApp **data/webhook foundation** (migration 18). Phase 6B delivers managed **inbox/send-intent/dispatch foundations** (migrations 19–21) plus repository admin UI — **not production-activated**. Groq copilot formal runtime, quotation persistence, and project modules remain **not implemented** as production runtime features.

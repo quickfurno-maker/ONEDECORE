@@ -1,13 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced post Phase 6A closeout, August 7, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced post Phase 6B closeout, August 8, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 6A — Meta WhatsApp Data & Webhook Foundation (**COMPLETE**)
-**Next Implementation Phase:** Phase 6B — Premium Shared Inbox & Controlled Outbound Messaging (**runtime NOT STARTED**)
+**Current Phase:** Phase 6B — Premium Shared Inbox & Controlled Outbound Messaging (**COMPLETE — managed foundation**)
+**Next Implementation Phase:** Phase 6C — Groq Human-Controlled Copilot (**formal runtime NOT STARTED**)
 
 ---
 
@@ -91,9 +91,12 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Sales targets & CRM reporting (migration 16) | Applied managed August 3, 2026 (Phase DB-5B) |
 | Controlled public lead activation hardening (migration 17) | Applied managed August 4, 2026 (Phase DB-6B) |
 | Meta WhatsApp data & webhook foundation (migration 18) | Applied managed August 7, 2026 (Phase DB-7B) |
-| Managed migration alignment | **1–18** on OneDecore (`lpurlfmpvriyvpkujvyl`); **no M19+** |
+| Premium shared inbox send-intent foundation (migration 19) | Applied managed August 8, 2026 (Phase DB-8B-M19) |
+| Shared inbox read model foundation (migration 20) | Applied managed August 8, 2026 (Phase DB-8B-M20) |
+| WhatsApp provider dispatch foundation (migration 21) | Applied managed August 8, 2026 (Phase DB-8B-M21) |
+| Managed migration alignment | **1–21** on OneDecore (`lpurlfmpvriyvpkujvyl`); **no M22+** |
 
-CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, Phase 5F identity hardening, and Phase 6A WhatsApp foundation are **merged on protected main** with managed database foundation through M18; **production deployment pending** (Phase 10); **public intake remains inactive**; **WhatsApp not production-activated**.
+CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, Phase 5F identity hardening, Phase 6A WhatsApp foundation, and Phase 6B shared inbox/send-intent/dispatch foundations are **merged on protected main** with managed database foundation through M21; **production deployment pending** (Phase 10); **public intake remains inactive**; **WhatsApp not production-activated** (no Meta callback/token; no real outbound).
 
 ### Phase 5F truth
 
@@ -110,7 +113,14 @@ CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targ
 - Managed foundation: seven WhatsApp tables (RLS-enabled, zero rows at apply); service-role-only ingest RPCs; private hardened helpers; append-only webhook/status event protection.
 - **CRM consent remains authoritative** (`contacts`, `contact_channels`, `consent_events` with purpose distinctions `SERVICE_ENQUIRY`, `SERVICE_COMMUNICATION`, `WHATSAPP_SERVICE`, `MARKETING`). M18 does **not** create a parallel WhatsApp consent store, grant marketing consent, clear DNC, or auto-create/link CRM contacts or leads from inbound messages.
 - **No production deployment**; **no Meta callback/token activation**; **no outbound WhatsApp**; **no n8n activation**; **no Kriti runtime**; **public intake inactive**.
-- Phase 6B runtime (shared inbox + controlled outbound) remains **NOT STARTED**.
+### Phase 6B truth
+
+- Repository B1–B4 implementation merged; managed M19–M21 applied and verified (August 8, 2026).
+- Recovery: backup **1313589467** (`2026-08-07T19:53:32.362Z`, physical/WALG, COMPLETED).
+- Managed foundation: send-intent tables/events, scoped inbox read policies, provider dispatch attempts + service-role-only dispatch RPCs; all zero fake rows at apply.
+- **WHATSAPP_SERVICE** purpose only on service send path; **MARKETING** blocked; CRM consent/DNC authoritative; current-assignment access resolver; idempotency + dispatch reconciliation foundations.
+- **No production deployment**; **no Meta callback/token activation**; **no real customer outbound**; **no n8n/Kriti runtime**; **public intake inactive**.
+- Phase 6B formally **COMPLETE** (closeout merged). Formal **Phase 6C** is next.
 
 ### Phase 5E truth
 

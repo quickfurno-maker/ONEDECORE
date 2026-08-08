@@ -1,8 +1,8 @@
 # Phase 6B-B4 — Provider Dispatch Foundation Audit
 
-**Status:** Repository foundation (M21) — pending managed apply  
+**Status:** Managed apply **COMPLETE** (August 8, 2026)
 **Migration:** `20260808140000_whatsapp_provider_dispatch_foundation.sql`  
-**Managed OneDecore:** Remains M1–M18 until explicit owner authorization and DEC-0053 recovery readiness for M19+
+**Managed OneDecore:** M1–M21 aligned (`lpurlfmpvriyvpkujvyl`)
 
 ## Scope delivered (B4)
 
@@ -26,9 +26,9 @@
 | Service-role-only bind path | PASS |
 | RLS on dispatch attempts scoped via inbox read | PASS |
 | Separate migration for managed recovery | PASS — M21 is independent of M19 apply gate |
-| M18+M19+M21 relational correctness for binding | PASS in repository; managed alignment pending owner gate |
+| M18+M19+M21 relational correctness for binding | PASS — managed M1–M21 aligned |
 
-**Conclusion:** No additional repository migration required after M21 for provider binding/lifecycle correctness. Managed apply remains owner-gated per migration (M19 first, then M20, then M21).
+**Conclusion:** Managed M21 applied and verified. Phase 6B closeout complete. See `phase-6b-managed-alignment-closeout.md`.
 
 ## Explicitly not in B4
 
@@ -38,7 +38,7 @@
 - Media outbound V1
 - Fabricated template approval or delivery/read status
 
-## Owner gates
+## Owner gates (historical — COMPLETE)
 
-- M19 apply: requires `PROCEED PHASE 6B M19 APPLY` after DB1 recovery readiness
-- M20/M21: separate recovery/authorization gates after M19
+- Batch authorization: `PROCEED PHASE 6B M19-M21 BATCH APPLY` (August 8, 2026)
+- Recovery: backup 1313589467 (physical/WALG, COMPLETED)

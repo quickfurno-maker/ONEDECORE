@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 6A closeout, August 7, 2026)
-**Current Phase:** Phase 6A — Meta WhatsApp Data & Webhook Foundation (**COMPLETE**)
-**Next Implementation Phase:** Phase 6B — Premium Shared Inbox & Controlled Outbound Messaging (**B1 repository foundation in PR; managed M19 not applied; runtime NOT STARTED**)
+**Document Status:** Locked Roadmap (truth-synced post Phase 6B closeout, August 8, 2026)
+**Current Phase:** Phase 6B — Premium Shared Inbox & Controlled Outbound Messaging (**COMPLETE — managed foundation**)
+**Next Implementation Phase:** Phase 6C — Groq Human-Controlled Copilot (**formal runtime NOT STARTED**)
 
 ---
 
@@ -62,6 +62,13 @@ Phase 6A: Meta WhatsApp Data & Webhook Foundation ──────────
   • Foundation only — no deployment; no Meta callback/token; no outbound; no n8n/Kriti activation
   • Closeout truth-sync: current PR
 Phase DB-7A-R2 / DB-7B: M18 physical recovery readiness + managed apply ─ COMPLETED
+Phase 6B: Premium Shared Inbox & Controlled Outbound Messaging ───────── COMPLETED
+  • B1–B4 repository merged; M19–M21 applied managed (August 8, 2026)
+  • DB-8A physical recovery Route A (backup 1313589467)
+  • Managed inbox/send-intent/dispatch foundations; I1 integrated local E2E PASS
+  • No deployment; no Meta callback/token; no real outbound; public intake inactive
+  • Closeout truth-sync: current PR
+Phase DB-8B: M19–M21 sequential managed apply ─────────────────────── COMPLETED
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -101,9 +108,11 @@ Phase 6A ──► Meta WhatsApp Data & Webhook Foundation [COMPLETED]
     │         • M18 foundation managed; webhook ingestion schema only
     │         • No production Meta callback/token/outbound activation
     ▼
-Phase 6B ──► Premium Shared Inbox & Controlled Outbound Messaging [NEXT — runtime NOT STARTED]
+Phase 6B ──► Premium Shared Inbox & Controlled Outbound Messaging [COMPLETED]
+    │         • M19–M21 managed; inbox/send-intent/dispatch foundations
+    │         • No production Meta callback/token/outbound activation
     ▼
-Phase 6C ──► Groq Human-Controlled Copilot
+Phase 6C ──► Groq Human-Controlled Copilot [NEXT — formal runtime NOT STARTED]
     ▼
 Phase 7A ──► Commercial Quotation Data & Draft Foundation
     ▼
@@ -173,14 +182,14 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Status:** **COMPLETE** — foundation managed only. **No deployment**; **no production Meta callback/token**; **no outbound WhatsApp**; **no n8n/Kriti activation**; **public intake inactive**. CRM consent (`contacts` / `contact_channels` / `consent_events`) remains authoritative; M18 does not grant `MARKETING` consent or fabricate consent from inbound messages.
 - **Closeout:** `docs/audits/phase-6a-meta-whatsapp-data-webhook-foundation.md`
 
-### Phase 6B (Next — B1 repository foundation; runtime not started)
+### Phase 6B (Completed)
 - **Objective:** Premium shared inbox and controlled outbound messaging (`WHATSAPP_SERVICE` boundary).
-- **B1 repository (M19):** Inbox permissions, current-assignment access resolver, durable send-intent/idempotency foundation — **repository only; managed apply pending**.
-- **Exit gate:** Role-scoped inbox, controlled outbound, consent/DNC/template gates — **runtime/UI/provider dispatch not yet implemented**.
+- **Exit gate:** M19–M21 applied managed; role-scoped inbox read; send-intent/idempotency; service-role dispatch boundary; I1 integrated local E2E PASS; future-phase regression PASS.
 - **Dependencies:** Phase 6A complete (M18 managed).
-- **Status:** Architecture may be frozen in ignored artifacts; **runtime NOT STARTED**. No M19 allocated in Phase 6A closeout.
+- **Status:** **COMPLETE** — managed foundation + repository application. **No deployment**; **no production Meta callback/token**; **no real outbound**; **public intake inactive**.
+- **Closeout:** `docs/audits/phase-6b-managed-alignment-closeout.md`
 
-### Phase 6C (Architecture frozen / runtime not started)
+### Phase 6C (Next — formal runtime not started)
 - **Objective:** Groq human-controlled copilot (summarize, draft, suggest, explain only).
 - **Status:** **NOT STARTED** — no production Kriti runtime; no autonomous send or mutation.
 
