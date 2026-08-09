@@ -1,13 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced post Phase 6B closeout, August 8, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced post Phase 6C closeout, August 9, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 6C — Groq Human-Controlled Copilot (**formal runtime IN PROGRESS**)
-**Next Roadmap Phase after 6C:** Phase 6D — Staff Administration, Attendance & Leave (**preflight frozen; runtime NOT STARTED**)
+**Current Phase:** Phase 6D — Staff Administration, Attendance & Leave (**READY TO START formal implementation**)
+**Previous Phase:** Phase 6C — Groq Human-Controlled Copilot (**COMPLETE**)
 
 ---
 
@@ -94,7 +94,8 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Premium shared inbox send-intent foundation (migration 19) | Applied managed August 8, 2026 (Phase DB-8B-M19) |
 | Shared inbox read model foundation (migration 20) | Applied managed August 8, 2026 (Phase DB-8B-M20) |
 | WhatsApp provider dispatch foundation (migration 21) | Applied managed August 8, 2026 (Phase DB-8B-M21) |
-| Managed migration alignment | **1–21** on OneDecore (`lpurlfmpvriyvpkujvyl`); **no M22+** |
+| Kriti audit persistence foundation (migration 22) | Applied managed August 9, 2026 (Phase 6C M22) |
+| Managed migration alignment | **1–22** on OneDecore (`lpurlfmpvriyvpkujvyl`); **no M23+** |
 
 CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, Phase 5F identity hardening, Phase 6A WhatsApp foundation, and Phase 6B shared inbox/send-intent/dispatch foundations are **merged on protected main** with managed database foundation through M21; **production deployment pending** (Phase 10); **public intake remains inactive**; **WhatsApp not production-activated** (no Meta callback/token; no real outbound).
 
@@ -122,6 +123,17 @@ CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targ
 - **No production deployment**; **no Meta callback/token activation**; **no real customer outbound**; **no n8n/Kriti runtime**; **public intake inactive**.
 - Phase 6B formally **COMPLETE** (closeout merged). Formal **Phase 6C** is next.
 
+### Phase 6C truth
+
+- Repository formal runtime merged (PR #45); Kriti K0–K3 prebuild + staff-authorized inbox assist.
+- Managed M22 applied and verified (August 9, 2026); owner authorization `PROCEED PHASE 6C M22 MANAGED APPLY`.
+- Recovery: backup **1322197903** (`2026-08-08T19:54:50.080Z`, physical/WALG, COMPLETED; post-M21).
+- M22 Git blob `58d62e9f3f480fbfbbe71918179c20f5a6dde537`; SHA-256 `74f79fb7985bac4d556701371555f7717a026ec5ec5f77da314a42f643775630`.
+- Managed foundation: `kriti_runs`, `kriti_events` (append-only events; RLS own-run scope); `start_kriti_run`, `append_kriti_audit_event` RPCs.
+- **Human-controlled copilot only**; provider default **disabled**; no auto-send; no CRM/business mutations.
+- **No production Groq activation**; **no production deployment**; **public intake inactive**.
+- Phase 6C formally **COMPLETE** (closeout merged). **Phase 6D** is next.
+
 ### Phase 5E truth
 
 - Implementation merged (PR #15); managed M16 applied.
@@ -139,7 +151,7 @@ CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targ
 
 ### Planned — not live
 
-WhatsApp shared inbox/outbound runtime (Phase 6B), Groq copilot runtime (Phase 6C), quotations, project execution, designer workflows, marketing campaigns, Landing Page Lab (Phase 9B — roadmap-locked, not implemented), **public lead activation**, production deployment, **Meta production webhook/callback activation**.
+WhatsApp shared inbox/outbound runtime (Phase 6B), quotations, project execution, designer workflows, marketing campaigns, Landing Page Lab (Phase 9B — roadmap-locked, not implemented), **public lead activation**, production deployment, **Meta production webhook/callback activation**.
 
 **Do not claim planned modules are live or production-deployed.**
 
