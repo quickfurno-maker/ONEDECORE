@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireStaffPermission } from "@/server/auth";
 import { hasAnyCrmLeadReadPermission } from "@/features/crm/server/crm-permissions";
+import { hasAnyStaffNavPermission } from "@/features/staff-admin/server/staff-permissions";
+import { hasAnyAttendanceNavPermission } from "@/features/staff-attendance/server/attendance-auth";
+import { hasAnyLeaveNavPermission } from "@/features/staff-leave/server/leave-auth";
 import { hasAnyWhatsappInboxReadPermission } from "@/features/whatsapp/server/whatsapp-permissions";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +17,14 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await requireStaffPermission("admin.access", "/admin");
-  const showCrmLink = await hasAnyCrmLeadReadPermission();
-  const showWhatsappLink = await hasAnyWhatsappInboxReadPermission();
+  const [showCrmLink, showWhatsappLink, showStaffLink, showAttendanceLink, showLeaveLink] =
+    await Promise.all([
+      hasAnyCrmLeadReadPermission(),
+      hasAnyWhatsappInboxReadPermission(),
+      hasAnyStaffNavPermission(),
+      hasAnyAttendanceNavPermission(),
+      hasAnyLeaveNavPermission(),
+    ]);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
@@ -46,6 +55,30 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             >
               Portfolio CMS
             </Link>
+            {showStaffLink ? (
+              <Link
+                href="/admin/staff"
+                className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+              >
+                Staff
+              </Link>
+            ) : null}
+            {showAttendanceLink ? (
+              <Link
+                href="/admin/attendance"
+                className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+              >
+                Attendance
+              </Link>
+            ) : null}
+            {showLeaveLink ? (
+              <Link
+                href="/admin/leave"
+                className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+              >
+                Leave
+              </Link>
+            ) : null}
             {showCrmLink ? (
               <Link
                 href="/admin/crm/leads"
