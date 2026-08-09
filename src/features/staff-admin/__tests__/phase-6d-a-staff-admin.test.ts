@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
 import {
-  mapFinalizeStaffMemberRpcResult,
+  mapCreateStaffMemberRpcResult,
   validateCreateStaffMemberInput,
 } from "../contracts/dto.ts";
 import { STAFF_ERROR_CODES, staffErrorFromPostgresMessage } from "../contracts/errors.ts";
@@ -48,28 +48,40 @@ function validCreateInput() {
 }
 
 describe("Phase 6D-A migration contract", () => {
-  test("migration defines staff permissions and staff RPCs", () => {
+  test("migration defines staff permissions and durable invite saga RPCs", () => {
     const sql = readFileSync(M23_MIGRATION, "utf8");
 
     for (const code of STAFF_PERMISSION_CODES) {
       assert.match(sql, new RegExp(code.replaceAll(".", "\\.")));
     }
 
-    assert.match(sql, /finalize_staff_member/);
+    assert.match(sql, /create_staff_member/);
+    assert.match(sql, /prepare_staff_invite_saga/);
+    assert.match(sql, /record_staff_invite_auth_success/);
     assert.match(sql, /reconcile_staff_invite/);
+    assert.match(sql, /resend_staff_invite/);
+    assert.match(sql, /private\.staff_invite_saga_requests/);
+    assert.doesNotMatch(sql, /public\.staff_admin_idempotency/);
     assert.match(sql, /set_staff_profile_status/);
     assert.match(sql, /set_staff_reporting_manager/);
     assert.match(sql, /update_staff_employment/);
     assert.match(sql, /staff_employment_profiles/);
     assert.match(sql, /staff_admin_events/);
-    assert.match(sql, /staff_admin_idempotency/);
   });
 
-  test("assignable roles match finalize_staff_member allowlist", () => {
+  test("assignable roles match create_staff_member allowlist", () => {
     const sql = readFileSync(M23_MIGRATION, "utf8");
     for (const role of STAFF_ASSIGNABLE_ROLE_CODES) {
       assert.match(sql, new RegExp(`'${role}'`));
     }
+  });
+
+  test("private saga ledger is not granted to authenticated", () => {
+    const sql = readFileSync(M23_MIGRATION, "utf8");
+    assert.match(
+      sql,
+      /revoke all on table private\.staff_invite_saga_requests from public, anon, authenticated/
+    );
   });
 });
 
@@ -148,8 +160,8 @@ describe("Phase 6D-A invite adapter", () => {
 });
 
 describe("Phase 6D-A RPC result mapping", () => {
-  test("maps finalize_staff_member payload to CreateStaffMemberResult", () => {
-    const mapped = mapFinalizeStaffMemberRpcResult({
+  test("maps create_staff_member payload to CreateStaffMemberResult", () => {
+    const mapped = mapCreateStaffMemberRpcResult({
       staffId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       employeeCode: "OD-001",
       profileStatus: "pending",
@@ -165,7 +177,7 @@ describe("Phase 6D-A RPC result mapping", () => {
   });
 
   test("maps idempotent replay flag", () => {
-    const mapped = mapFinalizeStaffMemberRpcResult({
+    const mapped = mapCreateStaffMemberRpcResult({
       staffId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       employeeCode: "OD-001",
       profileStatus: "pending",
@@ -183,11 +195,18 @@ describe("Phase 6D-A staff error vocabulary", () => {
     assert.equal(STAFF_ERROR_CODES.includes("STAFF_UNAUTHORIZED"), true);
     assert.equal(STAFF_ERROR_CODES.includes("STAFF_INVITE_FAILED"), true);
     assert.equal(STAFF_ERROR_CODES.includes("STAFF_RECONCILIATION_REQUIRED"), true);
+    assert.equal(STAFF_ERROR_CODES.includes("STAFF_IDEMPOTENCY_CONFLICT"), true);
   });
 
   test("maps migration employee code conflict", () => {
     const error = staffErrorFromPostgresMessage("employee_code already exists");
     assert.equal(error.code, "STAFF_EMPLOYEE_CODE_CONFLICT");
+    assert.equal(error.httpStatus, 409);
+  });
+
+  test("maps idempotency conflict", () => {
+    const error = staffErrorFromPostgresMessage("STAFF_IDEMPOTENCY_CONFLICT");
+    assert.equal(error.code, "STAFF_IDEMPOTENCY_CONFLICT");
     assert.equal(error.httpStatus, 409);
   });
 
@@ -206,14 +225,23 @@ describe("Phase 6D-A staff error vocabulary", () => {
 });
 
 describe("Phase 6D-A server module boundaries", () => {
-  test("staff actions use authenticated client for RPCs", () => {
+  test("staff actions use durable saga order before Auth invite", () => {
     const src = readFileSync(
       join(root, "src/features/staff-admin/server/staff-actions.ts"),
       "utf8"
     );
-    assert.match(src, /createClient/);
-    assert.match(src, /finalize_staff_member/);
-    assert.match(src, /reconcile_staff_invite/);
+    const createBlock = src.slice(
+      src.indexOf("export async function createStaffMember"),
+      src.indexOf("export async function reconcileStaffInvite")
+    );
+    assert.match(createBlock, /prepare_staff_invite_saga/);
+    assert.match(createBlock, /record_staff_invite_auth_success/);
+    assert.match(createBlock, /create_staff_member/);
+    assert.ok(createBlock.indexOf("prepare_staff_invite_saga") < createBlock.indexOf("inviteStaffMemberByEmail"));
+    assert.ok(
+      createBlock.indexOf("record_staff_invite_auth_success") <
+        createBlock.indexOf("create_staff_member")
+    );
     assert.doesNotMatch(src, /serviceRoleKey/);
     assert.doesNotMatch(src, /createAdminClient/);
   });
@@ -231,5 +259,32 @@ describe("Phase 6D-A server module boundaries", () => {
     assert.match(adapterSrc, /inviteUserByEmail/);
     assert.match(contractSrc, /setStaffInviteAdapterForTests/);
     assert.match(contractSrc, /runStaffInvite/);
+  });
+});
+
+describe("Phase 6D-A invite saga orchestration contract", () => {
+  test("createStaffMember source never calls Auth before prepare", () => {
+    const src = readFileSync(
+      join(root, "src/features/staff-admin/server/staff-actions.ts"),
+      "utf8"
+    );
+    const createBlock = src.slice(
+      src.indexOf("export async function createStaffMember"),
+      src.indexOf("export async function reconcileStaffInvite")
+    );
+    const prepareIndex = createBlock.indexOf("prepare_staff_invite_saga");
+    const inviteIndex = createBlock.indexOf("inviteStaffMemberByEmail");
+    assert.ok(prepareIndex >= 0);
+    assert.ok(inviteIndex >= 0);
+    assert.ok(prepareIndex < inviteIndex);
+  });
+
+  test("failed finalize returns reconciliation_required without deleting auth marker", () => {
+    const src = readFileSync(
+      join(root, "src/features/staff-admin/server/staff-actions.ts"),
+      "utf8"
+    );
+    assert.match(src, /reconciliationState: "auth_created_db_pending"/);
+    assert.match(src, /invitationState: "reconciliation_required"/);
   });
 });

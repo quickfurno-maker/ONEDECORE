@@ -22,6 +22,7 @@ export const STAFF_ERROR_CODES = [
   "STAFF_ATTENDANCE_POLICY_MISSING",
   "STAFF_INVITE_FAILED",
   "STAFF_RECONCILIATION_REQUIRED",
+  "STAFF_IDEMPOTENCY_CONFLICT",
   "STAFF_RPC_FAILED",
 ] as const;
 
@@ -145,6 +146,15 @@ export function staffErrorFromPostgresMessage(
       code: "STAFF_EMPLOYMENT_NOT_FOUND",
       message: "Employment profile not found.",
       httpStatus: 404,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_idempotency_conflict")) {
+    return new StaffError({
+      code: "STAFF_IDEMPOTENCY_CONFLICT",
+      message: "The same request id was used with different staff details.",
+      httpStatus: 409,
       details: message,
     });
   }

@@ -212,11 +212,11 @@ export function validateCreateStaffMemberInput(
   return errors;
 }
 
-export function mapFinalizeStaffMemberRpcResult(
+export function mapCreateStaffMemberRpcResult(
   payload: unknown
 ): CreateStaffMemberResult {
   if (!payload || typeof payload !== "object") {
-    throw new Error("Empty finalize_staff_member RPC result");
+    throw new Error("Empty create_staff_member RPC result");
   }
 
   const record = payload as Record<string, unknown>;

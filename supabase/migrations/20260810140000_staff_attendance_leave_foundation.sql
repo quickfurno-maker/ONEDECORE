@@ -173,15 +173,52 @@ create trigger trg_staff_admin_events_no_delete
 comment on table public.staff_admin_events is
   'Append-only staff administration audit events.';
 
-create table public.staff_admin_idempotency (
+create table private.staff_invite_saga_requests (
   client_request_id uuid primary key,
-  staff_id uuid references public.profiles (id) on delete set null,
-  result jsonb not null,
-  created_at timestamptz not null default now()
+  request_digest text not null,
+  saga_state text not null,
+  intended_email text not null,
+  employee_code text not null,
+  staff_id uuid references public.profiles (id) on delete restrict,
+  created_by uuid not null references public.profiles (id) on delete restrict,
+  request_payload jsonb not null,
+  result jsonb,
+  auth_recorded_at timestamptz,
+  completed_at timestamptz,
+  last_resend_at timestamptz,
+  resend_count integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint chk_staff_invite_saga_state check (
+    saga_state in (
+      'db_created_auth_pending',
+      'auth_created_db_pending',
+      'completed',
+      'failed'
+    )
+  ),
+  constraint chk_staff_invite_saga_payload_size check (
+    pg_column_size(request_payload) <= 4096
+  ),
+  constraint chk_staff_invite_saga_email check (
+    length(trim(intended_email)) between 3 and 254
+  ),
+  constraint chk_staff_invite_saga_resend_count check (resend_count between 0 and 32)
 );
 
-comment on table public.staff_admin_idempotency is
-  'Idempotency ledger for staff invite/finalize sagas keyed by clientRequestId.';
+create index idx_staff_invite_saga_staff_id
+  on private.staff_invite_saga_requests (staff_id)
+  where staff_id is not null;
+
+create trigger trg_staff_invite_saga_requests_updated_at
+  before update on private.staff_invite_saga_requests
+  for each row execute function private.set_updated_at();
+
+revoke all on table private.staff_invite_saga_requests from public, anon, authenticated;
+
+comment on table private.staff_invite_saga_requests is
+  'Private durable staff invite saga ledger keyed by clientRequestId. Not exposed via PostgREST.';
 
 create table public.attendance_events (
   id uuid primary key default gen_random_uuid(),
@@ -861,14 +898,187 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
--- D. Staff RPCs
+-- -----------------------------------------------------------------------------
+-- D. Staff RPCs — durable invite saga (private ledger)
 -- -----------------------------------------------------------------------------
 
-create or replace function public.finalize_staff_member(
+create or replace function private.staff_finalize_invite_from_saga(
   p_client_request_id uuid,
-  p_staff_id uuid,
+  p_actor uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_row private.staff_invite_saga_requests%rowtype;
+  v_payload jsonb;
+  v_role_id uuid;
+  v_staff_id uuid;
+  v_normalized_code text;
+  v_role_code text;
+  v_reporting_manager_id uuid;
+  v_attendance_eligible boolean;
+  v_attendance_policy_id uuid;
+  v_result jsonb;
+  v_is_retry boolean;
+begin
+  select * into v_row
+  from private.staff_invite_saga_requests
+  where client_request_id = p_client_request_id
+  for update;
+
+  if not found then
+    raise exception 'reconciliation request not found' using errcode = 'P0002';
+  end if;
+
+  if v_row.saga_state = 'completed' then
+    return coalesce(v_row.result, '{}'::jsonb)
+      || jsonb_build_object('idempotentReplay', true);
+  end if;
+
+  if v_row.saga_state <> 'auth_created_db_pending' or v_row.staff_id is null then
+    raise exception 'staff invite saga not ready for finalization' using errcode = 'P0001';
+  end if;
+
+  v_payload := v_row.request_payload;
+  v_staff_id := v_row.staff_id;
+  v_normalized_code := upper(trim(v_payload ->> 'employeeCode'));
+  v_role_code := v_payload ->> 'roleCode';
+  v_reporting_manager_id := nullif(v_payload ->> 'reportingManagerId', '')::uuid;
+  v_attendance_eligible := coalesce((v_payload ->> 'attendanceEligible')::boolean, false);
+  v_attendance_policy_id := nullif(v_payload ->> 'attendancePolicyId', '')::uuid;
+
+  if v_attendance_eligible and v_attendance_policy_id is null then
+    raise exception 'ATTENDANCE_POLICY_MISSING' using errcode = 'P0001';
+  end if;
+
+  if v_role_code = 'sales_executive' and v_reporting_manager_id is null then
+    raise exception 'sales_executive requires reporting manager' using errcode = 'P0001';
+  end if;
+
+  perform private.assert_no_reporting_cycle(v_staff_id, v_reporting_manager_id);
+
+  if v_reporting_manager_id is not null and not exists (
+    select 1 from public.profiles mp
+    where mp.id = v_reporting_manager_id and mp.status = 'active'
+  ) then
+    raise exception 'reporting manager must be active' using errcode = 'P0001';
+  end if;
+
+  select r.id into v_role_id
+  from public.roles r
+  where r.code = v_role_code
+    and r.is_active = true
+    and r.code in ('sales_manager', 'sales_executive', 'project_manager', 'designer');
+
+  if v_role_id is null then
+    raise exception 'invalid role for staff assignment' using errcode = 'P0001';
+  end if;
+
+  v_is_retry := exists (
+    select 1 from public.staff_employment_profiles sep where sep.staff_id = v_staff_id
+  );
+
+  if not v_is_retry then
+    insert into public.profiles (id, display_name, phone_e164, status)
+    values (
+      v_staff_id,
+      trim(v_payload ->> 'displayName'),
+      nullif(v_payload ->> 'phoneE164', ''),
+      'pending'
+    )
+    on conflict (id) do update set
+      display_name = excluded.display_name,
+      phone_e164 = coalesce(excluded.phone_e164, public.profiles.phone_e164);
+
+    insert into public.staff_employment_profiles (
+      staff_id, employee_code, designation, joining_date,
+      reporting_manager_id, attendance_eligible, attendance_policy_id,
+      invite_reconciliation_state
+    )
+    values (
+      v_staff_id,
+      v_normalized_code,
+      trim(v_payload ->> 'designation'),
+      (v_payload ->> 'joiningDate')::date,
+      v_reporting_manager_id,
+      v_attendance_eligible,
+      v_attendance_policy_id,
+      'auth_created_db_pending'
+    );
+
+    delete from public.user_roles ur
+    using public.roles r
+    where ur.user_id = v_staff_id
+      and ur.role_id = r.id
+      and r.code in ('sales_manager', 'sales_executive', 'project_manager', 'designer');
+
+    insert into public.user_roles (user_id, role_id, assigned_by)
+    values (v_staff_id, v_role_id, p_actor);
+
+    perform private.staff_append_admin_event(
+      v_staff_id, p_actor, 'staff.created',
+      jsonb_build_object(
+        'employeeCode', v_normalized_code,
+        'roleCode', v_role_code,
+        'attendanceEligible', v_attendance_eligible,
+        'clientRequestId', p_client_request_id
+      )
+    );
+  else
+    update public.staff_employment_profiles
+    set
+      employee_code = v_normalized_code,
+      designation = trim(v_payload ->> 'designation'),
+      joining_date = (v_payload ->> 'joiningDate')::date,
+      reporting_manager_id = v_reporting_manager_id,
+      attendance_eligible = v_attendance_eligible,
+      attendance_policy_id = v_attendance_policy_id,
+      invite_reconciliation_state = 'auth_created_db_pending'
+    where staff_id = v_staff_id;
+  end if;
+
+  update public.staff_employment_profiles
+  set invite_reconciliation_state = 'none'
+  where staff_id = v_staff_id;
+
+  v_result := jsonb_build_object(
+    'staffId', v_staff_id,
+    'employeeCode', v_normalized_code,
+    'profileStatus', 'pending',
+    'invitationState', 'completed',
+    'reconciliationState', 'none',
+    'idempotentReplay', false
+  );
+
+  update private.staff_invite_saga_requests
+  set
+    saga_state = 'completed',
+    result = v_result,
+    completed_at = now()
+  where client_request_id = p_client_request_id;
+
+  if v_is_retry then
+    perform private.staff_append_admin_event(
+      v_staff_id, p_actor, 'staff.reconciliation_updated',
+      jsonb_build_object('clientRequestId', p_client_request_id, 'finalized', true)
+    );
+  end if;
+
+  return v_result;
+exception
+  when unique_violation then
+    raise exception 'employee_code already exists' using errcode = 'P0001';
+end;
+$$;
+
+create or replace function public.prepare_staff_invite_saga(
+  p_client_request_id uuid,
   p_employee_code text,
   p_display_name text,
+  p_email text,
   p_phone_e164 text,
   p_designation text,
   p_joining_date date,
@@ -884,10 +1094,121 @@ set search_path = ''
 as $$
 declare
   v_actor uuid;
-  v_existing jsonb;
-  v_role_id uuid;
+  v_row private.staff_invite_saga_requests%rowtype;
+  v_payload jsonb;
+  v_digest text;
   v_normalized_code text;
-  v_result jsonb;
+  v_email text;
+begin
+  v_actor := private.staff_require_active_actor();
+
+  if not (select public.authorize('staff.manage')) then
+    raise exception 'ATTENDANCE_UNAUTHORIZED' using errcode = '42501';
+  end if;
+
+  if p_client_request_id is null then
+    raise exception 'validation: client_request_id required' using errcode = '22023';
+  end if;
+
+  v_normalized_code := upper(trim(p_employee_code));
+  v_email := lower(trim(p_email));
+
+  v_payload := jsonb_build_object(
+    'employeeCode', v_normalized_code,
+    'displayName', trim(p_display_name),
+    'email', v_email,
+    'phoneE164', nullif(trim(coalesce(p_phone_e164, '')), ''),
+    'designation', trim(p_designation),
+    'joiningDate', p_joining_date::text,
+    'roleCode', p_role_code,
+    'reportingManagerId', p_reporting_manager_id,
+    'attendanceEligible', coalesce(p_attendance_eligible, false),
+    'attendancePolicyId', p_attendance_policy_id
+  );
+
+  v_digest := private.staff_digest_json(v_payload);
+
+  select * into v_row
+  from private.staff_invite_saga_requests
+  where client_request_id = p_client_request_id;
+
+  if found then
+    if v_row.request_digest <> v_digest then
+      raise exception 'STAFF_IDEMPOTENCY_CONFLICT' using errcode = 'P0001';
+    end if;
+
+    if v_row.saga_state = 'completed' then
+      return coalesce(v_row.result, '{}'::jsonb)
+        || jsonb_build_object('idempotentReplay', true, 'needsAuth', false, 'sagaState', 'completed');
+    end if;
+
+    return jsonb_build_object(
+      'clientRequestId', p_client_request_id,
+      'sagaState', v_row.saga_state,
+      'needsAuth', v_row.saga_state = 'db_created_auth_pending' and v_row.staff_id is null,
+      'staffId', v_row.staff_id,
+      'reconciliationState', case
+        when v_row.saga_state = 'auth_created_db_pending' then 'auth_created_db_pending'
+        when v_row.saga_state = 'db_created_auth_pending' then 'db_created_auth_pending'
+        else 'none'
+      end,
+      'invitationState', case
+        when v_row.saga_state = 'auth_created_db_pending' then 'reconciliation_required'
+        when v_row.saga_state = 'db_created_auth_pending' then 'invited'
+        else 'completed'
+      end,
+      'idempotentReplay', true
+    );
+  end if;
+
+  if coalesce(p_attendance_eligible, false) and p_attendance_policy_id is null then
+    raise exception 'ATTENDANCE_POLICY_MISSING' using errcode = 'P0001';
+  end if;
+
+  if p_role_code = 'sales_executive' and p_reporting_manager_id is null then
+    raise exception 'sales_executive requires reporting manager' using errcode = 'P0001';
+  end if;
+
+  if exists (
+    select 1 from public.staff_employment_profiles sep
+    where sep.employee_code = v_normalized_code
+  ) then
+    raise exception 'employee_code already exists' using errcode = 'P0001';
+  end if;
+
+  insert into private.staff_invite_saga_requests (
+    client_request_id, request_digest, saga_state, intended_email, employee_code,
+    created_by, request_payload
+  )
+  values (
+    p_client_request_id, v_digest, 'db_created_auth_pending', v_email, v_normalized_code,
+    v_actor, v_payload
+  );
+
+  return jsonb_build_object(
+    'clientRequestId', p_client_request_id,
+    'sagaState', 'db_created_auth_pending',
+    'needsAuth', true,
+    'staffId', null,
+    'reconciliationState', 'db_created_auth_pending',
+    'invitationState', 'invited',
+    'idempotentReplay', false
+  );
+end;
+$$;
+
+create or replace function public.record_staff_invite_auth_success(
+  p_client_request_id uuid,
+  p_staff_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid;
+  v_row private.staff_invite_saga_requests%rowtype;
 begin
   v_actor := private.staff_require_active_actor();
 
@@ -899,102 +1220,62 @@ begin
     raise exception 'validation: client_request_id and staff_id required' using errcode = '22023';
   end if;
 
-  select result into v_existing
-  from public.staff_admin_idempotency
+  select * into v_row
+  from private.staff_invite_saga_requests
+  where client_request_id = p_client_request_id
+  for update;
+
+  if not found then
+    raise exception 'reconciliation request not found' using errcode = 'P0002';
+  end if;
+
+  if v_row.saga_state = 'completed' then
+    return coalesce(v_row.result, '{}'::jsonb)
+      || jsonb_build_object('idempotentReplay', true, 'reconciliationState', 'none');
+  end if;
+
+  if v_row.staff_id is not null and v_row.staff_id <> p_staff_id then
+    raise exception 'STAFF_IDEMPOTENCY_CONFLICT' using errcode = 'P0001';
+  end if;
+
+  update private.staff_invite_saga_requests
+  set
+    staff_id = p_staff_id,
+    saga_state = 'auth_created_db_pending',
+    auth_recorded_at = coalesce(auth_recorded_at, now())
   where client_request_id = p_client_request_id;
 
-  if found then
-  return v_existing || jsonb_build_object('idempotentReplay', true);
-  end if;
-
-  v_normalized_code := upper(trim(p_employee_code));
-
-  if p_attendance_eligible and p_attendance_policy_id is null then
-    raise exception 'ATTENDANCE_POLICY_MISSING' using errcode = 'P0001';
-  end if;
-
-  if p_role_code = 'sales_executive' and p_reporting_manager_id is null then
-    raise exception 'sales_executive requires reporting manager' using errcode = 'P0001';
-  end if;
-
-  perform private.assert_no_reporting_cycle(p_staff_id, p_reporting_manager_id);
-
-  if p_reporting_manager_id is not null and not exists (
-    select 1 from public.profiles mp
-    where mp.id = p_reporting_manager_id and mp.status = 'active'
-  ) then
-    raise exception 'reporting manager must be active' using errcode = 'P0001';
-  end if;
-
-  select r.id into v_role_id
-  from public.roles r
-  where r.code = p_role_code
-    and r.is_active = true
-    and r.code in ('sales_manager', 'sales_executive', 'project_manager', 'designer');
-
-  if v_role_id is null then
-    raise exception 'invalid role for staff assignment' using errcode = 'P0001';
-  end if;
-
-  insert into public.profiles (id, display_name, phone_e164, status)
-  values (p_staff_id, trim(p_display_name), p_phone_e164, 'pending')
-  on conflict (id) do update set
-    display_name = excluded.display_name,
-    phone_e164 = coalesce(excluded.phone_e164, public.profiles.phone_e164);
-
-  insert into public.staff_employment_profiles (
-    staff_id, employee_code, designation, joining_date,
-    reporting_manager_id, attendance_eligible, attendance_policy_id,
-    invite_reconciliation_state
-  )
-  values (
-    p_staff_id, v_normalized_code, trim(p_designation), p_joining_date,
-    p_reporting_manager_id, coalesce(p_attendance_eligible, false), p_attendance_policy_id,
-    'none'
-  )
-  on conflict (staff_id) do update set
-    employee_code = excluded.employee_code,
-    designation = excluded.designation,
-    joining_date = excluded.joining_date,
-    reporting_manager_id = excluded.reporting_manager_id,
-    attendance_eligible = excluded.attendance_eligible,
-    attendance_policy_id = excluded.attendance_policy_id,
-    invite_reconciliation_state = 'none';
-
-  delete from public.user_roles ur
-  using public.roles r
-  where ur.user_id = p_staff_id
-    and ur.role_id = r.id
-    and r.code in ('sales_manager', 'sales_executive', 'project_manager', 'designer');
-
-  insert into public.user_roles (user_id, role_id, assigned_by)
-  values (p_staff_id, v_role_id, v_actor);
-
-  perform private.staff_append_admin_event(
-    p_staff_id, v_actor, 'staff.created',
-    jsonb_build_object(
-      'employeeCode', v_normalized_code,
-      'roleCode', p_role_code,
-      'attendanceEligible', coalesce(p_attendance_eligible, false)
-    )
-  );
-
-  v_result := jsonb_build_object(
+  return jsonb_build_object(
+    'clientRequestId', p_client_request_id,
     'staffId', p_staff_id,
-    'employeeCode', v_normalized_code,
-    'profileStatus', 'pending',
-    'invitationState', 'completed',
-    'reconciliationState', 'none',
-    'idempotentReplay', false
+    'sagaState', 'auth_created_db_pending',
+    'reconciliationState', 'auth_created_db_pending',
+    'invitationState', 'reconciliation_required',
+    'idempotentReplay', v_row.auth_recorded_at is not null
   );
+end;
+$$;
 
-  insert into public.staff_admin_idempotency (client_request_id, staff_id, result)
-  values (p_client_request_id, p_staff_id, v_result);
+create or replace function public.create_staff_member(p_client_request_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid;
+begin
+  v_actor := private.staff_require_active_actor();
 
-  return v_result;
-exception
-  when unique_violation then
-    raise exception 'employee_code already exists' using errcode = 'P0001';
+  if not (select public.authorize('staff.manage')) then
+    raise exception 'ATTENDANCE_UNAUTHORIZED' using errcode = '42501';
+  end if;
+
+  if p_client_request_id is null then
+    raise exception 'validation: client_request_id required' using errcode = '22023';
+  end if;
+
+  return private.staff_finalize_invite_from_saga(p_client_request_id, v_actor);
 end;
 $$;
 
@@ -1006,7 +1287,7 @@ set search_path = ''
 as $$
 declare
   v_actor uuid;
-  v_row public.staff_admin_idempotency%rowtype;
+  v_row private.staff_invite_saga_requests%rowtype;
 begin
   v_actor := private.staff_require_active_actor();
 
@@ -1015,30 +1296,101 @@ begin
   end if;
 
   select * into v_row
-  from public.staff_admin_idempotency
+  from private.staff_invite_saga_requests
   where client_request_id = p_client_request_id;
 
   if not found then
     raise exception 'reconciliation request not found' using errcode = 'P0002';
   end if;
 
-  update public.staff_employment_profiles
-  set invite_reconciliation_state = 'none'
-  where staff_id = v_row.staff_id
-    and invite_reconciliation_state = 'auth_created_db_pending';
-
-  if v_row.staff_id is not null then
-    perform private.staff_append_admin_event(
-      v_row.staff_id, v_actor, 'staff.reconciliation_updated',
-      jsonb_build_object('clientRequestId', p_client_request_id)
-    );
+  if v_row.saga_state = 'completed' then
+    return coalesce(v_row.result, '{}'::jsonb)
+      || jsonb_build_object('idempotentReplay', true, 'reconciliationState', 'none');
   end if;
 
-  return coalesce(v_row.result, '{}'::jsonb)
-    || jsonb_build_object('reconciliationState', 'none', 'idempotentReplay', true);
+  if v_row.saga_state = 'db_created_auth_pending' then
+    raise exception 'staff invite auth pending' using errcode = 'P0001';
+  end if;
+
+  return private.staff_finalize_invite_from_saga(p_client_request_id, v_actor);
 end;
 $$;
 
+create or replace function public.resend_staff_invite(
+  p_staff_id uuid,
+  p_reason text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid;
+  v_row private.staff_invite_saga_requests%rowtype;
+  v_profile_status text;
+begin
+  v_actor := private.staff_require_active_actor();
+
+  if not (select public.authorize('staff.manage')) then
+    raise exception 'ATTENDANCE_UNAUTHORIZED' using errcode = '42501';
+  end if;
+
+  if p_staff_id is null or p_reason is null or length(trim(p_reason)) < 1 then
+    raise exception 'validation: staff_id and reason required' using errcode = '22023';
+  end if;
+
+  select status into v_profile_status
+  from public.profiles
+  where id = p_staff_id;
+
+  if v_profile_status is distinct from 'pending' then
+    raise exception 'staff invite resend not permitted for profile status' using errcode = 'P0001';
+  end if;
+
+  select * into v_row
+  from private.staff_invite_saga_requests
+  where staff_id = p_staff_id
+  order by created_at desc
+  limit 1;
+
+  if not found then
+    raise exception 'staff invite saga not found' using errcode = 'P0002';
+  end if;
+
+  if v_row.saga_state = 'completed' then
+    raise exception 'staff invite already completed' using errcode = 'P0001';
+  end if;
+
+  if v_row.resend_count >= 5 then
+    raise exception 'staff invite resend limit reached' using errcode = 'P0001';
+  end if;
+
+  update private.staff_invite_saga_requests
+  set
+    resend_count = resend_count + 1,
+    last_resend_at = now()
+  where client_request_id = v_row.client_request_id;
+
+  perform private.staff_append_admin_event(
+    p_staff_id, v_actor, 'staff.invite_resent',
+    jsonb_build_object(
+      'clientRequestId', v_row.client_request_id,
+      'reason', left(trim(p_reason), 500),
+      'resendCount', v_row.resend_count + 1
+    )
+  );
+
+  return jsonb_build_object(
+    'staffId', p_staff_id,
+    'clientRequestId', v_row.client_request_id,
+    'email', v_row.intended_email,
+    'displayName', v_row.request_payload ->> 'displayName',
+    'sagaState', v_row.saga_state,
+    'resendCount', v_row.resend_count + 1
+  );
+end;
+$$;
 create or replace function public.set_staff_profile_status(
   p_staff_id uuid,
   p_status text,
@@ -2011,7 +2363,6 @@ $$;
 alter table public.attendance_policies enable row level security;
 alter table public.staff_employment_profiles enable row level security;
 alter table public.staff_admin_events enable row level security;
-alter table public.staff_admin_idempotency enable row level security;
 alter table public.attendance_events enable row level security;
 alter table public.attendance_days enable row level security;
 alter table public.attendance_corrections enable row level security;
@@ -2023,7 +2374,6 @@ revoke all on table
   public.attendance_policies,
   public.staff_employment_profiles,
   public.staff_admin_events,
-  public.staff_admin_idempotency,
   public.attendance_events,
   public.attendance_days,
   public.attendance_corrections,
@@ -2147,8 +2497,13 @@ revoke all on function private.derive_attendance_day(uuid, date) from public, an
 revoke all on function private.staff_assert_attendance_eligible(uuid) from public, anon, authenticated;
 revoke all on function private.staff_validate_attendance_location(public.attendance_policies, text, numeric, numeric, numeric) from public, anon, authenticated;
 
-revoke all on function public.finalize_staff_member(uuid, uuid, text, text, text, text, date, text, uuid, boolean, uuid) from public, anon;
+revoke all on function private.staff_finalize_invite_from_saga(uuid, uuid) from public, anon, authenticated;
+
+revoke all on function public.prepare_staff_invite_saga(uuid, text, text, text, text, text, date, text, uuid, boolean, uuid) from public, anon;
+revoke all on function public.record_staff_invite_auth_success(uuid, uuid) from public, anon;
+revoke all on function public.create_staff_member(uuid) from public, anon;
 revoke all on function public.reconcile_staff_invite(uuid) from public, anon;
+revoke all on function public.resend_staff_invite(uuid, text) from public, anon;
 revoke all on function public.set_staff_profile_status(uuid, text, text) from public, anon;
 revoke all on function public.set_staff_reporting_manager(uuid, uuid, text) from public, anon;
 revoke all on function public.update_staff_employment(uuid, text, text, date, text, text, boolean, uuid, text) from public, anon;
@@ -2164,8 +2519,14 @@ revoke all on function public.reject_leave_request(uuid, text) from public, anon
 revoke all on function public.create_holiday(date, text) from public, anon;
 revoke all on function public.archive_holiday(uuid) from public, anon;
 
-grant execute on function public.finalize_staff_member(uuid, uuid, text, text, text, text, date, text, uuid, boolean, uuid) to authenticated;
+grant execute on function private.staff_can_view_employment(uuid, uuid) to authenticated;
+grant execute on function private.staff_can_view_attendance(uuid, uuid) to authenticated;
+
+grant execute on function public.prepare_staff_invite_saga(uuid, text, text, text, text, text, date, text, uuid, boolean, uuid) to authenticated;
+grant execute on function public.record_staff_invite_auth_success(uuid, uuid) to authenticated;
+grant execute on function public.create_staff_member(uuid) to authenticated;
 grant execute on function public.reconcile_staff_invite(uuid) to authenticated;
+grant execute on function public.resend_staff_invite(uuid, text) to authenticated;
 grant execute on function public.set_staff_profile_status(uuid, text, text) to authenticated;
 grant execute on function public.set_staff_reporting_manager(uuid, uuid, text) to authenticated;
 grant execute on function public.update_staff_employment(uuid, text, text, date, text, text, boolean, uuid, text) to authenticated;
@@ -2183,8 +2544,12 @@ grant execute on function public.archive_holiday(uuid) to authenticated;
 
 alter function private.staff_require_active_actor() owner to postgres;
 alter function private.derive_attendance_day(uuid, date) owner to postgres;
-alter function public.finalize_staff_member(uuid, uuid, text, text, text, text, date, text, uuid, boolean, uuid) owner to postgres;
+alter function private.staff_finalize_invite_from_saga(uuid, uuid) owner to postgres;
+alter function public.prepare_staff_invite_saga(uuid, text, text, text, text, text, date, text, uuid, boolean, uuid) owner to postgres;
+alter function public.record_staff_invite_auth_success(uuid, uuid) owner to postgres;
+alter function public.create_staff_member(uuid) owner to postgres;
 alter function public.reconcile_staff_invite(uuid) owner to postgres;
+alter function public.resend_staff_invite(uuid, text) owner to postgres;
 alter function public.set_staff_profile_status(uuid, text, text) owner to postgres;
 alter function public.set_staff_reporting_manager(uuid, uuid, text) owner to postgres;
 alter function public.update_staff_employment(uuid, text, text, date, text, text, boolean, uuid, text) owner to postgres;

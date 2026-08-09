@@ -53,7 +53,7 @@ describe("Phase 6D security — actor spoof resistance", () => {
     assert.match(sql, /private\.staff_require_active_actor\(\)/);
     assert.match(sql, /v_actor uuid := auth\.uid\(\)/);
     for (const rpc of [
-      "finalize_staff_member",
+      "create_staff_member",
       "check_in_attendance",
       "check_out_attendance",
       "correct_attendance_day",
@@ -234,15 +234,21 @@ describe("Phase 6D security — idempotency conflict and replay", () => {
     assert.equal(error.httpStatus, 409);
   });
 
-  test("staff finalize uses client_request_id idempotency store", () => {
+  test("staff invite saga uses private durable ledger keyed by client_request_id", () => {
     const sql = readFileSync(M23_MIGRATION, "utf8");
-    assert.match(sql, /staff_admin_idempotency/);
+    assert.match(sql, /private\.staff_invite_saga_requests/);
+    assert.match(sql, /revoke all on table private\.staff_invite_saga_requests/);
     assert.match(sql, /idempotentReplay/);
-    const finalizeBlock = sql.slice(
-      sql.indexOf("function public.finalize_staff_member"),
-      sql.indexOf("function public.reconcile_staff_invite")
+    const prepareBlock = sql.slice(
+      sql.indexOf("function public.prepare_staff_invite_saga"),
+      sql.indexOf("function public.record_staff_invite_auth_success")
     );
-    assert.match(finalizeBlock, /client_request_id = p_client_request_id/);
+    assert.match(prepareBlock, /client_request_id = p_client_request_id/);
+    assert.match(prepareBlock, /STAFF_IDEMPOTENCY_CONFLICT/);
+    const finalizeBlock = sql.slice(
+      sql.indexOf("function private.staff_finalize_invite_from_saga"),
+      sql.indexOf("function public.prepare_staff_invite_saga")
+    );
     assert.match(finalizeBlock, /jsonb_build_object\('idempotentReplay', true\)/);
   });
 
@@ -267,7 +273,7 @@ describe("Phase 6D security — idempotency conflict and replay", () => {
     );
     assert.match(staffFormSrc, /clientRequestId/);
     assert.match(attendancePanelSrc, /idempotencyKey/);
-    assert.doesNotMatch(staffFormSrc, /finalize_staff_member/);
+    assert.doesNotMatch(staffFormSrc, /create_staff_member/);
     assert.doesNotMatch(attendancePanelSrc, /check_in_attendance/);
   });
 

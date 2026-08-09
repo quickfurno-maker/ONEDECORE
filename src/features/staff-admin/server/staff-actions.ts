@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.generated";
 import {
-  mapFinalizeStaffMemberRpcResult,
+  mapCreateStaffMemberRpcResult,
   normalizeEmployeeCode,
   type CreateStaffMemberInput,
   type CreateStaffMemberResult,
@@ -20,11 +20,11 @@ import { inviteStaffMemberByEmail } from "./staff-invite-adapter.ts";
 
 type StaffServerClient = SupabaseClient<Database>;
 
-interface FinalizeStaffMemberRpcArgs {
+interface PrepareStaffInviteSagaRpcArgs {
   readonly p_client_request_id: string;
-  readonly p_staff_id: string;
   readonly p_employee_code: string;
   readonly p_display_name: string;
+  readonly p_email: string;
   readonly p_phone_e164: string | null;
   readonly p_designation: string;
   readonly p_joining_date: string;
@@ -34,8 +34,18 @@ interface FinalizeStaffMemberRpcArgs {
   readonly p_attendance_policy_id: string | null;
 }
 
-interface ReconcileStaffInviteRpcArgs {
+interface RecordStaffInviteAuthSuccessRpcArgs {
   readonly p_client_request_id: string;
+  readonly p_staff_id: string;
+}
+
+interface ClientRequestIdRpcArgs {
+  readonly p_client_request_id: string;
+}
+
+interface ResendStaffInviteRpcArgs {
+  readonly p_staff_id: string;
+  readonly p_reason: string;
 }
 
 interface SetStaffProfileStatusRpcArgs {
@@ -64,12 +74,24 @@ interface UpdateStaffEmploymentRpcArgs {
 
 type StaffRpcClient = StaffServerClient & {
   rpc(
-    fn: "finalize_staff_member",
-    args: FinalizeStaffMemberRpcArgs
+    fn: "prepare_staff_invite_saga",
+    args: PrepareStaffInviteSagaRpcArgs
+  ): ReturnType<StaffServerClient["rpc"]>;
+  rpc(
+    fn: "record_staff_invite_auth_success",
+    args: RecordStaffInviteAuthSuccessRpcArgs
+  ): ReturnType<StaffServerClient["rpc"]>;
+  rpc(
+    fn: "create_staff_member",
+    args: ClientRequestIdRpcArgs
   ): ReturnType<StaffServerClient["rpc"]>;
   rpc(
     fn: "reconcile_staff_invite",
-    args: ReconcileStaffInviteRpcArgs
+    args: ClientRequestIdRpcArgs
+  ): ReturnType<StaffServerClient["rpc"]>;
+  rpc(
+    fn: "resend_staff_invite",
+    args: ResendStaffInviteRpcArgs
   ): ReturnType<StaffServerClient["rpc"]>;
   rpc(
     fn: "set_staff_profile_status",
@@ -114,6 +136,32 @@ function assertRpcJson(data: unknown, label: string): Record<string, unknown> {
   return data as Record<string, unknown>;
 }
 
+function mapPrepareResult(payload: Record<string, unknown>): {
+  readonly needsAuth: boolean;
+  readonly staffId: string | null;
+  readonly sagaState: string | null;
+  readonly completed: boolean;
+  readonly result: CreateStaffMemberResult | null;
+} {
+  if (payload.sagaState === "completed" || payload.invitationState === "completed") {
+    return {
+      needsAuth: false,
+      staffId: payload.staffId ? String(payload.staffId) : null,
+      sagaState: "completed",
+      completed: true,
+      result: mapCreateStaffMemberRpcResult(payload),
+    };
+  }
+
+  return {
+    needsAuth: payload.needsAuth === true,
+    staffId: payload.staffId ? String(payload.staffId) : null,
+    sagaState: payload.sagaState ? String(payload.sagaState) : null,
+    completed: false,
+    result: null,
+  };
+}
+
 export async function createStaffMember(
   input: CreateStaffMemberInput
 ): Promise<CreateStaffMemberResult> {
@@ -136,38 +184,78 @@ export async function createStaffMember(
   const designation = input.designation.trim();
   const reportingManagerId = input.reportingManagerId?.trim() || null;
 
-  let invitedUserId: string;
-  try {
-    const invite = await inviteStaffMemberByEmail({ email, displayName });
-    invitedUserId = invite.userId;
-  } catch (error) {
+  const supabase = await createClient();
+  const rpcClient = supabase as StaffRpcClient;
+
+  const { data: prepareData, error: prepareError } = await rpcClient.rpc(
+    "prepare_staff_invite_saga",
+    {
+      p_client_request_id: input.clientRequestId,
+      p_employee_code: employeeCode,
+      p_display_name: displayName,
+      p_email: email,
+      p_phone_e164: phoneE164,
+      p_designation: designation,
+      p_joining_date: input.joiningDate,
+      p_role_code: input.roleCode,
+      p_reporting_manager_id: reportingManagerId,
+      p_attendance_eligible: input.attendanceEligible,
+      p_attendance_policy_id: input.attendancePolicyId ?? null,
+    }
+  );
+
+  if (prepareError) {
+    throw staffErrorFromPostgresMessage(prepareError.message);
+  }
+
+  const preparePayload = assertRpcJson(prepareData, "prepare_staff_invite_saga");
+  const prepared = mapPrepareResult(preparePayload);
+
+  if (prepared.completed && prepared.result) {
+    return prepared.result;
+  }
+
+  let staffId = prepared.staffId;
+
+  if (prepared.needsAuth && !staffId) {
+    try {
+      const invite = await inviteStaffMemberByEmail({ email, displayName });
+      staffId = invite.userId;
+    } catch (error) {
+      throw new StaffError({
+        code: "STAFF_INVITE_FAILED",
+        message: "Staff invitation could not be sent.",
+        httpStatus: 502,
+        details: error instanceof Error ? error.message : undefined,
+      });
+    }
+
+    const { error: recordError } = await rpcClient.rpc(
+      "record_staff_invite_auth_success",
+      {
+        p_client_request_id: input.clientRequestId,
+        p_staff_id: staffId,
+      }
+    );
+
+    if (recordError) {
+      throw staffErrorFromPostgresMessage(recordError.message);
+    }
+  } else if (!staffId) {
     throw new StaffError({
-      code: "STAFF_INVITE_FAILED",
-      message: "Staff invitation could not be sent.",
-      httpStatus: 502,
-      details: error instanceof Error ? error.message : undefined,
+      code: "STAFF_RECONCILIATION_REQUIRED",
+      message: "Staff invite requires reconciliation before finalization.",
+      httpStatus: 409,
     });
   }
 
-  const supabase = await createClient();
-  const rpcClient = supabase as StaffRpcClient;
-  const { data, error } = await rpcClient.rpc("finalize_staff_member", {
+  const { data, error } = await rpcClient.rpc("create_staff_member", {
     p_client_request_id: input.clientRequestId,
-    p_staff_id: invitedUserId,
-    p_employee_code: employeeCode,
-    p_display_name: displayName,
-    p_phone_e164: phoneE164,
-    p_designation: designation,
-    p_joining_date: input.joiningDate,
-    p_role_code: input.roleCode,
-    p_reporting_manager_id: reportingManagerId,
-    p_attendance_eligible: input.attendanceEligible,
-    p_attendance_policy_id: input.attendancePolicyId ?? null,
   });
 
   if (error) {
     return {
-      staffId: invitedUserId,
+      staffId: staffId ?? "",
       employeeCode,
       profileStatus: "pending",
       invitationState: "reconciliation_required",
@@ -176,7 +264,7 @@ export async function createStaffMember(
     };
   }
 
-  return mapFinalizeStaffMemberRpcResult(data);
+  return mapCreateStaffMemberRpcResult(data);
 }
 
 export async function reconcileStaffInvite(
@@ -202,7 +290,56 @@ export async function reconcileStaffInvite(
     throw staffErrorFromPostgresMessage(error.message);
   }
 
-  return mapFinalizeStaffMemberRpcResult(data);
+  return mapCreateStaffMemberRpcResult(data);
+}
+
+export async function resendStaffInvite(input: {
+  readonly staffId: string;
+  readonly reason: string;
+}): Promise<{ readonly staffId: string; readonly email: string }> {
+  await requireManageStaffContext();
+
+  const reason = input.reason.trim();
+  if (reason.length < 1) {
+    throw new StaffError({
+      code: "STAFF_VALIDATION_FAILED",
+      message: "Reason is required.",
+      httpStatus: 422,
+    });
+  }
+
+  const supabase = await createClient();
+  const rpcClient = supabase as StaffRpcClient;
+  const { data, error } = await rpcClient.rpc("resend_staff_invite", {
+    p_staff_id: input.staffId,
+    p_reason: reason,
+  });
+
+  if (error) {
+    throw staffErrorFromPostgresMessage(error.message);
+  }
+
+  const payload = assertRpcJson(data, "resend_staff_invite");
+  const email = String(payload.email ?? "");
+
+  try {
+    await inviteStaffMemberByEmail({
+      email,
+      displayName: String(payload.displayName ?? email),
+    });
+  } catch (inviteError) {
+    throw new StaffError({
+      code: "STAFF_INVITE_FAILED",
+      message: "Staff invitation could not be resent.",
+      httpStatus: 502,
+      details: inviteError instanceof Error ? inviteError.message : undefined,
+    });
+  }
+
+  return {
+    staffId: String(payload.staffId ?? input.staffId),
+    email,
+  };
 }
 
 export async function setStaffStatus(
