@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 6C closeout, August 9, 2026)
-**Current Phase:** Phase 6D — Staff Administration, Attendance & Leave (**READY TO START formal implementation**)
-**Previous Phase:** Phase 6C — Groq Human-Controlled Copilot (**COMPLETE**)
+**Document Status:** Locked Roadmap (truth-synced post Phase 6D closeout, August 10, 2026)
+**Current Phase:** Phase 7A — Commercial Quotation Data & Draft Foundation (**NOT STARTED**)
+**Previous Phase:** Phase 6D — Staff Administration, Attendance & Leave (**COMPLETE**)
 
 ---
 
@@ -121,10 +121,11 @@ Phase 6C ──► Groq Human-Controlled Copilot [COMPLETED]
     │         • M22 managed; Kriti audit persistence + staff runtime
     │         • Provider default disabled; human-controlled only
     ▼
-Phase 6D ──► Staff Administration, Attendance & Leave [NEXT — READY TO START]
-    │         • Architecture + contract freeze complete; runtime NOT STARTED
+Phase 6D ──► Staff Administration, Attendance & Leave [COMPLETED]
+    │         • M23 managed; staff admin, attendance, leave, holidays foundation
+    │         • Durable invite saga; OD-1–OD-10 unresolved (no policy seeds)
     ▼
-Phase 7A ──► Commercial Quotation Data & Draft Foundation
+Phase 7A ──► Commercial Quotation Data & Draft Foundation [NEXT — NOT STARTED]
     ▼
 Phase 7B ──► Quotation Finalization, Premium PDF, Secure Delivery & Client Acceptance
     │         • No internal quotation approval (ADR-0022)
@@ -206,10 +207,12 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Status:** **COMPLETE** — repository + managed aligned through M22. No production Groq activation.
 - **Closeout:** `docs/audits/phase-6c-managed-alignment-closeout.md`
 
-### Phase 6D (Next — ready to start formal implementation)
+### Phase 6D (Completed)
 - **Objective:** Staff administration, attendance, leave, and holiday calendar (see `docs/audits/phase-6d-roadmap-lock.md`).
 - **Architecture freeze:** [Phase 6D preflight audit](audits/phase-6d-staff-attendance-leave-architecture-freeze.md), [ADR-0023](ADR/ADR-0023-staff-attendance-leave-architecture.md), [implementation contract freeze](audits/phase-6d-implementation-contract-freeze.md).
-- **Status:** **NOT STARTED** — architecture + contract freeze complete; formal runtime pending.
+- **Exit gate:** M23 applied managed; 9 public domain tables + private invite saga ledger verified; staff admin/attendance/leave routes + tests PASS; OD-1–OD-10 unresolved (no policy catalogue seeds).
+- **Status:** **COMPLETE** — repository + managed aligned through M23. No production deployment; attendance production activation blocked until owner OD values.
+- **Closeout:** `docs/audits/phase-6d-managed-alignment-closeout.md`
 
 ### Phases 7–8
 See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020–0021.
