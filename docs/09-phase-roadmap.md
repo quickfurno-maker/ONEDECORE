@@ -74,6 +74,11 @@ Phase 6C: Groq Human-Controlled Copilot ─────────────�
   • M22 applied managed (August 9, 2026); recovery 1322197903
   • Kriti audit persistence; provider default disabled; no auto-send
   • Closeout truth-sync: current PR
+Phase 6D: Staff Administration, Attendance & Leave ─────────────────── COMPLETED
+  • Repository merged (PR #49); H1 durable invite saga repair (DEC-0061)
+  • M23 applied managed (August 10, 2026); recovery 1330573859
+  • Staff/attendance/leave/holiday foundations; OD-1–OD-10 unresolved
+  • Closeout truth-sync: current PR
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
