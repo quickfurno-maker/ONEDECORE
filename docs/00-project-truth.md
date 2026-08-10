@@ -6,7 +6,8 @@
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 6D — Staff Administration, Attendance & Leave (**COMPLETE** — repository + managed M23 aligned)
+**Current Phase:** Phase 6D — Staff Administration, Attendance & Leave (**REPOSITORY M1–M24 COMPLETE; MANAGED M1–M23 APPLIED; M24 FORWARD REPAIR PENDING MANAGED APPLY**)
+**Next Phase:** Phase 7A — Commercial Quotation Data & Draft Foundation (**NOT STARTED / BLOCKED** until Phase 6D M24 repair closeout)
 **Previous Phase:** Phase 6C — Groq Human-Controlled Copilot (**COMPLETE**)
 
 ---
@@ -95,10 +96,11 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Shared inbox read model foundation (migration 20) | Applied managed August 8, 2026 (Phase DB-8B-M20) |
 | WhatsApp provider dispatch foundation (migration 21) | Applied managed August 8, 2026 (Phase DB-8B-M21) |
 | Kriti audit persistence foundation (migration 22) | Applied managed August 9, 2026 (Phase 6C M22) |
-| Staff attendance, leave & holidays foundation (migration 23) | Applied managed August 10, 2026 (Phase 6D M23) |
-| Managed migration alignment | **1–23** on OneDecore (`lpurlfmpvriyvpkujvyl`); **no M24+** |
+| Staff attendance, leave & holidays foundation (migration 23) | Applied managed August 10, 2026 (Phase 6D M23 baseline; immutable historical migration) |
+| Staff attendance idempotency order repair (migration 24) | Repository forward-only repair migration; **NOT managed applied yet** (pending owner authorization) |
+| Migration alignment | Repository: **M1–M24** (24 files); Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M23** (M24 pending apply) |
 
-CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, Phase 5F identity hardening, Phase 6A WhatsApp foundation, and Phase 6B shared inbox/send-intent/dispatch foundations are **merged on protected main** with managed database foundation through M21; **production deployment pending** (Phase 10); **public intake remains inactive**; **WhatsApp not production-activated** (no Meta callback/token; no real outbound).
+CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, Phase 5F identity hardening, Phase 6A WhatsApp foundation, Phase 6B shared inbox/send-intent/dispatch foundations, Phase 6C Kriti audit persistence, and Phase 6D staff admin/attendance/leave foundation (M23) are applied on managed database (`lpurlfmpvriyvpkujvyl`). **M24 forward-only repair is committed in repository but NOT managed applied yet; managed check-in/check-out RPCs retain pre-repair function order until managed apply.** Phase 6D managed repair closeout is **PENDING M24 managed apply/verification**. Phase 7A is **NOT STARTED** and blocked until Phase 6D repair closeout is complete. **Production deployment pending** (Phase 10); **public intake remains inactive**.
 
 ### Phase 5F truth
 

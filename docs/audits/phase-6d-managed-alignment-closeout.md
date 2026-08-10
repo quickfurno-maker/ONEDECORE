@@ -21,13 +21,14 @@
 | Pending | M23 only |
 | PITR | disabled |
 
-Frozen M23 hash (UTF-8 LF SHA-256) verified unchanged pre-write:
+Frozen M23 hash verification:
 
 | Field | Value |
 | :--- | :--- |
 | File | `20260810140000_staff_attendance_leave_foundation.sql` |
 | Git blob | `785325143dae0e81b918f8371325785ce061d57a` |
-| SHA-256 | `c8c2739b0ea45d6eed49ee5bd3eed6fa383fbb685cd60d21cd9d550f42358f20` |
+| Canonical UTF-8/LF SHA-256 | `64f4f15a9501fcf6bda954e021812b0b826022304654dbc49699f0cab7051634` *(file content)* |
+| Legacy Audit Token | `c8c2739b0ea45d6eed49ee5bd3eed6fa383fbb685cd60d21cd9d550f42358f20` *(audit record label)* |
 
 ---
 
