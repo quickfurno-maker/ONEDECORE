@@ -73,6 +73,22 @@ No frozen-file edits. No ad-hoc SQL. No migration-history repair.
 
 ---
 
+## F. Post-closeout repository repair (PR #50 CI — idempotency order)
+
+| Item | Value |
+| :--- | :--- |
+| Defect | `check_in_attendance` / `check_out_attendance` evaluated open-session guards before idempotency replay |
+| Symptom | pgTAP `17_staff_attendance_leave_foundation_test.sql` L.383: `ATTENDANCE_ALREADY_CHECKED_IN` on legitimate replay |
+| Root cause | M23 RPC validation order contradicted contract §10 idempotency rule (“duplicate key → return prior result”) |
+| Repository fix | Reorder: idempotency lookup → session guard → append event (both check-in and check-out) |
+| Managed state | M23 applied **2026-08-10** retains pre-repair function bodies until owner-authorized repair migration |
+| Applied managed hash | `c8c2739b0ea45d6eed49ee5bd3eed6fa383fbb685cd60d21cd9d550f42358f20` (unchanged on managed) |
+| Repaired repository hash | `1300ee66a3b54cb7b994538e4bd08ca3073801235a6ba158bdb2c19ece579523` |
+
+No managed write in this repair. No M24 applied.
+
+---
+
 ## D. Non-actions confirmed
 
 - No production deployment
