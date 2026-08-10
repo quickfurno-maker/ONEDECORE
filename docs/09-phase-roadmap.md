@@ -129,11 +129,12 @@ Phase 6C ──► Groq Human-Controlled Copilot [COMPLETED]
     │         • M22 managed; Kriti audit persistence + staff runtime
     │         • Provider default disabled; human-controlled only
     ▼
-Phase 6D ──► Staff Administration, Attendance & Leave [COMPLETED]
-    │         • M23 managed; staff admin, attendance, leave, holidays foundation
-    │         • Durable invite saga; OD-1–OD-10 unresolved (no policy seeds)
+Phase 6D ──► Staff Administration, Attendance & Leave [REPAIR PENDING MANAGED APPLY]
+    │         • Repository M1–M24 complete; M23 applied managed August 10, 2026
+    │         • M24 forward-only attendance idempotency repair NOT managed applied yet
+    │         • Managed check-in/check-out RPCs retain pre-repair function order until managed apply
     ▼
-Phase 7A ──► Commercial Quotation Data & Draft Foundation [NEXT — NOT STARTED]
+Phase 7A ──► Commercial Quotation Data & Draft Foundation [BLOCKED / NOT STARTED]
     ▼
 Phase 7B ──► Quotation Finalization, Premium PDF, Secure Delivery & Client Acceptance
     │         • No internal quotation approval (ADR-0022)
@@ -215,20 +216,20 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Status:** **COMPLETE** — repository + managed aligned through M22. No production Groq activation.
 - **Closeout:** `docs/audits/phase-6c-managed-alignment-closeout.md`
 
-### Phase 6D (Completed)
+### Phase 6D (Repository Complete / Repair Pending Managed Apply)
 - **Objective:** Staff administration, attendance, leave, and holiday calendar (see `docs/audits/phase-6d-roadmap-lock.md`).
 - **Architecture freeze:** [Phase 6D preflight audit](audits/phase-6d-staff-attendance-leave-architecture-freeze.md), [ADR-0023](ADR/ADR-0023-staff-attendance-leave-architecture.md), [implementation contract freeze](audits/phase-6d-implementation-contract-freeze.md).
-- **Exit gate:** M23 applied managed; 9 public domain tables + private invite saga ledger verified; staff admin/attendance/leave routes + tests PASS; OD-1–OD-10 unresolved (no policy catalogue seeds).
-- **Status:** **COMPLETE** — repository + managed aligned through M23. No production deployment; attendance production activation blocked until owner OD values.
+- **Exit gate:** M23 applied managed August 10, 2026; 9 public domain tables + private invite saga ledger verified; M24 forward-only attendance idempotency repair committed in repository (unapplied on managed project); staff admin/attendance/leave routes + tests PASS; OD-1–OD-10 unresolved (no policy catalogue seeds).
+- **Status:** Repository implementation M1–M24 complete; **managed repair closeout PENDING M24 apply/verification**. Managed check-in/check-out RPCs retain pre-repair function order until managed apply. No production deployment; attendance production activation blocked until owner OD values.
 - **Closeout:** `docs/audits/phase-6d-managed-alignment-closeout.md`
 
 ### Phases 7–8
 See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020–0021.
 
-### Phase 7A
+### Phase 7A (Blocked / Not Started)
 - **Objective:** Commercial quotation data and draft foundation (planned).
 - **Exit gate:** Draft editor, canonical money calculation, one-mutable-draft invariant, RLS foundation proven.
-- **Dependencies:** Phase 6 sequencing per owner roadmap.
+- **Dependencies:** Phase 6D managed repair closeout complete.
 
 ### Phase 7B
 - **Objective:** Quotation finalization (no internal approval), premium PDF, secure delivery via Phase 6B, client acceptance.

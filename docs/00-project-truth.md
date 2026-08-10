@@ -135,18 +135,19 @@ CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targ
 - Managed foundation: `kriti_runs`, `kriti_events` (append-only events; RLS own-run scope); `start_kriti_run`, `append_kriti_audit_event` RPCs.
 - **Human-controlled copilot only**; provider default **disabled**; no auto-send; no CRM/business mutations.
 - **No production Groq activation**; **no production deployment**; **public intake inactive**.
-- Phase 6C formally **COMPLETE** (closeout merged). **Phase 6D** formally **COMPLETE** (repository + managed M23).
+- Phase 6C formally **COMPLETE** (closeout merged). Phase 6D staff administration, attendance & leave baseline (M23) merged and applied managed; **M24 forward-only attendance idempotency repair committed in repository but pending managed apply**.
 
 ### Phase 6D truth
 
-- Repository implementation merged (PR #49); H1 durable invite saga repair (DEC-0061); 9 public domain tables + private `staff_invite_saga_requests` saga ledger.
+- Repository implementation merged M1–M24 (PR #49 merged M23 baseline; forward-only M24 attendance idempotency repair committed).
 - Managed M23 applied and verified (August 10, 2026); owner authorization `PROCEED PHASE 6D MANAGED APPLY`.
 - Recovery: backup **1330573859** (`2026-08-09T19:54:44.155Z`, physical/WALG, COMPLETED; post-M22).
-- M23 Git blob `785325143dae0e81b918f8371325785ce061d57a`; SHA-256 `c8c2739b0ea45d6eed49ee5bd3eed6fa383fbb685cd60d21cd9d550f42358f20`.
-- Managed foundation: staff employment profiles, attendance policies/events/days/corrections, leave types/requests, holidays; invite saga RPCs (`prepare_staff_invite_saga`, `record_staff_invite_auth_success`, `create_staff_member`, `reconcile_staff_invite`, `resend_staff_invite`); all zero rows at apply.
+- M23 Git blob `785325143dae0e81b918f8371325785ce061d57a`; canonical UTF-8/LF SHA-256 `64f4f15a9501fcf6bda954e021812b0b826022304654dbc49699f0cab7051634`; legacy audit token `c8c2739b0ea45d6eed49ee5bd3eed6fa383fbb685cd60d21cd9d550f42358f20` recorded at original apply.
+- Managed foundation (M23): staff employment profiles, attendance policies/events/days/corrections, leave types/requests, holidays; invite saga RPCs (`prepare_staff_invite_saga`, `record_staff_invite_auth_success`, `create_staff_member`, `reconcile_staff_invite`, `resend_staff_invite`); all zero rows at apply.
+- **M24 forward-only repair NOT managed applied yet**; managed check-in/check-out RPCs retain pre-repair function order until owner-authorized managed apply.
 - **OD-1–OD-10 unresolved** — no policy catalogue seeds; `attendance.correct.team` not granted; attendance production activation blocked until owner values.
-- **No production deployment**; **public intake inactive**; **no Phase 7 formal runtime**.
-- Phase 6D formally **COMPLETE** (closeout merged). **Phase 7A** is next.
+- **No production deployment**; **public intake inactive**; **Phase 7A NOT STARTED / blocked** until Phase 6D managed repair closeout complete.
+- Phase 6D repository implementation M1–M24 complete; **managed repair closeout PENDING M24 apply/verification**. **Phase 7A NOT STARTED / blocked**.
 
 ### Phase 5E truth
 

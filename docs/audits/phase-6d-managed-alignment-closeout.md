@@ -1,6 +1,6 @@
 # Phase 6D — Managed Alignment & Governance Closeout
 
-**Status:** **COMPLETE** (August 10, 2026)  
+**Status:** **M23 MANAGED APPLY HISTORICALLY COMPLETE; M24 MANAGED REPAIR CLOSEOUT PENDING** (August 10, 2026)
 **Protected main (repository):** `9ea36e5df55fb78235c1ccd21ef239ef4b224885`  
 **Managed project:** OneDecore `lpurlfmpvriyvpkujvyl` (ap-south-1)  
 **Owner authorization:** `PROCEED PHASE 6D MANAGED APPLY` (fresh, post repository merge PR #49)
@@ -60,17 +60,19 @@ No frozen-file edits. No ad-hoc SQL. No migration-history repair.
 | RPCs | `prepare_staff_invite_saga`, `record_staff_invite_auth_success`, `create_staff_member`, `reconcile_staff_invite`, `resend_staff_invite`, attendance/leave/holiday RPCs |
 | Linked `db lint` | PASS (unused-variable warnings only on frozen RPCs) |
 
-### Alignment checkpoint
+### Alignment checkpoint *(Historical snapshot immediately after M23 managed apply, before M24 repair was introduced)*
 
 | Check | Result |
 | :--- | :--- |
 | Managed migrations | M1–M23 aligned |
-| Repository migrations | M1–M23 (23 files) |
-| M24+ | Absent |
-| Frozen M23 hash | Unchanged |
+| Repository migrations | M1–M23 (23 files) at original apply; M1–M24 after forward-only repair |
+| M24+ | Absent at original M23 apply; M24 present in repository post-repair |
+| Frozen M23 Git blob | `785325143dae0e81b918f8371325785ce061d57a` (Unchanged) |
+| M23 Canonical UTF-8/LF SHA-256 | `64f4f15a9501fcf6bda954e021812b0b826022304654dbc49699f0cab7051634` (Unchanged) |
+| M23 Legacy Audit Token | `c8c2739b0ea45d6eed49ee5bd3eed6fa383fbb685cd60d21cd9d550f42358f20` |
 | Project health | ACTIVE_HEALTHY |
 
-**PHASE 6D MANAGED ALIGNMENT — PASS**
+**PHASE 6D M23 HISTORICAL MANAGED APPLY — PASS (M24 MANAGED REPAIR CLOSEOUT PENDING)**
 
 ---
 
@@ -83,8 +85,9 @@ No frozen-file edits. No ad-hoc SQL. No migration-history repair.
 | Root cause | M23 RPC validation order contradicted contract §10 idempotency rule (“duplicate key → return prior result”) |
 | Repository fix | Forward-only migration M24 reorders: idempotency lookup → session guard → append event (both check-in and check-out) |
 | Managed state | M23 applied **2026-08-10** retains pre-repair function bodies until owner-authorized repair migration |
-| Applied managed hash | `c8c2739b0ea45d6eed49ee5bd3eed6fa383fbb685cd60d21cd9d550f42358f20` (unchanged on managed) |
-| Staged M23 status | Restoration staged (`785325143dae0e81b918f8371325785ce061d57a` / `c8c2739b...`) — untouched |
+| M23 Git blob | `785325143dae0e81b918f8371325785ce061d57a` (unaltered) |
+| M23 Canonical UTF-8/LF SHA-256 | `64f4f15a9501fcf6bda954e021812b0b826022304654dbc49699f0cab7051634` |
+| M23 Legacy Audit Token | `c8c2739b0ea45d6eed49ee5bd3eed6fa383fbb685cd60d21cd9d550f42358f20` |
 
 ---
 
