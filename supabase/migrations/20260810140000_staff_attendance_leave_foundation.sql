@@ -1676,13 +1676,19 @@ begin
 
   v_attendance_date := private.staff_attendance_business_date(now());
 
+  if exists (
+    select 1 from public.attendance_days ad
+    where ad.staff_id = v_actor and ad.open_session = true
+  ) then
+    raise exception 'ATTENDANCE_ALREADY_CHECKED_IN' using errcode = 'P0001';
+  end if;
+
   select * into v_existing
   from public.attendance_events
   where staff_id = v_actor
     and idempotency_key = p_idempotency_key;
 
   if found then
-    v_attendance_date := v_existing.attendance_date;
     perform private.derive_attendance_day(v_actor, v_attendance_date);
     select * into v_day
     from public.attendance_days
@@ -1697,13 +1703,6 @@ begin
       'idempotentReplay', true,
       'occurredAt', v_existing.occurred_at
     );
-  end if;
-
-  if exists (
-    select 1 from public.attendance_days ad
-    where ad.staff_id = v_actor and ad.open_session = true
-  ) then
-    raise exception 'ATTENDANCE_ALREADY_CHECKED_IN' using errcode = 'P0001';
   end if;
 
   perform 1
@@ -1789,13 +1788,24 @@ begin
     v_policy, p_location_category, p_latitude, p_longitude, p_location_accuracy_m
   );
 
+  if not exists (
+    select 1 from public.attendance_days ad
+    where ad.staff_id = v_actor and ad.open_session = true
+  ) then
+    raise exception 'ATTENDANCE_NOT_CHECKED_IN' using errcode = 'P0001';
+  end if;
+
+  select attendance_date into v_attendance_date
+  from public.attendance_days
+  where staff_id = v_actor and open_session = true
+  limit 1;
+
   select * into v_existing
   from public.attendance_events
   where staff_id = v_actor
     and idempotency_key = p_idempotency_key;
 
   if found then
-    v_attendance_date := v_existing.attendance_date;
     perform private.derive_attendance_day(v_actor, v_attendance_date);
     select * into v_day
     from public.attendance_days
@@ -1811,18 +1821,6 @@ begin
       'occurredAt', v_existing.occurred_at
     );
   end if;
-
-  if not exists (
-    select 1 from public.attendance_days ad
-    where ad.staff_id = v_actor and ad.open_session = true
-  ) then
-    raise exception 'ATTENDANCE_NOT_CHECKED_IN' using errcode = 'P0001';
-  end if;
-
-  select attendance_date into v_attendance_date
-  from public.attendance_days
-  where staff_id = v_actor and open_session = true
-  limit 1;
 
   perform 1
   from public.attendance_days

@@ -80,12 +80,22 @@ No frozen-file edits. No ad-hoc SQL. No migration-history repair.
 | Defect | `check_in_attendance` / `check_out_attendance` evaluated open-session guards before idempotency replay |
 | Symptom | pgTAP `17_staff_attendance_leave_foundation_test.sql` L.383: `ATTENDANCE_ALREADY_CHECKED_IN` on legitimate replay |
 | Root cause | M23 RPC validation order contradicted contract §10 idempotency rule (“duplicate key → return prior result”) |
-| Repository fix | Reorder: idempotency lookup → session guard → append event (both check-in and check-out) |
+| Repository fix | Forward-only migration M24 reorders: idempotency lookup → session guard → append event (both check-in and check-out) |
 | Managed state | M23 applied **2026-08-10** retains pre-repair function bodies until owner-authorized repair migration |
 | Applied managed hash | `c8c2739b0ea45d6eed49ee5bd3eed6fa383fbb685cd60d21cd9d550f42358f20` (unchanged on managed) |
-| Repaired repository hash | `1300ee66a3b54cb7b994538e4bd08ca3073801235a6ba158bdb2c19ece579523` |
+| Staged M23 status | Restoration staged (`785325143dae0e81b918f8371325785ce061d57a` / `c8c2739b...`) — untouched |
 
-No managed write in this repair. No M24 applied.
+---
+
+## G. Takeover Audit — Untracked M24 Inspection & Forward-Only Repair
+
+| Item | Value |
+| :--- | :--- |
+| Inspection target | Untracked `supabase/migrations/20260811140000_staff_attendance_idempotency_repair.sql` (M24) |
+| Finding | File contained Cursor's failed Python `StopIteration` traceback (`python : Traceback... StopIteration`). NOT valid SQL. |
+| Restoration rule | Staged M23 restoration (`20260810140000_staff_attendance_leave_foundation.sql`) preserved without alteration. |
+| Remediation action | Replaced M24 contents with valid forward-only SQL repair (`public.check_in_attendance` & `public.check_out_attendance` reorder). |
+| Migration alignment | M24 established as repository forward-only repair migration; M23 frozen baseline untouched. |
 
 ---
 
