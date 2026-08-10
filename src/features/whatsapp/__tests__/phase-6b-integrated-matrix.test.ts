@@ -4,6 +4,7 @@
  */
 
 import assert from "node:assert/strict";
+import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -21,6 +22,10 @@ const FROZEN_HASHES = {
   M19: "77C8C994C8C391C1E5423584740FDAA1DA9D38064898FC1DEA0CDB99A41BB7F4",
   M20: "A80BAB2FE5E0C7E5E2B986839573AC8881C773EF49A81B8A15EF9EB7CF5A05EB",
   M21: "15178D62677667CD49B08DCA9D2D9907A2AF2F24C658A56CF3ACC1D73F9900DE",
+  M22: "74F79FB7985BAC4D556701371555F7717A026EC5EC5F77DA314A42F643775630",
+  M23_GIT_BLOB: "785325143dae0e81b918f8371325785ce061d57a",
+  M23_SHA256: "64F4F15A9501FCF6BDA954E021812B0B826022304654DBC49699F0CAB7051634",
+  M24_FILENAME: "20260811140000_staff_attendance_idempotency_repair.sql",
 } as const;
 
 function sha256File(relPath: string): string {
@@ -47,7 +52,7 @@ function mockAdmin(rpcImpl: (name: string, args: Record<string, unknown>) => Pro
 }
 
 describe("Phase 6B integrated — frozen migration ledger", () => {
-  test("M19/M20/M21 hashes match protected main freeze", () => {
+  test("M19/M20/M21/M22 frozen hashes match protected baseline freeze", () => {
     assert.equal(
       sha256File(
         "supabase/migrations/20260805140000_whatsapp_shared_inbox_send_intent_foundation.sql"
@@ -66,19 +71,55 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
       ),
       FROZEN_HASHES.M21
     );
+    assert.equal(
+      sha256File(
+        "supabase/migrations/20260809140000_kriti_audit_persistence_foundation.sql"
+      ),
+      FROZEN_HASHES.M22
+    );
   });
 
-  test("repository has M1–M22 frozen plus Phase 6D M23 only (no M24+)", () => {
-    const files = readdirSync(join(root, "supabase/migrations")).filter((f) =>
-      f.endsWith(".sql")
+  test("M23 remains immutable historical artifact applied managed (Git blob & SHA-256)", () => {
+    assert.equal(
+      sha256File(
+        "supabase/migrations/20260810140000_staff_attendance_leave_foundation.sql"
+      ),
+      FROZEN_HASHES.M23_SHA256
     );
-    assert.equal(files.length, 23);
+    const m23Blob = execSync(
+      "git hash-object supabase/migrations/20260810140000_staff_attendance_leave_foundation.sql",
+      { cwd: root, encoding: "utf8" }
+    ).trim();
+    assert.equal(m23Blob, FROZEN_HASHES.M23_GIT_BLOB);
+  });
+
+  test("repository has M1–M23 frozen, exactly one M24 forward repair, and fail-closed against M25+", () => {
+    const files = readdirSync(join(root, "supabase/migrations"))
+      .filter((f) => f.endsWith(".sql"))
+      .sort();
+    assert.equal(files.length, 24, "Migration count must be exactly 24");
+
     const phase6c = files.filter((f) => f.startsWith("20260809"));
     assert.equal(phase6c.length, 1);
-    assert.match(phase6c[0] ?? "", /kriti_audit_persistence_foundation/);
-    const phase6d = files.filter((f) => f.startsWith("20260810"));
-    assert.equal(phase6d.length, 1);
-    assert.match(phase6d[0] ?? "", /staff_attendance_leave_foundation/);
+    assert.equal(phase6c[0], "20260809140000_kriti_audit_persistence_foundation.sql");
+
+    const phase6d_m23 = files.filter((f) => f.startsWith("20260810"));
+    assert.equal(phase6d_m23.length, 1);
+    assert.equal(phase6d_m23[0], "20260810140000_staff_attendance_leave_foundation.sql");
+
+    const phase6d_m24 = files.filter((f) => f.startsWith("20260811"));
+    assert.equal(phase6d_m24.length, 1);
+    assert.equal(phase6d_m24[0], FROZEN_HASHES.M24_FILENAME);
+
+    const m24Content = readFileSync(
+      join(root, "supabase/migrations", phase6d_m24[0]),
+      "utf8"
+    );
+    assert.match(m24Content, /check_in_attendance/);
+    assert.match(m24Content, /check_out_attendance/);
+
+    const m25Plus = files.filter((f) => f > FROZEN_HASHES.M24_FILENAME);
+    assert.equal(m25Plus.length, 0, "No M25+ migration files allowed");
   });
 });
 

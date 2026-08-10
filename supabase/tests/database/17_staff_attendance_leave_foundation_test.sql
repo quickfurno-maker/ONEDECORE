@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 6D — Staff attendance, leave & holidays foundation pgTAP tests
 
 begin;
-select plan(47);
+select plan(50);
 
 -- A. Schema presence (9 public domain tables + private saga ledger)
 select ok(to_regclass('public.attendance_policies') is not null, 'attendance_policies exists');
@@ -380,6 +380,24 @@ select results_eq(
   $$select (public.check_in_attendance('6d-idem-checkin-001') ->> 'idempotentReplay')::boolean$$,
   array[true],
   'check_in idempotency replay returns idempotentReplay true'
+);
+
+select throws_ok(
+  $$select public.check_in_attendance('6d-idem-checkin-002')$$,
+  'P0001',
+  'ATTENDANCE_ALREADY_CHECKED_IN',
+  'distinct idempotency key denied while open session exists'
+);
+
+select lives_ok(
+  $$select public.check_out_attendance('6d-idem-checkout-001')$$,
+  'active staff can check out open session'
+);
+
+select results_eq(
+  $$select (public.check_out_attendance('6d-idem-checkout-001') ->> 'idempotentReplay')::boolean$$,
+  array[true],
+  'check_out idempotency replay returns idempotentReplay true after session closed'
 );
 
 -- M. attendance_events append-only
