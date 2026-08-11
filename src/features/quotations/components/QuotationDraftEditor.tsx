@@ -67,25 +67,9 @@ export function QuotationDraftEditor({
       return;
     }
 
-    if (!res.data) return;
-    const data = res.data;
-
-    setDraft((prev) => ({
-      ...prev,
-      version: prev.version
-        ? {
-            ...prev.version,
-            title,
-            scopeSummary,
-            lockVersion: data.lockVersion,
-            subtotalPaise: data.subtotalPaise,
-            discountTotalPaise: data.discountTotalPaise,
-            taxableBasePaise: data.taxableBasePaise,
-            taxTotalPaise: data.taxTotalPaise ?? null,
-            grandTotalPaise: data.grandTotalPaise ?? null,
-          }
-        : null,
-    }));
+    if (res.data) {
+      setDraft(res.data);
+    }
     setMessage({ type: "success", text: "Header details updated." });
   };
 
@@ -109,7 +93,10 @@ export function QuotationDraftEditor({
       return;
     }
 
-    router.refresh();
+    if (res.data) {
+      setDraft(res.data);
+    }
+    setMessage({ type: "success", text: "Tax profile updated." });
   };
 
   const handleUpdateDiscount = async (
@@ -137,7 +124,10 @@ export function QuotationDraftEditor({
       return;
     }
 
-    router.refresh();
+    if (res.data) {
+      setDraft(res.data);
+    }
+    setMessage({ type: "success", text: "Discount updated." });
   };
 
   const handleSaveSections = async (sections: readonly QuotationSectionDTO[]) => {
@@ -157,7 +147,10 @@ export function QuotationDraftEditor({
       return;
     }
 
-    router.refresh();
+    if (res.data) {
+      setDraft(res.data);
+    }
+    setMessage({ type: "success", text: "Line items saved successfully." });
   };
 
   const handleSaveSchedule = async (
@@ -185,7 +178,10 @@ export function QuotationDraftEditor({
       return;
     }
 
-    router.refresh();
+    if (res.data) {
+      setDraft(res.data);
+    }
+    setMessage({ type: "success", text: "Payment schedule saved successfully." });
   };
 
   const handleSaveTerms = async (
@@ -213,7 +209,10 @@ export function QuotationDraftEditor({
       return;
     }
 
-    router.refresh();
+    if (res.data) {
+      setDraft(res.data);
+    }
+    setMessage({ type: "success", text: "Terms and conditions updated." });
   };
 
   const handleArchive = async () => {

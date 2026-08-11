@@ -10,9 +10,9 @@ import type {
   CreateQuotationDraftResult,
   PaymentScheduleMode,
   QuotationDiscountType,
-  QuotationSectionDTO,
+  QuotationDraftDTO,
   QuotationPaymentScheduleMilestoneDTO,
-  QuotationTotalsSummaryDTO,
+  QuotationSectionDTO,
 } from "../contracts/types";
 import { quotationErrorFromPostgresMessage } from "./quotation-errors";
 
@@ -83,8 +83,9 @@ export async function updateQuotationDraftAction(
     readonly termsAndConditions?: string;
     readonly inclusions?: readonly string[];
     readonly exclusions?: readonly string[];
+    readonly idempotencyKey?: string;
   }
-): Promise<QuotationActionResult<QuotationTotalsSummaryDTO>> {
+): Promise<QuotationActionResult<QuotationDraftDTO>> {
   try {
     const supabase = await createClient();
 
@@ -101,20 +102,22 @@ export async function updateQuotationDraftAction(
       p_terms_and_conditions: params.termsAndConditions,
       p_inclusions: params.inclusions ? [...params.inclusions] : undefined,
       p_exclusions: params.exclusions ? [...params.exclusions] : undefined,
+      p_idempotency_key: params.idempotencyKey,
     });
 
     if (error) {
       throw quotationErrorFromPostgresMessage(error);
     }
 
-    const summary = data as unknown as QuotationTotalsSummaryDTO;
+    const payload = data as Record<string, unknown>;
+    const dto = (payload.dto || payload) as QuotationDraftDTO;
 
     revalidatePath(`/admin/quotations/${quotationId}/draft`);
 
     return {
       success: true,
       message: "Quotation draft updated successfully.",
-      data: summary,
+      data: dto,
     };
   } catch (error) {
     const err = quotationErrorFromPostgresMessage(error);
@@ -132,8 +135,9 @@ export async function updateQuotationDraftAction(
 export async function saveQuotationDraftItemsAction(
   quotationId: string,
   expectedLockVersion: number,
-  sections: readonly QuotationSectionDTO[]
-): Promise<QuotationActionResult<QuotationTotalsSummaryDTO>> {
+  sections: readonly QuotationSectionDTO[],
+  idempotencyKey?: string
+): Promise<QuotationActionResult<QuotationDraftDTO>> {
   try {
     const supabase = await createClient();
 
@@ -141,20 +145,22 @@ export async function saveQuotationDraftItemsAction(
       p_quotation_id: quotationId,
       p_expected_lock_version: expectedLockVersion,
       p_sections: JSON.parse(JSON.stringify(sections)),
+      p_idempotency_key: idempotencyKey,
     });
 
     if (error) {
       throw quotationErrorFromPostgresMessage(error);
     }
 
-    const summary = data as unknown as QuotationTotalsSummaryDTO;
+    const payload = data as Record<string, unknown>;
+    const dto = (payload.dto || payload) as QuotationDraftDTO;
 
     revalidatePath(`/admin/quotations/${quotationId}/draft`);
 
     return {
       success: true,
       message: "Line items saved successfully.",
-      data: summary,
+      data: dto,
     };
   } catch (error) {
     const err = quotationErrorFromPostgresMessage(error);
@@ -173,27 +179,33 @@ export async function replaceQuotationPaymentScheduleAction(
   quotationId: string,
   expectedLockVersion: number,
   mode: PaymentScheduleMode,
-  milestones: readonly QuotationPaymentScheduleMilestoneDTO[]
-): Promise<QuotationActionResult> {
+  milestones: readonly QuotationPaymentScheduleMilestoneDTO[],
+  idempotencyKey?: string
+): Promise<QuotationActionResult<QuotationDraftDTO>> {
   try {
     const supabase = await createClient();
 
-    const { error } = await supabase.rpc("replace_quotation_payment_schedule", {
+    const { data, error } = await supabase.rpc("replace_quotation_payment_schedule", {
       p_quotation_id: quotationId,
       p_expected_lock_version: expectedLockVersion,
       p_mode: mode,
       p_milestones: JSON.parse(JSON.stringify(milestones)),
+      p_idempotency_key: idempotencyKey,
     });
 
     if (error) {
       throw quotationErrorFromPostgresMessage(error);
     }
 
+    const payload = data as Record<string, unknown>;
+    const dto = (payload.dto || payload) as QuotationDraftDTO;
+
     revalidatePath(`/admin/quotations/${quotationId}/draft`);
 
     return {
       success: true,
       message: "Payment schedule updated successfully.",
+      data: dto,
     };
   } catch (error) {
     const err = quotationErrorFromPostgresMessage(error);
@@ -211,11 +223,11 @@ export async function replaceQuotationPaymentScheduleAction(
 export async function archiveQuotationDraftAction(
   quotationId: string,
   expectedLockVersion: number
-): Promise<QuotationActionResult> {
+): Promise<QuotationActionResult<QuotationDraftDTO>> {
   try {
     const supabase = await createClient();
 
-    const { error } = await supabase.rpc("archive_quotation_draft", {
+    const { data, error } = await supabase.rpc("archive_quotation_draft", {
       p_quotation_id: quotationId,
       p_expected_lock_version: expectedLockVersion,
     });
@@ -224,12 +236,16 @@ export async function archiveQuotationDraftAction(
       throw quotationErrorFromPostgresMessage(error);
     }
 
+    const payload = data as Record<string, unknown>;
+    const dto = (payload.dto || payload) as QuotationDraftDTO;
+
     revalidatePath("/admin/quotations");
     revalidatePath(`/admin/quotations/${quotationId}/draft`);
 
     return {
       success: true,
       message: "Quotation draft archived successfully.",
+      data: dto,
     };
   } catch (error) {
     const err = quotationErrorFromPostgresMessage(error);

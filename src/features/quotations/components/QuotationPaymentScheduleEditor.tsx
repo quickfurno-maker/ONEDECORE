@@ -17,6 +17,17 @@ interface QuotationPaymentScheduleEditorProps {
   ) => void;
 }
 
+export function parseInrToPaise(inrStr: string): number {
+  const trimmed = inrStr.trim();
+  if (!trimmed || isNaN(Number(trimmed))) return 0;
+  const parts = trimmed.split(".");
+  const rupees = parseInt(parts[0] || "0", 10);
+  const decimals = (parts[1] || "").padEnd(2, "0").slice(0, 2);
+  const paise = parseInt(decimals || "0", 10);
+  const sign = rupees < 0 || trimmed.startsWith("-") ? -1 : 1;
+  return sign * (Math.abs(rupees) * 100 + paise);
+}
+
 export function QuotationPaymentScheduleEditor({
   version,
   schedules,
@@ -25,17 +36,24 @@ export function QuotationPaymentScheduleEditor({
   const [mode, setMode] = useState<PaymentScheduleMode>(
     version.paymentScheduleMode || "percentage"
   );
+  // Default to empty schedule if no schedules provided (no 10/40/40/10 defaults)
   const [milestones, setMilestones] = useState<readonly QuotationPaymentScheduleMilestoneDTO[]>(
-    schedules.length > 0
-      ? schedules
-      : [
-          { milestoneName: "Advance Booking", milestoneOrder: 0, percentage: 10.0 },
-          { milestoneName: "Design Approval", milestoneOrder: 1, percentage: 40.0 },
-          { milestoneName: "Material Delivery", milestoneOrder: 2, percentage: 40.0 },
-          { milestoneName: "Handover", milestoneOrder: 3, percentage: 10.0 },
-        ]
+    schedules.length > 0 ? schedules : []
   );
   const [dirty, setDirty] = useState(false);
+
+  const handleModeChange = (newMode: PaymentScheduleMode) => {
+    setMode(newMode);
+    // Clear inactive representation on mode switch
+    setMilestones(
+      milestones.map((m) => ({
+        ...m,
+        percentage: newMode === "percentage" ? (m.percentage ?? 0) : null,
+        amountPaise: newMode === "amount" ? (m.amountPaise ?? 0) : null,
+      }))
+    );
+    setDirty(true);
+  };
 
   const handleAddMilestone = () => {
     setMilestones([
@@ -91,10 +109,7 @@ export function QuotationPaymentScheduleEditor({
                 name="scheduleMode"
                 value="percentage"
                 checked={mode === "percentage"}
-                onChange={() => {
-                  setMode("percentage");
-                  setDirty(true);
-                }}
+                onChange={() => handleModeChange("percentage")}
               />
               Percentage (%) Mode
             </label>
@@ -104,10 +119,7 @@ export function QuotationPaymentScheduleEditor({
                 name="scheduleMode"
                 value="amount"
                 checked={mode === "amount"}
-                onChange={() => {
-                  setMode("amount");
-                  setDirty(true);
-                }}
+                onChange={() => handleModeChange("amount")}
               />
               Amount (₹) Mode
             </label>
@@ -174,17 +186,11 @@ export function QuotationPaymentScheduleEditor({
                 ) : (
                   <td className="py-2 pr-2">
                     <input
-                      type="number"
-                      min="0"
-                      step="1"
+                      type="text"
                       className="w-full rounded border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 font-mono text-neutral-100"
-                      value={(m.amountPaise || 0) / 100}
+                      value={((m.amountPaise || 0) / 100).toString()}
                       onChange={(e) =>
-                        handleChange(
-                          idx,
-                          "amountPaise",
-                          Math.round((parseFloat(e.target.value) || 0) * 100)
-                        )
+                        handleChange(idx, "amountPaise", parseInrToPaise(e.target.value))
                       }
                     />
                   </td>
@@ -194,6 +200,8 @@ export function QuotationPaymentScheduleEditor({
                     ? formatInrFromPaise(m.amountPaise)
                     : version.grandTotalPaise == null
                     ? "(Grand total pending)"
+                    : Math.abs(pctSum - 100) >= 0.01
+                    ? "(Percentage sum != 100%)"
                     : "—"}
                 </td>
                 <td className="py-2 text-right">

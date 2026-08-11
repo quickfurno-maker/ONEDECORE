@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatInrFromPaise } from "@/features/crm/contracts/sales-target-contracts";
 import type { QuotationLineItemDTO, QuotationSectionDTO } from "../contracts/types";
+import { parseInrToPaise } from "./QuotationPaymentScheduleEditor";
 
 interface QuotationSectionAccordionProps {
   readonly sections: readonly QuotationSectionDTO[];
@@ -42,13 +43,14 @@ export function QuotationSectionAccordion({
   };
 
   const handleAddItem = (secIndex: number) => {
+    // Require explicit valid user input: no default "nos", no default ₹1000 rate
     const newItem: QuotationLineItemDTO = {
-      itemName: "New Line Item",
+      itemName: "",
       description: "",
       specifications: "",
       quantity: 1,
-      unitOfMeasure: "nos",
-      unitRatePaise: 100000,
+      unitOfMeasure: "",
+      unitRatePaise: 0,
     };
 
     const updated = localSections.map((sec, idx) => {
@@ -141,6 +143,7 @@ export function QuotationSectionAccordion({
                     type="text"
                     className="rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-sm font-semibold text-neutral-100 focus:border-emerald-500 focus:outline-none"
                     value={sec.sectionName}
+                    placeholder="Section Name (e.g. Living Room)"
                     onChange={(e) => handleSectionNameChange(sIdx, e.target.value)}
                   />
                   {sec.subtotalPaise != null && sec.subtotalPaise > 0 && (
@@ -189,6 +192,7 @@ export function QuotationSectionAccordion({
                             type="text"
                             className="w-full rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-neutral-100"
                             value={item.itemName}
+                            placeholder="Item Name"
                             onChange={(e) => handleItemChange(sIdx, iIdx, "itemName", e.target.value)}
                           />
                         </td>
@@ -209,7 +213,7 @@ export function QuotationSectionAccordion({
                             className="w-full rounded border border-neutral-800 bg-neutral-900 px-2 py-1 font-mono text-neutral-100"
                             value={item.quantity}
                             onChange={(e) =>
-                              handleItemChange(sIdx, iIdx, "quantity", parseFloat(e.target.value) || 1)
+                              handleItemChange(sIdx, iIdx, "quantity", parseFloat(e.target.value) || 0)
                             }
                           />
                         </td>
@@ -224,17 +228,15 @@ export function QuotationSectionAccordion({
                         </td>
                         <td className="py-2 pr-2">
                           <input
-                            type="number"
-                            min="0"
-                            step="1"
+                            type="text"
                             className="w-full rounded border border-neutral-800 bg-neutral-900 px-2 py-1 font-mono text-neutral-100"
-                            value={item.unitRatePaise / 100}
+                            value={((item.unitRatePaise || 0) / 100).toString()}
                             onChange={(e) =>
                               handleItemChange(
                                 sIdx,
                                 iIdx,
                                 "unitRatePaise",
-                                Math.round((parseFloat(e.target.value) || 0) * 100)
+                                parseInrToPaise(e.target.value)
                               )
                             }
                           />

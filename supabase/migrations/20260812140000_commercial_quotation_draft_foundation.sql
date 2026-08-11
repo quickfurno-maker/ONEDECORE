@@ -106,6 +106,9 @@ create table public.quotation_versions (
   constraint chk_quotation_versions_number check (version_number > 0),
   constraint chk_quotation_versions_lock check (lock_version > 0),
   constraint chk_quotation_versions_status check (status in ('draft', 'archived')),
+  constraint chk_quotation_versions_draft_current check (
+    (status = 'draft' and is_current_draft = true) or (status = 'archived' and is_current_draft = false)
+  ),
   constraint chk_quotation_versions_title check (length(trim(title)) between 1 and 200),
   constraint chk_quotation_versions_payment_mode check (
     payment_schedule_mode is null or payment_schedule_mode in ('percentage', 'amount')
@@ -115,7 +118,9 @@ create table public.quotation_versions (
   constraint chk_quotation_versions_discount_val check (discount_value_paise >= 0),
   constraint chk_quotation_versions_discount_pct check (discount_percentage >= 0.00 and discount_percentage <= 100.00),
   constraint chk_quotation_versions_discount_tot check (discount_total_paise >= 0),
+  constraint chk_quotation_versions_discount_bound check (discount_total_paise <= subtotal_paise),
   constraint chk_quotation_versions_taxable_base check (taxable_base_paise >= 0),
+  constraint chk_quotation_versions_taxable_base_eq check (taxable_base_paise = subtotal_paise - discount_total_paise),
   constraint chk_quotation_versions_tax_rate check (
     tax_rate_percentage is null or (tax_rate_percentage >= 0.00 and tax_rate_percentage <= 100.00)
   ),
@@ -123,7 +128,7 @@ create table public.quotation_versions (
   constraint chk_quotation_versions_grand_total check (grand_total_paise is null or grand_total_paise >= 0),
   constraint chk_quotation_versions_discount_invariants check (
     (discount_type = 'none' and discount_value_paise = 0 and discount_percentage = 0.00 and discount_total_paise = 0)
-    or (discount_type = 'flat' and discount_percentage = 0.00 and discount_total_paise = discount_value_paise)
+    or (discount_type = 'flat' and discount_percentage = 0.00)
     or (discount_type = 'percentage' and discount_value_paise = 0)
   )
 );
@@ -176,6 +181,7 @@ create table public.quotation_items (
   constraint chk_quotation_items_uom check (length(trim(unit_of_measure)) between 1 and 30),
   constraint chk_quotation_items_rate check (unit_rate_paise >= 0),
   constraint chk_quotation_items_line_total check (line_total_paise >= 0),
+  constraint chk_quotation_items_line_total_eq check (line_total_paise = round((quantity * unit_rate_paise::numeric)::numeric)::bigint),
   constraint chk_quotation_items_order check (display_order >= 0)
 );
 
@@ -338,6 +344,7 @@ declare
   v_derived_amt bigint;
   v_total_count integer;
   v_curr_idx integer := 0;
+  v_pct_sum numeric(5,2) := 0.00;
 begin
   select payment_schedule_mode, grand_total_paise
   into v_ver_rec
@@ -349,9 +356,18 @@ begin
   end if;
 
   if v_ver_rec.payment_schedule_mode = 'percentage' then
-    select count(*) into v_total_count
+    select count(*), coalesce(sum(percentage), 0.00)
+    into v_total_count, v_pct_sum
     from public.quotation_payment_schedules
     where quotation_version_id = p_version_id;
+
+    -- Only calculate derived milestone amount_paise when grand_total_paise IS NOT NULL AND percentage sum is EXACTLY 100.00
+    if v_ver_rec.grand_total_paise is null or v_pct_sum <> 100.00 then
+      update public.quotation_payment_schedules
+      set amount_paise = null
+      where quotation_version_id = p_version_id;
+      return;
+    end if;
 
     for v_elem in
       select id, percentage
@@ -359,15 +375,11 @@ begin
       where quotation_version_id = p_version_id
       order by milestone_order asc
     loop
-      if v_ver_rec.grand_total_paise is not null then
-        if v_curr_idx = v_total_count - 1 then
-          v_derived_amt := v_ver_rec.grand_total_paise - v_running_amt;
-        else
-          v_derived_amt := round((v_ver_rec.grand_total_paise::numeric * (v_elem.percentage / 100.00))::numeric)::bigint;
-          v_running_amt := v_running_amt + v_derived_amt;
-        end if;
+      if v_curr_idx = v_total_count - 1 then
+        v_derived_amt := v_ver_rec.grand_total_paise - v_running_amt;
       else
-        v_derived_amt := null;
+        v_derived_amt := round((v_ver_rec.grand_total_paise::numeric * (v_elem.percentage / 100.00))::numeric)::bigint;
+        v_running_amt := v_running_amt + v_derived_amt;
       end if;
 
       update public.quotation_payment_schedules
@@ -377,6 +389,7 @@ begin
       v_curr_idx := v_curr_idx + 1;
     end loop;
   end if;
+  -- If payment_schedule_mode = 'amount', preserve authoritative amount_paise.
 end;
 $$;
 
@@ -426,14 +439,11 @@ begin
   end if;
 
   if v_discount_tot > v_subtotal then
-    v_discount_tot := v_subtotal;
+    raise exception 'QUOTATION_VALIDATION_FAILED: Discount total cannot exceed subtotal' using errcode = 'P0001';
   end if;
 
   -- 3. Taxable base
   v_taxable_base := v_subtotal - v_discount_tot;
-  if v_taxable_base < 0 then
-    v_taxable_base := 0;
-  end if;
 
   -- 4. Tax & Grand Total
   if v_ver_rec.tax_rate_percentage is not null then
@@ -467,9 +477,21 @@ alter table public.quotation_items enable row level security;
 alter table public.quotation_payment_schedules enable row level security;
 alter table public.quotation_events enable row level security;
 
--- Table privileges for PostgREST & authenticated role (RLS restricts actual row-level access)
-grant select, insert, update, delete on public.quotations, public.quotation_tax_profiles, public.quotation_versions, public.quotation_sections, public.quotation_items, public.quotation_payment_schedules, public.quotation_events to authenticated;
-grant usage on sequence private.quotation_number_seq to authenticated;
+-- Revoke all table privileges from public, anon, authenticated
+revoke all on table public.quotations from public, anon, authenticated;
+revoke all on table public.quotation_tax_profiles from public, anon, authenticated;
+revoke all on table public.quotation_versions from public, anon, authenticated;
+revoke all on table public.quotation_sections from public, anon, authenticated;
+revoke all on table public.quotation_items from public, anon, authenticated;
+revoke all on table public.quotation_payment_schedules from public, anon, authenticated;
+revoke all on table public.quotation_events from public, anon, authenticated;
+revoke all on table private.quotation_idempotency_requests from public, anon, authenticated;
+
+-- Table SELECT-only privileges for authenticated role (RLS restricts actual row-level access)
+grant select on table public.quotations, public.quotation_tax_profiles, public.quotation_versions, public.quotation_sections, public.quotation_items, public.quotation_payment_schedules, public.quotation_events to authenticated;
+
+-- Revoke sequence usage from public, anon, authenticated
+revoke all on sequence private.quotation_number_seq from public, anon, authenticated;
 
 -- RLS Policies: public.quotations
 create policy p_quotations_select on public.quotations
@@ -571,9 +593,9 @@ begin
 
   v_request_hash := encode(sha256(convert_to(p_lead_id::text || '|' || trim(p_title) || '|' || trim(p_idempotency_key), 'UTF8')), 'hex');
 
-  -- Transaction-scoped advisory locks for idempotency & 64-bit lead root lock
-  perform pg_advisory_xact_lock(hashtext(v_actor_id::text || '|' || v_op_code || '|' || trim(p_idempotency_key)));
-  perform pg_advisory_xact_lock(hashtext('quotation_root:' || p_lead_id::text));
+  -- Transaction-scoped 64-bit advisory locks for idempotency & lead root lock
+  perform pg_advisory_xact_lock(hashtextextended(v_actor_id::text || '|' || v_op_code || '|' || trim(p_idempotency_key), 0));
+  perform pg_advisory_xact_lock(hashtextextended('quotation_root:' || p_lead_id::text, 0));
 
   select * into v_idempotency_rec
   from private.quotation_idempotency_requests
@@ -670,6 +692,9 @@ begin
   if v_version_number = 1 then
     insert into public.quotation_events (quotation_id, quotation_version_id, lead_id, event_type, actor_id, details)
     values (v_quotation_id, v_version_id, p_lead_id, 'quotation.created', v_actor_id, jsonb_build_object('quotation_number', v_quotation_number));
+  else
+    insert into public.quotation_events (quotation_id, quotation_version_id, lead_id, event_type, actor_id, details)
+    values (v_quotation_id, v_version_id, p_lead_id, 'quotation.version_created', v_actor_id, jsonb_build_object('version_number', v_version_number, 'title', trim(p_title)));
   end if;
 
   insert into public.quotation_events (quotation_id, quotation_version_id, lead_id, event_type, actor_id, details)
@@ -706,7 +731,8 @@ create or replace function public.update_quotation_draft(
   p_clear_tax_profile boolean default false,
   p_terms_and_conditions text default null,
   p_inclusions text[] default null,
-  p_exclusions text[] default null
+  p_exclusions text[] default null,
+  p_idempotency_key text default null
 )
 returns jsonb
 language plpgsql
@@ -715,6 +741,9 @@ set search_path = ''
 as $$
 declare
   v_actor_id uuid;
+  v_op_code text := 'update_quotation_draft';
+  v_request_hash text;
+  v_idempotency_rec record;
   v_version_rec record;
   v_lead_id uuid;
   v_new_discount_type text;
@@ -724,6 +753,8 @@ declare
   v_new_tax_rate numeric(5,2);
   v_new_lock_version bigint;
   v_tax_profile_rec record;
+  v_discount_changed boolean := false;
+  v_tax_changed boolean := false;
   v_result jsonb;
 begin
   v_actor_id := auth.uid();
@@ -733,6 +764,57 @@ begin
 
   if not private.quotation_can_edit(p_quotation_id) then
     raise exception 'QUOTATION_NOT_FOUND_OR_FORBIDDEN' using errcode = '42501';
+  end if;
+
+  if p_title is not null and (length(trim(p_title)) < 1 or length(trim(p_title)) > 200) then
+    raise exception 'QUOTATION_VALIDATION_FAILED: Title length out of bounds' using errcode = 'P0001';
+  end if;
+
+  if p_scope_summary is not null and length(p_scope_summary) > 2000 then
+    raise exception 'QUOTATION_VALIDATION_FAILED: Scope summary too long' using errcode = 'P0001';
+  end if;
+
+  if p_terms_and_conditions is not null and length(p_terms_and_conditions) > 5000 then
+    raise exception 'QUOTATION_VALIDATION_FAILED: Terms too long' using errcode = 'P0001';
+  end if;
+
+  if p_inclusions is not null and array_length(p_inclusions, 1) > 100 then
+    raise exception 'QUOTATION_VALIDATION_FAILED: Inclusions array limit exceeded' using errcode = 'P0001';
+  end if;
+
+  if p_exclusions is not null and array_length(p_exclusions, 1) > 100 then
+    raise exception 'QUOTATION_VALIDATION_FAILED: Exclusions array limit exceeded' using errcode = 'P0001';
+  end if;
+
+  -- Durable idempotency check
+  if p_idempotency_key is not null and length(trim(p_idempotency_key)) >= 1 then
+    if length(trim(p_idempotency_key)) > 128 then
+      raise exception 'QUOTATION_VALIDATION_FAILED: Idempotency key too long' using errcode = 'P0001';
+    end if;
+
+    v_request_hash := encode(sha256(convert_to(
+      p_quotation_id::text || '|' || p_expected_lock_version::text || '|' || coalesce(p_title, '') || '|' ||
+      coalesce(p_discount_type, '') || '|' || coalesce(p_discount_value_paise::text, '') || '|' ||
+      coalesce(p_discount_percentage::text, '') || '|' || coalesce(p_tax_profile_id::text, '') || '|' ||
+      p_clear_tax_profile::text || '|' || trim(p_idempotency_key),
+      'UTF8'
+    )), 'hex');
+
+    perform pg_advisory_xact_lock(hashtextextended(v_actor_id::text || '|' || v_op_code || '|' || trim(p_idempotency_key), 0));
+
+    select * into v_idempotency_rec
+    from private.quotation_idempotency_requests
+    where actor_id = v_actor_id
+      and operation_code = v_op_code
+      and idempotency_key = trim(p_idempotency_key);
+
+    if found then
+      if v_idempotency_rec.request_hash = v_request_hash then
+        return jsonb_set(v_idempotency_rec.response_snapshot, '{idempotentReplay}', 'true'::jsonb);
+      else
+        raise exception 'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH' using errcode = 'P0001';
+      end if;
+    end if;
   end if;
 
   select lead_id into v_lead_id from public.quotations where id = p_quotation_id;
@@ -761,6 +843,10 @@ begin
     raise exception 'QUOTATION_VALIDATION_FAILED: Invalid discount type' using errcode = 'P0001';
   end if;
 
+  if v_new_discount_val < 0 or v_new_discount_pct < 0.00 or v_new_discount_pct > 100.00 then
+    raise exception 'QUOTATION_VALIDATION_FAILED: Invalid discount value or percentage' using errcode = 'P0001';
+  end if;
+
   if v_new_discount_type = 'none' then
     v_new_discount_val := 0;
     v_new_discount_pct := 0.00;
@@ -770,10 +856,24 @@ begin
     v_new_discount_val := 0;
   end if;
 
+  -- Validation: flat discount total cannot exceed subtotal
+  if v_new_discount_type = 'flat' and v_new_discount_val > v_version_rec.subtotal_paise then
+    raise exception 'QUOTATION_VALIDATION_FAILED: Discount total cannot exceed subtotal' using errcode = 'P0001';
+  end if;
+
+  if v_new_discount_type <> v_version_rec.discount_type
+     or v_new_discount_val <> v_version_rec.discount_value_paise
+     or v_new_discount_pct <> v_version_rec.discount_percentage then
+    v_discount_changed := true;
+  end if;
+
   -- Resolve tax profile snapshot
   if p_clear_tax_profile then
     v_new_tax_profile_id := null;
     v_new_tax_rate := null;
+    if v_version_rec.tax_profile_id is not null then
+      v_tax_changed := true;
+    end if;
   elsif p_tax_profile_id is not null then
     select * into v_tax_profile_rec
     from public.quotation_tax_profiles
@@ -785,6 +885,9 @@ begin
 
     v_new_tax_profile_id := v_tax_profile_rec.id;
     v_new_tax_rate := v_tax_profile_rec.rate_percentage;
+    if v_version_rec.tax_profile_id is null or v_version_rec.tax_profile_id <> v_new_tax_profile_id then
+      v_tax_changed := true;
+    end if;
   else
     v_new_tax_profile_id := v_version_rec.tax_profile_id;
     v_new_tax_rate := v_version_rec.tax_rate_percentage;
@@ -814,6 +917,23 @@ begin
   -- Fetch updated version record
   select * into v_version_rec from public.quotation_versions where id = v_version_rec.id;
 
+  -- Event audit logging
+  if v_discount_changed then
+    insert into public.quotation_events (quotation_id, quotation_version_id, lead_id, event_type, actor_id, details)
+    values (p_quotation_id, v_version_rec.id, v_lead_id, 'quotation.discount_changed', v_actor_id, jsonb_build_object(
+      'discountType', v_new_discount_type,
+      'discountTotalPaise', v_version_rec.discount_total_paise
+    ));
+  end if;
+
+  if v_tax_changed then
+    insert into public.quotation_events (quotation_id, quotation_version_id, lead_id, event_type, actor_id, details)
+    values (p_quotation_id, v_version_rec.id, v_lead_id, 'quotation.tax_profile_changed', v_actor_id, jsonb_build_object(
+      'taxProfileId', v_new_tax_profile_id,
+      'taxRatePercentage', v_new_tax_rate
+    ));
+  end if;
+
   insert into public.quotation_events (quotation_id, quotation_version_id, lead_id, event_type, actor_id, details)
   values (p_quotation_id, v_version_rec.id, v_lead_id, 'quotation.draft_updated', v_actor_id, jsonb_build_object(
     'lockVersion', v_new_lock_version,
@@ -832,8 +952,14 @@ begin
     'taxableBasePaise', v_version_rec.taxable_base_paise,
     'taxTotalPaise', v_version_rec.tax_total_paise,
     'grandTotalPaise', v_version_rec.grand_total_paise,
+    'idempotentReplay', false,
     'dto', public.get_quotation_draft(p_quotation_id)
   );
+
+  if p_idempotency_key is not null and length(trim(p_idempotency_key)) >= 1 then
+    insert into private.quotation_idempotency_requests (actor_id, operation_code, idempotency_key, request_hash, quotation_id, quotation_version_id, response_snapshot)
+    values (v_actor_id, v_op_code, trim(p_idempotency_key), v_request_hash, p_quotation_id, v_version_rec.id, v_result);
+  end if;
 
   return v_result;
 end;
@@ -843,7 +969,8 @@ $$;
 create or replace function public.save_quotation_draft_items(
   p_quotation_id uuid,
   p_expected_lock_version bigint,
-  p_sections jsonb
+  p_sections jsonb,
+  p_idempotency_key text default null
 )
 returns jsonb
 language plpgsql
@@ -852,13 +979,21 @@ set search_path = ''
 as $$
 declare
   v_actor_id uuid;
+  v_op_code text := 'save_quotation_draft_items';
+  v_request_hash text;
+  v_idempotency_rec record;
   v_lead_id uuid;
   v_version_rec record;
   v_sec_elem jsonb;
   v_item_elem jsonb;
   v_sec_id uuid;
+  v_sec_name text;
+  v_item_name text;
+  v_uom text;
   v_sec_order integer := 0;
   v_item_order integer := 0;
+  v_sec_count integer := 0;
+  v_item_count integer := 0;
   v_line_qty numeric(10,3);
   v_unit_rate bigint;
   v_line_total bigint;
@@ -876,6 +1011,39 @@ begin
 
   if p_sections is null or jsonb_typeof(p_sections) <> 'array' then
     raise exception 'QUOTATION_VALIDATION_FAILED: Sections payload must be a JSON array' using errcode = 'P0001';
+  end if;
+
+  v_sec_count := jsonb_array_length(p_sections);
+  if v_sec_count > 50 then
+    raise exception 'QUOTATION_VALIDATION_FAILED: Maximum 50 sections allowed' using errcode = 'P0001';
+  end if;
+
+  -- Durable idempotency check
+  if p_idempotency_key is not null and length(trim(p_idempotency_key)) >= 1 then
+    if length(trim(p_idempotency_key)) > 128 then
+      raise exception 'QUOTATION_VALIDATION_FAILED: Idempotency key too long' using errcode = 'P0001';
+    end if;
+
+    v_request_hash := encode(sha256(convert_to(
+      p_quotation_id::text || '|' || p_expected_lock_version::text || '|' || p_sections::text || '|' || trim(p_idempotency_key),
+      'UTF8'
+    )), 'hex');
+
+    perform pg_advisory_xact_lock(hashtextextended(v_actor_id::text || '|' || v_op_code || '|' || trim(p_idempotency_key), 0));
+
+    select * into v_idempotency_rec
+    from private.quotation_idempotency_requests
+    where actor_id = v_actor_id
+      and operation_code = v_op_code
+      and idempotency_key = trim(p_idempotency_key);
+
+    if found then
+      if v_idempotency_rec.request_hash = v_request_hash then
+        return jsonb_set(v_idempotency_rec.response_snapshot, '{idempotentReplay}', 'true'::jsonb);
+      else
+        raise exception 'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH' using errcode = 'P0001';
+      end if;
+    end if;
   end if;
 
   select lead_id into v_lead_id from public.quotations where id = p_quotation_id;
@@ -906,10 +1074,15 @@ begin
   -- Process sections and line items
   for v_sec_elem in select * from jsonb_array_elements(p_sections)
   loop
+    v_sec_name := trim(v_sec_elem->>'sectionName');
+    if v_sec_name is null or length(v_sec_name) < 1 or length(v_sec_name) > 120 then
+      raise exception 'QUOTATION_VALIDATION_FAILED: Invalid section name' using errcode = 'P0001';
+    end if;
+
     insert into public.quotation_sections (quotation_version_id, section_name, display_order, subtotal_paise)
     values (
       v_version_rec.id,
-      trim(v_sec_elem->>'sectionName'),
+      v_sec_name,
       v_sec_order,
       0
     )
@@ -917,13 +1090,33 @@ begin
 
     v_item_order := 0;
     if v_sec_elem->'items' is not null and jsonb_typeof(v_sec_elem->'items') = 'array' then
+      v_item_count := jsonb_array_length(v_sec_elem->'items');
+      if v_item_count > 100 then
+        raise exception 'QUOTATION_VALIDATION_FAILED: Maximum 100 items per section allowed' using errcode = 'P0001';
+      end if;
+
       for v_item_elem in select * from jsonb_array_elements(v_sec_elem->'items')
       loop
+        v_item_name := trim(v_item_elem->>'itemName');
+        v_uom := trim(v_item_elem->>'unitOfMeasure');
+
+        if v_item_name is null or length(v_item_name) < 1 or length(v_item_name) > 200 then
+          raise exception 'QUOTATION_VALIDATION_FAILED: Invalid item name' using errcode = 'P0001';
+        end if;
+
+        if v_uom is null or length(v_uom) < 1 or length(v_uom) > 30 then
+          raise exception 'QUOTATION_VALIDATION_FAILED: Invalid unit of measure' using errcode = 'P0001';
+        end if;
+
         v_line_qty := (v_item_elem->>'quantity')::numeric;
         v_unit_rate := (v_item_elem->>'unitRatePaise')::bigint;
 
-        if v_line_qty <= 0 or v_unit_rate < 0 then
-          raise exception 'QUOTATION_VALIDATION_FAILED: Invalid quantity or unit rate' using errcode = 'P0001';
+        if v_line_qty is null or v_line_qty <= 0 or v_line_qty > 100000 then
+          raise exception 'QUOTATION_VALIDATION_FAILED: Invalid quantity' using errcode = 'P0001';
+        end if;
+
+        if v_unit_rate is null or v_unit_rate < 0 or v_unit_rate > 100000000000 then
+          raise exception 'QUOTATION_VALIDATION_FAILED: Invalid unit rate' using errcode = 'P0001';
         end if;
 
         v_line_total := round((v_line_qty * v_unit_rate::numeric)::numeric)::bigint;
@@ -940,11 +1133,11 @@ begin
           display_order
         ) values (
           v_sec_id,
-          trim(v_item_elem->>'itemName'),
+          v_item_name,
           nullif(trim(v_item_elem->>'description'), ''),
           nullif(trim(v_item_elem->>'specifications'), ''),
           v_line_qty,
-          trim(v_item_elem->>'unitOfMeasure'),
+          v_uom,
           v_unit_rate,
           v_line_total,
           v_item_order
@@ -987,8 +1180,14 @@ begin
     'taxableBasePaise', v_version_rec.taxable_base_paise,
     'taxTotalPaise', v_version_rec.tax_total_paise,
     'grandTotalPaise', v_version_rec.grand_total_paise,
+    'idempotentReplay', false,
     'dto', public.get_quotation_draft(p_quotation_id)
   );
+
+  if p_idempotency_key is not null and length(trim(p_idempotency_key)) >= 1 then
+    insert into private.quotation_idempotency_requests (actor_id, operation_code, idempotency_key, request_hash, quotation_id, quotation_version_id, response_snapshot)
+    values (v_actor_id, v_op_code, trim(p_idempotency_key), v_request_hash, p_quotation_id, v_version_rec.id, v_result);
+  end if;
 
   return v_result;
 end;
@@ -999,7 +1198,8 @@ create or replace function public.replace_quotation_payment_schedule(
   p_quotation_id uuid,
   p_expected_lock_version bigint,
   p_mode text,
-  p_milestones jsonb
+  p_milestones jsonb,
+  p_idempotency_key text default null
 )
 returns jsonb
 language plpgsql
@@ -1008,9 +1208,13 @@ set search_path = ''
 as $$
 declare
   v_actor_id uuid;
+  v_op_code text := 'replace_quotation_payment_schedule';
+  v_request_hash text;
+  v_idempotency_rec record;
   v_lead_id uuid;
   v_version_rec record;
   v_elem jsonb;
+  v_milestone_name text;
   v_order integer := 0;
   v_pct_sum numeric(5,2) := 0.00;
   v_amt_sum bigint := 0;
@@ -1037,6 +1241,39 @@ begin
     raise exception 'QUOTATION_VALIDATION_FAILED: Milestones must be a JSON array' using errcode = 'P0001';
   end if;
 
+  v_total_milestones := jsonb_array_length(p_milestones);
+  if v_total_milestones > 50 then
+    raise exception 'QUOTATION_VALIDATION_FAILED: Maximum 50 milestones allowed' using errcode = 'P0001';
+  end if;
+
+  -- Durable idempotency check
+  if p_idempotency_key is not null and length(trim(p_idempotency_key)) >= 1 then
+    if length(trim(p_idempotency_key)) > 128 then
+      raise exception 'QUOTATION_VALIDATION_FAILED: Idempotency key too long' using errcode = 'P0001';
+    end if;
+
+    v_request_hash := encode(sha256(convert_to(
+      p_quotation_id::text || '|' || p_expected_lock_version::text || '|' || p_mode || '|' || p_milestones::text || '|' || trim(p_idempotency_key),
+      'UTF8'
+    )), 'hex');
+
+    perform pg_advisory_xact_lock(hashtextextended(v_actor_id::text || '|' || v_op_code || '|' || trim(p_idempotency_key), 0));
+
+    select * into v_idempotency_rec
+    from private.quotation_idempotency_requests
+    where actor_id = v_actor_id
+      and operation_code = v_op_code
+      and idempotency_key = trim(p_idempotency_key);
+
+    if found then
+      if v_idempotency_rec.request_hash = v_request_hash then
+        return jsonb_set(v_idempotency_rec.response_snapshot, '{idempotentReplay}', 'true'::jsonb);
+      else
+        raise exception 'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH' using errcode = 'P0001';
+      end if;
+    end if;
+  end if;
+
   select lead_id into v_lead_id from public.quotations where id = p_quotation_id;
 
   select * into v_version_rec
@@ -1056,10 +1293,13 @@ begin
 
   delete from public.quotation_payment_schedules where quotation_version_id = v_version_rec.id;
 
-  v_total_milestones := jsonb_array_length(p_milestones);
-
   for v_elem in select * from jsonb_array_elements(p_milestones)
   loop
+    v_milestone_name := trim(v_elem->>'milestoneName');
+    if v_milestone_name is null or length(v_milestone_name) < 1 or length(v_milestone_name) > 150 then
+      raise exception 'QUOTATION_VALIDATION_FAILED: Invalid milestone name' using errcode = 'P0001';
+    end if;
+
     if p_mode = 'percentage' then
       v_item_pct := (v_elem->>'percentage')::numeric;
       if v_item_pct is null or v_item_pct < 0.00 or v_item_pct > 100.00 then
@@ -1069,17 +1309,17 @@ begin
       v_pct_sum := v_pct_sum + v_item_pct;
 
       insert into public.quotation_payment_schedules (quotation_version_id, milestone_name, milestone_order, percentage, amount_paise)
-      values (v_version_rec.id, trim(v_elem->>'milestoneName'), v_order, v_item_pct, null);
+      values (v_version_rec.id, v_milestone_name, v_order, v_item_pct, null);
     else
       v_item_amt := (v_elem->>'amountPaise')::bigint;
-      if v_item_amt is null or v_item_amt < 0 then
+      if v_item_amt is null or v_item_amt < 0 or v_item_amt > 100000000000 then
         raise exception 'QUOTATION_VALIDATION_FAILED: Invalid milestone amount' using errcode = 'P0001';
       end if;
 
       v_amt_sum := v_amt_sum + v_item_amt;
 
       insert into public.quotation_payment_schedules (quotation_version_id, milestone_name, milestone_order, percentage, amount_paise)
-      values (v_version_rec.id, trim(v_elem->>'milestoneName'), v_order, null, v_item_amt);
+      values (v_version_rec.id, v_milestone_name, v_order, null, v_item_amt);
     end if;
 
     v_order := v_order + 1;
@@ -1119,8 +1359,14 @@ begin
       when p_mode = 'amount' and v_version_rec.grand_total_paise is not null and v_amt_sum = v_version_rec.grand_total_paise then true
       else false
     end,
+    'idempotentReplay', false,
     'dto', public.get_quotation_draft(p_quotation_id)
   );
+
+  if p_idempotency_key is not null and length(trim(p_idempotency_key)) >= 1 then
+    insert into private.quotation_idempotency_requests (actor_id, operation_code, idempotency_key, request_hash, quotation_id, quotation_version_id, response_snapshot)
+    values (v_actor_id, v_op_code, trim(p_idempotency_key), v_request_hash, p_quotation_id, v_version_rec.id, v_result);
+  end if;
 
   return v_result;
 end;
@@ -1253,6 +1499,7 @@ begin
       'quotationId', v_root_rec.id,
       'leadId', v_root_rec.lead_id,
       'quotationNumber', v_root_rec.quotation_number,
+      'rootStatus', v_root_rec.status,
       'status', v_root_rec.status,
       'version', null
     );
@@ -1305,6 +1552,7 @@ begin
     'leadId', v_root_rec.lead_id,
     'quotationNumber', v_root_rec.quotation_number,
     'rootStatus', v_root_rec.status,
+    'status', v_root_rec.status,
     'version', jsonb_build_object(
       'id', v_ver_rec.id,
       'versionNumber', v_ver_rec.version_number,
@@ -1338,3 +1586,48 @@ begin
 end;
 $$;
 
+-- =============================================================================
+-- 5. Security Definer Ownership, Explicit Execute Revokes & Grants
+-- =============================================================================
+
+-- Set function owners to postgres
+alter function private.generate_quotation_number() owner to postgres;
+alter function private.quotation_can_view(uuid) owner to postgres;
+alter function private.quotation_can_create_for_lead(uuid) owner to postgres;
+alter function private.quotation_can_edit(uuid) owner to postgres;
+alter function private.recalculate_quotation_payment_schedule(uuid) owner to postgres;
+alter function private.recalculate_quotation_totals(uuid) owner to postgres;
+alter function public.create_quotation_draft(uuid, text, text) owner to postgres;
+alter function public.update_quotation_draft(uuid, bigint, text, text, text, bigint, numeric, uuid, boolean, text, text[], text[], text) owner to postgres;
+alter function public.save_quotation_draft_items(uuid, bigint, jsonb, text) owner to postgres;
+alter function public.replace_quotation_payment_schedule(uuid, bigint, text, jsonb, text) owner to postgres;
+alter function public.archive_quotation_draft(uuid, bigint) owner to postgres;
+alter function public.get_quotation_draft(uuid) owner to postgres;
+
+-- Revoke ALL from public and anon on all routines
+revoke all on function private.generate_quotation_number() from public, anon, authenticated;
+revoke all on function private.recalculate_quotation_payment_schedule(uuid) from public, anon, authenticated;
+revoke all on function private.recalculate_quotation_totals(uuid) from public, anon, authenticated;
+
+revoke execute on function private.quotation_can_view(uuid) from public, anon;
+revoke execute on function private.quotation_can_create_for_lead(uuid) from public, anon;
+revoke execute on function private.quotation_can_edit(uuid) from public, anon;
+
+revoke execute on function public.create_quotation_draft(uuid, text, text) from public, anon;
+revoke execute on function public.update_quotation_draft(uuid, bigint, text, text, text, bigint, numeric, uuid, boolean, text, text[], text[], text) from public, anon;
+revoke execute on function public.save_quotation_draft_items(uuid, bigint, jsonb, text) from public, anon;
+revoke execute on function public.replace_quotation_payment_schedule(uuid, bigint, text, jsonb, text) from public, anon;
+revoke execute on function public.archive_quotation_draft(uuid, bigint) from public, anon;
+revoke execute on function public.get_quotation_draft(uuid) from public, anon;
+
+-- Grant EXECUTE on RLS authorization helpers and public business RPCs to authenticated ONLY
+grant execute on function private.quotation_can_view(uuid) to authenticated;
+grant execute on function private.quotation_can_create_for_lead(uuid) to authenticated;
+grant execute on function private.quotation_can_edit(uuid) to authenticated;
+
+grant execute on function public.create_quotation_draft(uuid, text, text) to authenticated;
+grant execute on function public.update_quotation_draft(uuid, bigint, text, text, text, bigint, numeric, uuid, boolean, text, text[], text[], text) to authenticated;
+grant execute on function public.save_quotation_draft_items(uuid, bigint, jsonb, text) to authenticated;
+grant execute on function public.replace_quotation_payment_schedule(uuid, bigint, text, jsonb, text) to authenticated;
+grant execute on function public.archive_quotation_draft(uuid, bigint) to authenticated;
+grant execute on function public.get_quotation_draft(uuid) to authenticated;

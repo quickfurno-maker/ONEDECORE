@@ -29,6 +29,13 @@ export function quotationErrorFromPostgresMessage(error: unknown): QuotationErro
 
   const message = error instanceof Error ? error.message : String(error);
 
+  if (message.includes("QUOTATION_UNAUTHORIZED")) {
+    return new QuotationError(
+      "QUOTATION_UNAUTHORIZED",
+      "Authentication is required to access commercial quotations."
+    );
+  }
+
   if (message.includes("QUOTATION_NOT_FOUND_OR_FORBIDDEN") || message.includes("42501")) {
     return new QuotationError(
       "QUOTATION_NOT_FOUND_OR_FORBIDDEN",
@@ -36,7 +43,7 @@ export function quotationErrorFromPostgresMessage(error: unknown): QuotationErro
     );
   }
 
-  if (message.includes("QUOTATION_VERSION_CONFLICT") || message.includes("P0002")) {
+  if (message.includes("QUOTATION_VERSION_CONFLICT")) {
     return new QuotationError(
       "QUOTATION_VERSION_CONFLICT",
       "This draft was modified in another tab or session. Please reload to refresh the latest state."
@@ -58,8 +65,12 @@ export function quotationErrorFromPostgresMessage(error: unknown): QuotationErro
   }
 
   if (message.includes("QUOTATION_VALIDATION_FAILED")) {
-    return new QuotationError("QUOTATION_VALIDATION_FAILED", message);
+    const cleanMessage = message.replace(/^.*QUOTATION_VALIDATION_FAILED:\s*/, "");
+    return new QuotationError("QUOTATION_VALIDATION_FAILED", cleanMessage || "Validation failed.");
   }
 
-  return new QuotationError("QUOTATION_UNKNOWN_ERROR", message || "An unexpected error occurred.");
+  return new QuotationError(
+    "QUOTATION_UNKNOWN_ERROR",
+    "An unexpected commercial quotation error occurred. Please try again or contact support."
+  );
 }
