@@ -261,7 +261,7 @@ comment on table private.quotation_idempotency_requests is
 create sequence private.quotation_number_seq start with 1 increment by 1;
 
 -- =============================================================================
--- 3. RLS & Authorization Helpers
+-- 3. RLS & Authorization Helpers & Private Recalculation Routines
 -- =============================================================================
 
 create or replace function private.generate_quotation_number()
@@ -323,6 +323,139 @@ as $$
       and (select public.authorize('quotations.edit'))
       and (select private.crm_can_view_lead(l.assigned_to))
   );
+$$;
+
+create or replace function private.recalculate_quotation_payment_schedule(p_version_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_ver_rec record;
+  v_elem record;
+  v_running_amt bigint := 0;
+  v_derived_amt bigint;
+  v_total_count integer;
+  v_curr_idx integer := 0;
+begin
+  select payment_schedule_mode, grand_total_paise
+  into v_ver_rec
+  from public.quotation_versions
+  where id = p_version_id;
+
+  if not found or v_ver_rec.payment_schedule_mode is null then
+    return;
+  end if;
+
+  if v_ver_rec.payment_schedule_mode = 'percentage' then
+    select count(*) into v_total_count
+    from public.quotation_payment_schedules
+    where quotation_version_id = p_version_id;
+
+    for v_elem in
+      select id, percentage
+      from public.quotation_payment_schedules
+      where quotation_version_id = p_version_id
+      order by milestone_order asc
+    loop
+      if v_ver_rec.grand_total_paise is not null then
+        if v_curr_idx = v_total_count - 1 then
+          v_derived_amt := v_ver_rec.grand_total_paise - v_running_amt;
+        else
+          v_derived_amt := round((v_ver_rec.grand_total_paise::numeric * (v_elem.percentage / 100.00))::numeric)::bigint;
+          v_running_amt := v_running_amt + v_derived_amt;
+        end if;
+      else
+        v_derived_amt := null;
+      end if;
+
+      update public.quotation_payment_schedules
+      set amount_paise = v_derived_amt
+      where id = v_elem.id;
+
+      v_curr_idx := v_curr_idx + 1;
+    end loop;
+  end if;
+end;
+$$;
+
+create or replace function private.recalculate_quotation_totals(p_version_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_ver_rec record;
+  v_subtotal bigint := 0;
+  v_discount_tot bigint := 0;
+  v_taxable_base bigint := 0;
+  v_tax_tot bigint;
+  v_grand_tot bigint;
+begin
+  select * into v_ver_rec
+  from public.quotation_versions
+  where id = p_version_id;
+
+  if not found then
+    return;
+  end if;
+
+  -- 1. Recalculate section subtotals & overall version subtotal
+  update public.quotation_sections qs
+  set subtotal_paise = coalesce((
+    select sum(qi.line_total_paise)
+    from public.quotation_items qi
+    where qi.section_id = qs.id
+  ), 0)
+  where qs.quotation_version_id = p_version_id;
+
+  select coalesce(sum(subtotal_paise), 0)
+  into v_subtotal
+  from public.quotation_sections
+  where quotation_version_id = p_version_id;
+
+  -- 2. Recalculate discount total
+  if v_ver_rec.discount_type = 'none' then
+    v_discount_tot := 0;
+  elsif v_ver_rec.discount_type = 'flat' then
+    v_discount_tot := v_ver_rec.discount_value_paise;
+  elsif v_ver_rec.discount_type = 'percentage' then
+    v_discount_tot := round((v_subtotal::numeric * (v_ver_rec.discount_percentage / 100.00))::numeric)::bigint;
+  end if;
+
+  if v_discount_tot > v_subtotal then
+    v_discount_tot := v_subtotal;
+  end if;
+
+  -- 3. Taxable base
+  v_taxable_base := v_subtotal - v_discount_tot;
+  if v_taxable_base < 0 then
+    v_taxable_base := 0;
+  end if;
+
+  -- 4. Tax & Grand Total
+  if v_ver_rec.tax_rate_percentage is not null then
+    v_tax_tot := round((v_taxable_base::numeric * (v_ver_rec.tax_rate_percentage / 100.00))::numeric)::bigint;
+    v_grand_tot := v_taxable_base + v_tax_tot;
+  else
+    v_tax_tot := null;
+    v_grand_tot := null;
+  end if;
+
+  -- Update quotation_versions
+  update public.quotation_versions set
+    subtotal_paise = v_subtotal,
+    discount_total_paise = v_discount_tot,
+    taxable_base_paise = v_taxable_base,
+    tax_total_paise = v_tax_tot,
+    grand_total_paise = v_grand_tot
+  where id = p_version_id;
+
+  -- Recalculate payment schedule amounts
+  perform private.recalculate_quotation_payment_schedule(p_version_id);
+end;
 $$;
 
 -- Enable RLS on all public tables
@@ -438,8 +571,9 @@ begin
 
   v_request_hash := encode(sha256(convert_to(p_lead_id::text || '|' || trim(p_title) || '|' || trim(p_idempotency_key), 'UTF8')), 'hex');
 
-  -- Transaction-scoped advisory lock for idempotency
+  -- Transaction-scoped advisory locks for idempotency & 64-bit lead root lock
   perform pg_advisory_xact_lock(hashtext(v_actor_id::text || '|' || v_op_code || '|' || trim(p_idempotency_key)));
+  perform pg_advisory_xact_lock(hashtext('quotation_root:' || p_lead_id::text));
 
   select * into v_idempotency_rec
   from private.quotation_idempotency_requests
@@ -548,7 +682,8 @@ begin
     'versionNumber', v_version_number,
     'lockVersion', 1,
     'status', 'draft',
-    'idempotentReplay', false
+    'idempotentReplay', false,
+    'dto', public.get_quotation_draft(v_quotation_id)
   );
 
   insert into private.quotation_idempotency_requests (actor_id, operation_code, idempotency_key, request_hash, quotation_id, quotation_version_id, response_snapshot)
@@ -582,18 +717,14 @@ declare
   v_actor_id uuid;
   v_version_rec record;
   v_lead_id uuid;
-  v_new_subtotal bigint;
   v_new_discount_type text;
   v_new_discount_val bigint;
   v_new_discount_pct numeric(5,2);
-  v_new_discount_tot bigint;
-  v_new_taxable_base bigint;
   v_new_tax_profile_id uuid;
   v_new_tax_rate numeric(5,2);
-  v_new_tax_tot bigint;
-  v_new_grand_tot bigint;
   v_new_lock_version bigint;
   v_tax_profile_rec record;
+  v_result jsonb;
 begin
   v_actor_id := auth.uid();
   if v_actor_id is null then
@@ -622,7 +753,6 @@ begin
     raise exception 'QUOTATION_VERSION_CONFLICT: Stale lock version' using errcode = 'P0002';
   end if;
 
-  v_new_subtotal := v_version_rec.subtotal_paise;
   v_new_discount_type := coalesce(p_discount_type, v_version_rec.discount_type);
   v_new_discount_val := coalesce(p_discount_value_paise, v_version_rec.discount_value_paise);
   v_new_discount_pct := coalesce(p_discount_percentage, v_version_rec.discount_percentage);
@@ -631,31 +761,19 @@ begin
     raise exception 'QUOTATION_VALIDATION_FAILED: Invalid discount type' using errcode = 'P0001';
   end if;
 
-  -- Compute discount total
   if v_new_discount_type = 'none' then
     v_new_discount_val := 0;
     v_new_discount_pct := 0.00;
-    v_new_discount_tot := 0;
   elsif v_new_discount_type = 'flat' then
     v_new_discount_pct := 0.00;
-    v_new_discount_tot := v_new_discount_val;
   elsif v_new_discount_type = 'percentage' then
     v_new_discount_val := 0;
-    v_new_discount_tot := round((v_new_subtotal::numeric * (v_new_discount_pct / 100.00))::numeric)::bigint;
   end if;
-
-  if v_new_discount_tot > v_new_subtotal then
-    raise exception 'QUOTATION_VALIDATION_FAILED: Discount cannot exceed subtotal' using errcode = 'P0001';
-  end if;
-
-  v_new_taxable_base := v_new_subtotal - v_new_discount_tot;
 
   -- Resolve tax profile snapshot
   if p_clear_tax_profile then
     v_new_tax_profile_id := null;
     v_new_tax_rate := null;
-    v_new_tax_tot := null;
-    v_new_grand_tot := null;
   elsif p_tax_profile_id is not null then
     select * into v_tax_profile_rec
     from public.quotation_tax_profiles
@@ -667,18 +785,9 @@ begin
 
     v_new_tax_profile_id := v_tax_profile_rec.id;
     v_new_tax_rate := v_tax_profile_rec.rate_percentage;
-    v_new_tax_tot := round((v_new_taxable_base::numeric * (v_new_tax_rate / 100.00))::numeric)::bigint;
-    v_new_grand_tot := v_new_taxable_base + v_new_tax_tot;
   else
     v_new_tax_profile_id := v_version_rec.tax_profile_id;
     v_new_tax_rate := v_version_rec.tax_rate_percentage;
-    if v_new_tax_rate is not null then
-      v_new_tax_tot := round((v_new_taxable_base::numeric * (v_new_tax_rate / 100.00))::numeric)::bigint;
-      v_new_grand_tot := v_new_taxable_base + v_new_tax_tot;
-    else
-      v_new_tax_tot := null;
-      v_new_grand_tot := null;
-    end if;
   end if;
 
   v_new_lock_version := v_version_rec.lock_version + 1;
@@ -690,12 +799,8 @@ begin
     discount_type = v_new_discount_type,
     discount_value_paise = v_new_discount_val,
     discount_percentage = v_new_discount_pct,
-    discount_total_paise = v_new_discount_tot,
-    taxable_base_paise = v_new_taxable_base,
     tax_profile_id = v_new_tax_profile_id,
     tax_rate_percentage = v_new_tax_rate,
-    tax_total_paise = v_new_tax_tot,
-    grand_total_paise = v_new_grand_tot,
     terms_and_conditions = coalesce(p_terms_and_conditions, terms_and_conditions),
     inclusions = coalesce(p_inclusions, inclusions),
     exclusions = coalesce(p_exclusions, exclusions),
@@ -703,25 +808,34 @@ begin
     updated_at = now()
   where id = v_version_rec.id;
 
+  -- Private explicit recalculation of totals & payment schedules
+  perform private.recalculate_quotation_totals(v_version_rec.id);
+
+  -- Fetch updated version record
+  select * into v_version_rec from public.quotation_versions where id = v_version_rec.id;
+
   insert into public.quotation_events (quotation_id, quotation_version_id, lead_id, event_type, actor_id, details)
   values (p_quotation_id, v_version_rec.id, v_lead_id, 'quotation.draft_updated', v_actor_id, jsonb_build_object(
     'lockVersion', v_new_lock_version,
     'discountType', v_new_discount_type,
-    'discountTotalPaise', v_new_discount_tot,
-    'taxableBasePaise', v_new_taxable_base,
-    'grandTotalPaise', v_new_grand_tot
+    'discountTotalPaise', v_version_rec.discount_total_paise,
+    'taxableBasePaise', v_version_rec.taxable_base_paise,
+    'grandTotalPaise', v_version_rec.grand_total_paise
   ));
 
-  return jsonb_build_object(
+  v_result := jsonb_build_object(
     'quotationId', p_quotation_id,
     'versionId', v_version_rec.id,
     'lockVersion', v_new_lock_version,
-    'subtotalPaise', v_new_subtotal,
-    'discountTotalPaise', v_new_discount_tot,
-    'taxableBasePaise', v_new_taxable_base,
-    'taxTotalPaise', v_new_tax_tot,
-    'grandTotalPaise', v_new_grand_tot
+    'subtotalPaise', v_version_rec.subtotal_paise,
+    'discountTotalPaise', v_version_rec.discount_total_paise,
+    'taxableBasePaise', v_version_rec.taxable_base_paise,
+    'taxTotalPaise', v_version_rec.tax_total_paise,
+    'grandTotalPaise', v_version_rec.grand_total_paise,
+    'dto', public.get_quotation_draft(p_quotation_id)
   );
+
+  return v_result;
 end;
 $$;
 
@@ -748,12 +862,8 @@ declare
   v_line_qty numeric(10,3);
   v_unit_rate bigint;
   v_line_total bigint;
-  v_sec_subtotal bigint;
-  v_ver_subtotal bigint := 0;
-  v_new_taxable_base bigint;
-  v_new_tax_tot bigint;
-  v_new_grand_tot bigint;
   v_new_lock_version bigint;
+  v_result jsonb;
 begin
   v_actor_id := auth.uid();
   if v_actor_id is null then
@@ -796,8 +906,6 @@ begin
   -- Process sections and line items
   for v_sec_elem in select * from jsonb_array_elements(p_sections)
   loop
-    v_sec_subtotal := 0;
-
     insert into public.quotation_sections (quotation_version_id, section_name, display_order, subtotal_paise)
     values (
       v_version_rec.id,
@@ -819,7 +927,6 @@ begin
         end if;
 
         v_line_total := round((v_line_qty * v_unit_rate::numeric)::numeric)::bigint;
-        v_sec_subtotal := v_sec_subtotal + v_line_total;
 
         insert into public.quotation_items (
           section_id,
@@ -847,54 +954,43 @@ begin
       end loop;
     end if;
 
-    update public.quotation_sections set subtotal_paise = v_sec_subtotal where id = v_sec_id;
-    v_ver_subtotal := v_ver_subtotal + v_sec_subtotal;
     v_sec_order := v_sec_order + 1;
   end loop;
-
-  -- Recompute version totals
-  v_new_taxable_base := v_ver_subtotal - v_version_rec.discount_total_paise;
-  if v_new_taxable_base < 0 then
-    v_new_taxable_base := 0;
-  end if;
-
-  if v_version_rec.tax_rate_percentage is not null then
-    v_new_tax_tot := round((v_new_taxable_base::numeric * (v_version_rec.tax_rate_percentage / 100.00))::numeric)::bigint;
-    v_new_grand_tot := v_new_taxable_base + v_new_tax_tot;
-  else
-    v_new_tax_tot := null;
-    v_new_grand_tot := null;
-  end if;
 
   v_new_lock_version := v_version_rec.lock_version + 1;
 
   update public.quotation_versions set
     lock_version = v_new_lock_version,
-    subtotal_paise = v_ver_subtotal,
-    taxable_base_paise = v_new_taxable_base,
-    tax_total_paise = v_new_tax_tot,
-    grand_total_paise = v_new_grand_tot,
     updated_by = v_actor_id,
     updated_at = now()
   where id = v_version_rec.id;
 
+  -- Private explicit recalculation of totals & payment schedules
+  perform private.recalculate_quotation_totals(v_version_rec.id);
+
+  -- Fetch updated version record
+  select * into v_version_rec from public.quotation_versions where id = v_version_rec.id;
+
   insert into public.quotation_events (quotation_id, quotation_version_id, lead_id, event_type, actor_id, details)
   values (p_quotation_id, v_version_rec.id, v_lead_id, 'quotation.draft_updated', v_actor_id, jsonb_build_object(
     'lockVersion', v_new_lock_version,
-    'subtotalPaise', v_ver_subtotal,
-    'grandTotalPaise', v_new_grand_tot
+    'subtotalPaise', v_version_rec.subtotal_paise,
+    'grandTotalPaise', v_version_rec.grand_total_paise
   ));
 
-  return jsonb_build_object(
+  v_result := jsonb_build_object(
     'quotationId', p_quotation_id,
     'versionId', v_version_rec.id,
     'lockVersion', v_new_lock_version,
-    'subtotalPaise', v_ver_subtotal,
+    'subtotalPaise', v_version_rec.subtotal_paise,
     'discountTotalPaise', v_version_rec.discount_total_paise,
-    'taxableBasePaise', v_new_taxable_base,
-    'taxTotalPaise', v_new_tax_tot,
-    'grandTotalPaise', v_new_grand_tot
+    'taxableBasePaise', v_version_rec.taxable_base_paise,
+    'taxTotalPaise', v_version_rec.tax_total_paise,
+    'grandTotalPaise', v_version_rec.grand_total_paise,
+    'dto', public.get_quotation_draft(p_quotation_id)
   );
+
+  return v_result;
 end;
 $$;
 
@@ -920,10 +1016,9 @@ declare
   v_amt_sum bigint := 0;
   v_item_pct numeric(5,2);
   v_item_amt bigint;
-  v_derived_amt bigint;
-  v_running_amt bigint := 0;
   v_total_milestones integer;
   v_new_lock_version bigint;
+  v_result jsonb;
 begin
   v_actor_id := auth.uid();
   if v_actor_id is null then
@@ -973,19 +1068,8 @@ begin
 
       v_pct_sum := v_pct_sum + v_item_pct;
 
-      if v_version_rec.grand_total_paise is not null then
-        if v_order = v_total_milestones - 1 then
-          v_derived_amt := v_version_rec.grand_total_paise - v_running_amt;
-        else
-          v_derived_amt := round((v_version_rec.grand_total_paise::numeric * (v_item_pct / 100.00))::numeric)::bigint;
-          v_running_amt := v_running_amt + v_derived_amt;
-        end if;
-      else
-        v_derived_amt := null;
-      end if;
-
       insert into public.quotation_payment_schedules (quotation_version_id, milestone_name, milestone_order, percentage, amount_paise)
-      values (v_version_rec.id, trim(v_elem->>'milestoneName'), v_order, v_item_pct, v_derived_amt);
+      values (v_version_rec.id, trim(v_elem->>'milestoneName'), v_order, v_item_pct, null);
     else
       v_item_amt := (v_elem->>'amountPaise')::bigint;
       if v_item_amt is null or v_item_amt < 0 then
@@ -1010,6 +1094,12 @@ begin
     updated_at = now()
   where id = v_version_rec.id;
 
+  -- Explicit private recalculation of payment schedule amounts
+  perform private.recalculate_quotation_payment_schedule(v_version_rec.id);
+
+  -- Fetch updated version record
+  select * into v_version_rec from public.quotation_versions where id = v_version_rec.id;
+
   insert into public.quotation_events (quotation_id, quotation_version_id, lead_id, event_type, actor_id, details)
   values (p_quotation_id, v_version_rec.id, v_lead_id, 'quotation.payment_schedule_changed', v_actor_id, jsonb_build_object(
     'lockVersion', v_new_lock_version,
@@ -1017,7 +1107,7 @@ begin
     'milestoneCount', v_total_milestones
   ));
 
-  return jsonb_build_object(
+  v_result := jsonb_build_object(
     'quotationId', p_quotation_id,
     'versionId', v_version_rec.id,
     'lockVersion', v_new_lock_version,
@@ -1028,8 +1118,11 @@ begin
       when p_mode = 'percentage' and v_pct_sum = 100.00 and v_version_rec.grand_total_paise is not null then true
       when p_mode = 'amount' and v_version_rec.grand_total_paise is not null and v_amt_sum = v_version_rec.grand_total_paise then true
       else false
-    end
+    end,
+    'dto', public.get_quotation_draft(p_quotation_id)
   );
+
+  return v_result;
 end;
 $$;
 
@@ -1048,6 +1141,7 @@ declare
   v_lead_id uuid;
   v_version_rec record;
   v_new_lock_version bigint;
+  v_result jsonb;
 begin
   v_actor_id := auth.uid();
   if v_actor_id is null then
@@ -1097,12 +1191,16 @@ begin
     'versionNumber', v_version_rec.version_number
   ));
 
-  return jsonb_build_object(
+  v_result := jsonb_build_object(
     'quotationId', p_quotation_id,
     'versionId', v_version_rec.id,
     'status', 'archived',
-    'isCurrentDraft', false
+    'isCurrentDraft', false,
+    'lockVersion', v_new_lock_version,
+    'dto', public.get_quotation_draft(p_quotation_id)
   );
+
+  return v_result;
 end;
 $$;
 
@@ -1239,3 +1337,4 @@ begin
   );
 end;
 $$;
+
