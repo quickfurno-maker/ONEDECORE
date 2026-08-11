@@ -80,12 +80,20 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               </Link>
             ) : null}
             {showCrmLink ? (
-              <Link
-                href="/admin/crm/leads"
-                className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-              >
-                CRM
-              </Link>
+              <>
+                <Link
+                  href="/admin/crm/leads"
+                  className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                >
+                  CRM
+                </Link>
+                <Link
+                  href="/admin/quotations"
+                  className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                >
+                  Quotations
+                </Link>
+              </>
             ) : null}
             {showWhatsappLink ? (
               <Link
