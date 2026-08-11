@@ -34,11 +34,11 @@ All Phase 7A owner architecture decisions have been explicitly authorized and lo
 - V1 does not support multiple competing quotation roots or proposal families for one lead.
 - Revisions never create a second quotation root for a lead.
 
-### OD7A-2 — Payment Schedule Model
+### OD7A-2 — Payment Schedule Model & Nullability Consistency
 - **LOCKED:** Explicit **SCHEDULE-LEVEL** mode (`payment_schedule_mode in ('percentage', 'amount')`).
 - No mixing of percentage-based and amount-based milestones within one version.
-- **Percentage Mode:** Milestone percentages are authoritative inputs (`sum(percentage) = 100.00`). Milestone amounts in paise are server-derived (`amount_paise = round(grand_total_paise * (percentage / 100.00))`). The final ordered milestone absorbs any integer paise rounding residual so `sum(amount_paise) == grand_total_paise` exactly.
-- **Amount Mode:** Milestone amounts in paise are authoritative inputs (`sum(amount_paise) == grand_total_paise`). Percentages remain NULL.
+- **Percentage Mode:** Milestone percentages are required authoritative inputs (`sum(percentage) = 100.00`). If `grand_total_paise` is NULL/incomplete (unconfigured tax profile), derived `amount_paise` remains NULL and the schedule is incomplete/unreconciled. Once `grand_total_paise` exists, `amount_paise` values are server-derived (`amount_paise = round(grand_total_paise * (percentage / 100.00))`) and the final ordered milestone absorbs any integer paise rounding residual so `sum(amount_paise) == grand_total_paise` exactly.
+- **Amount Mode:** Milestone amounts in paise are required authoritative inputs (`amount_paise` non-null, `sum(amount_paise) == grand_total_paise`). Percentages remain NULL. Amount mode cannot claim reconciliation while `grand_total_paise` is NULL.
 
 ### OD7A-3 — Quotation Number Format
 - **LOCKED:** Format **`OD-Q-{YYYY}-{SEQ6}`** (e.g. `OD-Q-2026-000123`).
@@ -51,7 +51,7 @@ All Phase 7A owner architecture decisions have been explicitly authorized and lo
 - **NO** seeded or default GST percentage. **NO** assumed 18%, 5%, or any production default rate.
 - Draft versions snapshot `tax_profile_id` and `tax_rate_percentage`.
 - **NULL Tax Contract:** A draft with no configured tax profile (`tax_profile_id = NULL`) has `tax_total_paise = NULL` and `grand_total_paise = NULL` and is commercially incomplete.
-- **Explicit 0.00% Tax:** Valid only if an authoritative 0% tax profile was selected.
+- **Explicit 0.00% Tax:** Valid only if an authoritative 0% tax profile was explicitly configured and selected.
 
 ### OD7A-5 — Hard Commercial Discount Bounds Architecture
 - **LOCKED:** **NO** manager override, **NO** quotation approval workflow, **NO** per-quotation approval request path.
@@ -209,13 +209,13 @@ All Phase 7A owner architecture decisions have been explicitly authorized and lo
    - `quotation_version_id` (uuid, references public.quotation_versions(id) on delete restrict, not null)
    - `milestone_name` (text, not null)
    - `milestone_order` (integer, not null)
-   - `percentage` (numeric(5,2) check (percentage >= 0.00 and percentage <= 100.00))
-   - `amount_paise` (bigint not null check (amount_paise >= 0))
+   - `percentage` (numeric(5,2) check (percentage >= 0.00 and percentage <= 100.00)) — Required in percentage mode; NULL in amount mode
+   - `amount_paise` (bigint check (amount_paise >= 0)) — Required in amount mode; derived (nullable while grand_total_paise is NULL) in percentage mode
    - `created_at` (timestamptz, default now(), not null)
 
 6. **`public.quotation_tax_profiles`** (Tax Profile Catalogue — OD7A-4)
    - `id` (uuid, primary key, default gen_random_uuid())
-   - `code` (text, unique, not null) — e.g., `'GST_18'`, `'EXEMPT_0'`
+   - `code` (text, unique, not null) — Rate-neutral identifiers (e.g., `'standard_tax'`, `'zero_rated'`)
    - `display_name` (text, not null)
    - `rate_percentage` (numeric(5,2), not null check (rate_percentage >= 0.00 and rate_percentage <= 100.00))
    - `is_active` (boolean, not null default true)
@@ -384,6 +384,11 @@ When authorized for implementation in Phase 7A:
   - Over-discount (`discount_total_paise > subtotal_paise`) raises `QUOTATION_VALIDATION_FAILED`.
   - Synthetic test tax rate calculates `tax_total_paise` exactly.
   - NULL tax profile sets `tax_total_paise = NULL` and `grand_total_paise = NULL`.
+- **PAYMENT SCHEDULE MODE**:
+  - Percentage mode + NULL grand total => percentages stored, derived `amount_paise` is NULL, schedule is incomplete/unreconciled.
+  - Percentage mode + grand total set => `amount_paise` derived and final milestone absorbs residual.
+  - Amount mode rejects NULL milestone amount.
+  - Amount mode cannot claim reconciliation while `grand_total_paise` is NULL.
 - **CONCURRENCY & IDEMPOTENCY**:
   - Stale `lock_version` raises `QUOTATION_VERSION_CONFLICT`.
   - `p_idempotency_key` replay returns previous result with `idempotentReplay = true`.
