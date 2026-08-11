@@ -6,9 +6,9 @@
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 6D — Staff Administration, Attendance & Leave (**REPOSITORY M1–M24 COMPLETE; MANAGED M1–M24 APPLIED & VERIFIED; REPAIR CLOSEOUT COMPLETE**)
-**Next Phase:** Phase 7A — Commercial Quotation Data & Draft Foundation (**NEXT ELIGIBLE FORMAL PHASE; NOT STARTED / PENDING CLOSEOUT MERGE**)
-**Previous Phase:** Phase 6C — Groq Human-Controlled Copilot (**COMPLETE**)
+**Current Phase:** Phase 7A — Commercial Quotation Data & Draft Foundation (**ENTRY AUDIT & ARCHITECTURE FREEZE**)
+**Next Phase:** Phase 7B — Quotation Finalization, Delivery & Acceptance (**PLANNED**)
+**Previous Phase:** Phase 6D — Staff Administration, Attendance & Leave (**COMPLETE / CLOSED** — PR #51 merged)
 
 ---
 
@@ -100,7 +100,7 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Staff attendance idempotency order repair (migration 24) | Applied managed August 11, 2026 (Phase 6D M24 owner-authorized repair apply) |
 | Migration alignment | Repository: **M1–M24** (24 files); Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M24** (24 migrations applied & aligned) |
 
-CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, Phase 5F identity hardening, Phase 6A WhatsApp foundation, Phase 6B shared inbox/send-intent/dispatch foundations, Phase 6C Kriti audit persistence, and Phase 6D staff admin/attendance/leave foundation + M24 idempotency repair (M23–M24) are applied on managed database (`lpurlfmpvriyvpkujvyl`). **M24 forward-only repair is applied managed; repaired check-in/check-out RPC ordering verified.** Phase 6D managed repair closeout is **TECHNICALLY COMPLETE**. Phase 7A is **NOT STARTED** (next eligible formal phase after closeout merge). **Production deployment pending** (Phase 10); **public intake remains inactive**.
+CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, Phase 5F identity hardening, Phase 6A WhatsApp foundation, Phase 6B shared inbox/send-intent/dispatch foundations, Phase 6C Kriti audit persistence, and Phase 6D staff admin/attendance/leave foundation + M24 idempotency repair (M23–M24) are applied on managed database (`lpurlfmpvriyvpkujvyl`). **M24 forward-only repair is applied managed; repaired check-in/check-out RPC ordering verified.** Phase 6D managed repair closeout is **COMPLETE / CLOSED** (PR #51 merged). Phase 7A is **CURRENT FORMAL PHASE** (Entry Audit & Architecture Freeze). **Production deployment pending** (Phase 10); **public intake remains inactive**.
 
 ### Phase 5F truth
 
@@ -147,8 +147,8 @@ CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targ
 - M24 Git blob `790db51dc7761c4d1ced3c38db07d974849e6fdb`; normalized UTF-8/LF SHA-256 `029a88db95bafe5cfd8791baf77fb94695da7febed41b5251898cfede5a860b2`.
 - Managed foundation (M23–M24): staff employment profiles, attendance policies/events/days/corrections, leave types/requests, holidays; invite saga RPCs; repaired check-in/check-out idempotency-first function ordering verified on managed DB.
 - **OD-1–OD-10 unresolved** — no policy catalogue seeds; `attendance.correct.team` not granted; attendance production activation blocked until owner values.
-- **No production deployment**; **public intake inactive**; **Phase 7A NOT STARTED** (next eligible formal phase after closeout PR merge).
-- Phase 6D repository implementation M1–M24 complete; **managed repair closeout TECHNICALLY COMPLETE**. **Phase 7A NOT STARTED**.
+- **No production deployment**; **public intake inactive**; **Phase 7A ACTIVE** (Entry Audit & Architecture Freeze).
+- Phase 6D repository implementation M1–M24 complete; **managed repair closeout COMPLETE / CLOSED** (PR #51 merged). **Phase 7A CURRENT FORMAL PHASE**.
 
 ### Phase 5E truth
 

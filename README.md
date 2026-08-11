@@ -4,8 +4,8 @@
 
 ONEDECORE is a premium interior-business operating system for Pune, India — combining a production public website and portfolio with a planned sales, quotation, project execution, design, WhatsApp, and marketing CRM backbone.
 
-**Current phase:** Phase 5F — Controlled Public Lead Activation Gate (**READY TO CLOSE** — formally COMPLETE after closeout PR merge).
-**Next implementation:** Phase 6A — Meta WhatsApp Data & Webhook Foundation (**NOT STARTED**).
+**Current phase:** Phase 7A — Commercial Quotation Data & Draft Foundation (**ENTRY AUDIT & ARCHITECTURE FREEZE**).
+**Previous phase:** Phase 6D — Staff Administration, Attendance & Leave (**COMPLETE / CLOSED** — PR #51 merged).
 **Public intake:** inactive (`copy-only` browser gate; server `disabled`). **Production activation:** Phase 10 only.
 
 ---
@@ -44,7 +44,7 @@ ONEDECORE is a premium interior-business operating system for Pune, India — co
 | Public lead form | **Merged; default `copy-only`; server `disabled`** |
 | Controlled public lead activation hardening (Phase 5F) | Merged (PR #17); M17 applied managed August 4, 2026; **public intake inactive** |
 
-Managed Supabase (**OneDecore**, `lpurlfmpvriyvpkujvyl`): migrations **1–17** aligned (M17 applied August 4, 2026).
+Managed Supabase (**OneDecore**, `lpurlfmpvriyvpkujvyl`): migrations **1–24** aligned (M24 applied August 11, 2026).
 
 ### Not yet complete
 
@@ -96,7 +96,7 @@ Five locked V1 staff roles: `super_admin`, `sales_manager`, `sales_executive`, `
 
 - **Framework:** Next.js 16.2.11 · React 19 · TypeScript 5 · Tailwind CSS v4
 - **Node:** 24.x LTS (`>=24 <25`) · npm 11.16.0
-- **Database:** Supabase (`lpurlfmpvriyvpkujvyl`, Mumbai) · **17 migrations applied** (managed aligned)
+- **Database:** Supabase (`lpurlfmpvriyvpkujvyl`, Mumbai) · **24 migrations applied** (M1–M24 managed aligned)
 - **Quality gates:** `npm run check` · `npm run check:db`
 - **Contributions:** [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md)
 

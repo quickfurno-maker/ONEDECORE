@@ -152,5 +152,5 @@ Backup **1330573859** does not permanently satisfy Phase 10 production activatio
 | Unintended schema changes | None (0 new tables, 0 permission changes, 0 policy seeds) |
 | Local quality suite | `db:test` (654/654 PASS), Phase 6D formal (101/101 PASS), Phase 6B integrated (48/48 PASS), app (561/561 PASS), typecheck PASS, lint PASS, build PASS |
 | Non-actions confirmed | No M25 created; no M23 modified; no OD seeds; no attendance production activation; no Phase 7A started; no production deployment |
-| Closeout status | `PHASE_6D_M24_MANAGED_APPLY: PASS`, `MANAGED_ALIGNMENT: M1–M24`, `PHASE_6D_MANAGED_REPAIR: TECHNICALLY COMPLETE`, `CLOSEOUT_PR: PENDING OWNER MERGE AUTHORIZATION`, `PHASE_7A: NOT STARTED` |
+| Closeout status | `PHASE_6D_M24_MANAGED_APPLY: PASS`, `MANAGED_ALIGNMENT: M1–M24`, `PHASE_6D_MANAGED_REPAIR: COMPLETE / CLOSED` (PR #51 merged `eb524d166e09b3160526ff5d0c642a1a65012f88`), `PHASE_7A: CURRENT FORMAL PHASE` (Entry Audit & Architecture Freeze) |
 
