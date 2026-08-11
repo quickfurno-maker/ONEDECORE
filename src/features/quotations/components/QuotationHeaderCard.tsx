@@ -28,7 +28,7 @@ export function QuotationHeaderCard({
             </span>
           </div>
           <p className="mt-1 text-xs text-neutral-400">
-            Lock Version: {version.lockVersion} • Created: {new Date(version.id ? Date.now() : Date.now()).toLocaleDateString("en-IN")}
+            Lock Version: {version.lockVersion}
           </p>
         </div>
 

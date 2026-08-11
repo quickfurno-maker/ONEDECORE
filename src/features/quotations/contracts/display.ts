@@ -4,7 +4,6 @@
 
 import type { QuotationCalculationResult } from "./calculation.ts";
 import type { QuotationLifecycleState } from "./lifecycle.ts";
-import type { QuotationLineItemDraft } from "./line-item.ts";
 import type { QuotationRevisionRef } from "./reference.ts";
 
 export interface QuotationDisplayLineItem {
