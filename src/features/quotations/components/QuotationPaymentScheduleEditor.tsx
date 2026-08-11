@@ -48,7 +48,7 @@ export function QuotationPaymentScheduleEditor({
     setMilestones(
       milestones.map((m) => ({
         ...m,
-        percentage: newMode === "percentage" ? (m.percentage ?? 0) : null,
+        percentage: newMode === "percentage" ? (m.percentage ?? "0") : null,
         amountPaise: newMode === "amount" ? (m.amountPaise ?? 0) : null,
       }))
     );
@@ -61,7 +61,7 @@ export function QuotationPaymentScheduleEditor({
       {
         milestoneName: `Milestone ${milestones.length + 1}`,
         milestoneOrder: milestones.length,
-        percentage: mode === "percentage" ? 0 : null,
+        percentage: mode === "percentage" ? "0" : null,
         amountPaise: mode === "amount" ? 0 : null,
       },
     ]);
@@ -88,7 +88,7 @@ export function QuotationPaymentScheduleEditor({
     setDirty(false);
   };
 
-  const pctSum = milestones.reduce((sum, m) => sum + (m.percentage || 0), 0);
+  const pctSum = milestones.reduce((sum, m) => sum + (Number(m.percentage) || 0), 0);
   const amtSum = milestones.reduce((sum, m) => sum + (m.amountPaise || 0), 0);
 
   return (
@@ -172,15 +172,10 @@ export function QuotationPaymentScheduleEditor({
                 {mode === "percentage" ? (
                   <td className="py-2 pr-2">
                     <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
+                      type="text"
                       className="w-full rounded border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 font-mono text-neutral-100"
-                      value={m.percentage ?? 0}
-                      onChange={(e) =>
-                        handleChange(idx, "percentage", parseFloat(e.target.value) || 0)
-                      }
+                      value={m.percentage != null ? String(m.percentage) : ""}
+                      onChange={(e) => handleChange(idx, "percentage", e.target.value)}
                     />
                   </td>
                 ) : (
@@ -188,7 +183,7 @@ export function QuotationPaymentScheduleEditor({
                     <input
                       type="text"
                       className="w-full rounded border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 font-mono text-neutral-100"
-                      value={((m.amountPaise || 0) / 100).toString()}
+                      value={m.amountPaise != null ? ((m.amountPaise || 0) / 100).toString() : ""}
                       onChange={(e) =>
                         handleChange(idx, "amountPaise", parseInrToPaise(e.target.value))
                       }
@@ -198,11 +193,9 @@ export function QuotationPaymentScheduleEditor({
                 <td className="py-2 font-mono text-neutral-400">
                   {m.amountPaise != null
                     ? formatInrFromPaise(m.amountPaise)
-                    : version.grandTotalPaise == null
-                    ? "(Grand total pending)"
-                    : Math.abs(pctSum - 100) >= 0.01
-                    ? "(Percentage sum != 100%)"
-                    : "—"}
+                    : mode === "percentage"
+                    ? "Derived on total"
+                    : "Explicit amount"}
                 </td>
                 <td className="py-2 text-right">
                   <button
@@ -219,31 +212,24 @@ export function QuotationPaymentScheduleEditor({
         </table>
       </div>
 
-      <div className="mt-4 flex items-center justify-between border-t border-neutral-800/80 pt-3 text-xs">
+      <div className="mt-4 flex items-center justify-between text-xs font-mono text-neutral-400">
         <div>
           {mode === "percentage" ? (
-            <span
-              className={`font-semibold ${
-                Math.abs(pctSum - 100) < 0.01 ? "text-emerald-400" : "text-amber-400"
-              }`}
-            >
-              Total Percentage: {pctSum.toFixed(2)}%{" "}
-              {Math.abs(pctSum - 100) < 0.01 ? "(100% Reconciled)" : "(Must equal 100.00%)"}
+            <span>
+              Total Percentage:{" "}
+              <strong
+                className={
+                  Math.abs(pctSum - 100) < 0.001 ? "text-emerald-400" : "text-amber-400"
+                }
+              >
+                {pctSum.toFixed(2)}%
+              </strong>{" "}
+              (Must equal exactly 100.00%)
             </span>
           ) : (
-            <span
-              className={`font-semibold ${
-                version.grandTotalPaise != null && amtSum === version.grandTotalPaise
-                  ? "text-emerald-400"
-                  : "text-amber-400"
-              }`}
-            >
-              Total Amount: {formatInrFromPaise(amtSum)}{" "}
-              {version.grandTotalPaise != null && amtSum === version.grandTotalPaise
-                ? "(Reconciled with Grand Total)"
-                : version.grandTotalPaise != null
-                ? `(Grand Total: ${formatInrFromPaise(version.grandTotalPaise)})`
-                : "(Grand Total Pending)"}
+            <span>
+              Total Schedule Amount:{" "}
+              <strong className="text-emerald-400">{formatInrFromPaise(amtSum)}</strong>
             </span>
           )}
         </div>

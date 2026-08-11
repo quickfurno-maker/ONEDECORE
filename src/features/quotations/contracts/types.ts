@@ -7,7 +7,7 @@ export interface QuotationLineItemDTO {
   readonly itemName: string;
   readonly description?: string | null;
   readonly specifications?: string | null;
-  readonly quantity: number;
+  readonly quantity: number | string;
   readonly unitOfMeasure: string;
   readonly unitRatePaise: number;
   readonly lineTotalPaise?: number;
@@ -26,7 +26,7 @@ export interface QuotationPaymentScheduleMilestoneDTO {
   readonly id?: string;
   readonly milestoneName: string;
   readonly milestoneOrder?: number;
-  readonly percentage?: number | null;
+  readonly percentage?: number | string | null;
   readonly amountPaise?: number | null;
 }
 
@@ -57,7 +57,7 @@ export interface QuotationVersionDTO {
   readonly subtotalPaise: number;
   readonly discountType: QuotationDiscountType;
   readonly discountValuePaise: number;
-  readonly discountPercentage: number;
+  readonly discountPercentage: number | string;
   readonly discountTotalPaise: number;
   readonly taxableBasePaise: number;
   readonly taxProfileId?: string | null;

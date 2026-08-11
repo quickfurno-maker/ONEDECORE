@@ -8,7 +8,7 @@ interface QuotationDiscountCardProps {
   readonly onUpdateDiscount: (
     discountType: QuotationDiscountType,
     discountValuePaise: number,
-    discountPercentage: number
+    discountPercentage: number | string
   ) => void;
 }
 
@@ -60,15 +60,11 @@ export function QuotationDiscountCard({
           <div>
             <label className="block text-xs font-medium text-neutral-300">Discount Percentage (%)</label>
             <input
-              type="number"
-              min="0"
-              max="100"
-              step="0.01"
+              type="text"
               className="mt-1 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-emerald-500 focus:outline-none font-mono"
-              value={version.discountPercentage}
+              value={version.discountPercentage != null ? String(version.discountPercentage) : ""}
               onChange={(e) => {
-                const pct = parseFloat(e.target.value) || 0;
-                onUpdateDiscount("percentage", 0, pct);
+                onUpdateDiscount("percentage", 0, e.target.value);
               }}
             />
           </div>

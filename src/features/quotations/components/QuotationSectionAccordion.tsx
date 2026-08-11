@@ -207,13 +207,11 @@ export function QuotationSectionAccordion({
                         </td>
                         <td className="py-2 pr-2">
                           <input
-                            type="number"
-                            min="0.001"
-                            step="any"
+                            type="text"
                             className="w-full rounded border border-neutral-800 bg-neutral-900 px-2 py-1 font-mono text-neutral-100"
-                            value={item.quantity}
+                            value={item.quantity != null ? String(item.quantity) : ""}
                             onChange={(e) =>
-                              handleItemChange(sIdx, iIdx, "quantity", parseFloat(e.target.value) || 0)
+                              handleItemChange(sIdx, iIdx, "quantity", e.target.value)
                             }
                           />
                         </td>

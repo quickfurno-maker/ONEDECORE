@@ -66,7 +66,7 @@ export function LeadDetailQuotationPanel({
 
         <div>
           {hasActiveDraft ? (
-            canEditQuotation || canCreateQuotation ? (
+            canEditQuotation ? (
               <Link
                 href={`/admin/quotations/${existingDraft?.quotationId}/draft`}
                 className="inline-flex min-h-10 items-center rounded-lg bg-amber-500 px-4 py-2 text-xs font-semibold text-neutral-950 hover:bg-amber-400 shadow"
@@ -75,7 +75,7 @@ export function LeadDetailQuotationPanel({
               </Link>
             ) : (
               <span className="text-xs text-neutral-500 italic">
-                (Quotation edit permission required)
+                Viewing active draft requires quotation edit permission (quotations.edit).
               </span>
             )
           ) : canCreateQuotation ? (

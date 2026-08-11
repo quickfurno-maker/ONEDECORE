@@ -804,8 +804,8 @@ begin
         'taxProfileId', p_tax_profile_id,
         'clearTaxProfile', p_clear_tax_profile,
         'termsAndConditions', p_terms_and_conditions,
-        'inclusions', to_jsonb(coalesce(p_inclusions, array[]::text[])),
-        'exclusions', to_jsonb(coalesce(p_exclusions, array[]::text[]))
+        'inclusions', case when p_inclusions is null then 'null'::jsonb else to_jsonb(p_inclusions) end,
+        'exclusions', case when p_exclusions is null then 'null'::jsonb else to_jsonb(p_exclusions) end
       )::text,
       'UTF8'
     )), 'hex');
@@ -848,6 +848,12 @@ begin
   v_new_discount_type := coalesce(p_discount_type, v_version_rec.discount_type);
   v_new_discount_val := coalesce(p_discount_value_paise, v_version_rec.discount_value_paise);
   v_new_discount_pct := coalesce(p_discount_percentage, v_version_rec.discount_percentage);
+
+  if p_discount_percentage is not null then
+    if (p_discount_percentage::text) ~ '\.[0-9]{3,}$' then
+      raise exception 'QUOTATION_VALIDATION_FAILED: Percentage cannot exceed 2 decimal places' using errcode = 'P0001';
+    end if;
+  end if;
 
   if v_new_discount_type not in ('none', 'flat', 'percentage') then
     raise exception 'QUOTATION_VALIDATION_FAILED: Invalid discount type' using errcode = 'P0001';
@@ -1121,6 +1127,10 @@ begin
         if (v_item_elem->>'quantity') is null or (v_item_elem->>'quantity') !~ '^[0-9]+(\.[0-9]+)?$' then
           raise exception 'QUOTATION_VALIDATION_FAILED: Invalid quantity' using errcode = 'P0001';
         end if;
+
+        if (v_item_elem->>'quantity') ~ '\.[0-9]{4,}$' then
+          raise exception 'QUOTATION_VALIDATION_FAILED: Quantity cannot exceed 3 decimal places' using errcode = 'P0001';
+        end if;
         v_line_qty := (v_item_elem->>'quantity')::numeric;
 
         if (v_item_elem->>'unitRatePaise') is null or (v_item_elem->>'unitRatePaise') !~ '^[0-9]+$' then
@@ -1324,6 +1334,10 @@ begin
 
       if (v_elem->>'percentage') is null or (v_elem->>'percentage') !~ '^[0-9]+(\.[0-9]+)?$' then
         raise exception 'QUOTATION_VALIDATION_FAILED: Invalid milestone percentage' using errcode = 'P0001';
+      end if;
+
+      if (v_elem->>'percentage') ~ '\.[0-9]{3,}$' then
+        raise exception 'QUOTATION_VALIDATION_FAILED: Percentage cannot exceed 2 decimal places' using errcode = 'P0001';
       end if;
 
       v_item_pct := (v_elem->>'percentage')::numeric;

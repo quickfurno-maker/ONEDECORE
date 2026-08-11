@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 7A — Commercial Quotation Data & Draft Foundation pgTAP tests
 
 begin;
-select plan(63);
+select plan(66);
 
 -- =============================================================================
 -- A. Schema Presence & RLS Verification
@@ -452,11 +452,61 @@ select throws_ok(
   'Reusing update idempotency key with modified scope_summary throws payload mismatch'
 );
 
+-- Test 21b: update_quotation_draft distinguishes p_inclusions NULL vs []
+select public.update_quotation_draft(
+  (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+  2::bigint,
+  p_inclusions => null::text[],
+  p_idempotency_key => 'update_key_null_inc'::text
+);
+
+select throws_ok(
+  $$select public.update_quotation_draft(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    3::bigint,
+    p_inclusions => array[]::text[],
+    p_idempotency_key => 'update_key_null_inc'::text
+  )$$,
+  'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH',
+  'Reusing update idempotency key with inclusions NULL vs empty array [] throws payload mismatch'
+);
+
+-- Test 21c: over-scale decimal validation (quantity >3 decimals, percentage >2 decimals)
+select throws_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    3::bigint,
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'Hall',
+        'items', jsonb_build_array(
+          jsonb_build_object('itemName', 'Sofa', 'quantity', '12.3456', 'unitOfMeasure', 'nos', 'unitRatePaise', 1000)
+        )
+      )
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Quantity cannot exceed 3 decimal places',
+  'Over-scale quantity string (>3 decimals) throws controlled validation error'
+);
+
+select throws_ok(
+  $$select public.replace_quotation_payment_schedule(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    3::bigint,
+    'percentage'::text,
+    jsonb_build_array(
+      jsonb_build_object('milestoneName', 'Booking', 'percentage', '33.333')
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Percentage cannot exceed 2 decimal places',
+  'Over-scale percentage string (>2 decimals) throws controlled validation error'
+);
+
 -- Test 22: replace_quotation_payment_schedule percentage mode rejects non-null amountPaise
 select throws_ok(
   $$select public.replace_quotation_payment_schedule(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
-    2::bigint,
+    3::bigint,
     'percentage'::text,
     jsonb_build_array(
       jsonb_build_object('milestoneName', 'Booking', 'percentage', '50.00', 'amountPaise', 50000)
@@ -470,7 +520,7 @@ select throws_ok(
 select throws_ok(
   $$select public.replace_quotation_payment_schedule(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
-    2::bigint,
+    3::bigint,
     'amount'::text,
     jsonb_build_array(
       jsonb_build_object('milestoneName', 'Booking', 'amountPaise', 50000, 'percentage', '50.00')
@@ -484,7 +534,7 @@ select throws_ok(
 select throws_ok(
   $$select public.replace_quotation_payment_schedule(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
-    2::bigint,
+    3::bigint,
     'percentage'::text,
     jsonb_build_array(
       jsonb_build_object('milestoneName', 'Booking', 'percentage', 'invalid-pct-string')
@@ -498,7 +548,7 @@ select throws_ok(
 select throws_ok(
   $$select public.save_quotation_draft_items(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
-    2::bigint,
+    3::bigint,
     jsonb_build_array(
       jsonb_build_object(
         'sectionName', 'Hall',
@@ -516,7 +566,7 @@ select throws_ok(
 select throws_ok(
   $$select public.save_quotation_draft_items(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
-    2::bigint,
+    3::bigint,
     jsonb_build_array(
       jsonb_build_object(
         'sectionName', 'Hall',

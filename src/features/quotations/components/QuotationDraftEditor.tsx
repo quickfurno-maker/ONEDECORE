@@ -146,7 +146,8 @@ export function QuotationDraftEditor({
 
   const handleUpdateDiscount = async (
     discountType: QuotationDiscountType,
-    val: number
+    discountValuePaise: number,
+    discountPercentage: number | string
   ) => {
     setSaving(true);
     setMessage(null);
@@ -154,8 +155,8 @@ export function QuotationDraftEditor({
 
     const res = await updateQuotationDraftAction(draft.quotationId, version.lockVersion, {
       discountType,
-      discountValuePaise: discountType === "flat" ? val : 0,
-      discountPercentage: discountType === "percentage" ? val : 0,
+      discountValuePaise: discountType === "flat" ? discountValuePaise : 0,
+      discountPercentage: discountType === "percentage" ? discountPercentage : "0",
     });
 
     setSaving(false);

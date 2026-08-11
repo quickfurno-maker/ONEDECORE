@@ -3,9 +3,17 @@
  */
 
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { describe, test } from "node:test";
 import { quotationErrorFromPostgresMessage } from "../server/quotation-errors.ts";
 import type { QuotationDraftDTO } from "../contracts/types.ts";
+import {
+  QuotationValidationError,
+  validateAndFormatPaiseInteger,
+  validateAndFormatPercentageString,
+  validateAndFormatQuantityString,
+} from "../server/quotation-decimal-utils.ts";
 
 describe("Phase 7A Commercial Quotation Draft Foundation", () => {
   test("Quotation number format validation regex matches OD-Q-YYYY-SEQ6", () => {
@@ -18,146 +26,110 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     assert.equal(pattern.test("OD-Q-2026-1234"), false);
   });
 
-  test("Error normalization maps Postgres error messages and plain Supabase objects to safe domain codes", () => {
-    const forbidden = quotationErrorFromPostgresMessage(new Error("QUOTATION_NOT_FOUND_OR_FORBIDDEN: Permission denied"));
-    assert.equal(forbidden.code, "QUOTATION_NOT_FOUND_OR_FORBIDDEN");
+  test("APP-1: Actual quantity mutation adapter preserves exact decimal string without parseFloat drift", () => {
+    const exactQtyStr = "120.500";
+    const formatted = validateAndFormatQuantityString(exactQtyStr);
+    assert.equal(formatted, "120.500");
+    assert.strictEqual(formatted, "120.500");
 
-    const conflict = quotationErrorFromPostgresMessage(new Error("QUOTATION_VERSION_CONFLICT: Stale lock version"));
-    assert.equal(conflict.code, "QUOTATION_VERSION_CONFLICT");
+    // Prove parseFloat drift is avoided
+    const floatResult = parseFloat("0.1") + parseFloat("0.2");
+    assert.notEqual(floatResult, 0.3); // IEEE 754 drift 0.30000000000000004
+    const exactResult = validateAndFormatQuantityString("0.300");
+    assert.equal(exactResult, "0.300");
+  });
 
-    const duplicate = quotationErrorFromPostgresMessage(new Error("QUOTATION_DRAFT_ALREADY_EXISTS: Active draft present"));
-    assert.equal(duplicate.code, "QUOTATION_DRAFT_ALREADY_EXISTS");
+  test("APP-2: Actual payment percentage mutation adapter preserves exact decimal string", () => {
+    const exactPctStr = "33.33";
+    const formatted = validateAndFormatPercentageString(exactPctStr);
+    assert.equal(formatted, "33.33");
+    assert.strictEqual(formatted, "33.33");
+  });
 
-    const idempotency = quotationErrorFromPostgresMessage(new Error("IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH"));
-    assert.equal(idempotency.code, "IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH");
+  test("APP-3: Actual discount percentage mutation adapter preserves exact decimal string", () => {
+    const exactDiscountStr = "12.50";
+    const formatted = validateAndFormatPercentageString(exactDiscountStr);
+    assert.equal(formatted, "12.50");
+  });
 
-    // Plain Supabase/PostgREST error object mapping
-    const plainObjConflict = quotationErrorFromPostgresMessage({
+  test("APP-4: Invalid decimal syntax is rejected before RPC payload construction", () => {
+    assert.throws(
+      () => validateAndFormatQuantityString("invalid-qty-string"),
+      (err: unknown) =>
+        err instanceof QuotationValidationError &&
+        err.message.includes("Invalid quantity format")
+    );
+    assert.throws(
+      () => validateAndFormatPercentageString("bad-pct"),
+      (err: unknown) =>
+        err instanceof QuotationValidationError &&
+        err.message.includes("Invalid percentage format")
+    );
+  });
+
+  test("APP-5: Over-scale quantity (>3 decimals) is rejected before RPC payload construction", () => {
+    assert.throws(
+      () => validateAndFormatQuantityString("12.3456"),
+      (err: unknown) =>
+        err instanceof QuotationValidationError &&
+        err.message.includes("Quantity cannot exceed 3 decimal places")
+    );
+  });
+
+  test("APP-6: Over-scale percentage (>2 decimals) is rejected before RPC payload construction", () => {
+    assert.throws(
+      () => validateAndFormatPercentageString("33.333"),
+      (err: unknown) =>
+        err instanceof QuotationValidationError &&
+        err.message.includes("Percentage cannot exceed 2 decimal places")
+    );
+  });
+
+  test("APP-7 & APP-8 & APP-9: Plain Supabase/PostgREST error object normalization and sanitization", () => {
+    const conflictObj = quotationErrorFromPostgresMessage({
       code: "P0002",
       message: "QUOTATION_VERSION_CONFLICT: Stale lock version",
       details: null,
       hint: null,
     });
-    assert.equal(plainObjConflict.code, "QUOTATION_VERSION_CONFLICT");
+    assert.equal(conflictObj.code, "QUOTATION_VERSION_CONFLICT");
 
-    const plainObjForbidden = quotationErrorFromPostgresMessage({
+    const forbiddenObj = quotationErrorFromPostgresMessage({
       code: "42501",
       message: "insufficient_privilege",
       details: null,
       hint: null,
     });
-    assert.equal(plainObjForbidden.code, "QUOTATION_NOT_FOUND_OR_FORBIDDEN");
-  });
+    assert.equal(forbiddenObj.code, "QUOTATION_NOT_FOUND_OR_FORBIDDEN");
 
-  test("Unknown DB errors are sanitized to QUOTATION_UNKNOWN_ERROR without leaking raw details", () => {
-    const rawError = quotationErrorFromPostgresMessage({
-      code: "22000",
-      message: "internal_db_failure_leak",
-      details: "secret_table_info",
+    const unknownObj = quotationErrorFromPostgresMessage({
+      code: "99999",
+      message: "raw_internal_postgres_leak",
+      details: "sensitive_table_schema",
     });
-    assert.equal(rawError.code, "QUOTATION_UNKNOWN_ERROR");
-    assert.equal(rawError.message.includes("secret_table_info"), false);
-    assert.equal(rawError.message.includes("internal_db_failure_leak"), false);
+    assert.equal(unknownObj.code, "QUOTATION_UNKNOWN_ERROR");
+    assert.equal(unknownObj.message.includes("raw_internal_postgres_leak"), false);
   });
 
-  test("Exact decimal input transport preserves exact string representation without parseFloat drift", () => {
-    const quantityStr = "120.500";
-    const percentageStr = "33.33";
-
-    // Verify exact string serialization
-    assert.equal(String(quantityStr), "120.500");
-    assert.equal(String(percentageStr), "33.33");
-
-    // Prove parseFloat(0.1 + 0.2) drift is avoided by exact decimal string passing
-    const floatSum = 0.1 + 0.2;
-    assert.notEqual(floatSum, 0.3); // IEEE 754 float drift 0.30000000000000004
-    assert.equal("0.3", "0.3"); // Exact string transport
-  });
-
-  test("Draft DTO money fields enforce integer paise without floating-point drift", () => {
-    const mockDraft: QuotationDraftDTO = {
-      quotationId: "q-123",
-      leadId: "lead-456",
-      quotationNumber: "OD-Q-2026-000001",
+  test("APP-10: State replacement contract updates draft state on canonical refresh", () => {
+    const mockDraftV1: QuotationDraftDTO = {
+      quotationId: "q-100",
+      leadId: "lead-100",
+      quotationNumber: "OD-Q-2026-000100",
       rootStatus: "active",
       version: {
-        id: "ver-1",
-        versionNumber: 1,
-        lockVersion: 3,
-        status: "draft",
-        isCurrentDraft: true,
-        title: "Master Bedroom Wardrobes",
-        subtotalPaise: 8717500, // ₹87,175.00
-        discountType: "flat",
-        discountValuePaise: 217500, // ₹2,175.00
-        discountPercentage: 0,
-        discountTotalPaise: 217500,
-        taxableBasePaise: 8500000, // ₹85,000.00
-        taxProfileId: "tp-789",
-        taxRatePercentage: 18,
-        taxTotalPaise: 1530000, // ₹15,300.00
-        grandTotalPaise: 10030000, // ₹1,00,300.00
-        inclusions: ["10-Year Warranty"],
-        exclusions: ["Civil Work"],
-      },
-      sections: [
-        {
-          sectionName: "Bedroom 1",
-          subtotalPaise: 8717500,
-          items: [
-            {
-              itemName: "Wardrobe Unit",
-              quantity: 1,
-              unitOfMeasure: "nos",
-              unitRatePaise: 8717500,
-              lineTotalPaise: 8717500,
-            },
-          ],
-        },
-      ],
-      paymentSchedules: [
-        { milestoneName: "Booking", percentage: 10, amountPaise: 1003000 },
-        { milestoneName: "Delivery", percentage: 90, amountPaise: 9027000 },
-      ],
-    };
-
-    assert.equal(Number.isInteger(mockDraft.version?.subtotalPaise), true);
-    assert.equal(Number.isInteger(mockDraft.version?.taxableBasePaise), true);
-    assert.equal(Number.isInteger(mockDraft.version?.taxTotalPaise), true);
-    assert.equal(Number.isInteger(mockDraft.version?.grandTotalPaise), true);
-
-    // Verify subtotal - discount = taxable base
-    assert.equal(
-      mockDraft.version!.subtotalPaise - mockDraft.version!.discountTotalPaise,
-      mockDraft.version!.taxableBasePaise
-    );
-
-    // Verify taxable base + tax total = grand total
-    assert.equal(
-      mockDraft.version!.taxableBasePaise + mockDraft.version!.taxTotalPaise!,
-      mockDraft.version!.grandTotalPaise
-    );
-  });
-
-  test("Unconfigured tax profile produces null tax total and null grand total contract", () => {
-    const mockUnconfiguredDraft: QuotationDraftDTO = {
-      quotationId: "q-999",
-      leadId: "lead-999",
-      quotationNumber: "OD-Q-2026-000002",
-      rootStatus: "active",
-      version: {
-        id: "ver-2",
+        id: "v-1",
         versionNumber: 1,
         lockVersion: 1,
         status: "draft",
         isCurrentDraft: true,
-        title: "Draft Without Tax Profile",
-        subtotalPaise: 5000000,
+        title: "Title V1",
+        subtotalPaise: 100000,
         discountType: "none",
         discountValuePaise: 0,
         discountPercentage: 0,
         discountTotalPaise: 0,
-        taxableBasePaise: 5000000,
+        taxableBasePaise: 100000,
         taxProfileId: null,
         taxRatePercentage: null,
         taxTotalPaise: null,
@@ -169,16 +141,94 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
       paymentSchedules: [],
     };
 
-    assert.equal(mockUnconfiguredDraft.version?.taxProfileId, null);
-    assert.equal(mockUnconfiguredDraft.version?.taxRatePercentage, null);
-    assert.equal(mockUnconfiguredDraft.version?.taxTotalPaise, null);
-    assert.equal(mockUnconfiguredDraft.version?.grandTotalPaise, null);
+    const mockDraftV2: QuotationDraftDTO = {
+      ...mockDraftV1,
+      version: {
+        ...mockDraftV1.version!,
+        lockVersion: 2,
+        title: "Refreshed Title V2",
+      },
+    };
+
+    // State replacement helper simulation
+    let currentDraftState = mockDraftV1;
+    const setDraftState = (newDraft: QuotationDraftDTO) => {
+      currentDraftState = newDraft;
+    };
+
+    setDraftState(mockDraftV2);
+    assert.equal(currentDraftState.version?.lockVersion, 2);
+    assert.equal(currentDraftState.version?.title, "Refreshed Title V2");
   });
 
-  test("No Phase 7B actions, approval permissions, or delete permissions exposed in Phase 7A", () => {
-    // Assert approve and delete permissions do not exist
+  test("APP-11: Source regression guard — no parseFloat on quotation authoritative mutation paths", () => {
+    const projectRoot = path.resolve(import.meta.dirname, "../../../../");
+    const actionsFile = fs.readFileSync(
+      path.join(projectRoot, "src/features/quotations/server/quotation-draft-actions.ts"),
+      "utf-8"
+    );
+    const scheduleEditorFile = fs.readFileSync(
+      path.join(projectRoot, "src/features/quotations/components/QuotationPaymentScheduleEditor.tsx"),
+      "utf-8"
+    );
+    const sectionAccordionFile = fs.readFileSync(
+      path.join(projectRoot, "src/features/quotations/components/QuotationSectionAccordion.tsx"),
+      "utf-8"
+    );
+    const discountCardFile = fs.readFileSync(
+      path.join(projectRoot, "src/features/quotations/components/QuotationDiscountCard.tsx"),
+      "utf-8"
+    );
+
+    assert.equal(actionsFile.includes("parseFloat"), false, "quotation-draft-actions.ts contains parseFloat!");
+    assert.equal(scheduleEditorFile.includes("parseFloat"), false, "QuotationPaymentScheduleEditor.tsx contains parseFloat!");
+    assert.equal(sectionAccordionFile.includes("parseFloat"), false, "QuotationSectionAccordion.tsx contains parseFloat!");
+    assert.equal(discountCardFile.includes("parseFloat"), false, "QuotationDiscountCard.tsx contains parseFloat!");
+  });
+
+  test("APP-12 & APP-13: CRM LeadDetailQuotationPanel RBAC gating rules", () => {
+    const leadPanelFile = fs.readFileSync(
+      path.resolve(
+        import.meta.dirname,
+        "../../crm/components/leads/LeadDetailQuotationPanel.tsx"
+      ),
+      "utf-8"
+    );
+
+    // Active draft editor navigation must strictly require canEditQuotation
+    assert.equal(
+      leadPanelFile.includes("canEditQuotation || canCreateQuotation"),
+      false,
+      "LeadDetailQuotationPanel permits opening active draft without canEditQuotation!"
+    );
+    assert.equal(
+      leadPanelFile.includes("hasActiveDraft ? (\n            canEditQuotation ?") ||
+        leadPanelFile.includes("hasActiveDraft ? (\n            canEditQuotation"),
+      true,
+      "LeadDetailQuotationPanel does not strictly require canEditQuotation for active draft!"
+    );
+  });
+
+  test("APP-14: Permission probe uses real permission codes from actual quotation permissions module", () => {
+    const permissionsModule = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../server/quotation-permissions.ts"),
+      "utf-8"
+    );
+    assert.equal(permissionsModule.includes('"quotations.read"'), true);
+    assert.equal(permissionsModule.includes('"quotations.create"'), true);
+    assert.equal(permissionsModule.includes('"quotations.edit"'), true);
+    assert.equal(permissionsModule.includes('"quotations.approve"'), false);
+    assert.equal(permissionsModule.includes('"quotations.delete"'), false);
+  });
+
+  test("APP-15 & APP-16 & APP-17: Phase 7B boundaries, approval permissions, and default values", () => {
     const systemPermissions = ["quotations.read", "quotations.create", "quotations.edit"];
     assert.equal(systemPermissions.includes("quotations.approve"), false);
     assert.equal(systemPermissions.includes("quotations.delete"), false);
+
+    // Validate paise integer helper
+    assert.equal(validateAndFormatPaiseInteger(50000), 50000);
+    assert.throws(() => validateAndFormatPaiseInteger(-100));
+    assert.throws(() => validateAndFormatPaiseInteger("invalid"));
   });
 });

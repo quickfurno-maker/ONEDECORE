@@ -15,6 +15,11 @@ import type {
   QuotationSectionDTO,
 } from "../contracts/types";
 import { quotationErrorFromPostgresMessage } from "./quotation-errors";
+import {
+  validateAndFormatPaiseInteger,
+  validateAndFormatPercentageString,
+  validateAndFormatQuantityString,
+} from "./quotation-decimal-utils";
 
 export interface QuotationActionResult<T = void> {
   readonly success: boolean;
@@ -124,19 +129,24 @@ export async function updateQuotationDraftAction(
   try {
     const supabase = await createClient();
 
+    const discountPctFormatted =
+      params.discountPercentage !== undefined && params.discountPercentage !== null
+        ? validateAndFormatPercentageString(params.discountPercentage)
+        : undefined;
+
+    const discountValFormatted =
+      params.discountValuePaise !== undefined && params.discountValuePaise !== null
+        ? validateAndFormatPaiseInteger(params.discountValuePaise, "Discount flat amount")
+        : undefined;
+
     const { data, error } = await supabase.rpc("update_quotation_draft", {
       p_quotation_id: quotationId,
       p_expected_lock_version: expectedLockVersion,
       p_title: params.title,
       p_scope_summary: params.scopeSummary,
       p_discount_type: params.discountType,
-      p_discount_value_paise: params.discountValuePaise,
-      p_discount_percentage:
-        params.discountPercentage !== undefined
-          ? typeof params.discountPercentage === "number"
-            ? params.discountPercentage
-            : parseFloat(String(params.discountPercentage)) || 0
-          : undefined,
+      p_discount_value_paise: discountValFormatted,
+      p_discount_percentage: discountPctFormatted as unknown as number | undefined,
       p_tax_profile_id: params.taxProfileId,
       p_clear_tax_profile: params.clearTaxProfile ?? false,
       p_terms_and_conditions: params.termsAndConditions,
@@ -182,16 +192,16 @@ export async function saveQuotationDraftItemsAction(
   try {
     const supabase = await createClient();
 
-    // Map sections ensuring quantity is exact string representation
+    // Map sections validating and preserving exact decimal quantity string
     const sanitizedSections = sections.map((sec) => ({
       sectionName: sec.sectionName,
       items: sec.items.map((item) => ({
         itemName: item.itemName,
         description: item.description,
         specifications: item.specifications,
-        quantity: String(item.quantity),
+        quantity: validateAndFormatQuantityString(item.quantity),
         unitOfMeasure: item.unitOfMeasure,
-        unitRatePaise: item.unitRatePaise,
+        unitRatePaise: validateAndFormatPaiseInteger(item.unitRatePaise, "Unit rate"),
       })),
     }));
 
@@ -240,12 +250,17 @@ export async function replaceQuotationPaymentScheduleAction(
   try {
     const supabase = await createClient();
 
-    // Map milestones ensuring mode-specific exact values and nulls
+    // Map milestones preserving exact decimal string for percentage
     const sanitizedMilestones = milestones.map((m) => ({
       milestoneName: m.milestoneName,
       percentage:
-        mode === "percentage" && m.percentage != null ? String(m.percentage) : null,
-      amountPaise: mode === "amount" ? m.amountPaise : null,
+        mode === "percentage" && m.percentage != null
+          ? validateAndFormatPercentageString(m.percentage)
+          : null,
+      amountPaise:
+        mode === "amount" && m.amountPaise != null
+          ? validateAndFormatPaiseInteger(m.amountPaise, "Milestone amount")
+          : null,
     }));
 
     const { data, error } = await supabase.rpc("replace_quotation_payment_schedule", {
