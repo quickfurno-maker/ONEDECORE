@@ -8,11 +8,13 @@
 - **Protected Main Baseline**: `a768e33203c5971892944d0f689540d5ee7e173f`
 - **Implementation Branch**: `phase-7a-m25-quotation-draft-foundation`
 - **Managed Supabase Project**: `lpurlfmpvriyvpkujvyl` (`ap-south-1`)
-- **Managed Migration Baseline**: `M1–M24` (M25 strictly absent from managed database in this turn)
+- **Managed Migration Baseline**: `M1–M24` (M25 strictly absent from managed database)
+- **Repository Migration Baseline**: `M1–M25` (M26 strictly absent)
+- **PR Status**: PR #53 OPEN / DO NOT MERGE
 
 ---
 
-## Technical Audit & Verification Summary
+## Technical Audit & Final Correction Pass Summary
 
 ### 1. Database Schema & M25 Migration Foundation
 - **Migration File**: `supabase/migrations/20260812140000_commercial_quotation_draft_foundation.sql`
@@ -27,38 +29,22 @@
   - `private.quotation_idempotency_requests`: Private idempotency ledger with `UNIQUE(actor_id, operation_code, idempotency_key)` and SHA-256 request payload verification.
   - `private.quotation_number_seq`: Monotonic sequence allocator yielding sequence format `OD-Q-{YYYY}-{SEQ6}` (Asia/Kolkata timezone).
 
-### 2. Transactional RPC API Foundation
-- `public.create_quotation_draft`: Creates initial quotation draft or reactivates archived root to allocate next version under existing root. Enforces durable idempotency and snapshots CRM contact & property metadata.
-- `public.save_quotation_draft_items`: Atomic replacement of sections and items with expected `lock_version` check, line item multiplication, section subtotal summation, and version total recalculation.
-- `public.update_quotation_draft`: Mutates proposal title, scope summary, discount type/value, tax profile snapshot, terms, inclusions, and exclusions. Validates discount invariants (`discount_total_paise <= subtotal_paise`).
-- `public.replace_quotation_payment_schedule`: Replaces payment milestones for percentage or amount mode. Reconciles percentage sum (100.00%) and derives milestone amounts with final milestone absorbing residual paise.
-- `public.archive_quotation_draft`: Archives active draft version and quotation root.
-- `public.get_quotation_draft`: Reads complete canonical QuotationDraftDTO for caller.
+### 2. Final Correction Pass Repairs
+- **Update RPC Idempotency Hash**: `update_quotation_draft` constructs request hash from all mutable inputs (`quotationId`, `expectedLockVersion`, `title`, `scopeSummary`, `discountType`, `discountValuePaise`, `discountPercentage`, `taxProfileId`, `clearTaxProfile`, `termsAndConditions`, `inclusions`, `exclusions`) via deterministic JSONB hashing.
+- **64-bit Transaction Advisory Locking**: Replaced all 32-bit `hashtext` advisory locks with 64-bit transaction advisory locks (`hashtextextended(..., 0)`).
+- **Error Object Normalization**: `quotationErrorFromPostgresMessage` normalizes plain Supabase error objects (`{ code, message, details, hint }`), mapping `P0002` to `QUOTATION_VERSION_CONFLICT`, `42501` to `QUOTATION_NOT_FOUND_OR_FORBIDDEN`, and sanitizing unknown errors to `QUOTATION_UNKNOWN_ERROR`.
+- **Exact Decimal Input Transport**: Exact decimal strings transported from UI and Server Actions to PostgreSQL RPCs (`quantity`, `percentage`), avoiding `parseFloat` binary floating-point conversion drift.
+- **Payment Schedule Mode Isolation**: In `percentage` mode, non-null `amountPaise` is rejected with `QUOTATION_VALIDATION_FAILED`. In `amount` mode, non-null `percentage` is rejected with `QUOTATION_VALIDATION_FAILED`. Malformed scalar strings are rejected with controlled validation errors instead of raw syntax errors.
+- **Canonical Draft Reload**: `getQuotationDraftAction` reads fresh `QuotationDraftDTO` without mutating DB. `QuotationDraftEditor.tsx` uses `handleRefreshDraft()` to replace local client state on demand and on stale lock conflict.
+- **CRM Quotation RBAC Integration**: `LeadDetailQuotationPanel.tsx` uses explicit `quotations.create` and `quotations.edit` RBAC permissions derived from `probeQuotationPermissions()`, instead of CRM lead read capability.
 
-### 3. Application & Draft UI Workspace Layer
-- `src/features/quotations/contracts/types.ts`: DTO interfaces and type contracts.
-- `src/features/quotations/server/quotation-errors.ts`: Normalization of Postgres/RPC errors to stable domain errors (`QUOTATION_NOT_FOUND_OR_FORBIDDEN`, `QUOTATION_VERSION_CONFLICT`, `QUOTATION_VALIDATION_FAILED`, `QUOTATION_DRAFT_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH`).
-- `src/features/quotations/server/quotation-draft-actions.ts`: Server Actions (`createQuotationDraftAction`, `updateQuotationDraftAction`, `saveQuotationDraftItemsAction`, `replaceQuotationPaymentScheduleAction`, `archiveQuotationDraftAction`).
-- `src/features/quotations/server/quotation-queries.ts`: Read queries (`getQuotationDraftByQuotationId`, `getQuotationDraftByLeadId`, `listLeadQuotations`, `listActiveTaxProfiles`).
-- Interactive UI Components:
-  - `QuotationDraftEditor.tsx` (Main container with `lock_version` conflict banner & optimistic updates).
-  - `QuotationHeaderCard.tsx` (Title, scope, client snapshot, tax profile selector).
-  - `QuotationSectionAccordion.tsx` (Room layout & line item table).
-  - `QuotationDiscountCard.tsx` (Discount mode toggle & value inputs).
-  - `QuotationPaymentScheduleEditor.tsx` (Milestone percentage/amount mode editor).
-  - `QuotationTermsEditor.tsx` (Inclusions, exclusions, terms text block).
-  - `QuotationTotalsSummary.tsx` (Subtotal, Discount, Taxable Base / Sales Achievement Basis, Tax, Grand Total summary).
-- Admin Pages:
-  - `/admin/quotations` (Overview table).
-  - `/admin/quotations/[quotationId]/draft` (Draft editor workspace page).
-  - Navigation: Added Quotations link to Admin Layout navbar.
-
-### 4. QA Verification Results
-- **pgTAP Database Tests**: 18/18 test files PASS (100% SUCCESS; 685/685 subtests passed, including `18_quotation_draft_foundation_test.sql`).
-- **Application Unit Tests**: `npm run test:phase-7a` PASS (14/14 tests passed).
+### 3. QA Verification Matrix
+- **pgTAP Database Tests**: 18/18 test files PASS (100% SUCCESS; 715/715 subtests passed, including 61/61 in `18_quotation_draft_foundation_test.sql`).
+- **Phase 7A Unit Tests**: `npm run test:phase-7a` PASS (14/14 tests passed).
+- **Application Unit Tests**: `npm run test:app` PASS (565/565 tests passed).
 - **TypeScript Typecheck**: `npm run typecheck` PASS (0 errors).
-- **Production Application Build**: `npm run build` PASS (All routes including `/admin/quotations` and `/admin/quotations/[quotationId]/draft` compiled cleanly).
-- **Managed Supabase Status**: Verified M1–M24 baseline; M25 remained 100% UNAPPLIED to managed Supabase.
+- **Application Lint & Build**: `npm run check` PASS (0 lint errors, Next.js build succeeded).
+- **Managed Supabase Status**: Verified M1–M24 baseline (`lpurlfmpvriyvpkujvyl`); M25 remains 100% UNAPPLIED to managed Supabase.
 
 ---
 

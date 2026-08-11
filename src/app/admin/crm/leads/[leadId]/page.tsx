@@ -25,6 +25,7 @@ import {
   fetchCrmAssigneeDirectory,
 } from "@/features/crm/server/crm-lead-queries";
 import { getQuotationDraftByLeadId } from "@/features/quotations/server/quotation-queries";
+import { probeQuotationPermissions } from "@/features/quotations/server/quotation-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -53,16 +54,15 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
     context?.canReadBroad &&
     (context.canAssignLeads || context.canManageLeadFollowUps);
 
-  const [assigneeDirectory, closureReasons, existingDraft] = await Promise.all([
-    needsDirectory ? fetchCrmAssigneeDirectory(context!) : Promise.resolve([]),
-    context?.canTransitionLeads
-      ? fetchActiveLeadClosureReasons()
-      : Promise.resolve([]),
-    getQuotationDraftByLeadId(lead.id).catch(() => null),
-  ]);
-
-  // Authorization check for commercial quotation creation/editing (sales_executive, sales_manager, super_admin, management, sales)
-  const canCreateOrEditQuotation = Boolean(context?.canReadAssigned || context?.canReadBroad);
+  const [assigneeDirectory, closureReasons, existingDraft, quotationPermissions] =
+    await Promise.all([
+      needsDirectory ? fetchCrmAssigneeDirectory(context!) : Promise.resolve([]),
+      context?.canTransitionLeads
+        ? fetchActiveLeadClosureReasons()
+        : Promise.resolve([]),
+      getQuotationDraftByLeadId(lead.id).catch(() => null),
+      probeQuotationPermissions(),
+    ]);
 
   return (
     <div className="space-y-6">
@@ -103,7 +103,8 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
         leadId={lead.id}
         submittedName={lead.overview.submittedName}
         existingDraft={existingDraft}
-        canCreateOrEditQuotation={canCreateOrEditQuotation}
+        canCreateQuotation={quotationPermissions.canCreateQuotations}
+        canEditQuotation={quotationPermissions.canEditQuotations}
       />
 
       <div className="grid gap-6 xl:grid-cols-2">

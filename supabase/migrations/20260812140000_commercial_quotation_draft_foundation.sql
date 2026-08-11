@@ -793,10 +793,20 @@ begin
     end if;
 
     v_request_hash := encode(sha256(convert_to(
-      p_quotation_id::text || '|' || p_expected_lock_version::text || '|' || coalesce(p_title, '') || '|' ||
-      coalesce(p_discount_type, '') || '|' || coalesce(p_discount_value_paise::text, '') || '|' ||
-      coalesce(p_discount_percentage::text, '') || '|' || coalesce(p_tax_profile_id::text, '') || '|' ||
-      p_clear_tax_profile::text || '|' || trim(p_idempotency_key),
+      jsonb_build_object(
+        'quotationId', p_quotation_id,
+        'expectedLockVersion', p_expected_lock_version,
+        'title', p_title,
+        'scopeSummary', p_scope_summary,
+        'discountType', p_discount_type,
+        'discountValuePaise', p_discount_value_paise,
+        'discountPercentage', p_discount_percentage,
+        'taxProfileId', p_tax_profile_id,
+        'clearTaxProfile', p_clear_tax_profile,
+        'termsAndConditions', p_terms_and_conditions,
+        'inclusions', to_jsonb(coalesce(p_inclusions, array[]::text[])),
+        'exclusions', to_jsonb(coalesce(p_exclusions, array[]::text[]))
+      )::text,
       'UTF8'
     )), 'hex');
 
@@ -1108,14 +1118,21 @@ begin
           raise exception 'QUOTATION_VALIDATION_FAILED: Invalid unit of measure' using errcode = 'P0001';
         end if;
 
+        if (v_item_elem->>'quantity') is null or (v_item_elem->>'quantity') !~ '^[0-9]+(\.[0-9]+)?$' then
+          raise exception 'QUOTATION_VALIDATION_FAILED: Invalid quantity' using errcode = 'P0001';
+        end if;
         v_line_qty := (v_item_elem->>'quantity')::numeric;
+
+        if (v_item_elem->>'unitRatePaise') is null or (v_item_elem->>'unitRatePaise') !~ '^[0-9]+$' then
+          raise exception 'QUOTATION_VALIDATION_FAILED: Invalid unit rate' using errcode = 'P0001';
+        end if;
         v_unit_rate := (v_item_elem->>'unitRatePaise')::bigint;
 
-        if v_line_qty is null or v_line_qty <= 0 or v_line_qty > 100000 then
+        if v_line_qty <= 0 or v_line_qty > 100000 then
           raise exception 'QUOTATION_VALIDATION_FAILED: Invalid quantity' using errcode = 'P0001';
         end if;
 
-        if v_unit_rate is null or v_unit_rate < 0 or v_unit_rate > 100000000000 then
+        if v_unit_rate < 0 or v_unit_rate > 100000000000 then
           raise exception 'QUOTATION_VALIDATION_FAILED: Invalid unit rate' using errcode = 'P0001';
         end if;
 
@@ -1301,8 +1318,16 @@ begin
     end if;
 
     if p_mode = 'percentage' then
+      if v_elem->'amountPaise' is not null and jsonb_typeof(v_elem->'amountPaise') <> 'null' then
+        raise exception 'QUOTATION_VALIDATION_FAILED: Milestone amount must be null in percentage mode' using errcode = 'P0001';
+      end if;
+
+      if (v_elem->>'percentage') is null or (v_elem->>'percentage') !~ '^[0-9]+(\.[0-9]+)?$' then
+        raise exception 'QUOTATION_VALIDATION_FAILED: Invalid milestone percentage' using errcode = 'P0001';
+      end if;
+
       v_item_pct := (v_elem->>'percentage')::numeric;
-      if v_item_pct is null or v_item_pct < 0.00 or v_item_pct > 100.00 then
+      if v_item_pct < 0.00 or v_item_pct > 100.00 then
         raise exception 'QUOTATION_VALIDATION_FAILED: Invalid milestone percentage' using errcode = 'P0001';
       end if;
 
@@ -1311,8 +1336,16 @@ begin
       insert into public.quotation_payment_schedules (quotation_version_id, milestone_name, milestone_order, percentage, amount_paise)
       values (v_version_rec.id, v_milestone_name, v_order, v_item_pct, null);
     else
+      if v_elem->'percentage' is not null and jsonb_typeof(v_elem->'percentage') <> 'null' then
+        raise exception 'QUOTATION_VALIDATION_FAILED: Milestone percentage must be null in amount mode' using errcode = 'P0001';
+      end if;
+
+      if (v_elem->>'amountPaise') is null or (v_elem->>'amountPaise') !~ '^[0-9]+$' then
+        raise exception 'QUOTATION_VALIDATION_FAILED: Invalid milestone amount' using errcode = 'P0001';
+      end if;
+
       v_item_amt := (v_elem->>'amountPaise')::bigint;
-      if v_item_amt is null or v_item_amt < 0 or v_item_amt > 100000000000 then
+      if v_item_amt < 0 or v_item_amt > 100000000000 then
         raise exception 'QUOTATION_VALIDATION_FAILED: Invalid milestone amount' using errcode = 'P0001';
       end if;
 

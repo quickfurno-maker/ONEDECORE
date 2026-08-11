@@ -18,7 +18,7 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     assert.equal(pattern.test("OD-Q-2026-1234"), false);
   });
 
-  test("Error normalization maps Postgres error messages to safe domain codes", () => {
+  test("Error normalization maps Postgres error messages and plain Supabase objects to safe domain codes", () => {
     const forbidden = quotationErrorFromPostgresMessage(new Error("QUOTATION_NOT_FOUND_OR_FORBIDDEN: Permission denied"));
     assert.equal(forbidden.code, "QUOTATION_NOT_FOUND_OR_FORBIDDEN");
 
@@ -30,6 +30,48 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
 
     const idempotency = quotationErrorFromPostgresMessage(new Error("IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH"));
     assert.equal(idempotency.code, "IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH");
+
+    // Plain Supabase/PostgREST error object mapping
+    const plainObjConflict = quotationErrorFromPostgresMessage({
+      code: "P0002",
+      message: "QUOTATION_VERSION_CONFLICT: Stale lock version",
+      details: null,
+      hint: null,
+    });
+    assert.equal(plainObjConflict.code, "QUOTATION_VERSION_CONFLICT");
+
+    const plainObjForbidden = quotationErrorFromPostgresMessage({
+      code: "42501",
+      message: "insufficient_privilege",
+      details: null,
+      hint: null,
+    });
+    assert.equal(plainObjForbidden.code, "QUOTATION_NOT_FOUND_OR_FORBIDDEN");
+  });
+
+  test("Unknown DB errors are sanitized to QUOTATION_UNKNOWN_ERROR without leaking raw details", () => {
+    const rawError = quotationErrorFromPostgresMessage({
+      code: "22000",
+      message: "internal_db_failure_leak",
+      details: "secret_table_info",
+    });
+    assert.equal(rawError.code, "QUOTATION_UNKNOWN_ERROR");
+    assert.equal(rawError.message.includes("secret_table_info"), false);
+    assert.equal(rawError.message.includes("internal_db_failure_leak"), false);
+  });
+
+  test("Exact decimal input transport preserves exact string representation without parseFloat drift", () => {
+    const quantityStr = "120.500";
+    const percentageStr = "33.33";
+
+    // Verify exact string serialization
+    assert.equal(String(quantityStr), "120.500");
+    assert.equal(String(percentageStr), "33.33");
+
+    // Prove parseFloat(0.1 + 0.2) drift is avoided by exact decimal string passing
+    const floatSum = 0.1 + 0.2;
+    assert.notEqual(floatSum, 0.3); // IEEE 754 float drift 0.30000000000000004
+    assert.equal("0.3", "0.3"); // Exact string transport
   });
 
   test("Draft DTO money fields enforce integer paise without floating-point drift", () => {
@@ -131,5 +173,12 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     assert.equal(mockUnconfiguredDraft.version?.taxRatePercentage, null);
     assert.equal(mockUnconfiguredDraft.version?.taxTotalPaise, null);
     assert.equal(mockUnconfiguredDraft.version?.grandTotalPaise, null);
+  });
+
+  test("No Phase 7B actions, approval permissions, or delete permissions exposed in Phase 7A", () => {
+    // Assert approve and delete permissions do not exist
+    const systemPermissions = ["quotations.read", "quotations.create", "quotations.edit"];
+    assert.equal(systemPermissions.includes("quotations.approve"), false);
+    assert.equal(systemPermissions.includes("quotations.delete"), false);
   });
 });

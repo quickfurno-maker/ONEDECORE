@@ -24,6 +24,41 @@ export interface QuotationActionResult<T = void> {
 }
 
 /**
+ * Reads canonical current DTO without mutating DB.
+ * Used for client state refresh and stale lock recovery.
+ */
+export async function getQuotationDraftAction(
+  quotationId: string
+): Promise<QuotationActionResult<QuotationDraftDTO>> {
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase.rpc("get_quotation_draft", {
+      p_quotation_id: quotationId,
+    });
+
+    if (error) {
+      throw quotationErrorFromPostgresMessage(error);
+    }
+
+    const dto = data as unknown as QuotationDraftDTO;
+
+    return {
+      success: true,
+      message: "Quotation draft fetched successfully.",
+      data: dto,
+    };
+  } catch (error) {
+    const err = quotationErrorFromPostgresMessage(error);
+    return {
+      success: false,
+      message: err.message,
+      code: err.code,
+    };
+  }
+}
+
+/**
  * Creates initial quotation draft or new version under existing root.
  */
 export async function createQuotationDraftAction(
@@ -77,7 +112,7 @@ export async function updateQuotationDraftAction(
     readonly scopeSummary?: string;
     readonly discountType?: QuotationDiscountType;
     readonly discountValuePaise?: number;
-    readonly discountPercentage?: number;
+    readonly discountPercentage?: number | string;
     readonly taxProfileId?: string;
     readonly clearTaxProfile?: boolean;
     readonly termsAndConditions?: string;
@@ -96,7 +131,12 @@ export async function updateQuotationDraftAction(
       p_scope_summary: params.scopeSummary,
       p_discount_type: params.discountType,
       p_discount_value_paise: params.discountValuePaise,
-      p_discount_percentage: params.discountPercentage,
+      p_discount_percentage:
+        params.discountPercentage !== undefined
+          ? typeof params.discountPercentage === "number"
+            ? params.discountPercentage
+            : parseFloat(String(params.discountPercentage)) || 0
+          : undefined,
       p_tax_profile_id: params.taxProfileId,
       p_clear_tax_profile: params.clearTaxProfile ?? false,
       p_terms_and_conditions: params.termsAndConditions,
@@ -131,6 +171,7 @@ export async function updateQuotationDraftAction(
 
 /**
  * Saves aggregate sections & line items for draft composition.
+ * Preserves exact decimal strings for quantity.
  */
 export async function saveQuotationDraftItemsAction(
   quotationId: string,
@@ -141,10 +182,23 @@ export async function saveQuotationDraftItemsAction(
   try {
     const supabase = await createClient();
 
+    // Map sections ensuring quantity is exact string representation
+    const sanitizedSections = sections.map((sec) => ({
+      sectionName: sec.sectionName,
+      items: sec.items.map((item) => ({
+        itemName: item.itemName,
+        description: item.description,
+        specifications: item.specifications,
+        quantity: String(item.quantity),
+        unitOfMeasure: item.unitOfMeasure,
+        unitRatePaise: item.unitRatePaise,
+      })),
+    }));
+
     const { data, error } = await supabase.rpc("save_quotation_draft_items", {
       p_quotation_id: quotationId,
       p_expected_lock_version: expectedLockVersion,
-      p_sections: JSON.parse(JSON.stringify(sections)),
+      p_sections: sanitizedSections,
       p_idempotency_key: idempotencyKey,
     });
 
@@ -174,6 +228,7 @@ export async function saveQuotationDraftItemsAction(
 
 /**
  * Replaces payment schedule milestones.
+ * Preserves exact decimal strings for percentage.
  */
 export async function replaceQuotationPaymentScheduleAction(
   quotationId: string,
@@ -185,11 +240,19 @@ export async function replaceQuotationPaymentScheduleAction(
   try {
     const supabase = await createClient();
 
+    // Map milestones ensuring mode-specific exact values and nulls
+    const sanitizedMilestones = milestones.map((m) => ({
+      milestoneName: m.milestoneName,
+      percentage:
+        mode === "percentage" && m.percentage != null ? String(m.percentage) : null,
+      amountPaise: mode === "amount" ? m.amountPaise : null,
+    }));
+
     const { data, error } = await supabase.rpc("replace_quotation_payment_schedule", {
       p_quotation_id: quotationId,
       p_expected_lock_version: expectedLockVersion,
       p_mode: mode,
-      p_milestones: JSON.parse(JSON.stringify(milestones)),
+      p_milestones: sanitizedMilestones,
       p_idempotency_key: idempotencyKey,
     });
 

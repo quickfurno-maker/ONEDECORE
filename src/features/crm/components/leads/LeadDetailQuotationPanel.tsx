@@ -11,14 +11,16 @@ interface LeadDetailQuotationPanelProps {
   readonly leadId: string;
   readonly submittedName: string;
   readonly existingDraft: QuotationDraftDTO | null;
-  readonly canCreateOrEditQuotation: boolean;
+  readonly canCreateQuotation: boolean;
+  readonly canEditQuotation: boolean;
 }
 
 export function LeadDetailQuotationPanel({
   leadId,
   submittedName,
   existingDraft,
-  canCreateOrEditQuotation,
+  canCreateQuotation,
+  canEditQuotation,
 }: LeadDetailQuotationPanelProps) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
@@ -62,16 +64,22 @@ export function LeadDetailQuotationPanel({
           </p>
         </div>
 
-        {canCreateOrEditQuotation ? (
-          <div>
-            {hasActiveDraft ? (
+        <div>
+          {hasActiveDraft ? (
+            canEditQuotation || canCreateQuotation ? (
               <Link
                 href={`/admin/quotations/${existingDraft?.quotationId}/draft`}
                 className="inline-flex min-h-10 items-center rounded-lg bg-amber-500 px-4 py-2 text-xs font-semibold text-neutral-950 hover:bg-amber-400 shadow"
               >
                 Open Quotation Draft
               </Link>
-            ) : hasArchivedRoot ? (
+            ) : (
+              <span className="text-xs text-neutral-500 italic">
+                (Quotation edit permission required)
+              </span>
+            )
+          ) : canCreateQuotation ? (
+            hasArchivedRoot ? (
               <button
                 type="button"
                 disabled={creating}
@@ -89,13 +97,13 @@ export function LeadDetailQuotationPanel({
               >
                 {creating ? "Creating Draft..." : "Create Quotation Draft"}
               </button>
-            )}
-          </div>
-        ) : (
-          <span className="text-xs text-neutral-500 italic">
-            (Read-only / Quotation creation restricted to Sales & Management)
-          </span>
-        )}
+            )
+          ) : (
+            <span className="text-xs text-neutral-500 italic">
+              (Quotation creation permission required)
+            </span>
+          )}
+        </div>
       </div>
 
       {errorMsg && (

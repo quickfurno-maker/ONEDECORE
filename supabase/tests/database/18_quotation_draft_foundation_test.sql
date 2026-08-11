@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 7A — Commercial Quotation Data & Draft Foundation pgTAP tests
 
 begin;
-select plan(55);
+select plan(63);
 
 -- =============================================================================
 -- A. Schema Presence & RLS Verification
@@ -182,8 +182,8 @@ select is(
       jsonb_build_object(
         'sectionName', 'Living Room',
         'items', jsonb_build_array(
-          jsonb_build_object('itemName', 'TV Console Unit', 'quantity', 1, 'unitOfMeasure', 'nos', 'unitRatePaise', 4500000),
-          jsonb_build_object('itemName', 'Wooden Wall Paneling', 'quantity', 120.5, 'unitOfMeasure', 'sqft', 'unitRatePaise', 35000)
+          jsonb_build_object('itemName', 'TV Console Unit', 'quantity', '1', 'unitOfMeasure', 'nos', 'unitRatePaise', 4500000),
+          jsonb_build_object('itemName', 'Wooden Wall Paneling', 'quantity', '120.5', 'unitOfMeasure', 'sqft', 'unitRatePaise', 35000)
         )
       )
     ),
@@ -202,8 +202,8 @@ select is(
       jsonb_build_object(
         'sectionName', 'Living Room',
         'items', jsonb_build_array(
-          jsonb_build_object('itemName', 'TV Console Unit', 'quantity', 1, 'unitOfMeasure', 'nos', 'unitRatePaise', 4500000),
-          jsonb_build_object('itemName', 'Wooden Wall Paneling', 'quantity', 120.5, 'unitOfMeasure', 'sqft', 'unitRatePaise', 35000)
+          jsonb_build_object('itemName', 'TV Console Unit', 'quantity', '1', 'unitOfMeasure', 'nos', 'unitRatePaise', 4500000),
+          jsonb_build_object('itemName', 'Wooden Wall Paneling', 'quantity', '120.5', 'unitOfMeasure', 'sqft', 'unitRatePaise', 35000)
         )
       )
     ),
@@ -265,8 +265,8 @@ select is(
     3::bigint,
     'percentage'::text,
     jsonb_build_array(
-      jsonb_build_object('milestoneName', 'Advance Booking', 'percentage', 50.00),
-      jsonb_build_object('milestoneName', 'Design Approval', 'percentage', 40.00)
+      jsonb_build_object('milestoneName', 'Advance Booking', 'percentage', '50.00'),
+      jsonb_build_object('milestoneName', 'Design Approval', 'percentage', '40.00')
     )
   )->>'isReconciled'),
   'false',
@@ -286,10 +286,10 @@ select is(
     4::bigint,
     'percentage'::text,
     jsonb_build_array(
-      jsonb_build_object('milestoneName', 'Advance Booking', 'percentage', 10.00),
-      jsonb_build_object('milestoneName', 'Design Approval', 'percentage', 40.00),
-      jsonb_build_object('milestoneName', 'Material Delivery', 'percentage', 40.00),
-      jsonb_build_object('milestoneName', 'Handover', 'percentage', 10.00)
+      jsonb_build_object('milestoneName', 'Advance Booking', 'percentage', '10.00'),
+      jsonb_build_object('milestoneName', 'Design Approval', 'percentage', '40.00'),
+      jsonb_build_object('milestoneName', 'Material Delivery', 'percentage', '40.00'),
+      jsonb_build_object('milestoneName', 'Handover', 'percentage', '10.00')
     ),
     'sched_key_001'::text
   )->>'isReconciled'),
@@ -304,10 +304,10 @@ select is(
     4::bigint,
     'percentage'::text,
     jsonb_build_array(
-      jsonb_build_object('milestoneName', 'Advance Booking', 'percentage', 10.00),
-      jsonb_build_object('milestoneName', 'Design Approval', 'percentage', 40.00),
-      jsonb_build_object('milestoneName', 'Material Delivery', 'percentage', 40.00),
-      jsonb_build_object('milestoneName', 'Handover', 'percentage', 10.00)
+      jsonb_build_object('milestoneName', 'Advance Booking', 'percentage', '10.00'),
+      jsonb_build_object('milestoneName', 'Design Approval', 'percentage', '40.00'),
+      jsonb_build_object('milestoneName', 'Material Delivery', 'percentage', '40.00'),
+      jsonb_build_object('milestoneName', 'Handover', 'percentage', '10.00')
     ),
     'sched_key_001'::text
   )->>'idempotentReplay'),
@@ -413,6 +413,121 @@ select throws_ok(
   '55000',
   'quotation_events is append-only',
   'quotation_events table forbids DELETE'
+);
+
+-- Test 21: update_quotation_draft complete payload hash idempotency replay & mismatch check
+select set_config('request.jwt.claim.sub', '7a222222-2222-2222-2222-222222222222', true);
+select set_config('role', 'authenticated', true);
+
+select is(
+  (public.update_quotation_draft(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    1::bigint,
+    p_scope_summary => '3BHK full interior package'::text,
+    p_idempotency_key => 'update_key_001'::text
+  )->>'idempotentReplay'),
+  'false',
+  'First update with key update_key_001 succeeds with idempotentReplay false'
+);
+
+select is(
+  (public.update_quotation_draft(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    1::bigint,
+    p_scope_summary => '3BHK full interior package'::text,
+    p_idempotency_key => 'update_key_001'::text
+  )->>'idempotentReplay'),
+  'true',
+  'Replaying exact same update payload returns idempotentReplay true'
+);
+
+select throws_ok(
+  $$select public.update_quotation_draft(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    1::bigint,
+    p_scope_summary => 'MODIFIED scope summary'::text,
+    p_idempotency_key => 'update_key_001'::text
+  )$$,
+  'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH',
+  'Reusing update idempotency key with modified scope_summary throws payload mismatch'
+);
+
+-- Test 22: replace_quotation_payment_schedule percentage mode rejects non-null amountPaise
+select throws_ok(
+  $$select public.replace_quotation_payment_schedule(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    2::bigint,
+    'percentage'::text,
+    jsonb_build_array(
+      jsonb_build_object('milestoneName', 'Booking', 'percentage', '50.00', 'amountPaise', 50000)
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Milestone amount must be null in percentage mode',
+  'Percentage mode payment schedule rejects non-null amountPaise'
+);
+
+-- Test 23: replace_quotation_payment_schedule amount mode rejects non-null percentage
+select throws_ok(
+  $$select public.replace_quotation_payment_schedule(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    2::bigint,
+    'amount'::text,
+    jsonb_build_array(
+      jsonb_build_object('milestoneName', 'Booking', 'amountPaise', 50000, 'percentage', '50.00')
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Milestone percentage must be null in amount mode',
+  'Amount mode payment schedule rejects non-null percentage'
+);
+
+-- Test 24: replace_quotation_payment_schedule handles malformed percentage string cleanly
+select throws_ok(
+  $$select public.replace_quotation_payment_schedule(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    2::bigint,
+    'percentage'::text,
+    jsonb_build_array(
+      jsonb_build_object('milestoneName', 'Booking', 'percentage', 'invalid-pct-string')
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Invalid milestone percentage',
+  'Malformed percentage string throws controlled validation error'
+);
+
+-- Test 25: save_quotation_draft_items handles malformed quantity cleanly
+select throws_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    2::bigint,
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'Hall',
+        'items', jsonb_build_array(
+          jsonb_build_object('itemName', 'Sofa', 'quantity', 'bad-qty', 'unitOfMeasure', 'nos', 'unitRatePaise', 1000)
+        )
+      )
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Invalid quantity',
+  'Malformed quantity string throws controlled validation error'
+);
+
+-- Test 26: save_quotation_draft_items handles malformed unitRatePaise cleanly
+select throws_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    2::bigint,
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'Hall',
+        'items', jsonb_build_array(
+          jsonb_build_object('itemName', 'Sofa', 'quantity', '1', 'unitOfMeasure', 'nos', 'unitRatePaise', 'bad-rate')
+        )
+      )
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Invalid unit rate',
+  'Malformed unit rate string throws controlled validation error'
 );
 
 select finish();
