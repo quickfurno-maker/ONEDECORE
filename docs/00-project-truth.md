@@ -6,8 +6,8 @@
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 6D — Staff Administration, Attendance & Leave (**REPOSITORY M1–M24 COMPLETE; MANAGED M1–M23 APPLIED; M24 FORWARD REPAIR PENDING MANAGED APPLY**)
-**Next Phase:** Phase 7A — Commercial Quotation Data & Draft Foundation (**NOT STARTED / BLOCKED** until Phase 6D M24 repair closeout)
+**Current Phase:** Phase 6D — Staff Administration, Attendance & Leave (**REPOSITORY M1–M24 COMPLETE; MANAGED M1–M24 APPLIED & VERIFIED; REPAIR CLOSEOUT COMPLETE**)
+**Next Phase:** Phase 7A — Commercial Quotation Data & Draft Foundation (**NEXT ELIGIBLE FORMAL PHASE; NOT STARTED / PENDING CLOSEOUT MERGE**)
 **Previous Phase:** Phase 6C — Groq Human-Controlled Copilot (**COMPLETE**)
 
 ---
@@ -97,10 +97,10 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | WhatsApp provider dispatch foundation (migration 21) | Applied managed August 8, 2026 (Phase DB-8B-M21) |
 | Kriti audit persistence foundation (migration 22) | Applied managed August 9, 2026 (Phase 6C M22) |
 | Staff attendance, leave & holidays foundation (migration 23) | Applied managed August 10, 2026 (Phase 6D M23 baseline; immutable historical migration) |
-| Staff attendance idempotency order repair (migration 24) | Repository forward-only repair migration; **NOT managed applied yet** (pending owner authorization) |
-| Migration alignment | Repository: **M1–M24** (24 files); Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M23** (M24 pending apply) |
+| Staff attendance idempotency order repair (migration 24) | Applied managed August 11, 2026 (Phase 6D M24 owner-authorized repair apply) |
+| Migration alignment | Repository: **M1–M24** (24 files); Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M24** (24 migrations applied & aligned) |
 
-CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, Phase 5F identity hardening, Phase 6A WhatsApp foundation, Phase 6B shared inbox/send-intent/dispatch foundations, Phase 6C Kriti audit persistence, and Phase 6D staff admin/attendance/leave foundation (M23) are applied on managed database (`lpurlfmpvriyvpkujvyl`). **M24 forward-only repair is committed in repository but NOT managed applied yet; managed check-in/check-out RPCs retain pre-repair function order until managed apply.** Phase 6D managed repair closeout is **PENDING M24 managed apply/verification**. Phase 7A is **NOT STARTED** and blocked until Phase 6D repair closeout is complete. **Production deployment pending** (Phase 10); **public intake remains inactive**.
+CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, Phase 5F identity hardening, Phase 6A WhatsApp foundation, Phase 6B shared inbox/send-intent/dispatch foundations, Phase 6C Kriti audit persistence, and Phase 6D staff admin/attendance/leave foundation + M24 idempotency repair (M23–M24) are applied on managed database (`lpurlfmpvriyvpkujvyl`). **M24 forward-only repair is applied managed; repaired check-in/check-out RPC ordering verified.** Phase 6D managed repair closeout is **TECHNICALLY COMPLETE**. Phase 7A is **NOT STARTED** (next eligible formal phase after closeout merge). **Production deployment pending** (Phase 10); **public intake remains inactive**.
 
 ### Phase 5F truth
 
@@ -139,15 +139,16 @@ CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targ
 
 ### Phase 6D truth
 
-- Repository implementation merged M1–M24 (PR #49 merged M23 baseline; forward-only M24 attendance idempotency repair committed).
-- Managed M23 applied and verified (August 10, 2026); owner authorization `PROCEED PHASE 6D MANAGED APPLY`.
-- Recovery: backup **1330573859** (`2026-08-09T19:54:44.155Z`, physical/WALG, COMPLETED; post-M22).
-- M23 Git blob `785325143dae0e81b918f8371325785ce061d57a`; canonical UTF-8/LF SHA-256 `64f4f15a9501fcf6bda954e021812b0b826022304654dbc49699f0cab7051634`; legacy audit token `c8c2739b0ea45d6eed49ee5bd3eed6fa383fbb685cd60d21cd9d550f42358f20` recorded at original apply.
-- Managed foundation (M23): staff employment profiles, attendance policies/events/days/corrections, leave types/requests, holidays; invite saga RPCs (`prepare_staff_invite_saga`, `record_staff_invite_auth_success`, `create_staff_member`, `reconcile_staff_invite`, `resend_staff_invite`); all zero rows at apply.
-- **M24 forward-only repair NOT managed applied yet**; managed check-in/check-out RPCs retain pre-repair function order until owner-authorized managed apply.
+- Repository implementation merged M1–M24 (PR #49 merged M23 baseline; PR #50 forward-only M24 attendance idempotency repair merged).
+- Managed M23 applied and verified (August 10, 2026); immutable historical baseline.
+- Managed M24 applied and verified (August 11, 2026); owner authorization `PROCEED PHASE 6D M24 MANAGED APPLY`.
+- Recovery: backup **1338218011** (`2026-08-10T19:53:40.662Z UTC`, physical/WALG, COMPLETED; post-M23 cutoff `2026-08-10T02:46:52Z UTC`).
+- M23 Git blob `785325143dae0e81b918f8371325785ce061d57a`; canonical UTF-8/LF SHA-256 `64f4f15a9501fcf6bda954e021812b0b826022304654dbc49699f0cab7051634`.
+- M24 Git blob `790db51dc7761c4d1ced3c38db07d974849e6fdb`; normalized UTF-8/LF SHA-256 `029a88db95bafe5cfd8791baf77fb94695da7febed41b5251898cfede5a860b2`.
+- Managed foundation (M23–M24): staff employment profiles, attendance policies/events/days/corrections, leave types/requests, holidays; invite saga RPCs; repaired check-in/check-out idempotency-first function ordering verified on managed DB.
 - **OD-1–OD-10 unresolved** — no policy catalogue seeds; `attendance.correct.team` not granted; attendance production activation blocked until owner values.
-- **No production deployment**; **public intake inactive**; **Phase 7A NOT STARTED / blocked** until Phase 6D managed repair closeout complete.
-- Phase 6D repository implementation M1–M24 complete; **managed repair closeout PENDING M24 apply/verification**. **Phase 7A NOT STARTED / blocked**.
+- **No production deployment**; **public intake inactive**; **Phase 7A NOT STARTED** (next eligible formal phase after closeout PR merge).
+- Phase 6D repository implementation M1–M24 complete; **managed repair closeout TECHNICALLY COMPLETE**. **Phase 7A NOT STARTED**.
 
 ### Phase 5E truth
 

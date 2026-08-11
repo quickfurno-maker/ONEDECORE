@@ -216,20 +216,21 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Status:** **COMPLETE** — repository + managed aligned through M22. No production Groq activation.
 - **Closeout:** `docs/audits/phase-6c-managed-alignment-closeout.md`
 
-### Phase 6D (Repository Complete / Repair Pending Managed Apply)
+### Phase 6D (Completed / Repair Closeout Pending Merge)
 - **Objective:** Staff administration, attendance, leave, and holiday calendar (see `docs/audits/phase-6d-roadmap-lock.md`).
 - **Architecture freeze:** [Phase 6D preflight audit](audits/phase-6d-staff-attendance-leave-architecture-freeze.md), [ADR-0023](ADR/ADR-0023-staff-attendance-leave-architecture.md), [implementation contract freeze](audits/phase-6d-implementation-contract-freeze.md).
-- **Exit gate:** M23 applied managed August 10, 2026; 9 public domain tables + private invite saga ledger verified; M24 forward-only attendance idempotency repair committed in repository (unapplied on managed project); staff admin/attendance/leave routes + tests PASS; OD-1–OD-10 unresolved (no policy catalogue seeds).
-- **Status:** Repository implementation M1–M24 complete; **managed repair closeout PENDING M24 apply/verification**. Managed check-in/check-out RPCs retain pre-repair function order until managed apply. No production deployment; attendance production activation blocked until owner OD values.
+- **Exit gate:** M23 baseline applied managed August 10, 2026; M24 forward-only attendance idempotency repair applied managed August 11, 2026 (owner-authorized); 9 public domain tables + private invite saga ledger verified; repaired check-in/check-out RPC ordering verified on managed DB; staff admin/attendance/leave routes + tests PASS; OD-1–OD-10 unresolved (no policy catalogue seeds).
+- **Status:** Repository implementation M1–M24 complete; **managed M1–M24 applied and verified; repair closeout PENDING OWNER MERGE**. Repaired check-in/check-out RPC ordering verified on managed database. No production deployment; attendance production activation blocked until owner OD values.
 - **Closeout:** `docs/audits/phase-6d-managed-alignment-closeout.md`
 
 ### Phases 7–8
 See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020–0021.
 
-### Phase 7A (Blocked / Not Started)
+### Phase 7A (Next Eligible Formal Phase / Not Started)
 - **Objective:** Commercial quotation data and draft foundation (planned).
 - **Exit gate:** Draft editor, canonical money calculation, one-mutable-draft invariant, RLS foundation proven.
-- **Dependencies:** Phase 6D managed repair closeout complete.
+- **Dependencies:** Phase 6D managed repair closeout complete (PR merged).
+- **Status:** **NOT STARTED** during Phase 6D repair closeout; becomes next active phase upon owner closeout PR merge.
 
 ### Phase 7B
 - **Objective:** Quotation finalization (no internal approval), premium PDF, secure delivery via Phase 6B, client acceptance.

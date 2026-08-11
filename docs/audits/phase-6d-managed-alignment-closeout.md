@@ -117,6 +117,40 @@ No frozen-file edits. No ad-hoc SQL. No migration-history repair.
 
 ## E. M23 managed apply cutoff (for future recovery)
 
-Conservative cutoff for migrations after M23: **`~2026-08-10T02:46:52Z`** (UTC apply completion).
+Conservative cutoff for migrations after M23: **`2026-08-10T02:46:52Z`** (UTC apply completion).
 
 Backup **1330573859** does not permanently satisfy Phase 10 production activation (DEC-0053).
+
+---
+
+## H. M24 Owner-Authorized Managed Apply & Repair Closeout
+
+| Item | Value |
+| :--- | :--- |
+| Owner authorization | `PROCEED PHASE 6D M24 MANAGED APPLY` |
+| Recovery gate status | `RECOVERY_GATE: PASS` |
+| Qualified recovery backup ID | `1338218011` |
+| Backup exact timestamp | `2026-08-10T19:53:40.662Z UTC` |
+| Backup physical / WALG | `is_physical_backup = true`, `walg_enabled = true` |
+| Backup completion status | `COMPLETED` |
+| M23 cutoff timestamp | `2026-08-10T02:46:52Z UTC` |
+| Backup cutoff comparison | Backup 1338218011 is strictly later than cutoff by 17 hours 6 minutes |
+| Managed project | `lpurlfmpvriyvpkujvyl` (`ap-south-1`) |
+| Exact M24 filename | `supabase/migrations/20260811140000_staff_attendance_idempotency_repair.sql` |
+| M24 Git blob | `790db51dc7761c4d1ced3c38db07d974849e6fdb` |
+| M24 normalized SHA-256 | `029a88db95bafe5cfd8791baf77fb94695da7febed41b5251898cfede5a860b2` |
+| Pinned Supabase CLI | `supabase@2.109.1` |
+| Managed apply command | `npx supabase@2.109.1 db push --linked --yes` |
+| Apply start timestamp | `2026-08-11T02:43:52.923Z UTC` |
+| Apply end timestamp | `2026-08-11T02:44:05.908Z UTC` |
+| Apply exit code | `0` (SUCCESS) |
+| Migration plan | Exactly 1 pending migration: `20260811140000_staff_attendance_idempotency_repair.sql` |
+| Post-apply migration list | Exactly **M1–M24** (24 migrations applied remotely) |
+| `check_in_attendance` repair proof | Idempotency lookup (`select * into v_existing from public.attendance_events...`) verified before `ATTENDANCE_ALREADY_CHECKED_IN` guard |
+| `check_out_attendance` repair proof | Idempotency lookup (`select * into v_existing from public.attendance_events...`) verified before `ATTENDANCE_NOT_CHECKED_IN` guard |
+| Function contracts | `SECURITY DEFINER`, `jsonb` return, `search_path = ''` preserved |
+| Unintended schema changes | None (0 new tables, 0 permission changes, 0 policy seeds) |
+| Local quality suite | `db:test` (654/654 PASS), Phase 6D formal (101/101 PASS), Phase 6B integrated (48/48 PASS), app (561/561 PASS), typecheck PASS, lint PASS, build PASS |
+| Non-actions confirmed | No M25 created; no M23 modified; no OD seeds; no attendance production activation; no Phase 7A started; no production deployment |
+| Closeout status | `PHASE_6D_M24_MANAGED_APPLY: PASS`, `MANAGED_ALIGNMENT: M1–M24`, `PHASE_6D_MANAGED_REPAIR: TECHNICALLY COMPLETE`, `CLOSEOUT_PR: PENDING OWNER MERGE AUTHORIZATION`, `PHASE_7A: NOT STARTED` |
+
