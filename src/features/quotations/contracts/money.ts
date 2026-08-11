@@ -37,6 +37,44 @@ export function subtractMoneyPaise(a: MoneyPaise, b: MoneyPaise): MoneyPaise {
 
 /**
  * Re-export CRM INR formatting for quotation display consistency.
- * Persistence layer may later centralise this helper.
  */
-export { formatInrFromPaise, parseInrToPaise } from "../../crm/contracts/sales-target-contracts.ts";
+export { formatInrFromPaise } from "../../crm/contracts/sales-target-contracts.ts";
+
+/**
+ * Exact INR to paise parser for commercial quotations.
+ * Accepts optional ₹ symbol, commas, and surrounding whitespace.
+ * Accepts only digits plus optional decimal with maximum 2 decimal places.
+ * Rejects invalid strings, negative numbers, non-standard notation, and over-scale decimals.
+ * Returns exact paise integer or null if invalid (NEVER silently truncates or defaults to 0).
+ */
+export function parseQuotationInrToPaiseExact(input: string | undefined | null): number | null {
+  if (input === undefined || input === null) return null;
+  let str = String(input).trim();
+  if (!str) return null;
+
+  // Harmless normalization: remove ₹ currency symbol and commas
+  str = str.replace(/₹/g, "").replace(/,/g, "").trim();
+
+  // Accept strictly non-negative decimal with 0, 1, or 2 decimal places
+  if (!/^[0-9]+(\.[0-9]{1,2})?$/.test(str)) {
+    return null;
+  }
+
+  const parts = str.split(".");
+  const rupeesStr = parts[0] || "0";
+  const decimalsStr = (parts[1] || "").padEnd(2, "0");
+
+  try {
+    const rupeesBig = BigInt(rupeesStr);
+    const decimalsBig = BigInt(decimalsStr);
+    const paiseBig = rupeesBig * BigInt(100) + decimalsBig;
+
+    if (paiseBig < BigInt(0) || paiseBig > BigInt(Number.MAX_SAFE_INTEGER)) {
+      return null;
+    }
+
+    return Number(paiseBig);
+  } catch {
+    return null;
+  }
+}

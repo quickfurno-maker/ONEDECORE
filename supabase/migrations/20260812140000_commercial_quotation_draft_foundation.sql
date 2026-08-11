@@ -177,7 +177,7 @@ create table public.quotation_items (
   constraint chk_quotation_items_name check (length(trim(item_name)) between 1 and 200),
   constraint chk_quotation_items_desc check (description is null or length(trim(description)) <= 2000),
   constraint chk_quotation_items_specs check (specifications is null or length(trim(specifications)) <= 2000),
-  constraint chk_quotation_items_qty check (quantity > 0),
+  constraint chk_quotation_items_qty check (quantity > 0 and quantity <= 1000000.000),
   constraint chk_quotation_items_uom check (length(trim(unit_of_measure)) between 1 and 30),
   constraint chk_quotation_items_rate check (unit_rate_paise >= 0),
   constraint chk_quotation_items_line_total check (line_total_paise >= 0),
@@ -1138,7 +1138,7 @@ begin
         end if;
         v_unit_rate := (v_item_elem->>'unitRatePaise')::bigint;
 
-        if v_line_qty <= 0 or v_line_qty > 100000 then
+        if v_line_qty <= 0 or v_line_qty > 1000000.000 then
           raise exception 'QUOTATION_VALIDATION_FAILED: Invalid quantity' using errcode = 'P0001';
         end if;
 

@@ -3,6 +3,8 @@
  * Enforces exact decimal string transport without IEEE 754 binary floating-point drift (parseFloat).
  */
 
+import { QUOTATION_QUANTITY_MILLI_MAX, QUOTATION_QUANTITY_MILLI_MIN } from "../contracts/line-item.ts";
+
 export class QuotationValidationError extends Error {
   readonly code = "QUOTATION_VALIDATION_FAILED";
   constructor(message: string) {
@@ -13,8 +15,9 @@ export class QuotationValidationError extends Error {
 
 /**
  * Validates and formats a quantity decimal string.
+ * Uses exact BigInt milli-unit conversion to align with QUOTATION_QUANTITY_MILLI_MAX (1_000_000_000).
  * Scale constraint: max 3 decimal places (numeric(10,3)).
- * Range constraint: > 0 and <= 999999.999.
+ * Range constraint: > 0.000 and <= 1,000,000.000 units.
  */
 export function validateAndFormatQuantityString(value: unknown): string {
   if (value === undefined || value === null || value === "") {
@@ -31,9 +34,21 @@ export function validateAndFormatQuantityString(value: unknown): string {
     throw new QuotationValidationError("Quantity cannot exceed 3 decimal places");
   }
 
-  const num = Number(str);
-  if (isNaN(num) || num <= 0 || num > 999999.999) {
-    throw new QuotationValidationError("Quantity out of allowed range");
+  const unitsPart = parts[0] || "0";
+  const milliPart = (parts[1] || "").padEnd(3, "0");
+
+  try {
+    const milliUnits = BigInt(unitsPart) * BigInt(1000) + BigInt(milliPart);
+
+    if (
+      milliUnits < BigInt(QUOTATION_QUANTITY_MILLI_MIN) ||
+      milliUnits > BigInt(QUOTATION_QUANTITY_MILLI_MAX)
+    ) {
+      throw new QuotationValidationError("Quantity out of allowed range (0, 1000000.000]");
+    }
+  } catch (err) {
+    if (err instanceof QuotationValidationError) throw err;
+    throw new QuotationValidationError("Invalid quantity value");
   }
 
   return str;
@@ -59,9 +74,18 @@ export function validateAndFormatPercentageString(value: unknown): string {
     throw new QuotationValidationError("Percentage cannot exceed 2 decimal places");
   }
 
-  const num = Number(str);
-  if (isNaN(num) || num < 0 || num > 100) {
-    throw new QuotationValidationError("Percentage out of allowed range [0.00, 100.00]");
+  const intPart = parts[0] || "0";
+  const decPart = (parts[1] || "").padEnd(2, "0");
+
+  try {
+    const bps = BigInt(intPart) * BigInt(100) + BigInt(decPart);
+
+    if (bps < BigInt(0) || bps > BigInt(10000)) {
+      throw new QuotationValidationError("Percentage out of allowed range [0.00, 100.00]");
+    }
+  } catch (err) {
+    if (err instanceof QuotationValidationError) throw err;
+    throw new QuotationValidationError("Invalid percentage value");
   }
 
   return str;
@@ -80,10 +104,15 @@ export function validateAndFormatPaiseInteger(value: unknown, fieldName = "Amoun
     throw new QuotationValidationError(`${fieldName} must be a non-negative integer`);
   }
 
-  const paise = Number(str);
-  if (!Number.isSafeInteger(paise) || paise < 0) {
-    throw new QuotationValidationError(`${fieldName} out of allowed non-negative range`);
-  }
+  try {
+    const paiseBig = BigInt(str);
+    if (paiseBig < BigInt(0) || paiseBig > BigInt(Number.MAX_SAFE_INTEGER)) {
+      throw new QuotationValidationError(`${fieldName} out of allowed non-negative range`);
+    }
 
-  return paise;
+    return Number(paiseBig);
+  } catch (err) {
+    if (err instanceof QuotationValidationError) throw err;
+    throw new QuotationValidationError(`${fieldName} invalid integer value`);
+  }
 }

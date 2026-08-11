@@ -7,10 +7,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, test } from "node:test";
 import { quotationErrorFromPostgresMessage } from "../server/quotation-errors.ts";
-import type { QuotationDraftDTO } from "../contracts/types.ts";
+import { parseQuotationInrToPaiseExact } from "../contracts/money.ts";
 import {
   QuotationValidationError,
-  validateAndFormatPaiseInteger,
   validateAndFormatPercentageString,
   validateAndFormatQuantityString,
 } from "../server/quotation-decimal-utils.ts";
@@ -67,7 +66,23 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     );
   });
 
-  test("APP-5: Over-scale quantity (>3 decimals) is rejected before RPC payload construction", () => {
+  test("APP-5: Quantity bounds alignment — 1000000.000 max accepted, 1000000.001 and over-scale rejected", () => {
+    assert.equal(validateAndFormatQuantityString("1000000.000"), "1000000.000");
+    assert.equal(validateAndFormatQuantityString("1000000"), "1000000");
+    assert.equal(validateAndFormatQuantityString("0.001"), "0.001");
+
+    assert.throws(
+      () => validateAndFormatQuantityString("1000000.001"),
+      (err: unknown) =>
+        err instanceof QuotationValidationError &&
+        err.message.includes("Quantity out of allowed range")
+    );
+    assert.throws(
+      () => validateAndFormatQuantityString("0.000"),
+      (err: unknown) =>
+        err instanceof QuotationValidationError &&
+        err.message.includes("Quantity out of allowed range")
+    );
     assert.throws(
       () => validateAndFormatQuantityString("12.3456"),
       (err: unknown) =>
@@ -111,54 +126,28 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     assert.equal(unknownObj.message.includes("raw_internal_postgres_leak"), false);
   });
 
-  test("APP-10: State replacement contract updates draft state on canonical refresh", () => {
-    const mockDraftV1: QuotationDraftDTO = {
-      quotationId: "q-100",
-      leadId: "lead-100",
-      quotationNumber: "OD-Q-2026-000100",
-      rootStatus: "active",
-      version: {
-        id: "v-1",
-        versionNumber: 1,
-        lockVersion: 1,
-        status: "draft",
-        isCurrentDraft: true,
-        title: "Title V1",
-        subtotalPaise: 100000,
-        discountType: "none",
-        discountValuePaise: 0,
-        discountPercentage: 0,
-        discountTotalPaise: 0,
-        taxableBasePaise: 100000,
-        taxProfileId: null,
-        taxRatePercentage: null,
-        taxTotalPaise: null,
-        grandTotalPaise: null,
-        inclusions: [],
-        exclusions: [],
-      },
-      sections: [],
-      paymentSchedules: [],
-    };
+  test("APP-10: Actual QuotationDraftEditor source code proof for getQuotationDraftAction and setDraft state replacement", () => {
+    const editorSource = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../components/QuotationDraftEditor.tsx"),
+      "utf-8"
+    );
 
-    const mockDraftV2: QuotationDraftDTO = {
-      ...mockDraftV1,
-      version: {
-        ...mockDraftV1.version!,
-        lockVersion: 2,
-        title: "Refreshed Title V2",
-      },
-    };
-
-    // State replacement helper simulation
-    let currentDraftState = mockDraftV1;
-    const setDraftState = (newDraft: QuotationDraftDTO) => {
-      currentDraftState = newDraft;
-    };
-
-    setDraftState(mockDraftV2);
-    assert.equal(currentDraftState.version?.lockVersion, 2);
-    assert.equal(currentDraftState.version?.title, "Refreshed Title V2");
+    assert.equal(
+      editorSource.includes('import { getQuotationDraftAction } from "../server/quotation-draft-actions";') ||
+        editorSource.includes("getQuotationDraftAction"),
+      true,
+      "QuotationDraftEditor does not import getQuotationDraftAction!"
+    );
+    assert.equal(
+      editorSource.includes("getQuotationDraftAction(draft.quotationId)"),
+      true,
+      "QuotationDraftEditor does not call getQuotationDraftAction with draft.quotationId!"
+    );
+    assert.equal(
+      editorSource.includes("setDraft(res.data)"),
+      true,
+      "QuotationDraftEditor does not call setDraft(res.data) on refresh success!"
+    );
   });
 
   test("APP-11: Source regression guard — no parseFloat on quotation authoritative mutation paths", () => {
@@ -195,7 +184,6 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
       "utf-8"
     );
 
-    // Active draft editor navigation must strictly require canEditQuotation
     assert.equal(
       leadPanelFile.includes("canEditQuotation || canCreateQuotation"),
       false,
@@ -221,14 +209,38 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     assert.equal(permissionsModule.includes('"quotations.delete"'), false);
   });
 
-  test("APP-15 & APP-16 & APP-17: Phase 7B boundaries, approval permissions, and default values", () => {
-    const systemPermissions = ["quotations.read", "quotations.create", "quotations.edit"];
-    assert.equal(systemPermissions.includes("quotations.approve"), false);
-    assert.equal(systemPermissions.includes("quotations.delete"), false);
+  test("APP-15 & APP-16: Real Phase 7B implementation-absence regression guard", () => {
+    const projectRoot = path.resolve(import.meta.dirname, "../../../../");
+    const actionsFile = fs.readFileSync(
+      path.join(projectRoot, "src/features/quotations/server/quotation-draft-actions.ts"),
+      "utf-8"
+    );
 
-    // Validate paise integer helper
-    assert.equal(validateAndFormatPaiseInteger(50000), 50000);
-    assert.throws(() => validateAndFormatPaiseInteger(-100));
-    assert.throws(() => validateAndFormatPaiseInteger("invalid"));
+    assert.equal(actionsFile.includes("finalizeQuotation"), false);
+    assert.equal(actionsFile.includes("sendQuotation"), false);
+    assert.equal(actionsFile.includes("acceptQuotation"), false);
+    assert.equal(actionsFile.includes("pdf"), false);
+    assert.equal(actionsFile.includes("quotations.approve"), false);
+  });
+
+  test("APP-17: parseQuotationInrToPaiseExact exact money parsing semantics", () => {
+    // PASS cases
+    assert.equal(parseQuotationInrToPaiseExact("0"), 0);
+    assert.equal(parseQuotationInrToPaiseExact("1"), 100);
+    assert.equal(parseQuotationInrToPaiseExact("1.2"), 120);
+    assert.equal(parseQuotationInrToPaiseExact("1.20"), 120);
+    assert.equal(parseQuotationInrToPaiseExact("1.99"), 199);
+    assert.equal(parseQuotationInrToPaiseExact("₹1,234.56"), 123456);
+
+    // FAIL cases (returns null, NO silent fallback to 0 or truncation)
+    assert.equal(parseQuotationInrToPaiseExact(""), null);
+    assert.equal(parseQuotationInrToPaiseExact("."), null);
+    assert.equal(parseQuotationInrToPaiseExact("abc"), null);
+    assert.equal(parseQuotationInrToPaiseExact("-1"), null);
+    assert.equal(parseQuotationInrToPaiseExact("1e3"), null);
+    assert.equal(parseQuotationInrToPaiseExact("NaN"), null);
+    assert.equal(parseQuotationInrToPaiseExact("Infinity"), null);
+    assert.equal(parseQuotationInrToPaiseExact("1.999"), null);
+    assert.equal(parseQuotationInrToPaiseExact("12.345"), null);
   });
 });

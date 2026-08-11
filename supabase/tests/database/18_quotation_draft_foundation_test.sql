@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 7A — Commercial Quotation Data & Draft Foundation pgTAP tests
 
 begin;
-select plan(66);
+select plan(69);
 
 -- =============================================================================
 -- A. Schema Presence & RLS Verification
@@ -471,11 +471,65 @@ select throws_ok(
   'Reusing update idempotency key with inclusions NULL vs empty array [] throws payload mismatch'
 );
 
+-- Test 21b2: update_quotation_draft distinguishes p_exclusions NULL vs []
+select public.update_quotation_draft(
+  (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+  3::bigint,
+  p_exclusions => null::text[],
+  p_idempotency_key => 'update_key_null_exc'::text
+);
+
+select throws_ok(
+  $$select public.update_quotation_draft(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    4::bigint,
+    p_exclusions => array[]::text[],
+    p_idempotency_key => 'update_key_null_exc'::text
+  )$$,
+  'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH',
+  'Reusing update idempotency key with exclusions NULL vs empty array [] throws payload mismatch'
+);
+
+-- Test 21c: quantity upper bound tests (1000000.000 accepted, 1000000.001 rejected)
+select is(
+  (public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    4::bigint,
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'Hall',
+        'items', jsonb_build_array(
+          jsonb_build_object('itemName', 'Large Panel', 'quantity', '1000000.000', 'unitOfMeasure', 'sqft', 'unitRatePaise', 100)
+        )
+      )
+    )
+  )->>'lockVersion'),
+  '5',
+  'Quantity exactly equal to 1000000.000 max bound is accepted and bumps lockVersion'
+);
+
+select throws_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    5::bigint,
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'Hall',
+        'items', jsonb_build_array(
+          jsonb_build_object('itemName', 'Large Panel', 'quantity', '1000000.001', 'unitOfMeasure', 'sqft', 'unitRatePaise', 100)
+        )
+      )
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Invalid quantity',
+  'Quantity exceeding 1000000.000 max bound throws controlled validation error'
+);
+
 -- Test 21c: over-scale decimal validation (quantity >3 decimals, percentage >2 decimals)
 select throws_ok(
   $$select public.save_quotation_draft_items(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
-    3::bigint,
+    5::bigint,
     jsonb_build_array(
       jsonb_build_object(
         'sectionName', 'Hall',
@@ -492,7 +546,7 @@ select throws_ok(
 select throws_ok(
   $$select public.replace_quotation_payment_schedule(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
-    3::bigint,
+    5::bigint,
     'percentage'::text,
     jsonb_build_array(
       jsonb_build_object('milestoneName', 'Booking', 'percentage', '33.333')
@@ -506,7 +560,7 @@ select throws_ok(
 select throws_ok(
   $$select public.replace_quotation_payment_schedule(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
-    3::bigint,
+    5::bigint,
     'percentage'::text,
     jsonb_build_array(
       jsonb_build_object('milestoneName', 'Booking', 'percentage', '50.00', 'amountPaise', 50000)
@@ -520,7 +574,7 @@ select throws_ok(
 select throws_ok(
   $$select public.replace_quotation_payment_schedule(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
-    3::bigint,
+    5::bigint,
     'amount'::text,
     jsonb_build_array(
       jsonb_build_object('milestoneName', 'Booking', 'amountPaise', 50000, 'percentage', '50.00')
@@ -534,7 +588,7 @@ select throws_ok(
 select throws_ok(
   $$select public.replace_quotation_payment_schedule(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
-    3::bigint,
+    5::bigint,
     'percentage'::text,
     jsonb_build_array(
       jsonb_build_object('milestoneName', 'Booking', 'percentage', 'invalid-pct-string')
@@ -548,7 +602,7 @@ select throws_ok(
 select throws_ok(
   $$select public.save_quotation_draft_items(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
-    3::bigint,
+    5::bigint,
     jsonb_build_array(
       jsonb_build_object(
         'sectionName', 'Hall',
@@ -566,7 +620,7 @@ select throws_ok(
 select throws_ok(
   $$select public.save_quotation_draft_items(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
-    3::bigint,
+    5::bigint,
     jsonb_build_array(
       jsonb_build_object(
         'sectionName', 'Hall',

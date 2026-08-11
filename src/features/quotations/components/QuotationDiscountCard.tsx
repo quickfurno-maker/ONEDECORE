@@ -1,7 +1,7 @@
 "use client";
 
 import type { QuotationDiscountType, QuotationVersionDTO } from "../contracts/types";
-import { parseInrToPaise } from "@/features/crm/contracts/sales-target-contracts";
+import { parseQuotationInrToPaiseExact } from "../contracts/money";
 
 interface QuotationDiscountCardProps {
   readonly version: QuotationVersionDTO;
@@ -43,13 +43,11 @@ export function QuotationDiscountCard({
           <div>
             <label className="block text-xs font-medium text-neutral-300">Flat Discount (INR ₹)</label>
             <input
-              type="number"
-              min="0"
-              step="1"
+              type="text"
               className="mt-1 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-emerald-500 focus:outline-none font-mono"
-              value={version.discountValuePaise / 100}
+              value={version.discountValuePaise != null ? (version.discountValuePaise / 100).toString() : ""}
               onChange={(e) => {
-                const paise = parseInrToPaise(e.target.value) ?? 0;
+                const paise = parseQuotationInrToPaiseExact(e.target.value) ?? 0;
                 onUpdateDiscount("flat", paise, 0);
               }}
             />

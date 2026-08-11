@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { formatInrFromPaise } from "@/features/crm/contracts/sales-target-contracts";
 import type { QuotationLineItemDTO, QuotationSectionDTO } from "../contracts/types";
-import { parseInrToPaise } from "./QuotationPaymentScheduleEditor";
+import { parseQuotationInrToPaiseExact } from "../contracts/money";
 
 interface QuotationSectionAccordionProps {
   readonly sections: readonly QuotationSectionDTO[];
@@ -234,7 +234,7 @@ export function QuotationSectionAccordion({
                                 sIdx,
                                 iIdx,
                                 "unitRatePaise",
-                                parseInrToPaise(e.target.value)
+                                parseQuotationInrToPaiseExact(e.target.value) ?? 0
                               )
                             }
                           />

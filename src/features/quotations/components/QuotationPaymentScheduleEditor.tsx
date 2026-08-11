@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatInrFromPaise } from "@/features/crm/contracts/sales-target-contracts";
+import { formatInrFromPaise, parseQuotationInrToPaiseExact } from "../contracts/money";
 import type {
   PaymentScheduleMode,
   QuotationPaymentScheduleMilestoneDTO,
@@ -15,17 +15,6 @@ interface QuotationPaymentScheduleEditorProps {
     mode: PaymentScheduleMode,
     milestones: readonly QuotationPaymentScheduleMilestoneDTO[]
   ) => void;
-}
-
-export function parseInrToPaise(inrStr: string): number {
-  const trimmed = inrStr.trim();
-  if (!trimmed || isNaN(Number(trimmed))) return 0;
-  const parts = trimmed.split(".");
-  const rupees = parseInt(parts[0] || "0", 10);
-  const decimals = (parts[1] || "").padEnd(2, "0").slice(0, 2);
-  const paise = parseInt(decimals || "0", 10);
-  const sign = rupees < 0 || trimmed.startsWith("-") ? -1 : 1;
-  return sign * (Math.abs(rupees) * 100 + paise);
 }
 
 export function QuotationPaymentScheduleEditor({
@@ -184,9 +173,10 @@ export function QuotationPaymentScheduleEditor({
                       type="text"
                       className="w-full rounded border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 font-mono text-neutral-100"
                       value={m.amountPaise != null ? ((m.amountPaise || 0) / 100).toString() : ""}
-                      onChange={(e) =>
-                        handleChange(idx, "amountPaise", parseInrToPaise(e.target.value))
-                      }
+                      onChange={(e) => {
+                        const paise = parseQuotationInrToPaiseExact(e.target.value);
+                        handleChange(idx, "amountPaise", paise);
+                      }}
                     />
                   </td>
                 )}
