@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -34,6 +34,251 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance_corrections: {
+        Row: {
+          actor_id: string
+          after_digest: string
+          attendance_date: string
+          before_digest: string
+          correction_type: string
+          created_at: string
+          details: Json
+          id: string
+          reason: string
+          staff_id: string
+        }
+        Insert: {
+          actor_id: string
+          after_digest: string
+          attendance_date: string
+          before_digest: string
+          correction_type: string
+          created_at?: string
+          details?: Json
+          id?: string
+          reason: string
+          staff_id: string
+        }
+        Update: {
+          actor_id?: string
+          after_digest?: string
+          attendance_date?: string
+          before_digest?: string
+          correction_type?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          reason?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_corrections_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_corrections_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_days: {
+        Row: {
+          attendance_date: string
+          attendance_policy_id: string
+          created_at: string
+          derived_at: string
+          first_check_in_at: string | null
+          has_manual_adjustment: boolean
+          is_early_checkout: boolean
+          is_late: boolean
+          is_missing_checkout: boolean
+          last_check_out_at: string | null
+          open_session: boolean
+          primary_status: string
+          staff_id: string
+          updated_at: string
+          worked_minutes: number
+        }
+        Insert: {
+          attendance_date: string
+          attendance_policy_id: string
+          created_at?: string
+          derived_at?: string
+          first_check_in_at?: string | null
+          has_manual_adjustment?: boolean
+          is_early_checkout?: boolean
+          is_late?: boolean
+          is_missing_checkout?: boolean
+          last_check_out_at?: string | null
+          open_session?: boolean
+          primary_status: string
+          staff_id: string
+          updated_at?: string
+          worked_minutes?: number
+        }
+        Update: {
+          attendance_date?: string
+          attendance_policy_id?: string
+          created_at?: string
+          derived_at?: string
+          first_check_in_at?: string | null
+          has_manual_adjustment?: boolean
+          is_early_checkout?: boolean
+          is_late?: boolean
+          is_missing_checkout?: boolean
+          last_check_out_at?: string | null
+          open_session?: boolean
+          primary_status?: string
+          staff_id?: string
+          updated_at?: string
+          worked_minutes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_days_attendance_policy_id_fkey"
+            columns: ["attendance_policy_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_days_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_events: {
+        Row: {
+          attendance_date: string
+          attendance_policy_id: string
+          client_reported_at: string | null
+          created_at: string
+          event_type: string
+          id: string
+          idempotency_key: string
+          latitude: number | null
+          location_accuracy_m: number | null
+          location_category: string | null
+          longitude: number | null
+          occurred_at: string
+          staff_id: string
+        }
+        Insert: {
+          attendance_date: string
+          attendance_policy_id: string
+          client_reported_at?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          idempotency_key: string
+          latitude?: number | null
+          location_accuracy_m?: number | null
+          location_category?: string | null
+          longitude?: number | null
+          occurred_at?: string
+          staff_id: string
+        }
+        Update: {
+          attendance_date?: string
+          attendance_policy_id?: string
+          client_reported_at?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          idempotency_key?: string
+          latitude?: number | null
+          location_accuracy_m?: number | null
+          location_category?: string | null
+          longitude?: number | null
+          occurred_at?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_events_attendance_policy_id_fkey"
+            columns: ["attendance_policy_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_events_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_policies: {
+        Row: {
+          code: string
+          created_at: string
+          half_day_threshold_minutes: number
+          id: string
+          is_current: boolean
+          late_grace_minutes: number
+          location_required: boolean
+          missing_checkout_cutoff_local: string
+          name: string
+          supersedes_policy_id: string | null
+          timezone: string
+          weekly_off_days: number[]
+          workday_end_local: string
+          workday_start_local: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          half_day_threshold_minutes: number
+          id?: string
+          is_current?: boolean
+          late_grace_minutes: number
+          location_required: boolean
+          missing_checkout_cutoff_local: string
+          name: string
+          supersedes_policy_id?: string | null
+          timezone: string
+          weekly_off_days: number[]
+          workday_end_local: string
+          workday_start_local: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          half_day_threshold_minutes?: number
+          id?: string
+          is_current?: boolean
+          late_grace_minutes?: number
+          location_required?: boolean
+          missing_checkout_cutoff_local?: string
+          name?: string
+          supersedes_policy_id?: string | null
+          timezone?: string
+          weekly_off_days?: number[]
+          workday_end_local?: string
+          workday_start_local?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_policies_supersedes_policy_id_fkey"
+            columns: ["supersedes_policy_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_events: {
         Row: {
           actor_type: string
@@ -188,6 +433,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      holidays: {
+        Row: {
+          created_at: string
+          holiday_date: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          holiday_date: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          holiday_date?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       kriti_events: {
         Row: {
@@ -1280,6 +1552,103 @@ export type Database = {
           },
         ]
       }
+      leave_requests: {
+        Row: {
+          created_at: string
+          end_date: string
+          half_day_part: string | null
+          id: string
+          leave_type_id: string
+          reason: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          staff_id: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          half_day_part?: string | null
+          id?: string
+          leave_type_id: string
+          reason: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          staff_id: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          half_day_part?: string | null
+          id?: string
+          leave_type_id?: string
+          reason?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          staff_id?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_types: {
+        Row: {
+          allows_half_day: boolean
+          code: string
+          created_at: string
+          display_name: string
+          id: string
+          is_active: boolean
+        }
+        Insert: {
+          allows_half_day?: boolean
+          code: string
+          created_at?: string
+          display_name: string
+          id?: string
+          is_active?: boolean
+        }
+        Update: {
+          allows_half_day?: boolean
+          code?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean
+        }
+        Relationships: []
+      }
       permissions: {
         Row: {
           code: string
@@ -1541,6 +1910,425 @@ export type Database = {
         }
         Relationships: []
       }
+      quotation_events: {
+        Row: {
+          actor_id: string
+          details: Json
+          event_type: string
+          id: string
+          lead_id: string
+          occurred_at: string
+          quotation_id: string
+          quotation_version_id: string | null
+        }
+        Insert: {
+          actor_id: string
+          details?: Json
+          event_type: string
+          id?: string
+          lead_id: string
+          occurred_at?: string
+          quotation_id: string
+          quotation_version_id?: string | null
+        }
+        Update: {
+          actor_id?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          lead_id?: string
+          occurred_at?: string
+          quotation_id?: string
+          quotation_version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_events_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_events_quotation_version_id_fkey"
+            columns: ["quotation_version_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotation_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          item_name: string
+          line_total_paise: number
+          quantity: number
+          section_id: string
+          specifications: string | null
+          unit_of_measure: string
+          unit_rate_paise: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          item_name: string
+          line_total_paise: number
+          quantity: number
+          section_id: string
+          specifications?: string | null
+          unit_of_measure: string
+          unit_rate_paise: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          item_name?: string
+          line_total_paise?: number
+          quantity?: number
+          section_id?: string
+          specifications?: string | null
+          unit_of_measure?: string
+          unit_rate_paise?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotation_payment_schedules: {
+        Row: {
+          amount_paise: number | null
+          created_at: string
+          id: string
+          milestone_name: string
+          milestone_order: number
+          percentage: number | null
+          quotation_version_id: string
+        }
+        Insert: {
+          amount_paise?: number | null
+          created_at?: string
+          id?: string
+          milestone_name: string
+          milestone_order?: number
+          percentage?: number | null
+          quotation_version_id: string
+        }
+        Update: {
+          amount_paise?: number | null
+          created_at?: string
+          id?: string
+          milestone_name?: string
+          milestone_order?: number
+          percentage?: number | null
+          quotation_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_payment_schedules_quotation_version_id_fkey"
+            columns: ["quotation_version_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotation_sections: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          quotation_version_id: string
+          section_name: string
+          subtotal_paise: number
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          quotation_version_id: string
+          section_name: string
+          subtotal_paise?: number
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          quotation_version_id?: string
+          section_name?: string
+          subtotal_paise?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_sections_quotation_version_id_fkey"
+            columns: ["quotation_version_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotation_tax_profiles: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          display_name: string
+          id: string
+          is_active: boolean
+          rate_percentage: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          display_name: string
+          id?: string
+          is_active?: boolean
+          rate_percentage: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          rate_percentage?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_tax_profiles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_tax_profiles_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotation_versions: {
+        Row: {
+          client_email_snapshot: string | null
+          client_name_snapshot: string | null
+          client_phone_snapshot: string | null
+          created_at: string
+          created_by: string
+          discount_percentage: number
+          discount_total_paise: number
+          discount_type: string
+          discount_value_paise: number
+          exclusions: string[]
+          grand_total_paise: number | null
+          id: string
+          inclusions: string[]
+          is_current_draft: boolean
+          lock_version: number
+          payment_schedule_mode: string | null
+          property_address_snapshot: string | null
+          quotation_id: string
+          scope_summary: string | null
+          status: string
+          subtotal_paise: number
+          tax_profile_id: string | null
+          tax_rate_percentage: number | null
+          tax_total_paise: number | null
+          taxable_base_paise: number
+          terms_and_conditions: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+          version_number: number
+        }
+        Insert: {
+          client_email_snapshot?: string | null
+          client_name_snapshot?: string | null
+          client_phone_snapshot?: string | null
+          created_at?: string
+          created_by: string
+          discount_percentage?: number
+          discount_total_paise?: number
+          discount_type?: string
+          discount_value_paise?: number
+          exclusions?: string[]
+          grand_total_paise?: number | null
+          id?: string
+          inclusions?: string[]
+          is_current_draft?: boolean
+          lock_version?: number
+          payment_schedule_mode?: string | null
+          property_address_snapshot?: string | null
+          quotation_id: string
+          scope_summary?: string | null
+          status?: string
+          subtotal_paise?: number
+          tax_profile_id?: string | null
+          tax_rate_percentage?: number | null
+          tax_total_paise?: number | null
+          taxable_base_paise?: number
+          terms_and_conditions?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          version_number: number
+        }
+        Update: {
+          client_email_snapshot?: string | null
+          client_name_snapshot?: string | null
+          client_phone_snapshot?: string | null
+          created_at?: string
+          created_by?: string
+          discount_percentage?: number
+          discount_total_paise?: number
+          discount_type?: string
+          discount_value_paise?: number
+          exclusions?: string[]
+          grand_total_paise?: number | null
+          id?: string
+          inclusions?: string[]
+          is_current_draft?: boolean
+          lock_version?: number
+          payment_schedule_mode?: string | null
+          property_address_snapshot?: string | null
+          quotation_id?: string
+          scope_summary?: string | null
+          status?: string
+          subtotal_paise?: number
+          tax_profile_id?: string | null
+          tax_rate_percentage?: number | null
+          tax_total_paise?: number | null
+          taxable_base_paise?: number
+          terms_and_conditions?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_versions_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_versions_tax_profile_id_fkey"
+            columns: ["tax_profile_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_tax_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_versions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotations: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          lead_id: string
+          quotation_number: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          lead_id: string
+          quotation_number: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          lead_id?: string
+          quotation_number?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           created_at: string
@@ -1726,6 +2514,109 @@ export type Database = {
             foreignKeyName: "sales_targets_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_admin_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          staff_id: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          staff_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_admin_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_admin_events_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_employment_profiles: {
+        Row: {
+          attendance_eligible: boolean
+          attendance_policy_id: string | null
+          created_at: string
+          designation: string
+          employee_code: string
+          invite_reconciliation_state: string
+          joining_date: string
+          reporting_manager_id: string | null
+          staff_id: string
+          updated_at: string
+        }
+        Insert: {
+          attendance_eligible?: boolean
+          attendance_policy_id?: string | null
+          created_at?: string
+          designation: string
+          employee_code: string
+          invite_reconciliation_state?: string
+          joining_date: string
+          reporting_manager_id?: string | null
+          staff_id: string
+          updated_at?: string
+        }
+        Update: {
+          attendance_eligible?: boolean
+          attendance_policy_id?: string | null
+          created_at?: string
+          designation?: string
+          employee_code?: string
+          invite_reconciliation_state?: string
+          joining_date?: string
+          reporting_manager_id?: string | null
+          staff_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_employment_profiles_attendance_policy_id_fkey"
+            columns: ["attendance_policy_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_employment_profiles_reporting_manager_id_fkey"
+            columns: ["reporting_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_employment_profiles_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2276,11 +3167,11 @@ export type Database = {
       append_kriti_audit_event: {
         Args: {
           p_details?: Json
-          p_error_code?: string | null
+          p_error_code?: string
           p_event_type: string
           p_run_id: string
-          p_run_status?: string | null
-          p_usage_metadata?: Json | null
+          p_run_status?: string
+          p_usage_metadata?: Json
         }
         Returns: string
       }
@@ -2327,6 +3218,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      approve_leave_request: {
+        Args: { p_note?: string; p_request_id: string }
+        Returns: Json
+      }
+      archive_holiday: { Args: { p_holiday_id: string }; Returns: Json }
+      archive_quotation_draft: {
+        Args: { p_expected_lock_version: number; p_quotation_id: string }
+        Returns: Json
       }
       assign_lead: {
         Args: {
@@ -2455,6 +3355,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancel_leave_request: {
+        Args: { p_reason: string; p_request_id: string }
+        Returns: Json
+      }
+      check_in_attendance: {
+        Args: {
+          p_client_reported_at?: string
+          p_idempotency_key: string
+          p_latitude?: number
+          p_location_accuracy_m?: number
+          p_location_category?: string
+          p_longitude?: number
+        }
+        Returns: Json
+      }
       check_manual_lead_duplicate: {
         Args: {
           p_email: string
@@ -2469,6 +3384,17 @@ export type Database = {
           existing_lead_id: string
           outcome_code: string
         }[]
+      }
+      check_out_attendance: {
+        Args: {
+          p_client_reported_at?: string
+          p_idempotency_key: string
+          p_latitude?: number
+          p_location_accuracy_m?: number
+          p_location_category?: string
+          p_longitude?: number
+        }
+        Returns: Json
       }
       claim_whatsapp_send_intent_for_dispatch: {
         Args: {
@@ -2554,6 +3480,20 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      correct_attendance_day: {
+        Args: {
+          p_attendance_date: string
+          p_correction_type: string
+          p_details?: Json
+          p_reason: string
+          p_staff_id: string
+        }
+        Returns: Json
+      }
+      create_holiday: {
+        Args: { p_holiday_date: string; p_name: string }
+        Returns: Json
       }
       create_lead_assignment_rule: {
         Args: {
@@ -2688,6 +3628,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_leave_request: {
+        Args: {
+          p_end_date: string
+          p_half_day_part?: string
+          p_leave_type_id: string
+          p_reason: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
       create_manual_lead: {
         Args: {
           p_assignee_id?: string
@@ -2743,6 +3693,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_quotation_draft: {
+        Args: { p_idempotency_key: string; p_lead_id: string; p_title: string }
+        Returns: Json
+      }
       create_sales_target: {
         Args: {
           p_closed_won_count_target: number
@@ -2774,6 +3728,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_staff_member: {
+        Args: { p_client_request_id: string }
+        Returns: Json
       }
       create_whatsapp_service_send_intent: {
         Args: {
@@ -2807,6 +3765,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_quotation_draft: { Args: { p_quotation_id: string }; Returns: Json }
       ingest_meta_whatsapp_message: {
         Args: {
           p_body_text: string
@@ -2892,12 +3851,48 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      prepare_staff_invite_saga: {
+        Args: {
+          p_attendance_eligible: boolean
+          p_attendance_policy_id: string
+          p_client_request_id: string
+          p_designation: string
+          p_display_name: string
+          p_email: string
+          p_employee_code: string
+          p_joining_date: string
+          p_phone_e164: string
+          p_reporting_manager_id: string
+          p_role_code: string
+        }
+        Returns: Json
+      }
       process_lead_import_batch: {
         Args: {
           p_batch_id: string
           p_expected_revision: number
           p_max_rows?: number
         }
+        Returns: Json
+      }
+      publish_attendance_policy: {
+        Args: {
+          p_code: string
+          p_half_day_threshold_minutes: number
+          p_late_grace_minutes: number
+          p_location_required: boolean
+          p_missing_checkout_cutoff_local: string
+          p_name: string
+          p_supersedes_policy_id?: string
+          p_timezone: string
+          p_weekly_off_days: number[]
+          p_workday_end_local: string
+          p_workday_start_local: string
+        }
+        Returns: Json
+      }
+      reconcile_staff_invite: {
+        Args: { p_client_request_id: string }
         Returns: Json
       }
       reconcile_whatsapp_dispatch_attempt: {
@@ -2907,6 +3902,10 @@ export type Database = {
           outcome_code: string
           send_intent_id: string
         }[]
+      }
+      record_staff_invite_auth_success: {
+        Args: { p_client_request_id: string; p_staff_id: string }
+        Returns: Json
       }
       record_whatsapp_dispatch_attempt_outcome: {
         Args: {
@@ -2969,6 +3968,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      reject_leave_request: {
+        Args: { p_note?: string; p_request_id: string }
+        Returns: Json
       }
       reopen_sales_target: {
         Args: {
@@ -3108,6 +4111,20 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      replace_quotation_payment_schedule: {
+        Args: {
+          p_expected_lock_version: number
+          p_idempotency_key?: string
+          p_milestones: Json
+          p_mode: string
+          p_quotation_id: string
+        }
+        Returns: Json
+      }
+      resend_staff_invite: {
+        Args: { p_reason: string; p_staff_id: string }
+        Returns: Json
+      }
       revise_sales_target: {
         Args: {
           p_closed_won_count_target: number
@@ -3138,6 +4155,19 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      save_quotation_draft_items: {
+        Args: {
+          p_expected_lock_version: number
+          p_idempotency_key?: string
+          p_quotation_id: string
+          p_sections: Json
+        }
+        Returns: Json
+      }
+      set_current_attendance_policy: {
+        Args: { p_policy_id: string }
+        Returns: Json
       }
       set_lead_assignment_rule_active: {
         Args: { p_is_active: boolean; p_rule_id: string }
@@ -3191,16 +4221,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_staff_profile_status: {
+        Args: { p_reason: string; p_staff_id: string; p_status: string }
+        Returns: Json
+      }
+      set_staff_reporting_manager: {
+        Args: { p_manager_id: string; p_reason: string; p_staff_id: string }
+        Returns: Json
+      }
       start_kriti_run: {
         Args: {
           p_context_digest: string
           p_context_provenance?: Json
-          p_model_name?: string | null
-          p_provider_code?: string | null
+          p_model_name: string
+          p_provider_code: string
           p_provider_mode: string
           p_run_id: string
-          p_target_id?: string | null
-          p_target_type?: string | null
+          p_target_id: string
+          p_target_type: string
           p_task_type: string
         }
         Returns: string
@@ -3387,6 +4425,38 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      update_quotation_draft: {
+        Args: {
+          p_clear_tax_profile?: boolean
+          p_discount_percentage?: number
+          p_discount_type?: string
+          p_discount_value_paise?: number
+          p_exclusions?: string[]
+          p_expected_lock_version: number
+          p_idempotency_key?: string
+          p_inclusions?: string[]
+          p_quotation_id: string
+          p_scope_summary?: string
+          p_tax_profile_id?: string
+          p_terms_and_conditions?: string
+          p_title?: string
+        }
+        Returns: Json
+      }
+      update_staff_employment: {
+        Args: {
+          p_attendance_eligible?: boolean
+          p_attendance_policy_id?: string
+          p_designation?: string
+          p_display_name?: string
+          p_employee_code?: string
+          p_joining_date?: string
+          p_phone_e164?: string
+          p_reason?: string
+          p_staff_id: string
+        }
+        Returns: Json
       }
       validate_lead_import_batch: {
         Args: { p_batch_id: string }

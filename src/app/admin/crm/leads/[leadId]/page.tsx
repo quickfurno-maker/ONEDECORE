@@ -13,6 +13,7 @@ import { LeadDetailNotes } from "@/features/crm/components/leads/LeadDetailNotes
 import { LeadDetailOverview } from "@/features/crm/components/leads/LeadDetailOverview";
 import { LeadDetailSourcePanel } from "@/features/crm/components/leads/LeadDetailSourcePanel";
 import { LeadDetailTimeline } from "@/features/crm/components/leads/LeadDetailTimeline";
+import { LeadDetailQuotationPanel } from "@/features/crm/components/leads/LeadDetailQuotationPanel";
 import { LeadStatusBadge } from "@/features/crm/components/leads/LeadStatusBadge";
 import { LeadStatusTransitionPanel } from "@/features/crm/components/leads/LeadStatusTransitionPanel";
 import type { LeadStageCode } from "@/features/crm/contracts/lead-stages";
@@ -23,6 +24,8 @@ import {
   fetchActiveLeadClosureReasons,
   fetchCrmAssigneeDirectory,
 } from "@/features/crm/server/crm-lead-queries";
+import { getQuotationDraftByLeadId } from "@/features/quotations/server/quotation-queries";
+import { probeQuotationPermissions } from "@/features/quotations/server/quotation-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -51,12 +54,15 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
     context?.canReadBroad &&
     (context.canAssignLeads || context.canManageLeadFollowUps);
 
-  const [assigneeDirectory, closureReasons] = await Promise.all([
-    needsDirectory ? fetchCrmAssigneeDirectory(context!) : Promise.resolve([]),
-    context?.canTransitionLeads
-      ? fetchActiveLeadClosureReasons()
-      : Promise.resolve([]),
-  ]);
+  const [assigneeDirectory, closureReasons, existingDraft, quotationPermissions] =
+    await Promise.all([
+      needsDirectory ? fetchCrmAssigneeDirectory(context!) : Promise.resolve([]),
+      context?.canTransitionLeads
+        ? fetchActiveLeadClosureReasons()
+        : Promise.resolve([]),
+      getQuotationDraftByLeadId(lead.id).catch(() => null),
+      probeQuotationPermissions(),
+    ]);
 
   return (
     <div className="space-y-6">
@@ -90,6 +96,15 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
         resumeTargetStatus={lead.statusSummary.resumeTargetStatus}
         canTransitionLeads={context?.canTransitionLeads ?? false}
         closureReasons={closureReasons}
+      />
+
+      {/* Commercial Quotation Workspace Integration Card */}
+      <LeadDetailQuotationPanel
+        leadId={lead.id}
+        submittedName={lead.overview.submittedName}
+        existingDraft={existingDraft}
+        canCreateQuotation={quotationPermissions.canCreateQuotations}
+        canEditQuotation={quotationPermissions.canEditQuotations}
       />
 
       <div className="grid gap-6 xl:grid-cols-2">
