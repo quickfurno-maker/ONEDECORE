@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 7A — Commercial Quotation Data & Draft Foundation pgTAP tests
 
 begin;
-select plan(90);
+select plan(94);
 
 -- Helper for reading private ledger snapshot size in pgTAP tests
 create or replace function public.test_get_snapshot_size(p_key text)
@@ -9,6 +9,52 @@ returns integer language sql security definer set search_path = '' as $$
   select pg_column_size(response_snapshot)::integer
   from private.quotation_idempotency_requests
   where operation_code = 'save_quotation_draft_items' and idempotency_key = p_key;
+$$;
+
+-- Helper for triggering tax grand total overflow in pgTAP tests
+create or replace function public.test_trigger_tax_grand_overflow()
+returns void language plpgsql security definer set search_path = '' as $$
+declare
+  v_tax_id uuid := gen_random_uuid();
+  v_quote_id uuid;
+  v_lock bigint;
+  v_actor uuid;
+begin
+  select id into v_quote_id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid;
+  select lock_version into v_lock from public.quotation_versions where quotation_id = v_quote_id and is_current_draft = true;
+
+  -- Save items to get a large subtotal = 6.0 * 10^18 paise (<= bigint max)
+  perform public.save_quotation_draft_items(
+    v_quote_id,
+    v_lock,
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'BigSection',
+        'items', (
+          select jsonb_agg(jsonb_build_object(
+            'itemName', 'Item_' || g,
+            'quantity', '1000000.000',
+            'unitOfMeasure', 'nos',
+            'unitRatePaise', 100000000000
+          )) from generate_series(1, 60) as g
+        )
+      )
+    )
+  );
+
+  select lock_version into v_lock from public.quotation_versions where quotation_id = v_quote_id and is_current_draft = true;
+  select created_by into v_actor from public.quotations where id = v_quote_id;
+
+  insert into public.quotation_tax_profiles (id, code, display_name, rate_percentage, is_active, created_by)
+  values (v_tax_id, 'overflow_tax', 'Overflow Tax', 99.99, true, v_actor);
+
+  -- Apply tax profile that forces grand total > bigint max
+  perform public.update_quotation_draft(
+    p_quotation_id => v_quote_id,
+    p_expected_lock_version => v_lock,
+    p_tax_profile_id => v_tax_id
+  );
+end;
 $$;
 
 -- =============================================================================
@@ -880,7 +926,7 @@ select lives_ok(
   'Large representable quote save succeeds'
 );
 
--- DB-HARDEN-6 through 12: Idempotency with large DTO (>8192 bytes), compact snapshot <= 8192, replay returning fresh DTO
+-- DB-HARDEN-6 through DB-HARDEN-14: Idempotency with large DTO (>8192 bytes), full DTO > 8192, compact snapshot <= 8192, DB lock equality, replay fresh DTO
 do $$
 declare
   v_quote_id uuid;
@@ -891,7 +937,10 @@ declare
   j integer;
   v_res1 jsonb;
   v_res2 jsonb;
+  v_full_dto_size integer;
   v_snap_size integer;
+  v_db_lock_after1 bigint;
+  v_db_lock_after2 bigint;
   v_events_after1 integer;
   v_events_after2 integer;
 begin
@@ -918,29 +967,36 @@ begin
 
   -- Initial call
   v_res1 := public.save_quotation_draft_items(v_quote_id, v_lock, v_sections, 'idempotency-key-large-dto-test-100');
+  v_full_dto_size := pg_column_size(v_res1->'dto');
+  select lock_version into v_db_lock_after1 from public.quotation_versions where quotation_id = v_quote_id and is_current_draft = true;
   select count(*) into v_events_after1 from public.quotation_events where quotation_id = v_quote_id;
 
   -- Replay call with exact same key and payload
   v_res2 := public.save_quotation_draft_items(v_quote_id, v_lock, v_sections, 'idempotency-key-large-dto-test-100');
+  select lock_version into v_db_lock_after2 from public.quotation_versions where quotation_id = v_quote_id and is_current_draft = true;
   select count(*) into v_events_after2 from public.quotation_events where quotation_id = v_quote_id;
 
   create temp table temp_idempotency_test_results (
     res1_replay boolean,
     res1_has_dto boolean,
+    full_dto_size integer,
     snap_size integer,
     res2_replay boolean,
     res2_has_dto boolean,
-    lock_same boolean,
+    res_lock_same boolean,
+    db_lock_same boolean,
     no_duplicate_event boolean
   ) on commit drop;
 
   insert into temp_idempotency_test_results values (
     (v_res1->>'idempotentReplay')::boolean,
     (v_res1->'dto' is not null),
+    v_full_dto_size,
     public.test_get_snapshot_size('idempotency-key-large-dto-test-100'),
     (v_res2->>'idempotentReplay')::boolean,
     (v_res2->'dto' is not null),
     ((v_res2->>'lockVersion')::bigint = (v_res1->>'lockVersion')::bigint),
+    (v_db_lock_after1 = v_db_lock_after2),
     (v_events_after1 = v_events_after2)
   );
 end;
@@ -958,37 +1014,49 @@ select ok(
   'Initial large DTO mutation returns DTO'
 );
 
--- Test DB-HARDEN-8: Stored snapshot <= 8192 bytes
+-- Test DB-HARDEN-8: Full response DTO size is > 8192 bytes
+select ok(
+  (select full_dto_size from temp_idempotency_test_results) > 8192,
+  'Full response DTO size is > 8192 bytes'
+);
+
+-- Test DB-HARDEN-9: Stored snapshot <= 8192 bytes
 select ok(
   (select snap_size from temp_idempotency_test_results) <= 8192,
   'Stored response snapshot size is <= 8192 bytes'
 );
 
--- Test DB-HARDEN-9: Replay returns idempotentReplay true
+-- Test DB-HARDEN-10: Replay returns idempotentReplay true
 select ok(
   (select res2_replay from temp_idempotency_test_results) = true,
   'Replay call returns idempotentReplay true'
 );
 
--- Test DB-HARDEN-10: Replay returns fresh DTO
+-- Test DB-HARDEN-11: Replay returns fresh DTO
 select ok(
   (select res2_has_dto from temp_idempotency_test_results) = true,
   'Replay call returns fresh DTO'
 );
 
--- Test DB-HARDEN-11: Replay does not increment lock_version
+-- Test DB-HARDEN-12: Replay does not increment response lockVersion
 select ok(
-  (select lock_same from temp_idempotency_test_results) = true,
-  'Replay call does not increment lock_version'
+  (select res_lock_same from temp_idempotency_test_results) = true,
+  'Replay call does not increment response lockVersion'
 );
 
--- Test DB-HARDEN-12: Replay does not duplicate audit event
+-- Test DB-HARDEN-13: Replay does not increment database lock_version
+select ok(
+  (select db_lock_same from temp_idempotency_test_results) = true,
+  'Replay call does not increment database lock_version'
+);
+
+-- Test DB-HARDEN-14: Replay does not duplicate audit event
 select ok(
   (select no_duplicate_event from temp_idempotency_test_results) = true,
   'Replay call does not duplicate audit event'
 );
 
--- Test DB-HARDEN-13: Replay with same key + changed payload throws IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH
+-- Test DB-HARDEN-15: Replay with same key + changed payload throws IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH
 select throws_ok(
   $$select public.save_quotation_draft_items(
     (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
@@ -1005,6 +1073,47 @@ select throws_ok(
   )$$,
   'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH',
   'Idempotency key reuse with changed payload throws IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH'
+);
+
+-- DB-FINAL-VERSION-BIGINT: Combined version subtotal > bigint max throws controlled validation error
+select throws_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    (select lock_version from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid) and is_current_draft = true),
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'Section1',
+        'items', (
+          select jsonb_agg(jsonb_build_object(
+            'itemName', 'Item1_' || g,
+            'quantity', '1000000.000',
+            'unitOfMeasure', 'nos',
+            'unitRatePaise', 100000000000
+          )) from generate_series(1, 60) as g
+        )
+      ),
+      jsonb_build_object(
+        'sectionName', 'Section2',
+        'items', (
+          select jsonb_agg(jsonb_build_object(
+            'itemName', 'Item2_' || g,
+            'quantity', '1000000.000',
+            'unitOfMeasure', 'nos',
+            'unitRatePaise', 100000000000
+          )) from generate_series(1, 60) as g
+        )
+      )
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Version subtotal exceeds maximum representable amount',
+  'Combined version subtotal exceeding bigint max throws controlled validation error'
+);
+
+-- DB-FINAL-TAX-GRAND-BIGINT: Tax profile pushing grand total > bigint max throws controlled validation error
+select throws_ok(
+  'select public.test_trigger_tax_grand_overflow()',
+  'QUOTATION_VALIDATION_FAILED: Grand total exceeds maximum representable amount',
+  'Tax profile pushing grand total over bigint max throws controlled validation error'
 );
 
 select finish();

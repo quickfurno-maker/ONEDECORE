@@ -633,4 +633,48 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     assert.equal(actionsFile.includes("pdf"), false);
     assert.equal(actionsFile.includes("quotations.approve"), false);
   });
+
+  test("APP-PARITY-1 & APP-PARITY-2: DDL constraint name accuracy and audit doc parity verification", () => {
+    const projectRoot = path.resolve(import.meta.dirname, "../../../../");
+    const migrationSql = fs.readFileSync(
+      path.join(
+        projectRoot,
+        "supabase/migrations/20260812140000_commercial_quotation_draft_foundation.sql"
+      ),
+      "utf-8"
+    );
+    const auditDoc = fs.readFileSync(
+      path.join(
+        projectRoot,
+        "docs/audits/phase-7a-m25-quotation-draft-foundation-implementation.md"
+      ),
+      "utf-8"
+    );
+
+    // Assert migration DDL contains actual exact constraint names
+    assert.equal(migrationSql.includes("chk_quotation_versions_title"), true);
+    assert.equal(migrationSql.includes("chk_quotation_items_desc"), true);
+    assert.equal(migrationSql.includes("chk_quotation_items_specs"), true);
+    assert.equal(migrationSql.includes("chk_quotation_items_qty"), true);
+    assert.equal(migrationSql.includes("chk_quotation_items_uom"), true);
+    assert.equal(migrationSql.includes("chk_quotation_items_rate"), true);
+    assert.equal(migrationSql.includes("chk_quotation_payment_schedules_name"), true);
+    assert.equal(migrationSql.includes("chk_quotation_payment_schedules_pct"), true);
+    assert.equal(migrationSql.includes("chk_quotation_payment_schedules_amt"), true);
+    assert.equal(migrationSql.includes("chk_quotation_idempotency_key"), true);
+
+    // Assert audit document DOES NOT falsely claim non-existent DDL constraint names
+    assert.equal(auditDoc.includes("chk_quotation_versions_scope_summary"), false);
+    assert.equal(auditDoc.includes("chk_quotation_versions_terms"), false);
+    assert.equal(auditDoc.includes("chk_quotation_items_description"), false);
+    assert.equal(auditDoc.includes("chk_quotation_items_specifications"), false);
+    assert.equal(auditDoc.includes("chk_quotation_items_quantity"), false);
+    assert.equal(auditDoc.includes("chk_quotation_items_unit_rate"), false);
+    assert.equal(auditDoc.includes("chk_quotation_payment_schedules_percentage"), false);
+    assert.equal(auditDoc.includes("chk_quotation_payment_schedules_amount"), false);
+    assert.equal(auditDoc.includes("chk_idempotency_key_length"), false);
+
+    // Assert audit document explicitly states RPC-owned bound for scope summary and terms
+    assert.equal(auditDoc.includes("text; no dedicated length CHECK — bound owned by application/server/RPC"), true);
+  });
 });
