@@ -199,7 +199,7 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
           {
             itemName: "TV Unit",
             rawQuantity: "2",
-            unitOfMeasure: "nos",
+            unitOfMeasure: "sqft",
             rawUnitRate: "invalid-rate",
           },
         ],
@@ -218,7 +218,7 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
           {
             itemName: "TV Unit",
             rawQuantity: "2",
-            unitOfMeasure: "nos",
+            unitOfMeasure: "sqft",
             rawUnitRate: "1234.56",
           },
         ],
@@ -260,6 +260,132 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     assert.equal(parseQuotationInrToPaiseExact("1.99"), 199);
     assert.equal(parseQuotationInrToPaiseExact("1.20"), 120);
     assert.equal(parseQuotationInrToPaiseExact("₹1,234.56"), 123456);
+  });
+
+  test("APP-UOM-1 & APP-UOM-2 & APP-UOM-4 & APP-UOM-5: Unit of Measure validation rules in buildValidatedSectionPayload", () => {
+    // APP-UOM-1: Blank UOM is rejected
+    const blankUomSections: RawSectionState[] = [
+      {
+        sectionName: "Hall",
+        items: [
+          { itemName: "Sofa", rawQuantity: "1", unitOfMeasure: "   ", rawUnitRate: "100" },
+        ],
+      },
+    ];
+    const resBlank = buildValidatedSectionPayload(blankUomSections);
+    assert.equal(resBlank.success, false);
+    if (!resBlank.success) {
+      assert.equal(resBlank.error.includes("Unit of measure is required"), true);
+    }
+
+    // APP-UOM-2: Blank UOM does NOT become "nos"
+    assert.equal(
+      resBlank.success === false && !JSON.stringify(resBlank).includes('"nos"'),
+      true,
+      "Blank UOM synthesized fallback nos!"
+    );
+
+    // APP-UOM-4: UOM > 30 characters is rejected
+    const overlongUomSections: RawSectionState[] = [
+      {
+        sectionName: "Hall",
+        items: [
+          {
+            itemName: "Sofa",
+            rawQuantity: "1",
+            unitOfMeasure: "a".repeat(31),
+            rawUnitRate: "100",
+          },
+        ],
+      },
+    ];
+    const resOverlong = buildValidatedSectionPayload(overlongUomSections);
+    assert.equal(resOverlong.success, false);
+    if (!resOverlong.success) {
+      assert.equal(resOverlong.error.includes("cannot exceed 30 characters"), true);
+    }
+
+    // APP-UOM-5: Valid UOM "  sqft  " normalized to "sqft"
+    const untrimmedUomSections: RawSectionState[] = [
+      {
+        sectionName: "Hall",
+        items: [
+          { itemName: "Panels", rawQuantity: "10", unitOfMeasure: "  sqft  ", rawUnitRate: "50" },
+        ],
+      },
+    ];
+    const resValid = buildValidatedSectionPayload(untrimmedUomSections);
+    assert.equal(resValid.success, true);
+    if (resValid.success) {
+      assert.equal(resValid.data[0].items[0].unitOfMeasure, "sqft");
+    }
+  });
+
+  test("APP-UOM-3: QuotationSectionAccordion new-item initialization starts with neutral blank unitOfMeasure: ''", () => {
+    const accordionSource = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../components/QuotationSectionAccordion.tsx"),
+      "utf-8"
+    );
+
+    assert.equal(
+      accordionSource.includes('unitOfMeasure: ""'),
+      true,
+      "QuotationSectionAccordion does not initialize new item with unitOfMeasure: ''!"
+    );
+    assert.equal(
+      accordionSource.includes('unitOfMeasure: "sqft"'),
+      false,
+      "QuotationSectionAccordion contains fabricated default unitOfMeasure: 'sqft'!"
+    );
+    assert.equal(
+      accordionSource.includes('unitOfMeasure: "nos"'),
+      false,
+      "QuotationSectionAccordion contains fabricated default unitOfMeasure: 'nos'!"
+    );
+  });
+
+  test("APP-UOM-6 & APP-UOM-7: Section and item name validation — blank names are rejected without synthesis", () => {
+    const blankSecSections: RawSectionState[] = [
+      {
+        sectionName: "   ",
+        items: [{ itemName: "Sofa", rawQuantity: "1", unitOfMeasure: "nos", rawUnitRate: "100" }],
+      },
+    ];
+    const resBlankSec = buildValidatedSectionPayload(blankSecSections);
+    assert.equal(resBlankSec.success, false);
+    if (!resBlankSec.success) {
+      assert.equal(resBlankSec.error.includes("Section name is required"), true);
+    }
+
+    const blankItemSections: RawSectionState[] = [
+      {
+        sectionName: "Hall",
+        items: [{ itemName: "   ", rawQuantity: "1", unitOfMeasure: "nos", rawUnitRate: "100" }],
+      },
+    ];
+    const resBlankItem = buildValidatedSectionPayload(blankItemSections);
+    assert.equal(resBlankItem.success, false);
+    if (!resBlankItem.success) {
+      assert.equal(resBlankItem.error.includes("Item name is required"), true);
+    }
+  });
+
+  test("APP-UOM-8: Source regression guard — no || 'nos' or || 'sqft' fallbacks in quotation-editor-helpers.ts", () => {
+    const helpersSource = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../utils/quotation-editor-helpers.ts"),
+      "utf-8"
+    );
+
+    assert.equal(
+      helpersSource.includes('|| "nos"'),
+      false,
+      "quotation-editor-helpers.ts contains || 'nos' fallback!"
+    );
+    assert.equal(
+      helpersSource.includes('|| "sqft"'),
+      false,
+      "quotation-editor-helpers.ts contains || 'sqft' fallback!"
+    );
   });
 
   test("APP-MONEY-11: Source regression guard — zero floating-point parsers on quotation mutation components", () => {
@@ -320,7 +446,7 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     );
   });
 
-  test("APP-MONEY-14: Real Phase 7B implementation-absence regression guard", () => {
+  test("APP-MONEY-14 & APP-UOM-10: Real Phase 7B implementation-absence regression guard", () => {
     const projectRoot = path.resolve(import.meta.dirname, "../../../../");
     const actionsFile = fs.readFileSync(
       path.join(projectRoot, "src/features/quotations/server/quotation-draft-actions.ts"),

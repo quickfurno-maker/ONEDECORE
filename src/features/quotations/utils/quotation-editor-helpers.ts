@@ -102,7 +102,19 @@ export function buildValidatedPaymentSchedulePayload(
 
   for (let idx = 0; idx < rawMilestones.length; idx++) {
     const m = rawMilestones[idx];
-    const name = m.milestoneName.trim() || `Milestone ${idx + 1}`;
+    const name = m.milestoneName.trim();
+    if (!name) {
+      return {
+        success: false,
+        error: `Milestone name is required for milestone ${idx + 1}`,
+      };
+    }
+    if (name.length > 150) {
+      return {
+        success: false,
+        error: `Milestone name for milestone ${idx + 1} cannot exceed 150 characters`,
+      };
+    }
 
     if (mode === "amount") {
       const trimmedAmount = m.rawAmount.trim();
@@ -158,7 +170,8 @@ export function buildValidatedPaymentSchedulePayload(
 
 /**
  * Validates raw line item sections and constructs canonical DTO payload.
- * Blocks submission if any line item unit rate or quantity input is invalid or blank.
+ * Blocks submission if any line item unit rate, quantity, UOM, section name, or item name is invalid or blank.
+ * Never synthesizes default UOM ("nos", "sqft") or default names.
  */
 export function buildValidatedSectionPayload(
   rawSections: readonly RawSectionState[]
@@ -167,12 +180,52 @@ export function buildValidatedSectionPayload(
 
   for (let sIdx = 0; sIdx < rawSections.length; sIdx++) {
     const s = rawSections[sIdx];
-    const secName = s.sectionName.trim() || `Section ${sIdx + 1}`;
+    const secName = s.sectionName.trim();
+    if (!secName) {
+      return {
+        success: false,
+        error: `Section name is required for section ${sIdx + 1}`,
+      };
+    }
+    if (secName.length > 150) {
+      return {
+        success: false,
+        error: `Section name for section ${sIdx + 1} cannot exceed 150 characters`,
+      };
+    }
+
     const validatedItems: QuotationLineItemDTO[] = [];
 
     for (let iIdx = 0; iIdx < s.items.length; iIdx++) {
       const item = s.items[iIdx];
-      const itemName = item.itemName.trim() || `Item ${iIdx + 1}`;
+      const itemName = item.itemName.trim();
+      if (!itemName) {
+        return {
+          success: false,
+          error: `Item name is required in section "${secName}"`,
+        };
+      }
+      if (itemName.length > 200) {
+        return {
+          success: false,
+          error: `Item name "${itemName}" in section "${secName}" cannot exceed 200 characters`,
+        };
+      }
+
+      // Validate Unit of Measure (UOM)
+      const trimmedUom = item.unitOfMeasure.trim();
+      if (!trimmedUom) {
+        return {
+          success: false,
+          error: `Unit of measure is required for item "${itemName}" in section "${secName}"`,
+        };
+      }
+      if (trimmedUom.length > 30) {
+        return {
+          success: false,
+          error: `Unit of measure for item "${itemName}" in section "${secName}" cannot exceed 30 characters`,
+        };
+      }
 
       // Validate quantity
       const trimmedQty = item.rawQuantity.trim();
@@ -215,7 +268,7 @@ export function buildValidatedSectionPayload(
         description: item.description ?? null,
         specifications: item.specifications ?? null,
         quantity: validQty,
-        unitOfMeasure: item.unitOfMeasure.trim() || "nos",
+        unitOfMeasure: trimmedUom,
         unitRatePaise: paise,
         displayOrder: item.displayOrder ?? iIdx,
       });

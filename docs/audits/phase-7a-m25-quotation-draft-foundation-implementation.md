@@ -14,7 +14,7 @@
 
 ---
 
-## Technical Audit & Final UI-Only Correction Pass Summary
+## Technical Audit & Final UOM / No-Fake-Default Correction Pass Summary
 
 ### 1. Database Schema & M25 Migration Foundation
 - **Migration File**: `supabase/migrations/20260812140000_commercial_quotation_draft_foundation.sql`
@@ -23,26 +23,28 @@
   - `public.quotation_tax_profiles`: Catalogue for Super-Admin governed tax profiles (0 production seeds in M25).
   - `public.quotation_versions`: Monotonic version ledger with `lock_version` optimistic concurrency, canonical money integers in INR paise, partial unique index `idx_one_current_draft_per_quotation`.
   - `public.quotation_sections`: Room/area layout blocks with section subtotal paise.
-  - `public.quotation_items`: Line items with explicit unit of measure, quantity numeric(10,3) (bounded (0, 1000000.000]), unit rate in paise, and auto-calculated line total.
+  - `public.quotation_items`: Line items with explicit unit of measure (mandatory 1..30 chars), quantity numeric(10,3) (bounded (0, 1000000.000]), unit rate in paise, and auto-calculated line total.
   - `public.quotation_payment_schedules`: Draft payment milestone schedule supporting schedule-level percentage or amount mode.
   - `public.quotation_events`: Append-only commercial quotation domain event ledger protected with `private.forbid_append_only_mutation()`.
   - `private.quotation_idempotency_requests`: Private idempotency ledger with `UNIQUE(actor_id, operation_code, idempotency_key)` and SHA-256 request payload verification.
   - `private.quotation_number_seq`: Monotonic sequence allocator yielding sequence format `OD-Q-{YYYY}-{SEQ6}` (Asia/Kolkata timezone).
 
-### 2. Final UI-Only Correction Pass Repairs
+### 2. Final UOM / No-Fake-Default Correction Pass Repairs
+- **Mandatory UOM & Name Validation**:
+  - `buildValidatedSectionPayload()` in `quotation-editor-helpers.ts`: Removed `|| "nos"` fallback. Blank UOM returns `{ success: false, error: "Unit of measure is required..." }`. UOM length > 30 returns validation error. Blank `sectionName` or `itemName` returns validation error without synthesizing default names like `"Section 1"` or `"Item 1"`.
+  - `QuotationSectionAccordion.tsx`: Updated new-item initialization to use neutral blank string `unitOfMeasure: ""`. Removed `unitOfMeasure: "sqft"` fabricated default.
 - **UI Raw Commercial Money Text & Canonical Paise Separation**:
   - `QuotationPaymentScheduleEditor.tsx`: Maintained raw amount text state (`RawMilestoneState`) per milestone. Invalid amount text (e.g. `1.999` or `abc`) displays inline validation and blocks `onSaveSchedule`. Invalid input cannot overwrite canonical `amountPaise` or silently become 0.
   - `QuotationSectionAccordion.tsx`: Maintained raw unit-rate text state (`RawLineItemState`) per item. Removed all invalid parse fallbacks (`?? 0`). Invalid unit-rate text displays inline validation and blocks `onSaveSections`.
   - `QuotationDiscountCard.tsx`: Maintained raw discount string state (`rawFlatDiscount`, `rawPercentageDiscount`) and added explicit `Apply Discount` commit action. Invalid discount text displays inline validation and blocks `onUpdateDiscount` callback invocation.
 - **Pure Editor Validation Helper**: Created `src/features/quotations/utils/quotation-editor-helpers.ts` containing pure validation and payload construction functions (`buildValidatedPaymentSchedulePayload`, `buildValidatedSectionPayload`, `validateFlatDiscountInput`, `validatePercentageDiscountInput`).
-- **Zero Floating-Point Parsers Guard**: Verified 0 calls to `parseFloat`, `Number.parseFloat`, `parseInrToPaise`, or `?? 0` in quotation UI components and server actions.
+- **Zero Floating-Point Parsers & Zero Fabricated Fallbacks Guard**: Verified 0 calls to `parseFloat`, `Number.parseFloat`, `parseInrToPaise`, `?? 0`, `|| "nos"`, or `|| "sqft"` in quotation UI components and server actions.
 - **CRM Active Draft RBAC Gating**: `LeadDetailQuotationPanel.tsx` strictly requires `canEditQuotation` (`quotations.edit`) to open an existing active draft. `canCreateQuotation` (`quotations.create`) alone cannot open an active draft.
-- **Frozen C0 Contract Reference**: `src/features/quotations/contracts/line-item.ts` defines `QUOTATION_QUANTITY_MILLI_MAX = 1_000_000_000` (max quantity = 1,000,000.000 units), which is enforced by repository migration M25 and `quotation-decimal-utils.ts`.
 
 ### 3. QA Verification Matrix
 - **Database Quality Gate (`npm run check:db`)**: 18/18 test files PASS (100% SUCCESS; 723/723 subtests passed, including 69/69 in `18_quotation_draft_foundation_test.sql`).
-- **Phase 7A Unit Tests (`npm run test:phase-7a`)**: PASS (28/28 tests passed: 10 in `phase-7-c0-contracts.test.ts`, 18 in `phase-7a-quotation-draft.test.ts`).
-- **Application Unit Tests (`npm run test:app`)**: PASS (579/579 tests passed).
+- **Phase 7A Unit Tests (`npm run test:phase-7a`)**: PASS (32/32 tests passed: 10 in `phase-7-c0-contracts.test.ts`, 22 in `phase-7a-quotation-draft.test.ts`).
+- **Application Unit Tests (`npm run test:app`)**: PASS (583/583 tests passed).
 - **TypeScript Typecheck**: `npm run typecheck` PASS (0 errors).
 - **Application Lint & Build**: `npm run check` PASS (0 lint errors, Next.js build succeeded).
 - **Managed Supabase Status**: Verified M1–M24 baseline (`lpurlfmpvriyvpkujvyl`); M25 remains 100% UNAPPLIED to managed Supabase.
@@ -51,12 +53,16 @@
 
 ## Compliance & Governance Checklist
 
+- [x] Mandatory UOM enforced; blank UOM rejected with validation error.
+- [x] Zero fabricated UOM defaults (`"nos"`, `"sqft"`) in editor helpers or UI state.
+- [x] New line items initialized with neutral blank UOM (`unitOfMeasure: ""`).
+- [x] Blank section names and item names rejected without default synthesis.
 - [x] 1:1 lead ↔ quotation root cardinality enforced (`quotations.lead_id` UNIQUE).
 - [x] Monotonic version numbering and `lock_version` optimistic concurrency implemented.
 - [x] All money calculations performed in canonical INR integer paise (zero floating-point drift).
 - [x] UI raw commercial money text separated from canonical paise state across all quotation editor components.
 - [x] Invalid/blank/over-scale money text cannot mutate to 0 or persist (callbacks blocked until exact parsing succeeds).
-- [x] Zero `parseFloat`, `Number.parseFloat`, `parseInrToPaise`, or `?? 0` fallbacks in quotation mutation paths.
+- [x] Zero `parseFloat`, `Number.parseFloat`, `parseInrToPaise`, `?? 0`, `|| "nos"`, or `|| "sqft"` fallbacks in quotation mutation paths.
 - [x] Quantity max bound aligned with frozen C0 contract (`1,000,000.000` units).
 - [x] Sales ownership pointer evaluated via `leads.assigned_to = auth.uid()` (assigned sales executive scope).
 - [x] Tax profile snapshotting implemented with null tax contract.

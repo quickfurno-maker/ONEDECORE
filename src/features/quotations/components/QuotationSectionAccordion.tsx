@@ -96,7 +96,7 @@ export function QuotationSectionAccordion({
       const newItem: RawLineItemState = {
         itemName: `Item ${s.items.length + 1}`,
         rawQuantity: "1",
-        unitOfMeasure: "sqft",
+        unitOfMeasure: "",
         rawUnitRate: "0",
         displayOrder: s.items.length,
       };
