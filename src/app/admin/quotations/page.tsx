@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatInrFromPaise } from "@/features/crm/contracts/sales-target-contracts";
+import { probeQuotationPermissions } from "@/features/quotations/server/quotation-permissions";
 import { listLeadQuotations } from "@/features/quotations/server/quotation-queries";
 
 export const metadata = {
@@ -10,8 +11,11 @@ export const metadata = {
 export default async function AdminQuotationsOverviewPage() {
   let quotations: readonly Awaited<ReturnType<typeof listLeadQuotations>>[number][] = [];
   let errorMessage: string | null = null;
+  let canEditQuotations = false;
 
   try {
+    const permissions = await probeQuotationPermissions();
+    canEditQuotations = permissions.canEditQuotations;
     quotations = await listLeadQuotations();
   } catch (error) {
     errorMessage = error instanceof Error ? error.message : String(error);
@@ -62,7 +66,7 @@ export default async function AdminQuotationsOverviewPage() {
               </tr>
             ) : (
               quotations.map((q) => {
-                const isActive = q.status === "active" && q.currentVersionNumber != null;
+                const isActiveAndEditable = q.status === "active" && q.currentVersionNumber != null && canEditQuotations;
                 return (
                   <tr key={q.id} className="hover:bg-neutral-800/40">
                     <td className="p-3 font-mono font-bold text-neutral-100">{q.quotationNumber}</td>
@@ -96,7 +100,7 @@ export default async function AdminQuotationsOverviewPage() {
                       {new Date(q.updatedAt).toLocaleDateString("en-IN")}
                     </td>
                     <td className="p-3 text-right">
-                      {isActive ? (
+                      {isActiveAndEditable ? (
                         <Link
                           href={`/admin/quotations/${q.id}/draft`}
                           className="text-emerald-400 hover:underline font-semibold"

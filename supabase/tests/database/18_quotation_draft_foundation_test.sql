@@ -1,7 +1,15 @@
 -- ONEDECORE Phase 7A — Commercial Quotation Data & Draft Foundation pgTAP tests
 
 begin;
-select plan(76);
+select plan(90);
+
+-- Helper for reading private ledger snapshot size in pgTAP tests
+create or replace function public.test_get_snapshot_size(p_key text)
+returns integer language sql security definer set search_path = '' as $$
+  select pg_column_size(response_snapshot)::integer
+  from private.quotation_idempotency_requests
+  where operation_code = 'save_quotation_draft_items' and idempotency_key = p_key;
+$$;
 
 -- =============================================================================
 -- A. Schema Presence & RLS Verification
@@ -746,6 +754,257 @@ select lives_ok(
     )
   )$$,
   'Percentage sum > 100 processes cleanly without numeric overflow'
+);
+
+-- =============================================================================
+-- I. Recovery-Gate Entry Hardening Tests (DB-HARDEN-1 through 11)
+-- =============================================================================
+
+-- DB-HARDEN-1: 11 x 100.00% milestone schedule does not throw 22003 and derived amounts remain NULL
+select lives_ok(
+  $$select public.replace_quotation_payment_schedule(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    (select lock_version from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid) and is_current_draft = true),
+    'percentage'::text,
+    jsonb_build_array(
+      jsonb_build_object('milestoneName', 'M1', 'percentage', '100.00'),
+      jsonb_build_object('milestoneName', 'M2', 'percentage', '100.00'),
+      jsonb_build_object('milestoneName', 'M3', 'percentage', '100.00'),
+      jsonb_build_object('milestoneName', 'M4', 'percentage', '100.00'),
+      jsonb_build_object('milestoneName', 'M5', 'percentage', '100.00'),
+      jsonb_build_object('milestoneName', 'M6', 'percentage', '100.00'),
+      jsonb_build_object('milestoneName', 'M7', 'percentage', '100.00'),
+      jsonb_build_object('milestoneName', 'M8', 'percentage', '100.00'),
+      jsonb_build_object('milestoneName', 'M9', 'percentage', '100.00'),
+      jsonb_build_object('milestoneName', 'M10', 'percentage', '100.00'),
+      jsonb_build_object('milestoneName', 'M11', 'percentage', '100.00')
+    )
+  )$$,
+  '11 x 100.00% schedule processes cleanly without 22003 numeric overflow'
+);
+
+select results_eq(
+  $$select count(*) from public.quotation_payment_schedules where amount_paise is not null and quotation_version_id = (select id from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid) and is_current_draft = true)$$,
+  array[0::bigint],
+  'Derived milestone amounts remain NULL when percentage sum is 1100.00%'
+);
+
+-- DB-HARDEN-2: Section aggregate exceeding bigint max throws controlled validation error
+select throws_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    (select lock_version from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid) and is_current_draft = true),
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'HugeSection',
+        'items', (
+          select jsonb_agg(jsonb_build_object(
+            'itemName', 'Item' || g,
+            'quantity', '1000000.000',
+            'unitOfMeasure', 'nos',
+            'unitRatePaise', 100000000000
+          ))
+          from generate_series(1, 95) as g
+        )
+      )
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Section subtotal exceeds maximum representable amount',
+  'Section aggregate exceeding bigint max throws controlled validation error'
+);
+
+-- DB-HARDEN-3: Normal safe line item save succeeds cleanly
+select lives_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    (select lock_version from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid) and is_current_draft = true),
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'Section1',
+        'items', jsonb_build_array(
+          jsonb_build_object('itemName', 'Item1', 'quantity', '10.000', 'unitOfMeasure', 'nos', 'unitRatePaise', 100000)
+        )
+      )
+    )
+  )$$,
+  'Normal line item save succeeds cleanly'
+);
+
+-- DB-HARDEN-4: Tax profile fixture applied to quotation version
+do $$
+declare
+  v_tax_id uuid := gen_random_uuid();
+  v_quote_id uuid;
+  v_lock bigint;
+  v_actor uuid;
+begin
+  select id into v_quote_id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid;
+  select lock_version into v_lock from public.quotation_versions where quotation_id = v_quote_id and is_current_draft = true;
+  select created_by into v_actor from public.quotations where id = v_quote_id;
+
+  set local role postgres;
+  insert into public.quotation_tax_profiles (id, code, display_name, rate_percentage, is_active, created_by)
+  values (v_tax_id, 'huge_tax', 'Temp Huge Tax', 99.99, true, v_actor);
+  reset role;
+  set local role authenticated;
+  set local "request.jwt.claims" = '{"sub": "00000000-0000-0000-0000-000000000001", "role": "authenticated"}';
+
+  -- Apply tax profile
+  perform public.update_quotation_draft(
+    p_quotation_id => v_quote_id,
+    p_expected_lock_version => v_lock,
+    p_tax_profile_id => v_tax_id
+  );
+end;
+$$;
+
+select ok(
+  (select tax_rate_percentage from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid) and is_current_draft = true) = 99.99,
+  'Temp tax profile applied to quotation version'
+);
+
+-- DB-HARDEN-5: Large but representable quote succeeds
+select lives_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    (select lock_version from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid) and is_current_draft = true),
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'Civil Work',
+        'items', jsonb_build_array(
+          jsonb_build_object('itemName', 'Flooring', 'quantity', '1000.000', 'unitOfMeasure', 'sqft', 'unitRatePaise', 50000)
+        )
+      )
+    )
+  )$$,
+  'Large representable quote save succeeds'
+);
+
+-- DB-HARDEN-6 through 12: Idempotency with large DTO (>8192 bytes), compact snapshot <= 8192, replay returning fresh DTO
+do $$
+declare
+  v_quote_id uuid;
+  v_lock bigint;
+  v_sections jsonb := '[]'::jsonb;
+  v_items jsonb;
+  i integer;
+  j integer;
+  v_res1 jsonb;
+  v_res2 jsonb;
+  v_snap_size integer;
+  v_events_after1 integer;
+  v_events_after2 integer;
+begin
+  select id into v_quote_id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid;
+  select lock_version into v_lock from public.quotation_versions where quotation_id = v_quote_id and is_current_draft = true;
+
+  for i in 1..5 loop
+    v_items := '[]'::jsonb;
+    for j in 1..20 loop
+      v_items := v_items || jsonb_build_object(
+        'itemName', 'Item ' || i || '.' || j,
+        'description', 'Detailed specification text for item ' || i || '.' || j || ' with substantial notes to inflate the DTO size above 8192 bytes constraint',
+        'specifications', 'Premium material grade A1 fire resistant moisture barrier compliant with BIS standards',
+        'quantity', '10.000',
+        'unitOfMeasure', 'sqft',
+        'unitRatePaise', 15000
+      );
+    end loop;
+    v_sections := v_sections || jsonb_build_object(
+      'sectionName', 'Large Section ' || i,
+      'items', v_items
+    );
+  end loop;
+
+  -- Initial call
+  v_res1 := public.save_quotation_draft_items(v_quote_id, v_lock, v_sections, 'idempotency-key-large-dto-test-100');
+  select count(*) into v_events_after1 from public.quotation_events where quotation_id = v_quote_id;
+
+  -- Replay call with exact same key and payload
+  v_res2 := public.save_quotation_draft_items(v_quote_id, v_lock, v_sections, 'idempotency-key-large-dto-test-100');
+  select count(*) into v_events_after2 from public.quotation_events where quotation_id = v_quote_id;
+
+  create temp table temp_idempotency_test_results (
+    res1_replay boolean,
+    res1_has_dto boolean,
+    snap_size integer,
+    res2_replay boolean,
+    res2_has_dto boolean,
+    lock_same boolean,
+    no_duplicate_event boolean
+  ) on commit drop;
+
+  insert into temp_idempotency_test_results values (
+    (v_res1->>'idempotentReplay')::boolean,
+    (v_res1->'dto' is not null),
+    public.test_get_snapshot_size('idempotency-key-large-dto-test-100'),
+    (v_res2->>'idempotentReplay')::boolean,
+    (v_res2->'dto' is not null),
+    ((v_res2->>'lockVersion')::bigint = (v_res1->>'lockVersion')::bigint),
+    (v_events_after1 = v_events_after2)
+  );
+end;
+$$;
+
+-- Test DB-HARDEN-6: Initial call returns idempotentReplay false
+select ok(
+  (select res1_replay from temp_idempotency_test_results) = false,
+  'Initial large DTO mutation returns idempotentReplay false'
+);
+
+-- Test DB-HARDEN-7: Initial call returns DTO
+select ok(
+  (select res1_has_dto from temp_idempotency_test_results) = true,
+  'Initial large DTO mutation returns DTO'
+);
+
+-- Test DB-HARDEN-8: Stored snapshot <= 8192 bytes
+select ok(
+  (select snap_size from temp_idempotency_test_results) <= 8192,
+  'Stored response snapshot size is <= 8192 bytes'
+);
+
+-- Test DB-HARDEN-9: Replay returns idempotentReplay true
+select ok(
+  (select res2_replay from temp_idempotency_test_results) = true,
+  'Replay call returns idempotentReplay true'
+);
+
+-- Test DB-HARDEN-10: Replay returns fresh DTO
+select ok(
+  (select res2_has_dto from temp_idempotency_test_results) = true,
+  'Replay call returns fresh DTO'
+);
+
+-- Test DB-HARDEN-11: Replay does not increment lock_version
+select ok(
+  (select lock_same from temp_idempotency_test_results) = true,
+  'Replay call does not increment lock_version'
+);
+
+-- Test DB-HARDEN-12: Replay does not duplicate audit event
+select ok(
+  (select no_duplicate_event from temp_idempotency_test_results) = true,
+  'Replay call does not duplicate audit event'
+);
+
+-- Test DB-HARDEN-13: Replay with same key + changed payload throws IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH
+select throws_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    (select lock_version from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid) and is_current_draft = true),
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'DifferentSection',
+        'items', jsonb_build_array(
+          jsonb_build_object('itemName', 'ChangedItem', 'quantity', '1.000', 'unitOfMeasure', 'nos', 'unitRatePaise', 1000)
+        )
+      )
+    ),
+    'idempotency-key-large-dto-test-100'
+  )$$,
+  'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH',
+  'Idempotency key reuse with changed payload throws IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH'
 );
 
 select finish();

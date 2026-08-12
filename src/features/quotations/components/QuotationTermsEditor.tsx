@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { QuotationVersionDTO } from "../contracts/types";
+import { getQuotationTermsVersionKey } from "../utils/quotation-editor-helpers";
 
 interface QuotationTermsEditorProps {
   readonly version: QuotationVersionDTO;
@@ -26,9 +27,9 @@ export function QuotationTermsEditor({
 
   // Resync local state during render when canonical version prop changes
   const [prevVersionKey, setPrevVersionKey] = useState<string>(
-    `${version.termsAndConditions || ""}-${(version.inclusions || []).join(",")}-${(version.exclusions || []).join(",")}`
+    getQuotationTermsVersionKey(version)
   );
-  const currentVersionKey = `${version.termsAndConditions || ""}-${(version.inclusions || []).join(",")}-${(version.exclusions || []).join(",")}`;
+  const currentVersionKey = getQuotationTermsVersionKey(version);
 
   if (prevVersionKey !== currentVersionKey) {
     setPrevVersionKey(currentVersionKey);

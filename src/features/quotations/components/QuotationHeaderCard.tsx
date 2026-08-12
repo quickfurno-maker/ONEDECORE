@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { QuotationTaxProfileDTO, QuotationVersionDTO } from "../contracts/types";
 
+import { getQuotationHeaderVersionKey } from "../utils/quotation-editor-helpers";
+
 interface QuotationHeaderCardProps {
   readonly version: QuotationVersionDTO;
   readonly quotationNumber: string;
@@ -25,9 +27,9 @@ export function QuotationHeaderCard({
 
   // Resync local state during render when canonical version prop changes
   const [prevVersionKey, setPrevVersionKey] = useState<string>(
-    `${version.title || ""}-${version.scopeSummary || ""}`
+    getQuotationHeaderVersionKey(version)
   );
-  const currentVersionKey = `${version.title || ""}-${version.scopeSummary || ""}`;
+  const currentVersionKey = getQuotationHeaderVersionKey(version);
 
   if (prevVersionKey !== currentVersionKey) {
     setPrevVersionKey(currentVersionKey);

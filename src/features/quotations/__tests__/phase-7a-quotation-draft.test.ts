@@ -16,6 +16,8 @@ import {
 import {
   buildValidatedPaymentSchedulePayload,
   buildValidatedSectionPayload,
+  getQuotationHeaderVersionKey,
+  getQuotationTermsVersionKey,
   validateFlatDiscountInput,
   type RawMilestoneState,
   type RawSectionState,
@@ -394,24 +396,98 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     );
   });
 
-  test("APP-PREAPPLY-10: Generated DB types include optional p_idempotency_key on update/save/schedule RPCs", () => {
+  test("APP-PREAPPLY-10 & APP-HARDEN-5: Generated DB types isolate each RPC Args block for p_idempotency_key", () => {
     const generatedTypes = fs.readFileSync(
       path.resolve(import.meta.dirname, "../../../types/database.generated.ts"),
       "utf-8"
     );
 
+    // Isolate update_quotation_draft Args block
+    const updateIdx = generatedTypes.indexOf("update_quotation_draft:");
+    assert.equal(updateIdx !== -1, true, "update_quotation_draft RPC not found in database.generated.ts");
+    const updateBlock = generatedTypes.substring(updateIdx, updateIdx + 600);
     assert.equal(
-      generatedTypes.includes("update_quotation_draft: {\n        Args: {\n          p_clear_tax_profile?: boolean\n          p_discount_percentage?: number\n          p_discount_type?: string\n          p_discount_value_paise?: number\n          p_exclusions?: string[]\n          p_expected_lock_version: number\n          p_idempotency_key?: string") ||
-        generatedTypes.includes("update_quotation_draft") && generatedTypes.includes("p_idempotency_key?: string"),
-      true
+      updateBlock.includes("p_idempotency_key?: string"),
+      true,
+      "update_quotation_draft Args block does not contain p_idempotency_key?: string"
+    );
+
+    // Isolate save_quotation_draft_items Args block
+    const saveIdx = generatedTypes.indexOf("save_quotation_draft_items:");
+    assert.equal(saveIdx !== -1, true, "save_quotation_draft_items RPC not found in database.generated.ts");
+    const saveBlock = generatedTypes.substring(saveIdx, saveIdx + 600);
+    assert.equal(
+      saveBlock.includes("p_idempotency_key?: string"),
+      true,
+      "save_quotation_draft_items Args block does not contain p_idempotency_key?: string"
+    );
+
+    // Isolate replace_quotation_payment_schedule Args block
+    const replaceIdx = generatedTypes.indexOf("replace_quotation_payment_schedule:");
+    assert.equal(replaceIdx !== -1, true, "replace_quotation_payment_schedule RPC not found in database.generated.ts");
+    const replaceBlock = generatedTypes.substring(replaceIdx, replaceIdx + 600);
+    assert.equal(
+      replaceBlock.includes("p_idempotency_key?: string"),
+      true,
+      "replace_quotation_payment_schedule Args block does not contain p_idempotency_key?: string"
+    );
+  });
+
+  test("APP-HARDEN-1 & APP-HARDEN-2: Structured resync keys prevent key collisions", () => {
+    // Header key collision resistance
+    const key1 = getQuotationHeaderVersionKey({ title: "a-b", scopeSummary: "c" });
+    const key2 = getQuotationHeaderVersionKey({ title: "a", scopeSummary: "b-c" });
+    assert.notEqual(key1, key2, '("a-b", "c") and ("a", "b-c") produced colliding header keys!');
+
+    // Terms key collision resistance
+    const termsKey1 = getQuotationTermsVersionKey({ inclusions: ["a,b"] });
+    const termsKey2 = getQuotationTermsVersionKey({ inclusions: ["a", "b"] });
+    assert.notEqual(termsKey1, termsKey2, '["a,b"] and ["a", "b"] produced colliding terms keys!');
+  });
+
+  test("APP-HARDEN-3: Quotations Overview route uses probeQuotationPermissions and gates editor link on canEditQuotations", () => {
+    const overviewPageSource = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../../../app/admin/quotations/page.tsx"),
+      "utf-8"
+    );
+
+    assert.equal(
+      overviewPageSource.includes("probeQuotationPermissions"),
+      true,
+      "AdminQuotationsOverviewPage does not call probeQuotationPermissions!"
     );
     assert.equal(
-      generatedTypes.includes("save_quotation_draft_items") && generatedTypes.includes("p_idempotency_key?: string"),
-      true
+      overviewPageSource.includes("isActiveAndEditable"),
+      true,
+      "AdminQuotationsOverviewPage does not check isActiveAndEditable!"
     );
     assert.equal(
-      generatedTypes.includes("replace_quotation_payment_schedule") && generatedTypes.includes("p_idempotency_key?: string"),
-      true
+      overviewPageSource.includes("canEditQuotations"),
+      true,
+      "AdminQuotationsOverviewPage does not gate editor link on canEditQuotations!"
+    );
+  });
+
+  test("APP-HARDEN-4: Quotation Draft route uses probeQuotationPermissions and gates QuotationDraftEditor rendering", () => {
+    const draftPageSource = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../../../app/admin/quotations/[quotationId]/draft/page.tsx"),
+      "utf-8"
+    );
+
+    assert.equal(
+      draftPageSource.includes("probeQuotationPermissions"),
+      true,
+      "QuotationDraftPage does not call probeQuotationPermissions!"
+    );
+    assert.equal(
+      draftPageSource.includes("canEditQuotations === true"),
+      true,
+      "QuotationDraftPage does not gate isEditableActiveDraft on canEditQuotations === true!"
+    );
+    assert.equal(
+      draftPageSource.includes("!canEditQuotations"),
+      true,
+      "QuotationDraftPage does not handle read-only actor message for missing edit permission!"
     );
   });
 

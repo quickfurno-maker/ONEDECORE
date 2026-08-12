@@ -344,7 +344,7 @@ declare
   v_derived_amt bigint;
   v_total_count integer;
   v_curr_idx integer := 0;
-  v_pct_sum numeric(5,2) := 0.00;
+  v_pct_sum numeric := 0.00;
 begin
   select payment_schedule_mode, grand_total_paise
   into v_ver_rec
@@ -401,11 +401,18 @@ set search_path = ''
 as $$
 declare
   v_ver_rec record;
+  v_sec_rec record;
+  v_raw_subtotal numeric := 0;
+  v_raw_discount_tot numeric := 0;
+  v_raw_taxable_base numeric := 0;
+  v_raw_tax_tot numeric;
+  v_raw_grand_tot numeric;
   v_subtotal bigint := 0;
   v_discount_tot bigint := 0;
   v_taxable_base bigint := 0;
   v_tax_tot bigint;
   v_grand_tot bigint;
+  v_bigint_max numeric := 9223372036854775807;
 begin
   select * into v_ver_rec
   from public.quotation_versions
@@ -415,40 +422,72 @@ begin
     return;
   end if;
 
-  -- 1. Recalculate section subtotals & overall version subtotal
-  update public.quotation_sections qs
-  set subtotal_paise = coalesce((
-    select sum(qi.line_total_paise)
-    from public.quotation_items qi
-    where qi.section_id = qs.id
-  ), 0)
-  where qs.quotation_version_id = p_version_id;
+  -- 1. Recalculate section subtotals & verify representability per section
+  for v_sec_rec in
+    select qs.id, coalesce(sum(qi.line_total_paise::numeric), 0) as sec_subtotal
+    from public.quotation_sections qs
+    left join public.quotation_items qi on qi.section_id = qs.id
+    where qs.quotation_version_id = p_version_id
+    group by qs.id
+  loop
+    if v_sec_rec.sec_subtotal < 0 or v_sec_rec.sec_subtotal > v_bigint_max then
+      raise exception 'QUOTATION_VALIDATION_FAILED: Section subtotal exceeds maximum representable amount' using errcode = 'P0001';
+    end if;
 
-  select coalesce(sum(subtotal_paise), 0)
-  into v_subtotal
+    update public.quotation_sections
+    set subtotal_paise = v_sec_rec.sec_subtotal::bigint
+    where id = v_sec_rec.id;
+  end loop;
+
+  -- Overall version subtotal
+  select coalesce(sum(subtotal_paise::numeric), 0)
+  into v_raw_subtotal
   from public.quotation_sections
   where quotation_version_id = p_version_id;
 
+  if v_raw_subtotal < 0 or v_raw_subtotal > v_bigint_max then
+    raise exception 'QUOTATION_VALIDATION_FAILED: Version subtotal exceeds maximum representable amount' using errcode = 'P0001';
+  end if;
+  v_subtotal := v_raw_subtotal::bigint;
+
   -- 2. Recalculate discount total
   if v_ver_rec.discount_type = 'none' then
-    v_discount_tot := 0;
+    v_raw_discount_tot := 0;
   elsif v_ver_rec.discount_type = 'flat' then
-    v_discount_tot := v_ver_rec.discount_value_paise;
+    v_raw_discount_tot := v_ver_rec.discount_value_paise::numeric;
   elsif v_ver_rec.discount_type = 'percentage' then
-    v_discount_tot := round((v_subtotal::numeric * (v_ver_rec.discount_percentage / 100.00))::numeric)::bigint;
+    v_raw_discount_tot := round((v_raw_subtotal * (v_ver_rec.discount_percentage / 100.00))::numeric);
   end if;
 
-  if v_discount_tot > v_subtotal then
+  if v_raw_discount_tot > v_raw_subtotal then
     raise exception 'QUOTATION_VALIDATION_FAILED: Discount total cannot exceed subtotal' using errcode = 'P0001';
   end if;
 
+  if v_raw_discount_tot < 0 or v_raw_discount_tot > v_bigint_max then
+    raise exception 'QUOTATION_VALIDATION_FAILED: Discount total exceeds maximum representable amount' using errcode = 'P0001';
+  end if;
+  v_discount_tot := v_raw_discount_tot::bigint;
+
   -- 3. Taxable base
-  v_taxable_base := v_subtotal - v_discount_tot;
+  v_raw_taxable_base := v_raw_subtotal - v_raw_discount_tot;
+  if v_raw_taxable_base < 0 or v_raw_taxable_base > v_bigint_max then
+    raise exception 'QUOTATION_VALIDATION_FAILED: Taxable base exceeds maximum representable amount' using errcode = 'P0001';
+  end if;
+  v_taxable_base := v_raw_taxable_base::bigint;
 
   -- 4. Tax & Grand Total
   if v_ver_rec.tax_rate_percentage is not null then
-    v_tax_tot := round((v_taxable_base::numeric * (v_ver_rec.tax_rate_percentage / 100.00))::numeric)::bigint;
-    v_grand_tot := v_taxable_base + v_tax_tot;
+    v_raw_tax_tot := round((v_raw_taxable_base * (v_ver_rec.tax_rate_percentage / 100.00))::numeric);
+    if v_raw_tax_tot < 0 or v_raw_tax_tot > v_bigint_max then
+      raise exception 'QUOTATION_VALIDATION_FAILED: Tax total exceeds maximum representable amount' using errcode = 'P0001';
+    end if;
+    v_tax_tot := v_raw_tax_tot::bigint;
+
+    v_raw_grand_tot := v_raw_taxable_base + v_raw_tax_tot;
+    if v_raw_grand_tot < 0 or v_raw_grand_tot > v_bigint_max then
+      raise exception 'QUOTATION_VALIDATION_FAILED: Grand total exceeds maximum representable amount' using errcode = 'P0001';
+    end if;
+    v_grand_tot := v_raw_grand_tot::bigint;
   else
     v_tax_tot := null;
     v_grand_tot := null;
@@ -605,7 +644,16 @@ begin
 
   if found then
     if v_idempotency_rec.request_hash = v_request_hash then
-      return jsonb_set(v_idempotency_rec.response_snapshot, '{idempotentReplay}', 'true'::jsonb);
+      return jsonb_build_object(
+        'quotationId', v_idempotency_rec.quotation_id,
+        'versionId', v_idempotency_rec.quotation_version_id,
+        'quotationNumber', (select quotation_number from public.quotations where id = v_idempotency_rec.quotation_id),
+        'versionNumber', (v_idempotency_rec.response_snapshot->>'versionNumber')::integer,
+        'lockVersion', (v_idempotency_rec.response_snapshot->>'lockVersion')::bigint,
+        'status', 'draft',
+        'idempotentReplay', true,
+        'dto', public.get_quotation_draft(v_idempotency_rec.quotation_id)
+      );
     else
       raise exception 'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH' using errcode = 'P0001';
     end if;
@@ -703,6 +751,17 @@ begin
   v_result := jsonb_build_object(
     'quotationId', v_quotation_id,
     'versionId', v_version_id,
+    'versionNumber', v_version_number,
+    'lockVersion', 1,
+    'status', 'draft'
+  );
+
+  insert into private.quotation_idempotency_requests (actor_id, operation_code, idempotency_key, request_hash, quotation_id, quotation_version_id, response_snapshot)
+  values (v_actor_id, v_op_code, trim(p_idempotency_key), v_request_hash, v_quotation_id, v_version_id, v_result);
+
+  return jsonb_build_object(
+    'quotationId', v_quotation_id,
+    'versionId', v_version_id,
     'quotationNumber', (select quotation_number from public.quotations where id = v_quotation_id),
     'versionNumber', v_version_number,
     'lockVersion', 1,
@@ -710,11 +769,6 @@ begin
     'idempotentReplay', false,
     'dto', public.get_quotation_draft(v_quotation_id)
   );
-
-  insert into private.quotation_idempotency_requests (actor_id, operation_code, idempotency_key, request_hash, quotation_id, quotation_version_id, response_snapshot)
-  values (v_actor_id, v_op_code, trim(p_idempotency_key), v_request_hash, v_quotation_id, v_version_id, v_result);
-
-  return v_result;
 end;
 $$;
 
@@ -822,7 +876,18 @@ begin
 
     if found then
       if v_idempotency_rec.request_hash = v_request_hash then
-        return jsonb_set(v_idempotency_rec.response_snapshot, '{idempotentReplay}', 'true'::jsonb);
+        return jsonb_build_object(
+          'quotationId', v_idempotency_rec.quotation_id,
+          'versionId', v_idempotency_rec.quotation_version_id,
+          'lockVersion', (v_idempotency_rec.response_snapshot->>'lockVersion')::bigint,
+          'subtotalPaise', (v_idempotency_rec.response_snapshot->>'subtotalPaise')::bigint,
+          'discountTotalPaise', (v_idempotency_rec.response_snapshot->>'discountTotalPaise')::bigint,
+          'taxableBasePaise', (v_idempotency_rec.response_snapshot->>'taxableBasePaise')::bigint,
+          'taxTotalPaise', case when (v_idempotency_rec.response_snapshot->>'taxTotalPaise') is null then null else (v_idempotency_rec.response_snapshot->>'taxTotalPaise')::bigint end,
+          'grandTotalPaise', case when (v_idempotency_rec.response_snapshot->>'grandTotalPaise') is null then null else (v_idempotency_rec.response_snapshot->>'grandTotalPaise')::bigint end,
+          'idempotentReplay', true,
+          'dto', public.get_quotation_draft(v_idempotency_rec.quotation_id)
+        );
       else
         raise exception 'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH' using errcode = 'P0001';
       end if;
@@ -1031,9 +1096,11 @@ declare
   v_raw_qty numeric;
   v_unit_rate bigint;
   v_raw_rate numeric;
+  v_raw_line_total numeric;
   v_line_total bigint;
   v_new_lock_version bigint;
   v_result jsonb;
+  v_bigint_max numeric := 9223372036854775807;
 begin
   v_actor_id := auth.uid();
   if v_actor_id is null then
@@ -1074,7 +1141,18 @@ begin
 
     if found then
       if v_idempotency_rec.request_hash = v_request_hash then
-        return jsonb_set(v_idempotency_rec.response_snapshot, '{idempotentReplay}', 'true'::jsonb);
+        return jsonb_build_object(
+          'quotationId', v_idempotency_rec.quotation_id,
+          'versionId', v_idempotency_rec.quotation_version_id,
+          'lockVersion', (v_idempotency_rec.response_snapshot->>'lockVersion')::bigint,
+          'subtotalPaise', (v_idempotency_rec.response_snapshot->>'subtotalPaise')::bigint,
+          'discountTotalPaise', (v_idempotency_rec.response_snapshot->>'discountTotalPaise')::bigint,
+          'taxableBasePaise', (v_idempotency_rec.response_snapshot->>'taxableBasePaise')::bigint,
+          'taxTotalPaise', case when (v_idempotency_rec.response_snapshot->>'taxTotalPaise') is null then null else (v_idempotency_rec.response_snapshot->>'taxTotalPaise')::bigint end,
+          'grandTotalPaise', case when (v_idempotency_rec.response_snapshot->>'grandTotalPaise') is null then null else (v_idempotency_rec.response_snapshot->>'grandTotalPaise')::bigint end,
+          'idempotentReplay', true,
+          'dto', public.get_quotation_draft(v_idempotency_rec.quotation_id)
+        );
       else
         raise exception 'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH' using errcode = 'P0001';
       end if;
@@ -1175,7 +1253,11 @@ begin
         end if;
         v_unit_rate := v_raw_rate::bigint;
 
-        v_line_total := round((v_line_qty * v_unit_rate::numeric)::numeric)::bigint;
+        v_raw_line_total := round((v_raw_qty * v_raw_rate)::numeric);
+        if v_raw_line_total < 0 or v_raw_line_total > v_bigint_max then
+          raise exception 'QUOTATION_VALIDATION_FAILED: Line item total exceeds maximum representable amount' using errcode = 'P0001';
+        end if;
+        v_line_total := v_raw_line_total::bigint;
 
         insert into public.quotation_items (
           section_id,
@@ -1235,9 +1317,7 @@ begin
     'discountTotalPaise', v_version_rec.discount_total_paise,
     'taxableBasePaise', v_version_rec.taxable_base_paise,
     'taxTotalPaise', v_version_rec.tax_total_paise,
-    'grandTotalPaise', v_version_rec.grand_total_paise,
-    'idempotentReplay', false,
-    'dto', public.get_quotation_draft(p_quotation_id)
+    'grandTotalPaise', v_version_rec.grand_total_paise
   );
 
   if p_idempotency_key is not null and length(trim(p_idempotency_key)) >= 1 then
@@ -1245,7 +1325,18 @@ begin
     values (v_actor_id, v_op_code, trim(p_idempotency_key), v_request_hash, p_quotation_id, v_version_rec.id, v_result);
   end if;
 
-  return v_result;
+  return jsonb_build_object(
+    'quotationId', p_quotation_id,
+    'versionId', v_version_rec.id,
+    'lockVersion', v_new_lock_version,
+    'subtotalPaise', v_version_rec.subtotal_paise,
+    'discountTotalPaise', v_version_rec.discount_total_paise,
+    'taxableBasePaise', v_version_rec.taxable_base_paise,
+    'taxTotalPaise', v_version_rec.tax_total_paise,
+    'grandTotalPaise', v_version_rec.grand_total_paise,
+    'idempotentReplay', false,
+    'dto', public.get_quotation_draft(p_quotation_id)
+  );
 end;
 $$;
 
@@ -1325,7 +1416,17 @@ begin
 
     if found then
       if v_idempotency_rec.request_hash = v_request_hash then
-        return jsonb_set(v_idempotency_rec.response_snapshot, '{idempotentReplay}', 'true'::jsonb);
+        return jsonb_build_object(
+          'quotationId', v_idempotency_rec.quotation_id,
+          'versionId', v_idempotency_rec.quotation_version_id,
+          'lockVersion', (v_idempotency_rec.response_snapshot->>'lockVersion')::bigint,
+          'paymentScheduleMode', v_idempotency_rec.response_snapshot->>'paymentScheduleMode',
+          'percentageSum', (v_idempotency_rec.response_snapshot->>'percentageSum')::numeric,
+          'amountSum', (v_idempotency_rec.response_snapshot->>'amountSum')::bigint,
+          'isReconciled', (v_idempotency_rec.response_snapshot->>'isReconciled')::boolean,
+          'idempotentReplay', true,
+          'dto', public.get_quotation_draft(v_idempotency_rec.quotation_id)
+        );
       else
         raise exception 'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH' using errcode = 'P0001';
       end if;
@@ -1437,9 +1538,7 @@ begin
       when p_mode = 'percentage' and v_pct_sum = 100.00 and v_version_rec.grand_total_paise is not null then true
       when p_mode = 'amount' and v_version_rec.grand_total_paise is not null and v_amt_sum = v_version_rec.grand_total_paise then true
       else false
-    end,
-    'idempotentReplay', false,
-    'dto', public.get_quotation_draft(p_quotation_id)
+    end
   );
 
   if p_idempotency_key is not null and length(trim(p_idempotency_key)) >= 1 then
@@ -1447,7 +1546,21 @@ begin
     values (v_actor_id, v_op_code, trim(p_idempotency_key), v_request_hash, p_quotation_id, v_version_rec.id, v_result);
   end if;
 
-  return v_result;
+  return jsonb_build_object(
+    'quotationId', p_quotation_id,
+    'versionId', v_version_rec.id,
+    'lockVersion', v_new_lock_version,
+    'paymentScheduleMode', p_mode,
+    'percentageSum', v_pct_sum,
+    'amountSum', v_amt_sum,
+    'isReconciled', case
+      when p_mode = 'percentage' and v_pct_sum = 100.00 and v_version_rec.grand_total_paise is not null then true
+      when p_mode = 'amount' and v_version_rec.grand_total_paise is not null and v_amt_sum = v_version_rec.grand_total_paise then true
+      else false
+    end,
+    'idempotentReplay', false,
+    'dto', public.get_quotation_draft(p_quotation_id)
+  );
 end;
 $$;
 

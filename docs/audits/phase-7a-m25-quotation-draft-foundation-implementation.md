@@ -48,7 +48,30 @@
 - **Archived Quotation UI Safety**:
   - `src/app/admin/quotations/[quotationId]/draft/page.tsx`: Blocks mutation editor for archived or inactive quotation versions and renders read-only notice banner.
 
-### 3. QA Verification Matrix
+### 3. Field Constraint Parity Matrix
+
+Authoritative mutation and persistence money arithmetic is exact and non-floating-point. UI preview and display calculations may use `Number` or `Math.round` only as non-authoritative preview.
+
+| Field | Application / Helper | Server Action | RPC Bounds | Table / Storage | Status / Owner |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **title** | 1..200 chars | Bounds check (1..200) | `length(trim(title)) in [1, 200]` | `chk_quotation_versions_title` (1..200) | PASS (DDL & RPC) |
+| **scope summary** | <= 2000 chars | Bounds check (<= 2000) | `length(scope) <= 2000` | `chk_quotation_versions_scope_summary` (<= 2000) | PASS (DDL & RPC) |
+| **terms and conditions** | <= 5000 chars | Bounds check (<= 5000) | `length(terms) <= 5000` | `chk_quotation_versions_terms` (<= 5000) | PASS (DDL & RPC) |
+| **section name** | 1..120 chars | `buildValidatedSectionPayload` (1..120) | `length(name) in [1, 120]` | `chk_quotation_sections_name` (1..120) | PASS (Parity 120) |
+| **item name** | 1..200 chars | `buildValidatedSectionPayload` (1..200) | `length(name) in [1, 200]` | `chk_quotation_items_name` (1..200) | PASS (Parity 200) |
+| **description** | <= 2000 chars | `buildValidatedSectionPayload` (<= 2000) | `length(desc) <= 2000` | `chk_quotation_items_description` (<= 2000) | PASS (RPC-owned) |
+| **specifications** | <= 2000 chars | `buildValidatedSectionPayload` (<= 2000) | `length(spec) <= 2000` | `chk_quotation_items_specifications` (<= 2000) | PASS (RPC-owned) |
+| **UOM** | 1..30 chars | `buildValidatedSectionPayload` (1..30) | `length(uom) in [1, 30]` | `chk_quotation_items_uom` (1..30) | PASS (Parity 30) |
+| **quantity** | (0, 1000000.000], max 3 decimals | `validateAndFormatQuantityString` | `(0, 1000000.000]`, max 3 decimals | `numeric(10,3)` & `chk_quotation_items_quantity` | PASS (DDL & RPC) |
+| **unit rate paise** | [0, 100000000000] (₹1B) | `parseQuotationInrToPaiseExact` | `[0, 100000000000]` | `bigint` & `chk_quotation_items_unit_rate` | PASS (Bigint-owned) |
+| **milestone name** | 1..150 chars | `buildValidatedPaymentSchedulePayload` | `length(name) in [1, 150]` | `chk_quotation_payment_schedules_name` (1..150) | PASS (DDL & RPC) |
+| **milestone percentage** | [0.00, 100.00], max 2 decimals | `validateAndFormatPercentageString` | `[0.00, 100.00]`, max 2 decimals | `numeric(5,2)` & `chk_quotation_payment_schedules_percentage` | PASS (DDL & RPC) |
+| **milestone amount paise** | [0, 100000000000] (amount mode) | `parseQuotationInrToPaiseExact` | `[0, 100000000000]` | `bigint` & `chk_quotation_payment_schedules_amount` | PASS (Bigint-owned) |
+| **inclusions count** | <= 100 items | Array length <= 100 | `array_length(inclusions, 1) <= 100` | `text[]` storage | PASS (RPC-owned) |
+| **exclusions count** | <= 100 items | Array length <= 100 | `array_length(exclusions, 1) <= 100` | `text[]` storage | PASS (RPC-owned) |
+| **idempotency key** | 1..128 chars | Server Action pass-through | `length(key) in [1, 128]` | `chk_idempotency_key_length` (1..128) | PASS (Ledger DDL) |
+
+### 4. QA Verification Matrix
 - **Database Quality Gate (`npm run check:db`)**: 18/18 test files PASS (100% SUCCESS; 730/730 subtests passed, including 76/76 in `18_quotation_draft_foundation_test.sql`).
 - **Phase 7A Unit Tests (`npm run test:phase-7a`)**: PASS (38/38 tests passed: 10 in `phase-7-c0-contracts.test.ts`, 28 in `phase-7a-quotation-draft.test.ts`).
 - **Application Unit Tests (`npm run test:app`)**: PASS (589/589 tests passed).

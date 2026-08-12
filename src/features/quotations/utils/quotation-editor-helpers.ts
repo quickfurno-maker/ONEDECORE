@@ -301,3 +301,28 @@ export function buildValidatedSectionPayload(
 
   return { success: true, data: validatedSections };
 }
+
+/**
+ * Computes an unambiguous structured JSON key for quotation header canonical state.
+ */
+export function getQuotationHeaderVersionKey(version: {
+  readonly title?: string | null;
+  readonly scopeSummary?: string | null;
+}): string {
+  return JSON.stringify([version.title ?? "", version.scopeSummary ?? ""]);
+}
+
+/**
+ * Computes an unambiguous structured JSON key for quotation terms canonical state.
+ */
+export function getQuotationTermsVersionKey(version: {
+  readonly termsAndConditions?: string | null;
+  readonly inclusions?: readonly string[];
+  readonly exclusions?: readonly string[];
+}): string {
+  return JSON.stringify([
+    version.termsAndConditions ?? "",
+    version.inclusions ?? [],
+    version.exclusions ?? [],
+  ]);
+}
