@@ -803,7 +803,7 @@ select lives_ok(
 );
 
 -- =============================================================================
--- I. Recovery-Gate Entry Hardening Tests (DB-HARDEN-1 through 11)
+-- I. Recovery-Gate Entry Hardening Tests (DB-HARDEN-1 through DB-HARDEN-15)
 -- =============================================================================
 
 -- DB-HARDEN-1: 11 x 100.00% milestone schedule does not throw 22003 and derived amounts remain NULL

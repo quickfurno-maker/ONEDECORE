@@ -50,7 +50,7 @@
 
 ### 3. Field Constraint Parity Matrix
 
-Authoritative quotation mutation and persistence arithmetic uses exact decimal/numeric or integer-paise semantics. UI-only preview/display calculations may use Number/Math.round and are non-authoritative.
+Authoritative quotation monetary amounts are represented and persisted in integer INR paise. Authoritative quantity and percentage inputs preserve exact decimal/numeric semantics with their bounded scales. UI-only preview or display calculations may use Number/Math.round but are non-authoritative.
 
 | Field | Application / Helper | Server Action | RPC Bounds | Table / Storage | Status / Owner |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -76,8 +76,8 @@ Authoritative quotation mutation and persistence arithmetic uses exact decimal/n
 - **Phase 7A Unit Tests (`npm run test:phase-7a`)**: PASS (42/42 tests passed: 10 in `phase-7-c0-contracts.test.ts`, 32 in `phase-7a-quotation-draft.test.ts`).
 - **Application Unit Tests (`npm run test:app`)**: PASS (593/593 tests passed across 156 test suites).
 - **TypeScript Typecheck (`npm run typecheck`)**: PASS (0 errors).
-- **Application Quality Gate (`npm run check`)**: PASS (0 lint errors, 0 type errors, Next.js Turbopack build succeeded with 49 static/dynamic routes).
-- **GitHub Actions CI Run 31579699564**: Application Quality SUCCESS (1m16s), Database Quality SUCCESS (2m52s) on exact HEAD `636556f904e842565f8c7af9592cc98341ddb346`.
+- **Application Quality Gate (`npm run check`)**: PASS (0 lint errors, 11 warnings, 0 type errors, Next.js Turbopack build succeeded with 49 static/dynamic routes).
+- **GitHub Actions CI Verification**: Final exact PR head and exact-head CI run are recorded in PR #53 after documentation push.
 - **Managed Supabase Status**: Verified M1–M24 baseline (`lpurlfmpvriyvpkujvyl`); M25 remains 100% UNAPPLIED to managed Supabase.
 
 ---
@@ -96,7 +96,7 @@ Authoritative quotation mutation and persistence arithmetic uses exact decimal/n
 - [x] Archived/inactive quotation versions block draft editor UI with read-only notice banner.
 - [x] 1:1 lead ↔ quotation root cardinality enforced (`quotations.lead_id` UNIQUE).
 - [x] Monotonic version numbering and `lock_version` optimistic concurrency implemented.
-- [x] All money calculations performed in canonical INR integer paise (zero floating-point drift).
+- [x] Authoritative quotation monetary amounts are represented and persisted in integer INR paise. Authoritative quantity and percentage inputs preserve exact decimal/numeric semantics with their bounded scales. UI-only preview or display calculations may use Number/Math.round but are non-authoritative.
 - [x] Zero `parseFloat`, `Number.parseFloat`, `parseInrToPaise`, `?? 0`, `|| "nos"`, or `|| "sqft"` fallbacks in quotation mutation paths.
 - [x] Sales ownership pointer evaluated via `leads.assigned_to = auth.uid()` (assigned sales executive scope).
 - [x] Durable idempotency ledger `private.quotation_idempotency_requests` implemented.
