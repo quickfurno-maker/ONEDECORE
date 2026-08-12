@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 7A — Commercial Quotation Data & Draft Foundation pgTAP tests
 
 begin;
-select plan(69);
+select plan(76);
 
 -- =============================================================================
 -- A. Schema Presence & RLS Verification
@@ -632,6 +632,120 @@ select throws_ok(
   )$$,
   'QUOTATION_VALIDATION_FAILED: Invalid unit rate',
   'Malformed unit rate string throws controlled validation error'
+);
+
+-- Test 27 (DB-PREAPPLY-1): Overlong description throws controlled validation error
+select throws_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    5::bigint,
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'Hall',
+        'items', jsonb_build_array(
+          jsonb_build_object('itemName', 'Sofa', 'quantity', '1', 'unitOfMeasure', 'nos', 'unitRatePaise', 1000, 'description', repeat('a', 2001))
+        )
+      )
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Line item description cannot exceed 2000 characters',
+  'Overlong description throws controlled validation error'
+);
+
+-- Test 28 (DB-PREAPPLY-2): Overlong specifications throw controlled validation error
+select throws_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    5::bigint,
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'Hall',
+        'items', jsonb_build_array(
+          jsonb_build_object('itemName', 'Sofa', 'quantity', '1', 'unitOfMeasure', 'nos', 'unitRatePaise', 1000, 'specifications', repeat('b', 2001))
+        )
+      )
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Line item specifications cannot exceed 2000 characters',
+  'Overlong specifications throw controlled validation error'
+);
+
+-- Test 29 (DB-PREAPPLY-3): Huge quantity string throws controlled validation error without 22003 overflow
+select throws_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    5::bigint,
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'Hall',
+        'items', jsonb_build_array(
+          jsonb_build_object('itemName', 'Sofa', 'quantity', '10000000.000', 'unitOfMeasure', 'nos', 'unitRatePaise', 1000)
+        )
+      )
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Invalid quantity',
+  'Huge quantity string throws controlled validation error without 22003 overflow'
+);
+
+-- Test 30 (DB-PREAPPLY-4): Huge unit rate throws controlled validation error without bigint overflow
+select throws_ok(
+  $$select public.save_quotation_draft_items(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    5::bigint,
+    jsonb_build_array(
+      jsonb_build_object(
+        'sectionName', 'Hall',
+        'items', jsonb_build_array(
+          jsonb_build_object('itemName', 'Sofa', 'quantity', '1', 'unitOfMeasure', 'nos', 'unitRatePaise', 1000000000000000)
+        )
+      )
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Invalid unit rate',
+  'Huge unit rate string throws controlled validation error without bigint overflow'
+);
+
+-- Test 31 (DB-PREAPPLY-5): Percentage 1000.00 throws controlled validation error
+select throws_ok(
+  $$select public.replace_quotation_payment_schedule(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    5::bigint,
+    'percentage'::text,
+    jsonb_build_array(
+      jsonb_build_object('milestoneName', 'Advance', 'percentage', '1000.00')
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Invalid milestone percentage',
+  'Percentage 1000.00 throws controlled validation error'
+);
+
+-- Test 32 (DB-PREAPPLY-6): Huge milestone amount throws controlled validation error
+select throws_ok(
+  $$select public.replace_quotation_payment_schedule(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    5::bigint,
+    'amount'::text,
+    jsonb_build_array(
+      jsonb_build_object('milestoneName', 'Advance', 'amountPaise', 1000000000000000)
+    )
+  )$$,
+  'QUOTATION_VALIDATION_FAILED: Invalid milestone amount',
+  'Huge milestone amount throws controlled validation error'
+);
+
+-- Test 33 (DB-PREAPPLY-7): Multiple milestone percentages summing >999.99 do not cause numeric overflow
+select lives_ok(
+  $$select public.replace_quotation_payment_schedule(
+    (select id from public.quotations where lead_id = '7a666666-6666-6666-6666-666666666666'::uuid),
+    5::bigint,
+    'percentage'::text,
+    jsonb_build_array(
+      jsonb_build_object('milestoneName', 'M1', 'percentage', '90.00'),
+      jsonb_build_object('milestoneName', 'M2', 'percentage', '90.00')
+    )
+  )$$,
+  'Percentage sum > 100 processes cleanly without numeric overflow'
 );
 
 select finish();

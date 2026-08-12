@@ -170,7 +170,8 @@ export function buildValidatedPaymentSchedulePayload(
 
 /**
  * Validates raw line item sections and constructs canonical DTO payload.
- * Blocks submission if any line item unit rate, quantity, UOM, section name, or item name is invalid or blank.
+ * Blocks submission if any line item unit rate, quantity, UOM, section name, item name, description, or specification is invalid or blank.
+ * Section name max length is strictly 120 characters to match database and RPC constraints.
  * Never synthesizes default UOM ("nos", "sqft") or default names.
  */
 export function buildValidatedSectionPayload(
@@ -187,10 +188,10 @@ export function buildValidatedSectionPayload(
         error: `Section name is required for section ${sIdx + 1}`,
       };
     }
-    if (secName.length > 150) {
+    if (secName.length > 120) {
       return {
         success: false,
-        error: `Section name for section ${sIdx + 1} cannot exceed 150 characters`,
+        error: `Section name for section ${sIdx + 1} cannot exceed 120 characters`,
       };
     }
 
@@ -209,6 +210,22 @@ export function buildValidatedSectionPayload(
         return {
           success: false,
           error: `Item name "${itemName}" in section "${secName}" cannot exceed 200 characters`,
+        };
+      }
+
+      // Validate description length (<= 2000)
+      if (item.description != null && item.description.trim().length > 2000) {
+        return {
+          success: false,
+          error: `Description for item "${itemName}" in section "${secName}" cannot exceed 2000 characters`,
+        };
+      }
+
+      // Validate specifications length (<= 2000)
+      if (item.specifications != null && item.specifications.trim().length > 2000) {
+        return {
+          success: false,
+          error: `Specifications for item "${itemName}" in section "${secName}" cannot exceed 2000 characters`,
         };
       }
 
@@ -265,8 +282,8 @@ export function buildValidatedSectionPayload(
       validatedItems.push({
         id: item.id,
         itemName,
-        description: item.description ?? null,
-        specifications: item.specifications ?? null,
+        description: item.description?.trim() ? item.description.trim() : null,
+        specifications: item.specifications?.trim() ? item.specifications.trim() : null,
         quantity: validQty,
         unitOfMeasure: trimmedUom,
         unitRatePaise: paise,

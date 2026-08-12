@@ -61,48 +61,60 @@ export default async function AdminQuotationsOverviewPage() {
                 </td>
               </tr>
             ) : (
-              quotations.map((q) => (
-                <tr key={q.id} className="hover:bg-neutral-800/40">
-                  <td className="p-3 font-mono font-bold text-neutral-100">{q.quotationNumber}</td>
-                  <td className="p-3 font-mono text-neutral-400">{q.leadId.substring(0, 8)}...</td>
-                  <td className="p-3">
-                    {q.currentVersionNumber != null ? (
-                      <span className="rounded bg-neutral-800 px-2 py-0.5 font-mono text-[11px] text-neutral-300">
-                        v{q.currentVersionNumber}
+              quotations.map((q) => {
+                const isActive = q.status === "active" && q.currentVersionNumber != null;
+                return (
+                  <tr key={q.id} className="hover:bg-neutral-800/40">
+                    <td className="p-3 font-mono font-bold text-neutral-100">{q.quotationNumber}</td>
+                    <td className="p-3 font-mono text-neutral-400">{q.leadId.substring(0, 8)}...</td>
+                    <td className="p-3">
+                      {q.currentVersionNumber != null ? (
+                        <span className="rounded bg-neutral-800 px-2 py-0.5 font-mono text-[11px] text-neutral-300">
+                          v{q.currentVersionNumber}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="p-3 font-mono">
+                      {q.grandTotalPaise != null
+                        ? formatInrFromPaise(q.grandTotalPaise)
+                        : "(Incomplete)"}
+                    </td>
+                    <td className="p-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          q.status === "active"
+                            ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
+                            : "bg-neutral-800 text-neutral-400"
+                        }`}
+                      >
+                        {q.status}
                       </span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="p-3 font-mono">
-                    {q.grandTotalPaise != null
-                      ? formatInrFromPaise(q.grandTotalPaise)
-                      : "(Incomplete)"}
-                  </td>
-                  <td className="p-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        q.status === "active"
-                          ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
-                          : "bg-neutral-800 text-neutral-400"
-                      }`}
-                    >
-                      {q.status}
-                    </span>
-                  </td>
-                  <td className="p-3 text-neutral-400">
-                    {new Date(q.updatedAt).toLocaleDateString("en-IN")}
-                  </td>
-                  <td className="p-3 text-right">
-                    <Link
-                      href={`/admin/quotations/${q.id}/draft`}
-                      className="text-emerald-400 hover:underline font-semibold"
-                    >
-                      Open Draft Editor →
-                    </Link>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="p-3 text-neutral-400">
+                      {new Date(q.updatedAt).toLocaleDateString("en-IN")}
+                    </td>
+                    <td className="p-3 text-right">
+                      {isActive ? (
+                        <Link
+                          href={`/admin/quotations/${q.id}/draft`}
+                          className="text-emerald-400 hover:underline font-semibold"
+                        >
+                          Open Draft Editor →
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/admin/crm/leads/${q.leadId}`}
+                          className="text-neutral-400 hover:underline font-semibold"
+                        >
+                          View Lead in CRM →
+                        </Link>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

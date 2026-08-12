@@ -28,8 +28,8 @@ function initRawMilestones(
     id: m.id,
     milestoneName: m.milestoneName,
     milestoneOrder: m.milestoneOrder,
-    rawPercentage: m.percentage != null ? String(m.percentage) : "0",
-    rawAmount: m.amountPaise != null ? (m.amountPaise / 100).toString() : "0",
+    rawPercentage: m.percentage != null ? String(m.percentage) : "",
+    rawAmount: m.amountPaise != null ? (m.amountPaise / 100).toString() : "",
   }));
 }
 
@@ -67,10 +67,10 @@ export function QuotationPaymentScheduleEditor({
     setRawMilestones([
       ...rawMilestones,
       {
-        milestoneName: `Milestone ${rawMilestones.length + 1}`,
+        milestoneName: "",
         milestoneOrder: rawMilestones.length,
-        rawPercentage: mode === "percentage" ? "0" : "",
-        rawAmount: mode === "amount" ? "0" : "",
+        rawPercentage: "",
+        rawAmount: "",
       },
     ]);
     setDirty(true);
@@ -197,6 +197,7 @@ export function QuotationPaymentScheduleEditor({
                     <input
                       type="text"
                       className="w-full rounded border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 text-neutral-100"
+                      placeholder="e.g. Advance Booking"
                       value={m.milestoneName}
                       onChange={(e) => handleChange(idx, "milestoneName", e.target.value)}
                     />
@@ -206,6 +207,7 @@ export function QuotationPaymentScheduleEditor({
                       <input
                         type="text"
                         className="w-full rounded border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 font-mono text-neutral-100"
+                        placeholder="e.g. 20.00"
                         value={m.rawPercentage}
                         onChange={(e) => handleChange(idx, "rawPercentage", e.target.value)}
                       />
@@ -217,6 +219,7 @@ export function QuotationPaymentScheduleEditor({
                         className={`w-full rounded border px-2.5 py-1.5 font-mono text-neutral-100 bg-neutral-950 ${
                           isAmountInvalid ? "border-rose-500 focus:border-rose-500" : "border-neutral-800"
                         }`}
+                        placeholder="e.g. 50000.00"
                         value={m.rawAmount}
                         onChange={(e) => handleChange(idx, "rawAmount", e.target.value)}
                       />
@@ -226,7 +229,7 @@ export function QuotationPaymentScheduleEditor({
                     {mode === "amount"
                       ? parsedPaise !== null
                         ? formatInrFromPaise(parsedPaise)
-                        : <span className="text-rose-400 text-[11px]">Invalid format</span>
+                        : <span className="text-neutral-500 text-[11px]">—</span>
                       : "Derived on total"}
                   </td>
                   <td className="py-2 text-right">

@@ -26,9 +26,9 @@ function initRawSections(
       itemName: item.itemName,
       description: item.description,
       specifications: item.specifications,
-      rawQuantity: item.quantity != null ? String(item.quantity) : "1",
-      unitOfMeasure: item.unitOfMeasure,
-      rawUnitRate: item.unitRatePaise != null ? (item.unitRatePaise / 100).toString() : "0",
+      rawQuantity: item.quantity != null ? String(item.quantity) : "",
+      unitOfMeasure: item.unitOfMeasure ?? "",
+      rawUnitRate: item.unitRatePaise != null ? (item.unitRatePaise / 100).toString() : "",
       displayOrder: item.displayOrder,
     })),
   }));
@@ -65,7 +65,7 @@ export function QuotationSectionAccordion({
     setRawSections([
       ...rawSections,
       {
-        sectionName: `Section ${newIdx + 1}`,
+        sectionName: "",
         displayOrder: newIdx,
         items: [],
       },
@@ -94,10 +94,10 @@ export function QuotationSectionAccordion({
     const updated = rawSections.map((s, idx) => {
       if (idx !== sIdx) return s;
       const newItem: RawLineItemState = {
-        itemName: `Item ${s.items.length + 1}`,
-        rawQuantity: "1",
+        itemName: "",
+        rawQuantity: "",
         unitOfMeasure: "",
-        rawUnitRate: "0",
+        rawUnitRate: "",
         displayOrder: s.items.length,
       };
       return { ...s, items: [...s.items, newItem] };
@@ -212,6 +212,7 @@ export function QuotationSectionAccordion({
                   <input
                     type="text"
                     className="rounded border border-neutral-800 bg-neutral-950 px-2.5 py-1 text-sm font-semibold text-neutral-100 focus:border-emerald-500 focus:outline-none"
+                    placeholder="e.g. Living Room"
                     value={sec.sectionName}
                     onChange={(e) => handleSectionNameChange(sIdx, e.target.value)}
                   />
@@ -270,6 +271,7 @@ export function QuotationSectionAccordion({
                                 <input
                                   type="text"
                                   className="w-full rounded border border-neutral-800 bg-neutral-950 px-2 py-1 text-neutral-100"
+                                  placeholder="e.g. TV Unit"
                                   value={item.itemName}
                                   onChange={(e) =>
                                     handleItemChange(sIdx, iIdx, "itemName", e.target.value)
@@ -280,6 +282,7 @@ export function QuotationSectionAccordion({
                                 <input
                                   type="text"
                                   className="w-full rounded border border-neutral-800 bg-neutral-950 px-2 py-1 font-mono text-neutral-100"
+                                  placeholder="e.g. 1"
                                   value={item.rawQuantity}
                                   onChange={(e) =>
                                     handleItemChange(sIdx, iIdx, "rawQuantity", e.target.value)
@@ -291,7 +294,7 @@ export function QuotationSectionAccordion({
                                   type="text"
                                   className="w-full rounded border border-neutral-800 bg-neutral-950 px-2 py-1 text-neutral-200"
                                   value={item.unitOfMeasure}
-                                  placeholder="sqft, rft, nos"
+                                  placeholder="e.g. sqft"
                                   onChange={(e) =>
                                     handleItemChange(sIdx, iIdx, "unitOfMeasure", e.target.value)
                                   }
@@ -303,6 +306,7 @@ export function QuotationSectionAccordion({
                                   className={`w-full rounded border px-2 py-1 font-mono text-neutral-100 bg-neutral-950 ${
                                     isRateInvalid ? "border-rose-500 focus:border-rose-500" : "border-neutral-800"
                                   }`}
+                                  placeholder="e.g. 1250.00"
                                   value={item.rawUnitRate}
                                   onChange={(e) =>
                                     handleItemChange(sIdx, iIdx, "rawUnitRate", e.target.value)
@@ -313,7 +317,7 @@ export function QuotationSectionAccordion({
                                 {lineTotalPaise !== null ? (
                                   formatInrFromPaise(lineTotalPaise)
                                 ) : (
-                                  <span className="text-rose-400 text-[11px]">Invalid rate</span>
+                                  <span className="text-neutral-500 text-[11px]">—</span>
                                 )}
                               </td>
                               <td className="py-2 text-right">

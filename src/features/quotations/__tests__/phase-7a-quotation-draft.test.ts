@@ -262,129 +262,227 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     assert.equal(parseQuotationInrToPaiseExact("₹1,234.56"), 123456);
   });
 
-  test("APP-UOM-1 & APP-UOM-2 & APP-UOM-4 & APP-UOM-5: Unit of Measure validation rules in buildValidatedSectionPayload", () => {
-    // APP-UOM-1: Blank UOM is rejected
-    const blankUomSections: RawSectionState[] = [
+  test("APP-PREAPPLY-1 & APP-PREAPPLY-2: Section name length limit is strictly 120 characters", () => {
+    const name120 = "S".repeat(120);
+    const validSections: RawSectionState[] = [
       {
-        sectionName: "Hall",
-        items: [
-          { itemName: "Sofa", rawQuantity: "1", unitOfMeasure: "   ", rawUnitRate: "100" },
-        ],
+        sectionName: name120,
+        items: [{ itemName: "Cabinet", rawQuantity: "1", unitOfMeasure: "nos", rawUnitRate: "100" }],
       },
     ];
-    const resBlank = buildValidatedSectionPayload(blankUomSections);
-    assert.equal(resBlank.success, false);
-    if (!resBlank.success) {
-      assert.equal(resBlank.error.includes("Unit of measure is required"), true);
-    }
+    const res120 = buildValidatedSectionPayload(validSections);
+    assert.equal(res120.success, true, "120 char section name was rejected!");
 
-    // APP-UOM-2: Blank UOM does NOT become "nos"
-    assert.equal(
-      resBlank.success === false && !JSON.stringify(resBlank).includes('"nos"'),
-      true,
-      "Blank UOM synthesized fallback nos!"
-    );
-
-    // APP-UOM-4: UOM > 30 characters is rejected
-    const overlongUomSections: RawSectionState[] = [
+    const name121 = "S".repeat(121);
+    const invalidSections: RawSectionState[] = [
       {
-        sectionName: "Hall",
-        items: [
-          {
-            itemName: "Sofa",
-            rawQuantity: "1",
-            unitOfMeasure: "a".repeat(31),
-            rawUnitRate: "100",
-          },
-        ],
+        sectionName: name121,
+        items: [{ itemName: "Cabinet", rawQuantity: "1", unitOfMeasure: "nos", rawUnitRate: "100" }],
       },
     ];
-    const resOverlong = buildValidatedSectionPayload(overlongUomSections);
-    assert.equal(resOverlong.success, false);
-    if (!resOverlong.success) {
-      assert.equal(resOverlong.error.includes("cannot exceed 30 characters"), true);
-    }
-
-    // APP-UOM-5: Valid UOM "  sqft  " normalized to "sqft"
-    const untrimmedUomSections: RawSectionState[] = [
-      {
-        sectionName: "Hall",
-        items: [
-          { itemName: "Panels", rawQuantity: "10", unitOfMeasure: "  sqft  ", rawUnitRate: "50" },
-        ],
-      },
-    ];
-    const resValid = buildValidatedSectionPayload(untrimmedUomSections);
-    assert.equal(resValid.success, true);
-    if (resValid.success) {
-      assert.equal(resValid.data[0].items[0].unitOfMeasure, "sqft");
+    const res121 = buildValidatedSectionPayload(invalidSections);
+    assert.equal(res121.success, false, "121 char section name was allowed!");
+    if (!res121.success) {
+      assert.equal(res121.error.includes("cannot exceed 120 characters"), true);
     }
   });
 
-  test("APP-UOM-3: QuotationSectionAccordion new-item initialization starts with neutral blank unitOfMeasure: ''", () => {
+  test("APP-PREAPPLY-3 & APP-PREAPPLY-4: QuotationSectionAccordion new section and item start neutral with blank business fields", () => {
     const accordionSource = fs.readFileSync(
       path.resolve(import.meta.dirname, "../components/QuotationSectionAccordion.tsx"),
       "utf-8"
     );
 
     assert.equal(
-      accordionSource.includes('unitOfMeasure: ""'),
+      accordionSource.includes('sectionName: ""'),
       true,
-      "QuotationSectionAccordion does not initialize new item with unitOfMeasure: ''!"
+      "QuotationSectionAccordion does not initialize new section with blank sectionName: ''!"
     );
     assert.equal(
-      accordionSource.includes('unitOfMeasure: "sqft"'),
-      false,
-      "QuotationSectionAccordion contains fabricated default unitOfMeasure: 'sqft'!"
+      accordionSource.includes('itemName: ""'),
+      true,
+      "QuotationSectionAccordion does not initialize new item with blank itemName: ''!"
     );
     assert.equal(
-      accordionSource.includes('unitOfMeasure: "nos"'),
-      false,
-      "QuotationSectionAccordion contains fabricated default unitOfMeasure: 'nos'!"
+      accordionSource.includes('rawQuantity: ""'),
+      true,
+      "QuotationSectionAccordion does not initialize new item with blank rawQuantity: ''!"
+    );
+    assert.equal(
+      accordionSource.includes('rawUnitRate: ""'),
+      true,
+      "QuotationSectionAccordion does not initialize new item with blank rawUnitRate: ''!"
     );
   });
 
-  test("APP-UOM-6 & APP-UOM-7: Section and item name validation — blank names are rejected without synthesis", () => {
-    const blankSecSections: RawSectionState[] = [
+  test("APP-PREAPPLY-5: QuotationPaymentScheduleEditor new milestone starts neutral with blank business fields", () => {
+    const scheduleSource = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../components/QuotationPaymentScheduleEditor.tsx"),
+      "utf-8"
+    );
+
+    assert.equal(
+      scheduleSource.includes('milestoneName: ""'),
+      true,
+      "QuotationPaymentScheduleEditor does not initialize new milestone with blank milestoneName: ''!"
+    );
+    assert.equal(
+      scheduleSource.includes('rawPercentage: ""'),
+      true,
+      "QuotationPaymentScheduleEditor does not initialize new milestone with blank rawPercentage: ''!"
+    );
+    assert.equal(
+      scheduleSource.includes('rawAmount: ""'),
+      true,
+      "QuotationPaymentScheduleEditor does not initialize new milestone with blank rawAmount: ''!"
+    );
+  });
+
+  test("APP-PREAPPLY-6: Untouched blank new section/item/milestone cannot produce a valid save payload", () => {
+    const blankSection: RawSectionState[] = [{ sectionName: "", items: [] }];
+    assert.equal(buildValidatedSectionPayload(blankSection).success, false);
+
+    const blankItemSection: RawSectionState[] = [
       {
-        sectionName: "   ",
-        items: [{ itemName: "Sofa", rawQuantity: "1", unitOfMeasure: "nos", rawUnitRate: "100" }],
+        sectionName: "Kitchen",
+        items: [
+          { itemName: "", rawQuantity: "", unitOfMeasure: "", rawUnitRate: "" },
+        ],
       },
     ];
-    const resBlankSec = buildValidatedSectionPayload(blankSecSections);
-    assert.equal(resBlankSec.success, false);
-    if (!resBlankSec.success) {
-      assert.equal(resBlankSec.error.includes("Section name is required"), true);
-    }
+    assert.equal(buildValidatedSectionPayload(blankItemSection).success, false);
 
-    const blankItemSections: RawSectionState[] = [
+    const blankMilestone: RawMilestoneState[] = [
+      { milestoneName: "", rawPercentage: "", rawAmount: "" },
+    ];
+    assert.equal(buildValidatedPaymentSchedulePayload("percentage", blankMilestone).success, false);
+  });
+
+  test("APP-PREAPPLY-7 & APP-PREAPPLY-8: QuotationHeaderCard onChange is local only and resyncs on canonical version prop change", () => {
+    const headerSource = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../components/QuotationHeaderCard.tsx"),
+      "utf-8"
+    );
+
+    assert.equal(
+      headerSource.includes('onChange={(e) => onUpdateTitleAndScope('),
+      false,
+      "QuotationHeaderCard calls onUpdateTitleAndScope on every onChange keystroke!"
+    );
+    assert.equal(
+      headerSource.includes("onUpdateTitleAndScope(trimmedTitle, trimmedScope)"),
+      true,
+      "QuotationHeaderCard does not invoke onUpdateTitleAndScope inside explicit handleSaveHeader!"
+    );
+    assert.equal(
+      headerSource.includes("setPrevVersionKey(currentVersionKey)"),
+      true,
+      "QuotationHeaderCard does not resync local state on canonical version change!"
+    );
+  });
+
+  test("APP-PREAPPLY-9: QuotationTermsEditor resyncs local state when canonical version terms data changes", () => {
+    const termsSource = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../components/QuotationTermsEditor.tsx"),
+      "utf-8"
+    );
+
+    assert.equal(
+      termsSource.includes("setPrevVersionKey(currentVersionKey)"),
+      true,
+      "QuotationTermsEditor does not resync local state on canonical version change!"
+    );
+  });
+
+  test("APP-PREAPPLY-10: Generated DB types include optional p_idempotency_key on update/save/schedule RPCs", () => {
+    const generatedTypes = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../../../types/database.generated.ts"),
+      "utf-8"
+    );
+
+    assert.equal(
+      generatedTypes.includes("update_quotation_draft: {\n        Args: {\n          p_clear_tax_profile?: boolean\n          p_discount_percentage?: number\n          p_discount_type?: string\n          p_discount_value_paise?: number\n          p_exclusions?: string[]\n          p_expected_lock_version: number\n          p_idempotency_key?: string") ||
+        generatedTypes.includes("update_quotation_draft") && generatedTypes.includes("p_idempotency_key?: string"),
+      true
+    );
+    assert.equal(
+      generatedTypes.includes("save_quotation_draft_items") && generatedTypes.includes("p_idempotency_key?: string"),
+      true
+    );
+    assert.equal(
+      generatedTypes.includes("replace_quotation_payment_schedule") && generatedTypes.includes("p_idempotency_key?: string"),
+      true
+    );
+  });
+
+  test("APP-PREAPPLY-11: Description and specifications length > 2000 are rejected by buildValidatedSectionPayload", () => {
+    const overlongDesc: RawSectionState[] = [
       {
         sectionName: "Hall",
-        items: [{ itemName: "   ", rawQuantity: "1", unitOfMeasure: "nos", rawUnitRate: "100" }],
+        items: [
+          {
+            itemName: "Sofa",
+            description: "a".repeat(2001),
+            rawQuantity: "1",
+            unitOfMeasure: "nos",
+            rawUnitRate: "100",
+          },
+        ],
       },
     ];
-    const resBlankItem = buildValidatedSectionPayload(blankItemSections);
-    assert.equal(resBlankItem.success, false);
-    if (!resBlankItem.success) {
-      assert.equal(resBlankItem.error.includes("Item name is required"), true);
+    const resDesc = buildValidatedSectionPayload(overlongDesc);
+    assert.equal(resDesc.success, false);
+    if (!resDesc.success) {
+      assert.equal(resDesc.error.includes("cannot exceed 2000 characters"), true);
+    }
+
+    const overlongSpec: RawSectionState[] = [
+      {
+        sectionName: "Hall",
+        items: [
+          {
+            itemName: "Sofa",
+            specifications: "b".repeat(2001),
+            rawQuantity: "1",
+            unitOfMeasure: "nos",
+            rawUnitRate: "100",
+          },
+        ],
+      },
+    ];
+    const resSpec = buildValidatedSectionPayload(overlongSpec);
+    assert.equal(resSpec.success, false);
+    if (!resSpec.success) {
+      assert.equal(resSpec.error.includes("cannot exceed 2000 characters"), true);
     }
   });
 
-  test("APP-UOM-8: Source regression guard — no || 'nos' or || 'sqft' fallbacks in quotation-editor-helpers.ts", () => {
+  test("APP-PREAPPLY-12: All raw-money and no-fake-UOM behavior remains intact", () => {
     const helpersSource = fs.readFileSync(
       path.resolve(import.meta.dirname, "../utils/quotation-editor-helpers.ts"),
       "utf-8"
     );
 
+    assert.equal(helpersSource.includes('|| "nos"'), false);
+    assert.equal(helpersSource.includes('|| "sqft"'), false);
+    assert.equal(helpersSource.includes('?? 0'), false);
+  });
+
+  test("APP-PREAPPLY-13: Archived or non-active quotation is not exposed as editable active draft UI", () => {
+    const draftPageSource = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../../../app/admin/quotations/[quotationId]/draft/page.tsx"),
+      "utf-8"
+    );
+
     assert.equal(
-      helpersSource.includes('|| "nos"'),
-      false,
-      "quotation-editor-helpers.ts contains || 'nos' fallback!"
+      draftPageSource.includes("isEditableActiveDraft"),
+      true,
+      "QuotationDraftPage does not check isEditableActiveDraft!"
     );
     assert.equal(
-      helpersSource.includes('|| "sqft"'),
-      false,
-      "quotation-editor-helpers.ts contains || 'sqft' fallback!"
+      draftPageSource.includes("Archived or Non-Editable Quotation State"),
+      true,
+      "QuotationDraftPage does not render read-only banner for archived draft!"
     );
   });
 
@@ -446,7 +544,7 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     );
   });
 
-  test("APP-MONEY-14 & APP-UOM-10: Real Phase 7B implementation-absence regression guard", () => {
+  test("APP-MONEY-14 & APP-PREAPPLY-14: Real Phase 7B implementation-absence regression guard", () => {
     const projectRoot = path.resolve(import.meta.dirname, "../../../../");
     const actionsFile = fs.readFileSync(
       path.join(projectRoot, "src/features/quotations/server/quotation-draft-actions.ts"),

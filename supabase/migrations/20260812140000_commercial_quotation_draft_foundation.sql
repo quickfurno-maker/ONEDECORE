@@ -749,6 +749,8 @@ declare
   v_new_discount_type text;
   v_new_discount_val bigint;
   v_new_discount_pct numeric(5,2);
+  v_raw_disc_pct numeric;
+  v_raw_disc_val numeric;
   v_new_tax_profile_id uuid;
   v_new_tax_rate numeric(5,2);
   v_new_lock_version bigint;
@@ -846,13 +848,28 @@ begin
   end if;
 
   v_new_discount_type := coalesce(p_discount_type, v_version_rec.discount_type);
-  v_new_discount_val := coalesce(p_discount_value_paise, v_version_rec.discount_value_paise);
-  v_new_discount_pct := coalesce(p_discount_percentage, v_version_rec.discount_percentage);
 
   if p_discount_percentage is not null then
-    if (p_discount_percentage::text) ~ '\.[0-9]{3,}$' then
+    v_raw_disc_pct := p_discount_percentage;
+    if (v_raw_disc_pct::text) ~ '\.[0-9]{3,}$' then
       raise exception 'QUOTATION_VALIDATION_FAILED: Percentage cannot exceed 2 decimal places' using errcode = 'P0001';
     end if;
+    if v_raw_disc_pct < 0.00 or v_raw_disc_pct > 100.00 then
+      raise exception 'QUOTATION_VALIDATION_FAILED: Invalid discount percentage' using errcode = 'P0001';
+    end if;
+    v_new_discount_pct := v_raw_disc_pct;
+  else
+    v_new_discount_pct := v_version_rec.discount_percentage;
+  end if;
+
+  if p_discount_value_paise is not null then
+    v_raw_disc_val := p_discount_value_paise;
+    if v_raw_disc_val < 0 or v_raw_disc_val > 100000000000 then
+      raise exception 'QUOTATION_VALIDATION_FAILED: Invalid discount value' using errcode = 'P0001';
+    end if;
+    v_new_discount_val := v_raw_disc_val;
+  else
+    v_new_discount_val := v_version_rec.discount_value_paise;
   end if;
 
   if v_new_discount_type not in ('none', 'flat', 'percentage') then
@@ -1011,7 +1028,9 @@ declare
   v_sec_count integer := 0;
   v_item_count integer := 0;
   v_line_qty numeric(10,3);
+  v_raw_qty numeric;
   v_unit_rate bigint;
+  v_raw_rate numeric;
   v_line_total bigint;
   v_new_lock_version bigint;
   v_result jsonb;
@@ -1120,6 +1139,14 @@ begin
           raise exception 'QUOTATION_VALIDATION_FAILED: Invalid item name' using errcode = 'P0001';
         end if;
 
+        if (v_item_elem->>'description') is not null and length(trim(v_item_elem->>'description')) > 2000 then
+          raise exception 'QUOTATION_VALIDATION_FAILED: Line item description cannot exceed 2000 characters' using errcode = 'P0001';
+        end if;
+
+        if (v_item_elem->>'specifications') is not null and length(trim(v_item_elem->>'specifications')) > 2000 then
+          raise exception 'QUOTATION_VALIDATION_FAILED: Line item specifications cannot exceed 2000 characters' using errcode = 'P0001';
+        end if;
+
         if v_uom is null or length(v_uom) < 1 or length(v_uom) > 30 then
           raise exception 'QUOTATION_VALIDATION_FAILED: Invalid unit of measure' using errcode = 'P0001';
         end if;
@@ -1131,20 +1158,22 @@ begin
         if (v_item_elem->>'quantity') ~ '\.[0-9]{4,}$' then
           raise exception 'QUOTATION_VALIDATION_FAILED: Quantity cannot exceed 3 decimal places' using errcode = 'P0001';
         end if;
-        v_line_qty := (v_item_elem->>'quantity')::numeric;
+
+        v_raw_qty := (v_item_elem->>'quantity')::numeric;
+        if v_raw_qty <= 0 or v_raw_qty > 1000000.000 then
+          raise exception 'QUOTATION_VALIDATION_FAILED: Invalid quantity' using errcode = 'P0001';
+        end if;
+        v_line_qty := v_raw_qty;
 
         if (v_item_elem->>'unitRatePaise') is null or (v_item_elem->>'unitRatePaise') !~ '^[0-9]+$' then
           raise exception 'QUOTATION_VALIDATION_FAILED: Invalid unit rate' using errcode = 'P0001';
         end if;
-        v_unit_rate := (v_item_elem->>'unitRatePaise')::bigint;
 
-        if v_line_qty <= 0 or v_line_qty > 1000000.000 then
-          raise exception 'QUOTATION_VALIDATION_FAILED: Invalid quantity' using errcode = 'P0001';
-        end if;
-
-        if v_unit_rate < 0 or v_unit_rate > 100000000000 then
+        v_raw_rate := (v_item_elem->>'unitRatePaise')::numeric;
+        if v_raw_rate < 0 or v_raw_rate > 100000000000 then
           raise exception 'QUOTATION_VALIDATION_FAILED: Invalid unit rate' using errcode = 'P0001';
         end if;
+        v_unit_rate := v_raw_rate::bigint;
 
         v_line_total := round((v_line_qty * v_unit_rate::numeric)::numeric)::bigint;
 
@@ -1243,10 +1272,12 @@ declare
   v_elem jsonb;
   v_milestone_name text;
   v_order integer := 0;
-  v_pct_sum numeric(5,2) := 0.00;
+  v_pct_sum numeric := 0.00;
   v_amt_sum bigint := 0;
   v_item_pct numeric(5,2);
+  v_raw_pct numeric;
   v_item_amt bigint;
+  v_raw_amt numeric;
   v_total_milestones integer;
   v_new_lock_version bigint;
   v_result jsonb;
@@ -1340,12 +1371,12 @@ begin
         raise exception 'QUOTATION_VALIDATION_FAILED: Percentage cannot exceed 2 decimal places' using errcode = 'P0001';
       end if;
 
-      v_item_pct := (v_elem->>'percentage')::numeric;
-      if v_item_pct < 0.00 or v_item_pct > 100.00 then
+      v_raw_pct := (v_elem->>'percentage')::numeric;
+      if v_raw_pct < 0.00 or v_raw_pct > 100.00 then
         raise exception 'QUOTATION_VALIDATION_FAILED: Invalid milestone percentage' using errcode = 'P0001';
       end if;
-
-      v_pct_sum := v_pct_sum + v_item_pct;
+      v_item_pct := v_raw_pct;
+      v_pct_sum := v_pct_sum + v_raw_pct;
 
       insert into public.quotation_payment_schedules (quotation_version_id, milestone_name, milestone_order, percentage, amount_paise)
       values (v_version_rec.id, v_milestone_name, v_order, v_item_pct, null);
@@ -1358,10 +1389,11 @@ begin
         raise exception 'QUOTATION_VALIDATION_FAILED: Invalid milestone amount' using errcode = 'P0001';
       end if;
 
-      v_item_amt := (v_elem->>'amountPaise')::bigint;
-      if v_item_amt < 0 or v_item_amt > 100000000000 then
+      v_raw_amt := (v_elem->>'amountPaise')::numeric;
+      if v_raw_amt < 0 or v_raw_amt > 100000000000 then
         raise exception 'QUOTATION_VALIDATION_FAILED: Invalid milestone amount' using errcode = 'P0001';
       end if;
+      v_item_amt := v_raw_amt::bigint;
 
       v_amt_sum := v_amt_sum + v_item_amt;
 

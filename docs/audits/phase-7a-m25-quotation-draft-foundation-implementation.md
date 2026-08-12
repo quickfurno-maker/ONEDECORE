@@ -14,7 +14,7 @@
 
 ---
 
-## Technical Audit & Final UOM / No-Fake-Default Correction Pass Summary
+## Technical Audit & Final Pre-Apply Consistency Sweep Summary
 
 ### 1. Database Schema & M25 Migration Foundation
 - **Migration File**: `supabase/migrations/20260812140000_commercial_quotation_draft_foundation.sql`
@@ -22,55 +22,59 @@
   - `public.quotations`: 1:1 root identity table with `lead_id` UNIQUE constraint.
   - `public.quotation_tax_profiles`: Catalogue for Super-Admin governed tax profiles (0 production seeds in M25).
   - `public.quotation_versions`: Monotonic version ledger with `lock_version` optimistic concurrency, canonical money integers in INR paise, partial unique index `idx_one_current_draft_per_quotation`.
-  - `public.quotation_sections`: Room/area layout blocks with section subtotal paise.
-  - `public.quotation_items`: Line items with explicit unit of measure (mandatory 1..30 chars), quantity numeric(10,3) (bounded (0, 1000000.000]), unit rate in paise, and auto-calculated line total.
+  - `public.quotation_sections`: Room/area layout blocks with section subtotal paise. Section name constraint aligned to 120 characters (`chk_quotation_sections_name`).
+  - `public.quotation_items`: Line items with explicit unit of measure (mandatory 1..30 chars), quantity numeric(10,3) (bounded (0, 1000000.000]), unit rate in paise, line total in paise, and description/specifications bounds (<=2000 chars each).
   - `public.quotation_payment_schedules`: Draft payment milestone schedule supporting schedule-level percentage or amount mode.
   - `public.quotation_events`: Append-only commercial quotation domain event ledger protected with `private.forbid_append_only_mutation()`.
   - `private.quotation_idempotency_requests`: Private idempotency ledger with `UNIQUE(actor_id, operation_code, idempotency_key)` and SHA-256 request payload verification.
   - `private.quotation_number_seq`: Monotonic sequence allocator yielding sequence format `OD-Q-{YYYY}-{SEQ6}` (Asia/Kolkata timezone).
 
-### 2. Final UOM / No-Fake-Default Correction Pass Repairs
-- **Mandatory UOM & Name Validation**:
-  - `buildValidatedSectionPayload()` in `quotation-editor-helpers.ts`: Removed `|| "nos"` fallback. Blank UOM returns `{ success: false, error: "Unit of measure is required..." }`. UOM length > 30 returns validation error. Blank `sectionName` or `itemName` returns validation error without synthesizing default names like `"Section 1"` or `"Item 1"`.
-  - `QuotationSectionAccordion.tsx`: Updated new-item initialization to use neutral blank string `unitOfMeasure: ""`. Removed `unitOfMeasure: "sqft"` fabricated default.
-- **UI Raw Commercial Money Text & Canonical Paise Separation**:
-  - `QuotationPaymentScheduleEditor.tsx`: Maintained raw amount text state (`RawMilestoneState`) per milestone. Invalid amount text (e.g. `1.999` or `abc`) displays inline validation and blocks `onSaveSchedule`. Invalid input cannot overwrite canonical `amountPaise` or silently become 0.
-  - `QuotationSectionAccordion.tsx`: Maintained raw unit-rate text state (`RawLineItemState`) per item. Removed all invalid parse fallbacks (`?? 0`). Invalid unit-rate text displays inline validation and blocks `onSaveSections`.
-  - `QuotationDiscountCard.tsx`: Maintained raw discount string state (`rawFlatDiscount`, `rawPercentageDiscount`) and added explicit `Apply Discount` commit action. Invalid discount text displays inline validation and blocks `onUpdateDiscount` callback invocation.
-- **Pure Editor Validation Helper**: Created `src/features/quotations/utils/quotation-editor-helpers.ts` containing pure validation and payload construction functions (`buildValidatedPaymentSchedulePayload`, `buildValidatedSectionPayload`, `validateFlatDiscountInput`, `validatePercentageDiscountInput`).
-- **Zero Floating-Point Parsers & Zero Fabricated Fallbacks Guard**: Verified 0 calls to `parseFloat`, `Number.parseFloat`, `parseInrToPaise`, `?? 0`, `|| "nos"`, or `|| "sqft"` in quotation UI components and server actions.
-- **CRM Active Draft RBAC Gating**: `LeadDetailQuotationPanel.tsx` strictly requires `canEditQuotation` (`quotations.edit`) to open an existing active draft. `canCreateQuotation` (`quotations.create`) alone cannot open an active draft.
+### 2. Pre-Apply Consistency Sweep Repairs
+- **Section Name Max Length Alignment (120 Chars)**:
+  - `buildValidatedSectionPayload()` in `quotation-editor-helpers.ts`: Fixed max length check from 150 to **120** characters, establishing exact parity with database DDL (`chk_quotation_sections_name`) and RPC PL/pgSQL assertions.
+- **Description & Specifications Bounds (<= 2000 Chars)**:
+  - `buildValidatedSectionPayload()` and M25 RPC `save_quotation_draft_items`: Added explicit length validation for line item `description` (<= 2000 chars) and `specifications` (<= 2000 chars), raising `QUOTATION_VALIDATION_FAILED` (P0001).
+- **Numeric Overflow Protection in PL/pgSQL RPCs**:
+  - M25 RPCs (`save_quotation_draft_items`, `replace_quotation_payment_schedule`, `update_quotation_draft`): Parse raw JSON numbers into unrestricted `numeric` variables first, validate bounds, and raise `QUOTATION_VALIDATION_FAILED` (P0001) instead of raw Postgres `22003` overflow errors. Use unrestricted `v_pct_sum numeric := 0;` for percentage accumulator.
+- **No-Fake-Default Neutral Editor State**:
+  - `QuotationSectionAccordion.tsx`: New section starts with `sectionName: ""`. New item starts with `itemName: ""`, `rawQuantity: ""`, `unitOfMeasure: ""`, `rawUnitRate: ""`. Visual guidance provided via input `placeholder` attributes (`e.g. Living Room`, `e.g. TV Unit`).
+  - `QuotationPaymentScheduleEditor.tsx`: New milestone starts with `milestoneName: ""`, `rawPercentage: ""`, `rawAmount: ""`. Visual guidance provided via input `placeholder` attributes (`e.g. Advance Booking`, `e.g. 20.00`).
+- **Header Keystroke Isolation & Explicit Save**:
+  - `QuotationHeaderCard.tsx`: Isolate typing into local `rawTitle` and `rawScopeSummary` React state. Removed per-keystroke server action dispatches. Added explicit **"Save Title & Scope"** button with length validation (title 1..200, scope <= 2000). Resyncs local state from canonical `version` prop during render.
+- **Terms Editor Resync**:
+  - `QuotationTermsEditor.tsx`: Resyncs local state (`terms`, `inclusions`, `exclusions`) during render when canonical `version` prop changes.
+- **Generated Types RPC Idempotency Signature Parity**:
+  - `src/types/database.generated.ts`: Added optional `p_idempotency_key?: string` to `Args` of `update_quotation_draft`, `save_quotation_draft_items`, and `replace_quotation_payment_schedule`.
+- **Archived Quotation UI Safety**:
+  - `src/app/admin/quotations/[quotationId]/draft/page.tsx`: Blocks mutation editor for archived or inactive quotation versions and renders read-only notice banner.
 
 ### 3. QA Verification Matrix
-- **Database Quality Gate (`npm run check:db`)**: 18/18 test files PASS (100% SUCCESS; 723/723 subtests passed, including 69/69 in `18_quotation_draft_foundation_test.sql`).
-- **Phase 7A Unit Tests (`npm run test:phase-7a`)**: PASS (32/32 tests passed: 10 in `phase-7-c0-contracts.test.ts`, 22 in `phase-7a-quotation-draft.test.ts`).
-- **Application Unit Tests (`npm run test:app`)**: PASS (583/583 tests passed).
-- **TypeScript Typecheck**: `npm run typecheck` PASS (0 errors).
-- **Application Lint & Build**: `npm run check` PASS (0 lint errors, Next.js build succeeded).
+- **Database Quality Gate (`npm run check:db`)**: 18/18 test files PASS (100% SUCCESS; 730/730 subtests passed, including 76/76 in `18_quotation_draft_foundation_test.sql`).
+- **Phase 7A Unit Tests (`npm run test:phase-7a`)**: PASS (38/38 tests passed: 10 in `phase-7-c0-contracts.test.ts`, 28 in `phase-7a-quotation-draft.test.ts`).
+- **Application Unit Tests (`npm run test:app`)**: PASS (589/589 tests passed).
+- **TypeScript Typecheck (`npm run typecheck`)**: PASS (0 errors).
+- **Application Quality Gate (`npm run check`)**: PASS (0 lint errors, 0 type errors, Next.js Turbopack build succeeded with 49 static/dynamic routes).
 - **Managed Supabase Status**: Verified M1–M24 baseline (`lpurlfmpvriyvpkujvyl`); M25 remains 100% UNAPPLIED to managed Supabase.
 
 ---
 
 ## Compliance & Governance Checklist
 
+- [x] Section name length limit aligned to 120 chars across DDL, RPC, and TypeScript helper.
+- [x] Description (<= 2000) and specifications (<= 2000) length validated in UI helper and RPC.
+- [x] Raw Postgres 22003 numeric overflow prevented with unrestricted numeric parsing in PL/pgSQL RPCs.
 - [x] Mandatory UOM enforced; blank UOM rejected with validation error.
 - [x] Zero fabricated UOM defaults (`"nos"`, `"sqft"`) in editor helpers or UI state.
-- [x] New line items initialized with neutral blank UOM (`unitOfMeasure: ""`).
-- [x] Blank section names and item names rejected without default synthesis.
+- [x] New sections, items, and milestones initialize with neutral blank strings (`""`).
+- [x] Header keystrokes isolated from server calls; explicit Save button requires manual user commit.
+- [x] Header and Terms components resync local state when canonical version prop changes.
+- [x] Generated DB types include optional `p_idempotency_key` on update/save/schedule RPCs.
+- [x] Archived/inactive quotation versions block draft editor UI with read-only notice banner.
 - [x] 1:1 lead ↔ quotation root cardinality enforced (`quotations.lead_id` UNIQUE).
 - [x] Monotonic version numbering and `lock_version` optimistic concurrency implemented.
 - [x] All money calculations performed in canonical INR integer paise (zero floating-point drift).
-- [x] UI raw commercial money text separated from canonical paise state across all quotation editor components.
-- [x] Invalid/blank/over-scale money text cannot mutate to 0 or persist (callbacks blocked until exact parsing succeeds).
 - [x] Zero `parseFloat`, `Number.parseFloat`, `parseInrToPaise`, `?? 0`, `|| "nos"`, or `|| "sqft"` fallbacks in quotation mutation paths.
-- [x] Quantity max bound aligned with frozen C0 contract (`1,000,000.000` units).
 - [x] Sales ownership pointer evaluated via `leads.assigned_to = auth.uid()` (assigned sales executive scope).
-- [x] Tax profile snapshotting implemented with null tax contract.
-- [x] Schedule-level payment mode (percentage vs amount) enforced per OD7A-2.
 - [x] Durable idempotency ledger `private.quotation_idempotency_requests` implemented.
-- [x] Update RPC idempotency hash distinguishes SQL `NULL` vs `[]` arrays for both inclusions and exclusions.
 - [x] Append-only event audit ledger `public.quotation_events` protected against UPDATE and DELETE.
-- [x] System permissions `quotations.read`, `quotations.create`, `quotations.edit` granted to sales/management roles.
-- [x] Existing active draft opening strictly requires `quotations.edit`.
-- [x] `quotations.approve` and `quotations.delete` permissions strictly ABSENT.
 - [x] Managed Supabase database `lpurlfmpvriyvpkujvyl` remains M1–M24 (ZERO managed DDL/DML executed).

@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -4114,6 +4114,7 @@ export type Database = {
       replace_quotation_payment_schedule: {
         Args: {
           p_expected_lock_version: number
+          p_idempotency_key?: string
           p_milestones: Json
           p_mode: string
           p_quotation_id: string
@@ -4158,6 +4159,7 @@ export type Database = {
       save_quotation_draft_items: {
         Args: {
           p_expected_lock_version: number
+          p_idempotency_key?: string
           p_quotation_id: string
           p_sections: Json
         }
@@ -4432,6 +4434,7 @@ export type Database = {
           p_discount_value_paise?: number
           p_exclusions?: string[]
           p_expected_lock_version: number
+          p_idempotency_key?: string
           p_inclusions?: string[]
           p_quotation_id: string
           p_scope_summary?: string
