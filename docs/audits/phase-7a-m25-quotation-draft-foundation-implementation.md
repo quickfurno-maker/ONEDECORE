@@ -72,11 +72,12 @@ Authoritative quotation mutation and persistence arithmetic uses exact decimal/n
 | **idempotency key** | 1..128 chars | Server Action pass-through | `length(key) in [1, 128]` | `chk_quotation_idempotency_key` (1..128) | PASS (Ledger DDL) |
 
 ### 4. QA Verification Matrix
-- **Database Quality Gate (`npm run check:db`)**: 18/18 test files PASS (100% SUCCESS; 730/730 subtests passed, including 76/76 in `18_quotation_draft_foundation_test.sql`).
-- **Phase 7A Unit Tests (`npm run test:phase-7a`)**: PASS (38/38 tests passed: 10 in `phase-7-c0-contracts.test.ts`, 28 in `phase-7a-quotation-draft.test.ts`).
-- **Application Unit Tests (`npm run test:app`)**: PASS (589/589 tests passed).
+- **Database Quality Gate (`npm run check:db`)**: 18/18 test files PASS (100% SUCCESS; 748/748 subtests passed, including 94/94 in `18_quotation_draft_foundation_test.sql`).
+- **Phase 7A Unit Tests (`npm run test:phase-7a`)**: PASS (42/42 tests passed: 10 in `phase-7-c0-contracts.test.ts`, 32 in `phase-7a-quotation-draft.test.ts`).
+- **Application Unit Tests (`npm run test:app`)**: PASS (593/593 tests passed across 156 test suites).
 - **TypeScript Typecheck (`npm run typecheck`)**: PASS (0 errors).
 - **Application Quality Gate (`npm run check`)**: PASS (0 lint errors, 0 type errors, Next.js Turbopack build succeeded with 49 static/dynamic routes).
+- **GitHub Actions CI Run 31579699564**: Application Quality SUCCESS (1m16s), Database Quality SUCCESS (2m52s) on exact HEAD `636556f904e842565f8c7af9592cc98341ddb346`.
 - **Managed Supabase Status**: Verified M1–M24 baseline (`lpurlfmpvriyvpkujvyl`); M25 remains 100% UNAPPLIED to managed Supabase.
 
 ---
