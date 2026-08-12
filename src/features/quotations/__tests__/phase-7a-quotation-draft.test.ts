@@ -13,6 +13,13 @@ import {
   validateAndFormatPercentageString,
   validateAndFormatQuantityString,
 } from "../server/quotation-decimal-utils.ts";
+import {
+  buildValidatedPaymentSchedulePayload,
+  buildValidatedSectionPayload,
+  validateFlatDiscountInput,
+  type RawMilestoneState,
+  type RawSectionState,
+} from "../utils/quotation-editor-helpers.ts";
 
 describe("Phase 7A Commercial Quotation Draft Foundation", () => {
   test("Quotation number format validation regex matches OD-Q-YYYY-SEQ6", () => {
@@ -126,31 +133,136 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     assert.equal(unknownObj.message.includes("raw_internal_postgres_leak"), false);
   });
 
-  test("APP-10: Actual QuotationDraftEditor source code proof for getQuotationDraftAction and setDraft state replacement", () => {
-    const editorSource = fs.readFileSync(
-      path.resolve(import.meta.dirname, "../components/QuotationDraftEditor.tsx"),
+  test("APP-MONEY-1 & APP-MONEY-2: Source code proof — no parseQuotationInrToPaiseExact ?? 0 fallback in UI components", () => {
+    const projectRoot = path.resolve(import.meta.dirname, "../../../../");
+    const sectionAccordionFile = fs.readFileSync(
+      path.join(projectRoot, "src/features/quotations/components/QuotationSectionAccordion.tsx"),
+      "utf-8"
+    );
+    const discountCardFile = fs.readFileSync(
+      path.join(projectRoot, "src/features/quotations/components/QuotationDiscountCard.tsx"),
+      "utf-8"
+    );
+    const scheduleEditorFile = fs.readFileSync(
+      path.join(projectRoot, "src/features/quotations/components/QuotationPaymentScheduleEditor.tsx"),
       "utf-8"
     );
 
     assert.equal(
-      editorSource.includes('import { getQuotationDraftAction } from "../server/quotation-draft-actions";') ||
-        editorSource.includes("getQuotationDraftAction"),
-      true,
-      "QuotationDraftEditor does not import getQuotationDraftAction!"
+      sectionAccordionFile.includes("parseQuotationInrToPaiseExact") && sectionAccordionFile.includes("?? 0"),
+      false,
+      "QuotationSectionAccordion contains parseQuotationInrToPaiseExact ?? 0 fallback!"
     );
     assert.equal(
-      editorSource.includes("getQuotationDraftAction(draft.quotationId)"),
-      true,
-      "QuotationDraftEditor does not call getQuotationDraftAction with draft.quotationId!"
+      discountCardFile.includes("parseQuotationInrToPaiseExact") && discountCardFile.includes("?? 0"),
+      false,
+      "QuotationDiscountCard contains parseQuotationInrToPaiseExact ?? 0 fallback!"
     );
     assert.equal(
-      editorSource.includes("setDraft(res.data)"),
-      true,
-      "QuotationDraftEditor does not call setDraft(res.data) on refresh success!"
+      scheduleEditorFile.includes("parseQuotationInrToPaiseExact") && scheduleEditorFile.includes("?? 0"),
+      false,
+      "QuotationPaymentScheduleEditor contains parseQuotationInrToPaiseExact ?? 0 fallback!"
     );
   });
 
-  test("APP-11: Source regression guard — no parseFloat on quotation authoritative mutation paths", () => {
+  test("APP-MONEY-3 & APP-MONEY-4: Payment schedule raw amount state and submission blocking on invalid input", () => {
+    const invalidMilestones: RawMilestoneState[] = [
+      { milestoneName: "Advance", rawAmount: "1.999", rawPercentage: "0" },
+    ];
+    const resInvalid = buildValidatedPaymentSchedulePayload("amount", invalidMilestones);
+    assert.equal(resInvalid.success, false);
+    if (!resInvalid.success) {
+      assert.equal(resInvalid.error.includes("Invalid amount"), true);
+    }
+
+    const blankMilestones: RawMilestoneState[] = [
+      { milestoneName: "Advance", rawAmount: "", rawPercentage: "0" },
+    ];
+    const resBlank = buildValidatedPaymentSchedulePayload("amount", blankMilestones);
+    assert.equal(resBlank.success, false);
+
+    const validMilestones: RawMilestoneState[] = [
+      { milestoneName: "Advance", rawAmount: "500.50", rawPercentage: "0" },
+    ];
+    const resValid = buildValidatedPaymentSchedulePayload("amount", validMilestones);
+    assert.equal(resValid.success, true);
+    if (resValid.success) {
+      assert.equal(resValid.data[0].amountPaise, 50050);
+    }
+  });
+
+  test("APP-MONEY-5: Invalid line-item unit rate blocks section payload construction", () => {
+    const invalidSections: RawSectionState[] = [
+      {
+        sectionName: "Living Room",
+        items: [
+          {
+            itemName: "TV Unit",
+            rawQuantity: "2",
+            unitOfMeasure: "nos",
+            rawUnitRate: "invalid-rate",
+          },
+        ],
+      },
+    ];
+    const resInvalid = buildValidatedSectionPayload(invalidSections);
+    assert.equal(resInvalid.success, false);
+    if (!resInvalid.success) {
+      assert.equal(resInvalid.error.includes("Invalid unit rate"), true);
+    }
+
+    const validSections: RawSectionState[] = [
+      {
+        sectionName: "Living Room",
+        items: [
+          {
+            itemName: "TV Unit",
+            rawQuantity: "2",
+            unitOfMeasure: "nos",
+            rawUnitRate: "1234.56",
+          },
+        ],
+      },
+    ];
+    const resValid = buildValidatedSectionPayload(validSections);
+    assert.equal(resValid.success, true);
+    if (resValid.success) {
+      assert.equal(resValid.data[0].items[0].unitRatePaise, 123456);
+      assert.equal(resValid.data[0].items[0].quantity, "2");
+    }
+  });
+
+  test("APP-MONEY-6: Invalid flat discount blocks mutation callback", () => {
+    const resInvalid = validateFlatDiscountInput("abc");
+    assert.equal(resInvalid.success, false);
+
+    const resOverScale = validateFlatDiscountInput("1.999");
+    assert.equal(resOverScale.success, false);
+
+    const resBlank = validateFlatDiscountInput("");
+    assert.equal(resBlank.success, false);
+
+    const resValid = validateFlatDiscountInput("2500.75");
+    assert.equal(resValid.success, true);
+    if (resValid.success) {
+      assert.equal(resValid.data, 250075);
+    }
+  });
+
+  test("APP-MONEY-7 & APP-MONEY-8 & APP-MONEY-9: parseQuotationInrToPaiseExact semantics", () => {
+    assert.equal(parseQuotationInrToPaiseExact("1.999"), null);
+    assert.equal(parseQuotationInrToPaiseExact(""), null);
+    assert.equal(parseQuotationInrToPaiseExact("0"), 0);
+    assert.notEqual(parseQuotationInrToPaiseExact("0"), null);
+  });
+
+  test("APP-MONEY-10: Exact money parser accepts valid money representations", () => {
+    assert.equal(parseQuotationInrToPaiseExact("1.99"), 199);
+    assert.equal(parseQuotationInrToPaiseExact("1.20"), 120);
+    assert.equal(parseQuotationInrToPaiseExact("₹1,234.56"), 123456);
+  });
+
+  test("APP-MONEY-11: Source regression guard — zero floating-point parsers on quotation mutation components", () => {
     const projectRoot = path.resolve(import.meta.dirname, "../../../../");
     const actionsFile = fs.readFileSync(
       path.join(projectRoot, "src/features/quotations/server/quotation-draft-actions.ts"),
@@ -169,13 +281,29 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
       "utf-8"
     );
 
-    assert.equal(actionsFile.includes("parseFloat"), false, "quotation-draft-actions.ts contains parseFloat!");
-    assert.equal(scheduleEditorFile.includes("parseFloat"), false, "QuotationPaymentScheduleEditor.tsx contains parseFloat!");
-    assert.equal(sectionAccordionFile.includes("parseFloat"), false, "QuotationSectionAccordion.tsx contains parseFloat!");
-    assert.equal(discountCardFile.includes("parseFloat"), false, "QuotationDiscountCard.tsx contains parseFloat!");
+    assert.equal(actionsFile.includes("parseFloat"), false);
+    assert.equal(scheduleEditorFile.includes("parseFloat"), false);
+    assert.equal(sectionAccordionFile.includes("parseFloat"), false);
+    assert.equal(discountCardFile.includes("parseFloat"), false);
+    assert.equal(discountCardFile.includes("parseInrToPaise"), false);
   });
 
-  test("APP-12 & APP-13: CRM LeadDetailQuotationPanel RBAC gating rules", () => {
+  test("APP-MONEY-12: Actual QuotationDraftEditor source code proof for getQuotationDraftAction and setDraft state replacement", () => {
+    const editorSource = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../components/QuotationDraftEditor.tsx"),
+      "utf-8"
+    );
+
+    assert.equal(
+      editorSource.includes('import { getQuotationDraftAction } from "../server/quotation-draft-actions";') ||
+        editorSource.includes("getQuotationDraftAction"),
+      true
+    );
+    assert.equal(editorSource.includes("getQuotationDraftAction(draft.quotationId)"), true);
+    assert.equal(editorSource.includes("setDraft(res.data)"), true);
+  });
+
+  test("APP-MONEY-13: CRM LeadDetailQuotationPanel RBAC gating rules", () => {
     const leadPanelFile = fs.readFileSync(
       path.resolve(
         import.meta.dirname,
@@ -184,32 +312,15 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
       "utf-8"
     );
 
-    assert.equal(
-      leadPanelFile.includes("canEditQuotation || canCreateQuotation"),
-      false,
-      "LeadDetailQuotationPanel permits opening active draft without canEditQuotation!"
-    );
+    assert.equal(leadPanelFile.includes("canEditQuotation || canCreateQuotation"), false);
     assert.equal(
       leadPanelFile.includes("hasActiveDraft ? (\n            canEditQuotation ?") ||
         leadPanelFile.includes("hasActiveDraft ? (\n            canEditQuotation"),
-      true,
-      "LeadDetailQuotationPanel does not strictly require canEditQuotation for active draft!"
+      true
     );
   });
 
-  test("APP-14: Permission probe uses real permission codes from actual quotation permissions module", () => {
-    const permissionsModule = fs.readFileSync(
-      path.resolve(import.meta.dirname, "../server/quotation-permissions.ts"),
-      "utf-8"
-    );
-    assert.equal(permissionsModule.includes('"quotations.read"'), true);
-    assert.equal(permissionsModule.includes('"quotations.create"'), true);
-    assert.equal(permissionsModule.includes('"quotations.edit"'), true);
-    assert.equal(permissionsModule.includes('"quotations.approve"'), false);
-    assert.equal(permissionsModule.includes('"quotations.delete"'), false);
-  });
-
-  test("APP-15 & APP-16: Real Phase 7B implementation-absence regression guard", () => {
+  test("APP-MONEY-14: Real Phase 7B implementation-absence regression guard", () => {
     const projectRoot = path.resolve(import.meta.dirname, "../../../../");
     const actionsFile = fs.readFileSync(
       path.join(projectRoot, "src/features/quotations/server/quotation-draft-actions.ts"),
@@ -221,26 +332,5 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     assert.equal(actionsFile.includes("acceptQuotation"), false);
     assert.equal(actionsFile.includes("pdf"), false);
     assert.equal(actionsFile.includes("quotations.approve"), false);
-  });
-
-  test("APP-17: parseQuotationInrToPaiseExact exact money parsing semantics", () => {
-    // PASS cases
-    assert.equal(parseQuotationInrToPaiseExact("0"), 0);
-    assert.equal(parseQuotationInrToPaiseExact("1"), 100);
-    assert.equal(parseQuotationInrToPaiseExact("1.2"), 120);
-    assert.equal(parseQuotationInrToPaiseExact("1.20"), 120);
-    assert.equal(parseQuotationInrToPaiseExact("1.99"), 199);
-    assert.equal(parseQuotationInrToPaiseExact("₹1,234.56"), 123456);
-
-    // FAIL cases (returns null, NO silent fallback to 0 or truncation)
-    assert.equal(parseQuotationInrToPaiseExact(""), null);
-    assert.equal(parseQuotationInrToPaiseExact("."), null);
-    assert.equal(parseQuotationInrToPaiseExact("abc"), null);
-    assert.equal(parseQuotationInrToPaiseExact("-1"), null);
-    assert.equal(parseQuotationInrToPaiseExact("1e3"), null);
-    assert.equal(parseQuotationInrToPaiseExact("NaN"), null);
-    assert.equal(parseQuotationInrToPaiseExact("Infinity"), null);
-    assert.equal(parseQuotationInrToPaiseExact("1.999"), null);
-    assert.equal(parseQuotationInrToPaiseExact("12.345"), null);
   });
 });

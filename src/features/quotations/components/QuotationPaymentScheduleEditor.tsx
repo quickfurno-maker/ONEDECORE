@@ -7,6 +7,10 @@ import type {
   QuotationPaymentScheduleMilestoneDTO,
   QuotationVersionDTO,
 } from "../contracts/types";
+import {
+  buildValidatedPaymentSchedulePayload,
+  type RawMilestoneState,
+} from "../utils/quotation-editor-helpers";
 
 interface QuotationPaymentScheduleEditorProps {
   readonly version: QuotationVersionDTO;
@@ -17,6 +21,18 @@ interface QuotationPaymentScheduleEditorProps {
   ) => void;
 }
 
+function initRawMilestones(
+  schedules: readonly QuotationPaymentScheduleMilestoneDTO[]
+): readonly RawMilestoneState[] {
+  return schedules.map((m) => ({
+    id: m.id,
+    milestoneName: m.milestoneName,
+    milestoneOrder: m.milestoneOrder,
+    rawPercentage: m.percentage != null ? String(m.percentage) : "0",
+    rawAmount: m.amountPaise != null ? (m.amountPaise / 100).toString() : "0",
+  }));
+}
+
 export function QuotationPaymentScheduleEditor({
   version,
   schedules,
@@ -25,60 +41,77 @@ export function QuotationPaymentScheduleEditor({
   const [mode, setMode] = useState<PaymentScheduleMode>(
     version.paymentScheduleMode || "percentage"
   );
-  // Default to empty schedule if no schedules provided (no 10/40/40/10 defaults)
-  const [milestones, setMilestones] = useState<readonly QuotationPaymentScheduleMilestoneDTO[]>(
-    schedules.length > 0 ? schedules : []
+  const [rawMilestones, setRawMilestones] = useState<readonly RawMilestoneState[]>(() =>
+    initRawMilestones(schedules)
   );
   const [dirty, setDirty] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Resync state during render when canonical schedules prop changes
+  const [prevSchedules, setPrevSchedules] = useState(schedules);
+  if (prevSchedules !== schedules) {
+    setPrevSchedules(schedules);
+    setRawMilestones(initRawMilestones(schedules));
+    setMode(version.paymentScheduleMode || "percentage");
+    setDirty(false);
+    setValidationError(null);
+  }
 
   const handleModeChange = (newMode: PaymentScheduleMode) => {
     setMode(newMode);
-    // Clear inactive representation on mode switch
-    setMilestones(
-      milestones.map((m) => ({
-        ...m,
-        percentage: newMode === "percentage" ? (m.percentage ?? "0") : null,
-        amountPaise: newMode === "amount" ? (m.amountPaise ?? 0) : null,
-      }))
-    );
     setDirty(true);
+    setValidationError(null);
   };
 
   const handleAddMilestone = () => {
-    setMilestones([
-      ...milestones,
+    setRawMilestones([
+      ...rawMilestones,
       {
-        milestoneName: `Milestone ${milestones.length + 1}`,
-        milestoneOrder: milestones.length,
-        percentage: mode === "percentage" ? "0" : null,
-        amountPaise: mode === "amount" ? 0 : null,
+        milestoneName: `Milestone ${rawMilestones.length + 1}`,
+        milestoneOrder: rawMilestones.length,
+        rawPercentage: mode === "percentage" ? "0" : "",
+        rawAmount: mode === "amount" ? "0" : "",
       },
     ]);
     setDirty(true);
+    setValidationError(null);
   };
 
   const handleRemoveMilestone = (idx: number) => {
-    setMilestones(milestones.filter((_, i) => i !== idx));
+    setRawMilestones(rawMilestones.filter((_, i) => i !== idx));
     setDirty(true);
+    setValidationError(null);
   };
 
   const handleChange = (
     idx: number,
-    field: keyof QuotationPaymentScheduleMilestoneDTO,
-    val: unknown
+    field: keyof RawMilestoneState,
+    val: string
   ) => {
-    const updated = milestones.map((m, i) => (i === idx ? { ...m, [field]: val } : m));
-    setMilestones(updated);
+    const updated = rawMilestones.map((m, i) => (i === idx ? { ...m, [field]: val } : m));
+    setRawMilestones(updated);
     setDirty(true);
+    setValidationError(null);
   };
 
   const handleSave = () => {
-    onSaveSchedule(mode, milestones);
+    const res = buildValidatedPaymentSchedulePayload(mode, rawMilestones);
+    if (!res.success) {
+      setValidationError(res.error);
+      return;
+    }
+
+    setValidationError(null);
+    onSaveSchedule(mode, res.data);
     setDirty(false);
   };
 
-  const pctSum = milestones.reduce((sum, m) => sum + (Number(m.percentage) || 0), 0);
-  const amtSum = milestones.reduce((sum, m) => sum + (m.amountPaise || 0), 0);
+  // Safe display calculation for helper UI (ignores invalid inputs gracefully for display)
+  const pctSum = rawMilestones.reduce((sum, m) => sum + (Number(m.rawPercentage) || 0), 0);
+  const amtSum = rawMilestones.reduce((sum, m) => {
+    const paise = parseQuotationInrToPaiseExact(m.rawAmount);
+    return sum + (paise || 0);
+  }, 0);
 
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 shadow-sm">
@@ -133,6 +166,12 @@ export function QuotationPaymentScheduleEditor({
         </div>
       </div>
 
+      {validationError && (
+        <div className="mt-3 rounded-lg border border-rose-800/60 bg-rose-950/40 p-3 text-xs text-rose-300">
+          ⚠️ {validationError}
+        </div>
+      )}
+
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead>
@@ -148,56 +187,60 @@ export function QuotationPaymentScheduleEditor({
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-900">
-            {milestones.map((m, idx) => (
-              <tr key={m.id || `ms-${idx}`}>
-                <td className="py-2 pr-2">
-                  <input
-                    type="text"
-                    className="w-full rounded border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 text-neutral-100"
-                    value={m.milestoneName}
-                    onChange={(e) => handleChange(idx, "milestoneName", e.target.value)}
-                  />
-                </td>
-                {mode === "percentage" ? (
+            {rawMilestones.map((m, idx) => {
+              const parsedPaise = parseQuotationInrToPaiseExact(m.rawAmount);
+              const isAmountInvalid = mode === "amount" && m.rawAmount.trim() !== "" && parsedPaise === null;
+
+              return (
+                <tr key={m.id || `ms-${idx}`}>
                   <td className="py-2 pr-2">
                     <input
                       type="text"
-                      className="w-full rounded border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 font-mono text-neutral-100"
-                      value={m.percentage != null ? String(m.percentage) : ""}
-                      onChange={(e) => handleChange(idx, "percentage", e.target.value)}
+                      className="w-full rounded border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 text-neutral-100"
+                      value={m.milestoneName}
+                      onChange={(e) => handleChange(idx, "milestoneName", e.target.value)}
                     />
                   </td>
-                ) : (
-                  <td className="py-2 pr-2">
-                    <input
-                      type="text"
-                      className="w-full rounded border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 font-mono text-neutral-100"
-                      value={m.amountPaise != null ? ((m.amountPaise || 0) / 100).toString() : ""}
-                      onChange={(e) => {
-                        const paise = parseQuotationInrToPaiseExact(e.target.value);
-                        handleChange(idx, "amountPaise", paise);
-                      }}
-                    />
+                  {mode === "percentage" ? (
+                    <td className="py-2 pr-2">
+                      <input
+                        type="text"
+                        className="w-full rounded border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 font-mono text-neutral-100"
+                        value={m.rawPercentage}
+                        onChange={(e) => handleChange(idx, "rawPercentage", e.target.value)}
+                      />
+                    </td>
+                  ) : (
+                    <td className="py-2 pr-2">
+                      <input
+                        type="text"
+                        className={`w-full rounded border px-2.5 py-1.5 font-mono text-neutral-100 bg-neutral-950 ${
+                          isAmountInvalid ? "border-rose-500 focus:border-rose-500" : "border-neutral-800"
+                        }`}
+                        value={m.rawAmount}
+                        onChange={(e) => handleChange(idx, "rawAmount", e.target.value)}
+                      />
+                    </td>
+                  )}
+                  <td className="py-2 font-mono text-neutral-400">
+                    {mode === "amount"
+                      ? parsedPaise !== null
+                        ? formatInrFromPaise(parsedPaise)
+                        : <span className="text-rose-400 text-[11px]">Invalid format</span>
+                      : "Derived on total"}
                   </td>
-                )}
-                <td className="py-2 font-mono text-neutral-400">
-                  {m.amountPaise != null
-                    ? formatInrFromPaise(m.amountPaise)
-                    : mode === "percentage"
-                    ? "Derived on total"
-                    : "Explicit amount"}
-                </td>
-                <td className="py-2 text-right">
-                  <button
-                    type="button"
-                    className="text-xs text-rose-400 hover:underline"
-                    onClick={() => handleRemoveMilestone(idx)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  <td className="py-2 text-right">
+                    <button
+                      type="button"
+                      className="text-xs text-rose-400 hover:underline"
+                      onClick={() => handleRemoveMilestone(idx)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
