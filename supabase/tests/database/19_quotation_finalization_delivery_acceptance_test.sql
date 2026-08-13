@@ -64,6 +64,11 @@ insert into public.contacts (id, display_name, status)
 values ('7b666666-6666-6666-6666-666666666666', 'Test Client 7B', 'active')
 on conflict (id) do nothing;
 
+insert into public.contact_channels (contact_id, channel_type, address_normalized, is_primary)
+values ('7b666666-6666-6666-6666-666666666666', 'phone', '+919876543210', true),
+       ('7b666666-6666-6666-6666-666666666666', 'email', 'client7b@example.com', true)
+on conflict do nothing;
+
 insert into public.leads (
   id,
   submission_reference,
@@ -144,9 +149,6 @@ select save_quotation_draft_items(
 select update_quotation_draft(
   (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid),
   2::bigint,
-  p_client_name_snapshot => 'Test Client 7B'::text,
-  p_client_phone_snapshot => '+919876543210'::text,
-  p_client_email_snapshot => 'client7b@example.com'::text,
   p_tax_profile_id => '7b888888-8888-8888-8888-888888888888'::uuid
 );
 
