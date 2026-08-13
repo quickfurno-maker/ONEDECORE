@@ -119,7 +119,7 @@ select set_config('request.jwt.claim.sub', '7b333333-3333-3333-3333-333333333333
 select is(
   (public.create_quotation_draft(
     '7b777777-7777-7777-7777-777777777777'::uuid,
-    'Commercial Interior Quotation 7B'
+    'Commercial Interior Quotation 7B'::text
   )->>'versionNumber')::integer,
   1,
   'Assigned Sales Exec creates initial draft version 1'
