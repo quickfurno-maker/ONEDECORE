@@ -162,33 +162,29 @@ select replace_quotation_payment_schedule(
   )
 );
 
-create or replace function public.test_attempt_finalize_as(p_actor_id text)
-returns jsonb language plpgsql security definer set search_path = '' as $$
-declare
-  v_quote_id uuid;
-  v_version_id uuid;
-begin
-  select id into v_quote_id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid;
-  select id into v_version_id from public.quotation_versions where quotation_id = v_quote_id and status = 'draft';
-  
-  perform set_config('request.jwt.claim.sub', p_actor_id, true);
-  return public.finalize_quotation_version(v_quote_id, v_version_id, 4);
-end;
-$$;
-
 -- ----------------------------------------------------------------------------
 -- 3. RBAC Enforcement on Finalization
 -- ----------------------------------------------------------------------------
 -- Test: Designer role denied finalization
+select set_config('request.jwt.claim.sub', '7b555555-5555-5555-5555-555555555555', true);
 select throws_ok(
-  'select public.test_attempt_finalize_as(''7b555555-5555-5555-5555-555555555555'')',
+  $$select public.finalize_quotation_version(
+    (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid),
+    (select id from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid) and status = 'draft'),
+    4
+  )$$,
   'FORBIDDEN: Permission quotations.finalize is required.',
   'Designer role is denied quotations.finalize'
 );
 
 -- Test: Unassigned Sales Exec denied finalization
+select set_config('request.jwt.claim.sub', '7b444444-4444-4444-4444-444444444444', true);
 select throws_ok(
-  'select public.test_attempt_finalize_as(''7b444444-4444-4444-4444-444444444444'')',
+  $$select public.finalize_quotation_version(
+    (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid),
+    (select id from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid) and status = 'draft'),
+    4
+  )$$,
   'FORBIDDEN: Sales Executive can only finalize quotations for assigned leads.',
   'Unassigned Sales Executive is denied finalization for unassigned lead'
 );
