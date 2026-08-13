@@ -133,12 +133,52 @@ export async function dispatchWhatsappSendIntent(
     };
   }
 
+  // Secure Ephemeral Content Resolution for quotation links
+  let dispatchBodyText = claim.body_text;
+  if (typeof (admin as { from?: unknown }).from === "function") {
+    const { data: intentRow } = await admin
+      .from("whatsapp_send_intents")
+      .select("secure_content_kind, secure_content_ref")
+      .eq("id", claim.send_intent_id)
+      .single();
+
+    if (intentRow && intentRow.secure_content_kind === "quotation_link" && intentRow.secure_content_ref) {
+      const { data: grant } = await admin
+        .from("quotation_access_grants")
+        .select("id, quotation_version_id, derivation_nonce, revoked_at")
+        .eq("id", intentRow.secure_content_ref)
+        .single();
+
+      if (!grant || grant.revoked_at) {
+        return {
+          outcome: "failed",
+          sendIntentId: claim.send_intent_id,
+          dispatchAttemptId: claim.dispatch_attempt_id,
+          message: "QUOTATION_GRANT_REVOKED: Secure quotation access grant is invalid or revoked.",
+        };
+      }
+
+      const { deriveQuotationCapabilityToken } = await import(
+        "../../quotations/server/quotation-capability.ts"
+      );
+      const derivedToken = deriveQuotationCapabilityToken(
+        grant.quotation_version_id,
+        grant.id,
+        grant.derivation_nonce
+      );
+
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      dispatchBodyText = `Your ONEDECORE commercial quotation is ready. View and accept securely:\n${baseUrl}/q/${derivedToken}`;
+    }
+  }
+
   const providerResult = await provider.dispatchTextMessage({
     phoneNumberId: claim.phone_number_id,
     customerE164: claim.customer_e164,
-    bodyText: claim.body_text,
+    bodyText: dispatchBodyText,
     providerAttemptKey,
   });
+
 
   if (providerResult.kind === "success") {
     const { data: bindRows, error: bindError } = await admin.rpc(

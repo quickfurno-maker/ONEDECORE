@@ -1910,36 +1910,150 @@ export type Database = {
         }
         Relationships: []
       }
+      quotation_access_grants: {
+        Row: {
+          capability_token_hash: string
+          created_at: string
+          derivation_nonce: string
+          id: string
+          issued_by: string
+          quotation_id: string
+          quotation_version_id: string
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+        }
+        Insert: {
+          capability_token_hash: string
+          created_at?: string
+          derivation_nonce: string
+          id?: string
+          issued_by?: string
+          quotation_id: string
+          quotation_version_id: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Update: {
+          capability_token_hash?: string
+          created_at?: string
+          derivation_nonce?: string
+          id?: string
+          issued_by?: string
+          quotation_id?: string
+          quotation_version_id?: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Relationships: []
+      }
+      quotation_acceptances: {
+        Row: {
+          accepted_at: string
+          accepted_by_email: string | null
+          accepted_by_name: string
+          access_grant_id: string
+          created_at: string
+          credited_sales_executive_id: string | null
+          grand_total_paise: number
+          id: string
+          idempotency_key: string | null
+          lead_id: string
+          quotation_id: string
+          quotation_version_id: string
+          taxable_base_paise: number
+        }
+        Insert: {
+          accepted_at?: string
+          accepted_by_email?: string | null
+          accepted_by_name: string
+          access_grant_id: string
+          created_at?: string
+          credited_sales_executive_id?: string | null
+          grand_total_paise: number
+          id?: string
+          idempotency_key?: string | null
+          lead_id: string
+          quotation_id: string
+          quotation_version_id: string
+          taxable_base_paise: number
+        }
+        Update: {
+          accepted_at?: string
+          accepted_by_email?: string | null
+          accepted_by_name?: string
+          access_grant_id?: string
+          created_at?: string
+          credited_sales_executive_id?: string | null
+          grand_total_paise?: number
+          id?: string
+          idempotency_key?: string | null
+          lead_id?: string
+          quotation_id?: string
+          quotation_version_id?: string
+          taxable_base_paise?: number
+        }
+        Relationships: []
+      }
+      quotation_commercial_settings: {
+        Row: {
+          id: string
+          max_discount_percentage: number
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          id?: string
+          max_discount_percentage?: number
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          id?: string
+          max_discount_percentage?: number
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: []
+      }
       quotation_events: {
         Row: {
-          actor_id: string
+          actor_id: string | null
           details: Json
           event_type: string
           id: string
-          lead_id: string
+          lead_id: string | null
           occurred_at: string
+          payload?: Json
           quotation_id: string
           quotation_version_id: string | null
+          version_id?: string | null
         }
         Insert: {
-          actor_id: string
+          actor_id?: string | null
           details?: Json
           event_type: string
           id?: string
-          lead_id: string
+          lead_id?: string | null
           occurred_at?: string
+          payload?: Json
           quotation_id: string
           quotation_version_id?: string | null
+          version_id?: string | null
         }
         Update: {
-          actor_id?: string
+          actor_id?: string | null
           details?: Json
           event_type?: string
           id?: string
-          lead_id?: string
+          lead_id?: string | null
           occurred_at?: string
+          payload?: Json
           quotation_id?: string
           quotation_version_id?: string | null
+          version_id?: string | null
         }
         Relationships: [
           {
@@ -2146,6 +2260,42 @@ export type Database = {
           },
         ]
       }
+      quotation_pdf_documents: {
+        Row: {
+          created_at: string
+          created_by: string
+          file_size_bytes: number | null
+          id: string
+          object_path: string
+          pdf_sha256: string
+          quotation_id: string
+          quotation_version_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          file_size_bytes?: number | null
+          id?: string
+          object_path: string
+          pdf_sha256: string
+          quotation_id: string
+          quotation_version_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          file_size_bytes?: number | null
+          id?: string
+          object_path?: string
+          pdf_sha256?: string
+          quotation_id?: string
+          quotation_version_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       quotation_versions: {
         Row: {
           client_email_snapshot: string | null
@@ -2158,6 +2308,10 @@ export type Database = {
           discount_type: string
           discount_value_paise: number
           exclusions: string[]
+          finalized_at: string | null
+          finalized_by: string | null
+          finalized_content_hash_version: string | null
+          finalized_content_sha256: string | null
           grand_total_paise: number | null
           id: string
           inclusions: string[]
@@ -2170,6 +2324,7 @@ export type Database = {
           status: string
           subtotal_paise: number
           tax_profile_id: string | null
+          tax_profile_snapshot: Json | null
           tax_rate_percentage: number | null
           tax_total_paise: number | null
           taxable_base_paise: number
@@ -2190,6 +2345,10 @@ export type Database = {
           discount_type?: string
           discount_value_paise?: number
           exclusions?: string[]
+          finalized_at?: string | null
+          finalized_by?: string | null
+          finalized_content_hash_version?: string | null
+          finalized_content_sha256?: string | null
           grand_total_paise?: number | null
           id?: string
           inclusions?: string[]
@@ -2202,6 +2361,7 @@ export type Database = {
           status?: string
           subtotal_paise?: number
           tax_profile_id?: string | null
+          tax_profile_snapshot?: Json | null
           tax_rate_percentage?: number | null
           tax_total_paise?: number | null
           taxable_base_paise?: number
@@ -2222,6 +2382,10 @@ export type Database = {
           discount_type?: string
           discount_value_paise?: number
           exclusions?: string[]
+          finalized_at?: string | null
+          finalized_by?: string | null
+          finalized_content_hash_version?: string | null
+          finalized_content_sha256?: string | null
           grand_total_paise?: number | null
           id?: string
           inclusions?: string[]
@@ -2234,6 +2398,7 @@ export type Database = {
           status?: string
           subtotal_paise?: number
           tax_profile_id?: string | null
+          tax_profile_snapshot?: Json | null
           tax_rate_percentage?: number | null
           tax_total_paise?: number | null
           taxable_base_paise?: number
@@ -2997,6 +3162,8 @@ export type Database = {
           reply_to_message_id: string | null
           request_hash: string
           requested_by: string
+          secure_content_kind: string | null
+          secure_content_ref: string | null
           updated_at: string
         }
         Insert: {
@@ -3014,6 +3181,8 @@ export type Database = {
           reply_to_message_id?: string | null
           request_hash: string
           requested_by: string
+          secure_content_kind?: string | null
+          secure_content_ref?: string | null
           updated_at?: string
         }
         Update: {
@@ -3031,6 +3200,8 @@ export type Database = {
           reply_to_message_id?: string | null
           request_hash?: string
           requested_by?: string
+          secure_content_kind?: string | null
+          secure_content_ref?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3164,6 +3335,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_quotation_by_capability: {
+        Args: {
+          p_accepted_by_email?: string | null
+          p_accepted_by_name: string
+          p_capability_token_hash: string
+          p_idempotency_key?: string | null
+        }
+        Returns: Json
+      }
       append_kriti_audit_event: {
         Args: {
           p_details?: Json
@@ -3695,6 +3875,43 @@ export type Database = {
       }
       create_quotation_draft: {
         Args: { p_idempotency_key: string; p_lead_id: string; p_title: string }
+        Returns: Json
+      }
+      create_quotation_revision: {
+        Args: {
+          p_idempotency_key?: string | null
+          p_source_version_id: string
+        }
+        Returns: Json
+      }
+      finalize_quotation_version: {
+        Args: {
+          p_canonical_content_sha256?: string | null
+          p_expected_lock_version: number
+          p_idempotency_key?: string | null
+          p_quotation_id: string
+          p_version_id: string
+        }
+        Returns: Json
+      }
+      get_quotation_by_capability: {
+        Args: {
+          p_capability_token_hash: string
+        }
+        Returns: Json
+      }
+      issue_quotation_access_grant: {
+        Args: {
+          p_capability_token_hash: string
+          p_derivation_nonce: string
+          p_version_id: string
+        }
+        Returns: Json
+      }
+      set_quotation_max_discount: {
+        Args: {
+          p_max_discount: number
+        }
         Returns: Json
       }
       create_sales_target: {

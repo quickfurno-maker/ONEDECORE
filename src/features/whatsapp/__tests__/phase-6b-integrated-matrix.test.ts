@@ -93,11 +93,11 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(m23Blob, FROZEN_HASHES.M23_GIT_BLOB);
   });
 
-  test("repository has M1–M24 baseline, M25 Phase 7A draft foundation, and fail-closed against M26+", () => {
+  test("repository has M1–M25 baseline, M26 Phase 7B commercial quotation finalization, and fail-closed against M27+", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 25, "Migration count must be exactly 25");
+    assert.equal(files.length, 26, "Migration count must be exactly 26");
 
     const phase6c = files.filter((f) => f.startsWith("20260809"));
     assert.equal(phase6c.length, 1);
@@ -115,15 +115,19 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(phase7a_m25.length, 1);
     assert.equal(phase7a_m25[0], "20260812140000_commercial_quotation_draft_foundation.sql");
 
-    const m24Content = readFileSync(
+    const phase7b_m26 = files.filter((f) => f.startsWith("20260813"));
+    assert.equal(phase7b_m26.length, 1);
+    assert.equal(phase7b_m26[0], "20260813140000_commercial_quotation_finalization_delivery_acceptance.sql");
+
+    const m26Content = readFileSync(
       join(root, "supabase/migrations", phase6d_m24[0]),
       "utf8"
     );
-    assert.match(m24Content, /check_in_attendance/);
-    assert.match(m24Content, /check_out_attendance/);
+    assert.match(m26Content, /check_in_attendance/);
+    assert.match(m26Content, /check_out_attendance/);
 
-    const m25Plus = files.filter((f) => f > "20260812140000_commercial_quotation_draft_foundation.sql");
-    assert.equal(m25Plus.length, 0, "No M26+ migration files allowed");
+    const m26Plus = files.filter((f) => f > "20260813140000_commercial_quotation_finalization_delivery_acceptance.sql");
+    assert.equal(m26Plus.length, 0, "No M27+ migration files allowed");
   });
 });
 

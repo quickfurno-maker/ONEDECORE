@@ -17,6 +17,9 @@ import {
   saveQuotationDraftItemsAction,
   updateQuotationDraftAction,
 } from "../server/quotation-draft-actions";
+import { finalizeQuotationDraftAction } from "../server/quotation-finalization-actions";
+import { sendQuotationAction } from "../server/quotation-send-actions";
+import { createQuotationRevisionAction } from "../server/quotation-acceptance-actions";
 import { QuotationDiscountCard } from "./QuotationDiscountCard";
 import { QuotationHeaderCard } from "./QuotationHeaderCard";
 import { QuotationPaymentScheduleEditor } from "./QuotationPaymentScheduleEditor";
@@ -332,12 +335,85 @@ export function QuotationDraftEditor({
           {/* Commercial Summary Card */}
           <QuotationTotalsSummary version={version} />
 
-          {/* Draft Actions & Governance Status */}
+          {/* Commercial Actions & Governance Status */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 shadow-sm">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-              Draft Actions
+              Commercial Actions (Phase 7B)
             </h4>
             <div className="mt-3 space-y-2">
+              {version.status === "draft" && (
+                <button
+                  type="button"
+                  disabled={saving}
+                  className="w-full rounded-lg bg-amber-500 px-4 py-2.5 text-xs font-bold text-neutral-950 hover:bg-amber-400 disabled:opacity-50 transition-colors shadow-sm"
+                  onClick={async () => {
+                    setSaving(true);
+                    setMessage(null);
+                    const res = await finalizeQuotationDraftAction({
+                      quotationId: draft.quotationId,
+                      versionId: version.id,
+                      expectedLockVersion: version.lockVersion,
+                    });
+                    setSaving(false);
+                    if (!res.success) {
+                      setMessage({ type: "error", text: res.message || "Finalization failed." });
+                    } else {
+                      setMessage({ type: "success", text: "Quotation version finalized successfully!" });
+                      handleRefreshDraft();
+                    }
+                  }}
+                >
+                  🔒 Finalize Quotation Version
+                </button>
+              )}
+
+              {(version.status as string) === "finalized" && (
+                <>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors"
+                    onClick={async () => {
+                      setSaving(true);
+                      setMessage(null);
+                      const res = await sendQuotationAction({
+                        quotationId: draft.quotationId,
+                        versionId: version.id,
+                      });
+                      setSaving(false);
+                      if (!res.success) {
+                        setMessage({ type: "error", text: res.message || "Send failed." });
+                      } else {
+                        setMessage({ type: "success", text: "Secure WhatsApp send intent enqueued and dispatched!" });
+                        handleRefreshDraft();
+                      }
+                    }}
+                  >
+                    💬 Send via Secure WhatsApp
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={saving}
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-xs font-semibold text-neutral-200 hover:bg-neutral-700"
+                    onClick={async () => {
+                      setSaving(true);
+                      setMessage(null);
+                      const res = await createQuotationRevisionAction({ sourceVersionId: version.id });
+                      setSaving(false);
+                      if (!res.success) {
+                        setMessage({ type: "error", text: res.message || "Revision creation failed." });
+                      } else {
+                        setMessage({ type: "success", text: "New draft revision created!" });
+                        handleRefreshDraft();
+                      }
+                    }}
+                  >
+                    📝 Create New Draft Revision
+                  </button>
+                </>
+              )}
+
               <button
                 type="button"
                 disabled={saving}
@@ -347,22 +423,24 @@ export function QuotationDraftEditor({
                 Refresh Canonical State
               </button>
 
-              <button
-                type="button"
-                disabled={saving}
-                className="w-full rounded-lg border border-rose-900/80 bg-rose-950/40 px-4 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-900/60 disabled:opacity-50"
-                onClick={handleArchive}
-              >
-                Archive Draft
-              </button>
+              {version.status === "draft" && (
+                <button
+                  type="button"
+                  disabled={saving}
+                  className="w-full rounded-lg border border-rose-900/80 bg-rose-950/40 px-4 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-900/60 disabled:opacity-50"
+                  onClick={handleArchive}
+                >
+                  Archive Draft
+                </button>
+              )}
             </div>
 
             <div className="mt-4 rounded-lg bg-neutral-950 p-3 text-[11px] text-neutral-400 border border-neutral-800/80">
-              <p className="font-semibold text-neutral-300">Phase 7A Boundaries Active:</p>
+              <p className="font-semibold text-neutral-300">Phase 7B Active Boundaries:</p>
               <ul className="mt-1 space-y-0.5 list-disc list-inside">
-                <li>V1 Direct Sales Executive Authority (ADR-0022)</li>
-                <li>No Approval Workflow / No Manager Override</li>
-                <li>No Finalize, PDF, WhatsApp, or Client Link in 7A</li>
+                <li>Server-Authoritative Immutable Finalization</li>
+                <li>Secure Ephemeral WhatsApp Link (0 Plaintext Token)</li>
+                <li>Client Acceptance drives Atomic Closed-Won</li>
               </ul>
             </div>
           </div>

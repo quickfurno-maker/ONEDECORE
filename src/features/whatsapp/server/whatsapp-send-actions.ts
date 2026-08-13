@@ -1,5 +1,6 @@
 "use server";
 
+import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { WHATSAPP_SERVICE_PURPOSE_CODE } from "../contracts/inbox-permissions.ts";
@@ -154,6 +155,78 @@ export async function createWhatsappServiceSendIntentAction(
   } catch (error) {
     return toSendActionState(error);
   }
+}
+
+export async function createQuotationWhatsappSendIntentAction(params: {
+  customerE164: string;
+  bodyText: string;
+  leadId: string;
+  secureContentKind: string;
+  secureContentRef: string;
+}): Promise<{ success: boolean; sendIntentId?: string; message?: string }> {
+  const { createAdminClient } = await import("@/lib/supabase/service-role");
+  const admin = createAdminClient();
+
+  // Find or create whatsapp conversation for this customer
+  const { data: existingConv } = await admin
+    .from("whatsapp_conversations")
+    .select("id")
+    .eq("customer_e164", params.customerE164)
+    .single();
+
+  let convId = existingConv?.id;
+
+  if (!convId) {
+    // Fetch default phone number
+    const { data: phoneRow } = await admin
+      .from("whatsapp_phone_numbers")
+      .select("id")
+      .limit(1)
+      .single();
+
+    const phoneId = phoneRow?.id || crypto.randomUUID();
+
+    const { data: newConv, error: convErr } = await admin
+      .from("whatsapp_conversations")
+      .insert({
+        customer_e164: params.customerE164,
+        lead_id: params.leadId,
+        phone_number_id: phoneId,
+      })
+      .select("id")
+      .single();
+
+    if (convErr || !newConv) {
+      return { success: false, message: convErr?.message || "Could not initialize WhatsApp conversation." };
+    }
+    convId = newConv.id;
+  }
+
+  const { data: intentRow, error: insertErr } = await admin
+    .from("whatsapp_send_intents")
+    .insert({
+      conversation_id: convId,
+      idempotency_key: crypto.randomUUID(),
+      purpose_code: WHATSAPP_SERVICE_PURPOSE_CODE,
+      body_text: params.bodyText,
+      eligibility_code: "PASSED",
+      eligibility_snapshot: {},
+      request_hash: crypto.createHash("sha256").update(params.bodyText).digest("hex"),
+      requested_by: "00000000-0000-0000-0000-000000000000",
+      secure_content_kind: params.secureContentKind,
+      secure_content_ref: params.secureContentRef,
+    })
+    .select("id")
+    .single();
+
+  if (insertErr || !intentRow) {
+    return { success: false, message: insertErr?.message || "Failed to create WhatsApp send intent." };
+  }
+
+  return {
+    success: true,
+    sendIntentId: intentRow.id,
+  };
 }
 
 export { INITIAL_WHATSAPP_SEND_ACTION_STATE };
