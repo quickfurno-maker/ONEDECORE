@@ -60,8 +60,8 @@ select '7b555555-5555-5555-5555-555555555555', id from public.roles where code =
 on conflict do nothing;
 
 -- Create synthetic contact & lead
-insert into public.contacts (id, phone_e164, full_name, email, created_by)
-values ('7b666666-6666-6666-6666-666666666666', '+919876543210', 'Test Client 7B', 'client7b@example.com', '7b111111-1111-1111-1111-111111111111')
+insert into public.contacts (id, display_name, status)
+values ('7b666666-6666-6666-6666-666666666666', 'Test Client 7B', 'active')
 on conflict (id) do nothing;
 
 insert into public.leads (
