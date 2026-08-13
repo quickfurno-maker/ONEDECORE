@@ -6,42 +6,24 @@
 -- ----------------------------------------------------------------------------
 -- 1. System Permissions: Register quotations.finalize and quotations.send
 -- ----------------------------------------------------------------------------
-INSERT INTO public.system_permissions (permission_key, module_name, description)
-VALUES 
-  ('quotations.finalize', 'quotations', 'Allows finalizing a draft commercial quotation into an immutable version'),
-  ('quotations.send', 'quotations', 'Allows sending a finalized quotation to a client via secure WhatsApp link')
-ON CONFLICT (permission_key) DO NOTHING;
+insert into public.permissions (code, name, description, is_system, is_active) values
+  ('quotations.finalize', 'Finalize Commercial Quotations', 'Allows finalizing a draft commercial quotation into an immutable version', true, true),
+  ('quotations.send', 'Send Commercial Quotations', 'Allows sending a finalized quotation to a client via secure WhatsApp link', true, true)
+on conflict (code) do update set
+  name = excluded.name,
+  description = excluded.description,
+  is_system = true,
+  is_active = true;
 
--- Grant to canonical system roles: Super Admin, Sales Manager, Sales Executive
--- (PM, Designer, and Kriti receive 0 quotation finalize/send authority)
-DO $$
-DECLARE
-  v_role_id uuid;
-BEGIN
-  -- Super Admin
-  SELECT id INTO v_role_id FROM public.system_roles WHERE role_key = 'super_admin';
-  IF v_role_id IS NOT NULL THEN
-    INSERT INTO public.role_permissions (role_id, permission_id)
-    SELECT v_role_id, id FROM public.system_permissions WHERE permission_key IN ('quotations.finalize', 'quotations.send')
-    ON CONFLICT DO NOTHING;
-  END IF;
-
-  -- Sales Manager
-  SELECT id INTO v_role_id FROM public.system_roles WHERE role_key = 'sales_manager';
-  IF v_role_id IS NOT NULL THEN
-    INSERT INTO public.role_permissions (role_id, permission_id)
-    SELECT v_role_id, id FROM public.system_permissions WHERE permission_key IN ('quotations.finalize', 'quotations.send')
-    ON CONFLICT DO NOTHING;
-  END IF;
-
-  -- Sales Executive
-  SELECT id INTO v_role_id FROM public.system_roles WHERE role_key = 'sales_executive';
-  IF v_role_id IS NOT NULL THEN
-    INSERT INTO public.role_permissions (role_id, permission_id)
-    SELECT v_role_id, id FROM public.system_permissions WHERE permission_key IN ('quotations.finalize', 'quotations.send')
-    ON CONFLICT DO NOTHING;
-  END IF;
-END $$;
+insert into public.role_permissions (role_id, permission_id)
+select r.id, p.id
+from public.roles r
+cross join public.permissions p
+where r.is_system = true
+  and p.is_system = true
+  and p.code in ('quotations.finalize', 'quotations.send')
+  and r.code in ('super_admin', 'sales_manager', 'sales_executive', 'management', 'sales')
+on conflict (role_id, permission_id) do nothing;
 
 -- ----------------------------------------------------------------------------
 -- 2. Commercial Settings Table (Singleton, NO default seed)
