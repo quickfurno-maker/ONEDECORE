@@ -285,7 +285,7 @@ select is(
   (public.issue_quotation_access_grant(
     (select id from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid) and version_number = 1),
     'nonce_7b_01',
-    '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'
+    'd86e306dc2c559b331a0572a024c325ef442003faa73017ea13c9f00180b0ab1'
   )->>'success'),
   'true',
   'Assigned Sales Exec issues quotation access grant for finalized version 1'
@@ -294,7 +294,7 @@ select is(
 select set_config('role', 'postgres', true);
 -- Verify grant stored in quotation_access_grants with SHA-256 token digest
 select is(
-  (select count(*)::integer from public.quotation_access_grants where capability_token_hash = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'),
+  (select count(*)::integer from public.quotation_access_grants where capability_token_hash = 'd86e306dc2c559b331a0572a024c325ef442003faa73017ea13c9f00180b0ab1'),
   1,
   'Quotation access grant record exists with matching SHA-256 capability_token_hash'
 );
@@ -334,7 +334,7 @@ select is(
 -- Verify previous access grant was automatically revoked upon revision creation
 select set_config('role', 'postgres', true);
 select isnt(
-  (select revoked_at from public.quotation_access_grants where capability_token_hash = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'),
+  (select revoked_at from public.quotation_access_grants where capability_token_hash = 'd86e306dc2c559b331a0572a024c325ef442003faa73017ea13c9f00180b0ab1'),
   null,
   'Creating new draft revision automatically revokes active access grant for version 1'
 );
@@ -409,19 +409,18 @@ select set_config('role', 'authenticated', true);
 select issue_quotation_access_grant(
   (select id from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid) and version_number = 2),
   'nonce_7b_02',
-  '9d7087f6c6521526cef009ce5eff26ece278b0d9840d5cc9b92f7f3bc559b029'
+  '844cf259ca708252071dc80e0c66a0fc7654bfe947dea9c0b3f018120d07f819'
 );
 
 -- ----------------------------------------------------------------------------
 -- 8. Client Acceptance & Atomic Closed-Won CRM Integration
 -- ----------------------------------------------------------------------------
 -- Direct pipeline update guard test: Direct UPDATE to leads.status without transition context fails
-select set_config('request.jwt.claim.sub', '7b333333-3333-3333-3333-333333333333', true);
-select set_config('role', 'authenticated', true);
+select set_config('role', 'postgres', true);
 
 select throws_ok(
   $$update public.leads set status = 'closed_won' where id = '7b777777-7777-7777-7777-777777777777'::uuid$$,
-  '42501',
+  'Direct lead pipeline status update is forbidden by trg_leads_no_direct_pipeline_update',
   'Direct lead pipeline status update is forbidden by trg_leads_no_direct_pipeline_update'
 );
 
