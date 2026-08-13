@@ -1,7 +1,13 @@
 "use server";
+import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { hashCapabilityToken } from "./quotation-capability";
+
+interface CapabilityRpcResult {
+  success?: boolean;
+  message?: string;
+  data?: Record<string, unknown>;
+}
 
 export async function getQuotationByCapabilityAction(token: string): Promise<{
   success: boolean;
@@ -9,13 +15,14 @@ export async function getQuotationByCapabilityAction(token: string): Promise<{
   data?: Record<string, unknown>;
 }> {
   const supabase = await createClient();
-  const tokenHash = hashCapabilityToken(token);
 
   const { data, error } = await supabase.rpc("get_quotation_by_capability", {
-    p_capability_token_hash: tokenHash,
+    p_capability_token: token,
   });
 
-  if (error || !data) {
+  const result = data as unknown as CapabilityRpcResult | null;
+
+  if (error || !result || !result.success) {
     return {
       success: false,
       message: "QUOTATION_NOT_FOUND_OR_FORBIDDEN: Invalid or expired quotation link.",
@@ -24,7 +31,7 @@ export async function getQuotationByCapabilityAction(token: string): Promise<{
 
   return {
     success: true,
-    data: data as unknown as Record<string, unknown>,
+    data: result.data,
   };
 }
 
@@ -32,22 +39,18 @@ export async function acceptQuotationByCapabilityAction(params: {
   token: string;
   clientName: string;
   clientEmail?: string;
-  idempotencyKey?: string;
 }): Promise<{
   success: boolean;
   message?: string;
-  acceptanceId?: string;
   alreadyAccepted?: boolean;
   acceptedAt?: string;
 }> {
   const supabase = await createClient();
-  const tokenHash = hashCapabilityToken(params.token);
 
   const { data, error } = await supabase.rpc("accept_quotation_by_capability", {
-    p_capability_token_hash: tokenHash,
+    p_capability_token: params.token,
     p_accepted_by_name: params.clientName,
     p_accepted_by_email: params.clientEmail || null,
-    p_idempotency_key: params.idempotencyKey || null,
   });
 
   if (error || !data) {
@@ -59,10 +62,10 @@ export async function acceptQuotationByCapabilityAction(params: {
 
   const resultObj = data as Record<string, unknown>;
   return {
-    success: true,
-    acceptanceId: typeof resultObj.acceptance_id === "string" ? resultObj.acceptance_id : undefined,
-    alreadyAccepted: Boolean(resultObj.already_accepted),
-    acceptedAt: typeof resultObj.accepted_at === "string" ? resultObj.accepted_at : undefined,
+    success: Boolean(resultObj.success),
+    message: String(resultObj.message || ""),
+    alreadyAccepted: Boolean(resultObj.idempotent_replay),
+    acceptedAt: resultObj.accepted_at ? String(resultObj.accepted_at) : undefined,
   };
 }
 
@@ -91,8 +94,9 @@ export async function createQuotationRevisionAction(params: {
 
   const resultObj = data as Record<string, unknown>;
   return {
-    success: true,
-    newVersionId: typeof resultObj.new_version_id === "string" ? resultObj.new_version_id : undefined,
-    versionNumber: typeof resultObj.version_number === "number" ? resultObj.version_number : undefined,
+    success: Boolean(resultObj.success),
+    message: String(resultObj.message || ""),
+    newVersionId: resultObj.version_id ? String(resultObj.version_id) : undefined,
+    versionNumber: resultObj.version_number ? Number(resultObj.version_number) : undefined,
   };
 }

@@ -1914,9 +1914,11 @@ export type Database = {
         Row: {
           capability_token_hash: string
           created_at: string
+          created_by: string | null
           derivation_nonce: string
+          expires_at: string | null
           id: string
-          issued_by: string
+          issued_by: string | null
           quotation_id: string
           quotation_version_id: string
           revocation_reason: string | null
@@ -1926,9 +1928,11 @@ export type Database = {
         Insert: {
           capability_token_hash: string
           created_at?: string
+          created_by?: string | null
           derivation_nonce: string
+          expires_at?: string | null
           id?: string
-          issued_by?: string
+          issued_by?: string | null
           quotation_id: string
           quotation_version_id: string
           revocation_reason?: string | null
@@ -1938,9 +1942,11 @@ export type Database = {
         Update: {
           capability_token_hash?: string
           created_at?: string
+          created_by?: string | null
           derivation_nonce?: string
+          expires_at?: string | null
           id?: string
-          issued_by?: string
+          issued_by?: string | null
           quotation_id?: string
           quotation_version_id?: string
           revocation_reason?: string | null
@@ -3337,10 +3343,19 @@ export type Database = {
     Functions: {
       accept_quotation_by_capability: {
         Args: {
+          p_capability_token?: string
           p_accepted_by_email?: string | null
           p_accepted_by_name: string
-          p_capability_token_hash: string
+          p_capability_token_hash?: string
           p_idempotency_key?: string | null
+        }
+        Returns: Json
+      }
+      admin_create_quotation_tax_profile: {
+        Args: {
+          p_code: string
+          p_display_name: string
+          p_rate_percentage: number
         }
         Returns: Json
       }
@@ -3896,7 +3911,8 @@ export type Database = {
       }
       get_quotation_by_capability: {
         Args: {
-          p_capability_token_hash: string
+          p_capability_token?: string
+          p_capability_token_hash?: string
         }
         Returns: Json
       }

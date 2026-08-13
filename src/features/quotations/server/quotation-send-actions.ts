@@ -1,4 +1,5 @@
 "use server";
+import "server-only";
 
 import crypto from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
@@ -126,21 +127,27 @@ export async function sendQuotationAction(params: {
     console.warn("WhatsApp dispatch warning (intent enqueued):", dispatchErr);
   }
 
-  // Log send_requested audit event
-  await supabase.from("quotation_events").insert({
-    quotation_id: params.quotationId,
-    quotation_version_id: params.versionId,
-    event_type: "quotation.send_requested",
-    payload: {
-      send_intent_id: sendIntentId,
-      grant_id: grantId,
-      version_number: versionData.version_number,
-    },
-  });
+  // Log send_requested audit event using canonical quotation_events schema
+  const { data: userAuth } = await supabase.auth.getUser();
+  if (userAuth?.user?.id) {
+    await supabase.from("quotation_events").insert({
+      quotation_id: params.quotationId,
+      quotation_version_id: params.versionId,
+      lead_id: leadId,
+      event_type: "quotation.send_requested",
+      actor_id: userAuth.user.id,
+      details: {
+        send_intent_id: sendIntentId,
+        grant_id: grantId,
+        version_number: versionData.version_number,
+      },
+    });
+  }
 
   return {
     success: true,
     sendIntentId,
     grantId,
+    message: "Commercial quotation sent via secure WhatsApp link.",
   };
 }

@@ -14,14 +14,10 @@ export function deriveQuotationCapabilityToken(
 ): string {
   const secret = customSecret || process.env.QUOTATION_CAPABILITY_SECRET;
 
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('QUOTATION_CAPABILITY_SECRET_MISSING: Server capability secret is required in production.');
-    }
-    // Fail-safe deterministic key for local development and testing
-    const fallbackSecret = 'onedecore-dev-capability-secret-32-bytes-minimum!!';
-    const payload = `odq-capability-v1|${grantId}|${versionId}|${nonce}`;
-    return crypto.createHmac('sha256', fallbackSecret).update(payload).digest('hex');
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      'QUOTATION_CAPABILITY_SECRET_MISSING: QUOTATION_CAPABILITY_SECRET environment variable is missing or shorter than 32 bytes.'
+    );
   }
 
   const payload = `odq-capability-v1|${grantId}|${versionId}|${nonce}`;

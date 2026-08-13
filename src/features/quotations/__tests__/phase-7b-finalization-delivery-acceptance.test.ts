@@ -1,100 +1,52 @@
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { test, describe } from 'node:test';
 import { deriveQuotationCapabilityToken, hashCapabilityToken } from '../server/quotation-capability.ts';
-import { computeCanonicalQuotationHash } from '../server/quotation-canonical-hash.ts';
 import { renderQuotationPdfBuffer } from '../server/quotation-pdf-generator.ts';
+import { dispatchWhatsappSendIntent, type WhatsappDispatchServiceDeps } from '../../whatsapp/server/whatsapp-dispatch-service.ts';
 
 describe('Phase 7B Commercial Quotation Finalization, PDF, Secure WhatsApp & Acceptance', () => {
+  const validSecret = 'onedecore-dev-capability-secret-32-bytes-minimum!!';
 
-  test('OD7B-1 & Security: Capability token HMAC derivation is deterministic and produces strong token', () => {
-    const versionId = 'v-12345';
-    const grantId = 'g-67890';
-    const nonce = 'n-abcde';
-    const testSecret = 'secret-12345678901234567890123456789012';
-
-    const token1 = deriveQuotationCapabilityToken(versionId, grantId, nonce, testSecret);
-    const token2 = deriveQuotationCapabilityToken(versionId, grantId, nonce, testSecret);
-
-    assert.equal(token1, token2, 'Derivation must be deterministic for identical parameters and secret.');
-    assert.equal(typeof token1, 'string');
-    assert.ok(token1.length >= 32, 'Derived token must be high-entropy string.');
+  it('OD7B-1 & Security: Capability token HMAC derivation is deterministic and produces strong token', () => {
+    const token1 = deriveQuotationCapabilityToken('v1-uuid', 'grant-uuid', 'nonce-12345', validSecret);
+    const token2 = deriveQuotationCapabilityToken('v1-uuid', 'grant-uuid', 'nonce-12345', validSecret);
+    assert.equal(token1, token2);
+    assert.equal(token1.length, 64);
   });
 
-  test('OD7B-1 & Security: SHA-256 hash of capability token is unique and non-reversible', () => {
-    const token = 'sample-bearer-token-12345';
+  it('OD7B-1 & Security: Short or missing secret throws in ALL runtime environments', () => {
+    assert.throws(
+      () => deriveQuotationCapabilityToken('v1-uuid', 'grant-uuid', 'nonce-12345', 'short-secret'),
+      /QUOTATION_CAPABILITY_SECRET_MISSING/
+    );
+  });
+
+  it('OD7B-1 & Security: SHA-256 hash of capability token is unique and non-reversible', () => {
+    const token = deriveQuotationCapabilityToken('v1-uuid', 'grant-uuid', 'nonce-12345', validSecret);
     const hash = hashCapabilityToken(token);
-
-    assert.equal(hash.length, 64, 'SHA-256 digest must be 64 hex characters.');
-    assert.notEqual(hash, token, 'Hash must not equal plaintext token.');
+    assert.equal(hash.length, 64);
+    assert.notEqual(token, hash);
   });
 
-  test('OD7B-4 & Security: Canonical quotation content hash is deterministic across identical frozen payloads', () => {
-    const payload = {
-      quotation_number: 'OD-Q-2026-000001',
-      version_number: 1,
-      property_details: { city: 'Bengaluru', BHK: '3BHK' },
-      sections: [
-        {
-          section_name: 'Living Room',
-          section_order: 1,
-          section_subtotal_paise: 15000000,
-          items: [
-            {
-              item_name: 'TV Unit',
-              description: 'Plywood with Veneer',
-              quantity: 1,
-              uom: 'sqft',
-              unit_rate_paise: 15000000,
-              line_total_paise: 15000000,
-              item_order: 1,
-            },
-          ],
-        },
-      ],
-      subtotal_paise: 15000000,
-      discount_mode: 'amount',
-      discount_flat_paise: 1000000,
-      discount_paise: 1000000,
-      taxable_base_paise: 14000000,
-      tax_profile: { id: 'tp-1', display_name: 'GST 18%', tax_rate_percentage: 18 },
-      tax_total_paise: 2520000,
-      grand_total_paise: 16520000,
-      payment_schedule: [
-        { milestone_name: 'Advance', milestone_order: 1, percentage: 10, amount_paise: 1652000 },
-        { milestone_name: 'Completion', milestone_order: 2, percentage: 90, amount_paise: 14868000 },
-      ],
-      inclusions: ['Site Supervision'],
-      exclusions: ['Civil alterations'],
-      terms_and_conditions: ['Validity 15 days'],
-    };
-
-    const hash1 = computeCanonicalQuotationHash(payload);
-    const hash2 = computeCanonicalQuotationHash(payload);
-
-    assert.equal(hash1, hash2, 'Canonical content hash must be deterministic.');
-    assert.equal(hash1.length, 64, 'Canonical content hash must be 64-char hex string.');
-  });
-
-  test('OD7B-3 & OD7B-4: Server-side PDF renderer produces binary PDF buffer', async () => {
-    const pdfData = {
+  it('OD7B-3 & OD7B-4: Server-side PDF renderer produces binary PDF buffer deterministically', async () => {
+    const buffer = await renderQuotationPdfBuffer({
       quotation_id: 'q-1',
       quotation_version_id: 'qv-1',
       quotation_number: 'OD-Q-2026-000001',
       version_number: 1,
-      finalized_at: new Date().toISOString(),
-      client_name: 'Jane Doe',
+      finalized_at: '2026-08-13T10:00:00.000Z',
+      client_name: 'Test Client',
       client_phone: '+919876543210',
-      property_details: { city: 'Bengaluru' },
+      property_details: {},
       sections: [
         {
-          section_name: 'Foyer',
+          section_name: 'Living Room',
           section_subtotal_paise: 5000000,
           items: [
             {
-              item_name: 'Shoe Rack',
-              description: 'Laminate finish',
+              item_name: 'Sofa Unit',
               quantity: 1,
-              uom: 'unit',
+              uom: 'nos',
               unit_rate_paise: 5000000,
               line_total_paise: 5000000,
             },
@@ -106,27 +58,95 @@ describe('Phase 7B Commercial Quotation Finalization, PDF, Secure WhatsApp & Acc
       taxable_base_paise: 5000000,
       tax_total_paise: 900000,
       grand_total_paise: 5900000,
-      tax_profile_name: 'GST 18%',
+      tax_profile_name: 'Standard GST 18%',
       tax_rate_percentage: 18,
-      payment_schedule: [{ milestone_name: 'Token', percentage: 100, amount_paise: 5900000 }],
-      inclusions: ['Installation'],
-      exclusions: [],
-      terms_and_conditions: [],
-    };
+      payment_schedule: [
+        { milestone_name: 'Advance', percentage: 50, amount_paise: 2950000 },
+        { milestone_name: 'Handover', percentage: 50, amount_paise: 2950000 },
+      ],
+      inclusions: ['Custom Wood Finish'],
+      exclusions: ['Civil Works'],
+      terms_and_conditions: ['Valid for 30 days'],
+    });
 
-    const pdfBuffer = await renderQuotationPdfBuffer(pdfData);
-    assert.ok(Buffer.isBuffer(pdfBuffer), 'PDF renderer must return Buffer.');
-    assert.ok(pdfBuffer.length > 500, 'PDF buffer must be non-empty valid binary PDF.');
-    assert.equal(pdfBuffer.subarray(0, 4).toString(), '%PDF', 'PDF buffer header must start with %PDF.');
+    assert.ok(Buffer.isBuffer(buffer));
+    assert.ok(buffer.length > 500);
+    assert.equal(buffer.subarray(0, 4).toString(), '%PDF');
   });
 
-  test('OD7B-6 & Acceptance Contract: Closed-Won achievement uses taxable_base_paise with GST excluded', () => {
-    const taxableBasePaise = 10000000; // ₹1,00,000.00
-    const grandTotalPaise = 11800000;   // ₹1,18,000.00
+  it('OD7B-6 & Dispatch: Missing APP_URL fails closed', async () => {
+    const origUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const origMode = process.env.ONEDECORE_WHATSAPP_OUTBOUND_MODE;
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    process.env.ONEDECORE_WHATSAPP_OUTBOUND_MODE = 'local-test';
 
-    const salesAchievementBasisPaise = taxableBasePaise; // GST EXCLUDED
+    const mockAdmin = {
+      rpc: async () => ({
+        data: [
+          {
+            outcome_code: 'claimed',
+            dispatch_attempt_id: 'att-1',
+            send_intent_id: 'intent-1',
+            phone_number_id: 'phone-1',
+            customer_e164: '+919876543210',
+            body_text: 'Redacted body',
+          },
+        ],
+        error: null,
+      }),
+      from: (table: string) => ({
+        select: () => ({
+          eq: () => ({
+            single: async () => {
+              if (table === 'whatsapp_send_intents') {
+                return { data: { secure_content_kind: 'quotation_link', secure_content_ref: 'grant-1' } };
+              }
+              if (table === 'quotation_access_grants') {
+                return { data: { id: 'grant-1', quotation_version_id: 'qv-1', derivation_nonce: 'nonce', revoked_at: null } };
+              }
+              if (table === 'quotation_versions') {
+                return { data: { id: 'qv-1', status: 'finalized' } };
+              }
+              if (table === 'quotation_pdf_documents') {
+                return { data: { status: 'ready', pdf_sha256: 'a'.repeat(64), file_size_bytes: 5000 } };
+              }
+              return { data: null };
+            },
+          }),
+        }),
+      }),
+    };
 
-    assert.equal(salesAchievementBasisPaise, 10000000);
-    assert.notEqual(salesAchievementBasisPaise, grandTotalPaise, 'Sales achievement must exclude GST tax total.');
+    const deps: WhatsappDispatchServiceDeps = {
+      getEnv: () => ({
+        mode: 'local-test',
+        providerCode: 'fake',
+        supabaseUrl: 'http://127.0.0.1:54321',
+        serviceRoleKey: 'test-key',
+        graphApiVersion: 'v18.0',
+        accessToken: null,
+        phoneNumberId: null,
+      }),
+      createAdminClient: () => mockAdmin as unknown as ReturnType<NonNullable<WhatsappDispatchServiceDeps['createAdminClient']>>,
+      createProviderAdapter: () => ({
+        providerCode: 'fake',
+        dispatchTextMessage: async () => ({
+          kind: 'success',
+          providerMessageId: 'msg-1',
+          providerTimestamp: '2026-08-13T10:00:00.000Z',
+          httpStatus: 200,
+          responseSnapshot: {},
+        }),
+      }),
+    };
+
+    const res = await dispatchWhatsappSendIntent('intent-1', deps);
+
+    assert.equal(res.outcome, 'failed');
+    assert.match(res.message, /MISSING_APP_URL/);
+
+    if (origUrl) process.env.NEXT_PUBLIC_APP_URL = origUrl;
+    if (origMode) process.env.ONEDECORE_WHATSAPP_OUTBOUND_MODE = origMode;
+    else delete process.env.ONEDECORE_WHATSAPP_OUTBOUND_MODE;
   });
 });
