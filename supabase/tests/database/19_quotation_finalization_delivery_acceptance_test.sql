@@ -243,8 +243,9 @@ select throws_ok(
 );
 
 -- Test: Immutability trigger blocks updating finalized version
+select set_config('role', 'postgres', true);
 select throws_ok(
-  $$update public.quotation_versions set title = 'Mutated Title' where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid) and version_number = 1$$,
+  $$update public.quotation_versions set title = 'Mutated Title' where id = (select ver_id from temp_test_ids)$$,
   'QUOTATION_VERSION_IMMUTABLE: Cannot update or delete a finalized/archived quotation version.',
   'Immutability trigger blocks updating a finalized quotation version'
 );
@@ -290,6 +291,7 @@ select is(
   'Assigned Sales Exec issues quotation access grant for finalized version 1'
 );
 
+select set_config('role', 'postgres', true);
 -- Verify grant stored in quotation_access_grants with SHA-256 token digest
 select is(
   (select count(*)::integer from public.quotation_access_grants where capability_token_hash = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'),
@@ -330,11 +332,15 @@ select is(
 );
 
 -- Verify previous access grant was automatically revoked upon revision creation
+select set_config('role', 'postgres', true);
 select isnt(
   (select revoked_at from public.quotation_access_grants where capability_token_hash = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'),
   null,
   'Creating new draft revision automatically revokes active access grant for version 1'
 );
+
+select set_config('request.jwt.claim.sub', '7b333333-3333-3333-3333-333333333333', true);
+select set_config('role', 'authenticated', true);
 
 -- Finalize version 2 and register PDF
 select save_quotation_draft_items(
@@ -428,6 +434,7 @@ select is(
   'Client accepts commercial quotation via capability token'
 );
 
+select set_config('role', 'postgres', true);
 -- Verify CRM Lead status was mutated atomically to closed_won
 select is(
   (select status from public.leads where id = '7b777777-7777-7777-7777-777777777777'::uuid),
@@ -463,6 +470,7 @@ select is(
   'status.changed activity recorded in lead_activities interaction log'
 );
 
+select set_config('role', 'anon', true);
 -- Test: Idempotent replay of same quotation acceptance
 select is(
   (public.accept_quotation_by_capability('test_token_7b_02', 'Test Client 7B', 'client7b@example.com')->>'alreadyAccepted'),
@@ -499,6 +507,7 @@ select throws_ok(
   'Direct INSERT on quotation_access_grants is denied to authenticated users'
 );
 
+select set_config('role', 'postgres', true);
 -- Verify no plaintext capability token exists in database text/json columns
 select is(
   (select count(*)::integer from public.quotation_access_grants where capability_token_hash = 'test_token_7b_02' or derivation_nonce = 'test_token_7b_02'),
