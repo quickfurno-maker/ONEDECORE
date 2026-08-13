@@ -90,9 +90,9 @@ insert into public.leads (
   'website-planner',
   (select id from public.lead_sources where code = 'website_planner'),
   'public_intake',
-  'full_interior',
-  '3bhk',
-  'immediate',
+  'complete-home-interiors',
+  'apartment-3bhk',
+  'ready-now',
   'v1',
   '/planner',
   '7b333333-3333-3333-3333-333333333333'
