@@ -420,7 +420,7 @@ select set_config('role', 'postgres', true);
 
 select throws_ok(
   $$update public.leads set status = 'closed_won' where id = '7b777777-7777-7777-7777-777777777777'::uuid$$,
-  'Direct lead pipeline status update is forbidden by trg_leads_no_direct_pipeline_update',
+  'Direct lead pipeline mutation forbidden; use CRM RPCs',
   'Direct lead pipeline status update is forbidden by trg_leads_no_direct_pipeline_update'
 );
 

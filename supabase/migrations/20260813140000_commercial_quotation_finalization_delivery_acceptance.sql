@@ -1005,12 +1005,14 @@ begin
     lead_id,
     event_type,
     actor_id,
-    details,
+    actor_type,
+    event_data,
     occurred_at
   ) values (
     p_lead_id,
     'lead.status_changed',
     p_actor_id,
+    'system',
     jsonb_build_object(
       'from_status', v_old_status,
       'to_status', 'closed_won',
