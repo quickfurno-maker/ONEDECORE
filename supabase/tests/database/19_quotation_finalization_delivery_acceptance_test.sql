@@ -144,6 +144,9 @@ select save_quotation_draft_items(
 select update_quotation_draft(
   (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid),
   2::bigint,
+  p_client_name_snapshot => 'Test Client 7B'::text,
+  p_client_phone_snapshot => '+919876543210'::text,
+  p_client_email_snapshot => 'client7b@example.com'::text,
   p_tax_profile_id => '7b888888-8888-8888-8888-888888888888'::uuid
 );
 
@@ -156,12 +159,6 @@ select replace_quotation_payment_schedule(
     jsonb_build_object('milestoneName', 'Handover', 'percentage', '50.00')
   )
 );
-
-update public.quotation_versions
-set client_name_snapshot = 'Test Client 7B',
-    client_phone_snapshot = '+919876543210',
-    client_email_snapshot = 'client7b@example.com'
-where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid);
 
 create or replace function public.test_attempt_finalize_as(p_actor_id text)
 returns jsonb language plpgsql security definer set search_path = '' as $$
