@@ -233,8 +233,8 @@ select is(
 -- Test: Idempotency key reuse with different payload throws exception
 select throws_ok(
   $$select public.finalize_quotation_version(
-    (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid),
-    (select id from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid) and version_number = 1),
+    (select quote_id from temp_test_ids),
+    (select ver_id from temp_test_ids),
     99,
     'fin_key_7b_01'
   )$$,

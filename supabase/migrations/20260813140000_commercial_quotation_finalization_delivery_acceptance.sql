@@ -505,14 +505,6 @@ begin
     raise exception 'VERSION_NOT_FOUND: Quotation version % does not exist.', p_version_id;
   end if;
 
-  if v_version.status <> 'draft' or not v_version.is_current_draft then
-    raise exception 'INVALID_VERSION_STATE: Only current active draft versions can be finalized.';
-  end if;
-
-  if v_version.lock_version <> p_expected_lock_version then
-    raise exception 'LOCK_VERSION_MISMATCH: Lock version conflict (expected %, current %).', p_expected_lock_version, v_version.lock_version;
-  end if;
-
   -- Handle Idempotency
   if p_idempotency_key is not null and length(trim(p_idempotency_key)) > 0 then
     perform pg_advisory_xact_lock(hashtext('finalize_quotation_version'), hashtext(v_user_id::text || ':' || p_idempotency_key));
@@ -532,6 +524,14 @@ begin
         raise exception 'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH: Idempotency key reused with different payload.';
       end if;
     end if;
+  end if;
+
+  if v_version.status <> 'draft' or not v_version.is_current_draft then
+    raise exception 'INVALID_VERSION_STATE: Only current active draft versions can be finalized.';
+  end if;
+
+  if v_version.lock_version <> p_expected_lock_version then
+    raise exception 'LOCK_VERSION_MISMATCH: Lock version conflict (expected %, current %).', p_expected_lock_version, v_version.lock_version;
   end if;
 
   -- Validate Client Snapshots
