@@ -162,6 +162,12 @@ select replace_quotation_payment_schedule(
   )
 );
 
+create temp table temp_test_ids as
+select q.id as quote_id, qv.id as ver_id
+from public.quotations q
+join public.quotation_versions qv on qv.quotation_id = q.id
+where q.lead_id = '7b777777-7777-7777-7777-777777777777'::uuid and qv.status = 'draft';
+
 -- ----------------------------------------------------------------------------
 -- 3. RBAC Enforcement on Finalization
 -- ----------------------------------------------------------------------------
@@ -169,8 +175,8 @@ select replace_quotation_payment_schedule(
 select set_config('request.jwt.claim.sub', '7b555555-5555-5555-5555-555555555555', true);
 select throws_ok(
   $$select public.finalize_quotation_version(
-    (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid),
-    (select id from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid) and status = 'draft'),
+    (select quote_id from temp_test_ids),
+    (select ver_id from temp_test_ids),
     4
   )$$,
   'FORBIDDEN: Permission quotations.finalize is required.',
@@ -181,8 +187,8 @@ select throws_ok(
 select set_config('request.jwt.claim.sub', '7b444444-4444-4444-4444-444444444444', true);
 select throws_ok(
   $$select public.finalize_quotation_version(
-    (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid),
-    (select id from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid) and status = 'draft'),
+    (select quote_id from temp_test_ids),
+    (select ver_id from temp_test_ids),
     4
   )$$,
   'FORBIDDEN: Sales Executive can only finalize quotations for assigned leads.',
@@ -196,8 +202,8 @@ select set_config('request.jwt.claim.sub', '7b333333-3333-3333-3333-333333333333
 
 select is(
   (public.finalize_quotation_version(
-    (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid),
-    (select id from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid) and status = 'draft'),
+    (select quote_id from temp_test_ids),
+    (select ver_id from temp_test_ids),
     4,
     'fin_key_7b_01'
   )->>'status'),
@@ -207,7 +213,7 @@ select is(
 
 -- Verify server-authoritative canonical content SHA-256 is stored
 select isnt(
-  (select finalized_content_sha256 from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid) and version_number = 1),
+  (select finalized_content_sha256 from public.quotation_versions where id = (select ver_id from temp_test_ids)),
   null,
   'Finalized version has non-null server-authoritative finalized_content_sha256'
 );
@@ -215,8 +221,8 @@ select isnt(
 -- Test: Idempotent replay of finalization
 select is(
   (public.finalize_quotation_version(
-    (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid),
-    (select id from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid) and version_number = 1),
+    (select quote_id from temp_test_ids),
+    (select ver_id from temp_test_ids),
     4,
     'fin_key_7b_01'
   )->>'status'),
