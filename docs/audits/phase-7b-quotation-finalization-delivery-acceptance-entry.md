@@ -1,11 +1,11 @@
 # ONEDECORE Phase 7B Architecture Entry Audit & Contract Freeze
 
 ## Executive Summary
-This document establishes the authoritative architecture freeze, archaeology audit, and contract specification for **ONEDECORE Phase 7B: Commercial Quotation Finalization, Premium PDF Generation, Secure WhatsApp Delivery & Client Acceptance**.
+This document establishes the authoritative, source-faithful architecture freeze, archaeology audit, and contract specification for **ONEDECORE Phase 7B: Commercial Quotation Finalization, Premium PDF Generation, Secure WhatsApp Delivery & Client Acceptance**.
 
-Phase 7B builds upon the fully merged, certified Phase 7A commercial quotation data plane and draft foundation (commit [`6e2426be8bee80ff6e6474b3f7c033ba506587b1`](file:///c:/Users/KESHAV%20SHARMA/Desktop/OneDecore-phase6c/docs/audits/phase-7b-quotation-finalization-delivery-acceptance-entry.md), migration M25).
+Phase 7B builds upon the fully merged, certified Phase 7A commercial quotation data plane and draft foundation (protected main entry commit [`6e2426be8bee80ff6e6474b3f7c033ba506587b1`](file:///c:/Users/KESHAV%20SHARMA/Desktop/OneDecore-phase6c/docs/audits/phase-7b-quotation-finalization-delivery-acceptance-entry.md), migration M25).
 
-This gate is **DOCUMENTATION ONLY**. No migration files (M26+), managed database schema mutations, or runtime source code modifications are included in this entry audit.
+This gate is **DOCUMENTATION ONLY**. No migration files (M26+), managed database schema mutations, or runtime source code modifications are included in this correction pass.
 
 ---
 
@@ -24,48 +24,55 @@ This gate is **DOCUMENTATION ONLY**. No migration files (M26+), managed database
 - **M26**: Strictly **ABSENT**.
 
 ### Scope Inclusions (Phase 7B)
-1. **Server-Authoritative Quotation Finalization**: Immutable version freezing, SHA-256 content hashing, strict transactional pre-validation (totals, hard discount validation, tax completeness, payment schedule absorption).
-2. **Premium Commercial PDF Engine & Storage**: Server-side PDF rendering from frozen finalization state, immutable storage in private bucket `quotation-documents`, signed URL delivery.
+1. **Server-Authoritative Quotation Finalization**: Immutable version freezing, SHA-256 canonical content hashing, strict transactional pre-validation (totals re-calculation in paise, hard discount validation, tax snapshotting, payment schedule last-milestone residual paise absorption).
+2. **Premium Commercial PDF Engine & Storage**: Server-side PDF rendering from frozen finalization state, immutable storage in private bucket `quotation-documents`, signed URL delivery (15-min TTL).
 3. **Phase 6B Secure Outbound Delivery**: Dispatch of finalized quotation notifications and PDF view links via existing `WHATSAPP_SERVICE` outbound infrastructure.
-4. **Client Acceptance Capability & Portal**: Non-enumerating high-entropy capability tokens, client-facing acceptance portal, append-only acceptance audit, Closed-Won commercial prerequisite binding.
-5. **Revision Lifecycle Management**: Controlled version incrementing (`OD-Q-YYYY-SEQ6` v1 -> v2), historical version immutability, acceptance capability re-issuance/revocation.
+4. **Client Acceptance Capability & Portal**: Non-enumerating high-entropy capability tokens (`/q/[token]`), client-facing acceptance portal, append-only acceptance audit, Closed-Won commercial prerequisite binding.
+5. **Pre-Acceptance Revision Management**: Controlled version incrementing (`OD-Q-YYYY-SEQ6` v1 -> v2), historical version immutability, acceptance capability re-issuance/revocation.
 
 ### Scope Exclusions (Forbidden in Phase 7B)
 - 🚫 **NO** internal approval workflow, maker-checker flow, `Submitted for Approval` status, or `quotations.approve` permission.
+- 🚫 **NO** staff capability to accept a quotation on behalf of a client (no staff `quotations.accept`).
 - 🚫 **NO** project creation or Phase 8A handover execution.
 - 🚫 **NO** production tax rate or discount bound default hardcoding.
 - 🚫 **NO** direct Meta Graph API calls from quotation code (must route through Phase 6B `WHATSAPP_SERVICE`).
-- 🚫 **NO** staff capability to execute client acceptance on behalf of client.
 
 ---
 
-## 2. Source Provenance Matrix
+## 2. Authoritative Source Provenance Matrix
 
-| Source Identifier | File Path | Key Section / Symbol | Locked Rule Summary | Status | Phase 7B Implication |
+| Source Identifier | File Path | Key Section / Symbol | Locked Rule Summary | Classification | Phase 7B Implication |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **ADR-0020** | `docs/ADR/ADR-0020-closed-won-project-handover-invariants.md` | Closed-Won & Handover Invariants | Closed-Won requires accepted quotation; PM/Designer handover post-Closed-Won. | PARTIALLY SUPERSEDED | Approval workflow superseded by ADR-0022; Closed-Won commercial prerequisite remains binding. |
-| **ADR-0022** | `docs/ADR/ADR-0022-v1-direct-quotation-finalization-and-send.md` | V1 Direct Authority | V1 has NO internal approval workflow; direct finalization/send by assigned Sales Exec; NO `quotations.approve`. | CURRENT & BINDING | Eliminates maker-checker friction; Sales Exec finalizes directly. |
-| **DEC-0056** | `docs/10-decision-register.md` | Quotation Boundary | Commercial data plane separated from CRM lead identity; integer INR paise storage. | CURRENT & BINDING | Authoritative money stored in integer paise. |
+| **ADR-0022** | `docs/ADR/ADR-0022-v1-direct-quotation-finalization-and-send.md` | V1 Direct Authority | V1 has NO internal approval workflow; direct finalization/send by assigned Sales Exec; NO `quotations.approve`. | CURRENT & BINDING | Finalize permission: `quotations.finalize`; Send: `quotations.send`; Edit: `quotations.edit`. |
+| **CRM Boundary** | `docs/07-crm-and-quotation-boundary.md` | Commercial / CRM Boundary | Commercial data plane separated from CRM lead identity; accepted quotation is Closed-Won prerequisite. | CURRENT & BINDING | Commercial snapshot isolated from CRM lead identity; accepted quotation enables Closed-Won. |
+| **DEC-0056** | `docs/10-decision-register.md` | Quotation Boundary | Commercial data plane isolated; integer INR paise storage. | CURRENT & BINDING | Authoritative money stored and calculated in integer paise. |
 | **DEC-0065** | `docs/10-decision-register.md` | Phase 7A Architecture Freeze | 1:1 lead-quotation root, schedule percentage/amount mode, `OD-Q-YYYY-SEQ6` sequence, Super Admin tax/discount bounds. | CURRENT & BINDING | M25 draft data plane baseline frozen. |
-| **M25 Migration** | `supabase/migrations/20260812140000_...sql` | M25 Data Plane | `quotations`, `quotation_versions`, `quotation_sections`, `quotation_items`, `quotation_payment_schedules`, `quotation_events`. | CURRENT & BINDING | Phase 7A database tables and RLS baseline. |
-| **Phase 6B Outbound** | `docs/08-whatsapp-and-n8n-boundary.md` | `WHATSAPP_SERVICE` Outbound | All WhatsApp messages dispatched via controlled Phase 6B outbound intent. | CURRENT & BINDING | Delivery must use `WHATSAPP_SERVICE` outbound queue. |
+| **DEC-0066 & Audit** | `docs/audits/phase-7a-m25-quotation-draft-foundation-implementation.md` | Implemented M25 Scope | Implemented permissions: `quotations.read`, `quotations.create`, `quotations.edit`. Reserved: `quotations.finalize`, `quotations.send`. | IMPLEMENTED BASELINE | M25 provides draft data plane; `quotations.finalize` and `quotations.send` reserved for Phase 7B. |
+| **M25 Migration** | `supabase/migrations/20260812140000_...sql` | M25 Data Plane | `quotations`, `quotation_versions`, `quotation_sections`, `quotation_items`, `quotation_payment_schedules`, `quotation_events`. | IMPLEMENTED BASELINE | Phase 7A database tables, RLS, sequence, and idempotency ledger. |
+| **Phase 6B Outbound** | `docs/08-whatsapp-and-n8n-boundary.md` & `src/features/whatsapp/server/` | `WHATSAPP_SERVICE` Outbound | WhatsApp messages dispatched strictly via Phase 6B outbound intent queue. | CURRENT & BINDING | Quotation delivery must enqueue `WHATSAPP_SERVICE` outbound intent; 0 direct Meta API calls. |
+| **CRM Stage Mutation** | `src/features/crm/` | Closed-Won Transition | Closed-Won transition requires valid accepted quotation. Sales achievement basis = `taxable_base_paise` (GST excluded). | CURRENT & BINDING | Sales achievement calculated from accepted version `taxable_base_paise`. |
+| **Storage Conventions** | `docs/06-security-privacy-and-rls.md` | Private Storage Buckets | Private document storage bucket `quotation-documents`; signed URLs. | FUTURE PHASE BOUNDARY | PDF documents stored in private bucket `quotation-documents` with 15-min signed URLs. |
+| **Phase 8A Handover** | `docs/09-phase-roadmap.md` | Project Creation Boundary | Project creation and PM handover execution begins ONLY post-Closed-Won in Phase 8A. | FUTURE PHASE BOUNDARY | Phase 7B does NOT create projects or execute Phase 8A handovers. |
 
 ---
 
-## 3. Contradiction & Archaeology Audit
+## 3. Supersession & Contradiction Audit Findings
 
-A comprehensive codebase search was conducted across all documentation, database migrations, and application source code:
-1. **Internal Approval Search**: `quotations.approve`, `Submitted for Approval`, `Approved`, `maker-checker`.
-   - **Result**: Confirmed 0 active runtime usage. ADR-0020 approval language was explicitly superseded by ADR-0022. `18_quotation_draft_foundation_test.sql` explicitly asserts `quotations.approve` does NOT exist in permission catalogue.
-2. **Phase 6B Direct Outbound Search**: Verified zero direct calls to Meta Graph API outside `src/features/whatsapp/server/`. Quotation delivery will interface strictly with Phase 6B intent dispatch.
+A complete search across documentation, migrations, and source code confirmed:
+1. **Approval Workflow Exclusions**:
+   - `quotations.approve` permission: **0 active occurrences** in database or application code (`18_quotation_draft_foundation_test.sql` explicitly asserts `quotations.approve` does NOT exist).
+   - Approval states (`Submitted for Approval`, `Approved`): Historical references in ADR-0020 explicitly marked superseded by ADR-0022.
+2. **Direct WhatsApp Outbound Exclusions**:
+   - All WhatsApp outbound interactions in the codebase route exclusively through `src/features/whatsapp/server/`. Quotation feature code contains zero direct Meta Graph API fetch calls.
 
 ---
 
-## 4. Locked Business & Architecture Rules
+## 4. Locked Pre-Existing Rules
 
 1. **NO Internal Approval**: V1 quotation lifecycle operates as: `Draft` → `Finalized` → `Sent` → `Accepted` / `Revised`. No `quotations.approve` permission or approval table shall be created.
-2. **Sales Authority**: Assigned Sales Executive is the V1 commercial operator for assigned leads, subject to `quotations.edit` and `quotations.send` permissions.
-3. **Server-Authoritative Finalization**: Transactional freezing of quotation draft into an immutable `finalized` version with a SHA-256 payload digest.
+2. **Sales Authority**: Assigned Sales Executive is the V1 commercial operator for assigned leads, subject to `quotations.edit`, `quotations.finalize`, and `quotations.send` permissions.
+3. **Server-Authoritative Finalization**: Transactional freezing of quotation draft into an immutable `finalized` version with a SHA-256 canonical content digest.
 4. **Hard Discount & Tax Boundary**:
    - Hard maximum discount percentage is configured by Super Admin (production value remains UNSET).
    - Tax profile catalogue is configured by Super Admin (production value remains UNSET; no fake default GST).
@@ -77,137 +84,208 @@ A comprehensive codebase search was conducted across all documentation, database
 
 ---
 
-## 5. Domain State Model & Lifecycle
+## 5. Phase 7B V1 Actor & RBAC Matrix
+
+| Actor Role | View Finalized / PDF | Draft / Revision Mutate | Finalize Version | Send Delivery | Revoke Token | Accept as Client |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Super Admin** | ✅ Broad Scope | ✅ Broad Scope (`quotations.edit`) | ✅ Broad Scope (`quotations.finalize`) | ✅ Broad Scope (`quotations.send`) | ✅ Broad Scope | ❌ FORBIDDEN |
+| **Assigned Sales Exec** | ✅ Assigned Lead | ✅ Assigned Lead (`quotations.edit`) | ✅ Assigned Lead (`quotations.finalize`) | ✅ Assigned Lead (`quotations.send`) | ✅ Assigned Lead | ❌ FORBIDDEN |
+| **Non-assigned Sales Exec** | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN |
+| **Project Manager (PM)** | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN |
+| **Designer** | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN |
+| **Kriti (AI Copilot)** | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN |
+| **Client Capability Holder** | ✅ Exact Version via Token | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ✅ Exact Version (`/q/[token]`) |
+
+---
+
+## 6. Domain State & Lifecycle Model
 
 ```
  +------------------+           Finalize RPC          +----------------------+
  |   DRAFT (v1)     | -----------------------------> |   FINALIZED (v1)     |
- | (Mutable Draft)  |                                | (Immutable Version)  |
+ | (Mutable Draft)  |  (quotations.finalize)         | (Immutable Version)  |
  +------------------+                                +----------------------+
           ^                                                     |
-          | Create Revision                                     | Generate PDF & Send
-          |                                                     v
+          | Pre-Acceptance Revision                             | Generate PDF & Send
+          | (quotations.edit)                                   v (quotations.send)
  +------------------+                                +----------------------+
  |   DRAFT (v2)     |                                |  SENT / DELIVERED    |
  | (Mutable Draft)  |                                | (Client Capability)  |
  +------------------+                                +----------------------+
                                                                 |
                                                                 | Client Accept
-                                                                v
+                                                                v (Client Token)
                                                      +----------------------+
                                                      |    ACCEPTED (v1)     |
-                                                     | (Closed-Won Ready)   |
+                                                     | (Closed-Won Baseline)|
+                                                     +----------------------+
+                                                                |
+                                                                | Post-Acceptance Change Order
+                                                                v (Future System - Outside 7B V1)
+                                                     +----------------------+
+                                                     | CHANGE ORDER SYSTEM  |
+                                                     | (Preserves Baseline) |
                                                      +----------------------+
 ```
 
 ---
 
-## 6. Conceptual Database & Storage Plan (Phase 7B Forward-Only Migration Concept)
+## 7. Server-Authoritative Finalization Contract
+
+The finalization transaction must be server/database-authoritative and execute the following atomic steps:
+1. **Identity & RBAC Check**: Verify active staff actor possesses `quotations.finalize` and has assignment scope (or Super Admin broad scope).
+2. **Target Lock & State Check**: Lock the target quotation root and verify target version status is active `draft`. Enforce optimistic concurrency check on `lock_version`.
+3. **Monetary Totals Re-Calculation**: Server-side re-calculation of line item totals, section subtotals, subtotal paise, quotation discount, taxable base paise, tax total paise, and grand total paise in integer INR paise.
+4. **Discount & Tax Bounds Validation**: Reject finalization if quotation discount exceeds Super-Admin hard maximum discount bound or if required production tax profile configuration is missing.
+5. **Schedule Residual Absorption**: For percentage payment schedules, last ordered milestone absorbs residual paise to ensure `sum(milestone_amounts) == grand_total_paise`.
+6. **Deterministic Content SHA-256 Digest**: Compute `finalized_content_sha256` over the canonical JSON representation of the frozen commercial payload.
+7. **Freeze & Audit**: Mark version status `finalized`, set `finalized_at` and `finalized_by`, append `quotation.finalized` audit event.
+
+---
+
+## 8. Canonical Content Hash vs. PDF Binary Hash
+
+Phase 7B explicitly distinguishes between two distinct SHA-256 digests:
+- **`finalized_content_sha256`**: The SHA-256 digest computed over the canonical JSON serialization of the frozen commercial data payload (semantic snapshot digest).
+- **`pdf_sha256`**: The SHA-256 digest computed over the exact binary bytes of the rendered PDF document (binary artifact digest).
+
+---
+
+## 9. Premium PDF Artifact & Storage Contract
+
+- **Storage Bucket**: Private Supabase Storage bucket `quotation-documents` (0 public listing, 0 unauthenticated permanent URLs).
+- **Two-Boundary Execution**: Database finalization commits the commercial snapshot FIRST. PDF rendering and upload occur as an idempotent server-side artifact step. Storage failure does NOT roll back database finalization; PDF generation can be safely retried.
+- **Access Model**: PDF delivered to client via short-lived signed URLs (15-minute TTL) generated on-demand by the client portal server endpoint after capability validation.
+- **Fidelity**: Generated once per finalized version, hashed (`pdf_sha256`), and stored immutably. Byte-changing overwrite of an existing verified PDF artifact is prohibited.
+
+---
+
+## 10. Client Capability & Token Security Contract
+
+1. **Token Generation**: Cryptographically random, high-entropy token (32+ bytes hex/base64url).
+2. **One-Way Hashing**: Plaintext token transmitted ONLY in client URL (`/q/[token]`). Database stores only `capability_token_hash` = `sha256(plaintext_token)`.
+3. **Log Protection**: Plaintext token MUST NEVER be written to database tables, application logs, error traces, audit events, or analytics.
+4. **Non-Enumerating Error Handling**: Invalid or revoked token requests return generic non-enumerating error `QUOTATION_NOT_FOUND_OR_FORBIDDEN`.
+5. **Privacy Protection**: Client IP address MUST NOT be logged or stored. User-Agent is retained as bounded audit metadata.
+6. **Pre-Acceptance Token Revocation**: Creating a new draft revision automatically revokes active capability tokens for previous unaccepted versions.
+
+---
+
+## 11. Acceptance Uniqueness & Closed-Won Contract
+
+1. **Cardinality**: 1 quotation root per lead (`quotations.lead_id` UNIQUE).
+2. **Acceptance Uniqueness**: Exactly 1 authoritative accepted quotation version per lead across all versions (`quotation_acceptances.quotation_id` UNIQUE).
+3. **Transaction**: Acceptance locks the quotation root, verifies capability grant validity, records acceptance metadata (`accepted_by_name`, `accepted_by_email`, `accepted_at`), and appends `quotation.accepted` audit event.
+4. **Idempotency**: Repeated acceptance submission of the SAME exact accepted version returns successful idempotent response without creating duplicate rows.
+5. **Closed-Won Binding**: CRM lead transition to `Closed-Won` requires 1 valid accepted quotation. Sales achievement is calculated strictly from `taxable_base_paise` (GST excluded).
+6. **Phase 8A Boundary**: Client acceptance does NOT create Phase 8A projects or trigger handover execution.
+
+---
+
+## 12. Pre-Acceptance Revision Contract
+
+- Revisions may be created ONLY while no quotation version for the lead has been accepted.
+- Creating a revision increments version ordinal (`OD-Q-YYYY-SEQ6` v1 -> v2) under the same quotation root.
+- Historical finalized versions remain immutable.
+- Active capability tokens for unaccepted prior versions are automatically revoked upon revision creation.
+
+---
+
+## 13. Post-Acceptance Commercial Stability & Future Change Orders (Revised OD7B-5)
 
 > [!IMPORTANT]
-> The following schema extensions are **CONCEPTUAL** for Phase 7B design and WILL NOT be created in this docs-only gate.
-
-### Conceptual Tables & Columns (Forward-Only Migration Concept)
-1. **`public.quotation_versions` extensions**:
-   - `status`: `draft` | `finalized` | `archived`
-   - `finalized_at`: `TIMESTAMPTZ`
-   - `finalized_by`: `UUID` (FK `auth.users`)
-   - `content_sha256`: `TEXT`
-   - `tax_profile_snapshot`: `JSONB`
-2. **`public.quotation_pdf_documents`**:
-   - `id`: `UUID` (PK)
-   - `quotation_id`: `UUID` (FK `quotations`)
-   - `version_id`: `UUID` (FK `quotation_versions`)
-   - `bucket_id`: `TEXT` (`quotation-documents`)
-   - `file_path`: `TEXT`
-   - `file_size_bytes`: `BIGINT`
-   - `sha256_hash`: `TEXT`
-   - `created_at`: `TIMESTAMPTZ`
-3. **`public.quotation_access_grants`**:
-   - `id`: `UUID` (PK)
-   - `quotation_id`: `UUID` (FK `quotations`)
-   - `version_id`: `UUID` (FK `quotation_versions`)
-   - `capability_token_hash`: `TEXT` (UNIQUE, SHA-256 hashed token)
-   - `expires_at`: `TIMESTAMPTZ`
-   - `revoked_at`: `TIMESTAMPTZ`
-   - `created_at`: `TIMESTAMPTZ`
-4. **`public.quotation_acceptances`**:
-   - `id`: `UUID` (PK)
-   - `quotation_id`: `UUID` (FK `quotations`)
-   - `version_id`: `UUID` (FK `quotation_versions` UNIQUE per lead)
-   - `accepted_by_name`: `TEXT`
-   - `accepted_by_email`: `TEXT`
-   - `accepted_at`: `TIMESTAMPTZ`
-   - `user_agent`: `TEXT`
+> **Revised OD7B-5 Rule**: Once a quotation version has been client-accepted and forms the Closed-Won commercial baseline, that accepted baseline is permanent and immutable. Phase 7B V1 prohibits ordinary quotation revision creation after acceptance. Any later commercial changes belong to a separate future Change Order / Commercial Amendment workflow (outside Phase 7B V1) that preserves the original accepted quotation and its historical sales/handover baseline.
 
 ---
 
-## 7. Material Owner Decisions Analysis
+## 14. WhatsApp Delivery & Phase 6B Boundary
 
-The following 6 material architecture decisions are submitted to the owner for formal review and locking:
+- All quotation WhatsApp deliveries MUST route through the existing Phase 6B `WHATSAPP_SERVICE` outbound intent system (`src/features/whatsapp/server/`).
+- Direct Meta Graph API fetch calls from quotation feature code are strictly prohibited.
+- Outbound payload contains secure portal link `/q/[token]`, never a public PDF URL.
+- Distinct transport states: `FINALIZED` → `PDF_READY` → `SEND_REQUESTED` / `QUEUED` → `PROVIDER_SENT` / `DELIVERED` (via Phase 6B webhook) → `ACCEPTED`.
+
+---
+
+## 15. Concurrency, Idempotency & Failure Matrix
+
+| Operation | Concurrent Request / Replay | Failure Mode | Idempotent / Safe Outcome |
+| :--- | :--- | :--- | :--- |
+| **Finalize** | Concurrent draft edit vs finalize | Stale `lock_version` or non-draft status | Replayed request returns same finalized snapshot; concurrent edit rejected. |
+| **PDF Render** | Repeated generation trigger | Storage network timeout / render crash | Finalized DB snapshot preserved; retry completes missing artifact. Verified PDF never overwritten. |
+| **Send** | Duplicate send button click / timeout | Outbound queue error | Enqueues exactly 1 Phase 6B intent; retry returns existing intent ID. |
+| **Client Accept** | Double-click accept / page refresh | Invalid / revoked capability token | Replayed accept returns existing acceptance record; invalid token returns non-enumerating error. |
+
+---
+
+## 16. Append-Only Audit Event Contract
+
+Future Phase 7B implementation will record the following append-only commercial audit events in `public.quotation_events`:
+- `quotation.finalized`: Finalized version SHA-256 digest, actor ID, timestamp.
+- `quotation.pdf_generated`: PDF artifact path, PDF SHA-256, file size.
+- `quotation.send_requested`: Phase 6B outbound intent ID, recipient phone (masked/sanitized), version ID.
+- `quotation.capability_issued`: Version ID, capability grant ID, expiration timestamp.
+- `quotation.capability_revoked`: Grant ID, revocation reason, revoking actor ID.
+- `quotation.accepted`: Version ID, accepted name/email, timestamp (0 raw IP).
+- `quotation.revision_created`: Source version ID, new version ID, actor ID.
+
+---
+
+## 17. Conceptual Forward-Only M26 Schema Plan (No M26 Created in this Gate)
+
+> [!NOTE]
+> The following schema extensions are conceptual for future forward-only migration M26:
+> - Extend `public.quotation_versions` with `status` (`draft` | `finalized` | `archived`), `finalized_at`, `finalized_by`, `finalized_content_sha256`, `tax_profile_snapshot`.
+> - Create `public.quotation_pdf_documents` for PDF artifact metadata (`bucket_id`, `file_path`, `file_size_bytes`, `pdf_sha256`, `status`).
+> - Create `public.quotation_access_grants` for token capability hashes (`capability_token_hash` UNIQUE, `expires_at`, `revoked_at`).
+> - Create `public.quotation_acceptances` for client acceptance records (`quotation_id` UNIQUE per lead, `version_id`, `accepted_by_name`, `accepted_by_email`, `accepted_at`).
+> - System permissions: `quotations.finalize`, `quotations.send`.
+
+---
+
+## 18. Material Owner Decisions Submitted for Review (6 Candidates)
+
+> [!IMPORTANT]
+> The following 6 decisions are submitted for formal owner review. Final exact PR head and exact-head CI run are recorded in PR #54 after the documentation correction push.
 
 ### Decision OD7B-1: Client Acceptance Capability Token Expiry Policy
-- **Context**: Defines whether a client acceptance URL capability token automatically expires after a fixed time window.
-- **Options**:
-  - *Option A*: Fixed 30-day expiration window.
-  - *Option B (RECOMMENDED)*: Capability token remains active until a new quotation revision is issued or the token is explicitly revoked.
-- **Rationale**: Aligns with custom interior commercial cycles; finalization snapshots freeze all commercial terms so price integrity is preserved regardless of token age.
+- **Recommendation**: Active until a new revision is issued or explicit revocation by authorized staff.
 - **Proposed Lock Wording**: *"Client acceptance capability tokens remain active for the finalized version until a new revision is issued or the token is explicitly revoked by authorized staff."*
 
-### Decision OD7B-2: Token Revocation / Rotation on Revision Creation
-- **Context**: Defines whether issuing a new draft revision automatically invalidates previous client acceptance capability tokens.
-- **Options**:
-  - *Option A (RECOMMENDED)*: Issuing a new quotation revision automatically revokes active client acceptance tokens for previous unaccepted versions.
-  - *Option B*: Older version tokens remain acceptable until manually revoked.
-- **Rationale**: Prevents a client from accidentally accepting an outdated commercial draft after a new revision has been requested.
-- **Proposed Lock Wording**: *"Creating a new quotation revision automatically revokes client acceptance capability for all previous unaccepted versions of that quotation."*
+### Decision OD7B-2: Token Revocation on Pre-Acceptance Revision Creation
+- **Recommendation**: Creating a new quotation revision automatically revokes active client capability tokens for all previous unaccepted versions.
+- **Proposed Lock Wording**: *"Creating a new pre-acceptance quotation revision automatically revokes client acceptance capability for all previous unaccepted versions of that quotation."*
 
 ### Decision OD7B-3: Premium PDF Storage & Delivery Access Model
-- **Context**: Defines how generated quotation PDF documents are stored and served to clients.
-- **Options**:
-  - *Option A (RECOMMENDED)*: Store PDFs in private Supabase Storage bucket `quotation-documents`; serve to clients via short-lived signed URLs (15-minute TTL) generated on-demand by the acceptance portal.
-  - *Option B*: Store PDFs in a public storage bucket with unauthenticated URLs.
-- **Rationale**: Option A prevents public URL enumeration and unauthorized document harvesting while providing seamless client access.
-- **Proposed Lock Wording**: *"Quotation PDF documents are stored in private bucket quotation-documents and delivered via short-lived signed URLs generated on-demand through authenticated or valid capability sessions."*
+- **Recommendation**: PDFs stored in private bucket `quotation-documents`; served via short-lived signed URLs (15-min TTL) generated on-demand by client portal.
+- **Proposed Lock Wording**: *"Quotation PDF documents are stored in private bucket quotation-documents and delivered via short-lived signed URLs generated on-demand through valid capability sessions."*
 
-### Decision OD7B-4: PDF Immutable Caching & Regeneration Policy
-- **Context**: Defines whether PDFs are re-rendered on every view or cached immutably upon finalization.
-- **Options**:
-  - *Option A (RECOMMENDED)*: PDF is rendered once upon finalization, hashed, and immutably stored; re-rendering occurs only if a new version is finalized.
-  - *Option B*: PDF is dynamically rendered on every client download request.
-- **Rationale**: Guarantees absolute byte-for-byte fidelity between the stored PDF artifact, the database record, and what the client views.
+### Decision OD7B-4: PDF Immutable Caching & Content Hashing Policy
+- **Recommendation**: PDF generated once per finalized version, hashed (`pdf_sha256`), and stored immutably. Byte-changing re-render of an existing finalized version is prohibited.
 - **Proposed Lock Wording**: *"Quotation PDFs are generated once per finalized version, hashed, and stored immutably. Re-rendering of existing finalized versions is prohibited."*
 
-### Decision OD7B-5: Post-Acceptance Revision Handling & Closed-Won Invariant
-- **Context**: Defines behavior if a customer requests changes after a quotation version has already been accepted and marked Closed-Won.
-- **Options**:
-  - *Option A (RECOMMENDED)*: Revisions created after acceptance produce a new draft version, but the previously accepted version remains the active Closed-Won commercial baseline until the new revision is finalized and accepted.
-  - *Option B*: Creating a revision post-acceptance immediately reverts lead stage out of Closed-Won.
-- **Rationale**: Protects sales achievement and contract stability while allowing commercial change orders.
-- **Proposed Lock Wording**: *"Creating a revision after client acceptance does not invalidate the existing accepted quotation or Closed-Won baseline until the new revision is explicitly finalized and accepted."*
+### Decision OD7B-5: Post-Acceptance Commercial Stability & Future Change Orders (REVISED)
+- **Recommendation**: After client acceptance, the accepted quotation version remains the permanent authoritative Closed-Won commercial baseline. Phase 7B V1 prohibits ordinary quotation revision after acceptance. Later commercial changes belong to a separate future Change Order / Commercial Amendment workflow that preserves the original accepted quotation and its historical sales/handover baseline.
+- **Proposed Lock Wording**: *"After client acceptance, the accepted quotation version remains the permanent authoritative Closed-Won commercial baseline. Phase 7B V1 prohibits creation of an ordinary quotation revision after acceptance. Any later commercial change must be represented by a separate future Change Order / Commercial Amendment workflow that preserves the original accepted quotation and its historical sales/handover baseline."*
 
-### Decision OD7B-6: Broad-Scope Sales Authority Boundaries
-- **Context**: Defines which staff roles possess authority to finalize, generate PDF, send, and revise commercial quotations.
-- **Options**:
-  - *Option A (RECOMMENDED)*: Super Admin and assigned Sales Executive possess finalize/send/revise authority for assigned leads. PMs, Designers, and Kriti possess 0 finalize/send/revise authority.
-  - *Option B*: PMs and Designers can finalize quotations.
-- **Rationale**: Enforces strict commercial accountability and aligns with V1 RBAC model.
-- **Proposed Lock Wording**: *"Finalization, PDF generation, WhatsApp delivery, and revision creation are restricted to Super Admin and active assigned Sales Executives (`quotations.edit` and `quotations.send`). PM, Designer, and Kriti roles possess zero commercial mutation authority."*
+### Decision OD7B-6: Commercial Authority Matrix & Permission Split (CORRECTED)
+- **Recommendation**: Commercial authority is restricted to Super Admin under broad scope and the active Sales Executive currently assigned to the lead under assignment scope. Finalization requires `quotations.finalize`, delivery requires `quotations.send`, and revision/draft mutation requires `quotations.edit`. PM, Designer, and Kriti possess zero quotation finalize/send/revision authority. No staff `quotations.accept` or `quotations.approve` capability exists.
+- **Proposed Lock Wording**: *"Phase 7B commercial authority is restricted to Super Admin under broad scope and the active Sales Executive currently assigned to the lead under assignment scope. Finalization requires quotations.finalize, delivery requires quotations.send, and revision/draft mutation requires quotations.edit. PM, Designer, and Kriti have zero quotation finalize/send/revision authority. No staff quotations.accept or quotations.approve capability exists."*
 
 ---
 
-## 8. Quality Gate Verification
+## 19. Quality Gate Verification
 
 Local verification on entry branch `phase-7b-architecture-entry`:
-- **Phase 7A Tests (`npm run test:phase-7a`)**: 42/42 PASS
-- **Database Tests (`npm run check:db`)**: 748/748 PASS (94/94 in M25 pgTAP)
-- **App Unit Tests (`npm run test:app`)**: 593/593 PASS across 156 suites
-- **Quality Check (`npm run check`)**: 0 lint errors, 11 warnings, 0 type errors, Next.js build SUCCESS
+- **Phase 7A Unit Tests (`npm run test:phase-7a`)**: 42/42 PASS
+- **Database Quality Gate (`npm run check:db`)**: 748/748 PASS (94/94 in `18_quotation_draft_foundation_test.sql`)
+- **All Application Unit Tests (`npm run test:app`)**: 593/593 PASS across 156 test suites
+- **Application Quality Gate (`npm run check`)**: 0 lint errors, 11 warnings, 0 type errors, Next.js build SUCCESS
 - **Git Hygiene (`git diff --check`)**: Clean (0 issues)
 
 ---
 
-## 9. Managed Write Ledger
+## 20. Managed Write Ledger
 
 ```text
 MANAGED_READS: YES
@@ -219,7 +297,7 @@ MANAGED_RESTORE: NONE
 
 ---
 
-## 10. Exit Classification
+## 21. Exit Classification
 
 ```text
 PHASE_7B_ARCHITECTURE_ENTRY: PASS
