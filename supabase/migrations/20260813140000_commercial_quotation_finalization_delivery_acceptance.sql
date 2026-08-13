@@ -578,12 +578,12 @@ begin
 
   if v_version.discount_type = 'percentage' then
     if v_version.discount_percentage > v_max_discount then
-      raise exception 'EXCEEDS_MAX_DISCOUNT: Discount percentage (%%) exceeds maximum allowed (%%).', v_version.discount_percentage, v_max_discount;
+      raise exception 'EXCEEDS_MAX_DISCOUNT: Discount percentage (%) exceeds maximum allowed (%).', v_version.discount_percentage, v_max_discount;
     end if;
   elsif v_version.discount_type = 'flat' then
     v_effective_discount_pct := (v_version.discount_total_paise::numeric * 100.0) / v_version.subtotal_paise::numeric;
     if v_effective_discount_pct > v_max_discount then
-      raise exception 'EXCEEDS_MAX_DISCOUNT: Flat discount effective percentage (%%) exceeds maximum allowed (%%).', round(v_effective_discount_pct, 2), v_max_discount;
+      raise exception 'EXCEEDS_MAX_DISCOUNT: Flat discount effective percentage (%) exceeds maximum allowed (%).', round(v_effective_discount_pct, 2), v_max_discount;
     end if;
   end if;
 
