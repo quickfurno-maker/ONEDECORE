@@ -409,7 +409,7 @@ select set_config('role', 'authenticated', true);
 select issue_quotation_access_grant(
   (select id from public.quotation_versions where quotation_id = (select id from public.quotations where lead_id = '7b777777-7777-7777-7777-777777777777'::uuid) and version_number = 2),
   'nonce_7b_02',
-  '9d7087f6c6521526cef009ce5eff26ece278b0d9840d5cc9b92g7g3bc559b029'
+  '9d7087f6c6521526cef009ce5eff26ece278b0d9840d5cc9b92f7f3bc559b029'
 );
 
 -- ----------------------------------------------------------------------------
