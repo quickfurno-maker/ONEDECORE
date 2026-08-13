@@ -578,12 +578,12 @@ begin
 
   if v_version.discount_type = 'percentage' then
     if v_version.discount_percentage > v_max_discount then
-      raise exception 'EXCEEDS_MAX_DISCOUNT: Discount percentage (%) exceeds maximum allowed (%).', v_version.discount_percentage, v_max_discount;
+      raise exception 'EXCEEDS_MAX_DISCOUNT: Discount percentage (%%) exceeds maximum allowed (%%).', v_version.discount_percentage, v_max_discount;
     end if;
   elsif v_version.discount_type = 'flat' then
     v_effective_discount_pct := (v_version.discount_total_paise::numeric * 100.0) / v_version.subtotal_paise::numeric;
     if v_effective_discount_pct > v_max_discount then
-      raise exception 'EXCEEDS_MAX_DISCOUNT: Flat discount effective percentage (%) exceeds maximum allowed (%).', round(v_effective_discount_pct, 2), v_max_discount;
+      raise exception 'EXCEEDS_MAX_DISCOUNT: Flat discount effective percentage (%%) exceeds maximum allowed (%%).', round(v_effective_discount_pct, 2), v_max_discount;
     end if;
   end if;
 
@@ -618,7 +618,7 @@ begin
 
   if v_version.payment_schedule_mode = 'percentage' then
     if (select coalesce(sum(percentage), 0) from public.quotation_payment_schedules where quotation_version_id = p_version_id) <> 100.00 then
-      raise exception 'INVALID_PAYMENT_SCHEDULE: Payment schedule milestone percentages must sum exactly to 100.00%.';
+      raise exception 'INVALID_PAYMENT_SCHEDULE: Payment schedule milestone percentages must sum exactly to 100.00%%.';
     end if;
   elsif v_version.payment_schedule_mode = 'amount' then
     if (select coalesce(sum(amount_paise), 0) from public.quotation_payment_schedules where quotation_version_id = p_version_id) <> v_version.grand_total_paise then
