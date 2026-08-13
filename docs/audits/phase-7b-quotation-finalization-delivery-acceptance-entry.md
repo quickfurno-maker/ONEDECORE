@@ -5,7 +5,7 @@ This document establishes the authoritative, source-faithful architecture freeze
 
 Phase 7B builds upon the fully merged, certified Phase 7A commercial quotation data plane and draft foundation (protected main entry commit [`6e2426be8bee80ff6e6474b3f7c033ba506587b1`](file:///c:/Users/KESHAV%20SHARMA/Desktop/OneDecore-phase6c/docs/audits/phase-7b-quotation-finalization-delivery-acceptance-entry.md), migration M25).
 
-This gate is **DOCUMENTATION ONLY**. No migration files (M26+), managed database schema mutations, or runtime source code modifications are included in this final canonical reconciliation pass.
+This gate is **DOCUMENTATION ONLY — OWNER DECISIONS LOCKED**. All six material Phase 7B architecture decisions (OD7B-1 through OD7B-6) have been formally locked by the owner under authorization: `LOCK PHASE 7B OWNER DECISIONS AS RECOMMENDED`. No migration files (M26+), managed database schema mutations, or runtime source code modifications are included in this document freeze pass.
 
 ---
 
@@ -201,10 +201,10 @@ Per ADR-0022 §6, client acceptance is an authoritative transactional operation 
 
 ---
 
-## 13. Post-Acceptance Commercial Stability & Future Change Orders (Revised OD7B-5)
+## 13. Post-Acceptance Commercial Stability & Future Change Orders (Locked OD7B-5)
 
 > [!IMPORTANT]
-> **Revised OD7B-5 Rule**: Once a quotation version has been client-accepted and forms the Closed-Won commercial baseline, that accepted baseline is permanent and immutable. Phase 7B V1 prohibits ordinary quotation revision creation after acceptance. Any later commercial changes belong to a separate future Change Order / Commercial Amendment workflow (outside Phase 7B V1) that preserves the original accepted quotation and its historical sales/handover baseline.
+> **Locked OD7B-5 Rule**: Once a quotation version has been client-accepted and forms the Closed-Won commercial baseline, that accepted baseline is permanent and immutable. Phase 7B V1 prohibits ordinary quotation revision creation after acceptance. Any later commercial changes belong to a separate future Change Order / Commercial Amendment workflow (outside Phase 7B V1) that preserves the original accepted quotation and its historical sales/handover baseline.
 
 ---
 
@@ -253,34 +253,34 @@ Future Phase 7B implementation will record the following append-only commercial 
 
 ---
 
-## 18. Material Owner Decisions Submitted for Review (6 Candidates)
+## 18. Locked Phase 7B Architecture Decisions (OD7B-1 through OD7B-6)
 
 > [!IMPORTANT]
-> The following 6 decisions are submitted for formal owner review. Final exact PR head and exact-head CI run are recorded in PR #54 body after the documentation correction push.
+> **Owner Authorization Received**: `LOCK PHASE 7B OWNER DECISIONS AS RECOMMENDED`. All 6 architecture decisions below are formally LOCKED. Final exact PR head and exact-head CI run are recorded in PR #54 body after push.
 
 ### Decision OD7B-1: Client Acceptance Capability Token Expiry Policy
-- **Recommendation**: Active until a new revision is issued or explicit revocation by authorized staff.
-- **Proposed Lock Wording**: *"Client acceptance capability tokens remain active for the finalized version until a new revision is issued or the token is explicitly revoked by authorized staff."*
+- **Status**: **LOCKED**
+- **Lock Wording**: *"Client acceptance capability tokens remain active for the finalized version until a new revision is issued or the token is explicitly revoked by authorized staff."*
 
 ### Decision OD7B-2: Token Revocation on Pre-Acceptance Revision Creation
-- **Recommendation**: Creating a new quotation revision automatically revokes active client capability tokens for all previous unaccepted versions.
-- **Proposed Lock Wording**: *"Creating a new pre-acceptance quotation revision automatically revokes client acceptance capability for all previous unaccepted versions of that quotation."*
+- **Status**: **LOCKED**
+- **Lock Wording**: *"Creating a new pre-acceptance quotation revision automatically revokes client acceptance capability for all previous unaccepted versions of that quotation."*
 
 ### Decision OD7B-3: Premium PDF Storage & Delivery Access Model
-- **Recommendation**: PDFs stored in private bucket `quotation-documents`; served via short-lived signed URLs (15-min TTL) generated on-demand by client portal.
-- **Proposed Lock Wording**: *"Quotation PDF documents are stored in private bucket quotation-documents and delivered via short-lived signed URLs generated on-demand through valid capability sessions."*
+- **Status**: **LOCKED**
+- **Lock Wording**: *"Quotation PDF documents are stored in private bucket quotation-documents and delivered via short-lived signed URLs generated on-demand through valid capability sessions."*
 
 ### Decision OD7B-4: PDF Immutable Caching & Content Hashing Policy
-- **Recommendation**: PDF generated once per finalized version, hashed (`pdf_sha256`), and stored immutably. Byte-changing re-render of an existing finalized version is prohibited.
-- **Proposed Lock Wording**: *"Quotation PDFs are generated once per finalized version, hashed, and stored immutably. Re-rendering of existing finalized versions is prohibited."*
+- **Status**: **LOCKED**
+- **Lock Wording**: *"Quotation PDFs are generated once per finalized version, hashed, and stored immutably. Re-rendering of existing finalized versions is prohibited."*
 
-### Decision OD7B-5: Post-Acceptance Commercial Stability & Future Change Orders (REVISED)
-- **Recommendation**: After client acceptance, the accepted quotation version remains the permanent authoritative Closed-Won commercial baseline. Phase 7B V1 prohibits ordinary quotation revision after acceptance. Later commercial changes belong to a separate future Change Order / Commercial Amendment workflow that preserves the original accepted quotation and its historical sales/handover baseline.
-- **Proposed Lock Wording**: *"After client acceptance, the accepted quotation version remains the permanent authoritative Closed-Won commercial baseline. Phase 7B V1 prohibits creation of an ordinary quotation revision after acceptance. Any later commercial change must be represented by a separate future Change Order / Commercial Amendment workflow that preserves the original accepted quotation and its historical sales/handover baseline."*
+### Decision OD7B-5: Post-Acceptance Commercial Stability & Future Change Orders
+- **Status**: **LOCKED**
+- **Lock Wording**: *"After client acceptance, the accepted quotation version remains the permanent authoritative Closed-Won commercial baseline. Phase 7B V1 prohibits creation of an ordinary quotation revision after acceptance. Any later commercial change must be represented by a separate future Change Order / Commercial Amendment workflow that preserves the original accepted quotation and its historical sales/handover baseline."*
 
-### Decision OD7B-6: Commercial Authority Matrix & Permission Split (CORRECTED & RECONCILED)
-- **Recommendation**: Commercial authority follows the locked V1 sales scope model: Super Admin has full commercial administrative scope; Sales Manager has broad authorized sales scope; and an active Sales Executive may mutate/finalize/send only quotations for leads currently assigned to that executive. Draft/revision mutation requires `quotations.edit`, finalization requires `quotations.finalize`, and delivery requires `quotations.send`. PM, Designer, and Kriti possess zero quotation mutation/finalize/send authority. No `quotations.approve` or staff `quotations.accept` capability exists.
-- **Proposed Lock Wording**: *"Phase 7B commercial authority follows the locked V1 sales scope model: Super Admin has full commercial administrative scope; Sales Manager has broad authorized sales scope; and an active Sales Executive may mutate/finalize/send only quotations for leads currently assigned to that executive. Draft/revision mutation requires quotations.edit, finalization requires quotations.finalize, and delivery requires quotations.send. PM, Designer, and Kriti have zero quotation mutation/finalize/send authority. No quotations.approve or staff quotations.accept capability exists."*
+### Decision OD7B-6: Commercial Authority Matrix & Permission Split
+- **Status**: **LOCKED**
+- **Lock Wording**: *"Phase 7B commercial authority follows the locked V1 sales scope model: Super Admin has full commercial administrative scope; Sales Manager has broad authorized sales scope; and an active Sales Executive may mutate/finalize/send only quotations for leads currently assigned to that executive. Draft/revision mutation requires quotations.edit, finalization requires quotations.finalize, and delivery requires quotations.send. PM, Designer, and Kriti have zero quotation mutation/finalize/send authority. No quotations.approve or staff quotations.accept capability exists."*
 
 ---
 
@@ -311,6 +311,7 @@ MANAGED_RESTORE: NONE
 
 ```text
 PHASE_7B_ARCHITECTURE_ENTRY: PASS
-PHASE_7B_ARCHITECTURE_STATUS: PENDING_OWNER_DECISIONS
-NEXT_OWNER_ACTION: LOCK PHASE 7B OWNER DECISIONS AS RECOMMENDED
+PHASE_7B_ARCHITECTURE_STATUS: FROZEN / OWNER_DECISIONS_LOCKED
+OWNER_DECISIONS_REMAINING: ZERO
+NEXT_OWNER_ACTION: PROCEED PHASE 7B PR54 MERGE
 ```
