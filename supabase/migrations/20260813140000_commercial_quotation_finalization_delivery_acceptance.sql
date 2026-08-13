@@ -67,8 +67,6 @@ BEGIN
     IF OLD.status IN ('finalized', 'archived') THEN
       RAISE EXCEPTION 'QUOTATION_VERSION_IMMUTABLE: Cannot update or delete a finalized/archived quotation version.';
     END IF;
-    RETURN NEW;
-
   ELSIF TG_TABLE_NAME IN ('quotation_sections', 'quotation_payment_schedules') THEN
     SELECT status INTO v_version_status
     FROM public.quotation_versions
@@ -77,8 +75,6 @@ BEGIN
     IF v_version_status IN ('finalized', 'archived') THEN
       RAISE EXCEPTION 'QUOTATION_CHILDREN_IMMUTABLE: Cannot mutate sections or schedule of a finalized/archived quotation version.';
     END IF;
-    RETURN OLD;
-
   ELSIF TG_TABLE_NAME = 'quotation_items' THEN
     SELECT qv.status INTO v_version_status
     FROM public.quotation_sections qs
@@ -88,10 +84,12 @@ BEGIN
     IF v_version_status IN ('finalized', 'archived') THEN
       RAISE EXCEPTION 'QUOTATION_CHILDREN_IMMUTABLE: Cannot mutate items of a finalized/archived quotation version.';
     END IF;
-    RETURN OLD;
   END IF;
 
-  RETURN OLD;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
 $$;
 
