@@ -15,9 +15,10 @@ This document records the repository implementation of Phase 7B on PR #55 **and*
 | M26 raw SHA256 (LF-normalized) | `231BFA6216ABA1EBB8615E78C877F4AF7EB896C42F47A9A45A20C50A98C693C1` |
 | M26 content changed during apply gate | **NO** |
 | Repository migrations | M1–M27 |
-| Managed project `lpurlfmpvriyvpkujvyl` | **M1–M26** (M27 repository-only until managed apply) |
+| Managed project `lpurlfmpvriyvpkujvyl` | **M1–M27** |
 | M26 managed-applied | **YES** |
-| M27 | repository file present; **managed-applied NO** |
+| M27 managed-applied | **YES** |
+| M28 | **ABSENT** |
 
 ## Grant authority model (A–C, W)
 
@@ -193,7 +194,7 @@ M26-introduced WARNs are the same class as prior managed applies: intentional cl
 
 Next step after exact-head CI on the docs certification commit: **PR #55 merge certification**. Do not merge in this gate.
 
-## M27 forward-only trigger EXECUTE privilege repair (repository; not managed-applied yet)
+## M27 forward-only trigger EXECUTE privilege repair (managed-applied)
 
 Independent live advisor/ACL inspection after M26 managed apply found one real privilege defect:
 
@@ -214,6 +215,19 @@ M26 is immutable because it is already managed-applied. This is a tiny forward-o
 | M27 raw SHA256 (LF) | `A0A90F913C63F174F8D9CA0B9C759E246561A725D96370D07C8C83950B45F257` |
 | SQL | `revoke all on function public.prevent_finalized_quotation_mutation() from public, anon, authenticated;` |
 | M26 changed | **NO** |
-| M27 managed-applied | **NO** (repository only at this section's writing) |
+| Pre-apply exact-head CI | SUCCESS run `31783498817` on `2e48894f444663b1bde7154ec6fd96da66368f02` |
+| Recovery package | `C:\Users\KESHAV SHARMA\Desktop\ONEDECORE_RECOVERY\M27_PREAPPLY_20260814T082040Z\` |
+| Apply command | `npx supabase@2.109.1 db push --linked --yes` |
+| APPLY_START_UTC | `2026-08-14T08:25:21.9387124Z` |
+| APPLY_END_UTC | `2026-08-14T08:25:27.4127507Z` |
+| Apply exit | `0` SUCCESS |
+| M27 managed-applied | **YES** |
+| Post-apply managed | M1–M27; pending NONE |
+| Post-apply ACL | `{postgres=X/postgres,service_role=X/postgres}` |
+| PUBLIC / anon / authenticated EXECUTE | **NO / NO / NO** |
+| Trigger helper advisor warnings | **REMOVED** (43 → 41 WARNs; `prevent_finalized_quotation_mutation` absent) |
+| Intentional advisor WARNs remaining | `get_quotation_by_capability` and `accept_quotation_by_capability` (anon/authenticated client capability path); authenticated commercial RPCs such as `finalize_quotation_version` and `create_quotation_whatsapp_service_send_intent` |
+| Row mutation by M27 | NONE (quotations/versions/leads/send-intents remain 0) |
+| Phase 8A / production activation | NOT_STARTED / NONE |
 
-Local certification after `supabase db reset` (M1–M27, before managed apply): pgTAP 19 **100/100**; DB tests **848/848**; phase-7a **42/42**; phase-7b **62/62**; app **613/613**. Local ACL: PUBLIC/anon/authenticated EXECUTE = false. Trigger immutability tests remain in plan 100.
+Local post-apply regression: pgTAP 19 **100/100**; DB tests **848/848**; phase-7a **42/42**; phase-7b **62/62**; app **613/613**; lint 0 errors / 11 warnings; typecheck PASS; build PASS. Trigger immutability assertions remain in plan 100.
