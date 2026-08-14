@@ -1,5 +1,5 @@
 begin;
-select plan(42);
+select plan(36);
 
 -- ----------------------------------------------------------------------------
 -- 1. Schema & Function Existence Verification
@@ -472,9 +472,9 @@ select is(
 select set_config('role', 'anon', true);
 -- Test: Idempotent replay of same quotation acceptance
 select is(
-  (public.accept_quotation_by_capability('test_token_7b_02', 'Test Client 7B', 'client7b@example.com')->>'alreadyAccepted'),
+  (public.accept_quotation_by_capability('test_token_7b_02', 'Test Client 7B', 'client7b@example.com')->>'idempotent_replay'),
   'true',
-  'Idempotent replay of same quotation acceptance returns alreadyAccepted true'
+  'Idempotent replay of same quotation acceptance returns idempotent_replay true'
 );
 
 -- Test: Post-acceptance revision creation is strictly forbidden
@@ -503,6 +503,7 @@ select throws_ok(
     'hash_hack'
   )$$,
   '42501',
+  'permission denied for table quotation_access_grants',
   'Direct INSERT on quotation_access_grants is denied to authenticated users'
 );
 
