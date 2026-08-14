@@ -1910,6 +1910,187 @@ export type Database = {
         }
         Relationships: []
       }
+      quotation_acceptances: {
+        Row: {
+          accepted_at: string
+          accepted_by_email: string | null
+          accepted_by_name: string
+          access_grant_id: string
+          created_at: string
+          credited_sales_executive_id: string
+          id: string
+          lead_id: string
+          quotation_id: string
+          quotation_version_id: string
+          sales_achievement_month: string
+          taxable_base_paise: number
+        }
+        Insert: {
+          accepted_at?: string
+          accepted_by_email?: string | null
+          accepted_by_name: string
+          access_grant_id: string
+          created_at?: string
+          credited_sales_executive_id: string
+          id?: string
+          lead_id: string
+          quotation_id: string
+          quotation_version_id: string
+          sales_achievement_month: string
+          taxable_base_paise: number
+        }
+        Update: {
+          accepted_at?: string
+          accepted_by_email?: string | null
+          accepted_by_name?: string
+          access_grant_id?: string
+          created_at?: string
+          credited_sales_executive_id?: string
+          id?: string
+          lead_id?: string
+          quotation_id?: string
+          quotation_version_id?: string
+          sales_achievement_month?: string
+          taxable_base_paise?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_acceptances_access_grant_id_fkey"
+            columns: ["access_grant_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_access_grants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_acceptances_credited_sales_executive_id_fkey"
+            columns: ["credited_sales_executive_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_acceptances_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_acceptances_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: true
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_acceptances_quotation_version_id_fkey"
+            columns: ["quotation_version_id"]
+            isOneToOne: true
+            referencedRelation: "quotation_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotation_access_grants: {
+        Row: {
+          capability_token_hash: string
+          created_at: string
+          created_by: string | null
+          derivation_nonce: string
+          expires_at: string | null
+          id: string
+          quotation_id: string
+          quotation_version_id: string
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+        }
+        Insert: {
+          capability_token_hash: string
+          created_at?: string
+          created_by?: string | null
+          derivation_nonce: string
+          expires_at?: string | null
+          id: string
+          quotation_id: string
+          quotation_version_id: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Update: {
+          capability_token_hash?: string
+          created_at?: string
+          created_by?: string | null
+          derivation_nonce?: string
+          expires_at?: string | null
+          id?: string
+          quotation_id?: string
+          quotation_version_id?: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_access_grants_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_access_grants_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_access_grants_quotation_version_id_fkey"
+            columns: ["quotation_version_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_access_grants_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotation_commercial_settings: {
+        Row: {
+          max_discount_percentage: number
+          setting_key: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          max_discount_percentage: number
+          setting_key?: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          max_discount_percentage?: number
+          setting_key?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_commercial_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotation_events: {
         Row: {
           actor_id: string
@@ -2060,6 +2241,70 @@ export type Database = {
           },
         ]
       }
+      quotation_pdf_documents: {
+        Row: {
+          bucket_id: string
+          created_at: string
+          created_by: string
+          file_size_bytes: number | null
+          id: string
+          object_path: string
+          pdf_sha256: string | null
+          quotation_id: string
+          quotation_version_id: string
+          ready_at: string | null
+          status: string
+        }
+        Insert: {
+          bucket_id?: string
+          created_at?: string
+          created_by: string
+          file_size_bytes?: number | null
+          id?: string
+          object_path: string
+          pdf_sha256?: string | null
+          quotation_id: string
+          quotation_version_id: string
+          ready_at?: string | null
+          status?: string
+        }
+        Update: {
+          bucket_id?: string
+          created_at?: string
+          created_by?: string
+          file_size_bytes?: number | null
+          id?: string
+          object_path?: string
+          pdf_sha256?: string | null
+          quotation_id?: string
+          quotation_version_id?: string
+          ready_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_pdf_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_pdf_documents_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_pdf_documents_quotation_version_id_fkey"
+            columns: ["quotation_version_id"]
+            isOneToOne: true
+            referencedRelation: "quotation_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotation_sections: {
         Row: {
           created_at: string
@@ -2158,6 +2403,9 @@ export type Database = {
           discount_type: string
           discount_value_paise: number
           exclusions: string[]
+          finalized_at: string | null
+          finalized_by: string | null
+          finalized_content_sha256: string | null
           grand_total_paise: number | null
           id: string
           inclusions: string[]
@@ -2170,6 +2418,7 @@ export type Database = {
           status: string
           subtotal_paise: number
           tax_profile_id: string | null
+          tax_profile_snapshot: Json | null
           tax_rate_percentage: number | null
           tax_total_paise: number | null
           taxable_base_paise: number
@@ -2190,6 +2439,9 @@ export type Database = {
           discount_type?: string
           discount_value_paise?: number
           exclusions?: string[]
+          finalized_at?: string | null
+          finalized_by?: string | null
+          finalized_content_sha256?: string | null
           grand_total_paise?: number | null
           id?: string
           inclusions?: string[]
@@ -2202,6 +2454,7 @@ export type Database = {
           status?: string
           subtotal_paise?: number
           tax_profile_id?: string | null
+          tax_profile_snapshot?: Json | null
           tax_rate_percentage?: number | null
           tax_total_paise?: number | null
           taxable_base_paise?: number
@@ -2222,6 +2475,9 @@ export type Database = {
           discount_type?: string
           discount_value_paise?: number
           exclusions?: string[]
+          finalized_at?: string | null
+          finalized_by?: string | null
+          finalized_content_sha256?: string | null
           grand_total_paise?: number | null
           id?: string
           inclusions?: string[]
@@ -2234,6 +2490,7 @@ export type Database = {
           status?: string
           subtotal_paise?: number
           tax_profile_id?: string | null
+          tax_profile_snapshot?: Json | null
           tax_rate_percentage?: number | null
           tax_total_paise?: number | null
           taxable_base_paise?: number
@@ -2247,6 +2504,13 @@ export type Database = {
           {
             foreignKeyName: "quotation_versions_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_versions_finalized_by_fkey"
+            columns: ["finalized_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2997,6 +3261,8 @@ export type Database = {
           reply_to_message_id: string | null
           request_hash: string
           requested_by: string
+          secure_content_kind: string | null
+          secure_content_ref: string | null
           updated_at: string
         }
         Insert: {
@@ -3014,6 +3280,8 @@ export type Database = {
           reply_to_message_id?: string | null
           request_hash: string
           requested_by: string
+          secure_content_kind?: string | null
+          secure_content_ref?: string | null
           updated_at?: string
         }
         Update: {
@@ -3031,6 +3299,8 @@ export type Database = {
           reply_to_message_id?: string | null
           request_hash?: string
           requested_by?: string
+          secure_content_kind?: string | null
+          secure_content_ref?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3060,6 +3330,13 @@ export type Database = {
             columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_send_intents_secure_content_ref_fkey"
+            columns: ["secure_content_ref"]
+            isOneToOne: false
+            referencedRelation: "quotation_access_grants"
             referencedColumns: ["id"]
           },
         ]
@@ -3164,6 +3441,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_quotation_by_capability: {
+        Args: {
+          p_capability_token: string
+          p_client_email?: string
+          p_client_name: string
+        }
+        Returns: Json
+      }
+      admin_create_quotation_tax_profile: {
+        Args: {
+          p_code: string
+          p_display_name: string
+          p_rate_percentage: number
+        }
+        Returns: Json
+      }
+      admin_update_quotation_tax_profile: {
+        Args: {
+          p_display_name: string
+          p_is_active: boolean
+          p_rate_percentage: number
+          p_tax_profile_id: string
+        }
+        Returns: Json
+      }
       append_kriti_audit_event: {
         Args: {
           p_details?: Json
@@ -3697,6 +3999,43 @@ export type Database = {
         Args: { p_idempotency_key: string; p_lead_id: string; p_title: string }
         Returns: Json
       }
+      create_quotation_revision: {
+        Args: { p_idempotency_key?: string; p_source_version_id: string }
+        Returns: Json
+      }
+      create_quotation_whatsapp_service_send_intent: {
+        Args: {
+          p_conversation_id: string
+          p_grant_id: string
+          p_idempotency_key: string
+          p_version_id: string
+        }
+        Returns: {
+          body_text: string
+          conversation_id: string
+          created_at: string
+          dispatch_mode: string
+          eligibility_code: string
+          eligibility_snapshot: Json
+          id: string
+          idempotency_key: string
+          lifecycle_status: string
+          outbound_message_id: string | null
+          purpose_code: string
+          reply_to_message_id: string | null
+          request_hash: string
+          requested_by: string
+          secure_content_kind: string | null
+          secure_content_ref: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "whatsapp_send_intents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_sales_target: {
         Args: {
           p_closed_won_count_target: number
@@ -3756,6 +4095,8 @@ export type Database = {
           reply_to_message_id: string | null
           request_hash: string
           requested_by: string
+          secure_content_kind: string | null
+          secure_content_ref: string | null
           updated_at: string
         }
         SetofOptions: {
@@ -3765,7 +4106,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      finalize_quotation_version: {
+        Args: {
+          p_expected_lock_version: number
+          p_idempotency_key?: string
+          p_quotation_id: string
+          p_version_id: string
+        }
+        Returns: Json
+      }
+      get_quotation_by_capability: {
+        Args: { p_capability_token: string }
+        Returns: Json
+      }
       get_quotation_draft: { Args: { p_quotation_id: string }; Returns: Json }
+      has_active_role: { Args: { p_role_code: string }; Returns: boolean }
       ingest_meta_whatsapp_message: {
         Args: {
           p_body_text: string
@@ -3814,6 +4169,17 @@ export type Database = {
           webhook_event_id: string
         }[]
       }
+      issue_quotation_access_grant_internal: {
+        Args: {
+          p_actor_id: string
+          p_capability_token_hash: string
+          p_derivation_nonce: string
+          p_grant_id: string
+          p_reissue: boolean
+          p_version_id: string
+        }
+        Returns: Json
+      }
       list_crm_assignable_executives: {
         Args: never
         Returns: {
@@ -3850,6 +4216,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      mark_quotation_pdf_document_ready: {
+        Args: {
+          p_file_size_bytes: number
+          p_object_path: string
+          p_pdf_id: string
+          p_pdf_sha256: string
+        }
+        Returns: Json
       }
       prepare_staff_invite_saga: {
         Args: {
@@ -4125,6 +4500,10 @@ export type Database = {
         Args: { p_reason: string; p_staff_id: string }
         Returns: Json
       }
+      reserve_quotation_pdf_document: {
+        Args: { p_version_id: string }
+        Returns: Json
+      }
       revise_sales_target: {
         Args: {
           p_closed_won_count_target: number
@@ -4155,6 +4534,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      revoke_quotation_access_grant: {
+        Args: { p_grant_id: string; p_reason?: string }
+        Returns: Json
       }
       save_quotation_draft_items: {
         Args: {
@@ -4220,6 +4603,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_quotation_max_discount: {
+        Args: { p_max_discount: number }
+        Returns: Json
       }
       set_staff_profile_status: {
         Args: { p_reason: string; p_staff_id: string; p_status: string }
