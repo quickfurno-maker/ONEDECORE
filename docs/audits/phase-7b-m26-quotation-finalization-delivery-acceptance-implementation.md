@@ -14,10 +14,10 @@ This document records the repository implementation of Phase 7B on PR #55 **and*
 | M26 Git blob SHA | `9d2370508bf6c6416205886ece4657ebb49135e4` |
 | M26 raw SHA256 (LF-normalized) | `231BFA6216ABA1EBB8615E78C877F4AF7EB896C42F47A9A45A20C50A98C693C1` |
 | M26 content changed during apply gate | **NO** |
-| Repository migrations | M1–M26 |
-| Managed project `lpurlfmpvriyvpkujvyl` | **M1–M26** |
+| Repository migrations | M1–M27 |
+| Managed project `lpurlfmpvriyvpkujvyl` | **M1–M26** (M27 repository-only until managed apply) |
 | M26 managed-applied | **YES** |
-| M27 | **ABSENT** |
+| M27 | repository file present; **managed-applied NO** |
 
 ## Grant authority model (A–C, W)
 
@@ -192,3 +192,28 @@ M26-introduced WARNs are the same class as prior managed applies: intentional cl
 | Repository write after apply | docs-only certification |
 
 Next step after exact-head CI on the docs certification commit: **PR #55 merge certification**. Do not merge in this gate.
+
+## M27 forward-only trigger EXECUTE privilege repair (repository; not managed-applied yet)
+
+Independent live advisor/ACL inspection after M26 managed apply found one real privilege defect:
+
+`public.prevent_finalized_quotation_mutation()` is SECURITY DEFINER and remained directly executable by PUBLIC, anon, and authenticated.
+
+Observed managed ACL before repair:
+
+`{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}`
+
+Sibling M26 trigger helpers `prevent_ready_quotation_pdf_mutation()` and `enforce_quotation_pdf_document_invariants()` were already `{postgres=X/postgres,service_role=X/postgres}`.
+
+M26 is immutable because it is already managed-applied. This is a tiny forward-only privilege revoke. No function body change, no trigger change, no architecture change, no OD7B decision change, no weakening of public capability read/accept or authenticated commercial RPCs.
+
+| Item | Value |
+| :--- | :--- |
+| File | `supabase/migrations/20260814140000_quotation_trigger_execute_privilege_hardening.sql` |
+| M27 Git blob SHA | `98305849555fb1b513dc295372cd499ad5d87a97` |
+| M27 raw SHA256 (LF) | `A0A90F913C63F174F8D9CA0B9C759E246561A725D96370D07C8C83950B45F257` |
+| SQL | `revoke all on function public.prevent_finalized_quotation_mutation() from public, anon, authenticated;` |
+| M26 changed | **NO** |
+| M27 managed-applied | **NO** (repository only at this section's writing) |
+
+Local certification after `supabase db reset` (M1–M27, before managed apply): pgTAP 19 **100/100**; DB tests **848/848**; phase-7a **42/42**; phase-7b **62/62**; app **613/613**. Local ACL: PUBLIC/anon/authenticated EXECUTE = false. Trigger immutability tests remain in plan 100.

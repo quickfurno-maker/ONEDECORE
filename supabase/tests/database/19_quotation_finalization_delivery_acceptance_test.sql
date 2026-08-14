@@ -1,5 +1,5 @@
 begin;
-select plan(97);
+select plan(100);
 
 -- ----------------------------------------------------------------------------
 -- 1. Schema & Function Existence Verification
@@ -515,6 +515,21 @@ select is(
   has_function_privilege('service_role', 'public.issue_quotation_access_grant_internal(uuid,uuid,uuid,text,text,boolean)', 'execute'),
   true,
   'service_role can execute internal grant mint'
+);
+select is(
+  has_function_privilege('anon', 'public.prevent_finalized_quotation_mutation()', 'execute'),
+  false,
+  'Anon cannot execute prevent_finalized_quotation_mutation trigger helper'
+);
+select is(
+  has_function_privilege('authenticated', 'public.prevent_finalized_quotation_mutation()', 'execute'),
+  false,
+  'Authenticated cannot execute prevent_finalized_quotation_mutation trigger helper'
+);
+select is(
+  has_function_privilege('public', 'public.prevent_finalized_quotation_mutation()', 'execute'),
+  false,
+  'PUBLIC cannot execute prevent_finalized_quotation_mutation trigger helper'
 );
 
 set local role authenticated;
