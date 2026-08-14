@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatInrFromPaise } from "@/features/crm/contracts/sales-target-contracts";
-import { probeQuotationPermissions } from "@/features/quotations/server/quotation-permissions";
+import { probeQuotationPermissions, isCurrentUserSuperAdmin } from "@/features/quotations/server/quotation-permissions";
 import { listLeadQuotations } from "@/features/quotations/server/quotation-queries";
 
 export const metadata = {
@@ -12,10 +12,12 @@ export default async function AdminQuotationsOverviewPage() {
   let quotations: readonly Awaited<ReturnType<typeof listLeadQuotations>>[number][] = [];
   let errorMessage: string | null = null;
   let canEditQuotations = false;
+  let showCommercialSettings = false;
 
   try {
     const permissions = await probeQuotationPermissions();
     canEditQuotations = permissions.canEditQuotations;
+    showCommercialSettings = await isCurrentUserSuperAdmin();
     quotations = await listLeadQuotations();
   } catch (error) {
     errorMessage = error instanceof Error ? error.message : String(error);
@@ -30,12 +32,22 @@ export default async function AdminQuotationsOverviewPage() {
             Phase 7A Commercial Quotation Data & Draft Foundation. Access is scoped to assigned sales leads.
           </p>
         </div>
-        <Link
-          href="/admin/crm"
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 shadow"
-        >
-          View Sales Leads in CRM
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {showCommercialSettings ? (
+            <Link
+              href="/admin/quotations/settings"
+              className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20"
+            >
+              Commercial Settings
+            </Link>
+          ) : null}
+          <Link
+            href="/admin/crm"
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 shadow"
+          >
+            View Sales Leads in CRM
+          </Link>
+        </div>
       </div>
 
       {errorMessage && (

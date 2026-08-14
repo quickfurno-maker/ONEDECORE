@@ -383,8 +383,20 @@ export function QuotationDraftEditor({
                       setSaving(false);
                       if (!res.success) {
                         setMessage({ type: "error", text: res.message || "Send failed." });
+                      } else if (res.status === "provider_bound") {
+                        setMessage({
+                          type: "success",
+                          text: "WhatsApp send intent is provider-bound. Delivery is confirmed only by webhook evidence.",
+                        });
+                        handleRefreshDraft();
+                      } else if (res.status === "dispatch_disabled" || res.status === "intent_recorded") {
+                        setMessage({
+                          type: "success",
+                          text: "WhatsApp send intent recorded. Provider dispatch is disabled.",
+                        });
+                        handleRefreshDraft();
                       } else {
-                        setMessage({ type: "success", text: "Secure WhatsApp send intent enqueued and dispatched!" });
+                        setMessage({ type: "success", text: res.message || "Send intent recorded." });
                         handleRefreshDraft();
                       }
                     }}

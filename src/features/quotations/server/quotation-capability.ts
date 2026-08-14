@@ -31,3 +31,9 @@ export function deriveQuotationCapabilityToken(
 export function hashCapabilityToken(token: string): string {
   return crypto.createHash('sha256').update(token.trim()).digest('hex');
 }
+
+export function redactCapabilitySecrets(text: string): string {
+  return text
+    .replace(/\/q\/[0-9a-f]{32,128}/gi, '/q/[redacted]')
+    .replace(/odq-capability-v1\|[^\s]+/gi, 'odq-capability-v1|[redacted]');
+}

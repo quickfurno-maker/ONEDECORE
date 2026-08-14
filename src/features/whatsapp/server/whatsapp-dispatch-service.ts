@@ -62,6 +62,12 @@ function asJsonSnapshot(value: Record<string, unknown>): Json {
   return value as Json;
 }
 
+function sanitizeDispatchMessage(message: string): string {
+  return message
+    .replace(/\/q\/[0-9a-f]{32,128}/gi, "/q/[redacted]")
+    .replace(/odq-capability-v1\|[^\s]+/gi, "odq-capability-v1|[redacted]");
+}
+
 export async function dispatchWhatsappSendIntent(
   sendIntentId: string,
   deps: WhatsappDispatchServiceDeps = {}
@@ -246,7 +252,7 @@ export async function dispatchWhatsappSendIntent(
         };
       }
 
-      // Construct link in memory ONLY
+      // Construct link in memory ONLY. Never persist, log, or snapshot the bearer token.
       const cleanAppUrl = appUrl.replace(/\/+$/, '');
       dispatchBodyText = `Your ONEDECORE commercial quotation is ready. View and accept securely:\n${cleanAppUrl}/q/${derivedToken}`;
     }
@@ -279,7 +285,7 @@ export async function dispatchWhatsappSendIntent(
         outcome: 'ambiguous',
         sendIntentId: claim.send_intent_id,
         dispatchAttemptId: claim.dispatch_attempt_id,
-        message: 'Provider accepted the request but local binding failed. Reconciliation required.',
+      message: sanitizeDispatchMessage('Provider accepted the request but local binding failed. Reconciliation required.'),
       };
     }
 
@@ -307,7 +313,7 @@ export async function dispatchWhatsappSendIntent(
       outcome: 'ambiguous',
       sendIntentId: claim.send_intent_id,
       dispatchAttemptId: claim.dispatch_attempt_id,
-      message: providerResult.message,
+      message: sanitizeDispatchMessage(providerResult.message),
     };
   }
 
@@ -323,6 +329,6 @@ export async function dispatchWhatsappSendIntent(
     outcome: 'failed',
     sendIntentId: claim.send_intent_id,
     dispatchAttemptId: claim.dispatch_attempt_id,
-    message: providerResult.message,
+    message: sanitizeDispatchMessage(providerResult.message),
   };
 }

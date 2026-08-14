@@ -59,6 +59,26 @@ export async function adminCreateTaxProfileAction(code: string, displayName: str
   return { success: true };
 }
 
+export async function adminUpdateTaxProfileAction(params: {
+  taxProfileId: string;
+  displayName: string;
+  ratePercentage: number;
+  isActive: boolean;
+}): Promise<{ success: boolean; message?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('admin_update_quotation_tax_profile', {
+    p_tax_profile_id: params.taxProfileId,
+    p_display_name: params.displayName,
+    p_rate_percentage: params.ratePercentage,
+    p_is_active: params.isActive,
+  });
+
+  if (error) {
+    return { success: false, message: error.message };
+  }
+  return { success: true };
+}
+
 export async function finalizeQuotationDraftAction(params: {
   quotationId: string;
   versionId: string;
@@ -78,7 +98,7 @@ export async function finalizeQuotationDraftAction(params: {
     p_quotation_id: params.quotationId,
     p_version_id: params.versionId,
     p_expected_lock_version: params.expectedLockVersion,
-    p_idempotency_key: params.idempotencyKey || null,
+    p_idempotency_key: params.idempotencyKey || undefined,
   });
 
   if (finalizeErr || !finalizeResult) {

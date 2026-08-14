@@ -1,71 +1,98 @@
-# ONEDECORE — Phase 7B Commercial Quotation Finalization, Premium PDF, Secure WhatsApp Delivery & Client Acceptance Audit
+# ONEDECORE — Phase 7B M26 Implementation Audit (PR #55 final A–W correction)
 
-## Executive Summary
-This document provides the authoritative implementation audit for **Phase 7B PR #55 M26 Correction Gate**. Every database schema construct, server action, security definer RPC, capability token mechanism, and test assertion has been audited and certified strictly against canonical M25, CRM pipeline invariants, and locked architecture decisions OD7B-1 through OD7B-6.
+This document records the **repository** implementation of Phase 7B on PR #55. It is not a managed-apply certificate and does not authorize merge.
 
----
+## Identity
 
-## 1. Schema & Migration Parity Certification (M26)
+| Item | Value |
+| :--- | :--- |
+| Branch | `phase-7b-m26-quotation-finalization-delivery-acceptance` |
+| PR | #55 OPEN / DO NOT MERGE |
+| Protected main (base) | `864b96776be756e0bb77b16746313e80460bd524` |
+| Starting head (this gate) | `457a0c53a3fe2fb593652d5f3d78c66adaf1eb8b` |
+| Migration file | `supabase/migrations/20260813140000_commercial_quotation_finalization_delivery_acceptance.sql` |
+| M26 Git blob SHA | `9d2370508bf6c6416205886ece4657ebb49135e4` |
+| M26 raw SHA256 (LF-normalized) | `231BFA6216ABA1EBB8615E78C877F4AF7EB896C42F47A9A45A20C50A98C693C1` |
+| Repository migrations | M1–M26 |
+| Managed project `lpurlfmpvriyvpkujvyl` | M1–M25 only |
+| M26 managed-applied | **NO** |
+| Managed schema/data/migration/storage writes this gate | **NONE** |
 
-### Canonical Table Structure & M25 Alignment
-- **`public.permissions` & `public.roles`**: Standard system permissions `quotations.finalize` and `quotations.send` registered and linked via `public.role_permissions` to `super_admin`, `sales_manager`, `sales_executive`, `management`, and `sales`. 0 permissions granted to PM, Designer, or Kriti.
-- **`private.quotation_idempotency_requests`**: Exactly aligns with M25 columns `(actor_id, operation_code, idempotency_key, request_hash, quotation_id, quotation_version_id, response_snapshot, created_at)`.
-- **`public.quotation_versions`**: Extends version table with `finalized_at`, `finalized_by`, `finalized_content_sha256`, and `tax_profile_snapshot`. Uses canonical M25 snapshot and money columns (`client_name_snapshot`, `client_email_snapshot`, `client_phone_snapshot`, `property_address_snapshot`, `scope_summary`, `subtotal_paise`, `discount_type`, `discount_value_paise`, `discount_percentage`, `discount_total_paise`, `taxable_base_paise`, `tax_profile_id`, `tax_rate_percentage`, `tax_total_paise`, `grand_total_paise`, `terms_and_conditions`, `inclusions`, `exclusions`).
-- **`public.quotation_tax_profiles`**: Uses canonical column `rate_percentage`.
-- **`public.quotation_sections` & `public.quotation_payment_schedules`**: Joined directly to `quotation_version_id`.
-- **`public.quotation_items`**: Joined via `section_id -> quotation_sections.id`.
-- **`public.quotation_events`**: Canonical schema `(quotation_id, quotation_version_id, lead_id, event_type, actor_id, details, occurred_at)`.
+If M26 is edited again, recompute blob SHA and SHA256 before recording the final head.
 
----
+## Grant authority model (A–C, W)
 
-## 2. Server-Authoritative Governance & Security Definer RPCs
+1. Authenticated `sendQuotationAction` resolves the real actor via `auth.getUser()`.
+2. The server mints `grantId = crypto.randomUUID()` and a 32-byte hex nonce, derives HMAC-SHA256(`QUOTATION_CAPABILITY_SECRET`, `odq-capability-v1|<grantId>|<versionId>|<nonce>`), and stores `sha256(token)`.
+3. Persistence is **only** through `public.issue_quotation_access_grant_internal` (SECURITY DEFINER, `search_path = ''`, **service_role EXECUTE only**). The caller-supplied `p_grant_id` is the row primary key.
+4. Public `issue_quotation_access_grant(uuid,text,text)` is dropped. Authenticated callers cannot choose nonce/hash.
+5. At most one active grant per `quotation_version_id` (`UNIQUE` where `revoked_at IS NULL`). Normal send reuses the active grant. Explicit reissue revokes the prior grant, appends `quotation.capability_revoked`, then issues the new id and `quotation.capability_issued`.
+6. `quotation_access_grants` has RLS enabled and **no** authenticated SELECT/DML. Database may persist grant id, nonce, and token hash only. Plaintext token and `/q/<token>` are never written to grants, send intents, messages, dispatch snapshots, quotation events, or lead ledgers.
 
-### Finalization RPC (`public.finalize_quotation_version`)
-- **Advisory Lock & Idempotency**: Locks user idempotency key using `pg_advisory_xact_lock`. Returns identical `response_snapshot` on idempotent replay. Throws `IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH` on payload mismatch.
-- **RBAC & Lead Scope**: Requires `quotations.finalize`. Super Admin / Sales Manager have broad scope; Sales Executive requires active lead assignment (`v_lead.assigned_to = v_user_id`). PM, Designer, Kriti denied.
-- **Recalculation & Validation**: Executes `private.recalculate_quotation_totals`. Re-verifies line items, payment schedule percentages (sum = 100.00%) or amounts (sum = grand total), and tax profile status.
-- **Max Discount Enforcement**: Evaluates percentage or flat discount effective rate `(discount_total_paise * 100.0) / subtotal_paise` against `max_discount_percentage` in `public.quotation_commercial_settings`.
-- **Server-Authoritative Content Hash**: Computes deterministic SHA-256 inside PostgreSQL over canonical JSON (`private.compute_canonical_quotation_sha256`).
+## Canonical Phase 6B send path (D–J)
 
-### Client Capability Token & Access Grants
-- **Token Non-Persistence**: Plaintext bearer token `/q/[token]` is NEVER saved to database tables, logs, or events.
-- **`public.quotation_access_grants`**: Stores `derivation_nonce` + `capability_token_hash = sha256(token)`.
-- **Timing-Safe Digest Verification**: Provider dispatch verifies token timing-safely (`crypto.timingSafeEqual`).
-- **Fail-Closed Dispatch**: `dispatchWhatsappSendIntent` validates active grant, non-expired grant, finalized version status, PDF status === `'ready'` with valid SHA-256 and size > 0, and non-empty `NEXT_PUBLIC_APP_URL`.
+- Direct service-role insert into `whatsapp_send_intents` is removed from quotation send.
+- Ordinary inbox send still goes through `public.create_whatsapp_service_send_intent` → `private.create_whatsapp_service_send_intent_impl_v2` with **NULL** secure fields (previous 4-field request hash).
+- Quotation send uses `public.create_quotation_whatsapp_service_send_intent` (authenticated, actor permission + OD7B-6 scope, active grant, finalized version, PDF READY, real conversation with matching `lead_id`, `whatsapp_inbox_can_use_conversation`, `whatsapp_evaluate_service_send_eligibility`).
+- Purpose is exactly `WHATSAPP_SERVICE`. Persisted body is redacted. `secure_content_kind = quotation_link`, `secure_content_ref = grant id`, `requested_by = auth.uid()`, `eligibility_code` is the canonical Phase 6B code (`eligible` or deny).
+- Stable idempotency: `quotation-send:<versionId>:<grantId>`.
+- `quotation.send_requested` is appended in the same DB transaction with `send_intent_id`, `grant_id`, `version_number` only.
+- `sendQuotationAction` uses `dispatchWhatsappSendIntent` return values. Provider-bound is **not** delivered. Only webhook evidence may say delivered/read. Missing conversation fails closed. No fake conversation or random `phone_number_id`.
 
----
+## PDF immutable workflow (K–P)
 
-## 3. CRM Closed-Won Milestone & Client Acceptance
+- READY requires status, 64-hex SHA-256, size > 0, `ready_at`, non-empty path, bucket `quotation-documents`.
+- Version must be finalized; `quotation_id` must match the version root.
+- READY rows reject mutation of identity/bytes/`created_by`/`created_at`/`ready_at`.
+- `ensureQuotationPdfArtifact`: authenticate via reserve RPC, skip render if already READY, render frozen PDFKit metadata, upload `upsert: false`, mark READY only after upload, `created_by` is the real actor. Upload failure does not mark READY. Binding failure after upload is `PDF_READY_BINDING_AMBIGUOUS` / recovery required.
+- Byte determinism: two renders of the same frozen payload must `Buffer.equals` and share SHA-256.
 
-### Private Helper `private.accepted_quotation_close_won_impl`
-- **Session Config Guard**: Sets `set_config('onedecore.crm_transition', '1', true)` to bypass `trg_leads_no_direct_pipeline_update` direct UPDATE guard.
-- **Lead Mutation**: Updates `public.leads.status = 'closed_won'`.
-- **Audit Logging**: Inserts `public.lead_events` (`lead.status_changed`) and `public.lead_activities` (`status.changed`).
+## Tax resnapshot and semantic hash (T, U)
 
-### Client Acceptance RPC (`public.accept_quotation_by_capability`)
-- **Single Acceptance per Lead**: Accepts quotation and snapshots `credited_sales_executive_id` (from `leads.assigned_to`), `taxable_base_paise` (GST excluded revenue basis), and `Asia/Kolkata` sales month (`YYYY-MM`).
-- **Idempotency Replay**: Re-submitting acceptance for the SAME version returns `{ success: true, idempotent_replay: true }`. Attempting acceptance on another version throws `QUOTATION_ALREADY_ACCEPTED`.
+Finalization locks the selected active tax profile, writes live `rate_percentage` and exact `tax_profile_snapshot` while the version is still draft, then `recalculate_quotation_totals`, then validates money, then computes `private.compute_canonical_quotation_sha256`.
 
----
+The digest binds quotation number, version number, title, client/property snapshots, scope, ordered sections/items (qty/UOM/rates/line totals), money columns, tax profile identity + rate, payment schedule mode/rows, inclusions, exclusions, and terms. Volatile send/PDF/audit fields are excluded.
 
-## 4. Pre-Acceptance Revision RPC (`public.create_quotation_revision`)
-- Clones version, sections, items, and payment schedules.
-- Revokes active capability grants for previous versions.
-- Post-acceptance revision attempts throw `QUOTATION_ACCEPTED_IMMUTABLE`.
+## Acceptance (V)
 
----
+`accept_quotation_by_capability` requires `private.crm_is_assignable_sales_user(leads.assigned_to)` before snapshotting `credited_sales_executive_id`. Unassigned, inactive, or non-sales owners fail closed. Duplicate same version is idempotent. Status becomes `closed_won`. Revenue basis is `taxable_base_paise`. Month is Asia/Kolkata. No Phase 8A project creation.
 
-## 5. Automated Quality & Verification Matrix
+## Service-role helper and settings UI
 
-| Test Suite | Result | Assertion Count |
-| :--- | :--- | :--- |
-| **Phase 7A Unit Tests** (`npm run test:phase-7a`) | **PASS** | 42/42 |
-| **Phase 7B Unit Tests** (`npm run test:phase-7b`) | **PASS** | 47/47 |
-| **Application Matrix Tests** (`npm run test:app`) | **PASS** | 598/598 |
-| **Local Verification** (`npm run check`) | **PASS** | ESLint 0 errors, `tsc --noEmit` 0 errors, Next.js build clean |
+- `src/lib/supabase/service-role.ts` fails closed if URL or `SUPABASE_SERVICE_ROLE_KEY` is missing/invalid. No dummy key. Independent of `NODE_ENV`.
+- `QuotationCommercialSettingsAdmin` is mounted at `/admin/quotations/settings` (Super Admin only) for tax profile create/update/activate/deactivate and max-discount configuration. No production tax or max-discount seeds.
 
----
+## Behavioral test counts (local certification)
 
-## 6. PR #55 Mandatory Body SHA Update
+Recorded after `supabase db reset` on this M26 file. Re-run before treating a later head as certified.
 
-The exact head SHA of branch `phase-7b-m26-quotation-finalization-delivery-acceptance` must be recorded in PR #55 body metadata upon final push.
+| Suite | Local result |
+| :--- | :--- |
+| pgTAP `19_quotation_finalization_delivery_acceptance_test.sql` | 97/97 |
+| Database tests total (`npx supabase test db`) | 845/845 |
+| `npm run test:phase-7a` | 42/42 |
+| `npm run test:phase-7b` | 62/62 |
+| `npm run test:app` | 613/613 |
+| Lint | 0 errors (11 pre-existing warnings) |
+| Typecheck | PASS |
+| Build | PASS |
+
+## Local security matrix (pgTAP 19 + M26 grants)
+
+| Control | Result |
+| :--- | :--- |
+| `quotation_access_grants` RLS | enabled; no authenticated SELECT/DML |
+| Internal grant mint | service_role EXECUTE yes; authenticated/anon/PUBLIC no |
+| Quotation secure send RPC | authenticated EXECUTE yes; actor/scope inside function |
+| `quotation_pdf_documents` | no authenticated DML; staff SELECT scoped |
+| SECURITY DEFINER 7B functions | `search_path = ''` |
+| `quotations.approve` / staff `quotations.accept` | absent |
+| `quotation-documents` bucket | private; not public |
+| Production tax / max-discount seed | none |
+
+## Explicit non-claims
+
+- Managed M26 is **not** applied.
+- PR #55 must remain **OPEN / not merged**.
+- This gate does not activate production quotation send or live Meta dispatch.
+- Exact-head GitHub CI must be recorded on the **final pushed SHA**, not this working tree.

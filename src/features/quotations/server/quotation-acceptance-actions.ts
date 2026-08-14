@@ -49,8 +49,8 @@ export async function acceptQuotationByCapabilityAction(params: {
 
   const { data, error } = await supabase.rpc("accept_quotation_by_capability", {
     p_capability_token: params.token,
-    p_accepted_by_name: params.clientName,
-    p_accepted_by_email: params.clientEmail || null,
+    p_client_name: params.clientName,
+    p_client_email: params.clientEmail || undefined,
   });
 
   if (error || !data) {
@@ -82,7 +82,7 @@ export async function createQuotationRevisionAction(params: {
 
   const { data, error } = await supabase.rpc("create_quotation_revision", {
     p_source_version_id: params.sourceVersionId,
-    p_idempotency_key: params.idempotencyKey || null,
+    p_idempotency_key: params.idempotencyKey || undefined,
   });
 
   if (error || !data) {

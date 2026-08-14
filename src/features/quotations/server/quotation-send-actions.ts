@@ -2,152 +2,265 @@
 import "server-only";
 
 import crypto from "node:crypto";
-import { createClient } from "@/lib/supabase/server";
-import { deriveQuotationCapabilityToken, hashCapabilityToken } from "./quotation-capability";
-import { createQuotationWhatsappSendIntentAction } from "@/features/whatsapp/server/whatsapp-send-actions";
-import { dispatchWhatsappSendIntent } from "@/features/whatsapp/server/whatsapp-dispatch-service";
+import { deriveQuotationCapabilityToken, hashCapabilityToken, redactCapabilitySecrets } from "./quotation-capability.ts";
+import { dispatchWhatsappSendIntent } from "../../whatsapp/server/whatsapp-dispatch-service.ts";
+import { getWhatsappOutboundMode } from "../../whatsapp/server/whatsapp-outbound-env.ts";
 
-export async function sendQuotationAction(params: {
-  quotationId: string;
-  versionId: string;
-  reissueToken?: boolean;
-}): Promise<{
+export type QuotationSendStatus =
+  | "intent_recorded"
+  | "dispatch_disabled"
+  | "queued"
+  | "pending"
+  | "provider_bound"
+  | "failure"
+  | "reconciliation_required";
+
+export type SendQuotationActionDeps = {
+  getUserId?: () => Promise<string | null>;
+  userClient?: {
+    from: (table: string) => unknown;
+    rpc: (
+      fn: string,
+      args: Record<string, unknown>
+    ) => Promise<{ data: unknown; error: { message: string } | null }>;
+  };
+  createAdminClient?: () => {
+    rpc: (
+      fn: string,
+      args: Record<string, unknown>
+    ) => Promise<{ data: unknown; error: { message: string } | null }>;
+  };
+  dispatchWhatsappSendIntent?: typeof dispatchWhatsappSendIntent;
+  getWhatsappOutboundMode?: typeof getWhatsappOutboundMode;
+};
+
+type QuotationSendUserClient = {
+  from: (table: string) => {
+    select: (cols: string) => {
+      eq: (
+        col: string,
+        val: string
+      ) => PromiseLike<{ data: unknown; error: { message: string } | null }> & {
+        single: () => Promise<{ data: unknown; error: { message: string } | null }>;
+      };
+    };
+  };
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: unknown; error: { message: string } | null }>;
+  auth?: { getUser: () => Promise<{ data: { user: { id: string } | null } }> };
+};
+
+export async function sendQuotationAction(
+  params: {
+    quotationId: string;
+    versionId: string;
+    reissueToken?: boolean;
+  },
+  deps: SendQuotationActionDeps = {}
+): Promise<{
   success: boolean;
+  status?: QuotationSendStatus;
   message?: string;
   sendIntentId?: string;
   grantId?: string;
 }> {
-  const supabase = await createClient();
+  let supabase: QuotationSendUserClient;
+  if (deps.userClient) {
+    supabase = deps.userClient as QuotationSendUserClient;
+  } else {
+    const { createClient } = await import("../../../lib/supabase/server.ts");
+    supabase = (await createClient()) as unknown as QuotationSendUserClient;
+  }
+  const actorId = deps.getUserId
+    ? await deps.getUserId()
+    : (await supabase.auth?.getUser())?.data?.user?.id;
+  if (!actorId) {
+    return { success: false, status: "failure", message: "UNAUTHENTICATED: Authentication required." };
+  }
 
-  // Fetch version & quotation details
   const { data: versionData, error: versionErr } = await supabase
     .from("quotation_versions")
     .select(`
       id,
       status,
       version_number,
-      grand_total_paise,
       quotations!inner(id, quotation_number, lead_id)
     `)
     .eq("id", params.versionId)
     .single();
 
   if (versionErr || !versionData) {
-    return { success: false, message: versionErr?.message || "Quotation version not found." };
+    return { success: false, status: "failure", message: versionErr?.message || "Quotation version not found." };
   }
 
-  if (versionData.status !== "finalized") {
-    return { success: false, message: "INVALID_STATE: Only finalized quotation versions can be sent." };
+  const versionRow = versionData as { status?: string; quotations?: { lead_id?: string } };
+  if (versionRow.status !== "finalized") {
+    return { success: false, status: "failure", message: "INVALID_STATE: Only finalized quotation versions can be sent." };
   }
 
-  const quotationObj = (versionData as Record<string, unknown>).quotations as Record<string, unknown>;
+  const leadId = String(versionRow.quotations?.lead_id || "");
 
-  // Check PDF is READY
   const { data: pdfDoc } = await supabase
     .from("quotation_pdf_documents")
     .select("id, status")
     .eq("quotation_version_id", params.versionId)
     .single();
 
-  if (!pdfDoc || pdfDoc.status !== "ready") {
-    return { success: false, message: "PDF_NOT_READY: Quotation PDF artifact must be ready before sending." };
+  const pdfRow = pdfDoc as { status?: string } | null;
+  if (!pdfRow || pdfRow.status !== "ready") {
+    return { success: false, status: "failure", message: "PDF_NOT_READY: Quotation PDF artifact must be ready before sending." };
   }
 
-  // Get lead customer contact info
-  const leadId = String(quotationObj.lead_id || "");
-  const { data: lead } = await supabase
-    .from("leads")
-    .select("id, submitted_name, contacts!contact_id(phone_e164)")
-    .eq("id", leadId)
-    .single();
+  const { data: conversations, error: convErr } = await supabase
+    .from("whatsapp_conversations")
+    .select("id, customer_e164, lead_id")
+    .eq("lead_id", leadId);
 
-  const customerPhone = (lead as unknown as { contacts: { phone_e164: string } })?.contacts?.phone_e164;
-  if (!lead || !customerPhone) {
-    return { success: false, message: "CUSTOMER_CONTACT_MISSING: Lead has no valid phone number for WhatsApp delivery." };
+  if (convErr) {
+    return { success: false, status: "failure", message: convErr.message };
   }
 
-  // Capability Grant Generation
-  let grantId: string;
-  let nonce: string;
-  let tokenHash: string;
-
-  // Check if active grant exists unless reissue is requested
-  const { data: existingGrant } = await supabase
-    .from("quotation_access_grants")
-    .select("id, derivation_nonce, capability_token_hash")
-    .eq("quotation_version_id", params.versionId)
-    .is("revoked_at", null)
-    .single();
-
-  if (existingGrant && !params.reissueToken) {
-    grantId = existingGrant.id;
-  } else {
-    // Generate new nonce & token hash
-    nonce = crypto.randomBytes(16).toString("hex");
-    const tempGrantId = crypto.randomUUID();
-    const token = deriveQuotationCapabilityToken(params.versionId, tempGrantId, nonce);
-    tokenHash = hashCapabilityToken(token);
-
-    const { data: issueResult, error: grantErr } = await supabase.rpc("issue_quotation_access_grant", {
-      p_version_id: params.versionId,
-      p_derivation_nonce: nonce,
-      p_capability_token_hash: tokenHash,
-    });
-
-    const issueObj = issueResult as Record<string, unknown> | null;
-    if (grantErr || !issueObj || typeof issueObj.grant_id !== "string") {
-      return { success: false, message: grantErr?.message || "Failed to issue access grant capability." };
-    }
-
-    grantId = issueObj.grant_id;
+  const linked = ((conversations as Array<{ id: string; lead_id: string; customer_e164: string }> | null) ?? []).filter(
+    (row) => row.lead_id === leadId
+  );
+  if (linked.length === 0) {
+    return {
+      success: false,
+      status: "failure",
+      message: "NO_ELIGIBLE_CONVERSATION: A real WhatsApp conversation linked to this lead is required.",
+    };
   }
 
-  // Create Phase 6B Secure Send Intent
-  // Note: bodyText contains REDACTED internal text ONLY (0 bearer token)
-  const redactedBodyText = `Your ONEDECORE commercial quotation ${quotationObj.quotation_number} (v${versionData.version_number}) is ready. Open your secure link to view details.`;
+  const conversationId = linked.length === 1 ? linked[0].id : null;
+  if (!conversationId) {
+    return {
+      success: false,
+      status: "failure",
+      message: "NO_ELIGIBLE_CONVERSATION: Multiple WhatsApp conversations are linked; refuse ambiguous send.",
+    };
+  }
 
-  const sendIntentResult = await createQuotationWhatsappSendIntentAction({
-    customerE164: customerPhone,
-    bodyText: redactedBodyText,
-    leadId: leadId,
-    secureContentKind: "quotation_link",
-    secureContentRef: grantId,
+  const grantId = crypto.randomUUID();
+  const nonce = crypto.randomBytes(32).toString("hex");
+  const token = deriveQuotationCapabilityToken(params.versionId, grantId, nonce);
+  const tokenHash = hashCapabilityToken(token);
+
+  let admin;
+  try {
+    admin = deps.createAdminClient
+      ? deps.createAdminClient()
+      : (await import("../../../lib/supabase/service-role.ts")).createAdminClient();
+  } catch (err) {
+    return {
+      success: false,
+      status: "failure",
+      message: err instanceof Error ? err.message : "Admin client unavailable.",
+    };
+  }
+
+  const { data: issueResult, error: grantErr } = await admin.rpc("issue_quotation_access_grant_internal", {
+    p_actor_id: actorId,
+    p_grant_id: grantId,
+    p_version_id: params.versionId,
+    p_derivation_nonce: nonce,
+    p_capability_token_hash: tokenHash,
+    p_reissue: Boolean(params.reissueToken),
   });
 
-  if (!sendIntentResult.success || !sendIntentResult.sendIntentId) {
-    return { success: false, message: sendIntentResult.message || "Failed to enqueue WhatsApp send intent." };
+  const issueObj = issueResult as Record<string, unknown> | null;
+  if (grantErr || !issueObj || typeof issueObj.grant_id !== "string") {
+    return { success: false, status: "failure", message: grantErr?.message || "Failed to issue access grant capability." };
   }
 
-  const sendIntentId = sendIntentResult.sendIntentId;
+  const persistedGrantId = issueObj.grant_id;
+  const idempotencyKey = `quotation-send:${params.versionId}:${persistedGrantId}`;
 
-  // Trigger Phase 6B dispatch service asynchronously/in-line
-  try {
-    await dispatchWhatsappSendIntent(sendIntentId);
-  } catch (dispatchErr) {
-    console.warn("WhatsApp dispatch warning (intent enqueued):", dispatchErr);
+  const { data: intentRow, error: intentErr } = await supabase.rpc(
+    "create_quotation_whatsapp_service_send_intent",
+    {
+      p_version_id: params.versionId,
+      p_grant_id: persistedGrantId,
+      p_conversation_id: conversationId,
+      p_idempotency_key: idempotencyKey,
+    }
+  );
+
+  if (intentErr || !intentRow) {
+    return {
+      success: false,
+      status: "failure",
+      message: intentErr?.message || "Failed to create WhatsApp send intent.",
+    };
   }
 
-  // Log send_requested audit event using canonical quotation_events schema
-  const { data: userAuth } = await supabase.auth.getUser();
-  if (userAuth?.user?.id) {
-    await supabase.from("quotation_events").insert({
-      quotation_id: params.quotationId,
-      quotation_version_id: params.versionId,
-      lead_id: leadId,
-      event_type: "quotation.send_requested",
-      actor_id: userAuth.user.id,
-      details: {
-        send_intent_id: sendIntentId,
-        grant_id: grantId,
-        version_number: versionData.version_number,
-      },
-    });
+  const sendIntentId = (intentRow as { id?: string }).id;
+  if (!sendIntentId) {
+    return { success: false, status: "failure", message: "Send intent row missing id." };
+  }
+
+  const outboundMode = (deps.getWhatsappOutboundMode ?? getWhatsappOutboundMode)();
+  if (outboundMode === "disabled") {
+    return {
+      success: true,
+      status: "dispatch_disabled",
+      sendIntentId,
+      grantId: persistedGrantId,
+      message: "Send intent recorded. Provider dispatch is disabled.",
+    };
+  }
+
+  const dispatchResult = await (deps.dispatchWhatsappSendIntent ?? dispatchWhatsappSendIntent)(
+    sendIntentId
+  );
+
+  if (dispatchResult.outcome === "disabled") {
+    return {
+      success: true,
+      status: "dispatch_disabled",
+      sendIntentId,
+      grantId: persistedGrantId,
+      message: redactCapabilitySecrets(dispatchResult.message),
+    };
+  }
+
+  if (dispatchResult.outcome === "bound" || dispatchResult.outcome === "already_bound") {
+    return {
+      success: true,
+      status: "provider_bound",
+      sendIntentId,
+      grantId: persistedGrantId,
+      message: "Provider-bound. Delivery status follows webhook evidence.",
+    };
+  }
+
+  if (dispatchResult.outcome === "not_claimable") {
+    const pending = /queued/i.test(dispatchResult.message) ? "queued" : "pending";
+    return {
+      success: true,
+      status: pending,
+      sendIntentId,
+      grantId: persistedGrantId,
+      message: redactCapabilitySecrets(dispatchResult.message),
+    };
+  }
+
+  if (dispatchResult.outcome === "ambiguous") {
+    return {
+      success: false,
+      status: "reconciliation_required",
+      sendIntentId,
+      grantId: persistedGrantId,
+      message: redactCapabilitySecrets(dispatchResult.message),
+    };
   }
 
   return {
-    success: true,
+    success: false,
+    status: "failure",
     sendIntentId,
-    grantId,
-    message: "Commercial quotation sent via secure WhatsApp link.",
+    grantId: persistedGrantId,
+    message: redactCapabilitySecrets(dispatchResult.message || "Quotation WhatsApp dispatch failed."),
   };
 }

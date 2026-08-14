@@ -20,3 +20,11 @@ export async function probeQuotationPermissions(): Promise<QuotationPermissionPr
     canEditQuotations: !editRes.error && editRes.data === true,
   };
 }
+
+export async function isCurrentUserSuperAdmin(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("has_active_role", {
+    p_role_code: "super_admin",
+  });
+  return !error && data === true;
+}
