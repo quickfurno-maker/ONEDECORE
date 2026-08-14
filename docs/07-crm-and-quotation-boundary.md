@@ -1,8 +1,8 @@
 # 07 — CRM PIPELINE AND COMMERCIAL QUOTATION BOUNDARY
 
-**Document Status:** Locked CRM & Quotation Baseline (reconciled Phase 5B, July 31, 2026)
+**Document Status:** Locked CRM & Quotation Baseline (truth-synced post Phase 7B merge / Phase 8A architecture freeze, August 14, 2026)
 **Internal Prefix:** `/admin`
-**Implementation Status:** Architecture frozen; **CRM workspace not yet built**
+**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55; M1–M27). Phase 8A **architecture freeze active** (M28 not created; production not activated).
 
 ---
 
@@ -81,7 +81,7 @@ Website; Website Planner; Google Organic; Google Ads; Google Business Profile; I
 
 ---
 
-## 3. Commercial Quotation Engine (Phase 7 — Planned)
+## 3. Commercial Quotation Engine (Phase 7A/7B — Implemented)
 
 ### 3.1 Capabilities
 - Lead/client/property linkage; room/area sections; line items with materials, measurements, quantities, rates.
@@ -119,21 +119,22 @@ Auditable acknowledgement (hash, timestamp, client identifier, privacy-safe keye
 
 ---
 
-## 4. Closed-Won to Project Handover (Phase 8A — Planned)
+## 4. Closed-Won to Project Handover (Phase 8A — Architecture Freeze)
 
-See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md).
+See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md) and [ADR-0024](ADR/ADR-0024-phase-8a-project-materialization-pm-handover.md).
 
-1. Quotation **Accepted**.
-2. Lead **Closed-Won**.
-3. Project **Awaiting Project Manager Assignment**.
+1. Quotation **Accepted** (Phase 7B; already implemented).
+2. Lead **Closed-Won** (atomic with acceptance; already implemented).
+3. **Separate** Phase 8A materializer creates/reuses one project (`awaiting_project_manager_assignment`). M28 not created yet.
 4. Sales Manager or Super Admin assigns exactly **one primary PM**.
 5. Status **Awaiting Project Manager Acceptance**.
-6. PM accepts handover.
-7. Execution stages may activate.
+6. Current PM accepts handover (`handover_accepted`).
+7. Execution stages may activate **only in Phase 8C** (not in 8A).
 
-- No execution before PM acceptance.
-- Sales Executive cannot assign PM.
-- One Lead Designer + Supporting Designers assigned manually by Manager/Admin only.
+- No execution or Designer assignment in Phase 8A (8B/8C).
+- Sales Executive cannot assign PM; high-level read of own won-origin project only.
+- SA/SM may reassign PM before or after handover acceptance; new PM must re-accept.
+- One Lead Designer + Supporting Designers remains Phase 8B.
 
 ---
 
@@ -155,7 +156,7 @@ See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md).
 
 **Phase 7B:** Activates authoritative quotation-accepted revenue (`taxable_base_paise`; GST excluded from sales achievement) and Closed-Won achievement calculations.
 
-**Phase 8A (optional):** Project-value reconciliation when business chooses project value as authoritative measure; no double counting with quotation acceptance.
+**Phase 8A:** Project-value reconciliation is **deferred**. Sales achievement remains `quotation_acceptances.taxable_base_paise` (no double counting).
 
 ---
 
@@ -170,5 +171,7 @@ CRM and project execution exclude: accounting ledgers, vendor POs, inventory, la
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0020: Closed-Won Handover](ADR/ADR-0020-closed-won-project-handover-invariants.md)
 - [ADR-0022: V1 Direct Quotation Finalization and Send](ADR/ADR-0022-v1-direct-quotation-finalization-and-send.md)
+- [ADR-0024: Phase 8A Project Materialization and PM Handover](ADR/ADR-0024-phase-8a-project-materialization-pm-handover.md)
+- [Phase 8A Architecture Freeze](audits/phase-8a-closed-won-project-pm-handover-architecture-freeze.md)
 - [Product Requirements](01-product-requirements.md)
 - [ADR-0005: Version 1 No-ERP Boundary](ADR/ADR-0005-version-1-no-erp-boundary.md)
