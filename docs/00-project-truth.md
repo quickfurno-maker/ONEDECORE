@@ -1,14 +1,14 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced post Phase 6C closeout, August 9, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced post Phase 7B merge / Phase 8A architecture freeze, August 14, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 7A — Commercial Quotation Data & Draft Foundation (**ENTRY AUDIT & ARCHITECTURE FREEZE**)
-**Next Phase:** Phase 7B — Quotation Finalization, Delivery & Acceptance (**PLANNED**)
-**Previous Phase:** Phase 6D — Staff Administration, Attendance & Leave (**COMPLETE / CLOSED** — PR #51 merged)
+**Current Phase:** Phase 8A — Closed-Won Project Conversion & PM Handover (**ARCHITECTURE FREEZE ACTIVE**; M28 **NOT CREATED**)
+**Next Phase:** Phase 8A M28 implementation (**NOT STARTED** — after architecture PR merge)
+**Previous Phase:** Phase 7B — Quotation Finalization, Delivery & Acceptance (**COMPLETE** — PR #55 merged; repository/managed **M1–M27**; production **not** activated)
 
 ---
 
@@ -98,9 +98,12 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Kriti audit persistence foundation (migration 22) | Applied managed August 9, 2026 (Phase 6C M22) |
 | Staff attendance, leave & holidays foundation (migration 23) | Applied managed August 10, 2026 (Phase 6D M23 baseline; immutable historical migration) |
 | Staff attendance idempotency order repair (migration 24) | Applied managed August 11, 2026 (Phase 6D M24 owner-authorized repair apply) |
-| Migration alignment | Repository: **M1–M24** (24 files); Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M24** (24 migrations applied & aligned) |
+| Commercial quotation draft foundation (migration 25) | Applied managed (Phase 7A M25) |
+| Quotation finalization, delivery & acceptance (migration 26) | Applied managed August 14, 2026 (Phase 7B M26; PR #55 merged) |
+| Quotation trigger EXECUTE privilege hardening (migration 27) | Applied managed August 14, 2026 (Phase 7B M27) |
+| Migration alignment | Repository: **M1–M27**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M27**; **M28 absent** |
 
-CRM workspace mutation slices (5C2A–5C2C), Phase 5D bulk import, Phase 5E targets/reporting, Phase 5F identity hardening, Phase 6A WhatsApp foundation, Phase 6B shared inbox/send-intent/dispatch foundations, Phase 6C Kriti audit persistence, and Phase 6D staff admin/attendance/leave foundation + M24 idempotency repair (M23–M24) are applied on managed database (`lpurlfmpvriyvpkujvyl`). **M24 forward-only repair is applied managed; repaired check-in/check-out RPC ordering verified.** Phase 6D managed repair closeout is **COMPLETE / CLOSED** (PR #51 merged). Phase 7A is **CURRENT FORMAL PHASE** (Entry Audit & Architecture Freeze). **Production deployment pending** (Phase 10); **public intake remains inactive**.
+CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed database (`lpurlfmpvriyvpkujvyl`) through **M27**. Phase 7B is **COMPLETE** (PR #55 merged). Phase 8A is **CURRENT FORMAL PHASE** (architecture freeze; OD8A-1–OD8A-4 locked; **M28 not created**). **Production deployment pending** (Phase 10); **public intake remains inactive**.
 
 ### Phase 5F truth
 

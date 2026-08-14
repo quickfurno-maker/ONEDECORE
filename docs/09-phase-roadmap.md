@@ -1,9 +1,9 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 6D closeout, August 10, 2026)
-**Current Phase:** Phase 6D — Staff Administration, Attendance & Leave (**REPOSITORY M1–M24 COMPLETE; M24 REPAIR PENDING MANAGED APPLY**)
-**Next Phase:** Phase 7A — Commercial Quotation Data & Draft Foundation (**NOT STARTED / BLOCKED** until Phase 6D M24 repair closeout)
-**Previous Phase:** Phase 6C — Groq Human-Controlled Copilot (**COMPLETE**)
+**Document Status:** Locked Roadmap (truth-synced post Phase 7B merge / Phase 8A architecture freeze, August 14, 2026)
+**Current Phase:** Phase 8A — Closed-Won Project Conversion & PM Handover (**ARCHITECTURE FREEZE ACTIVE**; M28 **NOT CREATED**)
+**Next Phase:** Phase 8A M28 implementation (**NOT STARTED** — after architecture PR merge)
+**Previous Phase:** Phase 7B — Quotation Finalization, Premium PDF, Secure Delivery & Client Acceptance (**COMPLETE** — PR #55 merged; repository/managed **M1–M27**; production **not** activated)
 
 ---
 
@@ -75,13 +75,14 @@ Phase 6C: Groq Human-Controlled Copilot ─────────────�
   • M22 applied managed (August 9, 2026); recovery 1322197903
   • Kriti audit persistence; provider default disabled; no auto-send
   • Closeout truth-sync: current PR
-Phase 6D: Staff Administration, Attendance & Leave ─────────────────── REPAIR PENDING MANAGED APPLY
-  • Repository M1–M24 complete (PR #49 merged M23 baseline; M24 forward repair committed)
-  • M23 applied managed (August 10, 2026); recovery 1330573859
-  • M24 forward-only attendance idempotency repair NOT managed applied yet
-  • Managed check-in/check-out RPCs retain pre-repair function order until managed apply
-  • Phase 6D managed repair closeout PENDING M24 apply/verification
-  • Phase 7A NOT STARTED / blocked until Phase 6D repair closeout
+Phase 6D: Staff Administration, Attendance & Leave ─────────────────── COMPLETE / CLOSED
+  • Repository + managed M1–M24; PR #51 merged
+Phase 7A: Commercial Quotation Data & Draft Foundation ────────────── COMPLETE
+  • M25 applied managed; PR #53 merged
+Phase 7B: Quotation Finalization, Delivery & Client Acceptance ────── COMPLETE
+  • M26 + M27 applied managed; PR #55 merged (`a30c733…`); production not activated
+Phase 8A: Closed-Won Project Conversion & PM Handover ─────────────── ARCHITECTURE FREEZE ACTIVE
+  • Owner decisions OD8A-1–OD8A-4 locked; M28 not created; managed remains M1–M27
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -129,19 +130,17 @@ Phase 6C ──► Groq Human-Controlled Copilot [COMPLETED]
     │         • M22 managed; Kriti audit persistence + staff runtime
     │         • Provider default disabled; human-controlled only
     ▼
-Phase 6D ──► Staff Administration, Attendance & Leave [REPAIR PENDING MANAGED APPLY]
-    │         • Repository M1–M24 complete; M23 applied managed August 10, 2026
-    │         • M24 forward-only attendance idempotency repair NOT managed applied yet
-    │         • Managed check-in/check-out RPCs retain pre-repair function order until managed apply
+Phase 6D ──► Staff Administration, Attendance & Leave [COMPLETED]
     ▼
-Phase 7A ──► Commercial Quotation Data & Draft Foundation [BLOCKED / NOT STARTED]
+Phase 7A ──► Commercial Quotation Data & Draft Foundation [COMPLETED]
     ▼
-Phase 7B ──► Quotation Finalization, Premium PDF, Secure Delivery & Client Acceptance
+Phase 7B ──► Quotation Finalization, Premium PDF, Secure Delivery & Client Acceptance [COMPLETED]
     │         • No internal quotation approval (ADR-0022)
-    │         • Activates authoritative accepted-quotation target achievement (`taxable_base_paise`)
+    │         • Authoritative accepted-quotation achievement (`taxable_base_paise`); PR #55 merged; M1–M27
     ▼
-Phase 8A ──► Closed-Won Project Conversion & PM Handover
-    │         • Optional project-value reconciliation (no double counting)
+Phase 8A ──► Closed-Won Project Conversion & PM Handover [ARCHITECTURE FREEZE ACTIVE]
+    │         • Project-value reconciliation deferred (OD8A / ADR-0024)
+    │         • M28 not created; production not activated
     ▼
 Phase 8B ──► Designer Assignment & Design Collaboration
     ▼
@@ -226,21 +225,22 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 ### Phases 7–8
 See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020–0021.
 
-### Phase 7A (Current Formal Phase — Entry Audit & Architecture Freeze)
-- **Objective:** Commercial quotation data and draft foundation (planned).
-- **Exit gate:** Architecture freeze audit merged; draft data model, canonical money calculation, one-mutable-draft invariant, RLS foundation, and test matrix frozen.
-- **Dependencies:** Phase 6D closeout merged (PR #51 complete).
-- **Status:** **CURRENT FORMAL PHASE** — Entry Audit & Architecture Contract Freeze authorized and active. No implementation code or M25 migration created yet.
+### Phase 7A (Completed)
+- **Objective:** Commercial quotation data and draft foundation.
+- **Status:** **COMPLETE** — M25 managed; PR #53 merged.
 
-### Phase 7B
+### Phase 7B (Completed)
 - **Objective:** Quotation finalization (no internal approval), premium PDF, secure delivery via Phase 6B, client acceptance.
 - **Exit gate:** Authoritative accepted-quotation revenue (`taxable_base_paise`) and Closed-Won achievement calculations proven and tested.
+- **Status:** **COMPLETE** — M26 + M27 managed; PR #55 merged (`a30c733003fb08b3250148c61f7c4f74f11d4c14`); production not activated.
 - **Dependencies:** 7A.
 
-### Phase 8A
+### Phase 8A (Current Formal Phase — Architecture Freeze)
 - **Objective:** Closed-Won project conversion and PM handover.
-- **Exit gate:** Project-value reconciliation (when used) proven without double counting against quotation acceptance.
-- **Dependencies:** 7B. **Closed-Won remains blocked until 7B.**
+- **Architecture freeze:** [Phase 8A freeze](audits/phase-8a-closed-won-project-pm-handover-architecture-freeze.md), [ADR-0024](ADR/ADR-0024-phase-8a-project-materialization-pm-handover.md).
+- **Exit gate (implementation, later):** one project per Closed-Won lead; PM assignment/acceptance; no double counting against quotation acceptance. Project-value reconciliation is **deferred**.
+- **Dependencies:** 7B complete.
+- **Status:** **CURRENT FORMAL PHASE** — architecture freeze active; OD8A-1–OD8A-4 locked; **M28 not created**; managed remains M1–M27.
 
 ### Phase 9B (Landing Page Lab)
 - **Status:** Owner-approved roadmap placement; **not implemented** (no routes/schema/integrations).
@@ -279,3 +279,5 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - [Phase 6D roadmap lock](audits/phase-6d-roadmap-lock.md)
 - [Phase 6D architecture freeze](audits/phase-6d-staff-attendance-leave-architecture-freeze.md)
 - [ADR-0023: Staff attendance architecture](ADR/ADR-0023-staff-attendance-leave-architecture.md)
+- [ADR-0024: Phase 8A project materialization and PM handover](ADR/ADR-0024-phase-8a-project-materialization-pm-handover.md)
+- [Phase 8A architecture freeze](audits/phase-8a-closed-won-project-pm-handover-architecture-freeze.md)
