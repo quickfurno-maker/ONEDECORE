@@ -4,7 +4,7 @@
 **Branch:** `phase-8b-m29-designer-design-collaboration`  
 **Base main:** `b7afef60e41900e7832ea41b249067841aebbaea` (PR #58 true merge; post-merge CI `31884887844` SUCCESS)  
 **Architecture:** ADR-0025 / DEC-0073 / OD8B-1–OD8B-8  
-**Gate:** repository implementation only — **managed M29 NOT applied**; **PR OPEN / NOT MERGED**; **no production activation**; **Phase 8C not started**
+**Gate:** repository implementation only — **managed M29 NOT applied**; **PR #59 OPEN / NOT MERGED**; **no production activation**; **Phase 8C not started**
 
 ---
 
