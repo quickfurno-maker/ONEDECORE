@@ -4090,6 +4090,14 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: boolean
       }
+      can_record_project_client_approval: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      can_approve_project_production_ready: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
       can_view_project_handover_baseline: {
         Args: { p_project_id: string }
         Returns: boolean

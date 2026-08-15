@@ -103,9 +103,55 @@ describe("Phase 8B M29 server and storage", () => {
     assert.match(src, /reserve_project_design_deliverable_version/);
     assert.match(src, /finalize_project_design_deliverable_version/);
     assert.match(src, /can_view_project_design/);
+    assert.match(src, /can_record_project_client_approval/);
+    assert.match(src, /can_approve_project_production_ready/);
     assert.match(src, /deleteDesignObjectBestEffort/);
     assert.doesNotMatch(src, /SUPABASE_SERVICE_ROLE_KEY/);
     assert.doesNotMatch(src, /canUpdateExecutionStages/);
+  });
+
+  test("client approval uploaded file preauthorizes before service-role upload", () => {
+    const src = readFileSync(join(root, "src/features/projects/server/project-design-actions.ts"), "utf8");
+    const fnStart = src.indexOf("export async function recordProjectClientApprovalAction");
+    const fnEnd = src.indexOf("export async function approveProjectProductionReadyAction");
+    const fn = src.slice(fnStart, fnEnd);
+    const preflightAt = fn.indexOf("can_record_project_client_approval");
+    const uploadAt = fn.indexOf("uploadDesignObject");
+    const rpcAt = fn.lastIndexOf("record_project_client_approval");
+    const cleanupAt = fn.indexOf("deleteDesignObjectBestEffort");
+    assert.ok(preflightAt >= 0 && uploadAt > preflightAt, "preflight before upload");
+    assert.ok(rpcAt > uploadAt, "authoritative RPC after upload");
+    assert.ok(cleanupAt > rpcAt, "orphan cleanup retained after mutation");
+    assert.match(fn, /allowed !== true/);
+  });
+
+  test("production ready uploaded file preauthorizes before service-role upload", () => {
+    const src = readFileSync(join(root, "src/features/projects/server/project-design-actions.ts"), "utf8");
+    const fnStart = src.indexOf("export async function approveProjectProductionReadyAction");
+    const fnEnd = src.indexOf("export async function uploadProjectDesignDeliverableAction");
+    const fn = src.slice(fnStart, fnEnd);
+    const preflightAt = fn.indexOf("can_approve_project_production_ready");
+    const uploadAt = fn.indexOf("uploadDesignObject");
+    const rpcAt = fn.lastIndexOf("approve_project_production_ready");
+    const cleanupAt = fn.indexOf("deleteDesignObjectBestEffort");
+    assert.ok(preflightAt >= 0 && uploadAt > preflightAt, "preflight before upload");
+    assert.ok(rpcAt > uploadAt, "authoritative RPC after upload");
+    assert.ok(cleanupAt > rpcAt, "orphan cleanup retained after mutation");
+    assert.match(fn, /allowed !== true/);
+  });
+
+  test("evidence signed URL uses DB identity and 900-second expiry", () => {
+    const src = readFileSync(join(root, "src/features/projects/server/project-design-actions.ts"), "utf8");
+    const fnStart = src.indexOf("export async function getProjectDesignEvidenceFileUrlAction");
+    const fn = src.slice(fnStart);
+    assert.match(fn, /evidenceId/);
+    assert.doesNotMatch(fn.slice(0, 800), /objectPath/);
+    assert.match(fn, /can_view_project_design/);
+    assert.match(fn, /from\("project_design_evidence/);
+    assert.match(fn, /source_type !== "uploaded_artifact"/);
+    assert.match(fn, /projects\/\$\{params.projectId\}\/evidence\//);
+    assert.match(fn, /signDesignObject\(row.storage_object_path\)/);
+    assert.match(fn, /expiresInSeconds: 900/);
   });
 
   test("M29 serializes idempotency lock before ledger lookup", () => {
@@ -130,7 +176,9 @@ describe("Phase 8B M29 server and storage", () => {
       const lookupAt = src.indexOf("from private.project_idempotency_requests");
       assert.ok(lockAt >= 0 && lookupAt > lockAt, `${fn} locks before lookup`);
     }
-    assert.match(migration, /project-design-documents/);
+    assert.match(migration, /project_design_uploaded_evidence_object_exists/);
+    assert.match(migration, /can_record_project_client_approval/);
+    assert.match(migration, /can_approve_project_production_ready/);
     assert.doesNotMatch(migration, /create table public.project_execution/);
     assert.doesNotMatch(migration, /project_design\.manage/);
   });
@@ -146,6 +194,20 @@ describe("Phase 8B M29 route mounting", () => {
     assert.doesNotMatch(detail, /ProjectExecutionWorkspace/);
     assert.match(list, /canReadDesign/);
     assert.doesNotMatch(list, /ProjectExecutionWorkspace/);
+  });
+
+  test("uploaded evidence exposes Open evidence; high-level SE surface does not", () => {
+    const workspace = readFileSync(
+      join(root, "src/features/projects/components/design/ProjectDesignWorkspace.tsx"),
+      "utf8"
+    );
+    assert.match(workspace, /Open evidence/);
+    assert.match(workspace, /getProjectDesignEvidenceFileUrlAction/);
+    assert.match(workspace, /evidenceId: item.id/);
+    const highLevelStart = workspace.indexOf("if (highLevelOnly)");
+    const highLevel = workspace.slice(highLevelStart, workspace.indexOf("const permitted"));
+    assert.doesNotMatch(highLevel, /Open evidence/);
+    assert.doesNotMatch(highLevel, /getProjectDesignEvidenceFileUrlAction/);
   });
 
   test("package scripts include both Phase 8B test files", () => {

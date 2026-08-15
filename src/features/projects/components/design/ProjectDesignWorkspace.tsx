@@ -15,6 +15,7 @@ import {
   addProjectSupportingDesignerAction,
   approveProjectProductionReadyAction,
   completeProjectDesignAction,
+  getProjectDesignEvidenceFileUrlAction,
   getProjectDesignFileUrlAction,
   holdProjectDesignAction,
   recordProjectClientApprovalAction,
@@ -214,8 +215,26 @@ export function ProjectDesignWorkspace({
 
       <ul className="space-y-1 text-sm text-neutral-400">
         {workspace.evidence.map((item) => (
-          <li key={item.id}>
-            {item.evidenceType} via {item.sourceType}
+          <li key={item.id} className="flex items-center justify-between gap-3">
+            <span>
+              {item.evidenceType} via {item.sourceType}
+            </span>
+            {item.sourceType === "uploaded_artifact" ? (
+              <button
+                type="button"
+                className="text-amber-300 hover:text-amber-200"
+                onClick={async () => {
+                  const signed = await getProjectDesignEvidenceFileUrlAction({
+                    projectId: workspace.projectId,
+                    evidenceId: item.id,
+                  });
+                  if (signed.url) window.open(signed.url, "_blank", "noopener,noreferrer");
+                  else setMessage(signed.message ?? "Evidence file could not be opened.");
+                }}
+              >
+                Open evidence
+              </button>
+            ) : null}
           </li>
         ))}
       </ul>

@@ -202,6 +202,14 @@ export async function recordProjectClientApprovalAction(params: {
   let sourceReference = params.sourceReference?.trim() || params.note?.trim() || randomUUID();
 
   if (params.sourceType === "uploaded_artifact") {
+    const supabase = await createClient();
+    const { data: allowed, error: preflightError } = await supabase.rpc(
+      "can_record_project_client_approval" as never,
+      { p_project_id: params.projectId } as never
+    );
+    if (preflightError || allowed !== true) {
+      return { success: false, message: "You are not authorized to record client approval." };
+    }
     if (!params.file) {
       return { success: false, message: "An approval file is required." };
     }
@@ -258,6 +266,14 @@ export async function approveProjectProductionReadyAction(params: {
   let sourceReference = params.note.trim();
 
   if (params.file) {
+    const supabase = await createClient();
+    const { data: allowed, error: preflightError } = await supabase.rpc(
+      "can_approve_project_production_ready" as never,
+      { p_project_id: params.projectId } as never
+    );
+    if (preflightError || allowed !== true) {
+      return { success: false, message: "You are not authorized to approve production ready." };
+    }
     const uploaded = await prepareDesignUpload(params.file);
     if (!uploaded.ok) return { success: false, message: uploaded.message };
     storagePath = buildDesignEvidenceObjectPath(params.projectId, "production_ready");
@@ -381,6 +397,50 @@ export async function getProjectDesignFileUrlAction(params: {
   const url = await signDesignObject(String(row.object_path));
   if (!url) {
     return { success: false, message: "Design file could not be signed." };
+  }
+  return { success: true, url, expiresInSeconds: 900 };
+}
+
+export async function getProjectDesignEvidenceFileUrlAction(params: {
+  projectId: string;
+  evidenceId: string;
+}): Promise<{ success: boolean; message?: string; url?: string; expiresInSeconds?: number }> {
+  const supabase = await createClient();
+  const { data: allowed, error: authError } = await supabase.rpc("can_view_project_design" as never, {
+    p_project_id: params.projectId,
+  } as never);
+  if (authError || allowed !== true) {
+    return { success: false, message: "You are not authorized to view this design evidence." };
+  }
+
+  const { data: evidence, error } = await supabase
+    .from("project_design_evidence" as never)
+    .select("id, project_id, source_type, storage_object_path")
+    .eq("id" as never, params.evidenceId)
+    .maybeSingle();
+
+  const row = evidence as {
+    project_id?: string;
+    source_type?: string;
+    storage_object_path?: string | null;
+  } | null;
+  if (error || !row || row.project_id !== params.projectId) {
+    return { success: false, message: "Design evidence not found." };
+  }
+  if (row.source_type !== "uploaded_artifact" || !row.storage_object_path) {
+    return { success: false, message: "This evidence is not an uploaded file." };
+  }
+  const expectedPrefix = `projects/${params.projectId}/evidence/`;
+  if (
+    row.storage_object_path.includes("..") ||
+    !row.storage_object_path.startsWith(expectedPrefix)
+  ) {
+    return { success: false, message: "Design evidence path is invalid." };
+  }
+
+  const url = await signDesignObject(row.storage_object_path);
+  if (!url) {
+    return { success: false, message: "Design evidence could not be signed." };
   }
   return { success: true, url, expiresInSeconds: 900 };
 }

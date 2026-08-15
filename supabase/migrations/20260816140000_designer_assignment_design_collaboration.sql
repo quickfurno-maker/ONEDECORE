@@ -209,11 +209,14 @@ create table public.project_design_evidence (
       source_type = 'uploaded_artifact'
       and storage_object_path is not null
       and length(trim(storage_object_path)) between 1 and 500
+      and trim(source_reference) = trim(storage_object_path)
+      and position('..' in storage_object_path) = 0
+      and storage_object_path like ('projects/' || project_id::text || '/evidence/%')
       and file_sha256 ~ '^[0-9a-f]{64}$'
       and file_size_bytes is not null
       and file_size_bytes > 0
-      and mime_type is not null
-      and length(trim(mime_type)) >= 1
+      and file_size_bytes <= 20971520
+      and mime_type in ('application/pdf', 'image/jpeg', 'image/png', 'image/webp')
     )
     or (
       source_type = 'whatsapp_message'
@@ -544,13 +547,20 @@ begin
     if p_storage_object_path is null or length(trim(p_storage_object_path)) not between 1 and 500 then
       raise exception 'PROJECT_MISSING_EVIDENCE';
     end if;
+    if trim(p_source_reference) <> trim(p_storage_object_path) then
+      raise exception 'PROJECT_MISSING_EVIDENCE';
+    end if;
+    if position('..' in trim(p_storage_object_path)) > 0
+       or trim(p_storage_object_path) !~ '^projects/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/evidence/' then
+      raise exception 'PROJECT_MISSING_EVIDENCE';
+    end if;
     if p_file_sha256 is null or p_file_sha256 !~ '^[0-9a-f]{64}$' then
       raise exception 'PROJECT_MISSING_EVIDENCE';
     end if;
-    if p_file_size_bytes is null or p_file_size_bytes <= 0 then
+    if p_file_size_bytes is null or p_file_size_bytes <= 0 or p_file_size_bytes > 20971520 then
       raise exception 'PROJECT_MISSING_EVIDENCE';
     end if;
-    if p_mime_type is null or length(trim(p_mime_type)) < 1 then
+    if trim(coalesce(p_mime_type, '')) not in ('application/pdf', 'image/jpeg', 'image/png', 'image/webp') then
       raise exception 'PROJECT_MISSING_EVIDENCE';
     end if;
   elsif p_source_type = 'whatsapp_message' then
@@ -566,6 +576,28 @@ begin
     end if;
   end if;
 end;
+$$;
+
+create or replace function private.project_design_uploaded_evidence_object_exists(
+  p_project_id uuid,
+  p_object_path text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from storage.objects o
+    where p_project_id is not null
+      and p_object_path is not null
+      and o.bucket_id = 'project-design-documents'
+      and o.name = trim(p_object_path)
+      and position('..' in trim(p_object_path)) = 0
+      and trim(p_object_path) like ('projects/' || p_project_id::text || '/evidence/%')
+  );
 $$;
 
 create or replace function private.project_design_whatsapp_belongs_to_project(p_project_id uuid, p_message_id uuid)
@@ -1455,9 +1487,13 @@ begin
     raise exception 'PROJECT_INVALID_TRANSITION';
   end if;
 
-  if p_source_type = 'uploaded_artifact'
-     and trim(p_storage_object_path) not like ('projects/' || p_project_id::text || '/evidence/%') then
-    raise exception 'PROJECT_MISSING_EVIDENCE';
+  if p_source_type = 'uploaded_artifact' then
+    if trim(p_source_reference) <> trim(p_storage_object_path)
+       or trim(p_storage_object_path) not like ('projects/' || p_project_id::text || '/evidence/%')
+       or position('..' in trim(p_storage_object_path)) > 0
+       or not private.project_design_uploaded_evidence_object_exists(p_project_id, p_storage_object_path) then
+      raise exception 'PROJECT_MISSING_EVIDENCE';
+    end if;
   end if;
 
   if p_source_type = 'whatsapp_message' then
@@ -1872,9 +1908,13 @@ begin
     raise exception 'PROJECT_MISSING_EVIDENCE';
   end if;
 
-  if p_source_type = 'uploaded_artifact'
-     and trim(p_storage_object_path) not like ('projects/' || p_project_id::text || '/evidence/%') then
-    raise exception 'PROJECT_MISSING_EVIDENCE';
+  if p_source_type = 'uploaded_artifact' then
+    if trim(p_source_reference) <> trim(p_storage_object_path)
+       or trim(p_storage_object_path) not like ('projects/' || p_project_id::text || '/evidence/%')
+       or position('..' in trim(p_storage_object_path)) > 0
+       or not private.project_design_uploaded_evidence_object_exists(p_project_id, p_storage_object_path) then
+      raise exception 'PROJECT_MISSING_EVIDENCE';
+    end if;
   end if;
 
   if p_source_type = 'whatsapp_message' then
@@ -2350,6 +2390,66 @@ as $$
   select private.project_design_can_view(p_project_id);
 $$;
 
+create or replace function public.can_record_project_client_approval(p_project_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.projects p
+    join public.project_design_workflows w on w.project_id = p.id
+    join public.profiles pr on pr.id = auth.uid()
+    where p.id = p_project_id
+      and auth.uid() is not null
+      and pr.status = 'active'
+      and (select public.authorize('project_design.client_approval'))
+      and p.status = 'handover_accepted'
+      and w.state = 'client_review'
+      and (
+        private.project_design_is_current_lead(p.id, auth.uid())
+        or (
+          (select private.has_role('project_manager'))
+          and p.primary_pm_id = auth.uid()
+        )
+      )
+  );
+$$;
+
+create or replace function public.can_approve_project_production_ready(p_project_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.projects p
+    join public.project_design_workflows w on w.project_id = p.id
+    join public.profiles pr on pr.id = auth.uid()
+    where p.id = p_project_id
+      and auth.uid() is not null
+      and pr.status = 'active'
+      and (select public.authorize('project_design.transition'))
+      and p.status = 'handover_accepted'
+      and w.state = 'production_drawings'
+      and private.project_design_is_current_lead(p.id, auth.uid())
+      and exists (
+        select 1
+        from public.project_design_evidence e
+        where e.project_id = p.id
+          and e.evidence_type = 'client_approval'
+      )
+      and (
+        private.project_design_has_ready_kind(p.id, 'production_drawing')
+        or private.project_design_has_ready_kind(p.id, 'approval_pack')
+      )
+  );
+$$;
+
 create or replace function public.get_project_design_high_level_status(p_project_id uuid)
 returns jsonb
 language plpgsql
@@ -2451,6 +2551,7 @@ alter function private.project_can_view(uuid) owner to postgres;
 alter function private.project_can_view_handover_baseline(uuid) owner to postgres;
 alter function private.project_design_require_active_actor() owner to postgres;
 alter function private.project_design_assert_evidence_args(text, text, text, text, text, bigint, text) owner to postgres;
+alter function private.project_design_uploaded_evidence_object_exists(uuid, text) owner to postgres;
 alter function private.project_design_whatsapp_belongs_to_project(uuid, uuid) owner to postgres;
 alter function private.prevent_project_designer_assignment_mutation() owner to postgres;
 alter function private.prevent_project_design_workflow_mutation() owner to postgres;
@@ -2468,6 +2569,8 @@ alter function public.complete_project_design(uuid, text) owner to postgres;
 alter function public.reserve_project_design_deliverable_version(uuid, text, text, text, text, text, bigint, text, text) owner to postgres;
 alter function public.finalize_project_design_deliverable_version(uuid, text) owner to postgres;
 alter function public.can_view_project_design(uuid) owner to postgres;
+alter function public.can_record_project_client_approval(uuid) owner to postgres;
+alter function public.can_approve_project_production_ready(uuid) owner to postgres;
 alter function public.get_project_design_high_level_status(uuid) owner to postgres;
 
 revoke all on function private.project_is_assignable_designer(uuid) from public, anon, authenticated;
@@ -2480,6 +2583,7 @@ revoke all on function private.project_design_has_ready_kind(uuid, text) from pu
 revoke all on function private.project_can_view_handover_baseline(uuid) from public, anon, authenticated;
 revoke all on function private.project_design_require_active_actor() from public, anon, authenticated;
 revoke all on function private.project_design_assert_evidence_args(text, text, text, text, text, bigint, text) from public, anon, authenticated;
+revoke all on function private.project_design_uploaded_evidence_object_exists(uuid, text) from public, anon, authenticated;
 revoke all on function private.project_design_whatsapp_belongs_to_project(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.prevent_project_designer_assignment_mutation() from public, anon, authenticated;
 revoke all on function private.prevent_project_design_workflow_mutation() from public, anon, authenticated;
@@ -2498,6 +2602,8 @@ revoke all on function public.complete_project_design(uuid, text) from public, a
 revoke all on function public.reserve_project_design_deliverable_version(uuid, text, text, text, text, text, bigint, text, text) from public, anon, authenticated;
 revoke all on function public.finalize_project_design_deliverable_version(uuid, text) from public, anon, authenticated;
 revoke all on function public.can_view_project_design(uuid) from public, anon, authenticated;
+revoke all on function public.can_record_project_client_approval(uuid) from public, anon, authenticated;
+revoke all on function public.can_approve_project_production_ready(uuid) from public, anon, authenticated;
 revoke all on function public.get_project_design_high_level_status(uuid) from public, anon, authenticated;
 
 grant execute on function private.project_can_view(uuid) to authenticated;
@@ -2516,4 +2622,6 @@ grant execute on function public.complete_project_design(uuid, text) to authenti
 grant execute on function public.reserve_project_design_deliverable_version(uuid, text, text, text, text, text, bigint, text, text) to authenticated;
 grant execute on function public.finalize_project_design_deliverable_version(uuid, text) to authenticated;
 grant execute on function public.can_view_project_design(uuid) to authenticated;
+grant execute on function public.can_record_project_client_approval(uuid) to authenticated;
+grant execute on function public.can_approve_project_production_ready(uuid) to authenticated;
 grant execute on function public.get_project_design_high_level_status(uuid) to authenticated;

@@ -178,6 +178,8 @@ select ok(
           'reserve_project_design_deliverable_version',
           'finalize_project_design_deliverable_version',
           'can_view_project_design',
+          'can_record_project_client_approval',
+          'can_approve_project_production_ready',
           'get_project_design_high_level_status'
         ))
         or (n.nspname = 'private' and p.proname in (
@@ -190,6 +192,7 @@ select ok(
           'project_design_has_ready_kind',
           'project_design_require_active_actor',
           'project_design_assert_evidence_args',
+          'project_design_uploaded_evidence_object_exists',
           'project_design_whatsapp_belongs_to_project',
           'prevent_project_designer_assignment_mutation',
           'prevent_project_design_workflow_mutation',
@@ -224,6 +227,51 @@ select is(
   has_function_privilege('authenticated', 'private.project_design_require_active_actor()', 'execute'),
   false,
   'authenticated cannot execute project_design_require_active_actor'
+);
+select is(
+  has_function_privilege('authenticated', 'private.project_design_uploaded_evidence_object_exists(uuid,text)', 'execute'),
+  false,
+  'authenticated cannot execute project_design_uploaded_evidence_object_exists'
+);
+select is(
+  has_function_privilege('anon', 'private.project_design_uploaded_evidence_object_exists(uuid,text)', 'execute'),
+  false,
+  'anon cannot execute project_design_uploaded_evidence_object_exists'
+);
+select is(
+  has_function_privilege('authenticated', 'public.can_record_project_client_approval(uuid)', 'execute'),
+  true,
+  'authenticated can execute can_record_project_client_approval'
+);
+select is(
+  has_function_privilege('anon', 'public.can_record_project_client_approval(uuid)', 'execute'),
+  false,
+  'anon cannot execute can_record_project_client_approval'
+);
+select is(
+  has_function_privilege('authenticated', 'public.can_approve_project_production_ready(uuid)', 'execute'),
+  true,
+  'authenticated can execute can_approve_project_production_ready'
+);
+select is(
+  has_function_privilege('anon', 'public.can_approve_project_production_ready(uuid)', 'execute'),
+  false,
+  'anon cannot execute can_approve_project_production_ready'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and (
+        coalesce(qual, '') ilike '%project-design-documents%'
+        or coalesce(with_check, '') ilike '%project-design-documents%'
+      )
+  ),
+  0,
+  'no storage.objects policies grant project-design-documents'
 );
 select is(
   has_function_privilege('authenticated', 'private.project_idempotency_xact_lock(text,uuid,text,text)', 'execute'),
@@ -475,6 +523,22 @@ select is(
   (select status from public.projects where id = current_setting('test.phase8b_project')::uuid),
   'handover_accepted',
   'Project status is handover_accepted'
+);
+
+select set_config('request.jwt.claim.sub', '8b666666-6666-6666-6666-666666666666', true);
+select set_config('role', 'authenticated', true);
+select throws_ok(
+  $$insert into storage.objects (bucket_id, name, owner, owner_id, metadata)
+    values (
+      'project-design-documents',
+      'projects/' || current_setting('test.phase8b_project') || '/evidence/unauthorized.pdf',
+      '8b666666-6666-6666-6666-666666666666',
+      '8b666666-6666-6666-6666-666666666666',
+      '{}'::jsonb
+    )$$,
+  '42501',
+  'new row violates row-level security policy for table "objects"',
+  'authenticated cannot directly insert project-design-documents storage objects'
 );
 
 select set_config('request.jwt.claim.sub', '8b121212-1212-1212-1212-121212121212', true);
@@ -1083,6 +1147,225 @@ select is(
   'Lead advances to client_review'
 );
 
+select is(
+  public.can_record_project_client_approval(current_setting('test.phase8b_project')::uuid),
+  true,
+  'Current Lead preflight is true in client_review'
+);
+select set_config('request.jwt.claim.sub', '8b666666-6666-6666-6666-666666666666', true);
+select is(
+  public.can_record_project_client_approval(current_setting('test.phase8b_project')::uuid),
+  true,
+  'Current PM preflight is true in client_review'
+);
+select set_config('request.jwt.claim.sub', '8b121212-1212-1212-1212-121212121212', true);
+select is(
+  public.can_record_project_client_approval(current_setting('test.phase8b_project')::uuid),
+  false,
+  'Supporting preflight is false for client approval'
+);
+select set_config('request.jwt.claim.sub', '8b777777-7777-7777-7777-777777777777', true);
+select is(
+  public.can_record_project_client_approval(current_setting('test.phase8b_project')::uuid),
+  false,
+  'Other PM preflight is false for client approval'
+);
+select set_config('request.jwt.claim.sub', '8b111111-1111-1111-1111-111111111111', true);
+select is(
+  public.can_record_project_client_approval(current_setting('test.phase8b_project')::uuid),
+  false,
+  'SA preflight is false for client approval'
+);
+select set_config('request.jwt.claim.sub', '8b222222-2222-2222-2222-222222222222', true);
+select is(
+  public.can_record_project_client_approval(current_setting('test.phase8b_project')::uuid),
+  false,
+  'SM preflight is false for client approval'
+);
+select set_config('role', 'postgres', true);
+update public.profiles set status = 'disabled' where id = '8b555555-5555-5555-5555-555555555555';
+select set_config('request.jwt.claim.sub', '8b555555-5555-5555-5555-555555555555', true);
+select set_config('role', 'authenticated', true);
+select is(
+  public.can_record_project_client_approval(current_setting('test.phase8b_project')::uuid),
+  false,
+  'Inactive Lead preflight is false for client approval'
+);
+select set_config('role', 'postgres', true);
+update public.profiles set status = 'active' where id = '8b555555-5555-5555-5555-555555555555';
+
+select set_config('request.jwt.claim.sub', '8b555555-5555-5555-5555-555555555555', true);
+select set_config('role', 'authenticated', true);
+select throws_ok(
+  format(
+    $f$select public.record_project_client_approval(
+      %L::uuid,
+      'client_appr_missing_obj',
+      'uploaded_artifact',
+      'projects/%s/evidence/client_approval/missing.pdf',
+      'Client signed board',
+      'projects/%s/evidence/client_approval/missing.pdf',
+      'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      1024,
+      'application/pdf'
+    )$f$,
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_project')
+  ),
+  'PROJECT_MISSING_EVIDENCE',
+  'Fabricated uploaded client-approval path without storage object is rejected'
+);
+select throws_ok(
+  format(
+    $f$select public.record_project_client_approval(
+      %L::uuid,
+      'client_appr_other_project',
+      'uploaded_artifact',
+      'projects/00000000-0000-0000-0000-000000000001/evidence/client_approval/x.pdf',
+      'Client signed board',
+      'projects/00000000-0000-0000-0000-000000000001/evidence/client_approval/x.pdf',
+      'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      1024,
+      'application/pdf'
+    )$f$,
+    current_setting('test.phase8b_project')
+  ),
+  'PROJECT_MISSING_EVIDENCE',
+  'Uploaded client-approval path for another project is rejected'
+);
+select throws_ok(
+  format(
+    $f$select public.record_project_client_approval(
+      %L::uuid,
+      'client_appr_ref_mismatch',
+      'uploaded_artifact',
+      'projects/%s/evidence/client_approval/a.pdf',
+      'Client signed board',
+      'projects/%s/evidence/client_approval/b.pdf',
+      'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      1024,
+      'application/pdf'
+    )$f$,
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_project')
+  ),
+  'PROJECT_MISSING_EVIDENCE',
+  'Uploaded client-approval source_reference must equal storage path'
+);
+select throws_ok(
+  format(
+    $f$select public.record_project_client_approval(
+      %L::uuid,
+      'client_appr_bad_mime',
+      'uploaded_artifact',
+      'projects/%s/evidence/client_approval/x.bin',
+      'Client signed board',
+      'projects/%s/evidence/client_approval/x.bin',
+      'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      1024,
+      'application/octet-stream'
+    )$f$,
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_project')
+  ),
+  'PROJECT_MISSING_EVIDENCE',
+  'Unsupported uploaded client-approval MIME is rejected'
+);
+select throws_ok(
+  format(
+    $f$select public.record_project_client_approval(
+      %L::uuid,
+      'client_appr_too_big',
+      'uploaded_artifact',
+      'projects/%s/evidence/client_approval/x.pdf',
+      'Client signed board',
+      'projects/%s/evidence/client_approval/x.pdf',
+      'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      20971521,
+      'application/pdf'
+    )$f$,
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_project')
+  ),
+  'PROJECT_MISSING_EVIDENCE',
+  'Uploaded client-approval larger than 20 MiB is rejected'
+);
+
+select set_config('role', 'postgres', true);
+select set_config(
+  'test.phase8b_wrong_bucket_path',
+  'projects/' || current_setting('test.phase8b_project') || '/evidence/client_approval/wrong-bucket.pdf',
+  true
+);
+insert into storage.objects (bucket_id, name, owner, owner_id, metadata)
+values (
+  'quotation-documents',
+  current_setting('test.phase8b_wrong_bucket_path'),
+  '8b555555-5555-5555-5555-555555555555',
+  '8b555555-5555-5555-5555-555555555555',
+  '{}'::jsonb
+);
+select set_config('request.jwt.claim.sub', '8b555555-5555-5555-5555-555555555555', true);
+select set_config('role', 'authenticated', true);
+select throws_ok(
+  format(
+    $f$select public.record_project_client_approval(
+      %L::uuid,
+      'client_appr_wrong_bucket',
+      'uploaded_artifact',
+      %L,
+      'Client signed board',
+      %L,
+      'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      1024,
+      'application/pdf'
+    )$f$,
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_wrong_bucket_path'),
+    current_setting('test.phase8b_wrong_bucket_path')
+  ),
+  'PROJECT_MISSING_EVIDENCE',
+  'Uploaded client-approval object in another bucket is rejected'
+);
+
+savepoint uploaded_client_approval_ok;
+select set_config('role', 'postgres', true);
+select set_config(
+  'test.phase8b_ok_evidence_path',
+  'projects/' || current_setting('test.phase8b_project') || '/evidence/client_approval/ok.pdf',
+  true
+);
+insert into storage.objects (bucket_id, name, owner, owner_id, metadata)
+values (
+  'project-design-documents',
+  current_setting('test.phase8b_ok_evidence_path'),
+  '8b555555-5555-5555-5555-555555555555',
+  '8b555555-5555-5555-5555-555555555555',
+  '{}'::jsonb
+);
+select set_config('request.jwt.claim.sub', '8b555555-5555-5555-5555-555555555555', true);
+select set_config('role', 'authenticated', true);
+select is(
+  (public.record_project_client_approval(
+    current_setting('test.phase8b_project')::uuid,
+    'client_appr_uploaded_ok',
+    'uploaded_artifact',
+    current_setting('test.phase8b_ok_evidence_path'),
+    'Client signed board',
+    current_setting('test.phase8b_ok_evidence_path'),
+    'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+    1024,
+    'application/pdf'
+  )->>'state'),
+  'client_approved',
+  'Uploaded client approval succeeds when the private object exists'
+);
+rollback to savepoint uploaded_client_approval_ok;
+
 select set_config('request.jwt.claim.sub', '8b121212-1212-1212-1212-121212121212', true);
 select throws_ok(
   $$select public.record_project_client_approval(
@@ -1249,6 +1532,99 @@ select is(
   'ready',
   'Production drawing version is ready'
 );
+
+select is(
+  public.can_approve_project_production_ready(current_setting('test.phase8b_project')::uuid),
+  true,
+  'Current Lead preflight is true at production_drawings with gates'
+);
+select set_config('request.jwt.claim.sub', '8b121212-1212-1212-1212-121212121212', true);
+select is(
+  public.can_approve_project_production_ready(current_setting('test.phase8b_project')::uuid),
+  false,
+  'Supporting preflight is false for production ready'
+);
+select set_config('request.jwt.claim.sub', '8b666666-6666-6666-6666-666666666666', true);
+select is(
+  public.can_approve_project_production_ready(current_setting('test.phase8b_project')::uuid),
+  false,
+  'PM preflight is false for production ready'
+);
+select set_config('request.jwt.claim.sub', '8b555555-5555-5555-5555-555555555555', true);
+select throws_ok(
+  format(
+    $f$select public.approve_project_production_ready(
+      %L::uuid,
+      'prod_ready_missing_obj',
+      'uploaded_artifact',
+      'projects/%s/evidence/production_ready/missing.pdf',
+      'Ready pack',
+      'projects/%s/evidence/production_ready/missing.pdf',
+      'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      2048,
+      'application/pdf'
+    )$f$,
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_project')
+  ),
+  'PROJECT_MISSING_EVIDENCE',
+  'Fabricated uploaded production-ready path without storage object is rejected'
+);
+select throws_ok(
+  format(
+    $f$select public.approve_project_production_ready(
+      %L::uuid,
+      'prod_ready_ref_mismatch',
+      'uploaded_artifact',
+      'projects/%s/evidence/production_ready/a.pdf',
+      'Ready pack',
+      'projects/%s/evidence/production_ready/b.pdf',
+      'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      2048,
+      'application/pdf'
+    )$f$,
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_project'),
+    current_setting('test.phase8b_project')
+  ),
+  'PROJECT_MISSING_EVIDENCE',
+  'Uploaded production-ready source_reference must equal storage path'
+);
+
+savepoint uploaded_production_ready_ok;
+select set_config('role', 'postgres', true);
+select set_config(
+  'test.phase8b_ok_prd_path',
+  'projects/' || current_setting('test.phase8b_project') || '/evidence/production_ready/ok.pdf',
+  true
+);
+insert into storage.objects (bucket_id, name, owner, owner_id, metadata)
+values (
+  'project-design-documents',
+  current_setting('test.phase8b_ok_prd_path'),
+  '8b555555-5555-5555-5555-555555555555',
+  '8b555555-5555-5555-5555-555555555555',
+  '{}'::jsonb
+);
+select set_config('request.jwt.claim.sub', '8b555555-5555-5555-5555-555555555555', true);
+select set_config('role', 'authenticated', true);
+select is(
+  (public.approve_project_production_ready(
+    current_setting('test.phase8b_project')::uuid,
+    'prod_ready_uploaded_ok',
+    'uploaded_artifact',
+    current_setting('test.phase8b_ok_prd_path'),
+    'Ready pack',
+    current_setting('test.phase8b_ok_prd_path'),
+    'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+    2048,
+    'application/pdf'
+  )->>'state'),
+  'production_ready',
+  'Uploaded production ready succeeds when the private object exists'
+);
+rollback to savepoint uploaded_production_ready_ok;
 
 select set_config('request.jwt.claim.sub', '8b121212-1212-1212-1212-121212121212', true);
 select throws_ok(

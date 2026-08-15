@@ -38,9 +38,15 @@
 
 ## 3. M29
 
-**File:** `supabase/migrations/20260816140000_designer_assignment_design_collaboration.sql`  
-**Git blob:** `1e8866633be5841b50cc4db0c415332505b20b5f`  
-**Raw SHA-256:** `0294CECFAEFC2767E4686462EC4CDDCBF0DA8080F6402C5B970137F3D02A7FB0`  
+**File:** `supabase/migrations/20260816140000_designer_assignment_design_collaboration.sql`
+
+**PRE-CORRECTION Git blob:** `1e8866633be5841b50cc4db0c415332505b20b5f`
+
+**PRE-CORRECTION raw SHA-256:** `0294CECFAEFC2767E4686462EC4CDDCBF0DA8080F6402C5B970137F3D02A7FB0`
+
+**Git blob:** `4038cbfc85cd024443f99b3d586eedd7afc7791a`
+
+**Raw SHA-256:** `7E82070A6F17517965B5F4E82695568F47F9473CA9F9E53C9892CE7AEA5ADCFC`
 Forward-only. No M1–M28 edits. No business/project/design seed rows. No automatic backfill.
 
 ### Permissions
@@ -117,7 +123,7 @@ Lock (`private.project_idempotency_xact_lock`) **before** ledger lookup. Codes i
 
 ## 6. Tests (local)
 
-Recorded locally: pgTAP 21 files / 1051 tests PASS; `test:phase-8b` 40 pass; `test:app` 701 pass; `npm run check` lint 0 errors / 11 pre-existing warnings, typecheck pass, build pass. Managed apply was **not** run.
+Recorded locally: pgTAP 21 files / 1079 tests PASS; `test:phase-8b` 44 pass; `test:app` 705 pass; `npm run check` lint 0 errors / 11 pre-existing warnings, typecheck pass, build pass. Managed apply was **not** run.
 
 ---
 
@@ -128,3 +134,27 @@ Recorded locally: pgTAP 21 files / 1051 tests PASS; `test:phase-8b` 40 pass; `te
 - Phase 8C persistence/UI activation absent
 - Production activation NONE
 - Next gate: `PHASE_8B_M29_RECOVERY_MANAGED_APPLY`
+
+---
+
+## 8. Independent-review evidence/storage integrity correction
+
+Starting certified head: `1aba588d94b3904f3d4685bc30d4370ca048a039`
+
+Pre-correction M29:
+- Git blob `1e8866633be5841b50cc4db0c415332505b20b5f`
+- raw SHA-256 `0294CECFAEFC2767E4686462EC4CDDCBF0DA8080F6402C5B970137F3D02A7FB0`
+
+Defects:
+1. uploaded-artifact DB evidence did not prove `storage.objects` existence
+2. service-role evidence upload occurred before action-specific DB preauthorization
+3. uploaded evidence had no project-scoped signed readback path
+
+Correction:
+- `private.project_design_uploaded_evidence_object_exists` plus table/RPC bounds (fixed bucket, project evidence path, source_reference = path, MIME allowlist, ≤20 MiB)
+- canonical evidence RPCs require object existence after actor/state proof
+- read-only `can_record_project_client_approval` / `can_approve_project_production_ready` before service-role write
+- `getProjectDesignEvidenceFileUrlAction` signs DB-resolved uploaded evidence at 900 seconds
+- workspace **Open evidence** for uploaded artifacts only; SE high-level surface excluded
+
+No architecture change. No owner-decision change (OD8B-1–OD8B-8). M29 remained managed-unapplied. No M30.
