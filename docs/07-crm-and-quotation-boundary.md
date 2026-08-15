@@ -1,8 +1,8 @@
 # 07 — CRM PIPELINE AND COMMERCIAL QUOTATION BOUNDARY
 
-**Document Status:** Locked CRM & Quotation Baseline (truth-synced post Phase 7B merge / Phase 8A architecture freeze, August 14, 2026)
+**Document Status:** Locked CRM & Quotation Baseline (truth-synced post Phase 8A complete / Phase 8B architecture freeze, August 15, 2026)
 **Internal Prefix:** `/admin`
-**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55). Phase 8A **M28 managed-applied**; PR #57 **not merged** (production not activated).
+**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55). Phase 8A **COMPLETE** (PR #57 merged). Phase 8B architecture frozen; M29 **not created** (production not activated).
 
 ---
 
@@ -125,7 +125,7 @@ See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md) and [ADR-
 
 1. Quotation **Accepted** (Phase 7B; already implemented).
 2. Lead **Closed-Won** (atomic with acceptance; already implemented).
-3. **Separate** Phase 8A materializer creates/reuses one project (`awaiting_project_manager_assignment`). Repository M28 exists; managed M28 is unapplied.
+3. **Separate** Phase 8A materializer creates/reuses one project (`awaiting_project_manager_assignment`). M28 is managed-applied; PR #57 is merged.
 4. Sales Manager or Super Admin assigns exactly **one primary PM**.
 5. Status **Awaiting Project Manager Acceptance**.
 6. Current PM accepts handover (`handover_accepted`).
@@ -134,7 +134,7 @@ See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md) and [ADR-
 - No execution or Designer assignment in Phase 8A (8B/8C).
 - Sales Executive cannot assign PM; high-level read of own won-origin project only.
 - SA/SM may reassign PM before or after handover acceptance; new PM must re-accept.
-- One Lead Designer + Supporting Designers remains Phase 8B.
+- One Lead Designer + Supporting Designers is Phase 8B (ADR-0025 / OD8B-1–OD8B-8; M29 not created).
 
 ---
 

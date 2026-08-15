@@ -116,17 +116,20 @@ Exact SQL identifiers deferred to Phase 5B implementation checkpoint. Naming mus
 **Not in V1:** `quotation_approvals`, `quotation_approval_policies`, `quotations.approve` — see ADR-0022.
 
 ### 3.3 Project & Design (Phase 8)
+
+Live Phase 8A schema (M28) uses `public.projects`, `public.project_manager_assignments`, and `public.project_events`. Names below are **conceptual planning labels**, not live tables. Phase 8B intended live names are frozen in [ADR-0025](ADR/ADR-0025-phase-8b-designer-assignment-design-collaboration.md) (`project_designer_assignments`, `project_design_workflows`, `project_design_evidence`, `project_design_deliverable_versions`) and are **not created** until M29. Phase 8C execution concepts remain unpersisted.
+
 | Concept | Purpose |
 | :--- | :--- |
-| `projects` | Created from Closed-Won; execution container |
-| `project_handover_events` | PM acceptance audit |
-| `project_manager_assignments` | One primary PM; assignment history |
-| `designer_assignments` | Lead Designer + Supporting Designers |
-| `design_tasks` / `design_deliverables` / `design_deliverable_versions` | Versioned design artifacts |
-| `design_approvals` | Lead Designer production-ready; client evidence |
-| `project_milestones` / `project_files` | PM execution tracking |
-| `project_delays` / `project_snags` | Operational issue tracking |
-| `client_decisions` | Documented client approvals |
+| `projects` | Created from Closed-Won; Phase 8A handover container (live M28) |
+| `project_handover_events` | Historical planning name; live audit is `public.project_events` |
+| `project_manager_assignments` | One primary PM; assignment history (live M28) |
+| `designer_assignments` | Conceptual; intended live: `project_designer_assignments` (M29) |
+| `design_tasks` / `design_deliverables` / `design_deliverable_versions` | Conceptual versioned artifacts (M29) |
+| `design_approvals` | Conceptual; intended generic immutable design evidence (M29) |
+| `project_milestones` / `project_files` | PM execution tracking (**Phase 8C — not started**) |
+| `project_delays` / `project_snags` | Operational issue tracking (**Phase 8C — not started**) |
+| `client_decisions` | Documented client approvals (Phase 8B evidence model, not a portal) |
 
 ### 3.4 Communication (Phase 6A foundation + Phase 6B runtime)
 | Concept | Purpose |

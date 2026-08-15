@@ -1,9 +1,9 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 8A M28 managed apply, August 15, 2026)
-**Current Phase:** Phase 8A — Closed-Won Project Conversion & PM Handover (**MANAGED M28 APPLIED**; PR #57 **OPEN / NOT MERGED**; Phase 8A **not COMPLETE**)
-**Next Phase:** Phase 8A PR #57 merge (**NOT STARTED**)
-**Previous Phase:** Phase 7B — Quotation Finalization, Premium PDF, Secure Delivery & Client Acceptance (**COMPLETE** — PR #55 merged; production **not** activated)
+**Document Status:** Locked Roadmap (truth-synced post Phase 8A complete / Phase 8B architecture freeze, August 15, 2026)
+**Current Phase:** Phase 8B — Designer Assignment & Design Collaboration (**ARCHITECTURE FREEZE**; M29 **NOT CREATED**; Phase 8B **not COMPLETE**)
+**Next Phase:** Phase 8B architecture PR merge, then M29 implementation (**NOT STARTED**)
+**Previous Phase:** Phase 8A — Closed-Won Project Conversion & PM Handover (**COMPLETE** — PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; production **not** activated)
 
 ---
 
@@ -81,8 +81,10 @@ Phase 7A: Commercial Quotation Data & Draft Foundation ────────�
   • M25 applied managed; PR #53 merged
 Phase 7B: Quotation Finalization, Delivery & Client Acceptance ────── COMPLETE
   • M26 + M27 applied managed; PR #55 merged (`a30c733…`); production not activated
-Phase 8A: Closed-Won Project Conversion & PM Handover ─────────────── REPOSITORY IMPLEMENTATION COMPLETE
-  • OD8A-1–OD8A-4 locked; repository/managed M1–M28; pending NONE; PR #57 not merged; not COMPLETE
+Phase 8A: Closed-Won Project Conversion & PM Handover ─────────────── COMPLETE
+  • OD8A-1–OD8A-4 locked; PR #57 merged `db879b5…`; repository/managed M1–M28; pending NONE
+Phase 8B: Designer Assignment & Design Collaboration ─────────────── ARCHITECTURE FREEZE
+  • OD8B-1–OD8B-8 locked; M29 not created; Phase 8C excluded; production not activated
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -138,11 +140,12 @@ Phase 7B ──► Quotation Finalization, Premium PDF, Secure Delivery & Client
     │         • No internal quotation approval (ADR-0022)
     │         • Authoritative accepted-quotation achievement (`taxable_base_paise`); PR #55 merged; M1–M27
     ▼
-Phase 8A ──► Closed-Won Project Conversion & PM Handover [MANAGED M28 APPLIED; PR #57 NOT MERGED]
+Phase 8A ──► Closed-Won Project Conversion & PM Handover [COMPLETE]
     │         • Project-value reconciliation deferred (OD8A / ADR-0024)
-    │         • Managed M28 applied; PR #57 open / not merged; production not activated
+    │         • PR #57 merged; repository/managed M1–M28; production not activated
     ▼
-Phase 8B ──► Designer Assignment & Design Collaboration
+Phase 8B ──► Designer Assignment & Design Collaboration [ARCHITECTURE FREEZE; M29 NOT CREATED]
+    │         • OD8B-1–OD8B-8 / ADR-0025; separate design state; Phase 8C excluded
     ▼
 Phase 8C ──► Project Execution Workspace
     ▼
@@ -235,13 +238,19 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Status:** **COMPLETE** — M26 + M27 managed; PR #55 merged (`a30c733003fb08b3250148c61f7c4f74f11d4c14`); production not activated.
 - **Dependencies:** 7A.
 
-### Phase 8A (Current Formal Phase — Managed Applied, Not Merged)
+### Phase 8A (Completed)
 - **Objective:** Closed-Won project conversion and PM handover.
 - **Architecture freeze:** [Phase 8A freeze](audits/phase-8a-closed-won-project-pm-handover-architecture-freeze.md), [ADR-0024](ADR/ADR-0024-phase-8a-project-materialization-pm-handover.md).
 - **Implementation audit:** [Phase 8A M28 implementation](audits/phase-8a-m28-project-conversion-pm-handover-implementation.md).
-- **Exit gate (merge, later):** PR #57 merge after independent review. Project-value reconciliation remains **deferred**.
 - **Dependencies:** 7B complete.
-- **Status:** **CURRENT FORMAL PHASE** — architecture frozen; repository/managed **M1–M28**; pending **NONE**; PR #57 **OPEN / NOT MERGED**; Phase 8A **not COMPLETE**.
+- **Status:** **COMPLETE** — PR #57 MERGED (`db879b5ca27fe9d26543c23d8f130811c7feadab`); repository/managed **M1–M28**; pending **NONE**; project-value reconciliation remains **deferred**; production not activated.
+
+### Phase 8B (Current Formal Phase — Architecture Freeze)
+- **Objective:** Designer assignment and design collaboration.
+- **Architecture freeze:** [Phase 8B freeze](audits/phase-8b-designer-assignment-design-collaboration-architecture-freeze.md), [ADR-0025](ADR/ADR-0025-phase-8b-designer-assignment-design-collaboration.md).
+- **Exit gate (later):** architecture PR merge, then M29 implementation. Phase 8C remains excluded.
+- **Dependencies:** 8A complete.
+- **Status:** **CURRENT FORMAL PHASE** — owner locks OD8B-1–OD8B-8; **M29 not created**; repository/managed remain **M1–M28**; production not activated.
 
 ### Phase 9B (Landing Page Lab)
 - **Status:** Owner-approved roadmap placement; **not implemented** (no routes/schema/integrations).
@@ -282,3 +291,5 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - [ADR-0023: Staff attendance architecture](ADR/ADR-0023-staff-attendance-leave-architecture.md)
 - [ADR-0024: Phase 8A project materialization and PM handover](ADR/ADR-0024-phase-8a-project-materialization-pm-handover.md)
 - [Phase 8A architecture freeze](audits/phase-8a-closed-won-project-pm-handover-architecture-freeze.md)
+- [ADR-0025: Phase 8B designer assignment and design collaboration](ADR/ADR-0025-phase-8b-designer-assignment-design-collaboration.md)
+- [Phase 8B architecture freeze](audits/phase-8b-designer-assignment-design-collaboration-architecture-freeze.md)
