@@ -1,5 +1,4 @@
-import { notFound } from "next/navigation";
-import { requireStaffPermission } from "@/server/auth";
+import { notFound, redirect } from "next/navigation";
 import { getStaffClaims } from "@/server/auth/session";
 import {
   probeProjectPermissions,
@@ -9,8 +8,13 @@ import {
   getProjectHandoverDetail,
   listAssignableProjectManagers,
 } from "@/features/projects/server/project-queries";
+import {
+  getProjectDesignHighLevelStatus,
+  getProjectDesignWorkspace,
+} from "@/features/projects/server/project-design-queries";
 import { buildHandoverDisplayModel } from "@/features/projects/handover/ui/build-handover-display-model";
 import { ProjectHandoverWorkspace } from "@/features/projects/components/handover/ProjectHandoverWorkspace";
+import { ProjectDesignWorkspace } from "@/features/projects/components/design/ProjectDesignWorkspace";
 
 interface AdminProjectDetailPageProps {
   params: Promise<{ projectId: string }>;
@@ -20,23 +24,39 @@ export default async function AdminProjectDetailPage({
   params,
 }: AdminProjectDetailPageProps) {
   const { projectId } = await params;
-  await requireStaffPermission("projects.read", `/admin/projects/${projectId}`);
-  const [permissions, session, detail] = await Promise.all([
+  const session = await getStaffClaims();
+  if (!session) {
+    redirect(`/auth/login?next=${encodeURIComponent(`/admin/projects/${projectId}`)}`);
+  }
+  const [permissions, detail] = await Promise.all([
     probeProjectPermissions(),
-    getStaffClaims(),
     getProjectHandoverDetail(projectId),
   ]);
 
-  if (!detail || !session) {
+  if (!permissions.canReadProjects && !permissions.canReadDesign) {
+    redirect("/auth/forbidden");
+  }
+
+  if (!detail) {
     notFound();
   }
 
   const role = resolveCrmRoleFromProjectProbe(permissions);
-  if (!role || role === "designer") {
+  if (!role) {
     notFound();
   }
 
   const highLevelOnly = role === "sales_executive";
+  const designWorkspace =
+    !highLevelOnly && detail.status === "handover_accepted"
+      ? await getProjectDesignWorkspace(projectId, permissions.canStaffDesigners)
+      : null;
+  const highLevelDesign =
+    highLevelOnly ? await getProjectDesignHighLevelStatus(projectId) : null;
+
+  if (role === "designer" && !designWorkspace) {
+    notFound();
+  }
   const assignableManagers =
     permissions.canAssignPm && !highLevelOnly ? await listAssignableProjectManagers() : [];
 
@@ -67,7 +87,7 @@ export default async function AdminProjectDetailPage({
       <div>
         <h1 className="text-2xl font-bold text-neutral-100">{detail.projectNumber}</h1>
         <p className="mt-1 text-xs text-neutral-400">
-          Phase 8A handover workspace. Designer and execution controls are not mounted.
+          Phase 8A handover plus Phase 8B design collaboration. Execution controls are not mounted.
         </p>
       </div>
       <ProjectHandoverWorkspace
@@ -81,6 +101,34 @@ export default async function AdminProjectDetailPage({
         assignments={highLevelOnly ? [] : detail.assignments}
         events={highLevelOnly ? [] : detail.events}
       />
+      {highLevelOnly && highLevelDesign ? (
+        <ProjectDesignWorkspace
+          workspace={{
+            projectId,
+            workflowState: highLevelDesign.state,
+            heldFromState: null,
+            revisionReturnState: null,
+            startedAt: highLevelDesign.startedAt,
+            completedAt: highLevelDesign.completedAt,
+            staffing: { leadDesigner: null, supportingDesigners: [] },
+            deliverables: [],
+            evidence: [],
+            assignableDesigners: [],
+          }}
+          actorProfileId={session.userId}
+          actorRole={role}
+          isAssignedPrimaryPm={detail.primaryPmId === session.userId}
+          highLevelOnly
+        />
+      ) : null}
+      {designWorkspace ? (
+        <ProjectDesignWorkspace
+          workspace={designWorkspace}
+          actorProfileId={session.userId}
+          actorRole={role}
+          isAssignedPrimaryPm={detail.primaryPmId === session.userId}
+        />
+      ) : null}
     </div>
   );
 }

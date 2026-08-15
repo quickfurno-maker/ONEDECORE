@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 8A complete / Phase 8B architecture freeze, August 15, 2026)
-**Current Phase:** Phase 8B — Designer Assignment & Design Collaboration (**ARCHITECTURE FREEZE**; M29 **NOT CREATED**; Phase 8B **not COMPLETE**)
-**Next Phase:** Phase 8B architecture PR merge, then M29 implementation (**NOT STARTED**)
+**Document Status:** Locked Roadmap (truth-synced post Phase 8B M29 repository implementation, August 15, 2026)
+**Current Phase:** Phase 8B — Designer Assignment & Design Collaboration (**REPOSITORY IMPLEMENTATION COMPLETE**; managed M29 **NOT APPLIED**; Phase 8B **not COMPLETE**)
+**Next Phase:** Phase 8B M29 recovery managed apply (**NOT STARTED**); Phase 8C **NOT STARTED**
 **Previous Phase:** Phase 8A — Closed-Won Project Conversion & PM Handover (**COMPLETE** — PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; production **not** activated)
 
 ---
@@ -83,8 +83,8 @@ Phase 7B: Quotation Finalization, Delivery & Client Acceptance ─────�
   • M26 + M27 applied managed; PR #55 merged (`a30c733…`); production not activated
 Phase 8A: Closed-Won Project Conversion & PM Handover ─────────────── COMPLETE
   • OD8A-1–OD8A-4 locked; PR #57 merged `db879b5…`; repository/managed M1–M28; pending NONE
-Phase 8B: Designer Assignment & Design Collaboration ─────────────── ARCHITECTURE FREEZE
-  • OD8B-1–OD8B-8 locked; M29 not created; Phase 8C excluded; production not activated
+Phase 8B: Designer Assignment & Design Collaboration ─────────────── REPOSITORY COMPLETE / MANAGED APPLY PENDING
+  • OD8B-1–OD8B-8 locked; repository M1–M29; managed M1–M28; M29 unapplied; Phase 8C excluded
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -144,8 +144,8 @@ Phase 8A ──► Closed-Won Project Conversion & PM Handover [COMPLETE]
     │         • Project-value reconciliation deferred (OD8A / ADR-0024)
     │         • PR #57 merged; repository/managed M1–M28; production not activated
     ▼
-Phase 8B ──► Designer Assignment & Design Collaboration [ARCHITECTURE FREEZE; M29 NOT CREATED]
-    │         • OD8B-1–OD8B-8 / ADR-0025; separate design state; Phase 8C excluded
+Phase 8B ──► Designer Assignment & Design Collaboration [REPOSITORY COMPLETE; M29 UNAPPLIED MANAGED]
+    │         • OD8B-1–OD8B-8 / ADR-0025 / DEC-0074; separate design state; Phase 8C excluded
     ▼
 Phase 8C ──► Project Execution Workspace
     ▼
@@ -245,12 +245,13 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Dependencies:** 7B complete.
 - **Status:** **COMPLETE** — PR #57 MERGED (`db879b5ca27fe9d26543c23d8f130811c7feadab`); repository/managed **M1–M28**; pending **NONE**; project-value reconciliation remains **deferred**; production not activated.
 
-### Phase 8B (Current Formal Phase — Architecture Freeze)
+### Phase 8B (Current Formal Phase — Repository Implementation Complete / Managed Apply Pending)
 - **Objective:** Designer assignment and design collaboration.
 - **Architecture freeze:** [Phase 8B freeze](audits/phase-8b-designer-assignment-design-collaboration-architecture-freeze.md), [ADR-0025](ADR/ADR-0025-phase-8b-designer-assignment-design-collaboration.md).
-- **Exit gate (later):** architecture PR merge, then M29 implementation. Phase 8C remains excluded.
-- **Dependencies:** 8A complete.
-- **Status:** **CURRENT FORMAL PHASE** — owner locks OD8B-1–OD8B-8; **M29 not created**; repository/managed remain **M1–M28**; production not activated.
+- **Implementation:** [Phase 8B M29 implementation](audits/phase-8b-m29-designer-assignment-design-collaboration-implementation.md), DEC-0074.
+- **Exit gate (later):** independent review, then `PHASE_8B_M29_RECOVERY_MANAGED_APPLY`. Phase 8C remains excluded.
+- **Dependencies:** 8A complete; architecture PR #58 merged `b7afef60e41900e7832ea41b249067841aebbaea`.
+- **Status:** **CURRENT FORMAL PHASE** — owner locks OD8B-1–OD8B-8; repository **M1–M29**; managed remains **M1–M28**; M29 **not** managed-applied; production not activated.
 
 ### Phase 9B (Landing Page Lab)
 - **Status:** Owner-approved roadmap placement; **not implemented** (no routes/schema/integrations).

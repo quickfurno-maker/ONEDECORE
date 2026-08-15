@@ -134,7 +134,7 @@ See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md) and [ADR-
 - No execution or Designer assignment in Phase 8A (8B/8C).
 - Sales Executive cannot assign PM; high-level read of own won-origin project only.
 - SA/SM may reassign PM before or after handover acceptance; new PM must re-accept.
-- One Lead Designer + Supporting Designers is Phase 8B (ADR-0025 / OD8B-1–OD8B-8; M29 not created).
+- One Lead Designer + Supporting Designers is Phase 8B (ADR-0025 / OD8B-1–OD8B-8; M29 repository-only, not managed-applied).
 
 ---
 

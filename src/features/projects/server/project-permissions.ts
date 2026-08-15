@@ -7,6 +7,8 @@ export interface ProjectPermissionProbeResult {
   readonly canReadProjects: boolean;
   readonly canAssignPm: boolean;
   readonly canAcceptHandover: boolean;
+  readonly canReadDesign: boolean;
+  readonly canStaffDesigners: boolean;
   readonly isSuperAdmin: boolean;
   readonly isSalesManager: boolean;
   readonly isSalesExecutive: boolean;
@@ -16,21 +18,26 @@ export interface ProjectPermissionProbeResult {
 
 export async function probeProjectPermissions(): Promise<ProjectPermissionProbeResult> {
   const supabase = await createClient();
-  const [readRes, assignRes, acceptRes, sa, sm, se, pm, designer] = await Promise.all([
-    supabase.rpc("authorize", { requested_permission: "projects.read" }),
-    supabase.rpc("authorize", { requested_permission: "projects.assign_pm" }),
-    supabase.rpc("authorize", { requested_permission: "projects.accept_handover" }),
-    supabase.rpc("has_active_role", { p_role_code: "super_admin" }),
-    supabase.rpc("has_active_role", { p_role_code: "sales_manager" }),
-    supabase.rpc("has_active_role", { p_role_code: "sales_executive" }),
-    supabase.rpc("has_active_role", { p_role_code: "project_manager" }),
-    supabase.rpc("has_active_role", { p_role_code: "designer" }),
-  ]);
+  const [readRes, assignRes, acceptRes, designRead, designStaff, sa, sm, se, pm, designer] =
+    await Promise.all([
+      supabase.rpc("authorize", { requested_permission: "projects.read" }),
+      supabase.rpc("authorize", { requested_permission: "projects.assign_pm" }),
+      supabase.rpc("authorize", { requested_permission: "projects.accept_handover" }),
+      supabase.rpc("authorize", { requested_permission: "project_design.read" }),
+      supabase.rpc("authorize", { requested_permission: "project_design.staff" }),
+      supabase.rpc("has_active_role", { p_role_code: "super_admin" }),
+      supabase.rpc("has_active_role", { p_role_code: "sales_manager" }),
+      supabase.rpc("has_active_role", { p_role_code: "sales_executive" }),
+      supabase.rpc("has_active_role", { p_role_code: "project_manager" }),
+      supabase.rpc("has_active_role", { p_role_code: "designer" }),
+    ]);
 
   return {
     canReadProjects: !readRes.error && readRes.data === true,
     canAssignPm: !assignRes.error && assignRes.data === true,
     canAcceptHandover: !acceptRes.error && acceptRes.data === true,
+    canReadDesign: !designRead.error && designRead.data === true,
+    canStaffDesigners: !designStaff.error && designStaff.data === true,
     isSuperAdmin: !sa.error && sa.data === true,
     isSalesManager: !sm.error && sm.data === true,
     isSalesExecutive: !se.error && se.data === true,
@@ -41,7 +48,7 @@ export async function probeProjectPermissions(): Promise<ProjectPermissionProbeR
 
 export async function hasAnyProjectReadPermission(): Promise<boolean> {
   const permissions = await probeProjectPermissions();
-  return permissions.canReadProjects;
+  return permissions.canReadProjects || permissions.canReadDesign;
 }
 
 export function resolveCrmRoleFromProjectProbe(

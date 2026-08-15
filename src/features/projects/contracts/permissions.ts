@@ -27,6 +27,9 @@ export interface ProjectPermissionCapabilities {
   readonly canReadFullProjectWorkspace: boolean;
   readonly canUpdateDesignWorkflow: boolean;
   readonly canApproveProductionReady: boolean;
+  readonly canCompleteDesign: boolean;
+  readonly canRecordClientApproval: boolean;
+  readonly canHoldOrResumeDesign: boolean;
 }
 
 const PM_ASSIGNMENT_ROLES = new Set<CrmRoleCode>(["super_admin", "sales_manager"]);
@@ -63,9 +66,14 @@ export function resolveProjectPermissionCapabilities(
       (isProjectManager && actor.isAssignedPrimaryPm) ||
       (isDesigner &&
         (actor.isAssignedLeadDesigner || actor.isAssignedSupportingDesigner)),
-    canUpdateDesignWorkflow:
-      isDesigner &&
-      (actor.isAssignedLeadDesigner || actor.isAssignedSupportingDesigner),
+    canUpdateDesignWorkflow: isDesigner && actor.isAssignedLeadDesigner,
     canApproveProductionReady: isDesigner && actor.isAssignedLeadDesigner,
+    canCompleteDesign: isDesigner && actor.isAssignedLeadDesigner,
+    canRecordClientApproval:
+      (isDesigner && actor.isAssignedLeadDesigner) ||
+      (isProjectManager && actor.isAssignedPrimaryPm),
+    canHoldOrResumeDesign:
+      (isDesigner && actor.isAssignedLeadDesigner) ||
+      (isProjectManager && actor.isAssignedPrimaryPm),
   };
 }
