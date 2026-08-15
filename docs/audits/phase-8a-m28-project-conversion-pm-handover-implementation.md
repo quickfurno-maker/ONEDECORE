@@ -4,7 +4,7 @@
 **Branch:** `phase-8a-m28-project-conversion-pm-handover`  
 **Base main:** `e46aa5341132ab710de543369ebb0a68747dac77`  
 **Architecture:** ADR-0024 / DEC-0071 / OD8A-1–OD8A-4  
-**Gate:** repository implementation only — **no managed M28 apply**, **no merge**, **no production activation**
+**Gate:** managed M28 applied — **PR #57 OPEN / NOT MERGED**, **no production activation**
 
 ---
 
@@ -122,14 +122,9 @@ Intentional authenticated RPCs: repair, list pending, list assignable PMs, assig
 
 ---
 
-## 7. Managed / production
+## 7. Managed / production (superseded by §10)
 
-- Managed remains **M1–M27**
-- M28 **not** managed-applied
-- No managed schema/data/migration/storage writes in this gate
-- Production activation **NONE**
-- Phase 8B **NOT STARTED**
-- Phase 8C **NOT STARTED**
+Historical repository-only state before this apply gate: managed **M1–M27**, M28 unapplied. See §10 for current managed-apply truth.
 
 ---
 
@@ -140,13 +135,45 @@ Intentional authenticated RPCs: repair, list pending, list assignable PMs, assig
 - **Affected operations:** `materialize`, `assign_pm`, `accept_handover`
 - **Correction:** `private.project_idempotency_xact_lock` acquires `pg_advisory_xact_lock` on the exact durable identity **before** the first `private.project_idempotency_requests` SELECT. Payload mismatch remains `request_hash` after lock. Unique constraints retained. No defensive catch of business unique violations.
 - **Concurrency test method:** sequential same-key replay + source-order static proof that the advisory lock precedes ledger lookup in all three paths. True two-session interleaving was **not** implemented (pgTAP is single-connection; no extra client dependency added).
-- M28 remains **unapplied** on managed; no M29; no architecture or OD8A change
-- Pre-correction identity is historical only; corrected fingerprint is canonical for later managed apply
+- Correction landed before any managed apply; no M29; no architecture or OD8A change
+- Pre-correction identity is historical only; corrected fingerprint is the managed-applied artifact
 
 ---
 
-## 9. Remaining blockers
+## 9. Remaining blockers (pre-apply)
 
-None for repository certification. Next authorized gate:
+None for repository certification. Managed apply executed in §10.
 
-`PHASE_8A_M28_RECOVERY_MANAGED_APPLY`
+---
+
+## 10. Managed M28 apply certification (2026-08-15)
+
+| Item | Value |
+| :--- | :--- |
+| Recovery package | `C:\Users\KESHAV SHARMA\Desktop\ONEDECORE_RECOVERY\M28_PREAPPLY_20260815T092323Z\` |
+| Physical backup | ID `1374687462` (`2026-08-14T19:53:30.663Z`, COMPLETED, `is_physical_backup=true`) |
+| WALG | enabled |
+| PITR | disabled |
+| Logical evidence | `roles.sql`, `schema.sql`, `data.sql`, `migration_history_*` (sensitive data dump outside repo) |
+| Apply command | `npx supabase@2.109.1 db push --linked --yes` |
+| Supabase CLI | `2.109.1` |
+| APPLY_START_UTC | `2026-08-15T09:26:39.9786906Z` |
+| APPLY_END_UTC | `2026-08-15T09:26:44.3196945Z` |
+| Apply exit | `0` SUCCESS |
+| Pre-apply managed | M1–M27; pending M28 only; no M29 |
+| Post-apply managed | M1–M28; pending NONE; dry-run “Remote database is up to date.” |
+| Corrected M28 Git blob | `b3f831136af809de9286dcc190160a93ec73c5fa` |
+| Corrected M28 raw SHA-256 | `934EC3D65FB89DFB4271DA2E319EF9A998FD069AE357ABDA8FA33E2CAAB37538` |
+| M28 bytes | 40700 |
+| Non-fatal apply note | pg-delta catalog cache warning (same class as M26/M27) |
+| Security advisors | 47 WARN; M28-specific blockers **NONE**; +6 intentional authenticated SECURITY DEFINER RPC WARNs |
+| Managed schema write | M28 only |
+| Managed data write | RBAC metadata only (`projects.read` / `projects.assign_pm` / `projects.accept_handover` + role mappings); **0** project/assignment/event/idempotency business rows |
+| Managed storage write | NONE (`storage.objects` count 0) |
+| Business test fixtures | NONE |
+| Phase 8B / 8C | NOT STARTED |
+| Production activation | NONE |
+
+Next authorized gate after independent review:
+
+`PHASE_8A_PR57_MERGE`

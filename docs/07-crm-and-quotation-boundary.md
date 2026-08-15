@@ -2,7 +2,7 @@
 
 **Document Status:** Locked CRM & Quotation Baseline (truth-synced post Phase 7B merge / Phase 8A architecture freeze, August 14, 2026)
 **Internal Prefix:** `/admin`
-**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55; managed M1–M27). Phase 8A **repository M28 complete / unapplied** (production not activated).
+**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55). Phase 8A **M28 managed-applied**; PR #57 **not merged** (production not activated).
 
 ---
 
