@@ -24,11 +24,25 @@ describe("Phase 8 delivery workspace shell", () => {
     assert.doesNotMatch(src, /closed_won/i);
   });
 
-  test("no project admin routes activated", () => {
+  test("Phase 8A project admin route is mounted without 8B/8C routes", () => {
+    const src = readFileSync(join(root, "src/app/admin/projects/page.tsx"), "utf8");
+    assert.match(src, /projects.read/);
+    assert.doesNotMatch(src, /DesignWorkspace|ProjectExecutionWorkspace/);
     assert.equal(
       (() => {
         try {
-          readFileSync(join(root, "src/app/admin/projects/page.tsx"), "utf8");
+          readFileSync(join(root, "src/app/admin/projects/execution/page.tsx"), "utf8");
+          return true;
+        } catch {
+          return false;
+        }
+      })(),
+      false
+    );
+    assert.equal(
+      (() => {
+        try {
+          readFileSync(join(root, "src/app/admin/projects/design/page.tsx"), "utf8");
           return true;
         } catch {
           return false;

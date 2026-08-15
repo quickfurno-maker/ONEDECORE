@@ -13,8 +13,11 @@ const ALLOWED_HANDOVER_TRANSITIONS: Readonly<
   Record<ProjectHandoverState, readonly ProjectHandoverState[]>
 > = {
   awaiting_project_manager_assignment: ["awaiting_project_manager_acceptance"],
-  awaiting_project_manager_acceptance: ["handover_accepted"],
-  handover_accepted: [],
+  awaiting_project_manager_acceptance: [
+    "handover_accepted",
+    "awaiting_project_manager_acceptance",
+  ],
+  handover_accepted: ["awaiting_project_manager_acceptance"],
 };
 
 export function canTransitionHandoverState(
@@ -35,12 +38,16 @@ export interface HandoverTransitionValidationResult {
 export function validateHandoverAssignmentTransition(
   from: ProjectHandoverState
 ): HandoverTransitionValidationResult {
-  if (from !== "awaiting_project_manager_assignment") {
+  if (
+    from !== "awaiting_project_manager_assignment" &&
+    from !== "awaiting_project_manager_acceptance" &&
+    from !== "handover_accepted"
+  ) {
     return {
       allowed: false,
       error: createProjectStageTransitionError(
         "PROJECT_INVALID_TRANSITION",
-        "PM assignment is only valid while awaiting project manager assignment."
+        "PM assignment or reassignment is not valid from the current handover state."
       ),
     };
   }

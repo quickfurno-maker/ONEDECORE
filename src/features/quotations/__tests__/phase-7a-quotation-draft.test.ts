@@ -615,7 +615,9 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     assert.equal(leadPanelFile.includes("canEditQuotation || canCreateQuotation"), false);
     assert.equal(
       leadPanelFile.includes("hasActiveDraft ? (\n            canEditQuotation ?") ||
-        leadPanelFile.includes("hasActiveDraft ? (\n            canEditQuotation"),
+        leadPanelFile.includes("hasActiveDraft ? (\n            canEditQuotation") ||
+        leadPanelFile.includes("hasActiveDraft ? (\r\n            canEditQuotation ?") ||
+        leadPanelFile.includes("hasActiveDraft ? (\r\n            canEditQuotation"),
       true
     );
   });

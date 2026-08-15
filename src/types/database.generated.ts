@@ -1910,6 +1910,146 @@ export type Database = {
         }
         Relationships: []
       }
+      project_events: {
+        Row: {
+          actor_id: string | null
+          actor_kind: string
+          details: Json
+          event_type: string
+          id: string
+          lead_id: string
+          occurred_at: string
+          project_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_kind: string
+          details?: Json
+          event_type: string
+          id?: string
+          lead_id: string
+          occurred_at?: string
+          project_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_kind?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          lead_id?: string
+          occurred_at?: string
+          project_id?: string
+        }
+        Relationships: []
+      }
+      project_manager_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          project_id: string
+          project_manager_id: string
+          reason: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          project_id: string
+          project_manager_id: string
+          reason?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          project_id?: string
+          project_manager_id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          accepted_quotation_id: string
+          accepted_quotation_version_id: string
+          created_at: string
+          created_by: string | null
+          handover_accepted_at: string | null
+          id: string
+          lead_id: string
+          primary_pm_id: string | null
+          project_number: string
+          quotation_acceptance_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_quotation_id: string
+          accepted_quotation_version_id: string
+          created_at?: string
+          created_by?: string | null
+          handover_accepted_at?: string | null
+          id?: string
+          lead_id: string
+          primary_pm_id?: string | null
+          project_number: string
+          quotation_acceptance_id: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_quotation_id?: string
+          accepted_quotation_version_id?: string
+          created_at?: string
+          created_by?: string | null
+          handover_accepted_at?: string | null
+          id?: string
+          lead_id?: string
+          primary_pm_id?: string | null
+          project_number?: string
+          quotation_acceptance_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_accepted_quotation_id_fkey"
+            columns: ["accepted_quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_primary_pm_id_fkey"
+            columns: ["primary_pm_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_quotation_acceptance_id_fkey"
+            columns: ["quotation_acceptance_id"]
+            isOneToOne: true
+            referencedRelation: "quotation_acceptances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotation_acceptances: {
         Row: {
           accepted_at: string
@@ -3441,6 +3581,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_project_handover: {
+        Args: {
+          p_idempotency_key: string
+          p_project_id: string
+        }
+        Returns: Json
+      }
       accept_quotation_by_capability: {
         Args: {
           p_capability_token: string
@@ -3448,6 +3595,19 @@ export type Database = {
           p_client_name: string
         }
         Returns: Json
+      }
+      assign_project_manager: {
+        Args: {
+          p_idempotency_key: string
+          p_project_id: string
+          p_project_manager_id: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      can_view_project_handover_baseline: {
+        Args: { p_project_id: string }
+        Returns: boolean
       }
       admin_create_quotation_tax_profile: {
         Args: {
@@ -4180,6 +4340,14 @@ export type Database = {
         }
         Returns: Json
       }
+      list_assignable_project_managers: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      list_pending_closed_won_project_materializations: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       list_crm_assignable_executives: {
         Args: never
         Returns: {
@@ -4216,6 +4384,13 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      materialize_closed_won_project_internal: {
+        Args: {
+          p_idempotency_key: string
+          p_quotation_version_id: string
+        }
+        Returns: Json
       }
       mark_quotation_pdf_document_ready: {
         Args: {
@@ -4498,6 +4673,13 @@ export type Database = {
       }
       resend_staff_invite: {
         Args: { p_reason: string; p_staff_id: string }
+        Returns: Json
+      }
+      repair_closed_won_project_materialization: {
+        Args: {
+          p_idempotency_key: string
+          p_quotation_version_id: string
+        }
         Returns: Json
       }
       reserve_quotation_pdf_document: {

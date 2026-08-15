@@ -2,6 +2,12 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/service-role";
+import {
+  resolveTrustedQuotationVersionId,
+  runPostAcceptanceProjectMaterialization,
+  type ProjectMaterializationState,
+} from "@/features/projects/server/project-materialization";
 
 interface CapabilityRpcResult {
   success?: boolean;
@@ -44,8 +50,17 @@ export async function acceptQuotationByCapabilityAction(params: {
   message?: string;
   alreadyAccepted?: boolean;
   acceptedAt?: string;
+  projectMaterialization?: ProjectMaterializationState;
 }> {
   const supabase = await createClient();
+
+  let trustedVersionId: string | null = null;
+  try {
+    const preview = await getQuotationByCapabilityAction(params.token);
+    trustedVersionId = resolveTrustedQuotationVersionId(preview.data);
+  } catch {
+    trustedVersionId = null;
+  }
 
   const { data, error } = await supabase.rpc("accept_quotation_by_capability", {
     p_capability_token: params.token,
@@ -61,11 +76,30 @@ export async function acceptQuotationByCapabilityAction(params: {
   }
 
   const resultObj = data as Record<string, unknown>;
+  const acceptanceSuccess = Boolean(resultObj.success);
+
+  let projectMaterialization: ProjectMaterializationState | undefined;
+  if (acceptanceSuccess) {
+    projectMaterialization = await runPostAcceptanceProjectMaterialization({
+      quotationVersionId: trustedVersionId,
+      materialize: async (quotationVersionId, idempotencyKey) => {
+        const admin = createAdminClient();
+        const materialized = await admin.rpc("materialize_closed_won_project_internal", {
+          p_quotation_version_id: quotationVersionId,
+          p_idempotency_key: idempotencyKey,
+        });
+        const payload = materialized.data as Record<string, unknown> | null;
+        return !materialized.error && payload?.success === true;
+      },
+    });
+  }
+
   return {
-    success: Boolean(resultObj.success),
+    success: acceptanceSuccess,
     message: String(resultObj.message || ""),
     alreadyAccepted: Boolean(resultObj.idempotent_replay),
     acceptedAt: resultObj.accepted_at ? String(resultObj.accepted_at) : undefined,
+    projectMaterialization,
   };
 }
 
