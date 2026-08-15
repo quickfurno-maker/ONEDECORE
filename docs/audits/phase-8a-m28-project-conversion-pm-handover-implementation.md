@@ -4,7 +4,7 @@
 **Branch:** `phase-8a-m28-project-conversion-pm-handover`  
 **Base main:** `e46aa5341132ab710de543369ebb0a68747dac77`  
 **Architecture:** ADR-0024 / DEC-0071 / OD8A-1–OD8A-4  
-**Gate:** managed M28 applied — **PR #57 OPEN / NOT MERGED**, **no production activation**
+**Gate:** managed M28 applied; later closeout — **PR #57 MERGED**, Phase 8A **COMPLETE**, **no production activation**
 
 ---
 
@@ -174,6 +174,10 @@ None for repository certification. Managed apply executed in §10.
 | Phase 8B / 8C | NOT STARTED |
 | Production activation | NONE |
 
-Next authorized gate after independent review:
+Next authorized gate after independent review (historical):
 
 `PHASE_8A_PR57_MERGE`
+
+### Closeout (2026-08-15)
+
+PR #57 was merged as a true two-parent merge at `db879b5ca27fe9d26543c23d8f130811c7feadab` (`2026-08-15T09:51:36Z`). Post-merge CI `31878059206` SUCCESS. Phase 8A is **COMPLETE**. Repository/managed remain **M1–M28**. M29 was not created in the merge gate. Phase 8B architecture is a separate freeze (ADR-0025 / DEC-0073).
