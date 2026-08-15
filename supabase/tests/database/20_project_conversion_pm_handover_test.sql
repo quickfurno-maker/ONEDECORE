@@ -154,6 +154,16 @@ select is(
   false,
   'authenticated cannot execute private materializer impl'
 );
+select is(
+  has_function_privilege('anon', 'private.project_idempotency_xact_lock(text,uuid,text,text)', 'execute'),
+  false,
+  'anon cannot execute project idempotency lock helper'
+);
+select is(
+  has_function_privilege('authenticated', 'private.project_idempotency_xact_lock(text,uuid,text,text)', 'execute'),
+  false,
+  'authenticated cannot execute project idempotency lock helper'
+);
 
 select ok(
   (
@@ -177,6 +187,7 @@ select ok(
           'project_can_view',
           'project_can_view_handover_baseline',
           'project_sha256',
+          'project_idempotency_xact_lock',
           'enforce_project_acceptance_identity',
           'prevent_project_identity_mutation',
           'prevent_project_assignment_mutation',
@@ -635,6 +646,34 @@ select is(
   (public.assign_project_manager(
     current_setting('test.phase8a_project')::uuid,
     '8a666666-6666-6666-6666-666666666666'::uuid,
+    'assign-sa-initial'
+  )->>'project_manager_id'),
+  '8a666666-6666-6666-6666-666666666666',
+  'Same-key assign replay returns the durable result'
+);
+
+select is(
+  (select count(*)::integer from public.project_manager_assignments
+    where project_id = current_setting('test.phase8a_project')::uuid),
+  1,
+  'Same-key assign replay does not duplicate assignment history'
+);
+
+select throws_ok(
+  $$select public.assign_project_manager(
+    current_setting('test.phase8a_project')::uuid,
+    '8a777777-7777-7777-7777-777777777777'::uuid,
+    'assign-sa-initial',
+    'different-reason'
+  )$$,
+  'IDEMPOTENCY_KEY_REUSED',
+  'Same assign key with different target/reason is rejected'
+);
+
+select is(
+  (public.assign_project_manager(
+    current_setting('test.phase8a_project')::uuid,
+    '8a666666-6666-6666-6666-666666666666'::uuid,
     'assign-sa-same'
   )->>'unchanged'),
   'true',
@@ -729,6 +768,15 @@ select is(
   )->>'status'),
   'handover_accepted',
   'Current PM accepts handover'
+);
+
+select is(
+  (public.accept_project_handover(
+    current_setting('test.phase8a_project')::uuid,
+    'accept-pm2'
+  )->>'status'),
+  'handover_accepted',
+  'Same-key handover replay returns the durable result'
 );
 
 select is(

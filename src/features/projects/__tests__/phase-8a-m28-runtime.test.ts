@@ -120,6 +120,33 @@ describe("Phase 8A server and UI containment", () => {
     assert.doesNotMatch(detail, /DesignerTeamPanel|ProjectExecutionWorkspace/);
   });
 
+  test("M28 serializes durable idempotency before ledger lookup", () => {
+    const migration = readFileSync(
+      join(root, "supabase/migrations/20260815140000_closed_won_project_conversion_pm_handover.sql"),
+      "utf8"
+    );
+    assert.match(migration, /pg_advisory_xact_lock/);
+    assert.match(migration, /private\.project_idempotency_xact_lock/);
+
+    const implStart = migration.indexOf("create or replace function private.materialize_closed_won_project_impl");
+    const assignStart = migration.indexOf("create or replace function public.assign_project_manager(");
+    const acceptStart = migration.indexOf("create or replace function public.accept_project_handover(");
+    const impl = migration.slice(implStart, assignStart);
+    const assign = migration.slice(assignStart, acceptStart);
+    const accept = migration.slice(acceptStart);
+
+    for (const [label, src] of [
+      ["materialize", impl],
+      ["assign_pm", assign],
+      ["accept_handover", accept],
+    ] as const) {
+      const lockAt = src.indexOf("private.project_idempotency_xact_lock");
+      const lookupAt = src.indexOf("from private.project_idempotency_requests");
+      assert.ok(lockAt >= 0, `${label} acquires an idempotency lock`);
+      assert.ok(lookupAt > lockAt, `${label} locks before the first ledger SELECT`);
+    }
+  });
+
   test("M28 does not add project revenue or 8B/8C persistence", () => {
     const migration = readFileSync(
       join(root, "supabase/migrations/20260815140000_closed_won_project_conversion_pm_handover.sql"),

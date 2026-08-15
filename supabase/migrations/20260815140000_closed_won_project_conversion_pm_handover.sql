@@ -278,6 +278,30 @@ as $$
   select encode(extensions.digest(convert_to(p_value, 'UTF8'), 'sha256'), 'hex');
 $$;
 
+create or replace function private.project_idempotency_xact_lock(
+  p_actor_kind text,
+  p_actor_id uuid,
+  p_operation_code text,
+  p_idempotency_key text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform pg_advisory_xact_lock(
+    hashtext('project_idempotency'),
+    hashtext(
+      p_actor_kind || '|' ||
+      coalesce(p_actor_id::text, '') || '|' ||
+      p_operation_code || '|' ||
+      trim(p_idempotency_key)
+    )
+  );
+end;
+$$;
+
 create or replace function private.enforce_project_acceptance_identity()
 returns trigger
 language plpgsql
@@ -416,6 +440,13 @@ begin
 
   v_request_hash := private.project_sha256(
     'materialize|' || p_quotation_version_id::text || '|' || p_actor_kind
+  );
+
+  perform private.project_idempotency_xact_lock(
+    p_actor_kind,
+    p_actor_id,
+    'materialize',
+    p_idempotency_key
   );
 
   if p_actor_kind = 'staff' then
@@ -766,6 +797,13 @@ begin
     'assign_pm|' || p_project_id::text || '|' || p_project_manager_id::text || '|' || coalesce(v_reason, '')
   );
 
+  perform private.project_idempotency_xact_lock(
+    'staff',
+    v_actor,
+    'assign_pm',
+    p_idempotency_key
+  );
+
   select * into v_idempotency
   from private.project_idempotency_requests
   where actor_kind = 'staff'
@@ -927,6 +965,13 @@ begin
 
   v_request_hash := private.project_sha256('accept_handover|' || p_project_id::text || '|' || v_actor::text);
 
+  perform private.project_idempotency_xact_lock(
+    'staff',
+    v_actor,
+    'accept_handover',
+    p_idempotency_key
+  );
+
   select * into v_idempotency
   from private.project_idempotency_requests
   where actor_kind = 'staff'
@@ -1051,6 +1096,7 @@ alter function private.project_is_assignable_pm(uuid) owner to postgres;
 alter function private.project_can_view(uuid) owner to postgres;
 alter function private.project_can_view_handover_baseline(uuid) owner to postgres;
 alter function private.project_sha256(text) owner to postgres;
+alter function private.project_idempotency_xact_lock(text, uuid, text, text) owner to postgres;
 alter function private.enforce_project_acceptance_identity() owner to postgres;
 alter function private.prevent_project_identity_mutation() owner to postgres;
 alter function private.prevent_project_assignment_mutation() owner to postgres;
@@ -1068,6 +1114,7 @@ revoke all on function private.project_is_assignable_pm(uuid) from public, anon,
 revoke all on function private.project_can_view(uuid) from public, anon, authenticated;
 revoke all on function private.project_can_view_handover_baseline(uuid) from public, anon, authenticated;
 revoke all on function private.project_sha256(text) from public, anon, authenticated;
+revoke all on function private.project_idempotency_xact_lock(text, uuid, text, text) from public, anon, authenticated;
 revoke all on function private.enforce_project_acceptance_identity() from public, anon, authenticated;
 revoke all on function private.prevent_project_identity_mutation() from public, anon, authenticated;
 revoke all on function private.prevent_project_assignment_mutation() from public, anon, authenticated;

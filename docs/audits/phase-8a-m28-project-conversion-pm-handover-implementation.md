@@ -35,8 +35,10 @@
 ## 3. M28
 
 **File:** `supabase/migrations/20260815140000_closed_won_project_conversion_pm_handover.sql`  
-**Git blob:** `46a92d464092ae4d8947497bb33d95cf9c39ee4e`  
-**Raw SHA-256:** `07AEF3E942CDEB510ADF74410141EF668344E20785381622CF5FD8F13DBC1A8F`
+**Pre-correction Git blob:** `46a92d464092ae4d8947497bb33d95cf9c39ee4e`  
+**Pre-correction raw SHA-256:** `07AEF3E942CDEB510ADF74410141EF668344E20785381622CF5FD8F13DBC1A8F`  
+**Corrected Git blob:** `b3f831136af809de9286dcc190160a93ec73c5fa`  
+**Corrected raw SHA-256:** `934EC3D65FB89DFB4271DA2E319EF9A998FD069AE357ABDA8FA33E2CAAB37538`
 
 Forward-only. No M1–M27 edits. No production seeds.
 
@@ -88,18 +90,17 @@ No Closed-Won DB trigger. No Phase 7B acceptance rewrite.
 
 | Suite | Result |
 |---|---|
-| `supabase test db` | PASS — 20 files, **930** tests |
-| Phase 8A pgTAP (`20_project_conversion_pm_handover_test.sql`) | PASS — **82** assertions |
+| `supabase test db` | PASS — 20 files, **936** tests |
+| Phase 8A pgTAP (`20_project_conversion_pm_handover_test.sql`) | PASS — **88** assertions |
 | `test:phase-8-p0` | PASS — 11 |
-| `test:phase-8a` | PASS — 47 |
+| `test:phase-8a` | PASS — 48 |
 | `test:phase-8b` | PASS — 31 |
 | `test:phase-8c` | PASS — 39 |
 | `test:phase-8-shell` | PASS — 2 |
 | `db lint --local --level warning` | PASS; no new M28 advisor function warnings |
-
 | `test:phase-7a` | PASS — 42 |
 | `test:phase-7b` | PASS — 62 |
-| `test:app` | PASS — **660** |
+| `test:app` | PASS — **661** |
 | `lint` | PASS — 0 errors / 11 pre-existing warnings |
 | `typecheck` | PASS |
 | `build` | PASS |
@@ -132,7 +133,19 @@ Intentional authenticated RPCs: repair, list pending, list assignable PMs, assig
 
 ---
 
-## 8. Remaining blockers
+## 8. Independent-review correction — durable idempotency concurrency
+
+- **Initial certified head:** `4af063dcce3974b016a40de62e16529c72ceb210`
+- **Defect:** durable idempotency lookup-before-lock race on same-key concurrent retries
+- **Affected operations:** `materialize`, `assign_pm`, `accept_handover`
+- **Correction:** `private.project_idempotency_xact_lock` acquires `pg_advisory_xact_lock` on the exact durable identity **before** the first `private.project_idempotency_requests` SELECT. Payload mismatch remains `request_hash` after lock. Unique constraints retained. No defensive catch of business unique violations.
+- **Concurrency test method:** sequential same-key replay + source-order static proof that the advisory lock precedes ledger lookup in all three paths. True two-session interleaving was **not** implemented (pgTAP is single-connection; no extra client dependency added).
+- M28 remains **unapplied** on managed; no M29; no architecture or OD8A change
+- Pre-correction identity is historical only; corrected fingerprint is canonical for later managed apply
+
+---
+
+## 9. Remaining blockers
 
 None for repository certification. Next authorized gate:
 
