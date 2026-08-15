@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 7B merge / Phase 8A architecture freeze, August 14, 2026)
-**Current Phase:** Phase 8A — Closed-Won Project Conversion & PM Handover (**ARCHITECTURE FREEZE ACTIVE**; M28 **NOT CREATED**)
-**Next Phase:** Phase 8A M28 implementation (**NOT STARTED** — after architecture PR merge)
+**Document Status:** Locked Roadmap (truth-synced post Phase 8A M28 repository implementation, August 15, 2026)
+**Current Phase:** Phase 8A — Closed-Won Project Conversion & PM Handover (**REPOSITORY IMPLEMENTATION COMPLETE**; managed M28 **NOT APPLIED**; Phase 8A **not COMPLETE**)
+**Next Phase:** Phase 8A M28 recovery / managed apply (**NOT STARTED**)
 **Previous Phase:** Phase 7B — Quotation Finalization, Premium PDF, Secure Delivery & Client Acceptance (**COMPLETE** — PR #55 merged; repository/managed **M1–M27**; production **not** activated)
 
 ---
@@ -81,8 +81,8 @@ Phase 7A: Commercial Quotation Data & Draft Foundation ────────�
   • M25 applied managed; PR #53 merged
 Phase 7B: Quotation Finalization, Delivery & Client Acceptance ────── COMPLETE
   • M26 + M27 applied managed; PR #55 merged (`a30c733…`); production not activated
-Phase 8A: Closed-Won Project Conversion & PM Handover ─────────────── ARCHITECTURE FREEZE ACTIVE
-  • Owner decisions OD8A-1–OD8A-4 locked; M28 not created; managed remains M1–M27
+Phase 8A: Closed-Won Project Conversion & PM Handover ─────────────── REPOSITORY IMPLEMENTATION COMPLETE
+  • OD8A-1–OD8A-4 locked; repository M1–M28; managed remains M1–M27; M28 unapplied; not COMPLETE
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -138,9 +138,9 @@ Phase 7B ──► Quotation Finalization, Premium PDF, Secure Delivery & Client
     │         • No internal quotation approval (ADR-0022)
     │         • Authoritative accepted-quotation achievement (`taxable_base_paise`); PR #55 merged; M1–M27
     ▼
-Phase 8A ──► Closed-Won Project Conversion & PM Handover [ARCHITECTURE FREEZE ACTIVE]
+Phase 8A ──► Closed-Won Project Conversion & PM Handover [REPOSITORY IMPLEMENTATION COMPLETE; MANAGED M28 PENDING]
     │         • Project-value reconciliation deferred (OD8A / ADR-0024)
-    │         • M28 not created; production not activated
+    │         • Repository M28 complete; managed M28 unapplied; production not activated
     ▼
 Phase 8B ──► Designer Assignment & Design Collaboration
     ▼
@@ -235,12 +235,13 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Status:** **COMPLETE** — M26 + M27 managed; PR #55 merged (`a30c733003fb08b3250148c61f7c4f74f11d4c14`); production not activated.
 - **Dependencies:** 7A.
 
-### Phase 8A (Current Formal Phase — Architecture Freeze)
+### Phase 8A (Current Formal Phase — Repository Implementation)
 - **Objective:** Closed-Won project conversion and PM handover.
 - **Architecture freeze:** [Phase 8A freeze](audits/phase-8a-closed-won-project-pm-handover-architecture-freeze.md), [ADR-0024](ADR/ADR-0024-phase-8a-project-materialization-pm-handover.md).
-- **Exit gate (implementation, later):** one project per Closed-Won lead; PM assignment/acceptance; no double counting against quotation acceptance. Project-value reconciliation is **deferred**.
+- **Implementation audit:** [Phase 8A M28 implementation](audits/phase-8a-m28-project-conversion-pm-handover-implementation.md).
+- **Exit gate (managed apply, later):** managed M28 apply after independent review. Project-value reconciliation remains **deferred**.
 - **Dependencies:** 7B complete.
-- **Status:** **CURRENT FORMAL PHASE** — architecture freeze active; OD8A-1–OD8A-4 locked; **M28 not created**; managed remains M1–M27.
+- **Status:** **CURRENT FORMAL PHASE** — architecture frozen; **repository M1–M28 complete**; managed remains **M1–M27**; M28 **unapplied**; Phase 8A **not COMPLETE**.
 
 ### Phase 9B (Landing Page Lab)
 - **Status:** Owner-approved roadmap placement; **not implemented** (no routes/schema/integrations).

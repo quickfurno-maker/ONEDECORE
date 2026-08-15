@@ -69,9 +69,7 @@ export function buildHandoverDisplayModel(args: {
       capabilities.canAssignProjectManager &&
       args.handoverState === "awaiting_project_manager_assignment",
     canShowReassignPm:
-      capabilities.canReassignProjectManager &&
-      hasPrimaryPm &&
-      args.handoverState !== "handover_accepted",
+      capabilities.canReassignProjectManager && hasPrimaryPm,
     canShowAcceptHandover:
       capabilities.canAcceptPmHandover &&
       args.handoverState === "awaiting_project_manager_acceptance",
@@ -102,7 +100,7 @@ function lifecycleBanner(state: ProjectHandoverState): string | null {
     case "awaiting_project_manager_acceptance":
       return "Assigned PM must review commercial summary and accept handover.";
     case "handover_accepted":
-      return "Handover accepted — execution stages may become active.";
+      return "Handover accepted";
     default:
       return null;
   }

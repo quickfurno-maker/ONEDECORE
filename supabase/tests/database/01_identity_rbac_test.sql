@@ -54,8 +54,8 @@ select results_eq(
 -- 5. Verify seeded system permissions count and is_system flag
 select results_eq(
   'select count(*)::integer from public.permissions where is_system = true',
-  array[49],
-  'Should have exactly 49 seeded system permissions (6 foundation + 2 portfolio + 4 lead intake + 9 Phase 5B CRM + 2 Phase 5C2B manual lead + 3 Phase 5D bulk import + 3 Phase 5E targets/reporting + 3 Phase 6B inbox + 12 Phase 6D staff attendance leave + 3 Phase 7A commercial quotations + 2 Phase 7B finalization send) with is_system = true'
+  array[52],
+  'Should have exactly 52 seeded system permissions (6 foundation + 2 portfolio + 4 lead intake + 9 Phase 5B CRM + 2 Phase 5C2B manual lead + 3 Phase 5D bulk import + 3 Phase 5E targets/reporting + 3 Phase 6B inbox + 12 Phase 6D staff attendance leave + 3 Phase 7A commercial quotations + 2 Phase 7B finalization send + 3 Phase 8A projects) with is_system = true'
 );
 
 -- 6. Verify user_roles starts empty
@@ -104,8 +104,8 @@ select results_eq(
 -- 10. Verify authorized application tables count
 select results_eq(
   'select count(*)::integer from information_schema.tables where table_schema = ''public'' and table_type = ''BASE TABLE''',
-  array[60],
-  'Public schema must contain exactly the 60 authorized application tables (identity + portfolio + lead intake + Phase 5B CRM + Phase 5D bulk import + Phase 5E sales targets + Phase 6A WhatsApp + Phase 6B send-intent + Phase 6B dispatch + Phase 6C Kriti + Phase 6D staff attendance leave + Phase 7A commercial draft + Phase 7B finalization delivery acceptance)'
+  array[63],
+  'Public schema must contain exactly the 63 authorized application tables (identity + portfolio + lead intake + Phase 5B CRM + Phase 5D bulk import + Phase 5E sales targets + Phase 6A WhatsApp + Phase 6B send-intent + Phase 6B dispatch + Phase 6C Kriti + Phase 6D staff attendance leave + Phase 7A commercial draft + Phase 7B finalization delivery acceptance + Phase 8A projects)'
 );
 
 -- 11. Phase 2C3 — rls_auto_enable existence and security properties

@@ -206,6 +206,25 @@ describe("Phase 8A handover states and transitions", () => {
     );
   });
 
+  test("OD8A-3 reassignment from awaiting acceptance and handover accepted", () => {
+    assert.equal(
+      validateHandoverAssignmentTransition("awaiting_project_manager_acceptance").allowed,
+      true
+    );
+    assert.equal(
+      validateHandoverAssignmentTransition("handover_accepted").allowed,
+      true
+    );
+    assert.equal(
+      resolveHandoverStateAfterAssignment("awaiting_project_manager_acceptance"),
+      "awaiting_project_manager_acceptance"
+    );
+    assert.equal(
+      resolveHandoverStateAfterAssignment("handover_accepted"),
+      "awaiting_project_manager_acceptance"
+    );
+  });
+
   test("awaiting acceptance state", () => {
     const fixture = buildAwaitingPmAcceptanceFixture();
     assert.equal(fixture.handoverState, "awaiting_project_manager_acceptance");

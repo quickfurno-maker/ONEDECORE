@@ -2,7 +2,7 @@
 
 **Document Status:** Locked CRM & Quotation Baseline (truth-synced post Phase 7B merge / Phase 8A architecture freeze, August 14, 2026)
 **Internal Prefix:** `/admin`
-**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55; M1–M27). Phase 8A **architecture freeze active** (M28 not created; production not activated).
+**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55; managed M1–M27). Phase 8A **repository M28 complete / unapplied** (production not activated).
 
 ---
 
@@ -125,7 +125,7 @@ See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md) and [ADR-
 
 1. Quotation **Accepted** (Phase 7B; already implemented).
 2. Lead **Closed-Won** (atomic with acceptance; already implemented).
-3. **Separate** Phase 8A materializer creates/reuses one project (`awaiting_project_manager_assignment`). M28 not created yet.
+3. **Separate** Phase 8A materializer creates/reuses one project (`awaiting_project_manager_assignment`). Repository M28 exists; managed M28 is unapplied.
 4. Sales Manager or Super Admin assigns exactly **one primary PM**.
 5. Status **Awaiting Project Manager Acceptance**.
 6. Current PM accepts handover (`handover_accepted`).

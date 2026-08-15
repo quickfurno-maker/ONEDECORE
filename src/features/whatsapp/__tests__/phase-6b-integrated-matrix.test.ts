@@ -93,11 +93,11 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(m23Blob, FROZEN_HASHES.M23_GIT_BLOB);
   });
 
-  test("repository has M1–M26 baseline, M27 trigger EXECUTE privilege repair, and fail-closed against M28+", () => {
+  test("repository has M1–M27 baseline, M28 project handover foundation, and fail-closed against M29+", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 27, "Migration count must be exactly 27");
+    assert.equal(files.length, 28, "Migration count must be exactly 28");
 
     const phase6c = files.filter((f) => f.startsWith("20260809"));
     assert.equal(phase6c.length, 1);
@@ -130,8 +130,12 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(phase7b_m27.length, 1);
     assert.equal(phase7b_m27[0], "20260814140000_quotation_trigger_execute_privilege_hardening.sql");
 
-    const m27Plus = files.filter((f) => f > "20260814140000_quotation_trigger_execute_privilege_hardening.sql");
-    assert.equal(m27Plus.length, 0, "No M28+ migration files allowed");
+    const phase8a_m28 = files.filter((f) => f.startsWith("20260815"));
+    assert.equal(phase8a_m28.length, 1);
+    assert.equal(phase8a_m28[0], "20260815140000_closed_won_project_conversion_pm_handover.sql");
+
+    const m28Plus = files.filter((f) => f > "20260815140000_closed_won_project_conversion_pm_handover.sql");
+    assert.equal(m28Plus.length, 0, "No M29+ migration files allowed");
   });
 });
 

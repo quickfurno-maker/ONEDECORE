@@ -7,6 +7,7 @@ import { hasAnyStaffNavPermission } from "@/features/staff-admin/server/staff-pe
 import { hasAnyAttendanceNavPermission } from "@/features/staff-attendance/server/attendance-auth";
 import { hasAnyLeaveNavPermission } from "@/features/staff-leave/server/leave-auth";
 import { hasAnyWhatsappInboxReadPermission } from "@/features/whatsapp/server/whatsapp-permissions";
+import { hasAnyProjectReadPermission } from "@/features/projects/server/project-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +18,14 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await requireStaffPermission("admin.access", "/admin");
-  const [showCrmLink, showWhatsappLink, showStaffLink, showAttendanceLink, showLeaveLink] =
+  const [showCrmLink, showWhatsappLink, showStaffLink, showAttendanceLink, showLeaveLink, showProjectsLink] =
     await Promise.all([
       hasAnyCrmLeadReadPermission(),
       hasAnyWhatsappInboxReadPermission(),
       hasAnyStaffNavPermission(),
       hasAnyAttendanceNavPermission(),
       hasAnyLeaveNavPermission(),
+      hasAnyProjectReadPermission(),
     ]);
 
   return (
@@ -94,6 +96,14 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                   Quotations
                 </Link>
               </>
+            ) : null}
+            {showProjectsLink ? (
+              <Link
+                href="/admin/projects"
+                className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+              >
+                Projects
+              </Link>
             ) : null}
             {showWhatsappLink ? (
               <Link
