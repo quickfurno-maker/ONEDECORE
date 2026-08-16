@@ -152,7 +152,9 @@ select set_config(
     15,
     240,
     '20:00'::time,
-    array[7]::smallint[],
+    array[
+      ((extract(isodow from (timezone('Asia/Kolkata', now()))::date)::smallint % 7) + 1)
+    ]::smallint[],
     false
   ) ->> 'policyId'),
   true

@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 8A complete / Phase 8B architecture freeze, August 15, 2026)
-**Current Phase:** Phase 8B — Designer Assignment & Design Collaboration (**ARCHITECTURE FREEZE**; M29 **NOT CREATED**; Phase 8B **not COMPLETE**)
-**Next Phase:** Phase 8B architecture PR merge, then M29 implementation (**NOT STARTED**)
+**Document Status:** Locked Roadmap (truth-synced post Phase 8B M29 managed apply, August 16, 2026)
+**Current Phase:** Phase 8B — Designer Assignment & Design Collaboration (**MANAGED_APPLIED_NOT_MERGED**; PR #59 **OPEN**; Phase 8B **not COMPLETE**)
+**Next Phase:** `PHASE_8B_PR59_MERGE`; Phase 8C **NOT STARTED**
 **Previous Phase:** Phase 8A — Closed-Won Project Conversion & PM Handover (**COMPLETE** — PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; production **not** activated)
 
 ---
@@ -83,8 +83,8 @@ Phase 7B: Quotation Finalization, Delivery & Client Acceptance ─────�
   • M26 + M27 applied managed; PR #55 merged (`a30c733…`); production not activated
 Phase 8A: Closed-Won Project Conversion & PM Handover ─────────────── COMPLETE
   • OD8A-1–OD8A-4 locked; PR #57 merged `db879b5…`; repository/managed M1–M28; pending NONE
-Phase 8B: Designer Assignment & Design Collaboration ─────────────── ARCHITECTURE FREEZE
-  • OD8B-1–OD8B-8 locked; M29 not created; Phase 8C excluded; production not activated
+Phase 8B: Designer Assignment & Design Collaboration ─────────────── MANAGED APPLIED / PR #59 NOT MERGED
+  • OD8B-1–OD8B-8 locked; repository/managed M1–M29; pending NONE; M30 absent; Phase 8C excluded
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -144,8 +144,8 @@ Phase 8A ──► Closed-Won Project Conversion & PM Handover [COMPLETE]
     │         • Project-value reconciliation deferred (OD8A / ADR-0024)
     │         • PR #57 merged; repository/managed M1–M28; production not activated
     ▼
-Phase 8B ──► Designer Assignment & Design Collaboration [ARCHITECTURE FREEZE; M29 NOT CREATED]
-    │         • OD8B-1–OD8B-8 / ADR-0025; separate design state; Phase 8C excluded
+Phase 8B ──► Designer Assignment & Design Collaboration [MANAGED APPLIED; PR #59 OPEN / NOT MERGED]
+    │         • OD8B-1–OD8B-8 / ADR-0025 / DEC-0074; separate design state; Phase 8C excluded
     ▼
 Phase 8C ──► Project Execution Workspace
     ▼
@@ -245,12 +245,13 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Dependencies:** 7B complete.
 - **Status:** **COMPLETE** — PR #57 MERGED (`db879b5ca27fe9d26543c23d8f130811c7feadab`); repository/managed **M1–M28**; pending **NONE**; project-value reconciliation remains **deferred**; production not activated.
 
-### Phase 8B (Current Formal Phase — Architecture Freeze)
+### Phase 8B (Current Formal Phase — Managed Applied / Not Merged)
 - **Objective:** Designer assignment and design collaboration.
 - **Architecture freeze:** [Phase 8B freeze](audits/phase-8b-designer-assignment-design-collaboration-architecture-freeze.md), [ADR-0025](ADR/ADR-0025-phase-8b-designer-assignment-design-collaboration.md).
-- **Exit gate (later):** architecture PR merge, then M29 implementation. Phase 8C remains excluded.
-- **Dependencies:** 8A complete.
-- **Status:** **CURRENT FORMAL PHASE** — owner locks OD8B-1–OD8B-8; **M29 not created**; repository/managed remain **M1–M28**; production not activated.
+- **Implementation:** [Phase 8B M29 implementation](audits/phase-8b-m29-designer-assignment-design-collaboration-implementation.md), DEC-0074.
+- **Exit gate (next):** `PHASE_8B_PR59_MERGE`. Phase 8C remains excluded.
+- **Dependencies:** 8A complete; architecture PR #58 merged `b7afef60e41900e7832ea41b249067841aebbaea`.
+- **Status:** **CURRENT FORMAL PHASE** — owner locks OD8B-1–OD8B-8; repository/managed **M1–M29**; pending **NONE**; M30 **ABSENT**; PR #59 **OPEN / NOT MERGED**; production not activated.
 
 ### Phase 9B (Landing Page Lab)
 - **Status:** Owner-approved roadmap placement; **not implemented** (no routes/schema/integrations).

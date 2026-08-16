@@ -119,6 +119,8 @@ describe("Phase 8 P0 permission capabilities", () => {
     });
     assert.equal(lead.canApproveProductionReady, true);
     assert.equal(supporting.canApproveProductionReady, false);
+    assert.equal(lead.canUpdateDesignWorkflow, true);
+    assert.equal(supporting.canUpdateDesignWorkflow, false);
   });
 });
 

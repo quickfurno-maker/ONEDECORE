@@ -27,7 +27,7 @@ export interface ProductionReadyValidationResult {
 }
 
 export function requiresProductionReadyGate(targetState: DesignState): boolean {
-  return targetState === "production_ready" || targetState === "design_completed";
+  return targetState === "production_ready";
 }
 
 export function validateProductionReadyTransition(

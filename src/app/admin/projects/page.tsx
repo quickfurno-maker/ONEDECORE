@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requireStaffPermission } from "@/server/auth";
+import { redirect } from "next/navigation";
+import { getStaffClaims } from "@/server/auth/session";
 import {
   probeProjectPermissions,
 } from "@/features/projects/server/project-permissions";
@@ -15,11 +16,13 @@ export const metadata = {
 };
 
 export default async function AdminProjectsPage() {
-  await requireStaffPermission("projects.read", "/admin/projects");
+  const session = await getStaffClaims();
+  if (!session) {
+    redirect("/auth/login?next=%2Fadmin%2Fprojects");
+  }
   const permissions = await probeProjectPermissions();
-
-  if (permissions.isDesigner && !permissions.canReadProjects) {
-    return null;
+  if (!permissions.canReadProjects && !permissions.canReadDesign) {
+    redirect("/auth/forbidden");
   }
 
   const projects = await listProjects();
@@ -33,7 +36,7 @@ export default async function AdminProjectsPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-100">Projects</h1>
         <p className="mt-1 text-xs text-neutral-400">
-          Phase 8A Closed-Won conversion and PM handover. Design and execution controls are not active.
+          Closed-Won conversion, PM handover, and assigned-project design collaboration.
         </p>
       </div>
 

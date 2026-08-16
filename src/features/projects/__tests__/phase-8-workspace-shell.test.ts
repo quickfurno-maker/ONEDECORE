@@ -24,9 +24,9 @@ describe("Phase 8 delivery workspace shell", () => {
     assert.doesNotMatch(src, /closed_won/i);
   });
 
-  test("Phase 8A project admin route is mounted without 8B/8C routes", () => {
+  test("Phase 8A project admin route is mounted without 8C routes", () => {
     const src = readFileSync(join(root, "src/app/admin/projects/page.tsx"), "utf8");
-    assert.match(src, /projects.read/);
+    assert.match(src, /canReadProjects/);
     assert.doesNotMatch(src, /DesignWorkspace|ProjectExecutionWorkspace/);
     assert.equal(
       (() => {

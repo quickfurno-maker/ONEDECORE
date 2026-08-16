@@ -96,7 +96,7 @@ describe("Phase 8A server and UI containment", () => {
   test("admin projects route exists for authorized roles", () => {
     const page = readFileSync(join(root, "src/app/admin/projects/page.tsx"), "utf8");
     const layout = readFileSync(join(root, "src/app/admin/layout.tsx"), "utf8");
-    assert.match(page, /requireStaffPermission\("projects.read"/);
+    assert.match(page, /canReadDesign/);
     assert.match(page, /ProjectMaterializationRepairQueue/);
     assert.match(layout, /\/admin\/projects/);
     assert.match(layout, /hasAnyProjectReadPermission/);
@@ -116,8 +116,9 @@ describe("Phase 8A server and UI containment", () => {
     assert.match(workspace, /High-level status only/);
     assert.match(detail, /highLevelOnly/);
     assert.match(detail, /role === "designer"/);
+    assert.match(detail, /ProjectDesignWorkspace/);
     assert.doesNotMatch(workspace, /DesignerTeamPanel|ProjectExecutionWorkspace|DesignWorkspaceShell/);
-    assert.doesNotMatch(detail, /DesignerTeamPanel|ProjectExecutionWorkspace/);
+    assert.doesNotMatch(detail, /ProjectExecutionWorkspace/);
   });
 
   test("M28 serializes durable idempotency before ledger lookup", () => {

@@ -23,7 +23,7 @@ import {
   validateDesignerStaffingSnapshot,
 } from "../design/domain/designer-staffing-validator.ts";
 import { validateClientApprovalEvidence } from "../design/domain/client-approval-evidence.ts";
-import { validateProductionReadyTransition } from "../design/domain/production-ready-validator.ts";
+import { requiresProductionReadyGate, validateProductionReadyTransition } from "../design/domain/production-ready-validator.ts";
 import {
   registerDeliverableVersion,
   supersedeDeliverableVersions,
@@ -279,6 +279,10 @@ describe("Phase 8B production ready validator", () => {
     });
     assert.equal(result.ok, false);
     assert.equal(result.error?.code, "PROJECT_UNAUTHORIZED");
+  });
+
+  test("design_completed does not reuse the production ready evidence gate", () => {
+    assert.equal(requiresProductionReadyGate("design_completed"), false);
   });
 });
 

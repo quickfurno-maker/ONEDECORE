@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -1910,6 +1910,261 @@ export type Database = {
         }
         Relationships: []
       }
+      project_design_deliverable_versions: {
+        Row: {
+          bucket_id: string
+          created_at: string
+          deliverable_key: string
+          file_name: string
+          file_sha256: string
+          file_size_bytes: number
+          id: string
+          kind: string
+          label: string
+          mime_type: string
+          object_path: string
+          project_id: string
+          ready_at: string | null
+          supersedes_version_id: string | null
+          upload_status: string
+          uploaded_by: string
+          version_number: number
+        }
+        Insert: {
+          bucket_id?: string
+          created_at?: string
+          deliverable_key: string
+          file_name: string
+          file_sha256: string
+          file_size_bytes: number
+          id?: string
+          kind: string
+          label: string
+          mime_type: string
+          object_path: string
+          project_id: string
+          ready_at?: string | null
+          supersedes_version_id?: string | null
+          upload_status: string
+          uploaded_by: string
+          version_number: number
+        }
+        Update: {
+          bucket_id?: string
+          created_at?: string
+          deliverable_key?: string
+          file_name?: string
+          file_sha256?: string
+          file_size_bytes?: number
+          id?: string
+          kind?: string
+          label?: string
+          mime_type?: string
+          object_path?: string
+          project_id?: string
+          ready_at?: string | null
+          supersedes_version_id?: string | null
+          upload_status?: string
+          uploaded_by?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_design_deliverable_versions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_design_deliverable_versions_supersedes_version_id_fkey"
+            columns: ["supersedes_version_id"]
+            isOneToOne: false
+            referencedRelation: "project_design_deliverable_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_design_deliverable_versions_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_design_evidence: {
+        Row: {
+          captured_at: string
+          captured_by: string
+          evidence_type: string
+          file_sha256: string | null
+          file_size_bytes: number | null
+          id: string
+          mime_type: string | null
+          note: string | null
+          project_id: string
+          source_reference: string
+          source_type: string
+          storage_object_path: string | null
+        }
+        Insert: {
+          captured_at?: string
+          captured_by: string
+          evidence_type: string
+          file_sha256?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          mime_type?: string | null
+          note?: string | null
+          project_id: string
+          source_reference: string
+          source_type: string
+          storage_object_path?: string | null
+        }
+        Update: {
+          captured_at?: string
+          captured_by?: string
+          evidence_type?: string
+          file_sha256?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          mime_type?: string | null
+          note?: string | null
+          project_id?: string
+          source_reference?: string
+          source_type?: string
+          storage_object_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_design_evidence_captured_by_fkey"
+            columns: ["captured_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_design_evidence_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_design_workflows: {
+        Row: {
+          completed_at: string | null
+          held_from_state: string | null
+          project_id: string
+          revision_return_state: string | null
+          started_at: string
+          started_by: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          held_from_state?: string | null
+          project_id: string
+          revision_return_state?: string | null
+          started_at?: string
+          started_by: string
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          held_from_state?: string | null
+          project_id?: string
+          revision_return_state?: string | null
+          started_at?: string
+          started_by?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_design_workflows_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_design_workflows_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_designer_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          assignment_role: string
+          designer_id: string
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          project_id: string
+          reason: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          assignment_role: string
+          designer_id: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          project_id: string
+          reason?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          assignment_role?: string
+          designer_id?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          project_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_designer_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_designer_assignments_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_designer_assignments_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_designer_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_events: {
         Row: {
           actor_id: string | null
@@ -1941,7 +2196,29 @@ export type Database = {
           occurred_at?: string
           project_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "project_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_manager_assignments: {
         Row: {
@@ -1974,7 +2251,36 @@ export type Database = {
           project_manager_id?: string
           reason?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "project_manager_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_manager_assignments_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_manager_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_manager_assignments_project_manager_id_fkey"
+            columns: ["project_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projects: {
         Row: {
@@ -2025,6 +2331,20 @@ export type Database = {
             columns: ["accepted_quotation_id"]
             isOneToOne: false
             referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_accepted_quotation_version_id_fkey"
+            columns: ["accepted_quotation_version_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -3582,10 +3902,7 @@ export type Database = {
     }
     Functions: {
       accept_project_handover: {
-        Args: {
-          p_idempotency_key: string
-          p_project_id: string
-        }
+        Args: { p_idempotency_key: string; p_project_id: string }
         Returns: Json
       }
       accept_quotation_by_capability: {
@@ -3596,18 +3913,14 @@ export type Database = {
         }
         Returns: Json
       }
-      assign_project_manager: {
+      add_project_supporting_designer: {
         Args: {
+          p_designer_id: string
           p_idempotency_key: string
           p_project_id: string
-          p_project_manager_id: string
           p_reason?: string
         }
         Returns: Json
-      }
-      can_view_project_handover_baseline: {
-        Args: { p_project_id: string }
-        Returns: boolean
       }
       admin_create_quotation_tax_profile: {
         Args: {
@@ -3685,6 +3998,20 @@ export type Database = {
         Args: { p_note?: string; p_request_id: string }
         Returns: Json
       }
+      approve_project_production_ready: {
+        Args: {
+          p_file_sha256?: string
+          p_file_size_bytes?: number
+          p_idempotency_key: string
+          p_mime_type?: string
+          p_note?: string
+          p_project_id: string
+          p_source_reference: string
+          p_source_type: string
+          p_storage_object_path?: string
+        }
+        Returns: Json
+      }
       archive_holiday: { Args: { p_holiday_id: string }; Returns: Json }
       archive_quotation_draft: {
         Args: { p_expected_lock_version: number; p_quotation_id: string }
@@ -3736,6 +4063,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      assign_project_manager: {
+        Args: {
+          p_idempotency_key: string
+          p_project_id: string
+          p_project_manager_id: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
       authorize: { Args: { requested_permission: string }; Returns: boolean }
       bind_whatsapp_send_intent_dispatch: {
         Args: {
@@ -3749,6 +4085,22 @@ export type Database = {
           provider_message_id: string
           send_intent_id: string
         }[]
+      }
+      can_view_project_design: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      can_record_project_client_approval: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      can_approve_project_production_ready: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      can_view_project_handover_baseline: {
+        Args: { p_project_id: string }
+        Returns: boolean
       }
       cancel_lead_follow_up: {
         Args: { p_follow_up_id: string; p_outcome?: string }
@@ -3898,6 +4250,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      complete_project_design: {
+        Args: { p_idempotency_key: string; p_project_id: string }
+        Returns: Json
       }
       confirm_lead_import_batch_direct: {
         Args: { p_batch_id: string; p_expected_revision: number }
@@ -4266,6 +4622,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      finalize_project_design_deliverable_version: {
+        Args: { p_idempotency_key: string; p_version_id: string }
+        Returns: Json
+      }
       finalize_quotation_version: {
         Args: {
           p_expected_lock_version: number
@@ -4275,12 +4635,24 @@ export type Database = {
         }
         Returns: Json
       }
+      get_project_design_high_level_status: {
+        Args: { p_project_id: string }
+        Returns: Json
+      }
       get_quotation_by_capability: {
         Args: { p_capability_token: string }
         Returns: Json
       }
       get_quotation_draft: { Args: { p_quotation_id: string }; Returns: Json }
       has_active_role: { Args: { p_role_code: string }; Returns: boolean }
+      hold_project_design: {
+        Args: {
+          p_idempotency_key: string
+          p_project_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       ingest_meta_whatsapp_message: {
         Args: {
           p_body_text: string
@@ -4340,14 +4712,8 @@ export type Database = {
         }
         Returns: Json
       }
-      list_assignable_project_managers: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      list_pending_closed_won_project_materializations: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      list_assignable_designers: { Args: never; Returns: Json }
+      list_assignable_project_managers: { Args: never; Returns: Json }
       list_crm_assignable_executives: {
         Args: never
         Returns: {
@@ -4355,6 +4721,10 @@ export type Database = {
           role_code: string
           user_id: string
         }[]
+      }
+      list_pending_closed_won_project_materializations: {
+        Args: never
+        Returns: Json
       }
       lock_sales_target: {
         Args: {
@@ -4385,13 +4755,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      materialize_closed_won_project_internal: {
-        Args: {
-          p_idempotency_key: string
-          p_quotation_version_id: string
-        }
-        Returns: Json
-      }
       mark_quotation_pdf_document_ready: {
         Args: {
           p_file_size_bytes: number
@@ -4399,6 +4762,10 @@ export type Database = {
           p_pdf_id: string
           p_pdf_sha256: string
         }
+        Returns: Json
+      }
+      materialize_closed_won_project_internal: {
+        Args: { p_idempotency_key: string; p_quotation_version_id: string }
         Returns: Json
       }
       prepare_staff_invite_saga: {
@@ -4452,6 +4819,20 @@ export type Database = {
           outcome_code: string
           send_intent_id: string
         }[]
+      }
+      record_project_client_approval: {
+        Args: {
+          p_file_sha256?: string
+          p_file_size_bytes?: number
+          p_idempotency_key: string
+          p_mime_type?: string
+          p_note?: string
+          p_project_id: string
+          p_source_reference: string
+          p_source_type: string
+          p_storage_object_path?: string
+        }
+        Returns: Json
       }
       record_staff_invite_auth_success: {
         Args: { p_client_request_id: string; p_staff_id: string }
@@ -4523,6 +4904,15 @@ export type Database = {
         Args: { p_note?: string; p_request_id: string }
         Returns: Json
       }
+      remove_project_designer_assignment: {
+        Args: {
+          p_designer_id: string
+          p_idempotency_key: string
+          p_project_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       reopen_sales_target: {
         Args: {
           p_expected_revision: number
@@ -4551,6 +4941,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      repair_closed_won_project_materialization: {
+        Args: { p_idempotency_key: string; p_quotation_version_id: string }
+        Returns: Json
       }
       replace_lead_import_mapping: {
         Args: {
@@ -4675,15 +5069,30 @@ export type Database = {
         Args: { p_reason: string; p_staff_id: string }
         Returns: Json
       }
-      repair_closed_won_project_materialization: {
+      reserve_project_design_deliverable_version: {
         Args: {
+          p_deliverable_key: string
+          p_file_name: string
+          p_file_sha256: string
+          p_file_size_bytes: number
           p_idempotency_key: string
-          p_quotation_version_id: string
+          p_kind: string
+          p_label: string
+          p_mime_type: string
+          p_project_id: string
         }
         Returns: Json
       }
       reserve_quotation_pdf_document: {
         Args: { p_version_id: string }
+        Returns: Json
+      }
+      resume_project_design: {
+        Args: {
+          p_idempotency_key: string
+          p_project_id: string
+          p_reason: string
+        }
         Returns: Json
       }
       revise_sales_target: {
@@ -4785,6 +5194,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_project_lead_designer: {
+        Args: {
+          p_designer_id: string
+          p_idempotency_key: string
+          p_project_id: string
+          p_reason?: string
+        }
+        Returns: Json
       }
       set_quotation_max_discount: {
         Args: { p_max_discount: number }
@@ -4936,6 +5354,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      transition_project_design: {
+        Args: {
+          p_idempotency_key: string
+          p_project_id: string
+          p_reason?: string
+          p_revision_return_state?: string
+          p_target_state: string
+        }
+        Returns: Json
       }
       update_lead_assignment_rule: {
         Args: {
