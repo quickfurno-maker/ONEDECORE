@@ -4,7 +4,7 @@
 **Branch:** `phase-8b-m29-designer-design-collaboration`  
 **Base main:** `b7afef60e41900e7832ea41b249067841aebbaea` (PR #58 true merge; post-merge CI `31884887844` SUCCESS)  
 **Architecture:** ADR-0025 / DEC-0073 / OD8B-1–OD8B-8  
-**Gate:** repository implementation only — **managed M29 NOT applied**; **PR #59 OPEN / NOT MERGED**; **no production activation**; **Phase 8C not started**
+**Gate:** managed apply certified — **managed M29 APPLIED**; **PR #59 OPEN / NOT MERGED**; **no production activation**; **Phase 8C not started**
 
 ---
 
@@ -123,17 +123,17 @@ Lock (`private.project_idempotency_xact_lock`) **before** ledger lookup. Codes i
 
 ## 6. Tests (local)
 
-Recorded locally: pgTAP 21 files / 1079 tests PASS; `test:phase-8b` 44 pass; `test:app` 705 pass; `npm run check` lint 0 errors / 11 pre-existing warnings, typecheck pass, build pass. Managed apply was **not** run.
+Recorded locally: pgTAP file 21 (M29) PASS; `test:phase-8b` 44 pass; `test:app` 705 pass; `npm run check` lint 0 errors / 11 pre-existing warnings, typecheck pass, build pass.
 
 ---
 
 ## 7. Containment / stop
 
 - Repository M1–M29
-- Managed M1–M28; M29 unapplied
+- Managed M1–M29; pending NONE; M30 absent
 - Phase 8C persistence/UI activation absent
 - Production activation NONE
-- Next gate: `PHASE_8B_M29_RECOVERY_MANAGED_APPLY`
+- Next gate: `PHASE_8B_PR59_MERGE`
 
 ---
 
@@ -157,4 +157,31 @@ Correction:
 - `getProjectDesignEvidenceFileUrlAction` signs DB-resolved uploaded evidence at 900 seconds
 - workspace **Open evidence** for uploaded artifacts only; SE high-level surface excluded
 
-No architecture change. No owner-decision change (OD8B-1–OD8B-8). M29 remained managed-unapplied. No M30.
+No architecture change. No owner-decision change (OD8B-1–OD8B-8). Correction certified live after managed apply. No M30.
+
+---
+
+## 9. Managed apply (2026-08-16)
+
+- Recovery package (outside repository): `C:\Users\KESHAV SHARMA\Desktop\ONEDECORE_RECOVERY\M29_PREAPPLY_20260816T124422Z\`
+- Physical backup: `1384020355` COMPLETED `2026-08-15T19:53:36.663Z` (`is_physical_backup=true`)
+- WALG: enabled; PITR: **disabled**
+- CLI: `npx supabase@2.109.1`
+- Method: `db push --linked --yes` (non-fatal pg-delta catalog cache warning only)
+- Apply start UTC: `2026-08-16T12:52:29Z`
+- Apply end UTC: `2026-08-16T12:52:34Z`
+- Pre-apply managed: M1–M28; pending M29 only; design bucket ABSENT; design objects 0
+- Post-apply managed: M1–M29; pending NONE; latest `20260816140000`
+- Corrected M29 fingerprint unchanged: blob `4038cbfc85cd024443f99b3d586eedd7afc7791a`; SHA-256 `7E82070A6F17517965B5F4E82695568F47F9473CA9F9E53C9892CE7AEA5ADCFC`
+- Advisor baseline: 47 WARN / 0 INFO / 0 ERROR
+- Advisor post: 63 WARN / 0 INFO / 0 ERROR
+- New findings: 16 intentional `authenticated_security_definer_function_executable` notices for Phase 8B public RPCs
+- M29-specific blockers: **NONE**
+- Private bucket `project-design-documents` created (`public=false`)
+- Migration-created `storage.objects`: **0**
+- Migration-created Phase 8B business rows: **0**
+- Data write: RBAC metadata only (`permissions` / `role_permissions`)
+- Storage classification: `MANAGED_STORAGE_BUCKET_METADATA_WRITE=PROJECT_DESIGN_DOCUMENTS_PRIVATE_ONLY`; `MANAGED_STORAGE_OBJECT_WRITE=NONE`
+- Evidence/storage integrity correction certified live (helper + both uploaded-artifact RPCs)
+- Local post-apply app/check: PASS (same counts as pre-apply). Local `db:test` file 17 tests 43–44 fail on ISO Sunday because test policy `weekly_off_days=[7]` leaves `open_session=false`; file 21 PASS. Not an M29 defect; exact-head CI `31891040375` already succeeded.
+- Phase 8C not started. Production none. PR #59 remains OPEN / NOT MERGED.

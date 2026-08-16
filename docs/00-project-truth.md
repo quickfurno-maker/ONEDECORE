@@ -1,13 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced post Phase 8B M29 repository implementation, August 15, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced post Phase 8B M29 managed apply, August 16, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 8B — Designer Assignment & Design Collaboration (**REPOSITORY IMPLEMENTATION COMPLETE**; managed M29 **NOT APPLIED**; Phase 8B **not COMPLETE**)
-**Next Phase:** Phase 8B M29 recovery managed apply (**NOT STARTED**); Phase 8C **NOT STARTED**
+**Current Phase:** Phase 8B — Designer Assignment & Design Collaboration (**MANAGED_APPLIED_NOT_MERGED**; PR #59 **OPEN**; Phase 8B **not COMPLETE** until merge)
+**Next Phase:** `PHASE_8B_PR59_MERGE`; Phase 8C **NOT STARTED**
 **Previous Phase:** Phase 8A — Closed-Won Project Conversion & PM Handover (**COMPLETE** — PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; repository/managed **M1–M28**; production **not** activated)
 
 ---
@@ -102,10 +102,10 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Quotation finalization, delivery & acceptance (migration 26) | Applied managed August 14, 2026 (Phase 7B M26; PR #55 merged) |
 | Quotation trigger EXECUTE privilege hardening (migration 27) | Applied managed August 14, 2026 (Phase 7B M27) |
 | Closed-Won project conversion & PM handover (migration 28) | Applied managed August 15, 2026 (Phase 8A M28); PR #57 **MERGED** `db879b5ca27fe9d26543c23d8f130811c7feadab` |
-| Designer assignment & design collaboration (migration 29) | Repository-only (Phase 8B M29); **not** managed-applied |
-| Migration alignment | Repository: **M1–M29**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M28**; pending **NONE**; M29 **UNAPPLIED** managed |
+| Designer assignment & design collaboration (migration 29) | Managed-applied 2026-08-16 (Phase 8B M29); PR #59 **OPEN / NOT MERGED** |
+| Migration alignment | Repository: **M1–M29**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M29**; pending **NONE**; M30 **ABSENT** |
 
-CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed database (`lpurlfmpvriyvpkujvyl`) through **M27**. Phase 7B is **COMPLETE** (PR #55 merged). Phase 8A is **COMPLETE** (PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; managed **M1–M28**). Phase 8B architecture is frozen (OD8B-1–OD8B-8 / ADR-0025 / DEC-0073). Phase 8B repository implementation is complete (DEC-0074; M29 in repository, **not** managed-applied). Phase 8B is **not COMPLETE**. Phase 8C is **not started**. **Production deployment pending** (Phase 10); **public intake remains inactive**.
+CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed database (`lpurlfmpvriyvpkujvyl`) through **M27**. Phase 7B is **COMPLETE** (PR #55 merged). Phase 8A is **COMPLETE** (PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; managed **M1–M28**). Phase 8B architecture is frozen (OD8B-1–OD8B-8 / ADR-0025 / DEC-0073). Phase 8B repository implementation is recorded in DEC-0074. Corrected M29 is **managed-applied** (2026-08-16); PR #59 remains **OPEN / NOT MERGED**. Phase 8B is **not COMPLETE** until merge. Phase 8C is **not started**. **Production deployment pending** (Phase 10); **public intake remains inactive**.
 
 ### Phase 5F truth
 
