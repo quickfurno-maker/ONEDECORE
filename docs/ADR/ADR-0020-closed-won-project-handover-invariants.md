@@ -6,6 +6,8 @@
 **Technical Scope:** Sales-to-Operations Handover (Phase 5A freeze)
 
 > **Partial supersession (August 6, 2026):** Quotation **approval** portions of this ADR are superseded by [ADR-0022: V1 Direct Quotation Finalization and Send Authority](ADR-0022-v1-direct-quotation-finalization-and-send.md). Current V1 quotation workflow is **Draft → Finalized/Frozen → Sent** (no internal Submitted for Approval / Approved states). All **Closed-Won, PM handover, Designer assignment, Phase 8 execution/design, and No-ERP invariants** below remain accepted unless explicitly noted in ADR-0022.
+>
+> **Partial supersession (August 16, 2026):** The Phase 8C **persisted** state graph in this ADR is superseded by [ADR-0026: Phase 8C Project Execution Workspace](ADR-0026-phase-8c-project-execution-workspace.md). M29 is authoritative for measurement, design, approval, Production Ready, and Design Completed. Persisted 8C starts at `production` after `handover_accepted` **and** `design_completed`. `material_finalisation` is not persisted. Closed-Won, PM handover, Designer assignment, and No-ERP invariants below remain accepted.
 
 ---
 
@@ -83,7 +85,15 @@ Brief Received → Measurement Pending → Measurement Completed → Concept Des
 
 ### Project execution stages (future — Phase 8C — state graph)
 
-**Main path:**
+> **Current V1 persisted path** is defined in ADR-0026. The 12-stage list below is **historical** and must not be persisted as competing measurement/design/approval truth.
+
+**Current V1 main path (ADR-0026):**
+
+```
+production → ready_for_dispatch → delivery → installation → snag_resolution → handover → completed
+```
+
+**Historical ADR-0020 main path (not persisted V1):**
 
 ```
 Project Created → Site Measurement → Design Development → Design Approval
@@ -110,7 +120,7 @@ Project Created → Site Measurement → Design Development → Design Approval
 4. Only **Sales Manager** or **Super Admin** manually assigns/reassigns PM (exactly one primary PM in V1).
 5. Status becomes **Awaiting Project Manager Acceptance**.
 6. PM reviews scope/commercial summary and **accepts handover**.
-7. Execution stages may become active.
+7. Execution stages may become active **only after PM acceptance and Design Completed** (ADR-0026).
 
 **Invariants:**
 
@@ -159,4 +169,5 @@ No accounting ledger/GST filing, procurement/PO, inventory/warehouse, labour att
 - [ADR-0005: Version 1 No-ERP Boundary](ADR-0005-version-1-no-erp-boundary.md)
 - [ADR-0019: Five-Role CRM Authorization Model](ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0022: V1 Direct Quotation Finalization and Send Authority](ADR-0022-v1-direct-quotation-finalization-and-send.md)
+- [ADR-0026: Phase 8C Project Execution Workspace](ADR-0026-phase-8c-project-execution-workspace.md)
 - [CRM & Quotation Boundary](../07-crm-and-quotation-boundary.md)

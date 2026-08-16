@@ -7,7 +7,7 @@
 **Owner authorization:** `LOCK PHASE 8B OWNER DECISIONS AS RECOMMENDED`  
 **Depends on:** [ADR-0019](ADR-0019-five-role-crm-authorization-model.md), [ADR-0020](ADR-0020-closed-won-project-handover-invariants.md), [ADR-0024](ADR-0024-phase-8a-project-materialization-pm-handover.md), [ADR-0005](ADR-0005-version-1-no-erp-boundary.md)
 
-This ADR **concretizes** Phase 8B implementation architecture. It does **not** supersede ADR-0020 wholesale. ADR-0020 remains authoritative for Closed-Won, PM handover, Designer/design business invariants, execution (Phase 8C), and No-ERP. ADR-0024 remains authoritative for Phase 8A project materialization and handover status.
+This ADR **concretizes** Phase 8B implementation architecture. It does **not** supersede ADR-0020 wholesale. ADR-0020 remains authoritative for Closed-Won, PM handover, Designer/design business invariants, and No-ERP. ADR-0024 remains authoritative for Phase 8A project materialization and handover status. Phase 8C persisted architecture is concretized by [ADR-0026](ADR-0026-phase-8c-project-execution-workspace.md); OD8B-1–OD8B-8 are not reopened.
 
 ---
 
@@ -73,7 +73,9 @@ Exactly one current Lead once the workflow is staffed; zero or more current Supp
 
 ### 14. Phase 8C excluded / No-ERP
 
-No execution-stage persistence, procurement, inventory, dispatch, delivery, installation, snags, completion execution, client portal, CAD/BIM, or autonomous Kriti mutation. `production_ready` / `design_completed` must not activate Phase 8C. ADR-0005 remains locked.
+This section bound **Phase 8B / M29**. No execution-stage persistence, procurement, inventory, dispatch, delivery, installation, snags, completion execution, client portal, CAD/BIM, or autonomous Kriti mutation **in M29**. `production_ready` must not create or activate Phase 8C rows and must not claim production started. `design_completed` must not write 8C rows from M29.
+
+**Concretization (August 16, 2026):** Phase 8C architecture is frozen in ADR-0026. Later M30 may auto-create a 1:1 execution workflow when `design_completed` is recorded on a `handover_accepted` project. ADR-0005 remains locked. OD8B-1–OD8B-8 are unchanged.
 
 ---
 
@@ -93,4 +95,5 @@ No execution-stage persistence, procurement, inventory, dispatch, delivery, inst
 - [ADR-0024: Phase 8A Project Materialization and PM Handover](ADR-0024-phase-8a-project-materialization-pm-handover.md)
 - [ADR-0019: Five-Role CRM Authorization](ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0005: Version 1 No-ERP Boundary](ADR-0005-version-1-no-erp-boundary.md)
+- [ADR-0026: Phase 8C Project Execution Workspace](ADR-0026-phase-8c-project-execution-workspace.md)
 - [Decision Register](../10-decision-register.md)

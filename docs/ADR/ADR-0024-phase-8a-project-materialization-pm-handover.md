@@ -7,7 +7,7 @@
 **Owner authorization:** `LOCK PHASE 8A OWNER DECISIONS AS RECOMMENDED`  
 **Depends on:** [ADR-0019](ADR-0019-five-role-crm-authorization-model.md), [ADR-0020](ADR-0020-closed-won-project-handover-invariants.md), [ADR-0022](ADR-0022-v1-direct-quotation-finalization-and-send.md), [ADR-0005](ADR-0005-version-1-no-erp-boundary.md)
 
-This ADR **concretizes** Phase 8A implementation architecture. It does **not** supersede ADR-0020 wholesale. ADR-0020 remains authoritative for Closed-Won, PM handover, Designer (Phase 8B), execution (Phase 8C), and No-ERP business invariants.
+This ADR **concretizes** Phase 8A implementation architecture. It does **not** supersede ADR-0020 wholesale. ADR-0020 remains authoritative for Closed-Won, PM handover, Designer (Phase 8B), and No-ERP business invariants. Phase 8C persisted architecture is concretized by [ADR-0026](ADR-0026-phase-8c-project-execution-workspace.md).
 
 ---
 
@@ -96,4 +96,5 @@ M28 is conceptually reserved as `closed_won_project_conversion_pm_handover` and 
 - [ADR-0019: Five-Role CRM Authorization](ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0022: V1 Direct Quotation Finalization and Send](ADR-0022-v1-direct-quotation-finalization-and-send.md)
 - [ADR-0005: Version 1 No-ERP Boundary](ADR-0005-version-1-no-erp-boundary.md)
+- [ADR-0026: Phase 8C Project Execution Workspace](ADR-0026-phase-8c-project-execution-workspace.md)
 - [Decision Register](../10-decision-register.md)

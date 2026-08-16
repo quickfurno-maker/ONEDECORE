@@ -117,6 +117,9 @@ OneDecore/
 - [ADR-0020: Closed-Won Project Handover Invariants](ADR/ADR-0020-closed-won-project-handover-invariants.md)
 - [ADR-0021: Groq Copilot and Official WhatsApp Boundary](ADR/ADR-0021-groq-copilot-and-whatsapp-boundary.md)
 - [ADR-0022: V1 Direct Quotation Finalization and Send Authority](ADR/ADR-0022-v1-direct-quotation-finalization-and-send.md)
+- [ADR-0024: Phase 8A Project Materialization and PM Handover](ADR/ADR-0024-phase-8a-project-materialization-pm-handover.md)
+- [ADR-0025: Phase 8B Designer Assignment and Design Collaboration](ADR/ADR-0025-phase-8b-designer-assignment-design-collaboration.md)
+- [ADR-0026: Phase 8C Project Execution Workspace](ADR/ADR-0026-phase-8c-project-execution-workspace.md)
 
 ---
 

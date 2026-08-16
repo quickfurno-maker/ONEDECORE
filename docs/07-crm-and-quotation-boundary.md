@@ -1,8 +1,8 @@
 # 07 — CRM PIPELINE AND COMMERCIAL QUOTATION BOUNDARY
 
-**Document Status:** Locked CRM & Quotation Baseline (truth-synced post Phase 8B M29 managed apply, August 16, 2026)
+**Document Status:** Locked CRM & Quotation Baseline (truth-synced post Phase 8C architecture freeze, August 16, 2026)
 **Internal Prefix:** `/admin`
-**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55). Phase 8A **COMPLETE** (PR #57 merged). Phase 8B M29 **managed-applied**; PR #59 **OPEN / NOT MERGED** (production not activated).
+**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55). Phase 8A **COMPLETE** (PR #57 merged). Phase 8B **COMPLETE** (PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`). Phase 8C architecture frozen (ADR-0026 / DEC-0075; M30 not created; production not activated).
 
 ---
 
@@ -129,12 +129,13 @@ See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md) and [ADR-
 4. Sales Manager or Super Admin assigns exactly **one primary PM**.
 5. Status **Awaiting Project Manager Acceptance**.
 6. Current PM accepts handover (`handover_accepted`).
-7. Execution stages may activate **only in Phase 8C** (not in 8A).
+7. Execution stages may activate **only in Phase 8C after `handover_accepted` and `design_completed`** (ADR-0026; not in 8A).
 
 - No execution or Designer assignment in Phase 8A (8B/8C).
 - Sales Executive cannot assign PM; high-level read of own won-origin project only.
 - SA/SM may reassign PM before or after handover acceptance; new PM must re-accept.
-- One Lead Designer + Supporting Designers is Phase 8B (ADR-0025 / OD8B-1–OD8B-8; M29 managed-applied; PR #59 not merged).
+- One Lead Designer + Supporting Designers is Phase 8B (ADR-0025 / OD8B-1–OD8B-8; M29 managed-applied; PR #59 **merged**).
+- Phase 8C persisted path is post-design only (ADR-0026 / OD8C-1–OD8C-12). M30 is not created.
 
 ---
 
@@ -173,5 +174,8 @@ CRM and project execution exclude: accounting ledgers, vendor POs, inventory, la
 - [ADR-0022: V1 Direct Quotation Finalization and Send](ADR/ADR-0022-v1-direct-quotation-finalization-and-send.md)
 - [ADR-0024: Phase 8A Project Materialization and PM Handover](ADR/ADR-0024-phase-8a-project-materialization-pm-handover.md)
 - [Phase 8A Architecture Freeze](audits/phase-8a-closed-won-project-pm-handover-architecture-freeze.md)
+- [ADR-0025: Phase 8B Designer Assignment and Design Collaboration](ADR/ADR-0025-phase-8b-designer-assignment-design-collaboration.md)
+- [ADR-0026: Phase 8C Project Execution Workspace](ADR/ADR-0026-phase-8c-project-execution-workspace.md)
+- [Phase 8C Architecture Freeze](audits/phase-8c-project-execution-workspace-architecture-freeze.md)
 - [Product Requirements](01-product-requirements.md)
 - [ADR-0005: Version 1 No-ERP Boundary](ADR/ADR-0005-version-1-no-erp-boundary.md)
