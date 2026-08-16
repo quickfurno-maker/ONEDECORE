@@ -183,5 +183,5 @@ No architecture change. No owner-decision change (OD8B-1–OD8B-8). Correction c
 - Data write: RBAC metadata only (`permissions` / `role_permissions`)
 - Storage classification: `MANAGED_STORAGE_BUCKET_METADATA_WRITE=PROJECT_DESIGN_DOCUMENTS_PRIVATE_ONLY`; `MANAGED_STORAGE_OBJECT_WRITE=NONE`
 - Evidence/storage integrity correction certified live (helper + both uploaded-artifact RPCs)
-- Local post-apply app/check: PASS (same counts as pre-apply). Local `db:test` file 17 tests 43–44 fail on ISO Sunday because test policy `weekly_off_days=[7]` leaves `open_session=false`; file 21 PASS. Not an M29 defect; exact-head CI `31891040375` already succeeded.
+- Local post-apply app/check: PASS. Local `db:test` initially failed file 17 tests 43–44 on ISO Sunday because the fixture used `weekly_off_days=[7]` and `derive_attendance_day` does not keep `open_session` on weekly off. Test-only fix in `17_staff_attendance_leave_foundation_test.sql` chooses a weekly-off day that is not today in `Asia/Kolkata` (M29 bytes unchanged). Re-run: 21 files / 1079 PASS. File 21 remained PASS throughout.
 - Phase 8C not started. Production none. PR #59 remains OPEN / NOT MERGED.
