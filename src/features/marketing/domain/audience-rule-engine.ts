@@ -43,16 +43,26 @@ export function validateAudienceRule(rule: AudienceRule): string | null {
   if (!(AUDIENCE_RULE_OPERATORS as readonly string[]).includes(rule.operator)) {
     return `Unsupported audience rule operator: ${rule.operator}`;
   }
-  if (rule.values.length === 0) return "Audience rule requires at least one value.";
-  for (const value of rule.values) {
-    if (!value.trim()) return "Audience rule values must be non-empty.";
-    if (value.length > 120) return "Audience rule value exceeds max length.";
+  if (rule.values.length < 1 || rule.values.length > 20) {
+    return "Audience rule values must contain 1 to 20 entries.";
+  }
+  const canonical = rule.values.map((v) => v.trim().toLowerCase());
+  if (canonical.some((value) => !value || value.length > 120)) {
+    return "Audience rule values must be non-empty and at most 120 characters.";
+  }
+  if (new Set(canonical).size !== canonical.length) {
+    return "Audience rule values must be unique after canonicalization.";
+  }
+  if ((rule.operator === "equals" || rule.operator === "not_equals") && canonical.length !== 1) {
+    return "equals/not_equals requires exactly one value.";
   }
   return null;
 }
 
 export function validateAudienceRuleGroup(group: AudienceRuleGroup): string | null {
-  if (group.rules.length === 0) return "Audience rule group requires at least one rule.";
+  if (group.rules.length < 1 || group.rules.length > 20) {
+    return "Audience rule group requires 1 to 20 rules.";
+  }
   for (const rule of group.rules) {
     const error = validateAudienceRule(rule);
     if (error) return error;

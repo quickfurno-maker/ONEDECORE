@@ -5,9 +5,13 @@ import { PrebuildBanner } from "./PrebuildBanner.tsx";
 
 interface CampaignCreativePreviewProps {
   readonly creative: CampaignCreativeSnapshot;
+  readonly destinationReference?: string | null;
 }
 
-export function CampaignCreativePreview({ creative }: CampaignCreativePreviewProps) {
+export function CampaignCreativePreview({
+  creative,
+  destinationReference = null,
+}: CampaignCreativePreviewProps) {
   return (
     <section aria-label="Campaign creative preview" aria-live="polite" className="space-y-3">
       <PrebuildBanner />
@@ -21,8 +25,7 @@ export function CampaignCreativePreview({ creative }: CampaignCreativePreviewPro
         </p>
       </article>
       <p className="text-xs text-neutral-500">
-        Destination: {creative.landingPublicationRef} — Audience hash:{" "}
-        <span className="font-mono">{creative.audienceRuleHash.slice(0, 12)}…</span>
+        Opaque destination: {destinationReference ?? "none"}
       </p>
     </section>
   );

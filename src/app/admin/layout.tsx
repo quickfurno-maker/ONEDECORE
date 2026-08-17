@@ -8,6 +8,7 @@ import { hasAnyAttendanceNavPermission } from "@/features/staff-attendance/serve
 import { hasAnyLeaveNavPermission } from "@/features/staff-leave/server/leave-auth";
 import { hasAnyWhatsappInboxReadPermission } from "@/features/whatsapp/server/whatsapp-permissions";
 import { hasAnyProjectReadPermission } from "@/features/projects/server/project-permissions";
+import { hasAnyCampaignReadPermission } from "@/features/marketing/server/campaign-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await requireStaffPermission("admin.access", "/admin");
-  const [showCrmLink, showWhatsappLink, showStaffLink, showAttendanceLink, showLeaveLink, showProjectsLink] =
+  const [showCrmLink, showWhatsappLink, showStaffLink, showAttendanceLink, showLeaveLink, showProjectsLink, showCampaignsLink] =
     await Promise.all([
       hasAnyCrmLeadReadPermission(),
       hasAnyWhatsappInboxReadPermission(),
@@ -26,6 +27,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       hasAnyAttendanceNavPermission(),
       hasAnyLeaveNavPermission(),
       hasAnyProjectReadPermission(),
+      hasAnyCampaignReadPermission(),
     ]);
 
   return (
@@ -103,6 +105,14 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
               >
                 Projects
+              </Link>
+            ) : null}
+            {showCampaignsLink ? (
+              <Link
+                href="/admin/campaigns"
+                className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+              >
+                Campaigns
               </Link>
             ) : null}
             {showWhatsappLink ? (

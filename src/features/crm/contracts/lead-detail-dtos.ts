@@ -37,6 +37,8 @@ export interface CrmLeadDetailContactChannel {
 }
 
 export interface CrmLeadDetailContact {
+  readonly id: string;
+  readonly status: string;
   readonly displayName: string;
   readonly channels: readonly CrmLeadDetailContactChannel[];
 }

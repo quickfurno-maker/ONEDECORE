@@ -1,5 +1,5 @@
 /**
- * Phase 9A migration-independent — campaign version lifecycle transitions.
+ * Phase 9A — campaign version lifecycle transitions (ADR-0027).
  */
 
 import type { CampaignLifecycleState } from "../contracts/lifecycle.ts";
@@ -16,14 +16,10 @@ export type CampaignLifecycleTransitionResult =
   | { readonly allowed: false; readonly reason: string };
 
 const TRANSITIONS: Readonly<Record<CampaignLifecycleState, readonly CampaignLifecycleState[]>> = {
-  draft: ["pending_approval", "cancelled"],
-  pending_approval: ["approved", "rejected", "draft"],
-  approved: ["scheduled", "cancelled"],
-  rejected: ["draft", "cancelled"],
-  scheduled: ["paused", "completed", "cancelled"],
-  paused: ["scheduled", "cancelled"],
-  completed: [],
-  cancelled: [],
+  draft: ["pending_approval"],
+  pending_approval: ["approved", "rejected"],
+  approved: [],
+  rejected: [],
 };
 
 export function validateCampaignLifecycleTransition(
@@ -33,7 +29,7 @@ export function validateCampaignLifecycleTransition(
   if (!allowedTargets.includes(input.to)) {
     return {
       allowed: false,
-      reason: `Transition from ${input.from} to ${input.to} is not permitted.`,
+      reason: `Transition from ${input.from} to ${input.to} is not permitted in Phase 9A.`,
     };
   }
 
@@ -41,15 +37,11 @@ export function validateCampaignLifecycleTransition(
     return { allowed: false, reason: "Actor cannot request campaign approval." };
   }
 
-  if (input.to === "approved" && !input.capabilities.canApproveCampaign) {
-    return { allowed: false, reason: "Actor cannot approve campaign versions." };
-  }
-
   if (
-    (input.to === "scheduled" || input.to === "paused") &&
-    !input.capabilities.canPublishLater
+    (input.to === "approved" || input.to === "rejected") &&
+    !input.capabilities.canApproveCampaign
   ) {
-    return { allowed: false, reason: "Actor cannot schedule or pause campaigns." };
+    return { allowed: false, reason: "Actor cannot decide this campaign version." };
   }
 
   return { allowed: true };

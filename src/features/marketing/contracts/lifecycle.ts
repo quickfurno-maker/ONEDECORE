@@ -1,5 +1,5 @@
 /**
- * Phase 9 migration-independent — campaign version lifecycle (no provider execution).
+ * Phase 9A — campaign version lifecycle (ADR-0027). Execution states belong to 9C.
  */
 
 export const CAMPAIGN_LIFECYCLE_STATES = [
@@ -7,19 +7,11 @@ export const CAMPAIGN_LIFECYCLE_STATES = [
   "pending_approval",
   "approved",
   "rejected",
-  "scheduled",
-  "paused",
-  "completed",
-  "cancelled",
 ] as const;
 
 export type CampaignLifecycleState = (typeof CAMPAIGN_LIFECYCLE_STATES)[number];
 
-export const CAMPAIGN_TERMINAL_STATES = [
-  "rejected",
-  "completed",
-  "cancelled",
-] as const;
+export const CAMPAIGN_TERMINAL_STATES = ["approved", "rejected"] as const;
 
 export type CampaignTerminalState = (typeof CAMPAIGN_TERMINAL_STATES)[number];
 

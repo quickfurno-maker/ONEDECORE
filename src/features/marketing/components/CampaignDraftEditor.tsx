@@ -28,6 +28,9 @@ export function CampaignDraftEditor({
     <section aria-label="Campaign draft editor" aria-live="polite" className="space-y-4">
       <PrebuildBanner />
       <h2 className="text-lg font-semibold text-neutral-100">Campaign draft</h2>
+      <p className="text-xs text-neutral-400">
+        Destination is opaque metadata only. No landing-page existence check in Phase 9A.
+      </p>
       <label className="block text-sm text-neutral-300">
         Targeting mode
         <select
@@ -43,6 +46,10 @@ export function CampaignDraftEditor({
           <option value="direct_or_custom">Direct/custom</option>
         </select>
       </label>
+      <p className="text-xs text-neutral-500">
+        Intended channels: {draft.intendedChannels.join(", ")}. Destination:{" "}
+        {draft.destinationReference ?? "none"}
+      </p>
       {validationError ? (
         <p role="alert" className="text-sm text-red-300">
           {validationError}

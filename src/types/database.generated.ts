@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -7,31 +7,6 @@
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       attendance_corrections: {
@@ -275,6 +250,228 @@ export type Database = {
             columns: ["supersedes_policy_id"]
             isOneToOne: false
             referencedRelation: "attendance_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_approvals: {
+        Row: {
+          campaign_version_id: string
+          configuration_hash: string
+          created_at: string
+          decided_at: string
+          decided_by: string
+          decision: string
+          id: string
+          reason: string | null
+          rule_hash: string
+        }
+        Insert: {
+          campaign_version_id: string
+          configuration_hash: string
+          created_at?: string
+          decided_at?: string
+          decided_by: string
+          decision: string
+          id?: string
+          reason?: string | null
+          rule_hash: string
+        }
+        Update: {
+          campaign_version_id?: string
+          configuration_hash?: string
+          created_at?: string
+          decided_at?: string
+          decided_by?: string
+          decision?: string
+          id?: string
+          reason?: string | null
+          rule_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_approvals_campaign_version_id_fkey"
+            columns: ["campaign_version_id"]
+            isOneToOne: true
+            referencedRelation: "campaign_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_approvals_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_audience_rule_versions: {
+        Row: {
+          campaign_version_id: string
+          created_at: string
+          frozen_at: string | null
+          frozen_by: string | null
+          id: string
+          rule_group: Json
+          rule_hash: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_version_id: string
+          created_at?: string
+          frozen_at?: string | null
+          frozen_by?: string | null
+          id?: string
+          rule_group: Json
+          rule_hash: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_version_id?: string
+          created_at?: string
+          frozen_at?: string | null
+          frozen_by?: string | null
+          id?: string
+          rule_group?: Json
+          rule_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_audience_rule_versions_campaign_version_id_fkey"
+            columns: ["campaign_version_id"]
+            isOneToOne: true
+            referencedRelation: "campaign_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_audience_rule_versions_frozen_by_fkey"
+            columns: ["frozen_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_versions: {
+        Row: {
+          budget_snapshot: Json
+          campaign_id: string
+          configuration_hash: string | null
+          created_at: string
+          created_by: string
+          creative_snapshot: Json
+          destination_reference: string | null
+          frozen_at: string | null
+          id: string
+          intended_channels: string[]
+          intended_window_snapshot: Json
+          lock_version: number
+          requested_at: string | null
+          requested_by: string | null
+          status: string
+          targeting_mode: string
+          title: string
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          budget_snapshot: Json
+          campaign_id: string
+          configuration_hash?: string | null
+          created_at?: string
+          created_by: string
+          creative_snapshot: Json
+          destination_reference?: string | null
+          frozen_at?: string | null
+          id?: string
+          intended_channels: string[]
+          intended_window_snapshot: Json
+          lock_version?: number
+          requested_at?: string | null
+          requested_by?: string | null
+          status?: string
+          targeting_mode: string
+          title: string
+          updated_at?: string
+          version_number: number
+        }
+        Update: {
+          budget_snapshot?: Json
+          campaign_id?: string
+          configuration_hash?: string | null
+          created_at?: string
+          created_by?: string
+          creative_snapshot?: Json
+          destination_reference?: string | null
+          frozen_at?: string | null
+          id?: string
+          intended_channels?: string[]
+          intended_window_snapshot?: Json
+          lock_version?: number
+          requested_at?: string | null
+          requested_by?: string | null
+          status?: string
+          targeting_mode?: string
+          title?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_versions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_versions_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          campaign_reference: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_reference: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_reference?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2220,6 +2417,184 @@ export type Database = {
           },
         ]
       }
+      project_execution_evidence: {
+        Row: {
+          captured_at: string
+          captured_by: string
+          evidence_type: string
+          file_sha256: string | null
+          file_size_bytes: number | null
+          id: string
+          mime_type: string | null
+          note: string | null
+          project_id: string
+          snag_id: string | null
+          source_reference: string
+          source_type: string
+          storage_object_path: string | null
+          target_state: string | null
+        }
+        Insert: {
+          captured_at?: string
+          captured_by: string
+          evidence_type: string
+          file_sha256?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          mime_type?: string | null
+          note?: string | null
+          project_id: string
+          snag_id?: string | null
+          source_reference: string
+          source_type: string
+          storage_object_path?: string | null
+          target_state?: string | null
+        }
+        Update: {
+          captured_at?: string
+          captured_by?: string
+          evidence_type?: string
+          file_sha256?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          mime_type?: string | null
+          note?: string | null
+          project_id?: string
+          snag_id?: string | null
+          source_reference?: string
+          source_type?: string
+          storage_object_path?: string | null
+          target_state?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_execution_evidence_captured_by_fkey"
+            columns: ["captured_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_execution_evidence_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_execution_evidence_snag_id_fkey"
+            columns: ["snag_id"]
+            isOneToOne: false
+            referencedRelation: "project_execution_snags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_execution_snags: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          project_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          project_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          project_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_execution_snags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_execution_snags_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_execution_snags_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_execution_workflows: {
+        Row: {
+          cancelled_at: string | null
+          completed_at: string | null
+          created_at: string
+          held_from_state: string | null
+          hold_reason: string | null
+          hold_reason_code: string | null
+          project_id: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          held_from_state?: string | null
+          hold_reason?: string | null
+          hold_reason_code?: string | null
+          project_id: string
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          held_from_state?: string | null
+          hold_reason?: string | null
+          hold_reason_code?: string | null
+          project_id?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_execution_workflows_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_manager_assignments: {
         Row: {
           assigned_at: string
@@ -4086,7 +4461,11 @@ export type Database = {
           send_intent_id: string
         }[]
       }
-      can_view_project_design: {
+      can_approve_project_production_ready: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      can_complete_project_execution: {
         Args: { p_project_id: string }
         Returns: boolean
       }
@@ -4094,7 +4473,23 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: boolean
       }
-      can_approve_project_production_ready: {
+      can_record_project_execution_handover: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      can_resolve_project_execution_snag: {
+        Args: { p_snag_id: string }
+        Returns: boolean
+      }
+      can_transition_project_execution: {
+        Args: { p_project_id: string; p_target_state: string }
+        Returns: boolean
+      }
+      can_view_project_design: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      can_view_project_execution_detail: {
         Args: { p_project_id: string }
         Returns: boolean
       }
@@ -4171,6 +4566,14 @@ export type Database = {
       }
       cancel_leave_request: {
         Args: { p_reason: string; p_request_id: string }
+        Returns: Json
+      }
+      cancel_project_execution: {
+        Args: {
+          p_idempotency_key: string
+          p_project_id: string
+          p_reason: string
+        }
         Returns: Json
       }
       check_in_attendance: {
@@ -4255,6 +4658,20 @@ export type Database = {
         Args: { p_idempotency_key: string; p_project_id: string }
         Returns: Json
       }
+      complete_project_execution: {
+        Args: {
+          p_file_sha256?: string
+          p_file_size_bytes?: number
+          p_idempotency_key: string
+          p_mime_type?: string
+          p_note?: string
+          p_project_id: string
+          p_source_reference: string
+          p_source_type: string
+          p_storage_object_path?: string
+        }
+        Returns: Json
+      }
       confirm_lead_import_batch_direct: {
         Args: { p_batch_id: string; p_expected_revision: number }
         Returns: {
@@ -4306,6 +4723,21 @@ export type Database = {
           p_details?: Json
           p_reason: string
           p_staff_id: string
+        }
+        Returns: Json
+      }
+      create_campaign_draft: {
+        Args: {
+          p_budget_snapshot: Json
+          p_creative_snapshot: Json
+          p_destination_reference: string
+          p_idempotency_key: string
+          p_intended_channels: string[]
+          p_intended_window_snapshot: Json
+          p_name: string
+          p_rule_group: Json
+          p_targeting_mode: string
+          p_title: string
         }
         Returns: Json
       }
@@ -4511,6 +4943,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_next_campaign_version: {
+        Args: { p_campaign_id: string; p_idempotency_key: string }
+        Returns: Json
+      }
+      create_project_execution_snag: {
+        Args: {
+          p_description: string
+          p_idempotency_key: string
+          p_project_id: string
+          p_title: string
+        }
+        Returns: Json
+      }
       create_quotation_draft: {
         Args: { p_idempotency_key: string; p_lead_id: string; p_title: string }
         Returns: Json
@@ -4622,6 +5067,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      decide_campaign_version: {
+        Args: {
+          p_campaign_version_id: string
+          p_decision: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       finalize_project_design_deliverable_version: {
         Args: { p_idempotency_key: string; p_version_id: string }
         Returns: Json
@@ -4635,7 +5089,15 @@ export type Database = {
         }
         Returns: Json
       }
+      get_contact_marketing_consent_state: {
+        Args: { p_contact_id: string }
+        Returns: Json
+      }
       get_project_design_high_level_status: {
+        Args: { p_project_id: string }
+        Returns: Json
+      }
+      get_project_execution_high_level_status: {
         Args: { p_project_id: string }
         Returns: Json
       }
@@ -4650,6 +5112,15 @@ export type Database = {
           p_idempotency_key: string
           p_project_id: string
           p_reason: string
+        }
+        Returns: Json
+      }
+      hold_project_execution: {
+        Args: {
+          p_idempotency_key: string
+          p_project_id: string
+          p_reason: string
+          p_reason_code: string
         }
         Returns: Json
       }
@@ -4784,6 +5255,10 @@ export type Database = {
         }
         Returns: Json
       }
+      preview_campaign_audience: {
+        Args: { p_campaign_version_id: string }
+        Returns: Json
+      }
       process_lead_import_batch: {
         Args: {
           p_batch_id: string
@@ -4820,7 +5295,34 @@ export type Database = {
           send_intent_id: string
         }[]
       }
+      record_marketing_consent_event: {
+        Args: {
+          p_channel: string
+          p_contact_id: string
+          p_copy_version: string
+          p_event_type: string
+          p_idempotency_key: string
+          p_instruction_source: string
+          p_note: string
+          p_notice_version: string
+        }
+        Returns: Json
+      }
       record_project_client_approval: {
+        Args: {
+          p_file_sha256?: string
+          p_file_size_bytes?: number
+          p_idempotency_key: string
+          p_mime_type?: string
+          p_note?: string
+          p_project_id: string
+          p_source_reference: string
+          p_source_type: string
+          p_storage_object_path?: string
+        }
+        Returns: Json
+      }
+      record_project_execution_handover: {
         Args: {
           p_file_sha256?: string
           p_file_size_bytes?: number
@@ -4946,6 +5448,10 @@ export type Database = {
         Args: { p_idempotency_key: string; p_quotation_version_id: string }
         Returns: Json
       }
+      repair_project_execution_workflow: {
+        Args: { p_idempotency_key: string; p_project_id: string }
+        Returns: Json
+      }
       replace_lead_import_mapping: {
         Args: {
           p_batch_id: string
@@ -5065,6 +5571,14 @@ export type Database = {
         }
         Returns: Json
       }
+      request_campaign_approval: {
+        Args: {
+          p_campaign_version_id: string
+          p_expected_lock_version: number
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
       resend_staff_invite: {
         Args: { p_reason: string; p_staff_id: string }
         Returns: Json
@@ -5087,12 +5601,30 @@ export type Database = {
         Args: { p_version_id: string }
         Returns: Json
       }
+      resolve_project_execution_snag: {
+        Args: {
+          p_file_sha256?: string
+          p_file_size_bytes?: number
+          p_idempotency_key: string
+          p_mime_type?: string
+          p_note?: string
+          p_snag_id: string
+          p_source_reference: string
+          p_source_type: string
+          p_storage_object_path?: string
+        }
+        Returns: Json
+      }
       resume_project_design: {
         Args: {
           p_idempotency_key: string
           p_project_id: string
           p_reason: string
         }
+        Returns: Json
+      }
+      resume_project_execution: {
+        Args: { p_idempotency_key: string; p_project_id: string }
         Returns: Json
       }
       revise_sales_target: {
@@ -5128,6 +5660,22 @@ export type Database = {
       }
       revoke_quotation_access_grant: {
         Args: { p_grant_id: string; p_reason?: string }
+        Returns: Json
+      }
+      save_campaign_draft: {
+        Args: {
+          p_budget_snapshot: Json
+          p_campaign_version_id: string
+          p_creative_snapshot: Json
+          p_destination_reference: string
+          p_expected_lock_version: number
+          p_idempotency_key: string
+          p_intended_channels: string[]
+          p_intended_window_snapshot: Json
+          p_rule_group: Json
+          p_targeting_mode: string
+          p_title: string
+        }
         Returns: Json
       }
       save_quotation_draft_items: {
@@ -5229,6 +5777,10 @@ export type Database = {
           p_task_type: string
         }
         Returns: string
+      }
+      start_project_execution_snag: {
+        Args: { p_idempotency_key: string; p_snag_id: string }
+        Returns: Json
       }
       submit_lead_import_batch: {
         Args: { p_batch_id: string; p_expected_revision: number }
@@ -5361,6 +5913,21 @@ export type Database = {
           p_project_id: string
           p_reason?: string
           p_revision_return_state?: string
+          p_target_state: string
+        }
+        Returns: Json
+      }
+      transition_project_execution: {
+        Args: {
+          p_file_sha256?: string
+          p_file_size_bytes?: number
+          p_idempotency_key: string
+          p_mime_type?: string
+          p_note?: string
+          p_project_id: string
+          p_source_reference?: string
+          p_source_type?: string
+          p_storage_object_path?: string
           p_target_state: string
         }
         Returns: Json
@@ -5631,9 +6198,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

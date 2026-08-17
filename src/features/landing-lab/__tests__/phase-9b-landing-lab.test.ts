@@ -204,6 +204,19 @@ describe("Phase 9B publication context HMAC", () => {
     assert.equal(result.valid, false);
     assert.deepEqual(verifyPublicationContext(secret, tampered), result);
   });
+
+  test("already-expired publication context is rejected", () => {
+    const expired = {
+      ...buildSamplePublicationContext(),
+      expiresAt: "2020-01-01T00:00:00.000Z",
+    };
+    const signed = signPublicationContext(secret, expired);
+    const result = verifyPublicationContext(secret, signed);
+    assert.equal(result.valid, false);
+    if (!result.valid) {
+      assert.match(result.reason, /expired/i);
+    }
+  });
 });
 
 describe("Phase 9B lead intake boundary", () => {

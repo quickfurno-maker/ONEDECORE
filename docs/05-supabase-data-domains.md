@@ -1,9 +1,9 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (truth-synced post Phase 9A architecture freeze, August 17, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced post Phase 9A M31 repository implementation, August 17, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
-**Migrations Applied (Managed):** M1–M30 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. **M31 ABSENT.**
+**Migrations Applied (Managed):** M1–M30 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **M31 only**. **M31 NOT managed-applied.**
 
 ---
 
@@ -27,7 +27,7 @@
 ├─────────────────────────────────────────────────────────┤
 │ 8. AI Copilot Domain (requests, suggestions, approvals) │ PLANNED Phase 6C
 ├─────────────────────────────────────────────────────────┤
-│ 9. Marketing Domain (campaigns, audiences, runs)          │ PLANNED Phase 9A+ (architecture frozen; not implemented)
+│ 9. Marketing Domain (campaigns, audience rules, approvals) │ REPOSITORY M31 (not managed-applied; no runs)
 ├─────────────────────────────────────────────────────────┤
 │ 10. Operations Domain (import batches, audit, settings) │ PLANNED Phase 5D+
 └─────────────────────────────────────────────────────────┘
@@ -55,7 +55,7 @@
 
 - **`contacts` / `contact_channels`:** CRM identity; phone dedupe key; email never auto-merges.
 - **`leads`:** Planner-backed requirements; `submission_reference`; `assigned_to` FK.
-- **`consent_events`:** Append-only; marketing capture deferred.
+- **`consent_events`:** Append-only; staff MARKETING grant/withdraw via M31 RPC (SA/SM); public MARKETING capture remains off.
 - **`lead_events`:** Append-only history.
 - **`lead_intake_requests`:** Idempotency + HMAC fingerprint ledger.
 - **`submit_lead_intake`:** Service-role-only atomic RPC.
@@ -147,21 +147,22 @@ Live Phase 8A schema (M28) uses `public.projects`, `public.project_manager_assig
 | `ai_requests` / `ai_suggestions` | Provider-independent adapter audit |
 | `ai_suggestion_approvals` | Human approval before customer-visible use |
 
-### 3.6 Marketing (Phase 9A architecture freeze — **NOT IMPLEMENTED**; M31 **ABSENT**)
+### 3.6 Marketing (Phase 9A M31 repository — **NOT managed-applied**)
 
-Reuse live CRM consent: `contacts`, `contact_channels`, `consent_events` (`purpose_code = 'MARKETING'` already allowed). Do not create a parallel marketing-consent table. Do not create `contact_suppressions` in 9A.
+Reuse live CRM consent: `contacts`, `contact_channels`, `consent_events` (`purpose_code = 'MARKETING'`). No parallel marketing-consent table. No `contact_suppressions` in 9A.
 
 | Concept | Purpose | 9A status |
 | :--- | :--- | :--- |
-| `campaigns` | Stable campaign identity | **PLANNED** — conceptual only |
-| `campaign_versions` | Draft / pending_approval / approved / rejected | **PLANNED** — conceptual only |
-| `campaign_audience_rule_versions` | Frozen normalized rule JSON + SHA-256 hash; **no PII members** | **PLANNED** — conceptual only |
-| `campaign_approvals` | Append-only approved/rejected evidence | **PLANNED** — conceptual only |
+| `campaigns` | Stable campaign identity `OD-C-{YYYY}-{SEQ6}` | **REPOSITORY M31** — not managed-applied |
+| `campaign_versions` | Draft / pending_approval / approved / rejected | **REPOSITORY M31** — not managed-applied |
+| `campaign_audience_rule_versions` | Frozen normalized rule JSON + SHA-256 hash; **no PII members** | **REPOSITORY M31** — not managed-applied |
+| `campaign_approvals` | Append-only approved/rejected evidence | **REPOSITORY M31** — not managed-applied |
+| `private.marketing_idempotency_requests` | Retry-safe Phase 9A mutations | **REPOSITORY M31** — not managed-applied |
 | `campaign_runs` / provider objects / spend | Execution | **EXCLUDED — Phase 9C** |
 | Recipient / member snapshots / CRM export tables | PII lists | **EXCLUDED — not 9A** |
 | Landing-page tables / campaign→landing FK | Landing Lab | **EXCLUDED — Phase 9B** |
 
-Historical planning names `campaign_audiences` / `campaign_recipients` / `campaign_events` are **not** 9A persistence. Exact SQL remains later M31 after ADR-0027 merge. See [ADR-0027](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md).
+See [ADR-0027](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md) and [M31 implementation audit](audits/phase-9a-m31-campaign-consent-audience-approval-implementation.md).
 
 ### 3.7 Operations & Audit
 | Concept | Purpose |

@@ -1,10 +1,11 @@
 "use client";
 
-import type { CampaignBudgetConfig } from "../contracts/budget.ts";
+import type { CampaignBudgetSnapshot, CampaignIntendedWindowSnapshot } from "../contracts/budget.ts";
 import { PrebuildBanner } from "./PrebuildBanner.tsx";
 
 interface CampaignBudgetPanelProps {
-  readonly budget: CampaignBudgetConfig;
+  readonly budget: CampaignBudgetSnapshot;
+  readonly window?: CampaignIntendedWindowSnapshot;
   readonly validationError?: string | null;
   readonly disabled?: boolean;
   readonly onEditBudget?: () => void;
@@ -12,6 +13,7 @@ interface CampaignBudgetPanelProps {
 
 export function CampaignBudgetPanel({
   budget,
+  window,
   validationError = null,
   disabled = false,
   onEditBudget,
@@ -19,7 +21,7 @@ export function CampaignBudgetPanel({
   return (
     <section aria-label="Campaign budget" aria-live="polite" className="space-y-3">
       <PrebuildBanner />
-      <h3 className="text-sm font-semibold text-neutral-100">Budget (validators only)</h3>
+      <h3 className="text-sm font-semibold text-neutral-100">Budget snapshot (approval only)</h3>
       <dl className="grid gap-2 text-sm text-neutral-300">
         <div>
           <dt className="text-neutral-500">Daily budget (paise)</dt>
@@ -29,12 +31,14 @@ export function CampaignBudgetPanel({
           <dt className="text-neutral-500">Total budget (paise)</dt>
           <dd>{budget.totalBudgetPaise ?? "—"}</dd>
         </div>
-        <div>
-          <dt className="text-neutral-500">Date range</dt>
-          <dd>
-            {budget.startDate} → {budget.endDate ?? "open"}
-          </dd>
-        </div>
+        {window ? (
+          <div>
+            <dt className="text-neutral-500">Intended window</dt>
+            <dd>
+              {window.startDate} → {window.endDate ?? "open"}
+            </dd>
+          </div>
+        ) : null}
       </dl>
       {validationError ? (
         <p role="alert" aria-live="assertive" className="text-sm text-red-300">

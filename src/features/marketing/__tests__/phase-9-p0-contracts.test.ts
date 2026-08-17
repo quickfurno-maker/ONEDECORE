@@ -149,7 +149,7 @@ describe("Phase 9 P0 publication context signing", () => {
     experimentReference: null,
     variantKey: null,
     issuedAt: "2026-08-07T10:00:00.000Z",
-    expiresAt: "2026-08-08T10:00:00.000Z",
+    expiresAt: null,
   };
 
   test("valid signature verifies", () => {
@@ -177,6 +177,19 @@ describe("Phase 9 P0 publication context signing", () => {
     const a = buildCanonicalPublicationContextPayload(context);
     const b = buildCanonicalPublicationContextPayload(context);
     assert.equal(a, b);
+  });
+
+  test("already-expired publication context is rejected without weakening the verifier", () => {
+    const expired = {
+      ...context,
+      expiresAt: "2020-01-01T00:00:00.000Z",
+    };
+    const signed = signPublicationContext(secret, expired);
+    const result = verifyPublicationContext(secret, signed);
+    assert.equal(result.valid, false);
+    if (!result.valid) {
+      assert.match(result.reason, /expired/i);
+    }
   });
 });
 
@@ -216,10 +229,10 @@ describe("Phase 9 P0 form submit idempotency", () => {
 
 describe("Phase 9 P0 reference validators", () => {
   test("campaign and landing references follow OD patterns", () => {
-    assert.equal(validateCampaignReference("OD-C-2026-0001"), null);
+    assert.equal(validateCampaignReference("OD-C-2026-000001"), null);
     assert.equal(validateLandingPageReference("OD-LP-2026-0001"), null);
     const version = createCampaignVersionRef({
-      campaignReference: "OD-C-2026-0001",
+      campaignReference: "OD-C-2026-000001",
       versionNumber: 1,
     });
     assert.equal(version.versionNumber, 1);
