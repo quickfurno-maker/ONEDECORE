@@ -1,6 +1,6 @@
 # 08 — META WHATSAPP, GROQ AI AND N8N AUTOMATION BOUNDARY
 
-**Document Status:** Locked Integration Baseline (truth-synced Phase 6B closeout, August 8, 2026)
+**Document Status:** Locked Integration Baseline (truth-synced post Phase 9A architecture freeze, August 17, 2026)
 **WhatsApp API:** Official Meta WhatsApp Cloud API Only
 **AI Provider:** Groq behind provider-independent adapter (planned Phase 6C)
 **n8n Role:** Stateless Async Event Bus & Notification Relay
@@ -68,18 +68,22 @@ Groq must **not** automatically send messages, mutate assignments or statuses, a
 
 ---
 
-## 3. Marketing Campaigns (Planned — Phase 9)
+## 3. Marketing Campaigns (Phase 9A architecture freeze — **not implemented**)
 
-| Role | Authority |
+| Role | Phase 9A authority |
 | :--- | :--- |
-| Super Admin | Create, approve, schedule, send; view all results |
-| Sales Manager | Create/edit drafts and audiences; **Super Admin approval mandatory**; cannot approve own campaign |
-| Sales Executive | No campaign creation or bulk messaging |
+| Super Admin | Create/edit drafts; request approval; approve any pending version; staff MARKETING consent recording (later RPC) |
+| Sales Manager | Create/edit drafts and audiences; request approval; **may approve other versions; MUST NOT approve own**; staff MARKETING consent recording (later RPC) |
+| Sales Executive | No campaign creation, approval, or bulk messaging |
 | PM / Designer | No campaign authority |
+| Kriti | No authoritative campaign approval or execution |
 
-- Mandatory consent, suppression, opt-out, template eligibility.
-- Replies route to assigned salesperson or manager/admin queue.
-- No fabricated consent.
+- MARKETING consent lives in existing append-only `consent_events`. WHATSAPP_SERVICE does **not** imply MARKETING.
+- DNC (`contacts.status = 'do_not_contact'`) and channel suppression (`contact_channels.status = 'suppressed'`) are the suppression foundation. No `contact_suppressions` table in 9A.
+- Audience approval freezes **rules**, not a PII recipient list. Phase 9C rechecks eligibility before any later export/send.
+- Intended channels are **metadata only**. M19 send-intent purpose remains **WHATSAPP_SERVICE**. MARKETING consent does **not** authorize the current send-intent RPC. Phase 9A approval creates **no** send intent. WhatsApp marketing requires later 9C design.
+- n8n cannot decide consent or approval truth.
+- No fabricated consent. Public MARKETING capture remains OFF.
 
 ---
 
@@ -109,5 +113,6 @@ Do not conflate disabled intake with future WhatsApp or campaign capabilities.
 
 - [ADR-0004: Server-Side Persistence Before n8n](ADR/ADR-0004-crm-before-n8n-persistence.md)
 - [ADR-0021: Groq Copilot and WhatsApp Boundary](ADR/ADR-0021-groq-copilot-and-whatsapp-boundary.md)
+- [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
 - [Security, Privacy & RLS](06-security-privacy-and-rls.md)
 - [Runbook: Lead Intake Public Activation](runbooks/lead-intake-public-activation.md)

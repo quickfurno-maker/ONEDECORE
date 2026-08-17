@@ -1,9 +1,9 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 8C M30 managed apply, August 17, 2026)
-**Current Phase:** Phase 8C — Project Execution Workspace (**ARCHITECTURE COMPLETE_FROZEN**; repository implementation **COMPLETE_CORRECTED**; managed DB **CERTIFIED_M1_M30**; PR #61 **OPEN_NOT_MERGED**)
-**Next Phase:** `PHASE_8C_PR61_MERGE`
-**Previous Phase:** Phase 8B — Designer Assignment & Design Collaboration (**COMPLETE** — PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`; production **not** activated)
+**Document Status:** Locked Roadmap (truth-synced post Phase 9A architecture freeze, August 17, 2026)
+**Current Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**ARCHITECTURE COMPLETE_FROZEN**; implementation **NOT_STARTED**; M31 **ABSENT**)
+**Next Phase:** `PHASE_9A_ARCHITECTURE_PR_MERGE`
+**Previous Phase:** Phase 8C — Project Execution Workspace (**COMPLETE** — PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; repository/managed **M1–M30**; production **not** activated)
 
 ---
 
@@ -85,8 +85,10 @@ Phase 8A: Closed-Won Project Conversion & PM Handover ────────�
   • OD8A-1–OD8A-4 locked; PR #57 merged `db879b5…`; repository/managed M1–M28; pending NONE
 Phase 8B: Designer Assignment & Design Collaboration ─────────────── COMPLETE
   • OD8B-1–OD8B-8 locked; PR #59 merged `6b31052…`; repository/managed M1–M29; pending NONE; M30 absent
-Phase 8C: Project Execution Workspace ────────────────────────────── ARCHITECTURE COMPLETE_FROZEN / REPOSITORY IMPLEMENTATION COMPLETE
-  • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; PR #60 merged; M30 managed-applied; PR #61 open / not merged; production not activated
+Phase 8C: Project Execution Workspace ────────────────────────────── COMPLETE
+  • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; PR #61 true merge `8f4f3ecf…`; repository/managed M1–M30; pending NONE; production not activated
+Phase 9A: Campaign Consent, Audience & Approval Foundation ──────── ARCHITECTURE COMPLETE_FROZEN
+  • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077; M31 conceptually reserved, not created; implementation not started; production not activated
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -149,10 +151,11 @@ Phase 8A ──► Closed-Won Project Conversion & PM Handover [COMPLETE]
 Phase 8B ──► Designer Assignment & Design Collaboration [COMPLETE]
     │         • OD8B-1–OD8B-8 / ADR-0025 / DEC-0074; PR #59 merged; separate design state
     ▼
-Phase 8C ──► Project Execution Workspace [ARCHITECTURE COMPLETE_FROZEN; REPO IMPLEMENTATION COMPLETE]
-    │         • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; managed M1–M30; PR #61 open
+Phase 8C ──► Project Execution Workspace [COMPLETE]
+    │         • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; PR #61 merged; managed M1–M30
     ▼
-Phase 9A ──► Campaign Consent, Audience & Approval Foundation
+Phase 9A ──► Campaign Consent, Audience & Approval Foundation [ARCHITECTURE COMPLETE_FROZEN]
+    │         • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077; M31 absent; implementation not started
     ▼
 Phase 9B ──► Landing Page Lab & Experimentation [ROADMAP-LOCKED — NOT IMPLEMENTED]
     │         • Landing page factory; reusable structured blocks
@@ -248,22 +251,30 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Dependencies:** 7B complete.
 - **Status:** **COMPLETE** — PR #57 MERGED (`db879b5ca27fe9d26543c23d8f130811c7feadab`); repository/managed **M1–M28**; pending **NONE**; project-value reconciliation remains **deferred**; production not activated.
 
-### Phase 8B (Complete)
+### Phase 8B (Completed)
 - **Objective:** Designer assignment and design collaboration.
 - **Architecture freeze:** [Phase 8B freeze](audits/phase-8b-designer-assignment-design-collaboration-architecture-freeze.md), [ADR-0025](ADR/ADR-0025-phase-8b-designer-assignment-design-collaboration.md).
 - **Implementation:** [Phase 8B M29 implementation](audits/phase-8b-m29-designer-assignment-design-collaboration-implementation.md), DEC-0074.
 - **Exit gate:** PR #59 **MERGED** `6b31052973cf9e50e25803b232ce446308c1fa3a`.
 - **Dependencies:** 8A complete; architecture PR #58 merged `b7afef60e41900e7832ea41b249067841aebbaea`.
-- **Status:** **COMPLETE** — owner locks OD8B-1–OD8B-8; repository/managed **M1–M29**; pending **NONE**; M30 **ABSENT**; production not activated.
+- **Status:** **COMPLETE** — owner locks OD8B-1–OD8B-8; repository/managed **M1–M29** at 8B closeout; production not activated.
 
-### Phase 8C (Current Formal Phase — Repository Implementation Complete)
+### Phase 8C (Completed)
 - **Objective:** Project execution workspace (status + evidence tracking after Design Completed; No-ERP).
 - **Architecture freeze:** [Phase 8C freeze](audits/phase-8c-project-execution-workspace-architecture-freeze.md), [ADR-0026](ADR/ADR-0026-phase-8c-project-execution-workspace.md), DEC-0075.
 - **Implementation:** [Phase 8C M30 implementation](audits/phase-8c-m30-project-execution-workspace-implementation.md), DEC-0076.
 - **Owner locks:** OD8C-1–OD8C-12 **as recommended**, with the three refinements (M29-only design truth; entry = handover_accepted + design_completed with auto-create at `production`; no persisted `material_finalisation`).
-- **Exit gate (next):** `PHASE_8C_PR61_MERGE`. Do not merge in the managed-apply gate.
+- **Exit gate:** PR #61 **MERGED** `8f4f3ecf082450e82ab15f02703c951e50f0817e`; post-merge CI `32010340601` SUCCESS.
 - **Dependencies:** 8B complete (PR #59 merged); architecture PR #60 merged `5b4a7f300e63b438884a2b440a69a569d91b9e5d`.
-- **Status:** **CURRENT FORMAL PHASE** — architecture COMPLETE_FROZEN; repository/managed **M1–M30**; pending **NONE**; M30 immutable; PR #61 OPEN_NOT_MERGED; production not activated.
+- **Status:** **COMPLETE** — repository/managed **M1–M30**; pending **NONE**; M30 immutable; production not activated.
+
+### Phase 9A (Current Formal Phase — Architecture Freeze)
+- **Objective:** Campaign consent, audience rule versioning, and approval foundation (no execution).
+- **Architecture freeze:** [Phase 9A freeze](audits/phase-9a-campaign-consent-audience-approval-architecture-freeze.md), [ADR-0027](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md), DEC-0077.
+- **Owner locks:** OD9A-1–OD9A-6 **as recommended** (existing DNC/channel suppression; MARKETING via `consent_events`; freeze rules not recipients; opaque destination / no 9B FK; channels metadata only; budget/creative/window approval snapshot).
+- **Exit gate (next):** `PHASE_9A_ARCHITECTURE_PR_MERGE`. Do not merge in this freeze gate. Do not create M31.
+- **Dependencies:** Phase 8C complete (PR #61 merged).
+- **Status:** **CURRENT FORMAL PHASE** — architecture COMPLETE_FROZEN; implementation NOT_STARTED; repository/managed **M1–M30**; pending **NONE**; M31 **ABSENT**; production not activated. Existing `src/features/marketing` / `src/features/landing-lab` prebuild is **not** architecture authority.
 
 ### Phase 9B (Landing Page Lab)
 - **Status:** Owner-approved roadmap placement; **not implemented** (no routes/schema/integrations).
@@ -284,12 +295,12 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 2. No Closed-Won project conversion (8A) before quotation acceptance (7B).
 3. No WhatsApp outbound (6B) before webhook foundation (6A) and consent records.
 4. No Groq copilot (6C) before message persistence (6A).
-5. No campaigns (9A/9B/9C) before consent/suppression foundation.
+5. No campaigns (9A/9B/9C) before consent/suppression foundation. Phase 9A **reuses** existing DNC (`contacts.status`) and channel suppression (`contact_channels.status`); it does **not** add `contact_suppressions`. Execution remains Phase 9C.
 6. ERP modules remain out of scope for all phases (ADR-0005).
 7. Authoritative target achievement requires Phase 7B (quotation acceptance); Phase 5E configures targets only.
 8. Project-value reconciliation (Phase 8A) must not double-count quotation acceptance.
 9. Landing Page Lab (9B) does not move earlier than roadmap sequence; production use requires Phase 10.
-10. Phase 8C execution persistence (M30) must not start before this architecture freeze is merged, and must not persist duplicate M29 measurement/design/approval truth.
+10. Phase 8C M30 is applied and merged; do not persist duplicate M29 measurement/design/approval truth. Phase 9A must not create M31 before ADR-0027 is merged.
 
 ---
 
@@ -309,3 +320,5 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - [Phase 8B architecture freeze](audits/phase-8b-designer-assignment-design-collaboration-architecture-freeze.md)
 - [ADR-0026: Phase 8C project execution workspace](ADR/ADR-0026-phase-8c-project-execution-workspace.md)
 - [Phase 8C architecture freeze](audits/phase-8c-project-execution-workspace-architecture-freeze.md)
+- [ADR-0027: Phase 9A campaign consent, audience and approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
+- [Phase 9A architecture freeze](audits/phase-9a-campaign-consent-audience-approval-architecture-freeze.md)

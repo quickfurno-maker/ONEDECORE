@@ -1,11 +1,11 @@
 # 02 — TECHNICAL ARCHITECTURE AND REPOSITORY SPECIFICATION
 
-**Document Status:** Locked Architecture Baseline (truth-synced post DB-2, August 1, 2026)
+**Document Status:** Locked Architecture Baseline (truth-synced post Phase 9A architecture freeze, August 17, 2026)
 **Pattern:** Modular Monolith
 **Framework:** Next.js 16.2.11
 **Database:** Supabase PostgreSQL
 **Route Prefix:** Internal CRM uses `/admin`
-**Current Phase:** 5C implementation complete on main (5C1, 5C2A, 5C2B, 5C2C merged; managed migrations 1–14 applied)
+**Current Phase:** Phase 9A architecture COMPLETE_FROZEN (implementation not started; M31 absent). Phase 8C COMPLETE on main (PR #61 merged).
 
 ---
 
@@ -120,6 +120,7 @@ OneDecore/
 - [ADR-0024: Phase 8A Project Materialization and PM Handover](ADR/ADR-0024-phase-8a-project-materialization-pm-handover.md)
 - [ADR-0025: Phase 8B Designer Assignment and Design Collaboration](ADR/ADR-0025-phase-8b-designer-assignment-design-collaboration.md)
 - [ADR-0026: Phase 8C Project Execution Workspace](ADR/ADR-0026-phase-8c-project-execution-workspace.md)
+- [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
 
 ---
 
@@ -138,7 +139,7 @@ Phase 5A locks the following cross-cutting patterns for future implementation:
 | Handover | PM assignment → PM acceptance before execution |
 | Design staffing | One Lead Designer + Supporting Designers; manual only |
 | AI | Provider adapter; human approval; structured outputs; audit |
-| WhatsApp | Official API; M18–M21 managed foundation (ingest, inbox read, send-intent, service-role dispatch); CRM consent authoritative; **not production-activated** |
-| Campaigns | Approval chain; suppression; no fabricated consent |
+| WhatsApp | Official API; M18–M21 managed foundation (ingest, inbox read, send-intent, service-role dispatch); CRM consent authoritative; **not production-activated**; M19 purpose remains `WHATSAPP_SERVICE` |
+| Campaigns (Phase 9A architecture) | Draft → pending_approval → approved/rejected; MARKETING via existing `consent_events`; DNC + channel suppression reused; freeze audience **rules** not recipient PII; no 9B FK; no 9C execution; M31 not created |
 
-Phase 6A delivers managed WhatsApp **data/webhook foundation** (migration 18). Phase 6B delivers managed **inbox/send-intent/dispatch foundations** (migrations 19–21) plus repository admin UI — **not production-activated**. Groq copilot formal runtime, quotation persistence, and project modules remain **not implemented** as production runtime features.
+Phase 6A delivers managed WhatsApp **data/webhook foundation** (migration 18). Phase 6B delivers managed **inbox/send-intent/dispatch foundations** (migrations 19–21) plus repository admin UI — **not production-activated**. Phase 8C project execution is **COMPLETE** (M30 managed). Phase 9A campaign persistence is **architecture-frozen only** (ADR-0027); `src/features/marketing` / `src/features/landing-lab` prebuild is **not** architecture authority.
