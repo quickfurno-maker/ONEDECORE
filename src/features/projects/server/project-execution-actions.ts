@@ -10,6 +10,7 @@ import {
   hashExecutionFileBytes,
   isProjectExecutionAllowedMime,
   normalizeExecutionFileName,
+  isSignableExecutionEvidencePath,
   signExecutionObject,
 } from "./project-execution-storage";
 import { uploadExecutionObject } from "./project-execution-storage";
@@ -80,11 +81,15 @@ export async function repairProjectExecutionAction(projectId: string): Promise<{
 }
 
 export async function holdProjectExecutionAction(formData: FormData): Promise<{ success: boolean; message?: string }> {
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (reason.length < 10 || reason.length > 1000) {
+    return { success: false, message: "A valid reason of 10 to 1000 characters is required." };
+  }
   const supabase = await createClient();
   const { error } = await supabase.rpc("hold_project_execution" as never, {
     p_project_id: String(formData.get("projectId") ?? ""),
     p_reason_code: String(formData.get("reasonCode") ?? ""),
-    p_reason: String(formData.get("reason") ?? ""),
+    p_reason: reason,
     p_idempotency_key: `hold-${randomUUID()}`,
   } as never);
   if (error) return { success: false, message: safeMessage(error, "Hold failed.") };
@@ -277,16 +282,23 @@ export async function getProjectExecutionEvidenceFileUrlAction(
   }
   const { data, error } = await supabase
     .from("project_execution_evidence" as never)
-    .select("id, project_id, storage_object_path")
+    .select("id, project_id, source_type, storage_object_path")
     .eq("id", evidenceId)
     .eq("project_id", projectId)
     .maybeSingle();
   if (error || !data) {
     return { success: false, message: "Evidence was not found." };
   }
-  const path = asRecord(data)?.storage_object_path;
-  if (typeof path !== "string" || !path) {
+  const row = asRecord(data);
+  if (row?.source_type !== "uploaded_artifact") {
     return { success: false, message: "This evidence has no uploaded file." };
+  }
+  const path = row.storage_object_path;
+  if (typeof path !== "string" || !path.trim()) {
+    return { success: false, message: "This evidence has no uploaded file." };
+  }
+  if (!isSignableExecutionEvidencePath(projectId, path)) {
+    return { success: false, message: "This evidence path is not signable." };
   }
   const url = await signExecutionObject(path);
   if (!url) return { success: false, message: "Could not create a signed URL." };

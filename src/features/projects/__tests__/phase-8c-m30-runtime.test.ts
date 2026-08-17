@@ -7,6 +7,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
 
+import { isSignableExecutionEvidencePath } from "../server/execution-evidence-path.ts";
+
 const root = process.cwd();
 
 describe("Phase 8C M30 runtime containment", () => {
@@ -28,6 +30,11 @@ describe("Phase 8C M30 runtime containment", () => {
     assert.match(migration, /can_complete_project_execution/);
     assert.match(migration, /get_project_execution_high_level_status/);
     assert.match(migration, /project_idempotency_xact_lock/);
+    assert.match(migration, /project_execution_allows_snag_mutation/);
+    assert.match(migration, /length\(trim\(hold_reason\)\) between 10 and 1000/);
+    assert.match(migration, /pr\.status = 'active'/);
+    assert.match(migration, /EXECUTION_INITIALIZATION_FAILED/);
+    assert.doesNotMatch(migration, /SQLERRM/);
     assert.doesNotMatch(migration, /material_finalisation/);
     assert.doesNotMatch(migration, /project_created/);
     assert.doesNotMatch(migration, /project_execution\.manage/);
@@ -53,6 +60,10 @@ describe("Phase 8C M30 runtime containment", () => {
     assert.match(actions, /deleteExecutionObjectBestEffort/);
     assert.match(actions, /can_view_project_execution_detail/);
     assert.match(actions, /eq\("id", evidenceId\)/);
+    assert.match(actions, /source_type/);
+    assert.match(actions, /isSignableExecutionEvidencePath/);
+    assert.match(actions, /can_resolve_project_execution_snag/);
+    assert.match(actions, /allowed !== true/);
     assert.doesNotMatch(actions, /createBrowserClient/);
   });
 
@@ -66,6 +77,40 @@ describe("Phase 8C M30 runtime containment", () => {
     assert.match(storage, /900/);
     assert.match(storage, /upsert: false/);
     assert.match(storage, /server-only/);
+    assert.match(storage, /isSignableExecutionEvidencePath/);
+  });
+
+  test("signed evidence path guard rejects notes, traversal, and foreign prefixes", () => {
+    const storage = readFileSync(
+      join(root, "src/features/projects/server/project-execution-storage.ts"),
+      "utf8"
+    );
+    const actions = readFileSync(
+      join(root, "src/features/projects/server/project-execution-actions.ts"),
+      "utf8"
+    );
+    assert.match(actions, /source_type !== "uploaded_artifact"/);
+    assert.match(actions, /This evidence has no uploaded file/);
+    assert.match(actions, /This evidence path is not signable/);
+    assert.match(actions, /createSignedUrl\(objectPath, PROJECT_EXECUTION_SIGNED_URL_SECONDS\)|signExecutionObject\(path\)/);
+    assert.match(storage, /PROJECT_EXECUTION_SIGNED_URL_SECONDS = 900/);
+    assert.doesNotMatch(actions, /formData\.get\("path"\)/);
+    assert.doesNotMatch(actions, /searchParams\.get\("path"\)/);
+  });
+
+  test("resolve preauth false returns before service-role upload", () => {
+    const actions = readFileSync(
+      join(root, "src/features/projects/server/project-execution-actions.ts"),
+      "utf8"
+    );
+    const rpcStart = actions.indexOf("async function evidencedRpc");
+    const rpcBody = actions.slice(rpcStart);
+    const preauthIndex = rpcBody.indexOf("if (preflightError || allowed !== true)");
+    const uploadIndex = rpcBody.indexOf("uploadExecutionObject");
+    const mutationIndex = rpcBody.indexOf("params.mutationRpc");
+    assert.ok(rpcStart > 0 && preauthIndex > 0 && uploadIndex > preauthIndex);
+    assert.ok(mutationIndex > uploadIndex);
+    assert.match(actions, /deleteExecutionObjectBestEffort/);
   });
 
   test("project detail mounts live execution and not client preview", () => {
@@ -85,5 +130,39 @@ describe("Phase 8C M30 runtime containment", () => {
     assert.match(pgtap, /execution_init_failed|design_completed/);
     assert.match(pgtap, /assign_project_manager/);
     assert.match(pgtap, /get_project_execution_high_level_status/);
+    assert.match(pgtap, /Suspended assigned designer/);
+    assert.match(pgtap, /Create snag after cancellation is denied/);
+    assert.match(pgtap, /Create snag after completion is denied/);
+    assert.match(pgtap, /Resolve preauth is false after cancellation/);
+    assert.match(pgtap, /Resolve preauth is false after completion/);
+    assert.match(pgtap, /Hold reason of exactly 1000 characters is accepted/);
+    assert.match(pgtap, /Hold reason of 1001 characters is denied/);
+    assert.match(pgtap, /Init failure event stores a safe reason code/);
+    assert.match(pgtap, /SQLERRM/);
+  });
+
+  test("signable execution evidence path requires uploaded prefix and rejects traversal", () => {
+    const projectId = "11111111-1111-1111-1111-111111111111";
+    assert.equal(
+      isSignableExecutionEvidencePath(
+        projectId,
+        `projects/${projectId}/execution/evidence/snag_resolution/file.pdf`
+      ),
+      true
+    );
+    assert.equal(isSignableExecutionEvidencePath(projectId, ""), false);
+    assert.equal(
+      isSignableExecutionEvidencePath(projectId, `projects/${projectId}/execution/evidence/../secret`),
+      false
+    );
+    assert.equal(
+      isSignableExecutionEvidencePath(
+        projectId,
+        "projects/22222222-2222-2222-2222-222222222222/execution/evidence/x"
+      ),
+      false
+    );
+    assert.equal(isSignableExecutionEvidencePath(projectId, "/etc/passwd"), false);
+    assert.equal(isSignableExecutionEvidencePath(projectId, `projects/${projectId}/execution/evidence/`), false);
   });
 });

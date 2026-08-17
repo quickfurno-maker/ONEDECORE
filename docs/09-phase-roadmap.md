@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
 **Document Status:** Locked Roadmap (truth-synced post Phase 8C M30 repository implementation, August 17, 2026)
-**Current Phase:** Phase 8C — Project Execution Workspace (**ARCHITECTURE COMPLETE_FROZEN**; repository implementation **COMPLETE**; M30 **NOT** managed-applied)
+**Current Phase:** Phase 8C — Project Execution Workspace (**ARCHITECTURE COMPLETE_FROZEN**; repository implementation **COMPLETE_CORRECTED**; M30 **NOT** managed-applied)
 **Next Phase:** `PHASE_8C_M30_RECOVERY_MANAGED_APPLY`
 **Previous Phase:** Phase 8B — Designer Assignment & Design Collaboration (**COMPLETE** — PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`; production **not** activated)
 

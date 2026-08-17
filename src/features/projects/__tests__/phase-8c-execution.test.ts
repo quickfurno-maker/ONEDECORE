@@ -114,6 +114,17 @@ describe("Phase 8C hold and cancel branches", () => {
     });
     assert.equal(allowed.allowed, true);
 
+    const maxAllowed = canTransitionExecutionState("production", "on_hold", {
+      reason: "x".repeat(1000),
+    });
+    assert.equal(maxAllowed.allowed, true);
+
+    const overMax = canTransitionExecutionState("production", "on_hold", {
+      reason: "x".repeat(1001),
+    });
+    assert.equal(overMax.allowed, false);
+    assert.equal(overMax.error?.code, "PROJECT_MISSING_REASON");
+
     const completedHold = canTransitionExecutionState("completed", "on_hold", {
       reason: "Attempting to hold after completion.",
     });
@@ -162,6 +173,14 @@ describe("Phase 8C hold and cancel branches", () => {
       actorCanUpdateExecution: true,
     });
     assert.equal(validateExecutionHoldRecord(record), null);
+    assert.equal(
+      validateExecutionHoldRecord({ ...record, humanNote: "x".repeat(1000) }),
+      null
+    );
+    assert.equal(
+      validateExecutionHoldRecord({ ...record, humanNote: "x".repeat(1001) }),
+      "Hold note must be between 10 and 1000 characters."
+    );
   });
 });
 
@@ -351,6 +370,7 @@ describe("Phase 8C UI component contracts", () => {
     assert.match(src, /EXECUTION_HOLD_REASON_CODES/);
     assert.match(src, /Resume execution/);
     assert.match(src, /aria-label="Hold reason code"/);
+    assert.match(src, /maxLength=\{1000\}/);
   });
 
   test("snag list resolves via callback with evidence", () => {

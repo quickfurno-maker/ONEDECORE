@@ -33,9 +33,13 @@
 
 **File:** `supabase/migrations/20260817140000_project_execution_workspace.sql`
 
-**Git blob:** `faa814d69f0768a4251e2b41fedbf517abc9f2bb`
+**Canonical Git blob (post-correction, never managed-applied):** `5dd62f085837ba93db7d780ccdd76fd650fd1afd`
 
-**Raw SHA-256:** `74F3C658A9062D38D39D5D824D30D70A64933077B4E351E2ACB1D0690959AF5D`
+**Canonical raw SHA-256:** `5BB9364C4A391B47306B1FBB5E159F50F6E195C950EB25AC8F0E44105D005FAD`
+
+**PRE-CORRECTION / NEVER MANAGED-APPLIED Git blob:** `faa814d69f0768a4251e2b41fedbf517abc9f2bb`
+
+**PRE-CORRECTION / NEVER MANAGED-APPLIED raw SHA-256:** `74F3C658A9062D38D39D5D824D30D70A64933077B4E351E2ACB1D0690959AF5D`
 
 Forward-only. No M1–M29 edits. No business/project/execution seed rows. System RBAC metadata + one private bucket metadata row only.
 
@@ -59,7 +63,7 @@ States: `production`, `ready_for_dispatch`, `delivery`, `installation`, `snag_re
 - Production Ready does not initialize
 - Handover acceptance alone does not initialize
 - Trigger **catches** initializer failure and does **not** re-raise; Design Completed is preserved
-- Optional bounded `project.execution_init_failed` event after catch
+- Bounded `project.execution_init_failed` event after catch stores only `{"reason_code":"EXECUTION_INITIALIZATION_FAILED"}` (no SQLERRM)
 - Existing row is idempotent reuse; initial state `production`
 
 ## 5. Repair
@@ -80,7 +84,7 @@ States: `production`, `ready_for_dispatch`, `delivery`, `installation`, `snag_re
 - Types: `stage_transition`, `snag_resolution`, `handover_acknowledgement`, `completion_acknowledgement`
 - Uploaded path `projects/<id>/execution/evidence/%`; SHA64; ≤20MiB; PDF/JPEG/PNG/WebP; object existence required
 - Server: preauth RPC → validate/hash → service-role upload (`upsert:false`) → mutation RPC → orphan cleanup
-- Signed URL 900s by evidence id (not raw path)
+- Signed URL 900s by evidence id (not raw path); `source_type='uploaded_artifact'` plus exact `projects/<projectId>/execution/evidence/` prefix and no `..`
 
 ## 8. PM continuity
 
@@ -92,7 +96,7 @@ Mounted on existing `/admin/projects/[projectId]`:
 
 - SA/SM: detailed read, cancel, repair missing init
 - Current PM: full workspace
-- Assigned Lead/Supporting + own SE: high-level card only
+- Assigned Lead/Supporting + own SE: high-level card only (assigned Designer also requires `profiles.status='active'` and an active canonical `designer` role)
 - Client update preview unmounted
 
 ## 10. Tests / managed / production
@@ -102,3 +106,27 @@ Mounted on existing `/admin/projects/[projectId]`:
 - Repository M1–M30; managed remains M1–M29; M30 pending only
 - Phase 9 persistence/UI absent
 - Production activation NONE
+
+## 11. PRE-MANAGED-APPLY INDEPENDENT REVIEW CORRECTION
+
+**Starting HEAD:** `d32682229dc5be79cb1ceccd4b627deba82f6df6`
+
+**Same PR:** #61 (`phase-8c-m30-project-execution-workspace`)
+
+**M30 never managed-applied; M31 not created; M1–M29 untouched.**
+
+Independent review found one terminal-state defect and three hardening gaps. Because M30 was unapplied, corrections were made **in place** on the same branch/PR.
+
+| Defect | Correction |
+|---|---|
+| A — snag create/start/resolve/`can_resolve` after `completed`/`cancelled` | `private.project_execution_allows_snag_mutation`; lock workflow; reject terminal before INSERT/update/evidence; preauth FALSE so service-role upload does not run |
+| B — inactive assigned Designer high-level | `private.project_execution_is_assigned_designer` requires current assignment, `profiles.status='active'`, active canonical `designer` role |
+| C — signed evidence readback | Sign DB-resolved path only when `uploaded_artifact`, exact project prefix, no `..` |
+| D — hold reason bound | Trim length 10..1000 at constraint, RPC, app/UI |
+| E — init failure payload | Persist `{"reason_code":"EXECUTION_INITIALIZATION_FAILED"}` only; no SQLERRM |
+
+Tests: pgTAP 22 completed/cancelled snag denials, inactive Designer high-level, hold 10/1000/1001/trim, init-failed safe reason code; app path-guard and preauth-before-upload proofs.
+
+**Canonical fingerprint for managed apply** is the post-correction blob/SHA above. The pre-correction fingerprint is historical only and was **never managed-applied**.
+
+Truth at this gate: PR #61 open / not merged; repository M1–M30; managed M1–M29; pending M30 only; M31 absent; Phase 9 not started; production none. Next = recovery managed apply.

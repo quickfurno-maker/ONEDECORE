@@ -109,7 +109,7 @@ create table public.project_execution_workflows (
         'other'
       )
       and hold_reason is not null
-      and length(trim(hold_reason)) >= 10
+      and length(trim(hold_reason)) between 10 and 1000
     )
     or (
       state <> 'on_hold'
@@ -338,9 +338,15 @@ as $$
   select exists (
     select 1
     from public.project_designer_assignments a
+    join public.profiles pr on pr.id = a.designer_id
+    join public.user_roles ur on ur.user_id = pr.id
+    join public.roles r on r.id = ur.role_id
     where a.project_id = p_project_id
       and a.designer_id = p_user_id
       and a.ended_at is null
+      and pr.status = 'active'
+      and r.is_active = true
+      and r.code = 'designer'
   );
 $$;
 
@@ -397,6 +403,21 @@ as $$
     from public.project_execution_snags s
     where s.project_id = p_project_id
       and s.status in ('open', 'in_progress')
+  );
+$$;
+
+create or replace function private.project_execution_allows_snag_mutation(p_project_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.project_execution_workflows w
+    where w.project_id = p_project_id
+      and w.state not in ('completed', 'cancelled')
   );
 $$;
 
@@ -728,7 +749,7 @@ begin
       begin
         insert into public.project_events (project_id, lead_id, event_type, actor_kind, actor_id, details)
         select NEW.project_id, p.lead_id, 'project.execution_init_failed', 'system', null,
-               jsonb_build_object('reason', left(SQLERRM, 240))
+               jsonb_build_object('reason_code', 'EXECUTION_INITIALIZATION_FAILED')
         from public.projects p
         where p.id = NEW.project_id;
       exception when others then
@@ -818,6 +839,9 @@ begin
   end if;
   select * into v_snag from public.project_execution_snags where id = p_snag_id;
   if v_snag.id is null or v_snag.status = 'resolved' then
+    return false;
+  end if;
+  if not private.project_execution_allows_snag_mutation(v_snag.project_id) then
     return false;
   end if;
   return private.project_execution_is_current_pm(v_snag.project_id, v_actor)
@@ -1046,7 +1070,7 @@ begin
   if p_reason_code not in ('client_decision_pending', 'site_access_blocked', 'material_delay', 'weather', 'internal_capacity', 'other') then
     raise exception 'INVALID_REASON';
   end if;
-  if p_reason is null or length(trim(p_reason)) < 10 then
+  if p_reason is null or length(trim(p_reason)) < 10 or length(trim(p_reason)) > 1000 then
     raise exception 'INVALID_REASON';
   end if;
   if p_idempotency_key is null or length(trim(p_idempotency_key)) < 8 or length(trim(p_idempotency_key)) > 128 then
@@ -1245,6 +1269,7 @@ as $$
 declare
   v_actor uuid;
   v_project public.projects%rowtype;
+  v_workflow public.project_execution_workflows%rowtype;
   v_idempotency private.project_idempotency_requests%rowtype;
   v_request_hash text;
   v_id uuid;
@@ -1271,7 +1296,8 @@ begin
   select * into v_project from public.projects where id = p_project_id for update;
   if v_project.id is null then raise exception 'PROJECT_NOT_FOUND'; end if;
   if not private.project_execution_entry_eligible(p_project_id) then raise exception 'PROJECT_INVALID_TRANSITION'; end if;
-  if not exists (select 1 from public.project_execution_workflows where project_id = p_project_id for update) then
+  select * into v_workflow from public.project_execution_workflows where project_id = p_project_id for update;
+  if v_workflow.project_id is null or v_workflow.state in ('completed', 'cancelled') then
     raise exception 'PROJECT_INVALID_TRANSITION';
   end if;
 
@@ -1303,6 +1329,7 @@ declare
   v_actor uuid;
   v_snag public.project_execution_snags%rowtype;
   v_project public.projects%rowtype;
+  v_workflow public.project_execution_workflows%rowtype;
   v_idempotency private.project_idempotency_requests%rowtype;
   v_request_hash text;
   v_now timestamptz := now();
@@ -1328,6 +1355,10 @@ begin
   if not private.project_execution_is_current_pm(v_snag.project_id, v_actor) then raise exception 'FORBIDDEN' using errcode = '42501'; end if;
   select * into v_project from public.projects where id = v_snag.project_id for update;
   if not private.project_execution_entry_eligible(v_snag.project_id) then raise exception 'PROJECT_INVALID_TRANSITION'; end if;
+  select * into v_workflow from public.project_execution_workflows where project_id = v_snag.project_id for update;
+  if v_workflow.project_id is null or v_workflow.state in ('completed', 'cancelled') then
+    raise exception 'PROJECT_INVALID_TRANSITION';
+  end if;
   if v_snag.status = 'in_progress' then
     v_response := jsonb_build_object('success', true, 'snag_id', v_snag.id, 'status', 'in_progress', 'unchanged', true);
     insert into private.project_idempotency_requests (
@@ -1369,6 +1400,7 @@ declare
   v_actor uuid;
   v_snag public.project_execution_snags%rowtype;
   v_project public.projects%rowtype;
+  v_workflow public.project_execution_workflows%rowtype;
   v_idempotency private.project_idempotency_requests%rowtype;
   v_request_hash text;
   v_evidence_id uuid;
@@ -1397,6 +1429,10 @@ begin
   if not private.project_execution_is_current_pm(v_snag.project_id, v_actor) then raise exception 'FORBIDDEN' using errcode = '42501'; end if;
   select * into v_project from public.projects where id = v_snag.project_id for update;
   if not private.project_execution_entry_eligible(v_snag.project_id) then raise exception 'PROJECT_INVALID_TRANSITION'; end if;
+  select * into v_workflow from public.project_execution_workflows where project_id = v_snag.project_id for update;
+  if v_workflow.project_id is null or v_workflow.state in ('completed', 'cancelled') then
+    raise exception 'PROJECT_INVALID_TRANSITION';
+  end if;
   if v_snag.status = 'resolved' then
     v_response := jsonb_build_object('success', true, 'snag_id', v_snag.id, 'status', 'resolved', 'unchanged', true);
     insert into private.project_idempotency_requests (
@@ -1682,6 +1718,7 @@ alter function private.project_execution_is_assigned_designer(uuid, uuid) owner 
 alter function private.project_execution_uploaded_evidence_object_exists(uuid, text) owner to postgres;
 alter function private.project_execution_whatsapp_belongs_to_project(uuid, uuid) owner to postgres;
 alter function private.project_execution_has_blocking_snags(uuid) owner to postgres;
+alter function private.project_execution_allows_snag_mutation(uuid) owner to postgres;
 alter function private.project_execution_require_active_actor() owner to postgres;
 alter function private.project_execution_assert_evidence_args(text, text, text, text, text, bigint, text) owner to postgres;
 alter function private.project_execution_insert_evidence(uuid, uuid, text, text, uuid, text, text, text, text, text, bigint, text) owner to postgres;
@@ -1713,6 +1750,7 @@ revoke all on function private.project_execution_is_assigned_designer(uuid, uuid
 revoke all on function private.project_execution_uploaded_evidence_object_exists(uuid, text) from public, anon, authenticated;
 revoke all on function private.project_execution_whatsapp_belongs_to_project(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.project_execution_has_blocking_snags(uuid) from public, anon, authenticated;
+revoke all on function private.project_execution_allows_snag_mutation(uuid) from public, anon, authenticated;
 revoke all on function private.project_execution_require_active_actor() from public, anon, authenticated;
 revoke all on function private.project_execution_assert_evidence_args(text, text, text, text, text, bigint, text) from public, anon, authenticated;
 revoke all on function private.project_execution_insert_evidence(uuid, uuid, text, text, uuid, text, text, text, text, text, bigint, text) from public, anon, authenticated;

@@ -103,7 +103,7 @@ export function LiveProjectExecutionWorkspace({ workspace, mode }: LiveProjectEx
               <option key={code} value={code}>{code}</option>
             ))}
           </select>
-          <textarea name="reason" minLength={10} required placeholder="Hold reason (min 10 characters)" className="w-full rounded bg-neutral-950 p-2 text-sm" />
+          <textarea name="reason" minLength={10} maxLength={1000} required placeholder="Hold reason (10-1000 characters)" className="w-full rounded bg-neutral-950 p-2 text-sm" />
           <button type="submit" disabled={pending} className="rounded-md bg-amber-700 px-3 py-2 text-sm text-white">Place on hold</button>
         </form>
       ) : null}

@@ -108,12 +108,12 @@ export function canTransitionExecutionState(
       };
     }
     const reason = options.reason?.trim() ?? "";
-    if (reason.length < 10) {
+    if (reason.length < 10 || reason.length > 1000) {
       return {
         allowed: false,
         error: createProjectStageTransitionError(
           "PROJECT_MISSING_REASON",
-          "On hold requires a reason of at least 10 characters."
+          "On hold requires a reason of 10 to 1000 characters."
         ),
       };
     }

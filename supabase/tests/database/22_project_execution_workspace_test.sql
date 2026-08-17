@@ -216,6 +216,7 @@ select ok(
           'project_execution_uploaded_evidence_object_exists',
           'project_execution_whatsapp_belongs_to_project',
           'project_execution_has_blocking_snags',
+          'project_execution_allows_snag_mutation',
           'project_execution_require_active_actor',
           'project_execution_assert_evidence_args',
           'project_execution_insert_evidence',
@@ -258,6 +259,11 @@ select is(
   has_function_privilege('authenticated', 'private.project_execution_has_blocking_snags(uuid)', 'execute'),
   false,
   'authenticated cannot execute project_execution_has_blocking_snags'
+);
+select is(
+  has_function_privilege('authenticated', 'private.project_execution_allows_snag_mutation(uuid)', 'execute'),
+  false,
+  'authenticated cannot execute project_execution_allows_snag_mutation'
 );
 select is(
   has_function_privilege('authenticated', 'private.project_execution_require_active_actor()', 'execute'),
@@ -731,6 +737,36 @@ select is(
   'No execution row when design completes before handover accept'
 );
 
+select is(
+  (
+    select details->>'reason_code'
+    from public.project_events
+    where project_id = current_setting('test.phase8c_project')::uuid
+      and event_type = 'project.execution_init_failed'
+    order by occurred_at desc
+    limit 1
+  ),
+  'EXECUTION_INITIALIZATION_FAILED',
+  'Init failure event stores a safe reason code'
+);
+
+select ok(
+  not exists (
+    select 1
+    from public.project_events
+    where project_id = current_setting('test.phase8c_project')::uuid
+      and event_type = 'project.execution_init_failed'
+      and (
+        details ? 'reason'
+        or coalesce(details->>'reason_code', '') <> 'EXECUTION_INITIALIZATION_FAILED'
+        or details::text ilike '%sqlerrm%'
+        or details::text ilike '%exception%'
+        or details::text ilike '%violat%'
+      )
+  ),
+  'Init failure event does not persist raw SQLERRM'
+);
+
 select set_config('request.jwt.claim.sub', '8c666666-6666-6666-6666-666666666666', true);
 select set_config('role', 'authenticated', true);
 select is(
@@ -1137,6 +1173,62 @@ select is(
   'Assigned supporting designer can read high-level execution status'
 );
 
+select set_config('role', 'postgres', true);
+update public.profiles
+  set status = 'suspended'
+  where id = '8c555555-5555-5555-5555-555555555555';
+select set_config('request.jwt.claim.sub', '8c555555-5555-5555-5555-555555555555', true);
+select set_config('role', 'authenticated', true);
+select throws_ok(
+  $$select public.get_project_execution_high_level_status(
+    current_setting('test.phase8c_project')::uuid
+  )$$,
+  '42501',
+  'FORBIDDEN',
+  'Suspended assigned designer cannot read high-level execution status'
+);
+
+select set_config('role', 'postgres', true);
+update public.profiles
+  set status = 'disabled'
+  where id = '8c555555-5555-5555-5555-555555555555';
+select set_config('role', 'authenticated', true);
+select throws_ok(
+  $$select public.get_project_execution_high_level_status(
+    current_setting('test.phase8c_project')::uuid
+  )$$,
+  '42501',
+  'FORBIDDEN',
+  'Disabled assigned designer cannot read high-level execution status'
+);
+
+select set_config('role', 'postgres', true);
+update public.profiles
+  set status = 'active'
+  where id = '8c555555-5555-5555-5555-555555555555';
+delete from public.user_roles
+  where user_id = '8c555555-5555-5555-5555-555555555555'
+    and role_id = (select id from public.roles where code = 'designer');
+select set_config('role', 'authenticated', true);
+select throws_ok(
+  $$select public.get_project_execution_high_level_status(
+    current_setting('test.phase8c_project')::uuid
+  )$$,
+  '42501',
+  'FORBIDDEN',
+  'Assigned designer without an active designer role cannot read high-level status'
+);
+
+select set_config('role', 'postgres', true);
+insert into public.user_roles (user_id, role_id, assigned_by)
+select
+  '8c555555-5555-5555-5555-555555555555'::uuid,
+  r.id,
+  '8c111111-1111-1111-1111-111111111111'::uuid
+from public.roles r
+where r.code = 'designer';
+select set_config('role', 'authenticated', true);
+
 select set_config('request.jwt.claim.sub', '8c999999-9999-9999-9999-999999999999', true);
 select throws_ok(
   $$select public.get_project_execution_high_level_status(
@@ -1296,6 +1388,54 @@ select is(
   'PM resume returns to exact held_from_state'
 );
 
+savepoint hold_reason_len_10;
+select is(
+  (public.hold_project_execution(
+    current_setting('test.phase8c_project')::uuid,
+    'other',
+    'ten chars!',
+    'hold_len_10_8c'
+  )->>'state'),
+  'on_hold',
+  'Hold reason of exactly 10 characters is accepted'
+);
+rollback to savepoint hold_reason_len_10;
+
+savepoint hold_reason_len_1000;
+select is(
+  (public.hold_project_execution(
+    current_setting('test.phase8c_project')::uuid,
+    'other',
+    repeat('x', 1000),
+    'hold_len_1000_8c'
+  )->>'state'),
+  'on_hold',
+  'Hold reason of exactly 1000 characters is accepted'
+);
+rollback to savepoint hold_reason_len_1000;
+
+select throws_ok(
+  $$select public.hold_project_execution(
+    current_setting('test.phase8c_project')::uuid,
+    'other',
+    repeat('x', 1001),
+    'hold_len_1001_8c'
+  )$$,
+  'INVALID_REASON',
+  'Hold reason of 1001 characters is denied'
+);
+
+select throws_ok(
+  $$select public.hold_project_execution(
+    current_setting('test.phase8c_project')::uuid,
+    'other',
+    '   xxxxxxxxx   ',
+    'hold_len_trim_8c'
+  )$$,
+  'INVALID_REASON',
+  'Hold reason is validated after trim'
+);
+
 select is(
   (public.transition_project_execution(
     current_setting('test.phase8c_project')::uuid,
@@ -1421,6 +1561,83 @@ select is(
   'PM starts open snag'
 );
 
+savepoint cancelled_terminal_snag;
+select is(
+  (public.cancel_project_execution(
+    current_setting('test.phase8c_project')::uuid,
+    'Client cancelled remaining site work',
+    'cancel_snag_term_8c'
+  )->>'state'),
+  'cancelled',
+  'PM cancels execution while a snag is in progress'
+);
+
+select throws_ok(
+  $$select public.create_project_execution_snag(
+    current_setting('test.phase8c_project')::uuid,
+    'Cancelled create',
+    'Must not persist after cancel',
+    'cancel_create_snag_8c'
+  )$$,
+  'PROJECT_INVALID_TRANSITION',
+  'Create snag after cancellation is denied'
+);
+
+select throws_ok(
+  $$select public.start_project_execution_snag(
+    current_setting('test.phase8c_snag')::uuid,
+    'cancel_start_snag_8c'
+  )$$,
+  'PROJECT_INVALID_TRANSITION',
+  'Start snag after cancellation is denied'
+);
+
+select is(
+  public.can_resolve_project_execution_snag(current_setting('test.phase8c_snag')::uuid),
+  false,
+  'Resolve preauth is false after cancellation'
+);
+
+select throws_ok(
+  $$select public.resolve_project_execution_snag(
+    current_setting('test.phase8c_snag')::uuid,
+    'cancel_resolve_snag_8c',
+    'offline_note',
+    'offline-cancel-resolve',
+    'Should not persist'
+  )$$,
+  'PROJECT_INVALID_TRANSITION',
+  'Resolve snag after cancellation is denied'
+);
+
+select is(
+  (select count(*)::integer from public.project_execution_snags
+    where project_id = current_setting('test.phase8c_project')::uuid),
+  1,
+  'Cancellation does not create a new snag from denied mutations'
+);
+
+select is(
+  (select count(*)::integer from public.project_execution_evidence
+    where project_id = current_setting('test.phase8c_project')::uuid
+      and evidence_type = 'snag_resolution'),
+  0,
+  'Denied cancelled resolve does not create snag evidence'
+);
+
+select is(
+  (select count(*)::integer from public.project_events
+    where project_id = current_setting('test.phase8c_project')::uuid
+      and event_type in (
+        'project.snag_created',
+        'project.snag_started',
+        'project.snag_resolved'
+      )),
+  2,
+  'Denied cancelled snag mutations do not write snag events'
+);
+rollback to savepoint cancelled_terminal_snag;
+
 select throws_ok(
   $$select public.record_project_execution_handover(
     current_setting('test.phase8c_project')::uuid,
@@ -1524,6 +1741,67 @@ select is(
     where project_id = current_setting('test.phase8c_project')::uuid),
   'completed',
   'Execution remains completed after denied reopen attempts'
+);
+
+select throws_ok(
+  $$select public.create_project_execution_snag(
+    current_setting('test.phase8c_project')::uuid,
+    'Completed create',
+    'Must not persist after complete',
+    'complete_create_snag_8c'
+  )$$,
+  'PROJECT_INVALID_TRANSITION',
+  'Create snag after completion is denied'
+);
+
+select throws_ok(
+  $$select public.start_project_execution_snag(
+    current_setting('test.phase8c_snag')::uuid,
+    'complete_start_snag_8c'
+  )$$,
+  'PROJECT_INVALID_TRANSITION',
+  'Start snag after completion is denied'
+);
+
+select is(
+  public.can_resolve_project_execution_snag(current_setting('test.phase8c_snag')::uuid),
+  false,
+  'Resolve preauth is false after completion'
+);
+
+select throws_ok(
+  $$select public.resolve_project_execution_snag(
+    current_setting('test.phase8c_snag')::uuid,
+    'complete_resolve_snag_8c',
+    'offline_note',
+    'offline-complete-resolve',
+    'Should not persist'
+  )$$,
+  'PROJECT_INVALID_TRANSITION',
+  'Resolve snag after completion is denied'
+);
+
+select is(
+  (select count(*)::integer from public.project_execution_snags
+    where project_id = current_setting('test.phase8c_project')::uuid),
+  1,
+  'Completion does not create a new snag from denied mutations'
+);
+
+select is(
+  (select count(*)::integer from public.project_events
+    where project_id = current_setting('test.phase8c_project')::uuid
+      and event_type = 'project.snag_created'),
+  1,
+  'Denied completed snag create does not write a snag event'
+);
+
+select is(
+  (select count(*)::integer from public.project_execution_evidence
+    where project_id = current_setting('test.phase8c_project')::uuid
+      and evidence_type = 'snag_resolution'),
+  1,
+  'Denied completed resolve does not create additional snag evidence'
 );
 
 select finish();

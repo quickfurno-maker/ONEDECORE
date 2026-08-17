@@ -2,6 +2,9 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/service-role";
+import { isSignableExecutionEvidencePath } from "./execution-evidence-path";
+
+export { isSignableExecutionEvidencePath };
 
 export const PROJECT_EXECUTION_BUCKET = "project-execution-documents";
 export const PROJECT_EXECUTION_SIGNED_URL_SECONDS = 900;
