@@ -19,17 +19,25 @@ export type ExecutionWorkspaceAccess = "none" | "high_level" | "full";
 export interface PmExecutionAuthorityContext {
   readonly actor: ProjectActorContext;
   readonly handoverState: ProjectHandoverState;
+  readonly designCompleted?: boolean;
 }
 
 export function resolveExecutionWorkspaceAccess(
   context: PmExecutionAuthorityContext
 ): ExecutionWorkspaceAccess {
-  const caps = resolveProjectPermissionCapabilities(context.actor);
-
-  if (caps.canReadFullProjectWorkspace) {
+  const actor = context.actor;
+  if (
+    actor.role === "super_admin" ||
+    actor.role === "sales_manager" ||
+    (actor.role === "project_manager" && actor.isAssignedPrimaryPm)
+  ) {
     return "full";
   }
-  if (caps.canReadHighLevelStatus) {
+  if (
+    (actor.role === "sales_executive" && actor.isOwningSalesExecutive) ||
+    (actor.role === "designer" &&
+      (actor.isAssignedLeadDesigner || actor.isAssignedSupportingDesigner))
+  ) {
     return "high_level";
   }
   return "none";
@@ -39,6 +47,9 @@ export function canActorUpdateExecutionStages(
   context: PmExecutionAuthorityContext
 ): boolean {
   if (!isHandoverExecutionEligible(context.handoverState)) {
+    return false;
+  }
+  if (context.designCompleted === false) {
     return false;
   }
   return resolveProjectPermissionCapabilities(context.actor).canUpdateExecutionStages;

@@ -1,13 +1,8 @@
 /**
- * Phase 8C migration-independent — execution stage contracts (ADR-0020).
+ * Phase 8C execution stage contracts (ADR-0026 / OD8C-2).
  */
 
 export const EXECUTION_MAIN_PATH_STATES = [
-  "project_created",
-  "site_measurement",
-  "design_development",
-  "design_approval",
-  "material_finalisation",
   "production",
   "ready_for_dispatch",
   "delivery",
@@ -35,11 +30,6 @@ export const TERMINAL_EXECUTION_STATES = ["completed", "cancelled"] as const;
 export type TerminalExecutionState = (typeof TERMINAL_EXECUTION_STATES)[number];
 
 export const EXECUTION_STATE_LABELS: Readonly<Record<ExecutionState, string>> = {
-  project_created: "Project Created",
-  site_measurement: "Site Measurement",
-  design_development: "Design Development",
-  design_approval: "Design Approval",
-  material_finalisation: "Material Finalisation",
   production: "Production",
   ready_for_dispatch: "Ready for Dispatch",
   delivery: "Delivery",

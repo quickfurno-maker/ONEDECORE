@@ -102,7 +102,7 @@ describe("Phase 8A server and UI containment", () => {
     assert.match(layout, /hasAnyProjectReadPermission/);
   });
 
-  test("SA/SM assignment and PM accept controls are present; design/execution are not mounted", () => {
+  test("SA/SM assignment and PM accept controls are present; execution lives on the project detail page", () => {
     const workspace = readFileSync(
       join(root, "src/features/projects/components/handover/ProjectHandoverWorkspace.tsx"),
       "utf8"
@@ -117,8 +117,8 @@ describe("Phase 8A server and UI containment", () => {
     assert.match(detail, /highLevelOnly/);
     assert.match(detail, /role === "designer"/);
     assert.match(detail, /ProjectDesignWorkspace/);
+    assert.match(detail, /LiveProjectExecutionWorkspace/);
     assert.doesNotMatch(workspace, /DesignerTeamPanel|ProjectExecutionWorkspace|DesignWorkspaceShell/);
-    assert.doesNotMatch(detail, /ProjectExecutionWorkspace/);
   });
 
   test("M28 serializes durable idempotency before ledger lookup", () => {

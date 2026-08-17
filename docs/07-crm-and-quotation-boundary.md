@@ -1,8 +1,8 @@
 # 07 — CRM PIPELINE AND COMMERCIAL QUOTATION BOUNDARY
 
-**Document Status:** Locked CRM & Quotation Baseline (truth-synced post Phase 8C architecture freeze, August 16, 2026)
+**Document Status:** Locked CRM & Quotation Baseline (truth-synced post Phase 8C M30 repository implementation, August 17, 2026)
 **Internal Prefix:** `/admin`
-**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55). Phase 8A **COMPLETE** (PR #57 merged). Phase 8B **COMPLETE** (PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`). Phase 8C architecture frozen (ADR-0026 / DEC-0075; M30 not created; production not activated).
+**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55). Phase 8A **COMPLETE** (PR #57 merged). Phase 8B **COMPLETE** (PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`). Phase 8C architecture frozen (ADR-0026 / DEC-0075; PR #60 merged). Phase 8C repository implementation complete (DEC-0076; M30 repo-only; managed M1–M29; production not activated).
 
 ---
 

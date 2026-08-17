@@ -185,13 +185,14 @@ describe("Phase 8B M29 server and storage", () => {
 });
 
 describe("Phase 8B M29 route mounting", () => {
-  test("assigned designer can reach project design workspace; execution stays unmounted", () => {
+  test("assigned designer can reach project design workspace; execution is high-level only on this page", () => {
     const detail = readFileSync(join(root, "src/app/admin/projects/[projectId]/page.tsx"), "utf8");
     const list = readFileSync(join(root, "src/app/admin/projects/page.tsx"), "utf8");
     assert.match(detail, /ProjectDesignWorkspace/);
     assert.match(detail, /role === "designer"/);
     assert.match(detail, /highLevelOnly/);
-    assert.doesNotMatch(detail, /ProjectExecutionWorkspace/);
+    assert.match(detail, /ProjectExecutionHighLevelCard/);
+    assert.match(detail, /LiveProjectExecutionWorkspace/);
     assert.match(list, /canReadDesign/);
     assert.doesNotMatch(list, /ProjectExecutionWorkspace/);
   });
