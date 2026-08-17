@@ -77,7 +77,7 @@ export function buildSyntheticActiveExecutionProject(
 }
 
 export function buildSyntheticExecutionHoldProject(): SyntheticExecutionProject {
-  const enteredFromState: ExecutionMainPathState = "material_finalisation";
+  const enteredFromState: ExecutionMainPathState = "production";
   return {
     ...buildSyntheticActiveExecutionProject(enteredFromState),
     executionState: "on_hold",

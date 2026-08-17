@@ -8,6 +8,7 @@ export type SnagStatus = (typeof SNAG_STATUSES)[number];
 
 export interface SnagItem {
   readonly snagRef: string;
+  readonly title?: string;
   readonly description: string;
   readonly status: SnagStatus;
   readonly evidenceRefs: readonly string[];
@@ -29,9 +30,12 @@ export function validateSnagItem(item: SnagItem): string | null {
   if (!item.snagRef.trim()) {
     return "Snag reference is required.";
   }
+  if (item.title !== undefined && item.title.trim().length === 0) {
+    return "Snag title is required.";
+  }
   const description = item.description.trim();
-  if (description.length < 5) {
-    return "Snag description must be at least 5 characters.";
+  if (description.length < 8) {
+    return "Snag description must be at least 8 characters.";
   }
   if (description.length > 2000) {
     return "Snag description exceeds maximum length.";

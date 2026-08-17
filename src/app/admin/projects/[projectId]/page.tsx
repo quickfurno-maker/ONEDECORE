@@ -12,9 +12,17 @@ import {
   getProjectDesignHighLevelStatus,
   getProjectDesignWorkspace,
 } from "@/features/projects/server/project-design-queries";
+import {
+  getProjectExecutionHighLevelStatus,
+  getProjectExecutionWorkspace,
+} from "@/features/projects/server/project-execution-queries";
 import { buildHandoverDisplayModel } from "@/features/projects/handover/ui/build-handover-display-model";
 import { ProjectHandoverWorkspace } from "@/features/projects/components/handover/ProjectHandoverWorkspace";
 import { ProjectDesignWorkspace } from "@/features/projects/components/design/ProjectDesignWorkspace";
+import {
+  LiveProjectExecutionWorkspace,
+  ProjectExecutionHighLevelCard,
+} from "@/features/projects/components/execution/LiveProjectExecutionWorkspace";
 
 interface AdminProjectDetailPageProps {
   params: Promise<{ projectId: string }>;
@@ -53,6 +61,16 @@ export default async function AdminProjectDetailPage({
       : null;
   const highLevelDesign =
     highLevelOnly ? await getProjectDesignHighLevelStatus(projectId) : null;
+  const executionWorkspace =
+    !highLevelOnly &&
+    (role === "super_admin" || role === "sales_manager" || role === "project_manager") &&
+    detail.status === "handover_accepted"
+      ? await getProjectExecutionWorkspace(projectId)
+      : null;
+  const executionHighLevel =
+    (highLevelOnly || role === "designer") && detail.status === "handover_accepted"
+      ? await getProjectExecutionHighLevelStatus(projectId)
+      : null;
 
   if (role === "designer" && !designWorkspace) {
     notFound();
@@ -87,7 +105,7 @@ export default async function AdminProjectDetailPage({
       <div>
         <h1 className="text-2xl font-bold text-neutral-100">{detail.projectNumber}</h1>
         <p className="mt-1 text-xs text-neutral-400">
-          Phase 8A handover plus Phase 8B design collaboration. Execution controls are not mounted.
+          Phase 8A handover, Phase 8B design, and Phase 8C execution after Design Completed.
         </p>
       </div>
       <ProjectHandoverWorkspace
@@ -127,6 +145,20 @@ export default async function AdminProjectDetailPage({
           actorProfileId={session.userId}
           actorRole={role}
           isAssignedPrimaryPm={detail.primaryPmId === session.userId}
+        />
+      ) : null}
+      {executionWorkspace ? (
+        <LiveProjectExecutionWorkspace
+          workspace={executionWorkspace}
+          mode={role === "project_manager" ? "pm" : "manager"}
+        />
+      ) : null}
+      {executionHighLevel ? (
+        <ProjectExecutionHighLevelCard
+          projectNumber={executionHighLevel.projectNumber}
+          initializationStatus={executionHighLevel.initializationStatus}
+          executionState={executionHighLevel.executionState}
+          updatedAt={executionHighLevel.updatedAt}
         />
       ) : null}
     </div>

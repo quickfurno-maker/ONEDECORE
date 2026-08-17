@@ -17,15 +17,11 @@ import {
 export const EXECUTION_TRANSITIONS_REQUIRING_EVIDENCE: Readonly<
   Partial<Record<ExecutionMainPathState, readonly string[]>>
 > = {
-  site_measurement: ["stage_transition"],
-  design_approval: ["client_approval", "stage_transition"],
-  material_finalisation: ["stage_transition"],
-  ready_for_dispatch: ["production_ready", "stage_transition"],
+  ready_for_dispatch: ["stage_transition"],
   delivery: ["stage_transition"],
   installation: ["stage_transition"],
-  snag_resolution: ["snag_resolution", "stage_transition"],
-  handover: ["handover_acknowledgement", "stage_transition"],
-  completed: ["completion_acknowledgement", "stage_transition"],
+  handover: ["handover_acknowledgement"],
+  completed: ["completion_acknowledgement"],
 };
 
 export interface ExecutionTransitionRequest {
@@ -58,11 +54,7 @@ function canEnterHold(fromState: ExecutionState): boolean {
 }
 
 function canCancel(fromState: ExecutionState): boolean {
-  return !isTerminalExecutionState(fromState) && fromState !== "on_hold";
-}
-
-function canCancelFromHold(): boolean {
-  return true;
+  return !isTerminalExecutionState(fromState);
 }
 
 function validateEvidence(
@@ -116,12 +108,12 @@ export function canTransitionExecutionState(
       };
     }
     const reason = options.reason?.trim() ?? "";
-    if (reason.length < 10) {
+    if (reason.length < 10 || reason.length > 1000) {
       return {
         allowed: false,
         error: createProjectStageTransitionError(
           "PROJECT_MISSING_REASON",
-          "On hold requires a reason of at least 10 characters."
+          "On hold requires a reason of 10 to 1000 characters."
         ),
       };
     }
@@ -129,8 +121,7 @@ export function canTransitionExecutionState(
   }
 
   if (toState === "cancelled") {
-    const permitted =
-      fromState === "on_hold" ? canCancelFromHold() : canCancel(fromState);
+    const permitted = canCancel(fromState);
     if (!permitted) {
       return {
         allowed: false,
@@ -222,7 +213,7 @@ export function getAllowedExecutionTransitions(
   }
 
   if (fromState === "on_hold") {
-    return [];
+    return ["cancelled"];
   }
 
   const allowed: ExecutionState[] = [];

@@ -1,0 +1,163 @@
+# Phase 8C M30 — Project Execution Workspace Implementation
+
+**Date:** 2026-08-17  
+**Branch:** `phase-8c-m30-project-execution-workspace`  
+**Base main:** `5b4a7f300e63b438884a2b440a69a569d91b9e5d` (PR #60 true merge; post-merge CI `31997689617` SUCCESS)  
+**Architecture:** ADR-0026 / DEC-0075 / OD8C-1–OD8C-12  
+**Implementation decision:** DEC-0076  
+**Gate:** managed apply certified — **managed M30 APPLIED**; **PR #61 OPEN / NOT MERGED**; **no production activation**; **Phase 9 not started**
+
+---
+
+## 1. Preflight
+
+- Local HEAD at branch creation = `origin/main` = `5b4a7f300e63b438884a2b440a69a569d91b9e5d`
+- Divergence `0/0`; tracked tree clean; historical stash untouched
+- Repository before this gate: M1–M29; M30 absent
+- Managed OneDecore `lpurlfmpvriyvpkujvyl`: M1–M29; pending NONE
+- CLI pin: `npx supabase@2.109.1`
+
+## 2. Collision / live-schema audit
+
+| Finding | Action |
+|---|---|
+| M28 projects / PM assignments / `project_events` / project idempotency | Reused; no second ledgers |
+| M29 design workflows / designer assignments / `complete_project_design` | Unchanged (byte-identical M29) |
+| No `project_execution_workflows` / snags / evidence | Created in M30 only |
+| No `project-execution-documents` bucket | Created private in M30; zero `storage.objects` |
+| No `project_execution.*` permissions | Five codes; no `.manage`; no designer/SE/legacy grants |
+| Phase 8C prebuild at `src/features/projects/execution/*` | Corrected to post-design graph; client preview remains unmounted |
+| `/admin/projects/[projectId]` | Minimum live execution workspace + high-level cards |
+
+## 3. M30
+
+**File:** `supabase/migrations/20260817140000_project_execution_workspace.sql`
+
+**Canonical Git blob (post-correction, never managed-applied):** `5dd62f085837ba93db7d780ccdd76fd650fd1afd`
+
+**Canonical raw SHA-256:** `5BB9364C4A391B47306B1FBB5E159F50F6E195C950EB25AC8F0E44105D005FAD`
+
+**PRE-CORRECTION / NEVER MANAGED-APPLIED Git blob:** `faa814d69f0768a4251e2b41fedbf517abc9f2bb`
+
+**PRE-CORRECTION / NEVER MANAGED-APPLIED raw SHA-256:** `74F3C658A9062D38D39D5D824D30D70A64933077B4E351E2ACB1D0690959AF5D`
+
+Forward-only. No M1–M29 edits. No business/project/execution seed rows. System RBAC metadata + one private bucket metadata row only.
+
+Permissions:
+
+- `project_execution.read` — super_admin, sales_manager, project_manager
+- `project_execution.transition` — project_manager
+- `project_execution.hold` — project_manager
+- `project_execution.snag` — project_manager
+- `project_execution.cancel` — super_admin, sales_manager, project_manager
+
+Tables: `project_execution_workflows`, `project_execution_snags`, `project_execution_evidence`.
+
+States: `production`, `ready_for_dispatch`, `delivery`, `installation`, `snag_resolution`, `handover`, `completed`, `on_hold`, `cancelled`. No duplicate Phase 8B states. No `material_finalisation`.
+
+## 4. Auto-init failure semantics
+
+- M30 AFTER UPDATE trigger on `project_design_workflows` when state first becomes `design_completed`
+- Calls `private.materialize_project_execution_impl(..., actor_kind=system, key=exec-init-<project_id>)`
+- Requires `projects.status = handover_accepted` AND `design.state = design_completed`
+- Production Ready does not initialize
+- Handover acceptance alone does not initialize
+- Trigger **catches** initializer failure and does **not** re-raise; Design Completed is preserved
+- Bounded `project.execution_init_failed` event after catch stores only `{"reason_code":"EXECUTION_INITIALIZATION_FAILED"}` (no SQLERRM)
+- Existing row is idempotent reuse; initial state `production`
+
+## 5. Repair
+
+`public.repair_project_execution_workflow` — Super Admin or Sales Manager only; staff actor; same canonical materializer. Recovery, not routine stage control.
+
+## 6. RLS / ACL
+
+- RLS SELECT for SA, SM, current PM (`primary_pm_id = auth.uid()`)
+- No authenticated INSERT/UPDATE/DELETE policies
+- Direct auth storage write denied
+- Private helpers EXECUTE denied except `private.project_execution_can_view_detail` (RLS predicate)
+- Public mutations authenticated only; anon denied
+- SECURITY DEFINER `search_path=''`
+
+## 7. Evidence / storage / preauth
+
+- Types: `stage_transition`, `snag_resolution`, `handover_acknowledgement`, `completion_acknowledgement`
+- Uploaded path `projects/<id>/execution/evidence/%`; SHA64; ≤20MiB; PDF/JPEG/PNG/WebP; object existence required
+- Server: preauth RPC → validate/hash → service-role upload (`upsert:false`) → mutation RPC → orphan cleanup
+- Signed URL 900s by evidence id (not raw path); `source_type='uploaded_artifact'` plus exact `projects/<projectId>/execution/evidence/` prefix and no `..`
+
+## 8. PM continuity
+
+Mutation requires current canonical PM and `handover_accepted`. Reassignment preserves workflow/state/evidence/snags; no reset; no auto-hold.
+
+## 9. UI
+
+Mounted on existing `/admin/projects/[projectId]`:
+
+- SA/SM: detailed read, cancel, repair missing init
+- Current PM: full workspace
+- Assigned Lead/Supporting + own SE: high-level card only (assigned Designer also requires `profiles.status='active'` and an active canonical `designer` role)
+- Client update preview unmounted
+
+## 10. Tests / managed / production
+
+- pgTAP `22_project_execution_workspace_test.sql`
+- App: `phase-8c-execution.test.ts` + `phase-8c-m30-runtime.test.ts`
+- Repository M1–M30; managed **M1–M30**; pending **NONE**; M30 immutable
+- Phase 9 persistence/UI absent
+- Production activation NONE
+- PR #61 remains OPEN / NOT MERGED
+
+## 11. PRE-MANAGED-APPLY INDEPENDENT REVIEW CORRECTION
+
+**Starting HEAD:** `d32682229dc5be79cb1ceccd4b627deba82f6df6`
+
+**Same PR:** #61 (`phase-8c-m30-project-execution-workspace`)
+
+**M30 never managed-applied; M31 not created; M1–M29 untouched.**
+
+Independent review found one terminal-state defect and three hardening gaps. Because M30 was unapplied, corrections were made **in place** on the same branch/PR.
+
+| Defect | Correction |
+|---|---|
+| A — snag create/start/resolve/`can_resolve` after `completed`/`cancelled` | `private.project_execution_allows_snag_mutation`; lock workflow; reject terminal before INSERT/update/evidence; preauth FALSE so service-role upload does not run |
+| B — inactive assigned Designer high-level | `private.project_execution_is_assigned_designer` requires current assignment, `profiles.status='active'`, active canonical `designer` role |
+| C — signed evidence readback | Sign DB-resolved path only when `uploaded_artifact`, exact project prefix, no `..` |
+| D — hold reason bound | Trim length 10..1000 at constraint, RPC, app/UI |
+| E — init failure payload | Persist `{"reason_code":"EXECUTION_INITIALIZATION_FAILED"}` only; no SQLERRM |
+
+Tests: pgTAP 22 completed/cancelled snag denials, inactive Designer high-level, hold 10/1000/1001/trim, init-failed safe reason code; app path-guard and preauth-before-upload proofs.
+
+**Canonical fingerprint for managed apply** is the post-correction blob/SHA above. The pre-correction fingerprint is historical only and was **never managed-applied**.
+
+Truth at this gate (pre-apply): PR #61 open / not merged; repository M1–M30; managed M1–M29; pending M30 only; M31 absent; Phase 9 not started; production none. Next was recovery managed apply.
+
+## 12. MANAGED APPLY CERTIFICATION (2026-08-17)
+
+- Recovery package (outside repository): `C:\Users\KESHAV SHARMA\Desktop\ONEDECORE_RECOVERY\M30_PREAPPLY_20260817T074029Z\`
+- Fresh physical backup: `1393334013` COMPLETED `2026-08-16T19:54:08.579Z` (`is_physical_backup=true`); not reused M29 backup `1384020355`
+- WALG: enabled; PITR: **disabled**
+- CLI: `npx supabase@2.109.1`
+- Method: `db push --linked --yes` (non-fatal pg-delta catalog cache warning only)
+- Apply start UTC: `2026-08-17T07:44:29Z`
+- Apply end UTC: `2026-08-17T07:44:36Z`
+- Pre-apply managed: M1–M29; pending M30 only; execution tables/bucket ABSENT; Phase 8 business/design rows 0; `design_completed` 0
+- Post-apply managed: M1–M30; pending NONE; latest `20260817140000`; exactly one M30 history row; M31 absent
+- Immutable M30 fingerprint unchanged: blob `5dd62f085837ba93db7d780ccdd76fd650fd1afd`; SHA-256 `5BB9364C4A391B47306B1FBB5E159F50F6E195C950EB25AC8F0E44105D005FAD`
+- Schema: execution workflows/snags/evidence present; post-design state set only; no `project_created` / 8B-duplicate / `material_finalisation`; `projects.status` and M29 design workflow unchanged
+- RLS: all three execution tables enabled; authenticated SELECT only; INSERT/UPDATE/DELETE denied; anon denied
+- RBAC metadata only: five `project_execution.*` permissions; READ SA/SM/PM; TRANSITION/HOLD/SNAG PM only; CANCEL SA/SM/PM; no designer/SE/legacy grants
+- Private helpers EXECUTE denied except documented RLS helper `private.project_execution_can_view_detail`; trigger/materializer denied; anon staff RPC denied; SECURITY DEFINER `search_path=''`
+- Correction definitions certified live: terminal snag helper/create/start/can_resolve/resolve; active assigned Designer; hold trim 10..1000; init-failed `EXECUTION_INITIALIZATION_FAILED` without SQLERRM; uploaded evidence path/object/SHA64/20MiB/MIME
+- Advisor baseline: 63 WARN / 0 INFO / 0 ERROR
+- Advisor post: 79 WARN / 0 INFO / 0 ERROR
+- New findings: 16 intentional `authenticated_security_definer_function_executable` notices for Phase 8C public RPCs
+- M30-specific blockers: **NONE**
+- Private bucket `project-execution-documents` created (`public=false`)
+- Migration-created `storage.objects`: **0**
+- Migration-created execution business rows / events / idempotency: **0**
+- Data write: RBAC metadata only (`permissions` / `role_permissions`)
+- Storage classification: `MANAGED_STORAGE_BUCKET_METADATA_WRITE=PROJECT_EXECUTION_DOCUMENTS_PRIVATE_ONLY`; `MANAGED_STORAGE_OBJECT_WRITE=NONE`
+- Local post-apply: Phase8C-specific 38; test:phase-8c 49; P0 11; 8A 48; 8B 44; shell 2; 7A 42; 7B 62; app 743; DB 1258; lint 0 errors / 11 warnings; typecheck PASS; build PASS
+- Phase 9 not started. Production none. PR #61 remains OPEN / NOT MERGED.
+- Next = `PHASE_8C_PR61_MERGE`

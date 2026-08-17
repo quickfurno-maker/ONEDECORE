@@ -33,8 +33,8 @@ export function ProjectHoldPanel({
 
   async function enterHold() {
     if (pending || readOnly) return;
-    if (humanNote.trim().length < 10) {
-      setMessage("Hold note must be at least 10 characters.");
+    if (humanNote.trim().length < 10 || humanNote.trim().length > 1000) {
+      setMessage("Hold note must be between 10 and 1000 characters.");
       return;
     }
     setPending(true);
@@ -109,6 +109,7 @@ export function ProjectHoldPanel({
               value={humanNote}
               onChange={(event) => setHumanNote(event.target.value)}
               aria-label="Hold human note"
+              maxLength={1000}
               disabled={readOnly || pending}
             />
           </label>

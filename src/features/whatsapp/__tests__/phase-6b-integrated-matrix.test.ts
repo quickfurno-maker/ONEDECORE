@@ -93,11 +93,11 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(m23Blob, FROZEN_HASHES.M23_GIT_BLOB);
   });
 
-  test("repository has M1–M28 baseline, M29 design collaboration foundation, and fail-closed against M30+", () => {
+  test("repository has M1–M29 baseline, M30 execution workspace, and fail-closed against M31+", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 29, "Migration count must be exactly 29");
+    assert.equal(files.length, 30, "Migration count must be exactly 30");
 
     const phase6c = files.filter((f) => f.startsWith("20260809"));
     assert.equal(phase6c.length, 1);
@@ -138,8 +138,12 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(phase8b_m29.length, 1);
     assert.equal(phase8b_m29[0], "20260816140000_designer_assignment_design_collaboration.sql");
 
-    const m29Plus = files.filter((f) => f > "20260816140000_designer_assignment_design_collaboration.sql");
-    assert.equal(m29Plus.length, 0, "No M30+ migration files allowed");
+    const phase8c_m30 = files.filter((f) => f.startsWith("20260817"));
+    assert.equal(phase8c_m30.length, 1);
+    assert.equal(phase8c_m30[0], "20260817140000_project_execution_workspace.sql");
+
+    const m30Plus = files.filter((f) => f > "20260817140000_project_execution_workspace.sql");
+    assert.equal(m30Plus.length, 0, "No M31+ migration files allowed");
   });
 });
 

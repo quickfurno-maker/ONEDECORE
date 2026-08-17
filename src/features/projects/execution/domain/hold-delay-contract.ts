@@ -32,8 +32,9 @@ export function validateExecutionHoldRecord(record: ExecutionHoldRecord): string
   if (!record.holdId.trim()) {
     return "Hold id is required.";
   }
-  if (record.humanNote.trim().length < 10) {
-    return "Hold note must be at least 10 characters.";
+  const holdNote = record.humanNote.trim();
+  if (holdNote.length < 10 || holdNote.length > 1000) {
+    return "Hold note must be between 10 and 1000 characters.";
   }
   if (record.enteredFromState !== record.resumeTarget) {
     return "Resume target must match the state entered from.";

@@ -58,18 +58,25 @@ import {
 const root = process.cwd();
 
 describe("Phase 8C execution main path", () => {
-  test("walks full ADR-0020 execution sequence", () => {
+  test("walks ADR-0026 post-design execution sequence", () => {
     assert.deepEqual(walkMainExecutionPath(), EXECUTION_MAIN_PATH_STATES);
-    assert.equal(EXECUTION_MAIN_PATH_STATES.length, 12);
-    assert.equal(EXECUTION_MAIN_PATH_STATES[0], "project_created");
+    assert.equal(EXECUTION_MAIN_PATH_STATES.length, 7);
+    assert.equal(EXECUTION_MAIN_PATH_STATES[0], "production");
     assert.equal(EXECUTION_MAIN_PATH_STATES.at(-1), "completed");
+    assert.equal(EXECUTION_MAIN_PATH_STATES.includes("project_created" as never), false);
+    assert.equal(EXECUTION_MAIN_PATH_STATES.includes("material_finalisation" as never), false);
   });
 
   test("allows adjacent forward transitions with evidence when required", () => {
     let state: ExecutionState = EXECUTION_MAIN_PATH_STATES[0];
     for (let index = 1; index < EXECUTION_MAIN_PATH_STATES.length; index += 1) {
       const next = EXECUTION_MAIN_PATH_STATES[index];
-      const needsEvidence = next !== "design_development" && next !== "production";
+      const needsEvidence =
+        next === "ready_for_dispatch" ||
+        next === "delivery" ||
+        next === "installation" ||
+        next === "handover" ||
+        next === "completed";
       const result = canTransitionExecutionState(state, next, {
         evidenceRefs: needsEvidence ? ["ev-test"] : [],
       });
@@ -79,7 +86,7 @@ describe("Phase 8C execution main path", () => {
   });
 
   test("denies invalid skip transitions", () => {
-    const result = canTransitionExecutionState("project_created", "production");
+    const result = canTransitionExecutionState("production", "installation");
     assert.equal(result.allowed, false);
     assert.equal(result.error?.code, "PROJECT_INVALID_TRANSITION");
   });
@@ -106,6 +113,17 @@ describe("Phase 8C hold and cancel branches", () => {
       reason: "Client requested pause pending kitchen layout confirmation.",
     });
     assert.equal(allowed.allowed, true);
+
+    const maxAllowed = canTransitionExecutionState("production", "on_hold", {
+      reason: "x".repeat(1000),
+    });
+    assert.equal(maxAllowed.allowed, true);
+
+    const overMax = canTransitionExecutionState("production", "on_hold", {
+      reason: "x".repeat(1001),
+    });
+    assert.equal(overMax.allowed, false);
+    assert.equal(overMax.error?.code, "PROJECT_MISSING_REASON");
 
     const completedHold = canTransitionExecutionState("completed", "on_hold", {
       reason: "Attempting to hold after completion.",
@@ -155,6 +173,14 @@ describe("Phase 8C hold and cancel branches", () => {
       actorCanUpdateExecution: true,
     });
     assert.equal(validateExecutionHoldRecord(record), null);
+    assert.equal(
+      validateExecutionHoldRecord({ ...record, humanNote: "x".repeat(1000) }),
+      null
+    );
+    assert.equal(
+      validateExecutionHoldRecord({ ...record, humanNote: "x".repeat(1001) }),
+      "Hold note must be between 10 and 1000 characters."
+    );
   });
 });
 
@@ -189,13 +215,23 @@ describe("Phase 8C PM execution authority", () => {
     assert.equal(deniesPmExecutionControlForSalesExecutive(context), true);
   });
 
-  test("designer has no execution control", () => {
+  test("designer has high-level visibility and no execution control", () => {
     const context = {
       actor: buildLeadDesignerActor(),
       handoverState: handoverAccepted,
     };
     assert.equal(canActorUpdateExecutionStages(context), false);
+    assert.equal(resolveExecutionWorkspaceAccess(context), "high_level");
     assert.equal(deniesPmExecutionControlForDesigner(context), true);
+  });
+
+  test("PM denied before design completed", () => {
+    const context = {
+      actor: buildAssignedPmActor(),
+      handoverState: handoverAccepted,
+      designCompleted: false,
+    };
+    assert.equal(canActorUpdateExecutionStages(context), false);
   });
 
   test("PM denied before handover acceptance", () => {
@@ -295,7 +331,7 @@ describe("Phase 8C synthetic fixtures", () => {
   });
 
   test("next main path helper is sequential", () => {
-    assert.equal(getNextMainPathState("project_created"), "site_measurement");
+    assert.equal(getNextMainPathState("production"), "ready_for_dispatch");
     assert.equal(getNextMainPathState("completed"), null);
   });
 });
@@ -334,6 +370,7 @@ describe("Phase 8C UI component contracts", () => {
     assert.match(src, /EXECUTION_HOLD_REASON_CODES/);
     assert.match(src, /Resume execution/);
     assert.match(src, /aria-label="Hold reason code"/);
+    assert.match(src, /maxLength=\{1000\}/);
   });
 
   test("snag list resolves via callback with evidence", () => {

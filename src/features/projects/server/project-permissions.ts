@@ -9,6 +9,8 @@ export interface ProjectPermissionProbeResult {
   readonly canAcceptHandover: boolean;
   readonly canReadDesign: boolean;
   readonly canStaffDesigners: boolean;
+  readonly canReadExecution: boolean;
+  readonly canCancelExecution: boolean;
   readonly isSuperAdmin: boolean;
   readonly isSalesManager: boolean;
   readonly isSalesExecutive: boolean;
@@ -18,13 +20,15 @@ export interface ProjectPermissionProbeResult {
 
 export async function probeProjectPermissions(): Promise<ProjectPermissionProbeResult> {
   const supabase = await createClient();
-  const [readRes, assignRes, acceptRes, designRead, designStaff, sa, sm, se, pm, designer] =
+  const [readRes, assignRes, acceptRes, designRead, designStaff, executionRead, executionCancel, sa, sm, se, pm, designer] =
     await Promise.all([
       supabase.rpc("authorize", { requested_permission: "projects.read" }),
       supabase.rpc("authorize", { requested_permission: "projects.assign_pm" }),
       supabase.rpc("authorize", { requested_permission: "projects.accept_handover" }),
       supabase.rpc("authorize", { requested_permission: "project_design.read" }),
       supabase.rpc("authorize", { requested_permission: "project_design.staff" }),
+      supabase.rpc("authorize", { requested_permission: "project_execution.read" }),
+      supabase.rpc("authorize", { requested_permission: "project_execution.cancel" }),
       supabase.rpc("has_active_role", { p_role_code: "super_admin" }),
       supabase.rpc("has_active_role", { p_role_code: "sales_manager" }),
       supabase.rpc("has_active_role", { p_role_code: "sales_executive" }),
@@ -38,6 +42,8 @@ export async function probeProjectPermissions(): Promise<ProjectPermissionProbeR
     canAcceptHandover: !acceptRes.error && acceptRes.data === true,
     canReadDesign: !designRead.error && designRead.data === true,
     canStaffDesigners: !designStaff.error && designStaff.data === true,
+    canReadExecution: !executionRead.error && executionRead.data === true,
+    canCancelExecution: !executionCancel.error && executionCancel.data === true,
     isSuperAdmin: !sa.error && sa.data === true,
     isSalesManager: !sm.error && sm.data === true,
     isSalesExecutive: !se.error && se.data === true,
