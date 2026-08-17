@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 8C M30 repository implementation, August 17, 2026)
-**Current Phase:** Phase 8C — Project Execution Workspace (**ARCHITECTURE COMPLETE_FROZEN**; repository implementation **COMPLETE_CORRECTED**; M30 **NOT** managed-applied)
-**Next Phase:** `PHASE_8C_M30_RECOVERY_MANAGED_APPLY`
+**Document Status:** Locked Roadmap (truth-synced post Phase 8C M30 managed apply, August 17, 2026)
+**Current Phase:** Phase 8C — Project Execution Workspace (**ARCHITECTURE COMPLETE_FROZEN**; repository implementation **COMPLETE_CORRECTED**; managed DB **CERTIFIED_M1_M30**; PR #61 **OPEN_NOT_MERGED**)
+**Next Phase:** `PHASE_8C_PR61_MERGE`
 **Previous Phase:** Phase 8B — Designer Assignment & Design Collaboration (**COMPLETE** — PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`; production **not** activated)
 
 ---
@@ -86,7 +86,7 @@ Phase 8A: Closed-Won Project Conversion & PM Handover ────────�
 Phase 8B: Designer Assignment & Design Collaboration ─────────────── COMPLETE
   • OD8B-1–OD8B-8 locked; PR #59 merged `6b31052…`; repository/managed M1–M29; pending NONE; M30 absent
 Phase 8C: Project Execution Workspace ────────────────────────────── ARCHITECTURE COMPLETE_FROZEN / REPOSITORY IMPLEMENTATION COMPLETE
-  • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; PR #60 merged; M30 in repository; managed M30 not applied; production not activated
+  • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; PR #60 merged; M30 managed-applied; PR #61 open / not merged; production not activated
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -150,7 +150,7 @@ Phase 8B ──► Designer Assignment & Design Collaboration [COMPLETE]
     │         • OD8B-1–OD8B-8 / ADR-0025 / DEC-0074; PR #59 merged; separate design state
     ▼
 Phase 8C ──► Project Execution Workspace [ARCHITECTURE COMPLETE_FROZEN; REPO IMPLEMENTATION COMPLETE]
-    │         • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; M30 repo-only; managed M1–M29
+    │         • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; managed M1–M30; PR #61 open
     ▼
 Phase 9A ──► Campaign Consent, Audience & Approval Foundation
     ▼
@@ -261,9 +261,9 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Architecture freeze:** [Phase 8C freeze](audits/phase-8c-project-execution-workspace-architecture-freeze.md), [ADR-0026](ADR/ADR-0026-phase-8c-project-execution-workspace.md), DEC-0075.
 - **Implementation:** [Phase 8C M30 implementation](audits/phase-8c-m30-project-execution-workspace-implementation.md), DEC-0076.
 - **Owner locks:** OD8C-1–OD8C-12 **as recommended**, with the three refinements (M29-only design truth; entry = handover_accepted + design_completed with auto-create at `production`; no persisted `material_finalisation`).
-- **Exit gate (next):** `PHASE_8C_M30_RECOVERY_MANAGED_APPLY`. Do not merge this implementation PR in this gate.
+- **Exit gate (next):** `PHASE_8C_PR61_MERGE`. Do not merge in the managed-apply gate.
 - **Dependencies:** 8B complete (PR #59 merged); architecture PR #60 merged `5b4a7f300e63b438884a2b440a69a569d91b9e5d`.
-- **Status:** **CURRENT FORMAL PHASE** — architecture COMPLETE_FROZEN; repository M1–M30; managed M1–M29; M30 unapplied; production not activated.
+- **Status:** **CURRENT FORMAL PHASE** — architecture COMPLETE_FROZEN; repository/managed **M1–M30**; pending **NONE**; M30 immutable; PR #61 OPEN_NOT_MERGED; production not activated.
 
 ### Phase 9B (Landing Page Lab)
 - **Status:** Owner-approved roadmap placement; **not implemented** (no routes/schema/integrations).

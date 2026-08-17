@@ -5,7 +5,7 @@
 **Base main:** `5b4a7f300e63b438884a2b440a69a569d91b9e5d` (PR #60 true merge; post-merge CI `31997689617` SUCCESS)  
 **Architecture:** ADR-0026 / DEC-0075 / OD8C-1–OD8C-12  
 **Implementation decision:** DEC-0076  
-**Gate:** repository implementation only — **M30 NOT managed-applied**; **PR OPEN / NOT MERGED**; **no production activation**; **Phase 9 not started**
+**Gate:** managed apply certified — **managed M30 APPLIED**; **PR #61 OPEN / NOT MERGED**; **no production activation**; **Phase 9 not started**
 
 ---
 
@@ -103,9 +103,10 @@ Mounted on existing `/admin/projects/[projectId]`:
 
 - pgTAP `22_project_execution_workspace_test.sql`
 - App: `phase-8c-execution.test.ts` + `phase-8c-m30-runtime.test.ts`
-- Repository M1–M30; managed remains M1–M29; M30 pending only
+- Repository M1–M30; managed **M1–M30**; pending **NONE**; M30 immutable
 - Phase 9 persistence/UI absent
 - Production activation NONE
+- PR #61 remains OPEN / NOT MERGED
 
 ## 11. PRE-MANAGED-APPLY INDEPENDENT REVIEW CORRECTION
 
@@ -129,4 +130,34 @@ Tests: pgTAP 22 completed/cancelled snag denials, inactive Designer high-level, 
 
 **Canonical fingerprint for managed apply** is the post-correction blob/SHA above. The pre-correction fingerprint is historical only and was **never managed-applied**.
 
-Truth at this gate: PR #61 open / not merged; repository M1–M30; managed M1–M29; pending M30 only; M31 absent; Phase 9 not started; production none. Next = recovery managed apply.
+Truth at this gate (pre-apply): PR #61 open / not merged; repository M1–M30; managed M1–M29; pending M30 only; M31 absent; Phase 9 not started; production none. Next was recovery managed apply.
+
+## 12. MANAGED APPLY CERTIFICATION (2026-08-17)
+
+- Recovery package (outside repository): `C:\Users\KESHAV SHARMA\Desktop\ONEDECORE_RECOVERY\M30_PREAPPLY_20260817T074029Z\`
+- Fresh physical backup: `1393334013` COMPLETED `2026-08-16T19:54:08.579Z` (`is_physical_backup=true`); not reused M29 backup `1384020355`
+- WALG: enabled; PITR: **disabled**
+- CLI: `npx supabase@2.109.1`
+- Method: `db push --linked --yes` (non-fatal pg-delta catalog cache warning only)
+- Apply start UTC: `2026-08-17T07:44:29Z`
+- Apply end UTC: `2026-08-17T07:44:36Z`
+- Pre-apply managed: M1–M29; pending M30 only; execution tables/bucket ABSENT; Phase 8 business/design rows 0; `design_completed` 0
+- Post-apply managed: M1–M30; pending NONE; latest `20260817140000`; exactly one M30 history row; M31 absent
+- Immutable M30 fingerprint unchanged: blob `5dd62f085837ba93db7d780ccdd76fd650fd1afd`; SHA-256 `5BB9364C4A391B47306B1FBB5E159F50F6E195C950EB25AC8F0E44105D005FAD`
+- Schema: execution workflows/snags/evidence present; post-design state set only; no `project_created` / 8B-duplicate / `material_finalisation`; `projects.status` and M29 design workflow unchanged
+- RLS: all three execution tables enabled; authenticated SELECT only; INSERT/UPDATE/DELETE denied; anon denied
+- RBAC metadata only: five `project_execution.*` permissions; READ SA/SM/PM; TRANSITION/HOLD/SNAG PM only; CANCEL SA/SM/PM; no designer/SE/legacy grants
+- Private helpers EXECUTE denied except documented RLS helper `private.project_execution_can_view_detail`; trigger/materializer denied; anon staff RPC denied; SECURITY DEFINER `search_path=''`
+- Correction definitions certified live: terminal snag helper/create/start/can_resolve/resolve; active assigned Designer; hold trim 10..1000; init-failed `EXECUTION_INITIALIZATION_FAILED` without SQLERRM; uploaded evidence path/object/SHA64/20MiB/MIME
+- Advisor baseline: 63 WARN / 0 INFO / 0 ERROR
+- Advisor post: 79 WARN / 0 INFO / 0 ERROR
+- New findings: 16 intentional `authenticated_security_definer_function_executable` notices for Phase 8C public RPCs
+- M30-specific blockers: **NONE**
+- Private bucket `project-execution-documents` created (`public=false`)
+- Migration-created `storage.objects`: **0**
+- Migration-created execution business rows / events / idempotency: **0**
+- Data write: RBAC metadata only (`permissions` / `role_permissions`)
+- Storage classification: `MANAGED_STORAGE_BUCKET_METADATA_WRITE=PROJECT_EXECUTION_DOCUMENTS_PRIVATE_ONLY`; `MANAGED_STORAGE_OBJECT_WRITE=NONE`
+- Local post-apply: Phase8C-specific 38; test:phase-8c 49; P0 11; 8A 48; 8B 44; shell 2; 7A 42; 7B 62; app 743; DB 1258; lint 0 errors / 11 warnings; typecheck PASS; build PASS
+- Phase 9 not started. Production none. PR #61 remains OPEN / NOT MERGED.
+- Next = `PHASE_8C_PR61_MERGE`
