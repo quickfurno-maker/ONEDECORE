@@ -1,14 +1,14 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced post Phase 8C M30 managed apply, August 17, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced post Phase 9A architecture freeze, August 17, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 8C — Project Execution Workspace (**ARCHITECTURE COMPLETE_FROZEN**; repository implementation **COMPLETE_CORRECTED**; managed DB **CERTIFIED_M1_M30**; PR #61 **OPEN_NOT_MERGED**)
-**Next Phase:** `PHASE_8C_PR61_MERGE`
-**Previous Phase:** Phase 8B — Designer Assignment & Design Collaboration (**COMPLETE** — PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`; repository/managed **M1–M29**; production **not** activated)
+**Current Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**ARCHITECTURE COMPLETE_FROZEN**; implementation **NOT_STARTED**; M31 **ABSENT**; architecture PR **OPEN_NOT_MERGED**)
+**Next Phase:** `PHASE_9A_ARCHITECTURE_PR_MERGE`
+**Previous Phase:** Phase 8C — Project Execution Workspace (**COMPLETE** — PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; repository/managed **M1–M30**; pending **NONE**; production **not** activated)
 
 ---
 
@@ -103,10 +103,10 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Quotation trigger EXECUTE privilege hardening (migration 27) | Applied managed August 14, 2026 (Phase 7B M27) |
 | Closed-Won project conversion & PM handover (migration 28) | Applied managed August 15, 2026 (Phase 8A M28); PR #57 **MERGED** `db879b5ca27fe9d26543c23d8f130811c7feadab` |
 | Designer assignment & design collaboration (migration 29) | Managed-applied 2026-08-16 (Phase 8B M29); PR #59 **MERGED** `6b31052973cf9e50e25803b232ce446308c1fa3a` |
-| Project execution workspace (migration 30) | Managed-applied 2026-08-17 (Phase 8C M30); PR #61 **OPEN / not merged** |
-| Migration alignment | Repository: **M1–M30**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M30**; pending **NONE**; M30 immutable |
+| Project execution workspace (migration 30) | Managed-applied 2026-08-17 (Phase 8C M30); PR #61 **MERGED** `8f4f3ecf082450e82ab15f02703c951e50f0817e` |
+| Migration alignment | Repository: **M1–M30**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M30**; pending **NONE**; M30 immutable; **M31 ABSENT** |
 
-CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed database (`lpurlfmpvriyvpkujvyl`) through **M27**. Phase 7B is **COMPLETE** (PR #55 merged). Phase 8A is **COMPLETE** (PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; managed **M1–M28**). Phase 8B is **COMPLETE** (OD8B-1–OD8B-8 / ADR-0025 / DEC-0073–DEC-0074; PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`; managed **M1–M29**). Phase 8C architecture is frozen (OD8C-1–OD8C-12 / ADR-0026 / DEC-0075; PR #60 merged `5b4a7f300e63b438884a2b440a69a569d91b9e5d`). Phase 8C repository implementation is complete/corrected (DEC-0076). Phase 8C managed DB is **CERTIFIED_M1_M30** (M30 applied 2026-08-17; PR #61 remains OPEN / not merged). **Production deployment pending** (Phase 10); **public intake remains inactive**.
+CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed database (`lpurlfmpvriyvpkujvyl`) through **M27**. Phase 7B is **COMPLETE** (PR #55 merged). Phase 8A is **COMPLETE** (PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; managed **M1–M28**). Phase 8B is **COMPLETE** (OD8B-1–OD8B-8 / ADR-0025 / DEC-0073–DEC-0074; PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`; managed **M1–M29**). Phase 8C is **COMPLETE** (OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; architecture PR #60 merged `5b4a7f300e63b438884a2b440a69a569d91b9e5d`; implementation PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; managed **M1–M30**). Phase 9A architecture is frozen (OD9A-1–OD9A-6 / ADR-0027 / DEC-0077); M31 **not created**; implementation **not started**. **Production deployment pending** (Phase 10); **public intake remains inactive**.
 
 ### Phase 5F truth
 
@@ -173,7 +173,7 @@ CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed
 
 ### Planned — not live
 
-WhatsApp shared inbox/outbound runtime (Phase 6B), quotations, project execution, designer workflows, marketing campaigns, Landing Page Lab (Phase 9B — roadmap-locked, not implemented), **public lead activation**, production deployment, **Meta production webhook/callback activation**.
+WhatsApp production outbound, public lead activation, production deployment, **Meta production webhook/callback activation**, Phase 9A campaign persistence (architecture frozen; M31 absent), Landing Page Lab (Phase 9B — not implemented), Phase 9C campaign execution.
 
 **Do not claim planned modules are live or production-deployed.**
 
@@ -216,4 +216,6 @@ WhatsApp shared inbox/outbound runtime (Phase 6B), quotations, project execution
 - [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0026: Phase 8C Project Execution Workspace](ADR/ADR-0026-phase-8c-project-execution-workspace.md)
+- [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
 - [Phase 8C Architecture Freeze](audits/phase-8c-project-execution-workspace-architecture-freeze.md)
+- [Phase 9A Architecture Freeze](audits/phase-9a-campaign-consent-audience-approval-architecture-freeze.md)

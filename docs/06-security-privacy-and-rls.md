@@ -1,6 +1,6 @@
 # 06 — SECURITY, PRIVACY AND ROW LEVEL SECURITY (RLS) POLICIES
 
-**Document Status:** Locked Security Baseline (reconciled Phase 5B, July 31, 2026)
+**Document Status:** Locked Security Baseline (truth-synced post Phase 9A architecture freeze, August 17, 2026)
 **RLS Target:** 100% Coverage on API-Exposed Application Tables
 **Default Access:** Anonymous Access Denied for Private Schemas
 
@@ -69,9 +69,9 @@ Following mandatory corrections in Phase 1B, RLS policies are applied to all API
 
 ## 4. Privacy & Consent Safeguards
 
-- **CRM consent authority:** `contacts`, `contact_channels`, and append-only `consent_events` are the sole consent store. Purpose codes include `SERVICE_ENQUIRY`, `SERVICE_COMMUNICATION`, `WHATSAPP_SERVICE`, and `MARKETING`. A service enquiry or inbound service-communication message is **not** `MARKETING` consent. DNC/suppression truth remains on CRM contact/channel records.
+- **CRM consent authority:** `contacts`, `contact_channels`, and append-only `consent_events` are the sole consent store. Purpose codes include `SERVICE_ENQUIRY`, `SERVICE_COMMUNICATION`, `WHATSAPP_SERVICE`, and `MARKETING`. A service enquiry or inbound service-communication message is **not** `MARKETING` consent. Global DNC is `contacts.status = 'do_not_contact'`. Channel suppression is `contact_channels.status = 'suppressed'`. `contact_suppressions` is **not** a Phase 9A table.
 - **Phase 6A (M18) boundary:** WhatsApp foundation tables store message/webhook audit data only. M18 does **not** create a parallel WhatsApp consent store, grant `MARKETING` consent, clear DNC, fabricate consent from inbound messages, or auto-create/link CRM contacts or leads.
-- **Public lead intake consent:** Opt-in consent logged with timestamp during controlled web form submission when intake is enabled (currently **inactive**). Opt-out request (`STOP`) must update CRM consent/suppression truth via governed flows — not inferred by M18 schema alone.
+- **Public lead intake consent:** Opt-in consent logged with timestamp during controlled web form submission when intake is enabled (currently **inactive**). Public MARKETING capture remains **OFF**. Opt-out request (`STOP`) must update CRM consent/suppression truth via governed flows — not inferred by M18 schema alone.
 - **PII Protection:** Customer names, phone numbers, and addresses masked in non-essential CRM administrative views.
 - **Audit Trails:** All sensitive mutations (role changes, discount overrides, lead status changes) logged to `system_audit_logs`.
 
@@ -129,7 +129,7 @@ The following security requirements are **locked in architecture** and must be e
 | No PM/Designer access before assignment | RLS denies until assignment row exists |
 | No silent assignment/state changes | All mutations via audited server actions/RPCs |
 | No hard-delete of business history | Soft-archive or append-only correction pattern |
-| Campaign eligibility | Consent + suppression check before recipient inclusion |
+| Campaign eligibility | Consent + DNC + channel suppression check; freeze **rules** not recipient PII (ADR-0027) |
 | AI isolation | No DB credentials to AI provider; structured output validation only |
 | Quotation executive scope (planned Phase 7) | RLS + RPC: Sales Executive read/create/edit/finalize/send only for `leads.assigned_to = auth.uid()` |
 | Quotation manager/admin scope (planned Phase 7) | Broad sales-scope finalize/send; Super Admin void/admin; **no `quotations.approve` permission** |
@@ -154,12 +154,21 @@ The following security requirements are **locked in architecture** and must be e
 - **No provider secrets in DB:** Meta access tokens and app secrets remain server environment configuration only.
 - **Activation boundary:** Managed schema only — no production Meta callback, outbound messaging, or n8n correctness dependency.
 
----
+## 10. Phase 9A Campaign Governance Security (Architecture freeze — **not implemented**; M31 **ABSENT**)
 
-## 8. Related Governance Documents
+- **Consent minimization:** Reuse append-only `consent_events` for MARKETING. No parallel marketing-consent table. No mutable current-consent truth table. Historical rows are never edited/deleted.
+- **No recipient PII snapshot** at approval. Audience artifact is a frozen rule version + hash. `broad_public` CRM PII export is **denied**. `direct_or_custom` requires current MARKETING grant; DNC and invalid/suppressed/archived target channels deny. Phase 9C rechecks before any later export/send.
+- **Staff MARKETING recording (future RPC):** Super Admin and Sales Manager only; `actor_type = 'staff'`; insert-only evidence; never fabricate. SE/PM/Designer denied.
+- **Campaign RBAC (conceptual):** `campaigns.read` / `draft` / `request_approval` / `approve` / `marketing_consents.manage`. No 9A execute/publish/schedule/pause/send. Super Admin may approve any pending version. Sales Manager **must not** approve own version at **database** authority. Legacy roles receive no automatic 9A grants. Kriti has no authoritative mutation/approval.
+- **Future RLS:** 100% on exposed campaign tables; direct authenticated DML denied; no browser service role; fail closed; no provider tokens in campaign rows.
+- **n8n** is not consent, approval, or campaign truth.
+- **Approval** has no provider side effect and creates no send intent, schedule, run, or recipient list.
+
+## 11. Related Governance Documents
 
 - [Supabase Data Domains](05-supabase-data-domains.md)
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
+- [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
 - [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
 - [ADR-0011: Portfolio Publication Model](ADR/ADR-0011-portfolio-publication-model.md)
 - [ADR-0012: Two-Bucket Media Architecture](ADR/ADR-0012-private-originals-public-derivatives.md)

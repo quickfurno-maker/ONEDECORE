@@ -1,9 +1,9 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (truth-synced post Phase 8C M30 repository implementation, August 17, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced post Phase 9A architecture freeze, August 17, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
-**Migrations Applied (Managed):** M1–M29 on OneDecore `lpurlfmpvriyvpkujvyl`. Repository includes M30 (`20260817140000_project_execution_workspace.sql`); M30 is **not** managed-applied.
+**Migrations Applied (Managed):** M1–M30 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. **M31 ABSENT.**
 
 ---
 
@@ -21,13 +21,13 @@
 ├─────────────────────────────────────────────────────────┤
 │ 5. Commercial Domain (quotations, versions, acceptance) │ PLANNED Phase 7
 ├─────────────────────────────────────────────────────────┤
-│ 6. Project & Design Domain (projects, milestones, design)  │ PLANNED Phase 8
+│ 6. Project & Design Domain (projects, design, execution)│ LIVE (M28–M30 managed)  │
 ├─────────────────────────────────────────────────────────┤
 │ 7. Communication Domain (WhatsApp foundation + Phase 6B inbox/send/dispatch managed) │ FOUNDATION MANAGED
 ├─────────────────────────────────────────────────────────┤
 │ 8. AI Copilot Domain (requests, suggestions, approvals) │ PLANNED Phase 6C
 ├─────────────────────────────────────────────────────────┤
-│ 9. Marketing Domain (campaigns, audiences, runs)          │ PLANNED Phase 9
+│ 9. Marketing Domain (campaigns, audiences, runs)          │ PLANNED Phase 9A+ (architecture frozen; not implemented)
 ├─────────────────────────────────────────────────────────┤
 │ 10. Operations Domain (import batches, audit, settings) │ PLANNED Phase 5D+
 └─────────────────────────────────────────────────────────┘
@@ -61,7 +61,7 @@
 - **`submit_lead_intake`:** Service-role-only atomic RPC.
 - Public route `/api/public/lead-intake` exists; **defaults disabled** (`ONEDECORE_LEAD_INTAKE_MODE` empty/disabled).
 - Homepage form default: **`copy-only`** (`NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE`).
-- `contact_suppressions` not yet created (deferred).
+- `contact_suppressions` not created (deferred historically; **not planned in Phase 9A** — OD9A-1 reuses DNC + channel suppression).
 
 ### 2.4 WhatsApp Foundation Domain (Phase 6A — migration 18 managed)
 
@@ -117,7 +117,7 @@ Exact SQL identifiers deferred to Phase 5B implementation checkpoint. Naming mus
 
 ### 3.3 Project & Design (Phase 8)
 
-Live Phase 8A schema (M28) uses `public.projects`, `public.project_manager_assignments`, and `public.project_events`. Phase 8B live names from M29 (managed-applied; PR #59 **merged** `6b31052973cf9e50e25803b232ce446308c1fa3a`) are frozen in [ADR-0025](ADR/ADR-0025-phase-8b-designer-assignment-design-collaboration.md): `project_designer_assignments`, `project_design_workflows`, `project_design_evidence`, `project_design_deliverable_versions`. Phase 8C execution concepts remain **unpersisted**; architecture is frozen in [ADR-0026](ADR/ADR-0026-phase-8c-project-execution-workspace.md) (OD8C-1–OD8C-12). M30 is **not created**.
+Live Phase 8A schema (M28) uses `public.projects`, `public.project_manager_assignments`, and `public.project_events`. Phase 8B live names from M29 are frozen in [ADR-0025](ADR/ADR-0025-phase-8b-designer-assignment-design-collaboration.md). Phase 8C live names from M30 are frozen in [ADR-0026](ADR/ADR-0026-phase-8c-project-execution-workspace.md) (OD8C-1–OD8C-12). PR #61 is **merged**.
 
 | Concept | Purpose |
 | :--- | :--- |
@@ -127,8 +127,8 @@ Live Phase 8A schema (M28) uses `public.projects`, `public.project_manager_assig
 | `designer_assignments` | Live: `project_designer_assignments` (M29) |
 | `design_tasks` / `design_deliverables` / `design_deliverable_versions` | Live: `project_design_deliverable_versions` (M29) |
 | `design_approvals` | Live: `project_design_evidence` (M29) |
-| `project_milestones` / `project_files` | PM execution tracking (**Phase 8C — architecture frozen; persistence DEFERRED / not started**) |
-| `project_delays` / `project_snags` | Operational issue tracking (**Phase 8C — architecture frozen; not persisted; snags conceptual in ADR-0026**) |
+| `project_milestones` / generic project files | **DEFERRED** (ADR-0026) |
+| `project_delays` / snags | Live snags: `project_execution_snags` (M30); generic delays not a separate ERP module |
 | `client_decisions` | Documented client approvals (Phase 8B evidence model, not a portal) |
 
 ### 3.4 Communication (Phase 6A foundation + Phase 6B runtime)
@@ -138,7 +138,7 @@ Live Phase 8A schema (M28) uses `public.projects`, `public.project_manager_assig
 | `whatsapp_conversations` / `whatsapp_messages` | Official API message store (**M18 managed**) |
 | `whatsapp_message_status_events` / `whatsapp_webhook_events` | Delivery/webhook audit (**M18 managed**; append-only triggers) |
 | `whatsapp_templates` | Template registry (**M18 managed**) |
-| Shared inbox UI + controlled outbound | **Phase 6B runtime — NOT STARTED** |
+| Shared inbox UI + controlled outbound | **Phase 6B runtime — managed foundation; not production-activated** |
 | CRM consent / DNC | **`consent_events` + `contact_channels` — authoritative; not duplicated in M18** |
 
 ### 3.5 AI Copilot (Phase 6C)
@@ -147,11 +147,21 @@ Live Phase 8A schema (M28) uses `public.projects`, `public.project_manager_assig
 | `ai_requests` / `ai_suggestions` | Provider-independent adapter audit |
 | `ai_suggestion_approvals` | Human approval before customer-visible use |
 
-### 3.6 Marketing (Phase 9)
-| Concept | Purpose |
-| :--- | :--- |
-| `campaigns` / `campaign_audiences` / `campaign_recipients` | Consent-eligible audiences |
-| `campaign_approvals` / `campaign_runs` / `campaign_events` | Approval chain and execution audit |
+### 3.6 Marketing (Phase 9A architecture freeze — **NOT IMPLEMENTED**; M31 **ABSENT**)
+
+Reuse live CRM consent: `contacts`, `contact_channels`, `consent_events` (`purpose_code = 'MARKETING'` already allowed). Do not create a parallel marketing-consent table. Do not create `contact_suppressions` in 9A.
+
+| Concept | Purpose | 9A status |
+| :--- | :--- | :--- |
+| `campaigns` | Stable campaign identity | **PLANNED** — conceptual only |
+| `campaign_versions` | Draft / pending_approval / approved / rejected | **PLANNED** — conceptual only |
+| `campaign_audience_rule_versions` | Frozen normalized rule JSON + SHA-256 hash; **no PII members** | **PLANNED** — conceptual only |
+| `campaign_approvals` | Append-only approved/rejected evidence | **PLANNED** — conceptual only |
+| `campaign_runs` / provider objects / spend | Execution | **EXCLUDED — Phase 9C** |
+| Recipient / member snapshots / CRM export tables | PII lists | **EXCLUDED — not 9A** |
+| Landing-page tables / campaign→landing FK | Landing Lab | **EXCLUDED — Phase 9B** |
+
+Historical planning names `campaign_audiences` / `campaign_recipients` / `campaign_events` are **not** 9A persistence. Exact SQL remains later M31 after ADR-0027 merge. See [ADR-0027](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md).
 
 ### 3.7 Operations & Audit
 | Concept | Purpose |
@@ -179,3 +189,4 @@ Live Phase 8A schema (M28) uses `public.projects`, `public.project_manager_assig
 - [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
 - [ADR-0018: Secure Lead Intake Data Plane](ADR/ADR-0018-secure-lead-intake-data-plane.md)
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
+- [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
