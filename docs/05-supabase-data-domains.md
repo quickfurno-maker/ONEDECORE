@@ -1,6 +1,6 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9B architecture freeze and Phase 9D-A conceptual commerce freeze, August 18, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
 **Migrations Applied (Managed):** M1–M31 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. M31 **MANAGED_APPLIED_IMMUTABLE**.
@@ -172,9 +172,9 @@ See [ADR-0027](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md) and 
 | `system_audit_logs` | Material mutation audit (existing pattern) |
 | `automation_events` | n8n outbox after persistence |
 
-### 3.8 Commerce (Phase 9D — **ROADMAP LOCKED, not started**)
+### 3.8 Commerce (Phase 9D — **ARCHITECTURE FROZEN**, implementation not started)
 
-Ready-made furniture catalogue, variants, SKU stock, orders (`OD-O-{YYYY}-{SEQ6}`), immutable item/address snapshots, COD + online payment state. **No tables in this gate.** See [ADR-0028](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md). Not quotation ecommerce. Not warehouse ERP.
+Ready-made furniture catalogue, variants, SKU stock, orders (`OD-O-{YYYY}-{SEQ6}`), immutable item/address snapshots, COD + online payment state. Online unpaid inventory uses a 15-minute `reserved_qty` hold; a late paid webhook after expiry must re-commit current stock or cancel without overselling (payment stays `paid`). Tax rates are explicit admin configuration (no architecture-seeded statutory GST %). **No tables in this gate.** Conceptual model and RBAC: [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md). Not quotation ecommerce. Not warehouse ERP. Migration timestamp **unreserved** until 9D-B.
 
 ---
 
@@ -198,6 +198,7 @@ Ready-made furniture catalogue, variants, SKU stock, orders (`OD-O-{YYYY}-{SEQ6}
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
+- [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
 ### Phase 9B Landing Page Lab Data Domain — M32 in repository, not managed

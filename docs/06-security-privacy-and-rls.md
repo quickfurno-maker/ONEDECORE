@@ -164,9 +164,9 @@ The following security requirements are **locked in architecture** and must be e
 - **n8n** is not consent, approval, or campaign truth.
 - **Approval** has no provider side effect and creates no send intent, schedule, run, or recipient list.
 
-## 11. Phase 9D commerce security (roadmap only — **not implemented**)
+## 11. Phase 9D commerce security (**architecture frozen** — **not implemented**)
 
-When 9D-A freezes architecture: browser cart totals are never authoritative; online payment success is webhook/server verified; no payment secrets in the browser; guest tracking must not leak full order PII without identity match; commerce SKU stock is not warehouse ERP. See [ADR-0028](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md).
+Browser cart totals are never authoritative. Online payment success is webhook/server verified; webhooks are signature-checked and **idempotent**. A paid webhook **after** inventory-hold expiry must attempt a fresh stock commit or cancel the order **without overselling**; payment stays `paid` if money was received (`payment_failed` is not used for that case). Guest tracking: POST order reference + mobile; server issues a **15-minute HttpOnly signed cookie** scoped to `/shop/order`. The URL `orderReference` alone never authorizes PII; raw mobile is not placed in query/URL. Commerce SKU stock is not warehouse ERP. No MARKETING consent from purchase. Tax rates are explicit admin configuration (no architecture-seeded statutory GST percentage). See [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md).
 
 ## 12. Related Governance Documents
 
@@ -174,6 +174,7 @@ When 9D-A freezes architecture: browser cart totals are never authoritative; onl
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
+- [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 - [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
 - [ADR-0011: Portfolio Publication Model](ADR/ADR-0011-portfolio-publication-model.md)
 - [ADR-0012: Two-Bucket Media Architecture](ADR/ADR-0012-private-originals-public-derivatives.md)

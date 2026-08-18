@@ -28,9 +28,14 @@
 | `/terms` | Website terms of service | Read Terms | Public | Phase 6 |
 | `/login` | Staff authentication portal | Sign In | Public (Auth) | Phase 2 |
 | `/admin/*` | Internal CRM portal (leads, quotes, portfolio CMS) | Administrative Controls | Role-Restricted | Phase 7 |
-| `/shop` | Ready-made furniture category store | Browse Shop | Planned public | Phase 9D |
+| `/shop` | Ready-made furniture category store | Browse Shop | Planned public | Phase 9D (ADR-0030 freeze; not implemented) |
+| `/shop/c/[slug]` | Category / subcategory listing | View products | Planned public | Phase 9D |
 | `/shop/search` | Catalogue search | Find products | Planned public | Phase 9D |
 | `/shop/product/[slug]` | Product detail | Add to Cart / Buy Now | Planned public | Phase 9D |
+| `/shop/cart` | Cart | Checkout | Planned public | Phase 9D |
+| `/shop/checkout` | Guest checkout | Place order | Planned public | Phase 9D |
+| `/shop/track` | Guest order lookup (POST order number + mobile) | View order | Planned public | Phase 9D |
+| `/shop/order/[orderReference]` | Order status after server tracking-proof cookie (not URL-only) | Track order | Planned public | Phase 9D |
 | `/admin/commerce*` | Catalogue and order operations | Manage store | Planned staff | Phase 9D |
 
 ---
@@ -77,6 +82,7 @@ The homepage is designed as an architectural storytelling experience. It showcas
 - [Portfolio Architecture](04-portfolio-architecture.md)
 - [ADR-0006: Public and Admin Route Separation](ADR/ADR-0006-public-and-admin-route-separation.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
+- [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
 ## Phase 9B Public/Admin Route Reservation
@@ -97,3 +103,9 @@ Public Landing Lab rules:
 
 The documented `/consultation` path must not be treated as a mounted route unless implementation separately proves/creates it.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9D_A_ARCHITECTURE_FREEZE_START -->
+## Phase 9D-A Public/Admin Route Freeze (not mounted)
+
+Canonical shop routes are frozen in ADR-0030. They are **not implemented** in this gate. Sitemap must not list guest track URLs as public indexable pages until 9D-C/F. `/shop/order/[orderReference]` is authorized only by a short-lived server tracking cookie after POST `/shop/track`, not by the URL alone. `/shop` is not `/portfolio` and not `/consultation`.
+<!-- PHASE_9D_A_ARCHITECTURE_FREEZE_END -->

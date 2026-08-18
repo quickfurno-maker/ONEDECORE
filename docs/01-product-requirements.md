@@ -98,7 +98,7 @@ The following remain **out of scope** for all Version 1 phases:
 
 - Accounting & general ledger / GST filing
 - Procurement & purchase orders
-- Inventory & warehouse management (ERP/WMS). Phase 9D later adds **bounded ready-made SKU stock** for `/shop` only (ADR-0028).
+- Inventory & warehouse management (ERP/WMS). Phase 9D later adds **bounded ready-made SKU stock** for `/shop` only (ADR-0028 / ADR-0030).
 - Labour attendance & site dispatch
 - Autonomous AI sales agents or unsupervised WhatsApp bots
 - Accountant, site supervisor, factory manager, installer, procurement, inventory, labour-dispatch **roles**
@@ -124,6 +124,7 @@ Project Manager and Designer roles **are in scope** for execution and design col
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0005: Version 1 No-ERP Boundary](ADR/ADR-0005-version-1-no-erp-boundary.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
+- [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
 ## Phase 9B Product Requirement — Landing Page Lab
