@@ -1,6 +1,6 @@
 # 01 — PRODUCT REQUIREMENTS DOCUMENT (PRD)
 
-**Document Status:** Locked PRD Baseline (truth-synced post Phase 9D roadmap lock, August 18, 2026)
+**Document Status:** Locked PRD Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
 **Scope:** ONEDECORE Version 1 Operating System
 **Target Market:** Pune, India
 
@@ -124,3 +124,15 @@ Project Manager and Designer roles **are in scope** for execution and design col
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0005: Version 1 No-ERP Boundary](ADR/ADR-0005-version-1-no-erp-boundary.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
+
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
+## Phase 9B Product Requirement — Landing Page Lab
+
+ONEDECORE will provide an internal Landing Page Lab for Super Admin and Sales Manager to create controlled campaign-specific landing pages from reusable structured blocks, freeze immutable versions, preview them, publish/pause/archive them, and compare deterministic A/B or A/B/C variants.
+
+V1 must optimize for **qualified CRM outcomes**, not just raw form submissions. Public landing submissions reuse the existing secure lead-intake boundary. Landing/campaign attribution must flow into existing CRM truth without creating a parallel lead or consent system.
+
+V1 excludes unrestricted HTML/code embeds, autonomous AI publishing/winner selection, provider campaign execution, spend/ROAS calculations, and production activation before Phase 10.
+
+Canonical architecture: ADR-0029 / DEC-0081.
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->

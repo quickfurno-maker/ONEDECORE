@@ -1,13 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced post Phase 9D roadmap lock, August 18, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 9B — Landing Page Lab (**NOT_STARTED** — next formal implementation). Phase 9A **COMPLETE**. Phase 9D **ROADMAP_LOCKED** (implementation **NOT_STARTED**).
-**Next Phase:** `PHASE_9B`
+**Current Phase:** Phase 9B — Landing Page Lab (**ARCHITECTURE_FROZEN** — implementation **NOT STARTED**; M32 **ABSENT**). Phase 9A **COMPLETE**. Phase 9D **ROADMAP_LOCKED** (implementation **NOT_STARTED**).
+**Next Phase:** `PHASE_9B_M32_IMPLEMENTATION_PREFLIGHT`
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; M31 immutable; production **not** activated)
 
 ---
@@ -225,3 +225,26 @@ WhatsApp production outbound, public lead activation, production deployment, **M
 - [Phase 9A M31 Implementation](audits/phase-9a-m31-campaign-consent-audience-approval-implementation.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [Phase 9D Roadmap Lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md)
+
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
+## Phase 9B Architecture Freeze — Landing Page Lab
+
+Phase 9B architecture is **FROZEN** under **ADR-0029 / DEC-0081 / OD9B-1–OD9B-12**. Implementation is not started and **M32 is absent**.
+
+Locked boundaries:
+
+- structured/versioned blocks only; no arbitrary HTML or unrestricted page builder;
+- publication lifecycle `draft → live ↔ paused → archived`;
+- deterministic A/B/C only, human winner;
+- `/admin/landing-pages` internal workspace and future `/lp/[slug]` public surface;
+- reuse `/api/public/lead-intake`, `leads.landing_path`, `leads.attribution`, and `lead_source_touchpoints`;
+- no parallel lead, consent, or attribution truth;
+- landing identity trusted only through signed server publication context;
+- Super Admin + Sales Manager Landing Lab management authority;
+- privacy-safe exposure denominator with no PII;
+- Phase 9A M31 unchanged; campaign destination coupling stays opaque;
+- Phase 9C provider execution excluded;
+- Phase 10 remains the production activation gate.
+
+Next formal gate: `PHASE_9B_M32_IMPLEMENTATION_PREFLIGHT`.
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->

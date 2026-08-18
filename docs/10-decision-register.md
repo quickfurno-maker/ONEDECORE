@@ -1,6 +1,6 @@
 # 10 — MASTER DECISION REGISTER
 
-**Document Status:** Locked Decision Register (truth-synced post Phase 9D roadmap lock, August 18, 2026)
+**Document Status:** Locked Decision Register (truth-synced through Phase 9B architecture freeze, August 18, 2026)
 **Scope:** Architectural & Business Scope Decisions  
 
 ---
@@ -89,6 +89,7 @@
 | **DEC-0079** | Phase 9D Ready-Made Furniture E-commerce Roadmap Lock: after 9C and before Phase 10; category-based premium mobile-first `/shop` (Shop → Category → Product → Variant → Cart → Checkout → Payment/COD → Order → Tracking); OD9D-1–OD9D-12 (no room-wise commerce; dynamic admin taxonomy; guest checkout first-class; simple variants only; Supabase authoritative; immutable order/address/price snapshots; COD + online with webhook-authoritative success; single-pool SKU stock not WMS; existing `/admin` shell; WhatsApp support not order truth; no ERP; Phase 10 remains production gate); subphases 9D-A audit/freeze through 9D-F certification; **implementation NOT STARTED**; no schema; must not mix into Phase 9A PR #63; next 9D gate `PHASE_9D_ENTRY_AUDIT`; current formal work remains 9A | LOCKED | Owner-approved later commerce domain without premature implementation or ERP/marketplace/room-package scope | No | Phase 9D | N/A |
 | **DEC-0080** | Phase 9A M31 Managed Apply Certified: owner-authorized retry after backup window; fresh physical/WALG backup **1402715223** (`inserted_at` 2026-08-17T19:54:19.657Z, COMPLETED, not 1393334013/1384020355); CLI `npx supabase@2.109.1 db push --linked --yes` 2026-08-18T03:34:34Z–03:34:46Z; recovery package `M31_PREAPPLY_20260818T033259Z` outside Git; remote history aligned **M1–M31**; pending **NONE**; M31 Git blob/raw SHA unchanged and **immutable**; campaign/approval/audience/idempotency rows **0**; MARKETING consent events **0**; no business CRM delta; RBAC metadata only; storage none; advisor 79→87 WARN / 0 ERROR with eight intended authenticated staff-RPC SECURITY DEFINER warnings; **M31_SECURITY_ADVISOR_BLOCKERS=NONE**; PR **#63 OPEN / not merged**; Phase 9B/9C **NOT STARTED**; Phase 9D stash preserved untouched; production activation NONE | LOCKED | Records authoritative managed database state after M31 apply without authorizing merge or production activation | No | Phase 9A | DEC-0078 |
 
+| **DEC-0081** | Phase 9B Landing Page Lab & Experimentation Architecture Freeze: owner authorization `LOCK PHASE 9B OWNER DECISIONS AS RECOMMENDED`; locks OD9B-1 structured block/versioning with no freeform HTML, OD9B-2 publication lifecycle `draft → live ↔ paused → archived` with no 9B scheduler, OD9B-3 deterministic A/B/C only with human winner, OD9B-4 opaque Phase 9A campaign linkage with no M31 rewrite, OD9B-5 reuse existing atomic `/api/public/lead-intake`, OD9B-6 enrich existing `leads.landing_path`/`leads.attribution`/`lead_source_touchpoints` with no parallel attribution truth, OD9B-7 service-enquiry consent only/no fabricated MARKETING, OD9B-8 CRM-stage-derived quality with no parallel quality status, OD9B-9 dedicated Landing Lab RBAC for Super Admin + Sales Manager, OD9B-10 `/admin/landing-pages` + future `/lp/[slug]` and campaign-page noindex default, OD9B-11 privacy-safe exposure denominator with no PII/raw visitor key, OD9B-12 Phase 10 production gate/no Phase 9C execution; signed server publication context is canonical landing identity; conceptual M32 `landing_page_lab_experimentation_foundation` reserved but NOT CREATED; repository/managed remain M1–M31; managed entry rows zero; no managed writes; existing landing-lab prebuild remains engineering scaffolding to reconcile during implementation | LOCKED | Establishes authoritative Phase 9B architecture and preserves single CRM/intake/consent truth before M32 implementation | No | Phase 9B | DEC-0051; DEC-0077; DEC-0080; ADR-0029 |
 ---
 
 ## Related Governance Documents
@@ -111,6 +112,8 @@
 - [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [Phase 9D Roadmap Lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md)
+- [ADR-0029: Phase 9B Landing Page Lab & Experimentation](ADR/ADR-0029-phase-9b-landing-page-lab.md)
+- [Phase 9B Architecture Freeze](audits/phase-9b-landing-page-lab-architecture-freeze.md)
 - [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
 - [Phase 8A Architecture Freeze](audits/phase-8a-closed-won-project-pm-handover-architecture-freeze.md)
 - [Phase 8C Architecture Freeze](audits/phase-8c-project-execution-workspace-architecture-freeze.md)

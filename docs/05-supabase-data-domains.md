@@ -1,6 +1,6 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (truth-synced post Phase 9D roadmap lock, August 18, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
 **Migrations Applied (Managed):** M1–M31 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. M31 **MANAGED_APPLIED_IMMUTABLE**.
@@ -198,3 +198,30 @@ Ready-made furniture catalogue, variants, SKU stock, orders (`OD-O-{YYYY}-{SEQ6}
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
+
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
+### Phase 9B Landing Page Lab Data Domain — Architecture Frozen, No M32 Yet
+
+Conceptual M32 (`landing_page_lab_experimentation_foundation`) will add:
+
+| Concept | Purpose |
+| :--- | :--- |
+| `landing_pages` | Stable `OD-LP-*` page identity + slug |
+| `landing_page_versions` | Structured content versions; frozen versions immutable |
+| `landing_publications` | Exact-version public binding; `draft/live/paused/archived` |
+| `landing_experiments` | `draft/running/concluded`; human winner |
+| `landing_experiment_variants` | Exactly 2–3 frozen-version allocations totaling 100% |
+| `landing_exposures` | Privacy-safe unique routing denominator; no PII/raw visitor cookie |
+
+Existing authoritative data is reused:
+
+- `leads.landing_path`;
+- `leads.attribution`;
+- `lead_source_touchpoints`;
+- CRM lead stages;
+- Phase 9A campaign reference only as optional opaque snapshot.
+
+No parallel lead, consent, attribution, provider-run, spend, or CDP tables are part of Phase 9B.
+
+Status at this freeze: repository/managed remain **M1–M31**; M32 absent; no managed write.
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->

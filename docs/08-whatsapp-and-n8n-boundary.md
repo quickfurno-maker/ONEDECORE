@@ -1,6 +1,6 @@
 # 08 — META WHATSAPP, GROQ AI AND N8N AUTOMATION BOUNDARY
 
-**Document Status:** Locked Integration Baseline (truth-synced post Phase 9D roadmap lock, August 18, 2026)
+**Document Status:** Locked Integration Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
 **WhatsApp API:** Official Meta WhatsApp Cloud API Only
 **AI Provider:** Groq behind provider-independent adapter (planned Phase 6C)
 **n8n Role:** Stateless Async Event Bus & Notification Relay
@@ -119,3 +119,21 @@ Do not conflate disabled intake with future WhatsApp or campaign capabilities.
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [Security, Privacy & RLS](06-security-privacy-and-rls.md)
 - [Runbook: Lead Intake Public Activation](runbooks/lead-intake-public-activation.md)
+
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
+## Phase 9B Automation Boundary
+
+n8n and WhatsApp are not Landing Page Lab truth.
+
+Phase 9B canonical persistence occurs in ONEDECORE/Supabase before any optional automation. n8n must not:
+
+- decide canonical experiment routing;
+- create a lead before the existing atomic intake;
+- own publication state;
+- own campaign approval;
+- grant MARKETING consent;
+- mutate CRM stage as analytics;
+- become attribution/conversion truth.
+
+WhatsApp MARKETING execution remains outside Phase 9B. Existing WHATSAPP_SERVICE boundaries remain unchanged. Provider/campaign execution belongs to Phase 9C and production activation remains Phase 10 gated.
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
