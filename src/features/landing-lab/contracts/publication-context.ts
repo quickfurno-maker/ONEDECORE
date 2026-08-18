@@ -8,6 +8,8 @@ export interface PublicationContext {
   readonly pageVersionNumber: number;
   readonly experimentReference: string | null;
   readonly variantKey: string | null;
+  readonly campaignReference?: string | null;
+  readonly campaignVersionNumber?: number | null;
   readonly issuedAt: string;
   readonly expiresAt: string | null;
 }

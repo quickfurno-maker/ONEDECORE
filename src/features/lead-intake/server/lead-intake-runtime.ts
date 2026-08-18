@@ -10,6 +10,9 @@ import {
   parseJsonBody,
   validateLeadIntakePayload,
 } from "./lead-intake-validation.ts";
+import { resolveTrustedLandingIdentity } from "../../landing-lab/server/verify-live-publication-context.ts";
+import { getLandingLabHmacSecret } from "../../landing-lab/server/landing-lab-env.ts";
+import type { ValidatedLeadIntake } from "../contracts.ts";
 import { deriveNetworkIdentifier } from "./request-canonicalisation.ts";
 import {
   submitValidatedLeadIntake,
@@ -30,7 +33,41 @@ export interface LeadIntakeRuntimeRequest {
 export interface LeadIntakeRuntimeDeps {
   readonly getEnv?: typeof getLeadIntakeServerEnv;
   readonly createAdminClient?: typeof createAdminClient;
+  readonly getLandingLabHmacSecret?: typeof getLandingLabHmacSecret;
   readonly now?: () => number;
+}
+
+async function attachTrustedLandingAttribution(
+  validated: ValidatedLeadIntake,
+  hmacSecret: string | null,
+  createAdmin: typeof createAdminClient
+): Promise<{ readonly ok: true; readonly value: ValidatedLeadIntake } | { readonly ok: false }> {
+  if (!validated.landingPublicationContext) {
+    return { ok: true, value: validated };
+  }
+  try {
+    const client = createAdmin();
+    const resolved = await resolveTrustedLandingIdentity({
+      signed: validated.landingPublicationContext,
+      client,
+      hmacSecret,
+    });
+    if (!resolved.ok) {
+      return { ok: false };
+    }
+    return {
+      ok: true,
+      value: {
+        ...validated,
+        attribution: {
+          ...validated.attribution,
+          ...resolved.identity,
+        },
+      },
+    };
+  } catch {
+    return { ok: false };
+  }
 }
 
 function assertSameOrigin(origin: string | null, host: string | null): void {
@@ -226,6 +263,44 @@ export async function handleLeadIntakeRequest(
     };
   }
 
+  const landingHmacSecret = (deps.getLandingLabHmacSecret ?? getLandingLabHmacSecret)();
+  if (validated.value.landingPublicationContext && !landingHmacSecret) {
+    return {
+      httpStatus: 400,
+      outcome: "validation_rejected",
+      duplicate: false,
+      correlationId,
+      body: {
+        ok: false,
+        code: "VALIDATION_REJECTED",
+        message: "Request failed validation.",
+        fields: ["landingPublicationContext"],
+        correlationId,
+      },
+    };
+  }
+
+  const trusted = await attachTrustedLandingAttribution(
+    validated.value,
+    landingHmacSecret,
+    deps.createAdminClient ?? createAdminClient
+  );
+  if (!trusted.ok) {
+    return {
+      httpStatus: 400,
+      outcome: "validation_rejected",
+      duplicate: false,
+      correlationId,
+      body: {
+        ok: false,
+        code: "VALIDATION_REJECTED",
+        message: "Request failed validation.",
+        fields: ["landingPublicationContext"],
+        correlationId,
+      },
+    };
+  }
+
   const network = deriveNetworkIdentifier({
     mode,
     trustProxy: env.trustProxy,
@@ -234,7 +309,7 @@ export async function handleLeadIntakeRequest(
   });
 
   const result = await submitValidatedLeadIntake(
-    validated.value,
+    trusted.value,
     {
       mode,
       hashSecret: env.hashSecret,

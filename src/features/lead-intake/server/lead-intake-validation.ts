@@ -24,6 +24,7 @@ import {
   type LeadTimelineCode,
   type ValidatedLeadIntake,
 } from "../contracts.ts";
+import type { SignedPublicationContext } from "../../landing-lab/contracts/publication-context.ts";
 import { LEAD_INTAKE_MAX_BODY_BYTES } from "./bounded-request-body.ts";
 import { normalisePhoneToE164 } from "./phone-normalisation.ts";
 import { isSafeSameSitePath } from "./same-site-path.ts";
@@ -41,10 +42,82 @@ const ROOT_KEYS = new Set([
   "consent",
   "attribution",
   "antiBot",
+  "landingPublicationContext",
 ]);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasUnsafeControlChars(value: string): boolean {
+  return /[\u0000-\u001F\u007F]/.test(value);
+}
+
+function parseSignedPublicationContext(
+  raw: unknown,
+  fields: string[]
+): SignedPublicationContext | null {
+  if (raw == null) return null;
+  if (!isPlainObject(raw)) {
+    fields.push("landingPublicationContext");
+    return null;
+  }
+  rejectUnknownKeys(raw, new Set(["context", "signature"]), "landingPublicationContext", fields);
+  const signature = asString(raw.signature);
+  if (!signature || signature.length > 128 || !/^[0-9a-f]+$/i.test(signature)) {
+    fields.push("landingPublicationContext.signature");
+  }
+  if (!isPlainObject(raw.context)) {
+    fields.push("landingPublicationContext.context");
+    return null;
+  }
+  const ctx = raw.context;
+  rejectUnknownKeys(
+    ctx,
+    new Set([
+      "publicationReference",
+      "pageReference",
+      "pageVersionNumber",
+      "experimentReference",
+      "variantKey",
+      "campaignReference",
+      "campaignVersionNumber",
+      "issuedAt",
+      "expiresAt",
+    ]),
+    "landingPublicationContext.context",
+    fields
+  );
+  const publicationReference = asString(ctx.publicationReference);
+  const pageReference = asString(ctx.pageReference);
+  const issuedAt = asString(ctx.issuedAt);
+  if (!publicationReference || !pageReference || !issuedAt) {
+    fields.push("landingPublicationContext.context");
+    return null;
+  }
+  if (typeof ctx.pageVersionNumber !== "number" || !Number.isInteger(ctx.pageVersionNumber)) {
+    fields.push("landingPublicationContext.context.pageVersionNumber");
+    return null;
+  }
+  return {
+    signature: signature ?? "",
+    context: {
+      publicationReference,
+      pageReference,
+      pageVersionNumber: ctx.pageVersionNumber,
+      experimentReference: ctx.experimentReference == null ? null : asString(ctx.experimentReference),
+      variantKey: ctx.variantKey == null ? null : asString(ctx.variantKey),
+      campaignReference: ctx.campaignReference == null ? null : asString(ctx.campaignReference),
+      campaignVersionNumber:
+        ctx.campaignVersionNumber == null
+          ? null
+          : typeof ctx.campaignVersionNumber === "number"
+            ? ctx.campaignVersionNumber
+            : null,
+      issuedAt,
+      expiresAt: ctx.expiresAt == null ? null : asString(ctx.expiresAt),
+    },
+  };
 }
 
 function rejectUnknownKeys(
@@ -451,6 +524,8 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
       "utmCampaign",
       "utmTerm",
       "utmContent",
+      "fbclid",
+      "gclid",
     ]),
     "attribution",
     fields
@@ -470,10 +545,12 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     "utmCampaign",
     "utmTerm",
     "utmContent",
+    "fbclid",
+    "gclid",
   ] as const) {
     if (input.attribution[key] != null) {
       const val = asString(input.attribution[key]);
-      if (!val || val.length > 200) {
+      if (!val || val.length > 200 || hasUnsafeControlChars(val)) {
         fields.push(`attribution.${key}`);
       } else if (key === "referrerPath") {
         if (!isSafeSameSitePath(val, 200)) {
@@ -482,10 +559,15 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
           attribution[key] = val;
         }
       } else {
-        attribution[key] = normaliseWhitespace(val);
+        attribution[key] = key === "fbclid" || key === "gclid" ? val.trim() : normaliseWhitespace(val);
       }
     }
   }
+
+  const landingPublicationContext = parseSignedPublicationContext(
+    input.landingPublicationContext,
+    fields
+  );
 
   if (!isPlainObject(input.antiBot)) {
     fields.push("antiBot");
@@ -537,6 +619,7 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
       message,
       landingPath: landingPath!,
       attribution,
+      landingPublicationContext,
       consentServicePhone: true,
       consentServiceEmail: emailChannelRequested,
       consentWhatsapp,

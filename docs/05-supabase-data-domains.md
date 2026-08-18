@@ -162,7 +162,7 @@ Reuse live CRM consent: `contacts`, `contact_channels`, `consent_events` (`purpo
 | `private.marketing_idempotency_requests` | Retry-safe Phase 9A mutations | **MANAGED M31** — certified empty at apply |
 | `campaign_runs` / provider objects / spend | Execution | **EXCLUDED — Phase 9C** |
 | Recipient / member snapshots / CRM export tables | PII lists | **EXCLUDED — not 9A** |
-| Landing-page tables / campaign→landing FK | Landing Lab | **EXCLUDED — Phase 9B** |
+| Landing-page tables / campaign→landing FK | Landing Lab | **M32 in repository; no M31 FK; not managed-applied** |
 
 See [ADR-0027](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md) and [M31 implementation audit](audits/phase-9a-m31-campaign-consent-audience-approval-implementation.md).
 
@@ -200,28 +200,19 @@ Ready-made furniture catalogue, variants, SKU stock, orders (`OD-O-{YYYY}-{SEQ6}
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
-### Phase 9B Landing Page Lab Data Domain — Architecture Frozen, No M32 Yet
+### Phase 9B Landing Page Lab Data Domain — M32 in repository, not managed
 
-Conceptual M32 (`landing_page_lab_experimentation_foundation`) will add:
+Forward-only M32 `20260819140000_landing_page_lab_experimentation_foundation.sql` adds:
 
 | Concept | Purpose |
 | :--- | :--- |
-| `landing_pages` | Stable `OD-LP-*` page identity + slug |
-| `landing_page_versions` | Structured content versions; frozen versions immutable |
-| `landing_publications` | Exact-version public binding; `draft/live/paused/archived` |
+| `landing_pages` | Stable `OD-LP-{YYYY}-{SEQ6}` identity + unique slug |
+| `landing_page_versions` | Structured JSON blocks; frozen versions immutable |
+| `landing_publications` | Exact frozen-version binding; `draft/live/paused/archived` |
 | `landing_experiments` | `draft/running/concluded`; human winner |
 | `landing_experiment_variants` | Exactly 2–3 frozen-version allocations totaling 100% |
-| `landing_exposures` | Privacy-safe unique routing denominator; no PII/raw visitor cookie |
+| `landing_exposures` | Privacy-safe unique denominator (HMAC visitor hash) |
+| `private.landing_lab_idempotency_requests` | Dedicated Landing Lab mutation ledger |
 
-Existing authoritative data is reused:
-
-- `leads.landing_path`;
-- `leads.attribution`;
-- `lead_source_touchpoints`;
-- CRM lead stages;
-- Phase 9A campaign reference only as optional opaque snapshot.
-
-No parallel lead, consent, attribution, provider-run, spend, or CDP tables are part of Phase 9B.
-
-Status at this freeze: repository/managed remain **M1–M31**; M32 absent; no managed write.
+Existing authoritative data is reused (`leads.landing_path`, `leads.attribution`, `lead_source_touchpoints`, CRM stages). No parallel attribution table. M31 is unchanged. Managed remains **M1–M31**; M32 **NOT** managed-applied.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->

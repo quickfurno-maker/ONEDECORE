@@ -9,6 +9,7 @@ import { hasAnyLeaveNavPermission } from "@/features/staff-leave/server/leave-au
 import { hasAnyWhatsappInboxReadPermission } from "@/features/whatsapp/server/whatsapp-permissions";
 import { hasAnyProjectReadPermission } from "@/features/projects/server/project-permissions";
 import { hasAnyCampaignReadPermission } from "@/features/marketing/server/campaign-permissions";
+import { hasLandingPagesReadPermission } from "@/features/landing-lab/server/landing-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await requireStaffPermission("admin.access", "/admin");
-  const [showCrmLink, showWhatsappLink, showStaffLink, showAttendanceLink, showLeaveLink, showProjectsLink, showCampaignsLink] =
+  const [showCrmLink, showWhatsappLink, showStaffLink, showAttendanceLink, showLeaveLink, showProjectsLink, showCampaignsLink, showLandingLabLink] =
     await Promise.all([
       hasAnyCrmLeadReadPermission(),
       hasAnyWhatsappInboxReadPermission(),
@@ -28,6 +29,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       hasAnyLeaveNavPermission(),
       hasAnyProjectReadPermission(),
       hasAnyCampaignReadPermission(),
+      hasLandingPagesReadPermission(),
     ]);
 
   return (
@@ -113,6 +115,14 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
               >
                 Campaigns
+              </Link>
+            ) : null}
+            {showLandingLabLink ? (
+              <Link
+                href="/admin/landing-pages"
+                className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+              >
+                Landing Lab
               </Link>
             ) : null}
             {showWhatsappLink ? (

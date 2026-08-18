@@ -133,6 +133,70 @@ describe("Phase 9B page model", () => {
   test("landing page version validates blocks", () => {
     assert.equal(validateLandingPageVersion(buildSampleLandingPageVersion()), null);
     assert.equal(validateLandingPublication(buildSampleLandingPublication()), null);
+    assert.equal(
+      validateLandingPublication({
+        ...buildSampleLandingPublication(),
+        status: "paused",
+      }),
+      null
+    );
+    assert.equal(
+      validateLandingPublication({
+        ...buildSampleLandingPublication(),
+        status: "archived",
+      }),
+      null
+    );
+    assert.match(
+      validateLandingPublication({
+        ...buildSampleLandingPublication(),
+        status: "scheduled" as never,
+      }) ?? "",
+      /invalid/i
+    );
+  });
+
+  test("experiment rejects a fourth variant and accepts A/B/C totaling 100", () => {
+    const experiment = buildSampleLandingExperiment();
+    const fourth = {
+      ...experiment,
+      variants: [
+        ...experiment.variants,
+        {
+          variantKey: "variant-c",
+          pageReference: "OD-LP-2026-0001",
+          pageVersionNumber: 2,
+          allocationPercent: 10,
+          label: "C",
+        },
+        {
+          variantKey: "variant-d",
+          pageReference: "OD-LP-2026-0001",
+          pageVersionNumber: 2,
+          allocationPercent: 10,
+          label: "D",
+        },
+      ].map((variant, index, all) =>
+        index === 0 ? { ...variant, allocationPercent: 100 - (all.length - 1) * 10 } : variant
+      ),
+    };
+    assert.match(validateLandingExperiment(fourth) ?? "", /maximum variant count/);
+
+    const abc = {
+      ...experiment,
+      variants: [
+        { ...experiment.variants[0]!, allocationPercent: 34, variantKey: "control" },
+        { ...experiment.variants[1]!, allocationPercent: 33, variantKey: "variant-b" },
+        {
+          variantKey: "variant-c",
+          pageReference: "OD-LP-2026-0001",
+          pageVersionNumber: 2,
+          allocationPercent: 33,
+          label: "C",
+        },
+      ],
+    };
+    assert.equal(validateLandingExperiment(abc), null);
   });
 });
 
@@ -355,9 +419,10 @@ describe("Phase 9B UI prebuild contracts", () => {
     assert.match(editor, /LANDING_LAB_PREBUILD_BANNER/);
     assert.match(publication, /LANDING_LAB_PREBUILD_BANNER/);
     assert.equal(
-      LANDING_LAB_PREBUILD_BANNER.includes("NOT LIVE"),
+      LANDING_LAB_PREBUILD_BANNER.includes("PREVIEW"),
       true
     );
+    assert.match(LANDING_LAB_PREBUILD_BANNER, /not a public publication/i);
   });
 
   test("lead form preview is non-submitting", () => {

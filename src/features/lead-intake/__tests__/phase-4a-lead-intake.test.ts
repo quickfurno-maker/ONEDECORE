@@ -110,6 +110,7 @@ function validatedFixture(
     message: "Synthetic local-test brief",
     landingPath: "/",
     attribution: { landingPath: "/" },
+    landingPublicationContext: null,
     consentServicePhone: true,
     consentServiceEmail: true,
     consentWhatsapp: false,

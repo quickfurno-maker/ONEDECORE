@@ -58,7 +58,7 @@ select ok(not exists (
       'campaign_audience_members', 'campaign_recipient_snapshots',
       'campaign_runs', 'campaign_jobs', 'campaign_delivery_jobs',
       'campaign_provider_objects', 'campaign_spend', 'campaign_conversions',
-      'campaign_attribution', 'landing_pages', 'landing_page_versions', 'experiments'
+      'campaign_attribution', 'experiments'
     )
 ), 'forbidden 9A/9B/9C tables absent');
 

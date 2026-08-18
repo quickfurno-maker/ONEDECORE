@@ -6,10 +6,17 @@ import type { LandingBlock } from "./blocks.ts";
 import { validateLandingPageBlocks } from "./blocks.ts";
 import { validateLandingPageReference } from "./references.ts";
 
-export const LANDING_PAGE_LIFECYCLE_STATES = ["draft", "published", "archived"] as const;
-export type LandingPageLifecycleState = (typeof LANDING_PAGE_LIFECYCLE_STATES)[number];
+/**
+ * Identity-only page state. Publication truth is landing_publications.status
+ * (draft|live|paused|archived). This is not a parallel "published" lifecycle.
+ */
+export const LANDING_PAGE_IDENTITY_STATES = ["active", "archived"] as const;
+export type LandingPageIdentityState = (typeof LANDING_PAGE_IDENTITY_STATES)[number];
+/** @deprecated Use LandingPageIdentityState — retained as identity alias, not publication. */
+export const LANDING_PAGE_LIFECYCLE_STATES = LANDING_PAGE_IDENTITY_STATES;
+export type LandingPageLifecycleState = LandingPageIdentityState;
 
-export const LANDING_PUBLICATION_STATUSES = ["draft", "scheduled", "live"] as const;
+export const LANDING_PUBLICATION_STATUSES = ["draft", "live", "paused", "archived"] as const;
 export type LandingPublicationStatus = (typeof LANDING_PUBLICATION_STATUSES)[number];
 
 export const LANDING_EXPERIMENT_STATUSES = ["draft", "running", "concluded"] as const;
@@ -129,7 +136,7 @@ export function validateLandingExperiment(experiment: LandingExperiment): string
   if (experiment.variants.length < 2) {
     return "Experiment requires at least two variants.";
   }
-  if (experiment.variants.length > 8) {
+  if (experiment.variants.length > 3) {
     return "Experiment exceeds maximum variant count.";
   }
 
@@ -163,5 +170,18 @@ export function validateLandingExperiment(experiment: LandingExperiment): string
     return "Winner variant key must reference an existing variant.";
   }
 
+  if (experiment.status === "concluded" && experiment.winnerVariantKey == null) {
+    return "Concluded experiments require a human-selected winner variant.";
+  }
+  if (experiment.status !== "concluded" && experiment.winnerVariantKey != null) {
+    return "Winner variant may be set only when concluding an experiment.";
+  }
+
   return null;
+}
+
+export function isLandingPublicationPubliclyRenderable(
+  status: LandingPublicationStatus
+): boolean {
+  return status === "live";
 }
