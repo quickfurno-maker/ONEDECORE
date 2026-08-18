@@ -166,7 +166,7 @@ The following security requirements are **locked in architecture** and must be e
 
 ## 11. Phase 9D commerce security (**architecture frozen** — **not implemented**)
 
-Browser cart totals are never authoritative. Online payment success is webhook/server verified. No payment secrets in the browser. Guest tracking must not leak full order PII without Order Number + Mobile match. Commerce SKU stock is not warehouse ERP. No MARKETING consent from purchase. See [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md).
+Browser cart totals are never authoritative. Online payment success is webhook/server verified; webhooks are signature-checked and **idempotent**. A paid webhook **after** inventory-hold expiry must attempt a fresh stock commit or cancel the order **without overselling**; payment stays `paid` if money was received (`payment_failed` is not used for that case). Guest tracking: POST order reference + mobile; server issues a **15-minute HttpOnly signed cookie** scoped to `/shop/order`. The URL `orderReference` alone never authorizes PII; raw mobile is not placed in query/URL. Commerce SKU stock is not warehouse ERP. No MARKETING consent from purchase. Tax rates are explicit admin configuration (no architecture-seeded statutory GST percentage). See [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md).
 
 ## 12. Related Governance Documents
 

@@ -50,8 +50,8 @@ Full normative text: [ADR-0030](../ADR/ADR-0030-phase-9d-ready-made-furniture-ec
 | :--- | :--- |
 | Payment | Provider-independent port; **Razorpay first adapter**; webhook = online success; no PAN/CVV |
 | CRM | No lead required; no auto interior lead; optional contact by E.164; purchase ≠ MARKETING |
-| Inventory | `stock_on_hand` / `reserved_qty`; COD decrements on confirm; online 15-minute reserve; row locks |
-| Tax | Commerce-owned rates; GST-inclusive prices; paise on server; not `quotation_tax_profiles` |
+| Inventory | `stock_on_hand` / `reserved_qty`; COD decrements on confirm; online 15-minute reserve; late paid webhook after expiry does a **fresh** stock commit or **cancelled + paid** (never oversell; never `payment_failed` when paid) |
+| Tax | Commerce-owned **configured** rates; GST-inclusive display; paise on server; not `quotation_tax_profiles`; **no** architecture-seeded statutory % |
 | Shipping | Pincode allowlist + default charge + free threshold + product/category override; no aggregator |
 | RBAC | Six `commerce.*` codes; SA all; SM read/orders/payments.read only |
 | Media | Dedicated originals + public derivatives |
@@ -64,6 +64,8 @@ Full normative text: [ADR-0030](../ADR/ADR-0030-phase-9d-ready-made-furniture-ec
 ## 4. Routes / schema / states
 
 See ADR-0030 §§10–12. Guest cart is **not** a DB table. COD orders start **`confirmed`**. Online orders start **`pending_payment`**.
+
+Guest `/shop/order/[orderReference]` requires a short-lived **server-issued tracking cookie** after POST `/shop/track` (order + mobile). Route reference alone never authorizes PII. Provider session-creation failure **releases** the inventory hold immediately.
 
 ---
 

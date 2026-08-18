@@ -56,8 +56,10 @@ MVP online methods: UPI, card, netbanking, wallet as the provider enables. No EM
 2. Create order `pending_payment` (online) or `confirmed` (COD) atomically with inventory (see §4).
 3. Online: create provider order/session with **exact** `amount_paise` and `INR`; store provider refs on `commerce_payments`.
 4. Browser redirect/checkout UX is **not** success.
-5. Webhook (or verified server fetch) with signature, amount, currency, and order binding is **paid** truth.
+5. Webhook (or verified server fetch) with signature, amount, currency, and order binding is **paid** truth. If the 15-minute hold has already expired, apply §4.3 (fresh stock commit or `cancelled` + `paid`, never oversell).
 6. Idempotent apply by `provider_event_id` / payment id.
+
+If step 3 **fails before the customer pays**, release the inventory hold **immediately** (§4.2).
 
 ### 2.4 Webhook / secrets
 
@@ -65,7 +67,8 @@ MVP online methods: UPI, card, netbanking, wallet as the provider enables. No EM
 - Replay: unique provider event id in append-only evidence table (or unique payment event ledger). Duplicate delivery replays stored outcome.
 - Amount and currency must match order snapshot.
 - Secrets: server env only. No PAN/CVV. No browser service role.
-- Failure: payment `failed`; order `payment_failed` if still unpaid; inventory hold released.
+- Failure **before pay** (session never created, or unpaid timeout): payment `failed` or `cancelled`; order `payment_failed`/`cancelled` if still unpaid; inventory hold released **immediately** if no session, or at TTL if unpaid.
+- Failure **after money received** with no stock: payment stays `paid`; order `cancelled` + manual refund flag (§4.3). Never `payment_failed` for a paid capture.
 
 Refunds: **manual ops / post-MVP**. No automatic refund engine in 9D-E. Optional `refunded` payment status may be added later without changing order snapshot immutability.
 
@@ -91,7 +94,7 @@ Contact reuse (safe MVP):
 - If an **active** `contacts` row matches that E.164, staff/RPC **may** set `commerce_orders.contact_id` (nullable FK). Do not merge emails as identity (intake already never auto-merges on email).
 - If no contact: **do not require** creating one at checkout. Optional post-commit `ensure_commerce_contact` may create a contact with **no lead**, **no MARKETING**, channels from snapshot only — 9D-D may skip contact creation entirely if linkage is staff-only.
 - Duplicate contacts: follow existing CRM duplicate-safe rules; never expose other customers’ orders.
-- Guest tracking: Order Number + Mobile match **before** extra PII.
+- Guest tracking: Order Number + Mobile match **before** extra PII. Match is proven by a short-lived server-issued tracking cookie (see §10.1 / §14); the URL `orderReference` alone never authorizes PII.
 
 ---
 
@@ -109,12 +112,44 @@ Single pool per sellable variant/SKU. **Not** WMS.
 ### 4.2 Allocation
 
 - **COD commit:** in one SECURITY DEFINER RPC, lock variant row, require `available_qty >= qty`, decrement `stock_on_hand`, insert order `confirmed`. No hold table required for COD.
-- **Online checkout:** same lock; increment `reserved_qty` (not yet decrementing `stock_on_hand`); order `pending_payment`; hold expiry **15 minutes**.
-- **Online paid webhook:** convert reservation to decrement (`reserved_qty -= qty`, `stock_on_hand -= qty`); order `confirmed`.
-- **Expiry / payment_failed / cancel before confirm:** release reservation. After `confirmed`, cancel restocks `stock_on_hand` via staff RPC only.
+- **Online checkout:** same lock; increment `reserved_qty` (not yet decrementing `stock_on_hand`); order `pending_payment`; store `inventory_hold_expires_at` = now + **15 minutes**.
+- **Provider session/checkout creation failure** (adapter error **before** the customer pays): **release the hold immediately** (`reserved_qty -= qty`); do **not** wait for TTL. Order → `payment_failed` or `cancelled` per §12; append evidence. Inventory must not stay reserved if no provider session exists.
 - Advisory/xact lock + row lock on variant; private commerce idempotency ledger (do **not** reuse `landing_lab_idempotency_requests` or `marketing_idempotency_requests`).
 
 No silent oversell. No warehouse bins. No supplier PO.
+
+### 4.3 Online paid webhook (including late payment after hold expiry)
+
+Webhook processing is **idempotent and replay-safe** (unique provider event id). Browser redirect is never `paid`.
+
+**Before `inventory_hold_expires_at` (active hold still assumed):**
+
+A signature-verified paid webhook **atomically converts the existing hold**: `reserved_qty -= qty`, `stock_on_hand -= qty`, payment = `paid`, order = `confirmed`. Do not convert a hold that has already been released.
+
+**After expiry, the original hold is no longer assumed to exist** (TTL or explicit release already decremented `reserved_qty`). A verified **late** paid webhook must **not** convert the old reservation. It must:
+
+1. Lock required inventory rows.
+2. Attempt a **fresh atomic stock commit** against **current** `available_qty`.
+
+**If all required `ready_stock` qty is still available:**
+
+- decrement `stock_on_hand` atomically (do not assume leftover `reserved_qty`);
+- payment remains / becomes `paid`;
+- order → `confirmed`;
+- append-only event `late_payment_recovered`.
+
+**If stock is NOT available:**
+
+- **never oversell**; never underflow `reserved_qty` / `stock_on_hand`;
+- payment remains authoritative **`paid`** (money was received — **do not** set `payment_failed`);
+- order must **not** become `confirmed`;
+- order → `cancelled` with `cancellation_reason_code = paid_after_hold_expiry_stock_unavailable`;
+- append an immutable `manual_action_required` (or equivalent) event;
+- flag the order/payment for **manual refund resolution**.
+
+No automatic refund engine in MVP. Made-to-order lines do not compete for storefront `stock_on_hand`; late-pay recovery for those lines confirms without a stock decrement.
+
+TTL expiry without a paid webhook: release reservation; order may remain `pending_payment` until staff/timeout policy moves it to `payment_failed`/`cancelled` **only if unpaid**. After `confirmed`, staff cancel restocks `stock_on_hand` via RPC only.
 
 ---
 
@@ -126,7 +161,8 @@ Do **not** reuse `quotation_tax_profiles` as commerce SoR (quotation commercial 
 - Authority: server computes tax **in paise** from inclusive unit price × qty using product/HSN tax rate snapshot.
 - Product metadata: optional HSN/SAC code + tax rate id. Line snapshot stores rate, HSN, tax paise, taxable paise, inclusive line total.
 - Rounding: round half-up to integer paise on line; order tax total = sum of line tax paise (no browser totals).
-- Settings: `commerce_tax_settings` / `commerce_tax_rates` (admin). Zero production seeds of secret rates required at freeze; 9D-B may seed **GST 18%** as a default active rate if implementation needs a bootstrap — not an ERP filing engine.
+- Settings: `commerce_tax_settings` / `commerce_tax_rates` are **explicit Super Admin / `commerce.settings.manage` configuration**. Architecture does **not** seed or assume any statutory GST percentage. Rates used in production must be verified and configured at implementation/activation time.
+- Product **publication** and **checkout** **fail closed** if a required tax rate is missing or inactive. No accounting / GST filing ERP.
 
 ---
 
@@ -207,10 +243,25 @@ No video / 360 / AR.
 | `/shop/search` | Search |
 | `/shop/cart` | Cart UI (client cart) |
 | `/shop/checkout` | Guest checkout |
-| `/shop/track` | Guest Order Number + Mobile |
-| `/shop/order/[orderReference]` | Tracking **after** successful match (non-enumerating; 404 otherwise) |
+| `/shop/track` | Guest Order Number + Mobile **form** (POST / server action) |
+| `/shop/order/[orderReference]` | Status **only after** valid tracking proof (see §10.1) |
 
 Do **not** use `/consultation` for commerce. Do **not** put shop under `/portfolio`.
+
+### 10.1 Guest tracking proof (required)
+
+The path `/shop/order/[orderReference]` **never** authorizes access by `orderReference` alone. Raw mobile **must not** appear in the URL or query string. Browser localStorage/sessionStorage is **not** authority.
+
+Lean MVP:
+
+1. Guest submits **POST** `/shop/track` (or equivalent server action / API) with order reference + mobile.
+2. Server rate-limits; normalizes mobile with `normalisePhoneToE164`; performs a **non-enumerating** combined order+mobile check. Individual existence of order vs mobile is never revealed (same 404-equivalent on miss).
+3. On match, server issues a **short-lived signed tracking context** (HMAC, server-only secret): `order_reference`, `issued_at`, `expires_at`, optional nonce/version. **Do not** put raw phone in the token unless strictly required (MVP: omit phone).
+4. Store proof in an **HttpOnly**, **SameSite=Lax**, **Secure** in production cookie, path-scoped as narrowly as practical to `/shop/order`. Lifetime **15 minutes** (within 10–30; not a long-lived guest session).
+5. `/shop/order/[orderReference]` validates the cookie **server-side**: signature, expiry, and `order_reference` **must equal** the route param. Invalid/missing/mismatch → non-enumerating `notFound()` / 404-equivalent. **No PII** before successful proof.
+6. Tracking proof is **not** customer authentication and creates **no account**.
+
+An opaque server-side token with the same properties is acceptable; HMAC cookie is the default freeze.
 
 **Admin** (existing shell)
 
@@ -243,7 +294,7 @@ All public tables: UUID PK, RLS on, revoke anon writes, mutations via RPCs. Hard
 | `commerce_related_products` | Manual related | Yes | No AI |
 | `commerce_pincodes` / `commerce_shipping_settings` | Shipping | Yes | §6 |
 | `commerce_tax_rates` / `commerce_tax_settings` | Tax | Yes | §5 |
-| `commerce_orders` | Order | Lifecycle only | `OD-O-{YYYY}-{SEQ6}`; snapshots immutable |
+| `commerce_orders` | Order | Lifecycle only | `OD-O-{YYYY}-{SEQ6}`; snapshots immutable; `inventory_hold_expires_at` for pending online; `cancellation_reason_code` nullable |
 | `commerce_order_items` | Lines | Immutable after insert | |
 | `commerce_order_delivery` | Address snapshot | Immutable after insert | |
 | `commerce_payments` | Payment | Provider-driven | Separate from order status |
@@ -271,14 +322,15 @@ Exceptions: payment_failed | cancelled
 ```
 
 - COD **starts `confirmed`** after successful stock commit (no `pending_payment`).
-- `pending_payment` → `confirmed` only via verified payment.
-- `pending_payment` → `payment_failed` or `cancelled` (hold release).
+- `pending_payment` → `confirmed` only via verified **paid** webhook **and** a successful stock conversion or late-pay restock commit (§4.3).
+- `pending_payment` → `payment_failed` or `cancelled` when **unpaid** (hold release): TTL without pay; provider session never created; customer abandon. **Not** used when money was received.
+- **Paid + stock unavailable after hold expiry:** order → `cancelled` (`paid_after_hold_expiry_stock_unavailable`); payment stays **`paid`**; manual refund flag. Do **not** invent `payment_failed`.
 - `cancelled` from `confirmed`/`processing` via staff RPC + restock; not from `shipped`/`delivered` in MVP (support/manual).
 - `delivered` terminal success. No project conversion.
 
 **Payment** (separate): `created` → `pending` → `paid` | `failed` | `cancelled`.
 
-Do not store card data. Do not treat browser redirect as `paid`.
+`paid` and order `cancelled` **may coexist** for the late-pay / stock-unavailable case. Do not store card data. Do not treat browser redirect as `paid`.
 
 ---
 
@@ -295,8 +347,9 @@ Do not store card data. Do not treat browser redirect as `paid`.
 ## 14. Security / privacy
 
 - No browser service role; no browser-authoritative price/stock/tax/shipping.
-- RLS on all public commerce tables; guest tracking RPC returns 404-equivalent without match; rate-limit track + checkout.
-- Webhook route: raw body signature verify; idempotent.
+- RLS on all public commerce tables; guest tracking returns 404-equivalent without a **combined** order+mobile match; rate-limit track + checkout + webhook.
+- Guest tracking proof: HMAC (or opaque) **HttpOnly** cookie; secret server-only; 15-minute expiry; route reference must match token; **no raw mobile in URL/query**; URL `orderReference` alone never authorizes PII (§10.1).
+- Webhook route: raw body signature verify; **idempotent / replay-safe**; late-pay must not convert a released hold (§4.3).
 - Purchase ≠ MARKETING. WhatsApp CTA ≠ order SoR (OD9D-10).
 - `/shop/order/[orderReference]` must not list or increment-guess PII.
 

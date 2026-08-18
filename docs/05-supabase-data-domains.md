@@ -174,7 +174,7 @@ See [ADR-0027](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md) and 
 
 ### 3.8 Commerce (Phase 9D — **ARCHITECTURE FROZEN**, implementation not started)
 
-Ready-made furniture catalogue, variants, SKU stock, orders (`OD-O-{YYYY}-{SEQ6}`), immutable item/address snapshots, COD + online payment state. **No tables in this gate.** Conceptual model and RBAC: [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md). Not quotation ecommerce. Not warehouse ERP. Migration timestamp **unreserved** until 9D-B.
+Ready-made furniture catalogue, variants, SKU stock, orders (`OD-O-{YYYY}-{SEQ6}`), immutable item/address snapshots, COD + online payment state. Online unpaid inventory uses a 15-minute `reserved_qty` hold; a late paid webhook after expiry must re-commit current stock or cancel without overselling (payment stays `paid`). Tax rates are explicit admin configuration (no architecture-seeded statutory GST %). **No tables in this gate.** Conceptual model and RBAC: [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md). Not quotation ecommerce. Not warehouse ERP. Migration timestamp **unreserved** until 9D-B.
 
 ---
 
