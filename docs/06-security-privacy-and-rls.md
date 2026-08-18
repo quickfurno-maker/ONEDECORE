@@ -1,6 +1,6 @@
 # 06 — SECURITY, PRIVACY AND ROW LEVEL SECURITY (RLS) POLICIES
 
-**Document Status:** Locked Security Baseline (truth-synced post Phase 9D roadmap lock, August 18, 2026)
+**Document Status:** Locked Security Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
 **RLS Target:** 100% Coverage on API-Exposed Application Tables
 **Default Access:** Anonymous Access Denied for Private Schemas
 
@@ -182,3 +182,21 @@ When 9D-A freezes architecture: browser cart totals are never authoritative; onl
 - [ADR-0015: Private Definer Status Transition Helper Pattern](ADR/ADR-0015-private-definer-status-transition-helper.md)
 - [Phase 2E2 Audit Report](audits/phase-2e2-portfolio-admin-cms.md)
 - [Phase 2E2A Audit Report](audits/phase-2e2a-status-rpc-exposure-hardening.md)
+
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
+## Phase 9B Security, Privacy & RLS Contract
+
+- RLS required on every API-exposed M32 table.
+- Landing management authority is dedicated and limited in V1 to active Super Admin / Sales Manager.
+- Frozen page versions are database-immutable.
+- Publication and experiment transitions are RPC/DB guarded.
+- No arbitrary HTML, JavaScript, CSS injection, or `dangerouslySetInnerHTML`.
+- `/lp/*` form submissions require server-verified signed publication context.
+- Canonical page/publication/experiment/variant/campaign identity is never trusted from raw client fields.
+- Exposure denominator stores only a server HMAC/hash visitor key plus publication/experiment/variant/timestamp data — no phone, email, IP, raw cookie ID, or unrestricted user agent.
+- Public intake DNC/suppression and consent behavior remains unchanged.
+- Landing forms must not fabricate MARKETING consent.
+- Campaign landing pages default `noindex, nofollow`.
+- Service-role credentials remain server-only.
+- Production activation remains Phase 10 gated.
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->

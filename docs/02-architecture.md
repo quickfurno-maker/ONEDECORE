@@ -1,6 +1,6 @@
 # 02 — TECHNICAL ARCHITECTURE AND REPOSITORY SPECIFICATION
 
-**Document Status:** Locked Architecture Baseline (truth-synced post Phase 9D roadmap lock, August 18, 2026)
+**Document Status:** Locked Architecture Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
 **Pattern:** Modular Monolith
 **Framework:** Next.js 16.2.11
 **Database:** Supabase PostgreSQL
@@ -145,3 +145,39 @@ Phase 5A locks the following cross-cutting patterns for future implementation:
 | Ready-made shop (Phase 9D) | Category `/shop` after 9C; guest checkout; simple variants; COD + online; webhook-authoritative payment; SKU stock not WMS; **ROADMAP LOCKED — not started** (ADR-0028) |
 
 Phase 6A delivers managed WhatsApp **data/webhook foundation** (migration 18). Phase 6B delivers managed **inbox/send-intent/dispatch foundations** (migrations 19–21) plus repository admin UI — **not production-activated**. Phase 8C project execution is **COMPLETE** (M30 managed). Phase 9A is **COMPLETE** (ADR-0027 / PR #62 / PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`). Phase 9A M31 is **managed-applied and immutable** (DEC-0080); `/admin/campaigns` is staff governance UI only. Phase 9D `/shop` is **not implemented**.
+
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
+## Phase 9B Architecture — Landing Page Lab
+
+Landing Page Lab remains inside the existing modular monolith.
+
+```text
+/admin/landing-pages
+        │ staff RBAC (SA/SM)
+        ▼
+Landing Lab domain
+  ├─ landing_pages
+  ├─ immutable landing_page_versions
+  ├─ landing_publications (draft/live/paused/archived)
+  ├─ landing_experiments + 2–3 variants
+  └─ privacy-safe landing_exposures
+        │
+        ▼
+/lp/[slug] server resolver
+  ├─ deterministic variant routing
+  ├─ signed publication context
+  └─ structured safe rendering
+        │
+        ▼
+/api/public/lead-intake
+        │ existing atomic RPC
+        ▼
+contacts / leads / consent_events
+        │
+        └─ existing lead_source_touchpoints enriched with landing/campaign metadata
+```
+
+No new public lead API, no browser service-role use, no parallel attribution store, no M31 rewrite, no n8n correctness dependency, and no provider execution in 9B.
+
+See ADR-0029.
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->

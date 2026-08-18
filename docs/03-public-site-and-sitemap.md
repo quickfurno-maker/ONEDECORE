@@ -1,6 +1,6 @@
 # 03 — PUBLIC WEBSITE SITEMAP AND INFORMATION ARCHITECTURE
 
-**Document Status:** Locked Sitemap Baseline (truth-synced post Phase 9D roadmap lock, August 18, 2026)
+**Document Status:** Locked Sitemap Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
 **Scope:** Public Marketing Pages & Route Ownership  
 **Target Market:** Pune, India  
 
@@ -77,3 +77,23 @@ The homepage is designed as an architectural storytelling experience. It showcas
 - [Portfolio Architecture](04-portfolio-architecture.md)
 - [ADR-0006: Public and Admin Route Separation](ADR/ADR-0006-public-and-admin-route-separation.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
+
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
+## Phase 9B Public/Admin Route Reservation
+
+Reserved Phase 9B routes:
+
+- Internal: `/admin/landing-pages` and nested staff-only editor/detail routes.
+- Public campaign landing: `/lp/[slug]`.
+
+Public Landing Lab rules:
+
+- only `live` publications may render;
+- draft/paused/archived/unknown publications are unavailable through a non-enumerating response;
+- pages are `noindex, nofollow` by default;
+- content is rendered only from validated structured blocks;
+- the lead form submits through the existing `/api/public/lead-intake` boundary;
+- no production route activation is authorized by the architecture freeze.
+
+The documented `/consultation` path must not be treated as a mounted route unless implementation separately proves/creates it.
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->

@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 9D roadmap lock, August 18, 2026)
-**Current Phase:** Phase 9B — Landing Page Lab (**NOT_STARTED** — next formal implementation). Phase 9A **COMPLETE**. Phase 9D **ROADMAP_LOCKED** (implementation **NOT_STARTED**).
-**Next Phase:** `PHASE_9B`
+**Document Status:** Locked Roadmap (truth-synced through Phase 9B architecture freeze, August 18, 2026)
+**Current Phase:** Phase 9B — Landing Page Lab (**ARCHITECTURE_FROZEN** — implementation **NOT STARTED**; M32 **ABSENT**). Phase 9A **COMPLETE**. Phase 9D **ROADMAP_LOCKED** (implementation **NOT_STARTED**).
+**Next Phase:** `PHASE_9B_M32_IMPLEMENTATION_PREFLIGHT`
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; production **not** activated)
 
 ---
@@ -157,7 +157,7 @@ Phase 8C ──► Project Execution Workspace [COMPLETE]
 Phase 9A ──► Campaign Consent, Audience & Approval Foundation [COMPLETE]
     │         • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077–DEC-0080; PR #62 merged; M31 managed-applied; PR #63 true merge `26e6346…`
     ▼
-Phase 9B ──► Landing Page Lab & Experimentation [ROADMAP-LOCKED — NOT IMPLEMENTED]
+Phase 9B ──► Landing Page Lab & Experimentation [ARCHITECTURE FROZEN — NOT IMPLEMENTED]
     │         • Landing page factory; reusable structured blocks
     │         • Campaign-specific variants; preview/publish/pause/archive
     │         • A/B/C experiments; UTM attribution; fbclid/gclid preservation
@@ -340,3 +340,24 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - [Phase 9A M31 implementation](audits/phase-9a-m31-campaign-consent-audience-approval-implementation.md)
 - [ADR-0028: Phase 9D ready-made furniture e-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [Phase 9D roadmap lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md)
+
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
+## Phase 9B Architecture Freeze Status
+
+**Status:** `ARCHITECTURE_FROZEN — IMPLEMENTATION NOT STARTED`
+
+Authority: **ADR-0029 / DEC-0081 / OD9B-1–OD9B-12**.
+
+Implementation sequence after architecture PR merge:
+
+1. `PHASE_9B_M32_IMPLEMENTATION_PREFLIGHT`
+2. reconcile migration-independent Landing Lab prebuild to ADR-0029
+3. create forward-only M32
+4. implement SA/SM admin workspace + public resolver + intake attribution bridge
+5. local application/database certification
+6. separate implementation PR
+7. separate managed recovery/apply gate
+8. Phase 10 retains production activation
+
+M32 is absent in the architecture-freeze gate. Phase 9C and Phase 9D implementation are excluded.
+<!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
