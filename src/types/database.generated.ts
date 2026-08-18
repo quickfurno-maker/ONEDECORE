@@ -1627,6 +1627,245 @@ export type Database = {
           },
         ]
       }
+      landing_experiment_variants: {
+        Row: {
+          allocation_percent: number
+          created_at: string
+          experiment_id: string
+          id: string
+          label: string
+          landing_page_version_id: string
+          variant_key: string
+        }
+        Insert: {
+          allocation_percent: number
+          created_at?: string
+          experiment_id: string
+          id?: string
+          label: string
+          landing_page_version_id: string
+          variant_key: string
+        }
+        Update: {
+          allocation_percent?: number
+          created_at?: string
+          experiment_id?: string
+          id?: string
+          label?: string
+          landing_page_version_id?: string
+          variant_key?: string
+        }
+        Relationships: []
+      }
+      landing_experiments: {
+        Row: {
+          concluded_at: string | null
+          concluded_by: string | null
+          created_at: string
+          created_by: string
+          experiment_reference: string
+          id: string
+          publication_id: string
+          started_at: string | null
+          started_by: string | null
+          status: string
+          updated_at: string
+          winner_variant_key: string | null
+        }
+        Insert: {
+          concluded_at?: string | null
+          concluded_by?: string | null
+          created_at?: string
+          created_by: string
+          experiment_reference: string
+          id?: string
+          publication_id: string
+          started_at?: string | null
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+          winner_variant_key?: string | null
+        }
+        Update: {
+          concluded_at?: string | null
+          concluded_by?: string | null
+          created_at?: string
+          created_by?: string
+          experiment_reference?: string
+          id?: string
+          publication_id?: string
+          started_at?: string | null
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+          winner_variant_key?: string | null
+        }
+        Relationships: []
+      }
+      landing_exposures: {
+        Row: {
+          assignment_epoch: string
+          created_at: string
+          experiment_id: string | null
+          experiment_id_key: string
+          first_exposed_at: string
+          id: string
+          publication_id: string
+          variant_key: string | null
+          variant_key_norm: string
+          visitor_key_hash: string
+        }
+        Insert: {
+          assignment_epoch: string
+          created_at?: string
+          experiment_id?: string | null
+          first_exposed_at?: string
+          id?: string
+          publication_id: string
+          variant_key?: string | null
+          visitor_key_hash: string
+        }
+        Update: {
+          assignment_epoch?: string
+          created_at?: string
+          experiment_id?: string | null
+          first_exposed_at?: string
+          id?: string
+          publication_id?: string
+          variant_key?: string | null
+          visitor_key_hash?: string
+        }
+        Relationships: []
+      }
+      landing_page_versions: {
+        Row: {
+          blocks: Json
+          content_hash: string | null
+          created_at: string
+          created_by: string
+          frozen_at: string | null
+          id: string
+          label: string
+          landing_page_id: string
+          lock_version: number
+          updated_at: string
+          updated_by: string | null
+          version_number: number
+        }
+        Insert: {
+          blocks: Json
+          content_hash?: string | null
+          created_at?: string
+          created_by: string
+          frozen_at?: string | null
+          id?: string
+          label: string
+          landing_page_id: string
+          lock_version?: number
+          updated_at?: string
+          updated_by?: string | null
+          version_number: number
+        }
+        Update: {
+          blocks?: Json
+          content_hash?: string | null
+          created_at?: string
+          created_by?: string
+          frozen_at?: string | null
+          id?: string
+          label?: string
+          landing_page_id?: string
+          lock_version?: number
+          updated_at?: string
+          updated_by?: string | null
+          version_number?: number
+        }
+        Relationships: []
+      }
+      landing_pages: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          page_reference: string
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          page_reference: string
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          page_reference?: string
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      landing_publications: {
+        Row: {
+          archived_at: string | null
+          campaign_reference: string | null
+          campaign_version_number: number | null
+          created_at: string
+          created_by: string
+          id: string
+          landing_page_id: string
+          landing_page_version_id: string
+          lock_version: number
+          paused_at: string | null
+          publication_reference: string
+          published_at: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          campaign_reference?: string | null
+          campaign_version_number?: number | null
+          created_at?: string
+          created_by: string
+          id?: string
+          landing_page_id: string
+          landing_page_version_id: string
+          lock_version?: number
+          paused_at?: string | null
+          publication_reference: string
+          published_at?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          campaign_reference?: string | null
+          campaign_version_number?: number | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          landing_page_id?: string
+          landing_page_version_id?: string
+          lock_version?: number
+          paused_at?: string | null
+          publication_reference?: string
+          published_at?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           assigned_to: string | null
@@ -4672,6 +4911,14 @@ export type Database = {
         }
         Returns: Json
       }
+      conclude_landing_experiment: {
+        Args: {
+          p_experiment_id: string
+          p_idempotency_key: string
+          p_winner_variant_key: string
+        }
+        Returns: Json
+      }
       confirm_lead_import_batch_direct: {
         Args: { p_batch_id: string; p_expected_revision: number }
         Returns: {
@@ -4743,6 +4990,34 @@ export type Database = {
       }
       create_holiday: {
         Args: { p_holiday_date: string; p_name: string }
+        Returns: Json
+      }
+      create_landing_page_draft: {
+        Args: {
+          p_blocks: Json
+          p_idempotency_key: string
+          p_slug: string
+          p_title: string
+          p_version_label: string
+        }
+        Returns: Json
+      }
+      create_landing_publication: {
+        Args: {
+          p_campaign_reference: string | null
+          p_campaign_version_number: number | null
+          p_idempotency_key: string
+          p_landing_page_id: string
+          p_version_id: string
+        }
+        Returns: Json
+      }
+      create_next_landing_page_version: {
+        Args: {
+          p_idempotency_key: string
+          p_landing_page_id: string
+          p_source_version_id: string
+        }
         Returns: Json
       }
       create_lead_assignment_rule: {
@@ -5076,6 +5351,10 @@ export type Database = {
         }
         Returns: Json
       }
+      freeze_landing_page_version: {
+        Args: { p_idempotency_key: string; p_version_id: string }
+        Returns: Json
+      }
       finalize_project_design_deliverable_version: {
         Args: { p_idempotency_key: string; p_version_id: string }
         Returns: Json
@@ -5106,6 +5385,7 @@ export type Database = {
         Returns: Json
       }
       get_quotation_draft: { Args: { p_quotation_id: string }; Returns: Json }
+      get_live_landing_publication: { Args: { p_slug: string }; Returns: Json }
       has_active_role: { Args: { p_role_code: string }; Returns: boolean }
       hold_project_design: {
         Args: {
@@ -5305,6 +5585,16 @@ export type Database = {
           p_instruction_source: string
           p_note: string
           p_notice_version: string
+        }
+        Returns: Json
+      }
+      record_landing_exposure: {
+        Args: {
+          p_assignment_epoch: string
+          p_experiment_id: string | null
+          p_publication_id: string
+          p_variant_key: string | null
+          p_visitor_key_hash: string
         }
         Returns: Json
       }
@@ -5678,6 +5968,27 @@ export type Database = {
         }
         Returns: Json
       }
+      save_landing_experiment_draft: {
+        Args: {
+          p_experiment_id: string | null
+          p_idempotency_key: string
+          p_publication_id: string
+          p_variants: Json
+        }
+        Returns: Json
+      }
+      save_landing_page_draft: {
+        Args: {
+          p_blocks: Json
+          p_expected_lock_version: number
+          p_idempotency_key: string
+          p_slug: string
+          p_title: string
+          p_version_id: string
+          p_version_label: string
+        }
+        Returns: Json
+      }
       save_quotation_draft_items: {
         Args: {
           p_expected_lock_version: number
@@ -5762,6 +6073,10 @@ export type Database = {
       }
       set_staff_reporting_manager: {
         Args: { p_manager_id: string; p_reason: string; p_staff_id: string }
+        Returns: Json
+      }
+      start_landing_experiment: {
+        Args: { p_experiment_id: string; p_idempotency_key: string }
         Returns: Json
       }
       start_kriti_run: {
@@ -5862,6 +6177,15 @@ export type Database = {
           retry_after_seconds: number
           submission_reference: string
         }[]
+      }
+      transition_landing_publication: {
+        Args: {
+          p_expected_lock_version: number
+          p_idempotency_key: string
+          p_publication_id: string
+          p_target_status: string
+        }
+        Returns: Json
       }
       transition_lead_status: {
         Args: {
@@ -6069,6 +6393,16 @@ export type Database = {
       whatsapp_inbox_check_conversation_access: {
         Args: { p_capability: string; p_conversation_id: string }
         Returns: boolean
+      }
+      verify_live_landing_publication_context: {
+        Args: {
+          p_experiment_reference: string | null
+          p_page_reference: string
+          p_page_version_number: number
+          p_publication_reference: string
+          p_variant_key: string | null
+        }
+        Returns: Json
       }
     }
     Enums: {

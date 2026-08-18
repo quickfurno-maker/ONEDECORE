@@ -14,6 +14,8 @@ export function buildCanonicalPublicationContextPayload(
   context: PublicationContext
 ): string {
   const payload = {
+    campaignReference: context.campaignReference ?? null,
+    campaignVersionNumber: context.campaignVersionNumber ?? null,
     experimentReference: context.experimentReference,
     expiresAt: context.expiresAt,
     issuedAt: context.issuedAt,

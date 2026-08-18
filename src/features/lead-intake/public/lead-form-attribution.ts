@@ -12,6 +12,8 @@ export interface LeadFormAttribution {
   readonly utmCampaign?: string;
   readonly utmTerm?: string;
   readonly utmContent?: string;
+  readonly fbclid?: string;
+  readonly gclid?: string;
 }
 
 const UTM_KEYS = [
@@ -22,14 +24,19 @@ const UTM_KEYS = [
   ["utm_content", "utmContent"],
 ] as const;
 
+const CLICK_ID_KEYS = [
+  ["fbclid", "fbclid"],
+  ["gclid", "gclid"],
+] as const;
+
 function readUtmParams(searchParams: URLSearchParams): Partial<
   Pick<
     LeadFormAttribution,
-    "utmSource" | "utmMedium" | "utmCampaign" | "utmTerm" | "utmContent"
+    "utmSource" | "utmMedium" | "utmCampaign" | "utmTerm" | "utmContent" | "fbclid" | "gclid"
   >
 > {
   const out: Record<string, string> = {};
-  for (const [queryKey, fieldKey] of UTM_KEYS) {
+  for (const [queryKey, fieldKey] of [...UTM_KEYS, ...CLICK_ID_KEYS]) {
     const value = searchParams.get(queryKey)?.trim();
     if (value) out[fieldKey] = value;
   }

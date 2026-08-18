@@ -6,8 +6,8 @@
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 9B — Landing Page Lab (**ARCHITECTURE_FROZEN** — implementation **NOT STARTED**; M32 **ABSENT**). Phase 9A **COMPLETE**. Phase 9D **ROADMAP_LOCKED** (implementation **NOT_STARTED**).
-**Next Phase:** `PHASE_9B_M32_IMPLEMENTATION_PREFLIGHT`
+**Current Phase:** Phase 9B — Landing Page Lab (**REPOSITORY IMPLEMENTATION COMPLETE** on branch — M32 present, **not** managed-applied). Phase 9A **COMPLETE**. Phase 9D **ROADMAP_LOCKED**.
+**Next Phase:** Managed M32 recovery/apply is a **separate later gate**. Production Landing Lab stays disabled.
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; M31 immutable; production **not** activated)
 
 ---
@@ -107,7 +107,7 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Designer assignment & design collaboration (migration 29) | Managed-applied 2026-08-16 (Phase 8B M29); PR #59 **MERGED** `6b31052973cf9e50e25803b232ce446308c1fa3a` |
 | Project execution workspace (migration 30) | Managed-applied 2026-08-17 (Phase 8C M30); PR #61 **MERGED** `8f4f3ecf082450e82ab15f02703c951e50f0817e` |
 | Campaign consent, audience & approval foundation (migration 31) | Managed-applied 2026-08-18 (Phase 9A M31); PR #63 **MERGED** `26e6346ef6722b7c6ff5908c12f208854b513ad6`; architecture PR #62 **MERGED** `caff9d0864e1546dff38646df4355dafa851a473` |
-| Migration alignment | Repository: **M1–M31**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M31**; pending **NONE**; M31 **immutable** |
+| Migration alignment | Repository: **M1–M32**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M31**; M32 **not** managed-applied; M31 **immutable** |
 
 CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed database (`lpurlfmpvriyvpkujvyl`) through **M27**. Phase 7B is **COMPLETE** (PR #55 merged). Phase 8A is **COMPLETE** (PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; managed **M1–M28**). Phase 8B is **COMPLETE** (OD8B-1–OD8B-8 / ADR-0025 / DEC-0073–DEC-0074; PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`; managed **M1–M29**). Phase 8C is **COMPLETE** (OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; architecture PR #60 merged `5b4a7f300e63b438884a2b440a69a569d91b9e5d`; implementation PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; managed **M1–M30**). Phase 9A architecture is frozen (OD9A-1–OD9A-6 / ADR-0027 / DEC-0077; architecture PR #62 true merge `caff9d0864e1546dff38646df4355dafa851a473`). Phase 9A repository implementation is **REPOSITORY_COMPLETE** (DEC-0078). Phase 9A managed apply is **CERTIFIED** (DEC-0080; M31 applied 2026-08-18; managed **M1–M31**; pending **NONE**; M31 immutable). PR #63 **MERGED** `26e6346ef6722b7c6ff5908c12f208854b513ad6`. Phase 9D is **ROADMAP_LOCKED** (DEC-0079 / ADR-0028; implementation **NOT STARTED**). **Production deployment pending** (Phase 10); **public intake remains inactive**.
 
@@ -223,13 +223,14 @@ WhatsApp production outbound, public lead activation, production deployment, **M
 - [Phase 8C Architecture Freeze](audits/phase-8c-project-execution-workspace-architecture-freeze.md)
 - [Phase 9A Architecture Freeze](audits/phase-9a-campaign-consent-audience-approval-architecture-freeze.md)
 - [Phase 9A M31 Implementation](audits/phase-9a-m31-campaign-consent-audience-approval-implementation.md)
-- [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
-- [Phase 9D Roadmap Lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md)
+- [ADR-0029: Phase 9B Landing Page Lab](ADR/ADR-0029-phase-9b-landing-page-lab.md)
+- [Phase 9B architecture freeze](audits/phase-9b-landing-page-lab-architecture-freeze.md)
+- [Phase 9B M32 implementation](audits/phase-9b-m32-landing-page-lab-implementation.md)
 
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
 ## Phase 9B Architecture Freeze — Landing Page Lab
 
-Phase 9B architecture is **FROZEN** under **ADR-0029 / DEC-0081 / OD9B-1–OD9B-12**. Implementation is not started and **M32 is absent**.
+Phase 9B architecture remains **FROZEN** under **ADR-0029 / DEC-0081 / OD9B-1–OD9B-12**. Repository implementation is recorded in **DEC-0082**. M32 exists in Git; managed remains **M1–M31**; production Landing Lab is **OFF**.
 
 Locked boundaries:
 
@@ -246,5 +247,5 @@ Locked boundaries:
 - Phase 9C provider execution excluded;
 - Phase 10 remains the production activation gate.
 
-Next formal gate: `PHASE_9B_M32_IMPLEMENTATION_PREFLIGHT`.
+Next formal gate: separate managed M32 recovery/apply. Production activation remains Phase 10.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->

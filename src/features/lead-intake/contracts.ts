@@ -7,6 +7,7 @@ import {
   type ConsentPurposeCode,
 } from "../legal/consent-registry.ts";
 import { PRIVACY_NOTICE_VERSION } from "../legal/privacy-policy-content.ts";
+import type { SignedPublicationContext } from "../landing-lab/contracts/publication-context.ts";
 import {
   LEAD_BUDGET_COMFORT_CODES,
   LEAD_PROPERTY_CODES,
@@ -89,11 +90,14 @@ export interface LeadIntakeRequestBody {
     readonly utmCampaign?: string;
     readonly utmTerm?: string;
     readonly utmContent?: string;
+    readonly fbclid?: string;
+    readonly gclid?: string;
   };
   readonly antiBot: {
     readonly website: string;
     readonly formStartedAt: string;
   };
+  readonly landingPublicationContext?: SignedPublicationContext;
 }
 
 export type LeadIntakeRpcOutcome =
@@ -127,6 +131,7 @@ export interface ValidatedLeadIntake {
   readonly message: string | null;
   readonly landingPath: string;
   readonly attribution: Record<string, string>;
+  readonly landingPublicationContext: SignedPublicationContext | null;
   readonly consentServicePhone: true;
   readonly consentServiceEmail: boolean;
   readonly consentWhatsapp: boolean;

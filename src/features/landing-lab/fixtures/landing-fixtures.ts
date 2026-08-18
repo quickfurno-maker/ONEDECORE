@@ -12,7 +12,7 @@ import type {
 import type { PublicationContext } from "../contracts/publication-context.ts";
 
 export const LANDING_LAB_PREBUILD_BANNER =
-  "PREBUILD — NOT LIVE. No public serving or lead intake activation.";
+  "STAFF PREVIEW — not a public publication. Exposures and live lead intake are disabled here.";
 
 export function buildSampleLandingBlocks(): readonly LandingBlock[] {
   return [
@@ -122,7 +122,7 @@ export function buildSampleLandingPage(): LandingPage {
   return {
     pageReference: "OD-LP-2026-0001",
     title: "Gurgaon Interiors Landing",
-    lifecycle: "draft",
+    lifecycle: "active",
     createdAt: "2026-08-07T10:00:00.000Z",
     updatedAt: "2026-08-07T10:00:00.000Z",
   };
@@ -156,6 +156,8 @@ export function buildSamplePublicationContext(): PublicationContext {
     pageVersionNumber: 1,
     experimentReference: "OD-LP-EXP-0001",
     variantKey: "control",
+    campaignReference: "OD-C-2026-0001",
+    campaignVersionNumber: 1,
     issuedAt: "2026-08-07T10:00:00.000Z",
     expiresAt: null,
   };
