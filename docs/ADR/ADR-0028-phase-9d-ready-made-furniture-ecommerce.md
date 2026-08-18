@@ -6,7 +6,7 @@
 **Technical Scope:** Category-based premium ready-made furniture storefront under `/shop`, with existing admin shell operations
 **Depends on:** [ADR-0002](ADR-0002-supabase-source-of-truth.md), [ADR-0005](ADR-0005-version-1-no-erp-boundary.md), [ADR-0006](ADR-0006-public-and-admin-route-separation.md), [ADR-0007](ADR-0007-imperative-versioned-migrations.md), [ADR-0008](ADR-0008-database-backed-rbac.md), [ADR-0027](ADR-0027-phase-9a-campaign-consent-audience-approval.md)
 
-This ADR **is** Phase 9D **roadmap and owner-lock** authority. It is **not** the Phase 9D architecture freeze. 9D-A (`PHASE_9D_ENTRY_AUDIT`) must still freeze payment provider, CRM identity reuse, inventory allocation, tax, shipping model, and RBAC codes **before** any schema.
+This ADR **is** Phase 9D **roadmap and owner-lock** authority. Architecture freeze is **[ADR-0030](ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md) / DEC-0083**. This ADR does **not** create schema. 9D-B remains blocked until Phase 9C complete and ADR-0030 is merged.
 
 This ADR does **not** reopen ADR-0027 / OD9A locks, Phase 9B/9C implementation, or Phase 10 production activation. Phase 9A is **COMPLETE** (PR #63 true merge). Next formal implementation is Phase 9B. Phase 9D implementation must not start until after 9C and 9D-A freeze.
 
@@ -122,5 +122,7 @@ Video / 360 / AR / 3D, customer account, compare (optional defer), complex coupo
 ## Related
 
 - [Phase 9D roadmap lock](../audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md)
+- [Phase 9D-A architecture freeze](../audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)
+- [ADR-0030](ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 - [ADR-0005: No-ERP boundary](ADR-0005-version-1-no-erp-boundary.md)
 - [ADR-0027: Phase 9A campaigns](ADR-0027-phase-9a-campaign-consent-audience-approval.md)

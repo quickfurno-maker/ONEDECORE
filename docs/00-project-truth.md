@@ -6,8 +6,8 @@
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 9B — Landing Page Lab (**REPOSITORY IMPLEMENTATION COMPLETE** on branch — M32 present, **not** managed-applied). Phase 9A **COMPLETE**. Phase 9D **ROADMAP_LOCKED**.
-**Next Phase:** Managed M32 recovery/apply is a **separate later gate**. Production Landing Lab stays disabled.
+**Current Phase:** Phase 9B — Landing Page Lab (**REPOSITORY MERGED** via PR #66 at `39f5a7a69998418bee943168cff218a0aa1f721e`; M32 **not** managed-applied). Phase 9A **COMPLETE**. Phase 9D-A **ARCHITECTURE_FROZEN** (docs). Phase 9C **NOT STARTED**.
+**Next Phase:** Managed M32 recovery/apply remains a **separate gate**. 9D-B blocked until 9C complete + 9D-A merged. Production Landing Lab and `/shop` stay disabled.
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; M31 immutable; production **not** activated)
 
 ---
@@ -58,7 +58,7 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 ├─────────────────────────────────────────────────────────┤
 │ 10. Controlled n8n Workflows (async notification bus)  │
 ├─────────────────────────────────────────────────────────┤
-│ 11. Ready-Made Furniture Shop (/shop) (Phase 9D locked; not started) │
+│ 11. Ready-Made Furniture Shop (/shop) (9D-A frozen; implementation blocked) │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -223,9 +223,12 @@ WhatsApp production outbound, public lead activation, production deployment, **M
 - [Phase 8C Architecture Freeze](audits/phase-8c-project-execution-workspace-architecture-freeze.md)
 - [Phase 9A Architecture Freeze](audits/phase-9a-campaign-consent-audience-approval-architecture-freeze.md)
 - [Phase 9A M31 Implementation](audits/phase-9a-m31-campaign-consent-audience-approval-implementation.md)
+- [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [ADR-0029: Phase 9B Landing Page Lab](ADR/ADR-0029-phase-9b-landing-page-lab.md)
 - [Phase 9B architecture freeze](audits/phase-9b-landing-page-lab-architecture-freeze.md)
 - [Phase 9B M32 implementation](audits/phase-9b-m32-landing-page-lab-implementation.md)
+- [ADR-0030: Phase 9D e-commerce architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
+- [Phase 9D-A entry audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)
 
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
 ## Phase 9B Architecture Freeze — Landing Page Lab
@@ -249,3 +252,11 @@ Locked boundaries:
 
 Next formal gate: separate managed M32 recovery/apply. Production activation remains Phase 10.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9D_A_ARCHITECTURE_FREEZE_START -->
+## Phase 9D-A Architecture Freeze — Ready-Made Furniture E-commerce
+
+Phase 9D product locks remain **OD9D-1–OD9D-12** (ADR-0028 / DEC-0079). Architecture is **FROZEN** under **ADR-0030 / DEC-0083**. Docs only: no schema, no `/shop` runtime, no payment adapter, no managed write.
+
+9D-B is blocked until Phase 9C is complete and this freeze is merged. Commerce migration number is **unreserved**.
+<!-- PHASE_9D_A_ARCHITECTURE_FREEZE_END -->

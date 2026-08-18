@@ -23,7 +23,7 @@
 10 Final Security, E2E, Performance & Production Launch
 ```
 
-Next Phase 9D gate after 9A–9C: **`PHASE_9D_ENTRY_AUDIT`** (9D-A). No database implementation before that audit and architecture freeze.
+9D-A architecture freeze is recorded in **[ADR-0030](../ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md) / DEC-0083**. Next 9D implementation gate is **9D-B**, blocked until Phase 9C complete and ADR-0030 merged. No database implementation in 9D-A.
 
 ---
 

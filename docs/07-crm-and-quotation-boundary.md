@@ -2,7 +2,7 @@
 
 **Document Status:** Locked CRM & Quotation Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
 **Internal Prefix:** `/admin`
-**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55). Phase 8A **COMPLETE** (PR #57 merged). Phase 8B **COMPLETE** (PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`). Phase 8C **COMPLETE** (ADR-0026 / DEC-0075–DEC-0076; PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; production not activated). Phase 9A **COMPLETE** (ADR-0027 / DEC-0077–DEC-0080; PR #62 merged `caff9d0864e1546dff38646df4355dafa851a473`; PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; M31 managed immutable). Phase 9D ready-made `/shop` is **roadmap-locked, not started**; guest-checkout CRM identity reuse is a 9D-A decision. Interior quotation ecommerce remains Phase 7 — not `/shop`.
+**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55). Phase 8A **COMPLETE** (PR #57 merged). Phase 8B **COMPLETE** (PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`). Phase 8C **COMPLETE** (ADR-0026 / DEC-0075–DEC-0076; PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; production not activated). Phase 9A **COMPLETE** (ADR-0027 / DEC-0077–DEC-0080; PR #62 merged `caff9d0864e1546dff38646df4355dafa851a473`; PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; M31 managed immutable). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030 / DEC-0083); `/shop` **not implemented**. Guest checkout does not auto-create interior leads. Interior quotation ecommerce remains Phase 7 — not `/shop`.
 
 ---
 
@@ -163,7 +163,7 @@ See [ADR-0020](ADR/ADR-0020-closed-won-project-handover-invariants.md) and [ADR-
 
 ## 6. Version 1 Scope Boundary (No ERP)
 
-CRM and project execution exclude: accounting ledgers, vendor POs, warehouse inventory, labour dispatch, vendor payments. PM and Designer roles **are in scope** for execution and design (ADR-0020). Phase 9D later adds **store SKU stock** for ready-made furniture only (ADR-0028) — not WMS.
+CRM and project execution exclude: accounting ledgers, vendor POs, warehouse inventory, labour dispatch, vendor payments. PM and Designer roles **are in scope** for execution and design (ADR-0020). Phase 9D later adds **store SKU stock** for ready-made furniture only (ADR-0028 / ADR-0030) — not WMS. Furniture orders do **not** become projects.
 
 ---
 
@@ -180,6 +180,7 @@ CRM and project execution exclude: accounting ledgers, vendor POs, warehouse inv
 - [Product Requirements](01-product-requirements.md)
 - [ADR-0005: Version 1 No-ERP Boundary](ADR/ADR-0005-version-1-no-erp-boundary.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
+- [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
 ## Phase 9B CRM Attribution Boundary

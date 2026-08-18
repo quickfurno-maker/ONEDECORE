@@ -85,7 +85,7 @@ Groq must **not** automatically send messages, mutate assignments or statuses, a
 - n8n cannot decide consent or approval truth.
 - No fabricated consent. Public MARKETING capture remains OFF.
 
-Phase 9D may add a public “Need Help? Chat with ONEDECORE” WhatsApp support CTA on `/shop`. That chat is **not** order, payment, or inventory truth (OD9D-10). Storefront purchase does **not** grant MARKETING consent.
+Phase 9D may add a public “Need Help? Chat with ONEDECORE” WhatsApp support CTA on `/shop`. That chat is **not** order, payment, or inventory truth (OD9D-10). Storefront purchase does **not** grant MARKETING consent. Architecture freeze: [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md).
 
 ---
 
@@ -117,6 +117,7 @@ Do not conflate disabled intake with future WhatsApp or campaign capabilities.
 - [ADR-0021: Groq Copilot and WhatsApp Boundary](ADR/ADR-0021-groq-copilot-and-whatsapp-boundary.md)
 - [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
+- [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 - [Security, Privacy & RLS](06-security-privacy-and-rls.md)
 - [Runbook: Lead Intake Public Activation](runbooks/lead-intake-public-activation.md)
 

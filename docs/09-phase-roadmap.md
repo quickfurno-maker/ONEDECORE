@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
 **Document Status:** Locked Roadmap (truth-synced through Phase 9B architecture freeze, August 18, 2026)
-**Current Phase:** Phase 9B — Landing Page Lab (**REPOSITORY IMPLEMENTATION COMPLETE**; M32 not managed-applied). Phase 9A **COMPLETE**. Phase 9D **ROADMAP_LOCKED**.
+**Current Phase:** Phase 9B — Landing Page Lab (**REPOSITORY MERGED**; M32 not managed-applied). Phase 9A **COMPLETE**. Phase 9D-A **ARCHITECTURE_FROZEN**. Phase 9C **NOT STARTED**.
 **Next Phase:** Managed M32 recovery/apply (separate gate). Production Landing Lab remains disabled.
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; production **not** activated)
 
@@ -170,7 +170,7 @@ Phase 9C ──► Campaign Execution, Attribution & Conversion Feedback [NOT IM
     │         • Authoritative later commercial conversion; attribution comparison
     │         • Cost per lead / qualified lead / later commercial conversion; no double counting
     ▼
-Phase 9D ──► Ready-Made Furniture E-commerce [ROADMAP-LOCKED — NOT STARTED]
+Phase 9D ──► Ready-Made Furniture E-commerce [9D-A FROZEN — IMPLEMENTATION BLOCKED UNTIL 9C]
     │         • Category-based /shop (no Shop by Room / packages / marketplace / ERP)
     │         • Guest checkout; simple variants; COD + online (provider chosen in 9D-A)
     │         • Supabase catalogue/inventory/order/payment-state truth; immutable snapshots
@@ -293,9 +293,9 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 ### Phase 9D (Ready-Made Furniture E-commerce)
 - **Objective:** Premium mobile-first category-based ready-made furniture store under `/shop`.
 - **Roadmap lock:** [Phase 9D lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md), [ADR-0028](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md), DEC-0079, OD9D-1–OD9D-12.
-- **Placement:** after 9C, before Phase 10. Implementation must not start during Phase 9B/9C.
-- **Next 9D gate:** `PHASE_9D_ENTRY_AUDIT` (9D-A architecture freeze). No database implementation before that freeze.
-- **Status:** **ROADMAP LOCKED** — implementation **NOT STARTED**. No `/shop` runtime, commerce schema, or payment provider.
+- **Architecture freeze:** [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md), [9D-A audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md), DEC-0083.
+- **Placement:** after 9C, before Phase 10. **9D-B blocked** until 9C complete and 9D-A merged.
+- **Status:** **9D-A ARCHITECTURE FROZEN** — implementation **NOT STARTED**. No `/shop` runtime, commerce schema, or payment provider. Commerce migration **unreserved**.
 
 ### Phase 10
 - **Objective:** Security hardening, full E2E, performance budgets, Hostinger VPS deployment.
@@ -315,7 +315,7 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 8. Project-value reconciliation (Phase 8A) must not double-count quotation acceptance.
 9. Landing Page Lab (9B) does not move earlier than roadmap sequence; production use requires Phase 10.
 10. Phase 8C M30 is applied and merged; do not persist duplicate M29 measurement/design/approval truth. Phase 9A must not create M31 before ADR-0027 is merged.
-11. Phase 9D does not start before 9A–9C complete and 9D-A architecture freeze. No room-wise or quotation ecommerce under `/shop`.
+11. Phase 9D implementation does not start before 9C complete and 9D-A architecture freeze merged. No room-wise or quotation ecommerce under `/shop`. Commerce migration timestamps are allocated at 9D-B, not reserved as M33.
 
 ---
 
@@ -340,6 +340,8 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - [Phase 9A M31 implementation](audits/phase-9a-m31-campaign-consent-audience-approval-implementation.md)
 - [ADR-0028: Phase 9D ready-made furniture e-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [Phase 9D roadmap lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md)
+- [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
+- [Phase 9D-A entry audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)
 
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
 ## Phase 9B Architecture Freeze Status
@@ -350,3 +352,13 @@ Authority: **ADR-0029 / DEC-0081 / OD9B-1–OD9B-12**.
 
 M32 is present in the repository and **must not** be applied to managed OneDecore in this gate. Phase 9C and Phase 9D implementation remain excluded. Production activation remains Phase 10.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9D_A_ARCHITECTURE_FREEZE_START -->
+## Phase 9D-A Architecture Freeze Status
+
+**Status:** `ARCHITECTURE_FROZEN (DEC-0083)` — implementation **NOT STARTED**
+
+Authority: **ADR-0028 / ADR-0030 / DEC-0079 / DEC-0083 / OD9D-1–OD9D-12**.
+
+No commerce migration, `/shop` runtime, payment SDK, or managed write in this gate. 9D-B blocked until 9C complete.
+<!-- PHASE_9D_A_ARCHITECTURE_FREEZE_END -->
