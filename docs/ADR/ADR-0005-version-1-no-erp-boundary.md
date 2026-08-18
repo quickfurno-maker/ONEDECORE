@@ -39,3 +39,9 @@ Interior design applications frequently suffer from scope creep by attempting to
 - Sales CRM (lead management, pipeline stages, site visit logs).
 - Commercial quotation builder (itemized estimates, versioning, discount approval locks).
 - Official Meta WhatsApp Cloud API integration (message logging, templates, consent management).
+
+---
+
+## Later bounded exception (does not reopen ERP)
+
+Phase 9D ([ADR-0028](ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)) locks a **ready-made furniture storefront** with **single-pool sellable SKU/variant stock**. That is store inventory for `/shop`, not warehouse WMS, barcode scanning, procurement, or accounting. ADR-0005 exclusions for ERP modules remain in force.

@@ -1,6 +1,6 @@
 # 03 — PUBLIC WEBSITE SITEMAP AND INFORMATION ARCHITECTURE
 
-**Document Status:** Locked Sitemap Baseline  
+**Document Status:** Locked Sitemap Baseline (truth-synced post Phase 9D roadmap lock, August 18, 2026)
 **Scope:** Public Marketing Pages & Route Ownership  
 **Target Market:** Pune, India  
 
@@ -28,6 +28,10 @@
 | `/terms` | Website terms of service | Read Terms | Public | Phase 6 |
 | `/login` | Staff authentication portal | Sign In | Public (Auth) | Phase 2 |
 | `/admin/*` | Internal CRM portal (leads, quotes, portfolio CMS) | Administrative Controls | Role-Restricted | Phase 7 |
+| `/shop` | Ready-made furniture category store | Browse Shop | Planned public | Phase 9D |
+| `/shop/search` | Catalogue search | Find products | Planned public | Phase 9D |
+| `/shop/product/[slug]` | Product detail | Add to Cart / Buy Now | Planned public | Phase 9D |
+| `/admin/commerce*` | Catalogue and order operations | Manage store | Planned staff | Phase 9D |
 
 ---
 
@@ -72,3 +76,4 @@ The homepage is designed as an architectural storytelling experience. It showcas
 - [Product Requirements](01-product-requirements.md)
 - [Portfolio Architecture](04-portfolio-architecture.md)
 - [ADR-0006: Public and Admin Route Separation](ADR/ADR-0006-public-and-admin-route-separation.md)
+- [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)

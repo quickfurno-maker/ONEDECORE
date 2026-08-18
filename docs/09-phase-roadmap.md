@@ -1,9 +1,9 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 9A M31 managed certification, August 18, 2026)
-**Current Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**ARCHITECTURE COMPLETE_FROZEN**; implementation **REPOSITORY_COMPLETE**; managed DB **CERTIFIED_M1_M31**; PR **OPEN_NOT_MERGED**)
-**Next Phase:** `PHASE_9A_PR63_MERGE`
-**Previous Phase:** Phase 8C — Project Execution Workspace (**COMPLETE** — PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; production **not** activated)
+**Document Status:** Locked Roadmap (truth-synced post Phase 9D roadmap lock, August 18, 2026)
+**Current Phase:** Phase 9B — Landing Page Lab (**NOT_STARTED** — next formal implementation). Phase 9A **COMPLETE**. Phase 9D **ROADMAP_LOCKED** (implementation **NOT_STARTED**).
+**Next Phase:** `PHASE_9B`
+**Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; production **not** activated)
 
 ---
 
@@ -87,8 +87,8 @@ Phase 8B: Designer Assignment & Design Collaboration ─────────
   • OD8B-1–OD8B-8 locked; PR #59 merged `6b31052…`; repository/managed M1–M29; pending NONE; M30 absent
 Phase 8C: Project Execution Workspace ────────────────────────────── COMPLETE
   • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; PR #61 true merge `8f4f3ecf…`; repository/managed M1–M30; pending NONE; production not activated
-Phase 9A: Campaign Consent, Audience & Approval Foundation ──────── ARCHITECTURE COMPLETE_FROZEN / REPOSITORY_COMPLETE
-  • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077–DEC-0080; architecture PR #62 merged `caff9d0…`; M31 managed-applied immutable; PR #63 OPEN; production not activated
+Phase 9A: Campaign Consent, Audience & Approval Foundation ──────── COMPLETE
+  • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077–DEC-0080; architecture PR #62 merged `caff9d0…`; M31 managed-applied immutable; PR #63 true merge `26e6346…`; production not activated
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -154,8 +154,8 @@ Phase 8B ──► Designer Assignment & Design Collaboration [COMPLETE]
 Phase 8C ──► Project Execution Workspace [COMPLETE]
     │         • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; PR #61 merged; managed M1–M30
     ▼
-Phase 9A ──► Campaign Consent, Audience & Approval Foundation [ARCHITECTURE COMPLETE_FROZEN / REPOSITORY_COMPLETE]
-    │         • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077–DEC-0080; PR #62 merged; M31 managed-applied; PR #63 OPEN
+Phase 9A ──► Campaign Consent, Audience & Approval Foundation [COMPLETE]
+    │         • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077–DEC-0080; PR #62 merged; M31 managed-applied; PR #63 true merge `26e6346…`
     ▼
 Phase 9B ──► Landing Page Lab & Experimentation [ROADMAP-LOCKED — NOT IMPLEMENTED]
     │         • Landing page factory; reusable structured blocks
@@ -169,6 +169,12 @@ Phase 9C ──► Campaign Execution, Attribution & Conversion Feedback [NOT IM
     │         • Server-side conversion feedback; QualifiedLead / ConsultationScheduled / ProposalSent
     │         • Authoritative later commercial conversion; attribution comparison
     │         • Cost per lead / qualified lead / later commercial conversion; no double counting
+    ▼
+Phase 9D ──► Ready-Made Furniture E-commerce [ROADMAP-LOCKED — NOT STARTED]
+    │         • Category-based /shop (no Shop by Room / packages / marketplace / ERP)
+    │         • Guest checkout; simple variants; COD + online (provider chosen in 9D-A)
+    │         • Supabase catalogue/inventory/order/payment-state truth; immutable snapshots
+    │         • Existing /admin/commerce shell; WhatsApp support not order truth
     ▼
 Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 ```
@@ -268,21 +274,28 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Dependencies:** 8B complete (PR #59 merged); architecture PR #60 merged `5b4a7f300e63b438884a2b440a69a569d91b9e5d`.
 - **Status:** **COMPLETE** — repository/managed **M1–M30**; pending **NONE**; M30 immutable; production not activated.
 
-### Phase 9A (Current Formal Phase — Architecture Frozen; Repository Implementation Complete)
+### Phase 9A (Completed)
 - **Objective:** Campaign consent, audience rule versioning, and approval foundation (no execution).
 - **Architecture freeze:** [Phase 9A freeze](audits/phase-9a-campaign-consent-audience-approval-architecture-freeze.md), [ADR-0027](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md), DEC-0077.
 - **Implementation:** [Phase 9A M31 implementation](audits/phase-9a-m31-campaign-consent-audience-approval-implementation.md), DEC-0078, DEC-0080.
 - **Owner locks:** OD9A-1–OD9A-6 **as recommended** (existing DNC/channel suppression; MARKETING via `consent_events`; freeze rules not recipients; opaque destination / no 9B FK; channels metadata only; budget/creative/window approval snapshot).
-- **Exit gate (next):** `PHASE_9A_PR63_MERGE`. Do not merge in this managed-apply gate. M31 is immutable.
+- **Exit gate:** PR #63 **MERGED** true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; post-merge CI `32097624707` SUCCESS. M31 immutable.
 - **Dependencies:** Phase 8C complete (PR #61 merged); architecture PR #62 merged `caff9d0864e1546dff38646df4355dafa851a473`.
-- **Status:** **CURRENT FORMAL PHASE** — architecture COMPLETE_FROZEN; repository implementation REPOSITORY_COMPLETE; managed DB **CERTIFIED_M1_M31**; repository/managed **M1–M31**; pending **NONE**; M31 **MANAGED_APPLIED_IMMUTABLE**; PR #63 **OPEN_NOT_MERGED**; production not activated. Phase 9B/9C not started.
+- **Status:** **COMPLETE** — architecture COMPLETE_FROZEN; repository implementation COMPLETE; managed DB **CERTIFIED_M1_M31**; repository/managed **M1–M31**; pending **NONE**; M31 **MANAGED_APPLIED_IMMUTABLE**; production not activated.
 
-### Phase 9B (Landing Page Lab)
-- **Status:** Owner-approved roadmap placement; **not implemented** (no routes/schema/integrations).
-- **Dependencies:** 9A consent foundation; production use Phase 10 gated.
+### Phase 9B (Landing Page Lab — Next Formal Implementation)
+- **Status:** Owner-approved roadmap placement; **NOT_STARTED** (no routes/schema/integrations).
+- **Dependencies:** 9A consent foundation complete; production use Phase 10 gated.
 
 ### Phase 9C
 - **Status:** Roadmap-locked; **not implemented**. No Meta/Google campaign execution live.
+
+### Phase 9D (Ready-Made Furniture E-commerce)
+- **Objective:** Premium mobile-first category-based ready-made furniture store under `/shop`.
+- **Roadmap lock:** [Phase 9D lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md), [ADR-0028](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md), DEC-0079, OD9D-1–OD9D-12.
+- **Placement:** after 9C, before Phase 10. Implementation must not start during Phase 9B/9C.
+- **Next 9D gate:** `PHASE_9D_ENTRY_AUDIT` (9D-A architecture freeze). No database implementation before that freeze.
+- **Status:** **ROADMAP LOCKED** — implementation **NOT STARTED**. No `/shop` runtime, commerce schema, or payment provider.
 
 ### Phase 10
 - **Objective:** Security hardening, full E2E, performance budgets, Hostinger VPS deployment.
@@ -297,11 +310,12 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 3. No WhatsApp outbound (6B) before webhook foundation (6A) and consent records.
 4. No Groq copilot (6C) before message persistence (6A).
 5. No campaigns (9A/9B/9C) before consent/suppression foundation. Phase 9A **reuses** existing DNC (`contacts.status`) and channel suppression (`contact_channels.status`); it does **not** add `contact_suppressions`. Execution remains Phase 9C.
-6. ERP modules remain out of scope for all phases (ADR-0005).
+6. ERP modules remain out of scope for all phases (ADR-0005). Phase 9D SKU stock is storefront inventory only (ADR-0028), not WMS/procurement.
 7. Authoritative target achievement requires Phase 7B (quotation acceptance); Phase 5E configures targets only.
 8. Project-value reconciliation (Phase 8A) must not double-count quotation acceptance.
 9. Landing Page Lab (9B) does not move earlier than roadmap sequence; production use requires Phase 10.
 10. Phase 8C M30 is applied and merged; do not persist duplicate M29 measurement/design/approval truth. Phase 9A must not create M31 before ADR-0027 is merged.
+11. Phase 9D does not start before 9A–9C complete and 9D-A architecture freeze. No room-wise or quotation ecommerce under `/shop`.
 
 ---
 
@@ -324,3 +338,5 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - [ADR-0027: Phase 9A campaign consent, audience and approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
 - [Phase 9A architecture freeze](audits/phase-9a-campaign-consent-audience-approval-architecture-freeze.md)
 - [Phase 9A M31 implementation](audits/phase-9a-m31-campaign-consent-audience-approval-implementation.md)
+- [ADR-0028: Phase 9D ready-made furniture e-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
+- [Phase 9D roadmap lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md)

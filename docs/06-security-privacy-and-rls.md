@@ -1,6 +1,6 @@
 # 06 — SECURITY, PRIVACY AND ROW LEVEL SECURITY (RLS) POLICIES
 
-**Document Status:** Locked Security Baseline (truth-synced post Phase 9A M31 managed certification, August 18, 2026)
+**Document Status:** Locked Security Baseline (truth-synced post Phase 9D roadmap lock, August 18, 2026)
 **RLS Target:** 100% Coverage on API-Exposed Application Tables
 **Default Access:** Anonymous Access Denied for Private Schemas
 
@@ -164,11 +164,16 @@ The following security requirements are **locked in architecture** and must be e
 - **n8n** is not consent, approval, or campaign truth.
 - **Approval** has no provider side effect and creates no send intent, schedule, run, or recipient list.
 
-## 11. Related Governance Documents
+## 11. Phase 9D commerce security (roadmap only — **not implemented**)
+
+When 9D-A freezes architecture: browser cart totals are never authoritative; online payment success is webhook/server verified; no payment secrets in the browser; guest tracking must not leak full order PII without identity match; commerce SKU stock is not warehouse ERP. See [ADR-0028](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md).
+
+## 12. Related Governance Documents
 
 - [Supabase Data Domains](05-supabase-data-domains.md)
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
+- [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
 - [ADR-0011: Portfolio Publication Model](ADR/ADR-0011-portfolio-publication-model.md)
 - [ADR-0012: Two-Bucket Media Architecture](ADR/ADR-0012-private-originals-public-derivatives.md)
