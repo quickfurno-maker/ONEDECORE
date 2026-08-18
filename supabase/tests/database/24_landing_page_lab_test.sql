@@ -1,6 +1,6 @@
 -- ONEDECORE Phase 9B M32 — landing page lab pgTAP
 begin;
-select plan(63);
+select plan(71);
 
 select ok(exists (select 1 from public.permissions where code = 'landing_pages.read'), 'landing_pages.read exists');
 select ok(exists (select 1 from public.permissions where code = 'landing_pages.manage'), 'landing_pages.manage exists');
@@ -321,10 +321,13 @@ select lives_ok(
   'draft can go live'
 );
 
+set local role postgres;
 select ok(
   (select public.get_live_landing_publication('gurgaon-interiors')->>'page') is not null,
   'live publication is readable by slug'
 );
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"9b111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 
 select lives_ok(
   $$select public.transition_landing_publication(
@@ -336,10 +339,13 @@ select lives_ok(
   'live can pause'
 );
 
+set local role postgres;
 select ok(
   public.get_live_landing_publication('gurgaon-interiors') is null,
   'paused publication is not publicly live'
 );
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"9b111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 
 select lives_ok(
   $$select public.transition_landing_publication(
@@ -530,6 +536,7 @@ select throws_ok(
   'archived publication is terminal'
 );
 
+set local role postgres;
 select ok(
   public.get_live_landing_publication('gurgaon-interiors') is null,
   'archived publication is not publicly live'
@@ -545,6 +552,8 @@ select ok(
   )->>'ok')::boolean = false,
   'paused/archived publication context fails live verification'
 );
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"9b111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 
 -- Enriched first touchpoint
 set local role postgres;
@@ -638,10 +647,93 @@ select ok(
 select has_column('public', 'campaign_versions', 'destination_reference', 'M31 destination_reference column unchanged');
 
 select ok(
-  (select proacl::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname = 'public' and p.proname = 'record_landing_exposure')
-  not ilike '%anon%',
+  not has_function_privilege(
+    'anon',
+    (select p.oid from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'get_live_landing_publication'),
+    'execute'
+  ),
+  'anon cannot execute get_live_landing_publication'
+);
+
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    (select p.oid from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'get_live_landing_publication'),
+    'execute'
+  ),
+  'authenticated cannot execute get_live_landing_publication'
+);
+
+select ok(
+  has_function_privilege(
+    'service_role',
+    (select p.oid from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'get_live_landing_publication'),
+    'execute'
+  ),
+  'service_role can execute get_live_landing_publication'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    (select p.oid from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'verify_live_landing_publication_context'),
+    'execute'
+  ),
+  'anon cannot execute verify_live_landing_publication_context'
+);
+
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    (select p.oid from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'verify_live_landing_publication_context'),
+    'execute'
+  ),
+  'authenticated cannot execute verify_live_landing_publication_context'
+);
+
+select ok(
+  has_function_privilege(
+    'service_role',
+    (select p.oid from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'verify_live_landing_publication_context'),
+    'execute'
+  ),
+  'service_role can execute verify_live_landing_publication_context'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    (select p.oid from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'record_landing_exposure'),
+    'execute'
+  ),
   'anon cannot execute record_landing_exposure'
+);
+
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    (select p.oid from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'record_landing_exposure'),
+    'execute'
+  ),
+  'authenticated cannot execute record_landing_exposure'
+);
+
+select ok(
+  has_function_privilege(
+    'service_role',
+    (select p.oid from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'record_landing_exposure'),
+    'execute'
+  ),
+  'service_role can execute record_landing_exposure'
 );
 
 select finish();

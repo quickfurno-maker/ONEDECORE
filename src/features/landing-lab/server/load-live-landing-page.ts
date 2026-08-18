@@ -14,7 +14,6 @@ import {
   LP_VISITOR_COOKIE_NAME,
 } from "./landing-lab-env.ts";
 import { asiaKolkataAssignmentEpoch, hashLandingVisitorKey } from "./visitor-key-hash.ts";
-import { createClient } from "@/lib/supabase/server";
 
 export interface LiveLandingPageView {
   readonly title: string;
@@ -30,12 +29,23 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-export async function loadLiveLandingPageView(slug: string): Promise<LiveLandingPageView | null> {
-  if (!isLandingLabPublicEnabled()) return null;
-  const secret = getLandingLabHmacSecret();
-  if (!secret) return null;
+export interface LoadLiveLandingPageDeps {
+  readonly isPublicEnabled?: () => boolean;
+  readonly getHmacSecret?: () => string | null;
+  readonly createServiceClient?: typeof createLandingLabServiceClient;
+}
 
-  const supabase = await createClient();
+export async function loadLiveLandingPageView(
+  slug: string,
+  deps: LoadLiveLandingPageDeps = {}
+): Promise<LiveLandingPageView | null> {
+  const isEnabled = deps.isPublicEnabled ?? isLandingLabPublicEnabled;
+  if (!isEnabled()) return null;
+  const secret = (deps.getHmacSecret ?? getLandingLabHmacSecret)();
+  if (!secret) return null;
+  const supabase = (deps.createServiceClient ?? createLandingLabServiceClient)();
+  if (!supabase) return null;
+
   const { data, error } = await supabase.rpc("get_live_landing_publication", { p_slug: slug });
   if (error || data == null) return null;
   const payload = asRecord(data);
@@ -110,16 +120,13 @@ export async function loadLiveLandingPageView(slug: string): Promise<LiveLanding
 
   const publicationId = typeof publication.id === "string" ? publication.id : null;
   if (publicationId && visitorKey) {
-    const service = createLandingLabServiceClient();
-    if (service) {
-      await service.rpc("record_landing_exposure", {
-        p_publication_id: publicationId,
-        p_experiment_id: experimentId,
-        p_variant_key: variantKey,
-        p_visitor_key_hash: hashLandingVisitorKey(secret, visitorKey),
-        p_assignment_epoch: asiaKolkataAssignmentEpoch(),
-      });
-    }
+    await supabase.rpc("record_landing_exposure", {
+      p_publication_id: publicationId,
+      p_experiment_id: experimentId,
+      p_variant_key: variantKey,
+      p_visitor_key_hash: hashLandingVisitorKey(secret, visitorKey),
+      p_assignment_epoch: asiaKolkataAssignmentEpoch(),
+    });
   }
 
   return {

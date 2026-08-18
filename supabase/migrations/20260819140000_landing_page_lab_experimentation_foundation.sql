@@ -1641,15 +1641,19 @@ begin
   loop
     execute format('alter function %s owner to postgres', r.sig);
     execute format('revoke all on function %s from public, anon, authenticated', r.sig);
-    if r.nsp = 'public' and r.proname not in ('record_landing_exposure') then
+    if r.nsp = 'public' and r.proname not in (
+      'record_landing_exposure',
+      'get_live_landing_publication',
+      'verify_live_landing_publication_context'
+    ) then
       execute format('grant execute on function %s to authenticated', r.sig);
     end if;
   end loop;
 end;
 $$;
 
-grant execute on function public.get_live_landing_publication(text) to anon, authenticated;
-grant execute on function public.verify_live_landing_publication_context(text, text, integer, text, text) to anon, authenticated;
+grant execute on function public.get_live_landing_publication(text) to service_role;
+grant execute on function public.verify_live_landing_publication_context(text, text, integer, text, text) to service_role;
 grant execute on function public.record_landing_exposure(uuid, uuid, text, text, text) to service_role;
 
 revoke execute on function public.create_landing_page_draft(text, text, jsonb, text, uuid) from public, anon;
@@ -1661,4 +1665,6 @@ revoke execute on function public.transition_landing_publication(uuid, text, int
 revoke execute on function public.save_landing_experiment_draft(uuid, uuid, jsonb, uuid) from public, anon;
 revoke execute on function public.start_landing_experiment(uuid, uuid) from public, anon;
 revoke execute on function public.conclude_landing_experiment(uuid, text, uuid) from public, anon;
+revoke execute on function public.get_live_landing_publication(text) from public, anon, authenticated;
+revoke execute on function public.verify_live_landing_publication_context(text, text, integer, text, text) from public, anon, authenticated;
 revoke execute on function public.record_landing_exposure(uuid, uuid, text, text, text) from public, anon, authenticated;

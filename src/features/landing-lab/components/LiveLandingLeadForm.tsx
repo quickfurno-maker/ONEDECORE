@@ -107,7 +107,10 @@ export function LiveLandingLeadForm({ block, signedContext }: LiveLandingLeadFor
       </label>
       <label className="block text-sm text-neutral-300">
         Service
-        <select required name="service" className="mt-1 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2">
+        <select required name="service" defaultValue="" className="mt-1 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2">
+          <option value="" disabled>
+            Select service
+          </option>
           {LEAD_SERVICE_CODES.map((code) => (
             <option key={code} value={code}>
               {code}
@@ -117,7 +120,10 @@ export function LiveLandingLeadForm({ block, signedContext }: LiveLandingLeadFor
       </label>
       <label className="block text-sm text-neutral-300">
         Property
-        <select required name="property" className="mt-1 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2">
+        <select required name="property" defaultValue="" className="mt-1 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2">
+          <option value="" disabled>
+            Select property
+          </option>
           {LEAD_PROPERTY_CODES.map((code) => (
             <option key={code} value={code}>
               {code}
@@ -127,7 +133,10 @@ export function LiveLandingLeadForm({ block, signedContext }: LiveLandingLeadFor
       </label>
       <label className="block text-sm text-neutral-300">
         Timeline
-        <select required name="timeline" className="mt-1 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2">
+        <select required name="timeline" defaultValue="" className="mt-1 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2">
+          <option value="" disabled>
+            Select timeline
+          </option>
           {LEAD_TIMELINE_CODES.map((code) => (
             <option key={code} value={code}>
               {code}
@@ -136,11 +145,11 @@ export function LiveLandingLeadForm({ block, signedContext }: LiveLandingLeadFor
         </select>
       </label>
       <fieldset className="text-sm text-neutral-300">
-        <legend>Rooms</legend>
+        <legend>Rooms (optional)</legend>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
           {LEAD_ROOM_CODES.map((code) => (
             <label key={code} className="flex items-center gap-2">
-              <input type="checkbox" name="rooms" value={code} defaultChecked={code === "living"} />
+              <input type="checkbox" name="rooms" value={code} />
               {code}
             </label>
           ))}

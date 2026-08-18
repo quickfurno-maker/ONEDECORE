@@ -21,32 +21,37 @@ Forward-only M32 implements the Phase 9B data plane, RPCs, RLS, first-touchpoint
 
 ## HMAC
 
-Visitor hashes and publication signatures use `ONEDECORE_LANDING_LAB_HMAC_SECRET` when set (≥32 chars), otherwise `ONEDECORE_LEAD_HASH_SECRET`. Secrets are not stored in the database.
+Visitor hashes and publication signatures use `getLandingLabHmacSecret()`: dedicated `ONEDECORE_LANDING_LAB_HMAC_SECRET` when set (≥32 chars), otherwise fallback `ONEDECORE_LEAD_HASH_SECRET`. `/lp` issuance and lead-intake verification use that same helper. `ONEDECORE_LEAD_HASH_SECRET` remains the lead-intake request/phone/network hash secret and is not forced into publication-context verification. Secrets are not stored in the database.
 
-## Containment
+## Public live RPCs
 
-Expected domains only: M32, pgTAP `24_`, `src/features/landing-lab/**`, lead-intake attribution/context bridge, `/admin/landing-pages`, `/lp/[slug]`, `src/proxy.ts`, admin nav, `package.json` test inclusion, `database.generated.ts`, truth-sync docs.
-
-Ledger-only extras (required so existing fail-closed tests match M32): `01_identity_rbac_test.sql` permission/table counts; `23_campaign_consent_audience_approval_test.sql` no longer forbids `landing_pages`/`landing_page_versions`; `phase-6b-integrated-matrix.test.ts` repository migration count 32.
+`get_live_landing_publication` and `verify_live_landing_publication_context` are **service_role only**. Anon/authenticated EXECUTE is revoked so the Phase 10 app gate cannot be bypassed with the public Supabase key. Public `/lp` loading uses `createLandingLabServiceClient()` after the gate and HMAC secret checks. `record_landing_exposure` remains service_role only.
 
 ## Fingerprints
 
 | Item | Value |
 | --- | --- |
 | M32 filename | `20260819140000_landing_page_lab_experimentation_foundation.sql` |
-| Git blob | `fc5aa2e8138e1136fe1d3e681f7fcfe6a8cfc6a7` |
-| Raw SHA-256 | `2DCD874A9C0336981F5DD322FBCFE798453909F658358B50EF1A08C5036C52B8` |
+| Git blob | `c1224fa0de919e8c189c511078d0a55901bf2a77` |
+| Raw SHA-256 | `B4709DDF9FA36218330267EDE61670A4501600FB8FEF549B3F18C1910F06C56E` |
+| Prior never-managed-applied blob | `fc5aa2e8138e1136fe1d3e681f7fcfe6a8cfc6a7` |
 
-## Local gates (2026-08-18)
+## Local gates (2026-08-18 correction)
 
 | Gate | Result |
 | --- | --- |
-| `npm run test:phase-9b` | PASS (60 tests) |
-| `npm run test:app` | PASS |
+| `npm run test:phase-9b` | PASS (63 tests) |
+| `npm run test:app` | PASS (839 tests) |
 | `npm run lint` | 0 errors (pre-existing warnings only) |
 | `npm run typecheck` | PASS |
 | `npm run build` | PASS |
 | `npm run db:reset` | PASS |
-| `npm run db:lint` | PASS (0 ERROR; existing extra WARNs) |
-| `npm run db:test` | PASS (24 files, 1412 tests) |
+| `npm run db:lint` | PASS (0 ERROR on public/private; existing extra WARNs) |
+| `npm run db:test` | PASS (24 files, 1420 tests) |
 | `git diff --check` | PASS |
+
+## Containment
+
+Expected domains only: M32, pgTAP `24_`, `src/features/landing-lab/**`, lead-intake attribution/context bridge, `/admin/landing-pages`, `/lp/[slug]`, `src/proxy.ts`, admin nav, `package.json` test inclusion, `database.generated.ts`, truth-sync docs.
+
+Ledger-only extras (required so existing fail-closed tests match M32): `01_identity_rbac_test.sql` permission/table counts; `23_campaign_consent_audience_approval_test.sql` no longer forbids `landing_pages`/`landing_page_versions`; `phase-6b-integrated-matrix.test.ts` repository migration count 32.

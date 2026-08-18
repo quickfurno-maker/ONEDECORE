@@ -11,6 +11,7 @@ import {
   validateLeadIntakePayload,
 } from "./lead-intake-validation.ts";
 import { resolveTrustedLandingIdentity } from "../../landing-lab/server/verify-live-publication-context.ts";
+import { getLandingLabHmacSecret } from "../../landing-lab/server/landing-lab-env.ts";
 import type { ValidatedLeadIntake } from "../contracts.ts";
 import { deriveNetworkIdentifier } from "./request-canonicalisation.ts";
 import {
@@ -32,12 +33,13 @@ export interface LeadIntakeRuntimeRequest {
 export interface LeadIntakeRuntimeDeps {
   readonly getEnv?: typeof getLeadIntakeServerEnv;
   readonly createAdminClient?: typeof createAdminClient;
+  readonly getLandingLabHmacSecret?: typeof getLandingLabHmacSecret;
   readonly now?: () => number;
 }
 
 async function attachTrustedLandingAttribution(
   validated: ValidatedLeadIntake,
-  hmacSecret: string,
+  hmacSecret: string | null,
   createAdmin: typeof createAdminClient
 ): Promise<{ readonly ok: true; readonly value: ValidatedLeadIntake } | { readonly ok: false }> {
   if (!validated.landingPublicationContext) {
@@ -261,9 +263,26 @@ export async function handleLeadIntakeRequest(
     };
   }
 
+  const landingHmacSecret = (deps.getLandingLabHmacSecret ?? getLandingLabHmacSecret)();
+  if (validated.value.landingPublicationContext && !landingHmacSecret) {
+    return {
+      httpStatus: 400,
+      outcome: "validation_rejected",
+      duplicate: false,
+      correlationId,
+      body: {
+        ok: false,
+        code: "VALIDATION_REJECTED",
+        message: "Request failed validation.",
+        fields: ["landingPublicationContext"],
+        correlationId,
+      },
+    };
+  }
+
   const trusted = await attachTrustedLandingAttribution(
     validated.value,
-    env.hashSecret,
+    landingHmacSecret,
     deps.createAdminClient ?? createAdminClient
   );
   if (!trusted.ok) {

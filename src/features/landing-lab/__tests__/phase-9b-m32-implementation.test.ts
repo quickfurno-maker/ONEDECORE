@@ -13,12 +13,15 @@ import {
 } from "../contracts/page-model.ts";
 import { buildSampleLandingExperiment, buildSampleLandingPublication } from "../fixtures/landing-fixtures.ts";
 import { isLandingLabPublicPath, resolveLandingVisitorKey } from "../domain/landing-visitor-key.ts";
-import { isLandingLabPublicEnabled } from "../server/landing-lab-env.ts";
+import { getLandingLabHmacSecret, isLandingLabPublicEnabled } from "../server/landing-lab-env.ts";
 import { hashLandingVisitorKey } from "../server/visitor-key-hash.ts";
 import { validateLeadIntakePayload } from "../../lead-intake/server/lead-intake-validation.ts";
+import { handleLeadIntakeRequest } from "../../lead-intake/server/lead-intake-runtime.ts";
+import { getLeadIntakeServerEnv } from "../../../config/server-env.ts";
 import { signPublicationContext, verifyPublicationContext } from "../server/publication-context-crypto.ts";
 import { buildSamplePublicationContext } from "../fixtures/landing-fixtures.ts";
 import { SERVICE_ENQUIRY_COPY_VERSION, SERVICE_COMMUNICATION_COPY_VERSION, LEAD_INTAKE_NOTICE_VERSION, LEAD_INTAKE_PLANNER_VERSION } from "../../lead-intake/contracts.ts";
+import type { createAdminClient } from "../../../lib/supabase/admin.ts";
 
 const root = process.cwd();
 const secret = "phase-9b-m32-test-secret-value-32chars";
@@ -141,6 +144,46 @@ describe("Phase 9B M32 exposures and activation", () => {
     assert.match(live, /\/api\/public\/lead-intake/);
     assert.doesNotMatch(live, /marketing:\s*true/i);
   });
+
+  test("live form does not invent customer requirements", () => {
+    const live = readFileSync(join(root, "src/features/landing-lab/components/LiveLandingLeadForm.tsx"), "utf8");
+    assert.doesNotMatch(live, /defaultChecked/);
+    assert.match(live, /defaultValue=""/);
+    assert.match(live, /Select service/);
+    assert.match(live, /Select property/);
+    assert.match(live, /Select timeline/);
+    assert.match(live, /Rooms \(optional\)/);
+    assert.doesNotMatch(live, /type="hidden"[^>]*name="service"/);
+    assert.doesNotMatch(live, /type="hidden"[^>]*name="property"/);
+    assert.doesNotMatch(live, /type="hidden"[^>]*name="timeline"/);
+    assert.doesNotMatch(live, /type="hidden"[^>]*name="rooms"/);
+    const emptyRooms = validateLeadIntakePayload(intakeBody({
+      requirements: {
+        service: "complete-home-interiors",
+        property: "apartment-2bhk",
+        timeline: "within-3-months",
+        rooms: [],
+      },
+    }));
+    assert.equal(emptyRooms.ok, true);
+  });
+
+  test("public gate default OFF prevents live page resolution without anon RPC bypass", () => {
+    assert.equal(isLandingLabPublicEnabled({}), false);
+    const loaderSrc = readFileSync(join(root, "src/features/landing-lab/server/load-live-landing-page.ts"), "utf8");
+    assert.match(loaderSrc, /if \(!isEnabled\(\)\) return null/);
+    assert.match(loaderSrc, /if \(!secret\) return null/);
+    assert.match(loaderSrc, /if \(!supabase\) return null/);
+    assert.match(loaderSrc, /createLandingLabServiceClient/);
+    assert.doesNotMatch(loaderSrc, /@\/lib\/supabase\/server/);
+    const sql = readFileSync(
+      join(root, "supabase/migrations/20260819140000_landing_page_lab_experimentation_foundation.sql"),
+      "utf8"
+    );
+    assert.doesNotMatch(sql, /grant execute on function public\.get_live_landing_publication\(text\) to anon/);
+    assert.doesNotMatch(sql, /grant execute on function public\.verify_live_landing_publication_context\([^)]*\) to anon/);
+    assert.match(sql, /grant execute on function public\.get_live_landing_publication\(text\) to service_role/);
+  });
 });
 
 describe("Phase 9B M32 lead intake attribution", () => {
@@ -199,6 +242,108 @@ describe("Phase 9B M32 lead intake attribution", () => {
       context: { ...signed.context, pageVersionNumber: 99 },
     };
     assert.equal(verifyPublicationContext(secret, tampered).valid, false);
+  });
+
+  test("dedicated landing HMAC signs and verifies independently of lead hash secret", async () => {
+    const landingSecret = "phase-9b-landing-hmac-secret-32chars-min!!";
+    const leadSecret = "phase-9b-lead-hash-secret-32chars-min!!!!";
+    assert.notEqual(landingSecret, leadSecret);
+    assert.equal(
+      getLandingLabHmacSecret({
+        ONEDECORE_LANDING_LAB_HMAC_SECRET: landingSecret,
+        ONEDECORE_LEAD_HASH_SECRET: leadSecret,
+      }),
+      landingSecret
+    );
+
+    const signedWithLanding = signPublicationContext(landingSecret, buildSamplePublicationContext());
+    const signedWithLead = signPublicationContext(leadSecret, buildSamplePublicationContext());
+    assert.equal(verifyPublicationContext(landingSecret, signedWithLanding).valid, true);
+    assert.equal(verifyPublicationContext(leadSecret, signedWithLanding).valid, false);
+    assert.equal(verifyPublicationContext(landingSecret, signedWithLead).valid, false);
+
+    const rpcCalls: string[] = [];
+    const adminMock = (() =>
+      ({
+        rpc: async (fn: string) => {
+          rpcCalls.push(fn);
+          if (fn === "verify_live_landing_publication_context") {
+            return { data: { ok: true }, error: null };
+          }
+          if (fn === "submit_lead_intake") {
+            return {
+              data: {
+                outcome: "created",
+                submission_reference: "OD-L-2026-000001",
+                retry_after_seconds: null,
+                duplicate: false,
+              },
+              error: null,
+            };
+          }
+          throw new Error(`unexpected rpc ${fn}`);
+        },
+      })) as unknown as typeof createAdminClient;
+
+    const localEnv = () =>
+      getLeadIntakeServerEnv({
+        NODE_ENV: "development",
+        ONEDECORE_LEAD_INTAKE_MODE: "local-test",
+        NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+        SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key-not-publishable",
+        ONEDECORE_LEAD_HASH_SECRET: leadSecret,
+      });
+
+    const request = {
+      method: "POST",
+      contentType: "application/json",
+      origin: "http://localhost:3100",
+      host: "localhost:3100",
+      remoteAddress: "127.0.0.1",
+      forwardedFor: null,
+      nodeEnv: "development",
+    } as const;
+
+    const accepted = await handleLeadIntakeRequest(
+      {
+        ...request,
+        rawBody: JSON.stringify(intakeBody({ landingPublicationContext: signedWithLanding })),
+      },
+      {
+        getEnv: localEnv,
+        getLandingLabHmacSecret: () =>
+          getLandingLabHmacSecret({
+            ONEDECORE_LANDING_LAB_HMAC_SECRET: landingSecret,
+            ONEDECORE_LEAD_HASH_SECRET: leadSecret,
+          }),
+        createAdminClient: adminMock,
+      }
+    );
+    assert.equal(accepted.httpStatus, 201);
+    assert.equal(accepted.body.ok, true);
+    assert.ok(rpcCalls.includes("verify_live_landing_publication_context"));
+    assert.ok(rpcCalls.includes("submit_lead_intake"));
+
+    rpcCalls.length = 0;
+    const rejected = await handleLeadIntakeRequest(
+      {
+        ...request,
+        rawBody: JSON.stringify(intakeBody({ landingPublicationContext: signedWithLead })),
+      },
+      {
+        getEnv: localEnv,
+        getLandingLabHmacSecret: () =>
+          getLandingLabHmacSecret({
+            ONEDECORE_LANDING_LAB_HMAC_SECRET: landingSecret,
+            ONEDECORE_LEAD_HASH_SECRET: leadSecret,
+          }),
+        createAdminClient: adminMock,
+      }
+    );
+    assert.equal(rejected.httpStatus, 400);
+    assert.equal(rejected.body.code, "VALIDATION_REJECTED");
+    assert.deepEqual(rejected.body.fields, ["landingPublicationContext"]);
+    assert.ok(!rpcCalls.includes("submit_lead_intake"));
   });
 });
 
