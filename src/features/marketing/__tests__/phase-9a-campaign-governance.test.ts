@@ -9,7 +9,8 @@ import { describe, test } from "node:test";
 import { evaluateMarketingEligibility } from "../domain/marketing-eligibility.ts";
 import {
   resolveCampaignPermissionCapabilities,
-  canSelfApproveCampaign,
+  isCampaignSelfApproval,
+  canApproveCampaignVersion,
 } from "../domain/campaign-capabilities.ts";
 import { validateCampaignLifecycleTransition } from "../domain/campaign-lifecycle.ts";
 import { validateCampaignDraftConfig } from "../domain/campaign-validators.ts";
@@ -187,45 +188,40 @@ describe("Phase 9A audience version immutability", () => {
 
 describe("Phase 9A campaign capabilities", () => {
   test("sales manager can draft but cannot self-approve", () => {
-    const caps = resolveCampaignPermissionCapabilities({
+    const actor = {
       profileId: "sm-1",
-      role: "sales_manager",
-      isCampaignRequester: true,
-      isCampaignApprover: true,
-    });
+      role: "sales_manager" as const,
+      isVersionCreator: true,
+      isVersionRequester: true,
+    };
+    const caps = resolveCampaignPermissionCapabilities(actor);
     assert.equal(caps.canCreateCampaignDraft, true);
     assert.equal(caps.canApproveCampaign, false);
-    assert.equal(
-      canSelfApproveCampaign({
-        profileId: "sm-1",
-        role: "sales_manager",
-        isCampaignRequester: true,
-        isCampaignApprover: true,
-      }),
-      true
-    );
+    assert.equal(isCampaignSelfApproval(actor), true);
+    assert.equal(canApproveCampaignVersion(actor), false);
   });
 
-  test("super admin can approve and publish later", () => {
+  test("super admin can approve any pending version and has no publish/execute capability", () => {
     const caps = resolveCampaignPermissionCapabilities({
       profileId: "sa-1",
       role: "super_admin",
-      isCampaignRequester: false,
-      isCampaignApprover: true,
+      isVersionCreator: true,
+      isVersionRequester: true,
     });
     assert.equal(caps.canApproveCampaign, true);
-    assert.equal(caps.canPublishLater, true);
+    assert.equal("canPublishLater" in caps, false);
+    assert.equal("canBulkExecuteCampaign" in caps, false);
   });
 
   test("sales executive has no campaign creation authority", () => {
     const caps = resolveCampaignPermissionCapabilities({
       profileId: "se-1",
       role: "sales_executive",
-      isCampaignRequester: false,
-      isCampaignApprover: false,
+      isVersionCreator: false,
+      isVersionRequester: false,
     });
     assert.equal(caps.canCreateCampaignDraft, false);
-    assert.equal(caps.canBulkExecuteCampaign, false);
+    assert.equal(caps.canApproveCampaign, false);
   });
 
   test("PM and designer have no campaign authority", () => {
@@ -233,8 +229,8 @@ describe("Phase 9A campaign capabilities", () => {
       const caps = resolveCampaignPermissionCapabilities({
         profileId: "x",
         role,
-        isCampaignRequester: false,
-        isCampaignApprover: false,
+        isVersionCreator: false,
+        isVersionRequester: false,
       });
       assert.equal(caps.canCreateCampaignDraft, false);
       assert.equal(caps.canApproveCampaign, false);
@@ -247,8 +243,8 @@ describe("Phase 9A lifecycle transitions", () => {
     const caps = resolveCampaignPermissionCapabilities({
       profileId: "sm-1",
       role: "sales_manager",
-      isCampaignRequester: true,
-      isCampaignApprover: true,
+      isVersionCreator: true,
+      isVersionRequester: true,
     });
     const result = validateCampaignLifecycleTransition({
       from: "pending_approval",
@@ -258,25 +254,25 @@ describe("Phase 9A lifecycle transitions", () => {
     assert.equal(result.allowed, false);
   });
 
-  test("super admin can schedule approved campaign", () => {
+  test("approved versions have no Phase 9A execution transition", () => {
     const caps = resolveCampaignPermissionCapabilities({
       profileId: "sa-1",
       role: "super_admin",
-      isCampaignRequester: false,
-      isCampaignApprover: true,
+      isVersionCreator: false,
+      isVersionRequester: false,
     });
     const result = validateCampaignLifecycleTransition({
       from: "approved",
-      to: "scheduled",
+      to: "approved",
       capabilities: caps,
     });
-    assert.equal(result.allowed, true);
+    assert.equal(result.allowed, false);
   });
 });
 
 describe("Phase 9A campaign draft validators", () => {
-  test("draft without creative fails validation", () => {
-    assert.match(validateCampaignDraftConfig(SAMPLE_CAMPAIGN_DRAFT) ?? "", /creative/i);
+  test("complete sample draft validates", () => {
+    assert.equal(validateCampaignDraftConfig(SAMPLE_CAMPAIGN_DRAFT), null);
   });
 });
 

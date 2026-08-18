@@ -1,36 +1,31 @@
 /**
- * Phase 9 migration-independent — immutable creative execution snapshot.
+ * Phase 9A — provider-neutral creative approval snapshot. No landing FK.
  */
 
-import type { CampaignBudgetConfig } from "./budget.ts";
-import type { CampaignTargetingMode } from "./targeting.ts";
-import type { CampaignVersionRef } from "./campaign-ref.ts";
-
 export interface CampaignCreativeSnapshot {
-  readonly campaignVersion: CampaignVersionRef;
   readonly headline: string;
   readonly primaryText: string;
   readonly callToAction: string;
-  readonly mediaPlaceholderRefs: readonly string[];
-  readonly landingPublicationRef: string;
-  readonly landingPageVersionRef: string;
-  readonly audienceVersionId: string;
-  readonly audienceRuleHash: string;
-  readonly targetingMode: CampaignTargetingMode;
-  readonly budgetConfig: CampaignBudgetConfig;
-  readonly humanAuthorizationPlaceholder: string | null;
-  readonly capturedAt: string;
+  readonly mediaReferences: readonly string[];
 }
 
 export function validateCampaignCreativeSnapshot(
   snapshot: CampaignCreativeSnapshot
 ): string | null {
-  if (!snapshot.headline.trim()) return "Headline is required.";
-  if (!snapshot.primaryText.trim()) return "Primary text is required.";
-  if (!snapshot.callToAction.trim()) return "Call to action is required.";
-  if (!snapshot.landingPublicationRef.trim()) {
-    return "Exact landing publication reference is required.";
+  const headline = snapshot.headline.trim();
+  const primaryText = snapshot.primaryText.trim();
+  const callToAction = snapshot.callToAction.trim();
+  if (!headline || headline.length > 200) return "Headline is required and must be at most 200 characters.";
+  if (!primaryText || primaryText.length > 4000) {
+    return "Primary text is required and must be at most 4000 characters.";
   }
-  if (!snapshot.audienceRuleHash.trim()) return "Audience rule hash is required.";
+  if (!callToAction || callToAction.length > 120) {
+    return "Call to action is required and must be at most 120 characters.";
+  }
+  if (snapshot.mediaReferences.length > 8) return "At most 8 media references are allowed.";
+  for (const ref of snapshot.mediaReferences) {
+    const trimmed = ref.trim();
+    if (!trimmed || trimmed.length > 200) return "Media references must be opaque strings up to 200 characters.";
+  }
   return null;
 }

@@ -1,11 +1,11 @@
 # 02 — TECHNICAL ARCHITECTURE AND REPOSITORY SPECIFICATION
 
-**Document Status:** Locked Architecture Baseline (truth-synced post Phase 9A architecture freeze, August 17, 2026)
+**Document Status:** Locked Architecture Baseline (truth-synced post Phase 9A M31 managed certification, August 18, 2026)
 **Pattern:** Modular Monolith
 **Framework:** Next.js 16.2.11
 **Database:** Supabase PostgreSQL
 **Route Prefix:** Internal CRM uses `/admin`
-**Current Phase:** Phase 9A architecture COMPLETE_FROZEN (implementation not started; M31 absent). Phase 8C COMPLETE on main (PR #61 merged).
+**Current Phase:** Phase 9A architecture COMPLETE_FROZEN; repository implementation REPOSITORY_COMPLETE; managed DB CERTIFIED_M1_M31; PR #63 OPEN_NOT_MERGED. Phase 8C COMPLETE on main (PR #61 merged). Architecture PR #62 merged `caff9d0864e1546dff38646df4355dafa851a473`.
 
 ---
 
@@ -140,6 +140,6 @@ Phase 5A locks the following cross-cutting patterns for future implementation:
 | Design staffing | One Lead Designer + Supporting Designers; manual only |
 | AI | Provider adapter; human approval; structured outputs; audit |
 | WhatsApp | Official API; M18–M21 managed foundation (ingest, inbox read, send-intent, service-role dispatch); CRM consent authoritative; **not production-activated**; M19 purpose remains `WHATSAPP_SERVICE` |
-| Campaigns (Phase 9A architecture) | Draft → pending_approval → approved/rejected; MARKETING via existing `consent_events`; DNC + channel suppression reused; freeze audience **rules** not recipient PII; no 9B FK; no 9C execution; M31 not created |
+| Campaigns (Phase 9A managed M31) | Draft → pending_approval → approved/rejected; MARKETING via existing `consent_events`; DNC + channel suppression reused; freeze audience **rules** not recipient PII; no 9B FK; no 9C execution; M31 managed-applied immutable |
 
-Phase 6A delivers managed WhatsApp **data/webhook foundation** (migration 18). Phase 6B delivers managed **inbox/send-intent/dispatch foundations** (migrations 19–21) plus repository admin UI — **not production-activated**. Phase 8C project execution is **COMPLETE** (M30 managed). Phase 9A campaign persistence is **architecture-frozen only** (ADR-0027); `src/features/marketing` / `src/features/landing-lab` prebuild is **not** architecture authority.
+Phase 6A delivers managed WhatsApp **data/webhook foundation** (migration 18). Phase 6B delivers managed **inbox/send-intent/dispatch foundations** (migrations 19–21) plus repository admin UI — **not production-activated**. Phase 8C project execution is **COMPLETE** (M30 managed). Phase 9A architecture is **COMPLETE_FROZEN** (ADR-0027 / PR #62). Phase 9A M31 is **managed-applied and immutable** (DEC-0080); `/admin/campaigns` is staff governance UI only. PR #63 remains open.

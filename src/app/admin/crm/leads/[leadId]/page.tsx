@@ -3,10 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CrmPageHeader } from "@/features/crm/components/shell/CrmPageHeader";
 import { LeadDetailAssignmentPanel } from "@/features/crm/components/leads/LeadDetailAssignmentPanel";
-import {
-  LeadDetailConsentSummary,
-  LeadDetailStatusSummary,
-} from "@/features/crm/components/leads/LeadDetailConsentSummary";
+import { LeadDetailConsentSummary, LeadDetailStatusSummary } from "@/features/crm/components/leads/LeadDetailConsentSummary";
+import { MarketingConsentPanel } from "@/features/marketing/components/MarketingConsentPanel";
+import { probeCampaignPermissions } from "@/features/marketing/server/campaign-permissions";
+import { getMarketingConsentState } from "@/features/marketing/server/campaign-queries";
 import { LeadDetailContact } from "@/features/crm/components/leads/LeadDetailContact";
 import { LeadDetailFollowUps } from "@/features/crm/components/leads/LeadDetailFollowUps";
 import { LeadDetailNotes } from "@/features/crm/components/leads/LeadDetailNotes";
@@ -54,7 +54,7 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
     context?.canReadBroad &&
     (context.canAssignLeads || context.canManageLeadFollowUps);
 
-  const [assigneeDirectory, closureReasons, existingDraft, quotationPermissions] =
+  const [assigneeDirectory, closureReasons, existingDraft, quotationPermissions, campaignPermissions] =
     await Promise.all([
       needsDirectory ? fetchCrmAssigneeDirectory(context!) : Promise.resolve([]),
       context?.canTransitionLeads
@@ -62,7 +62,12 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
         : Promise.resolve([]),
       getQuotationDraftByLeadId(lead.id).catch(() => null),
       probeQuotationPermissions(),
+      probeCampaignPermissions(),
     ]);
+
+  const marketingConsentState = campaignPermissions.canManageMarketingConsent
+    ? await getMarketingConsentState(lead.contact.id)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -135,6 +140,12 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
           assigneeDirectory={assigneeDirectory}
         />
         <LeadDetailConsentSummary items={lead.consentSummary} />
+        <MarketingConsentPanel
+          leadId={lead.id}
+          contactId={lead.contact.id}
+          canManage={campaignPermissions.canManageMarketingConsent}
+          state={marketingConsentState}
+        />
         <LeadDetailStatusSummary summary={lead.statusSummary} />
       </div>
     </div>

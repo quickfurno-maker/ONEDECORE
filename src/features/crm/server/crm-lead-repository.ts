@@ -141,7 +141,7 @@ export async function getLeadDetailForCurrentUser(
   ] = await Promise.all([
     supabase
       .from("contacts")
-      .select("id, display_name, contact_channels(id, channel_type, address_normalized, is_primary, status)")
+      .select("id, display_name, status, contact_channels(id, channel_type, address_normalized, is_primary, status)")
       .eq("id", lead.contact_id)
       .maybeSingle(),
     supabase
@@ -250,6 +250,8 @@ export async function getLeadDetailForCurrentUser(
       updatedAt: lead.updated_at,
     },
     contact: {
+      id: lead.contact_id,
+      status: contactResult.data?.status ?? "active",
       displayName: contactResult.data?.display_name ?? lead.submitted_name,
       channels: (contactResult.data?.contact_channels ?? []).map((channel) => ({
         id: channel.id,

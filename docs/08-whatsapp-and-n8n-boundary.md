@@ -1,6 +1,6 @@
 # 08 — META WHATSAPP, GROQ AI AND N8N AUTOMATION BOUNDARY
 
-**Document Status:** Locked Integration Baseline (truth-synced post Phase 9A architecture freeze, August 17, 2026)
+**Document Status:** Locked Integration Baseline (truth-synced post Phase 9A M31 managed certification, August 18, 2026)
 **WhatsApp API:** Official Meta WhatsApp Cloud API Only
 **AI Provider:** Groq behind provider-independent adapter (planned Phase 6C)
 **n8n Role:** Stateless Async Event Bus & Notification Relay
@@ -68,12 +68,12 @@ Groq must **not** automatically send messages, mutate assignments or statuses, a
 
 ---
 
-## 3. Marketing Campaigns (Phase 9A architecture freeze — **not implemented**)
+## 3. Marketing Campaigns (Phase 9A M31 **managed-applied 2026-08-18**)
 
 | Role | Phase 9A authority |
 | :--- | :--- |
-| Super Admin | Create/edit drafts; request approval; approve any pending version; staff MARKETING consent recording (later RPC) |
-| Sales Manager | Create/edit drafts and audiences; request approval; **may approve other versions; MUST NOT approve own**; staff MARKETING consent recording (later RPC) |
+| Super Admin | Create/edit drafts; request approval; approve any pending version; staff MARKETING consent recording |
+| Sales Manager | Create/edit drafts and audiences; request approval; **may approve other versions; MUST NOT approve own**; staff MARKETING consent recording |
 | Sales Executive | No campaign creation, approval, or bulk messaging |
 | PM / Designer | No campaign authority |
 | Kriti | No authoritative campaign approval or execution |

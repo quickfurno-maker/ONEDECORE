@@ -1,6 +1,6 @@
 # 06 — SECURITY, PRIVACY AND ROW LEVEL SECURITY (RLS) POLICIES
 
-**Document Status:** Locked Security Baseline (truth-synced post Phase 9A architecture freeze, August 17, 2026)
+**Document Status:** Locked Security Baseline (truth-synced post Phase 9A M31 managed certification, August 18, 2026)
 **RLS Target:** 100% Coverage on API-Exposed Application Tables
 **Default Access:** Anonymous Access Denied for Private Schemas
 
@@ -154,13 +154,13 @@ The following security requirements are **locked in architecture** and must be e
 - **No provider secrets in DB:** Meta access tokens and app secrets remain server environment configuration only.
 - **Activation boundary:** Managed schema only — no production Meta callback, outbound messaging, or n8n correctness dependency.
 
-## 10. Phase 9A Campaign Governance Security (Architecture freeze — **not implemented**; M31 **ABSENT**)
+## 10. Phase 9A Campaign Governance Security (M31 **managed-applied 2026-08-18**)
 
-- **Consent minimization:** Reuse append-only `consent_events` for MARKETING. No parallel marketing-consent table. No mutable current-consent truth table. Historical rows are never edited/deleted.
+- **Consent minimization:** Reuse append-only `consent_events` for MARKETING. No parallel marketing-consent table. No mutable current-consent truth table. Historical rows are never edited/deleted. Staff RPC `record_marketing_consent_event` is Super Admin / Sales Manager only.
 - **No recipient PII snapshot** at approval. Audience artifact is a frozen rule version + hash. `broad_public` CRM PII export is **denied**. `direct_or_custom` requires current MARKETING grant; DNC and invalid/suppressed/archived target channels deny. Phase 9C rechecks before any later export/send.
-- **Staff MARKETING recording (future RPC):** Super Admin and Sales Manager only; `actor_type = 'staff'`; insert-only evidence; never fabricate. SE/PM/Designer denied.
-- **Campaign RBAC (conceptual):** `campaigns.read` / `draft` / `request_approval` / `approve` / `marketing_consents.manage`. No 9A execute/publish/schedule/pause/send. Super Admin may approve any pending version. Sales Manager **must not** approve own version at **database** authority. Legacy roles receive no automatic 9A grants. Kriti has no authoritative mutation/approval.
-- **Future RLS:** 100% on exposed campaign tables; direct authenticated DML denied; no browser service role; fail closed; no provider tokens in campaign rows.
+- **Staff MARKETING recording:** Super Admin and Sales Manager only; `actor_type = 'staff'`; insert-only evidence; never fabricate. SE/PM/Designer denied.
+- **Campaign RBAC:** `campaigns.read` / `draft` / `request_approval` / `approve` / `marketing_consents.manage`. No 9A execute/publish/schedule/pause/send. Super Admin may approve any pending version. Sales Manager **must not** approve own version at **database** authority. Legacy roles receive no automatic 9A grants. Kriti has no authoritative mutation/approval.
+- **RLS:** 100% on exposed campaign tables; direct authenticated DML denied; no browser service role; fail closed; no provider tokens in campaign rows.
 - **n8n** is not consent, approval, or campaign truth.
 - **Approval** has no provider side effect and creates no send intent, schedule, run, or recipient list.
 

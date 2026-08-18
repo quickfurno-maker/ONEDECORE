@@ -157,7 +157,7 @@ export function buildSamplePublicationContext(): PublicationContext {
     experimentReference: "OD-LP-EXP-0001",
     variantKey: "control",
     issuedAt: "2026-08-07T10:00:00.000Z",
-    expiresAt: "2026-08-08T10:00:00.000Z",
+    expiresAt: null,
   };
 }
 
