@@ -1,9 +1,9 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced post Phase 9A M31 repository implementation, August 17, 2026)
-**Current Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**ARCHITECTURE COMPLETE_FROZEN**; implementation **REPOSITORY_COMPLETE**; M31 **NOT managed-applied**)
-**Next Phase:** `PHASE_9A_M31_RECOVERY_MANAGED_APPLY`
-**Previous Phase:** Phase 8C — Project Execution Workspace (**COMPLETE** — PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; repository/managed **M1–M30**; production **not** activated)
+**Document Status:** Locked Roadmap (truth-synced post Phase 9A M31 managed certification, August 18, 2026)
+**Current Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**ARCHITECTURE COMPLETE_FROZEN**; implementation **REPOSITORY_COMPLETE**; managed DB **CERTIFIED_M1_M31**; PR **OPEN_NOT_MERGED**)
+**Next Phase:** `PHASE_9A_PR63_MERGE`
+**Previous Phase:** Phase 8C — Project Execution Workspace (**COMPLETE** — PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; production **not** activated)
 
 ---
 
@@ -88,7 +88,7 @@ Phase 8B: Designer Assignment & Design Collaboration ─────────
 Phase 8C: Project Execution Workspace ────────────────────────────── COMPLETE
   • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; PR #61 true merge `8f4f3ecf…`; repository/managed M1–M30; pending NONE; production not activated
 Phase 9A: Campaign Consent, Audience & Approval Foundation ──────── ARCHITECTURE COMPLETE_FROZEN / REPOSITORY_COMPLETE
-  • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077–DEC-0078; architecture PR #62 merged `caff9d0…`; M31 repository-only, not managed-applied; production not activated
+  • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077–DEC-0080; architecture PR #62 merged `caff9d0…`; M31 managed-applied immutable; PR #63 OPEN; production not activated
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -155,7 +155,7 @@ Phase 8C ──► Project Execution Workspace [COMPLETE]
     │         • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; PR #61 merged; managed M1–M30
     ▼
 Phase 9A ──► Campaign Consent, Audience & Approval Foundation [ARCHITECTURE COMPLETE_FROZEN / REPOSITORY_COMPLETE]
-    │         • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077–DEC-0078; PR #62 merged; M31 not managed-applied
+    │         • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077–DEC-0080; PR #62 merged; M31 managed-applied; PR #63 OPEN
     ▼
 Phase 9B ──► Landing Page Lab & Experimentation [ROADMAP-LOCKED — NOT IMPLEMENTED]
     │         • Landing page factory; reusable structured blocks
@@ -271,11 +271,11 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 ### Phase 9A (Current Formal Phase — Architecture Frozen; Repository Implementation Complete)
 - **Objective:** Campaign consent, audience rule versioning, and approval foundation (no execution).
 - **Architecture freeze:** [Phase 9A freeze](audits/phase-9a-campaign-consent-audience-approval-architecture-freeze.md), [ADR-0027](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md), DEC-0077.
-- **Implementation:** [Phase 9A M31 implementation](audits/phase-9a-m31-campaign-consent-audience-approval-implementation.md), DEC-0078.
+- **Implementation:** [Phase 9A M31 implementation](audits/phase-9a-m31-campaign-consent-audience-approval-implementation.md), DEC-0078, DEC-0080.
 - **Owner locks:** OD9A-1–OD9A-6 **as recommended** (existing DNC/channel suppression; MARKETING via `consent_events`; freeze rules not recipients; opaque destination / no 9B FK; channels metadata only; budget/creative/window approval snapshot).
-- **Exit gate (next):** `PHASE_9A_M31_RECOVERY_MANAGED_APPLY`. Do not merge in this implementation gate. Do not apply M31 managed.
+- **Exit gate (next):** `PHASE_9A_PR63_MERGE`. Do not merge in this managed-apply gate. M31 is immutable.
 - **Dependencies:** Phase 8C complete (PR #61 merged); architecture PR #62 merged `caff9d0864e1546dff38646df4355dafa851a473`.
-- **Status:** **CURRENT FORMAL PHASE** — architecture COMPLETE_FROZEN; repository implementation REPOSITORY_COMPLETE; repository **M1–M31**; managed **M1–M30**; pending **M31 only**; M31 **NOT** managed-applied; production not activated. Phase 9B/9C not started.
+- **Status:** **CURRENT FORMAL PHASE** — architecture COMPLETE_FROZEN; repository implementation REPOSITORY_COMPLETE; managed DB **CERTIFIED_M1_M31**; repository/managed **M1–M31**; pending **NONE**; M31 **MANAGED_APPLIED_IMMUTABLE**; PR #63 **OPEN_NOT_MERGED**; production not activated. Phase 9B/9C not started.
 
 ### Phase 9B (Landing Page Lab)
 - **Status:** Owner-approved roadmap placement; **not implemented** (no routes/schema/integrations).

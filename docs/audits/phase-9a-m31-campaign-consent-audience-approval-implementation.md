@@ -5,7 +5,8 @@
 **Base main:** `caff9d0864e1546dff38646df4355dafa851a473` (architecture PR #62 true merge; post-merge CI `32024515137` SUCCESS)  
 **Architecture:** ADR-0027 / DEC-0077 / OD9A-1–OD9A-6  
 **Implementation decision:** DEC-0078  
-**Gate:** repository implementation only — **M31 NOT managed-applied**; **PR OPEN / NOT MERGED**; **no production activation**; **Phase 9B/9C not started**
+**Managed apply decision:** DEC-0080  
+**Gate:** repository implementation **REPOSITORY_COMPLETE**; managed M31 **CERTIFIED_M1_M31** (2026-08-18); **PR OPEN / NOT MERGED**; **no production activation**; **Phase 9B/9C not started**
 
 ---
 
@@ -154,10 +155,34 @@ RLS on all four campaign tables. SELECT via `campaigns.read`. Direct authenticat
 - Typecheck PASS / build PASS
 - pgTAP `23_campaign_consent_audience_approval_test.sql` plan(91)
 
-## 16. Managed
+## 16. Managed certification (2026-08-18)
 
-Project `lpurlfmpvriyvpkujvyl` remains **M1–M30**. Pending **M31 only**. M31 **not** managed-applied. No managed schema/data/migration/storage write in this gate.
+- Recovery package: `C:\Users\KESHAV SHARMA\Desktop\ONEDECORE_RECOVERY\M31_PREAPPLY_20260818T033259Z` (not the failed 20260817T164905Z package)
+- Physical backup: ID **1402715223**, COMPLETED, `is_physical_backup=true`, `inserted_at` **2026-08-17T19:54:19.657Z**, WALG true, PITR false. Not 1393334013 / 1384020355. After M30 apply and after the previous failed gate.
+- CLI: `npx supabase@2.109.1`
+- Apply: `npx supabase@2.109.1 db push --linked --yes`
+- APPLY_START_UTC: `2026-08-18T03:34:34Z`
+- APPLY_END_UTC: `2026-08-18T03:34:46Z`
+- Non-fatal pg-delta catalog cache warning (certificate path) — migration still applied; `Finished supabase db push.`
+- Pre: repository M1–M31; managed **M1–M30**; pending **M31 only**
+- Post: repository M1–M31; managed **M1–M31**; pending **NONE**; latest `20260818140000`; exactly one M31 history row
+- M31 blob/raw SHA unchanged after apply (`ea76b214e8b133b5f8cebd437f4a524916fb5bdd` / `F4E415901AA7243448DA87449B7E365AB121966B9E4E67A418AE1846E1981E93`)
+- Tables present: `campaigns`, `campaign_versions`, `campaign_audience_rule_versions`, `campaign_approvals`, `private.marketing_idempotency_requests`, `private.campaign_reference_seq`
+- Forbidden tables absent (including `contact_suppressions`, recipient/run/spend, `landing_pages`)
+- Lifecycle constraint exact: draft / pending_approval / approved / rejected
+- RLS on all four campaign tables; authenticated SELECT only; INSERT/UPDATE/DELETE denied; anon denied
+- Permissions five codes; grants SA+SM only; legacy grants 0; execute/schedule/send absent
+- SECURITY DEFINER `search_path` hardened; anon staff RPC execute false; private helper execute denied
+- Campaign/approval/audience/idempotency rows **0**; MARKETING consent events **0**; contacts/leads/touchpoints/send intents **0** (no business delta)
+- RBAC metadata write expected only
+- Storage schema/object write none
+- Advisor pre: 79 WARN / 0 ERROR. Post: 87 WARN / 0 ERROR. New: 8 authenticated SECURITY DEFINER warnings for intended public staff RPCs. Anon staff RPC none. **M31_SECURITY_ADVISOR_BLOCKERS=NONE**
+- Local post-apply: db reset; Phase7A 42, 7B 62, 8 P0 11, 8A 48, 8B 44, 8C 49, shell 2, 9A 51, 9B 46, app 794, DB 1349; lint 0 errors / 11 warnings; typecheck PASS; build PASS
+- HMAC fixture correction remains test-only; production expiry enforcement unchanged
+- PR #63 OPEN_NOT_MERGED
+- Phase 9B/9C not started; Phase 9D stash preserved untouched
+- Production none
 
 ## 17. Blockers
 
-None for repository implementation. Next authorized gate: `PHASE_9A_M31_RECOVERY_MANAGED_APPLY`. Do not merge this PR in this gate.
+None for managed M31 certification. Next authorized gate: `PHASE_9A_PR63_MERGE`. Do **not** merge in this gate. M31 is immutable.

@@ -1,6 +1,6 @@
 # 06 — SECURITY, PRIVACY AND ROW LEVEL SECURITY (RLS) POLICIES
 
-**Document Status:** Locked Security Baseline (truth-synced post Phase 9A M31 repository implementation, August 17, 2026)
+**Document Status:** Locked Security Baseline (truth-synced post Phase 9A M31 managed certification, August 18, 2026)
 **RLS Target:** 100% Coverage on API-Exposed Application Tables
 **Default Access:** Anonymous Access Denied for Private Schemas
 
@@ -154,7 +154,7 @@ The following security requirements are **locked in architecture** and must be e
 - **No provider secrets in DB:** Meta access tokens and app secrets remain server environment configuration only.
 - **Activation boundary:** Managed schema only — no production Meta callback, outbound messaging, or n8n correctness dependency.
 
-## 10. Phase 9A Campaign Governance Security (M31 repository — **not managed-applied**)
+## 10. Phase 9A Campaign Governance Security (M31 **managed-applied 2026-08-18**)
 
 - **Consent minimization:** Reuse append-only `consent_events` for MARKETING. No parallel marketing-consent table. No mutable current-consent truth table. Historical rows are never edited/deleted. Staff RPC `record_marketing_consent_event` is Super Admin / Sales Manager only.
 - **No recipient PII snapshot** at approval. Audience artifact is a frozen rule version + hash. `broad_public` CRM PII export is **denied**. `direct_or_custom` requires current MARKETING grant; DNC and invalid/suppressed/archived target channels deny. Phase 9C rechecks before any later export/send.

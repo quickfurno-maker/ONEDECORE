@@ -1,9 +1,9 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (truth-synced post Phase 9A M31 repository implementation, August 17, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced post Phase 9A M31 managed certification, August 18, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
-**Migrations Applied (Managed):** M1–M30 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **M31 only**. **M31 NOT managed-applied.**
+**Migrations Applied (Managed):** M1–M31 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. M31 **MANAGED_APPLIED_IMMUTABLE**.
 
 ---
 
@@ -27,7 +27,7 @@
 ├─────────────────────────────────────────────────────────┤
 │ 8. AI Copilot Domain (requests, suggestions, approvals) │ PLANNED Phase 6C
 ├─────────────────────────────────────────────────────────┤
-│ 9. Marketing Domain (campaigns, audience rules, approvals) │ REPOSITORY M31 (not managed-applied; no runs)
+│ 9. Marketing Domain (campaigns, audience rules, approvals) │ LIVE M31 managed (no runs)
 ├─────────────────────────────────────────────────────────┤
 │ 10. Operations Domain (import batches, audit, settings) │ PLANNED Phase 5D+
 └─────────────────────────────────────────────────────────┘
@@ -147,17 +147,17 @@ Live Phase 8A schema (M28) uses `public.projects`, `public.project_manager_assig
 | `ai_requests` / `ai_suggestions` | Provider-independent adapter audit |
 | `ai_suggestion_approvals` | Human approval before customer-visible use |
 
-### 3.6 Marketing (Phase 9A M31 repository — **NOT managed-applied**)
+### 3.6 Marketing (Phase 9A M31 — **managed-applied 2026-08-18**)
 
 Reuse live CRM consent: `contacts`, `contact_channels`, `consent_events` (`purpose_code = 'MARKETING'`). No parallel marketing-consent table. No `contact_suppressions` in 9A.
 
 | Concept | Purpose | 9A status |
 | :--- | :--- | :--- |
-| `campaigns` | Stable campaign identity `OD-C-{YYYY}-{SEQ6}` | **REPOSITORY M31** — not managed-applied |
-| `campaign_versions` | Draft / pending_approval / approved / rejected | **REPOSITORY M31** — not managed-applied |
-| `campaign_audience_rule_versions` | Frozen normalized rule JSON + SHA-256 hash; **no PII members** | **REPOSITORY M31** — not managed-applied |
-| `campaign_approvals` | Append-only approved/rejected evidence | **REPOSITORY M31** — not managed-applied |
-| `private.marketing_idempotency_requests` | Retry-safe Phase 9A mutations | **REPOSITORY M31** — not managed-applied |
+| `campaigns` | Stable campaign identity `OD-C-{YYYY}-{SEQ6}` | **MANAGED M31** — certified empty at apply |
+| `campaign_versions` | Draft / pending_approval / approved / rejected | **MANAGED M31** — certified empty at apply |
+| `campaign_audience_rule_versions` | Frozen normalized rule JSON + SHA-256 hash; **no PII members** | **MANAGED M31** — certified empty at apply |
+| `campaign_approvals` | Append-only approved/rejected evidence | **MANAGED M31** — certified empty at apply |
+| `private.marketing_idempotency_requests` | Retry-safe Phase 9A mutations | **MANAGED M31** — certified empty at apply |
 | `campaign_runs` / provider objects / spend | Execution | **EXCLUDED — Phase 9C** |
 | Recipient / member snapshots / CRM export tables | PII lists | **EXCLUDED — not 9A** |
 | Landing-page tables / campaign→landing FK | Landing Lab | **EXCLUDED — Phase 9B** |

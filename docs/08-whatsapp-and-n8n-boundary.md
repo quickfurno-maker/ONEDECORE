@@ -1,6 +1,6 @@
 # 08 — META WHATSAPP, GROQ AI AND N8N AUTOMATION BOUNDARY
 
-**Document Status:** Locked Integration Baseline (truth-synced post Phase 9A M31 repository implementation, August 17, 2026)
+**Document Status:** Locked Integration Baseline (truth-synced post Phase 9A M31 managed certification, August 18, 2026)
 **WhatsApp API:** Official Meta WhatsApp Cloud API Only
 **AI Provider:** Groq behind provider-independent adapter (planned Phase 6C)
 **n8n Role:** Stateless Async Event Bus & Notification Relay
@@ -68,7 +68,7 @@ Groq must **not** automatically send messages, mutate assignments or statuses, a
 
 ---
 
-## 3. Marketing Campaigns (Phase 9A M31 repository — **not managed-applied**)
+## 3. Marketing Campaigns (Phase 9A M31 **managed-applied 2026-08-18**)
 
 | Role | Phase 9A authority |
 | :--- | :--- |

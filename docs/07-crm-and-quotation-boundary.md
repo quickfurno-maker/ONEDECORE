@@ -1,8 +1,8 @@
 # 07 — CRM PIPELINE AND COMMERCIAL QUOTATION BOUNDARY
 
-**Document Status:** Locked CRM & Quotation Baseline (truth-synced post Phase 9A M31 repository implementation, August 17, 2026)
+**Document Status:** Locked CRM & Quotation Baseline (truth-synced post Phase 9A M31 managed certification, August 18, 2026)
 **Internal Prefix:** `/admin`
-**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55). Phase 8A **COMPLETE** (PR #57 merged). Phase 8B **COMPLETE** (PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`). Phase 8C **COMPLETE** (ADR-0026 / DEC-0075–DEC-0076; PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; managed **M1–M30**; production not activated). Phase 9A architecture frozen (ADR-0027 / DEC-0077; PR #62 merged `caff9d0864e1546dff38646df4355dafa851a473`). Phase 9A M31 **repository-complete, not managed-applied**.
+**Implementation Status:** CRM workspace merged (Phase 5C–5E); commercial quotation 7A/7B complete (PR #55). Phase 8A **COMPLETE** (PR #57 merged). Phase 8B **COMPLETE** (PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`). Phase 8C **COMPLETE** (ADR-0026 / DEC-0075–DEC-0076; PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; production not activated). Phase 9A architecture frozen (ADR-0027 / DEC-0077; PR #62 merged `caff9d0864e1546dff38646df4355dafa851a473`). Phase 9A M31 **managed-applied immutable** (DEC-0080); PR #63 **OPEN_NOT_MERGED**.
 
 ---
 
