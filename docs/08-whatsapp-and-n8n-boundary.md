@@ -1,6 +1,6 @@
 # 08 — META WHATSAPP, GROQ AI AND N8N AUTOMATION BOUNDARY
 
-**Document Status:** Locked Integration Baseline (truth-synced post Phase 9A M31 managed certification, August 18, 2026)
+**Document Status:** Locked Integration Baseline (truth-synced post Phase 9D roadmap lock, August 18, 2026)
 **WhatsApp API:** Official Meta WhatsApp Cloud API Only
 **AI Provider:** Groq behind provider-independent adapter (planned Phase 6C)
 **n8n Role:** Stateless Async Event Bus & Notification Relay
@@ -85,6 +85,8 @@ Groq must **not** automatically send messages, mutate assignments or statuses, a
 - n8n cannot decide consent or approval truth.
 - No fabricated consent. Public MARKETING capture remains OFF.
 
+Phase 9D may add a public “Need Help? Chat with ONEDECORE” WhatsApp support CTA on `/shop`. That chat is **not** order, payment, or inventory truth (OD9D-10). Storefront purchase does **not** grant MARKETING consent.
+
 ---
 
 ## 4. n8n Integration Rules (Unchanged)
@@ -114,5 +116,6 @@ Do not conflate disabled intake with future WhatsApp or campaign capabilities.
 - [ADR-0004: Server-Side Persistence Before n8n](ADR/ADR-0004-crm-before-n8n-persistence.md)
 - [ADR-0021: Groq Copilot and WhatsApp Boundary](ADR/ADR-0021-groq-copilot-and-whatsapp-boundary.md)
 - [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
+- [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [Security, Privacy & RLS](06-security-privacy-and-rls.md)
 - [Runbook: Lead Intake Public Activation](runbooks/lead-intake-public-activation.md)

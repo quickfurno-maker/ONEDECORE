@@ -1,6 +1,6 @@
 # 01 — PRODUCT REQUIREMENTS DOCUMENT (PRD)
 
-**Document Status:** Locked PRD Baseline (truth-synced post DB-2, August 1, 2026)
+**Document Status:** Locked PRD Baseline (truth-synced post Phase 9D roadmap lock, August 18, 2026)
 **Scope:** ONEDECORE Version 1 Operating System
 **Target Market:** Pune, India
 
@@ -98,7 +98,7 @@ The following remain **out of scope** for all Version 1 phases:
 
 - Accounting & general ledger / GST filing
 - Procurement & purchase orders
-- Inventory & warehouse management
+- Inventory & warehouse management (ERP/WMS). Phase 9D later adds **bounded ready-made SKU stock** for `/shop` only (ADR-0028).
 - Labour attendance & site dispatch
 - Autonomous AI sales agents or unsupervised WhatsApp bots
 - Accountant, site supervisor, factory manager, installer, procurement, inventory, labour-dispatch **roles**
@@ -123,3 +123,4 @@ Project Manager and Designer roles **are in scope** for execution and design col
 - [Phase Roadmap](09-phase-roadmap.md)
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0005: Version 1 No-ERP Boundary](ADR/ADR-0005-version-1-no-erp-boundary.md)
+- [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)

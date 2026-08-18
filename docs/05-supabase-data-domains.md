@@ -1,6 +1,6 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (truth-synced post Phase 9A M31 managed certification, August 18, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced post Phase 9D roadmap lock, August 18, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
 **Migrations Applied (Managed):** M1–M31 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. M31 **MANAGED_APPLIED_IMMUTABLE**.
@@ -30,6 +30,8 @@
 │ 9. Marketing Domain (campaigns, audience rules, approvals) │ LIVE M31 managed (no runs)
 ├─────────────────────────────────────────────────────────┤
 │ 10. Operations Domain (import batches, audit, settings) │ PLANNED Phase 5D+
+├─────────────────────────────────────────────────────────┤
+│ 11. Commerce Domain (catalogue, cart, orders, payments) │ PHASE 9D ROADMAP-LOCKED — NOT STARTED
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -170,6 +172,10 @@ See [ADR-0027](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md) and 
 | `system_audit_logs` | Material mutation audit (existing pattern) |
 | `automation_events` | n8n outbox after persistence |
 
+### 3.8 Commerce (Phase 9D — **ROADMAP LOCKED, not started**)
+
+Ready-made furniture catalogue, variants, SKU stock, orders (`OD-O-{YYYY}-{SEQ6}`), immutable item/address snapshots, COD + online payment state. **No tables in this gate.** See [ADR-0028](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md). Not quotation ecommerce. Not warehouse ERP.
+
 ---
 
 ## 4. Security Contracts (All Domains)
@@ -191,3 +197,4 @@ See [ADR-0027](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md) and 
 - [ADR-0018: Secure Lead Intake Data Plane](ADR/ADR-0018-secure-lead-intake-data-plane.md)
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
+- [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
