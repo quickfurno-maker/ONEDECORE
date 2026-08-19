@@ -111,13 +111,22 @@ export default async function AdminCampaignDetailPage({ params }: AdminCampaignD
                 adapterAvailable: true,
                 configMissing: !metaConfig.ok && !googleConfig.ok,
                 provider: {
-                  spendMinor: Number((metricsRaw.provider as Record<string, unknown> | undefined)?.spend_minor ?? 0),
+                  spendMinor:
+                    (metricsRaw.provider as Record<string, unknown> | undefined)?.spend_minor == null
+                      ? null
+                      : Number((metricsRaw.provider as Record<string, unknown>).spend_minor),
                   impressions: Number((metricsRaw.provider as Record<string, unknown> | undefined)?.impressions ?? 0),
                   clicks: Number((metricsRaw.provider as Record<string, unknown> | undefined)?.clicks ?? 0),
                   providerConversions: Number(
                     (metricsRaw.provider as Record<string, unknown> | undefined)?.provider_conversions ?? 0
                   ),
-                  currency: String((metricsRaw.provider as Record<string, unknown> | undefined)?.currency ?? "INR"),
+                  currency:
+                    (metricsRaw.provider as Record<string, unknown> | undefined)?.currency == null
+                      ? null
+                      : String((metricsRaw.provider as Record<string, unknown>).currency),
+                  mixedCurrency: Boolean(
+                    (metricsRaw.provider as Record<string, unknown> | undefined)?.mixed_currency
+                  ),
                 },
                 crm: {
                   LeadCreated: Number((metricsRaw.crm as Record<string, unknown> | undefined)?.LeadCreated ?? 0),

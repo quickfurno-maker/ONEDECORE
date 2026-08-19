@@ -1,4 +1,7 @@
 import type { CampaignConversionFeedbackCommand, CampaignConversionFeedbackOutcome } from "../contracts/conversion-feedback.ts";
+import { selectGoogleClickConversionIdentifier } from "../contracts/click-identifiers.ts";
+import { CAMPAIGN_APPROVED_SNAPSHOT_PROVIDER_INCOMPATIBLE } from "../contracts/approved-execution-spec.ts";
+import { buildGoogleSearchPausedCreatePlan } from "../domain/google-search-paused-plan.ts";
 import type { GoogleAdsProviderConfig } from "./provider-config.ts";
 import type {
   CampaignExecutionProvider,
@@ -103,46 +106,50 @@ export class GoogleAdsCampaignExecutionProvider implements CampaignExecutionProv
   }
 
   async create(command: CampaignProviderCommand): Promise<CampaignProviderOutcome> {
+    if (!command.approvedSpec) {
+      return { kind: "validation_failure", errorCode: CAMPAIGN_APPROVED_SNAPSHOT_PROVIDER_INCOMPATIBLE };
+    }
+    const planned = buildGoogleSearchPausedCreatePlan(command.approvedSpec, this.config.customerId);
+    if (!planned.ok) {
+      return { kind: "validation_failure", errorCode: planned.code };
+    }
     const token = await this.bearer();
     if (typeof token !== "string") return token;
     try {
-      const budgetResponse = await this.transport.request({
+      const response = await this.transport.request({
         method: "POST",
-        url: `${this.customerPath()}/campaignBudgets:mutate`,
+        url: `${this.customerPath()}/googleAds:mutate`,
         headers: this.headers(token),
-        body: JSON.stringify({
-          operations: [
-            {
-              create: {
-                name: `ONEDECORE budget ${command.runReference}`,
-                amountMicros: "100000000",
-                explicitlyShared: false,
-              },
-            },
-          ],
-        }),
+        body: JSON.stringify(planned.plan.mutateBody),
       });
-      if (budgetResponse.status === 429 || budgetResponse.status >= 500) {
+      if (response.status === 429 || response.status >= 500) {
         return { kind: "transient_failure", errorCode: "GOOGLE_ADS_TRANSIENT" };
       }
-      if (budgetResponse.status < 200 || budgetResponse.status >= 300) {
+      if (response.status === 401 || response.status === 403) {
+        return { kind: "validation_failure", errorCode: "GOOGLE_ADS_AUTH" };
+      }
+      if (response.status < 200 || response.status >= 300) {
         return { kind: "validation_failure", errorCode: "GOOGLE_ADS_VALIDATION" };
       }
-      const budgetParsed = JSON.parse(budgetResponse.bodyText) as {
+      const parsed = JSON.parse(response.bodyText) as {
+        mutateOperationResponses?: Array<{
+          campaignResult?: { resourceName?: string };
+          adGroupResult?: { resourceName?: string };
+        }>;
         results?: Array<{ resourceName?: string }>;
       };
-      const budgetName = budgetParsed.results?.[0]?.resourceName;
-      if (!budgetName) return { kind: "validation_failure", errorCode: "GOOGLE_ADS_MISSING_ID" };
-      return this.mutateCampaigns([
-        {
-          create: {
-            name: `ONEDECORE ${command.runReference}`,
-            status: "PAUSED",
-            advertisingChannelType: "SEARCH",
-            campaignBudget: budgetName,
-          },
-        },
-      ]);
+      const campaignName =
+        parsed.mutateOperationResponses?.find((row) => row.campaignResult?.resourceName)?.campaignResult
+          ?.resourceName ?? parsed.results?.find((row) => row.resourceName?.includes("/campaigns/"))?.resourceName;
+      const adGroupName = parsed.mutateOperationResponses?.find((row) => row.adGroupResult?.resourceName)
+        ?.adGroupResult?.resourceName;
+      if (!campaignName) return { kind: "validation_failure", errorCode: "GOOGLE_ADS_MISSING_ID" };
+      return {
+        kind: "success",
+        providerCampaignId: campaignName,
+        providerAdGroupId: adGroupName ?? null,
+        providerStatus: "PAUSED",
+      };
     } catch {
       return { kind: "timeout_unknown", errorCode: "GOOGLE_ADS_TIMEOUT_UNKNOWN" };
     }
@@ -189,7 +196,10 @@ export class GoogleAdsCampaignExecutionProvider implements CampaignExecutionProv
 
   async getStatus(command: CampaignProviderCommand): Promise<CampaignProviderReconcileOutcome> {
     const token = await this.bearer();
-    if (typeof token !== "string") return { kind: "not_found", errorCode: token.errorCode };
+    if (typeof token !== "string") {
+      if (token.kind === "timeout_unknown") return { kind: "timeout_unknown", errorCode: token.errorCode };
+      return { kind: "auth_config", errorCode: token.errorCode };
+    }
     if (!command.boundProviderCampaignId) return { kind: "not_found", errorCode: "GOOGLE_ADS_NOT_FOUND" };
     try {
       const response = await this.transport.request({
@@ -201,6 +211,15 @@ export class GoogleAdsCampaignExecutionProvider implements CampaignExecutionProv
         }),
       });
       if (response.status === 404) return { kind: "not_found", errorCode: "GOOGLE_ADS_NOT_FOUND" };
+      if (response.status === 401 || response.status === 403) {
+        return { kind: "auth_config", errorCode: "GOOGLE_ADS_AUTH" };
+      }
+      if (response.status === 429 || response.status >= 500) {
+        return { kind: "transient", errorCode: "GOOGLE_ADS_TRANSIENT" };
+      }
+      if (response.status < 200 || response.status >= 300) {
+        return { kind: "auth_config", errorCode: "GOOGLE_ADS_STATUS" };
+      }
       const parsed = JSON.parse(response.bodyText) as {
         results?: Array<{ campaign?: { resourceName?: string; status?: string } }>;
       };
@@ -212,7 +231,7 @@ export class GoogleAdsCampaignExecutionProvider implements CampaignExecutionProv
         providerStatus: campaign.status ?? "UNKNOWN",
       };
     } catch {
-      return { kind: "not_found", errorCode: "GOOGLE_ADS_TIMEOUT_UNKNOWN" };
+      return { kind: "timeout_unknown", errorCode: "GOOGLE_ADS_TIMEOUT_UNKNOWN" };
     }
   }
 
@@ -270,14 +289,23 @@ export class GoogleAdsCampaignExecutionProvider implements CampaignExecutionProv
   }
 
   buildConversionFeedbackRequest(command: CampaignConversionFeedbackCommand): Record<string, unknown> {
-    return {
-      conversionAction: "customers/unspecified/conversionActions/onedecore",
-      gclid: command.clickId,
+    const conversionAction =
+      command.conversionActionResource ?? this.config.conversionActionResource;
+    if (!conversionAction || conversionAction.includes("unspecified") || conversionAction.endsWith("/onedecore")) {
+      return { errorCode: "CAMPAIGN_CONVERSION_ACTION_MISSING" };
+    }
+    const click = selectGoogleClickConversionIdentifier(command.clickIdentifiers);
+    const body: Record<string, unknown> = {
+      conversionAction,
       conversionDateTime: command.occurredAt,
       conversionValue: command.valueMinor != null ? command.valueMinor / 100 : undefined,
       currencyCode: command.currency,
       orderId: command.eventReference,
     };
+    if (click?.kind === "gclid") body.gclid = click.value;
+    else if (click?.kind === "gbraid") body.gbraid = click.value;
+    else if (click?.kind === "wbraid") body.wbraid = click.value;
+    return body;
   }
 
   async submitConversionFeedback(

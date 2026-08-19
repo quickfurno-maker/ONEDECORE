@@ -1,6 +1,6 @@
 -- ONEDECORE Phase 9C-C pgTAP — metrics, conversion feedback, grants
 begin;
-select plan(47);
+select plan(65);
 
 select ok(exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'campaign_metric_snapshots'), 'metric snapshots exist');
 select ok(exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'campaign_conversion_feedback_events'), 'feedback events exist');
@@ -230,6 +230,19 @@ select is(
 
 select is(
   (
+    select count(*)::integer from public.campaign_run_operations
+    where operation_type = 'conversion_feedback'
+      and operation_key = 'conversion_feedback:' || (
+        select id::text from public.campaign_conversion_feedback_events
+        where source_event_key = 'lead:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1:LeadCreated'
+      )
+  ),
+  1,
+  'attributable pending event enqueues conversion_feedback once'
+);
+
+select is(
+  (
     select provider_submission_state from public.campaign_conversion_feedback_events
     where source_event_key = 'lead:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1:LeadCreated'
   ),
@@ -264,6 +277,18 @@ select is(
 );
 
 select is(
+  (
+    select count(*)::integer from public.campaign_run_operations
+    where operation_key = 'conversion_feedback:' || (
+      select id::text from public.campaign_conversion_feedback_events
+      where source_event_key = 'lead:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2:QualifiedLead'
+    )
+  ),
+  0,
+  'unattributed events never enqueue conversion_feedback'
+);
+
+select is(
   private.upsert_campaign_conversion_feedback_event(
     'LeadCreated', 'lead', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
     'lead:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1:LeadCreated',
@@ -287,7 +312,8 @@ select is(
 
 select lives_ok(
   $$select public.enqueue_campaign_metrics_sync(
-    (select id from public.campaign_runs order by run_reference desc limit 1)
+    (select id from public.campaign_runs order by run_reference desc limit 1),
+    '2026-08-01'
   )$$,
   'enqueue metrics_sync'
 );
@@ -297,16 +323,18 @@ select is(
     select count(*)::integer from public.campaign_run_operations
     where operation_type = 'metrics_sync'
       and campaign_run_id = (select id from public.campaign_runs order by run_reference desc limit 1)
+      and operation_key like '%:2026-08-01'
   ),
   1,
-  'metrics_sync unique per run'
+  'metrics_sync unique per target window'
 );
 
 select lives_ok(
   $$select public.enqueue_campaign_metrics_sync(
-    (select id from public.campaign_runs order by run_reference desc limit 1)
+    (select id from public.campaign_runs order by run_reference desc limit 1),
+    '2026-08-01'
   )$$,
-  'metrics_sync replay'
+  'metrics_sync same window replay'
 );
 
 select is(
@@ -316,7 +344,25 @@ select is(
       and campaign_run_id = (select id from public.campaign_runs order by run_reference desc limit 1)
   ),
   1,
-  'metrics_sync replay does not duplicate'
+  'metrics_sync same window does not duplicate'
+);
+
+select lives_ok(
+  $$select public.enqueue_campaign_metrics_sync(
+    (select id from public.campaign_runs order by run_reference desc limit 1),
+    '2026-08-02'
+  )$$,
+  'metrics_sync next window'
+);
+
+select is(
+  (
+    select count(*)::integer from public.campaign_run_operations
+    where operation_type = 'metrics_sync'
+      and campaign_run_id = (select id from public.campaign_runs order by run_reference desc limit 1)
+  ),
+  2,
+  'metrics_sync new window creates new operation'
 );
 
 set local role authenticated;
@@ -503,6 +549,185 @@ select is(
   ),
   'ambiguous_target',
   'conflicting trusted target is ambiguous_target'
+);
+
+select is(
+  (
+    select count(*)::integer from public.campaign_run_operations
+    where operation_key = 'conversion_feedback:' || (
+      select id::text from public.campaign_conversion_feedback_events
+      where source_event_key = 'lead:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa8:LeadCreated'
+    )
+  ),
+  0,
+  'ambiguous events never enqueue conversion_feedback'
+);
+
+select lives_ok(
+  $$select public.upsert_campaign_metric_snapshot(
+    (select id from public.campaign_run_targets order by run_target_reference desc limit 1),
+    '2026-08-02T00:00:00Z'::timestamptz,
+    '2026-08-03T00:00:00Z'::timestamptz,
+    'INR',
+    50,
+    4,
+    1,
+    0
+  )$$,
+  'second non-overlapping INR window'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"9c111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+select is(
+  public.get_campaign_metrics_board(
+    (select campaign_id from public.campaign_versions where title = 'Metrics Meta v1' limit 1)
+  ) -> 'provider' ->> 'spend_minor',
+  '200',
+  'non-overlapping same-currency windows aggregate'
+);
+select is(
+  public.get_campaign_metrics_board(
+    (select campaign_id from public.campaign_versions where title = 'Metrics Meta v1' limit 1)
+  ) -> 'provider' ->> 'mixed_currency',
+  'false',
+  'same-currency board is not mixed'
+);
+reset role;
+set local role postgres;
+
+select lives_ok(
+  $$select public.upsert_campaign_metric_snapshot(
+    (select id from public.campaign_run_targets order by run_target_reference desc limit 1),
+    '2026-08-04T00:00:00Z'::timestamptz,
+    '2026-08-05T00:00:00Z'::timestamptz,
+    'USD',
+    10,
+    1,
+    1,
+    0
+  )$$,
+  'USD snapshot insert'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"9c111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+select is(
+  public.get_campaign_metrics_board(
+    (select campaign_id from public.campaign_versions where title = 'Metrics Meta v1' limit 1)
+  ) -> 'provider' ->> 'mixed_currency',
+  'true',
+  'mixed currency is flagged'
+);
+select is(
+  public.get_campaign_metrics_board(
+    (select campaign_id from public.campaign_versions where title = 'Metrics Meta v1' limit 1)
+  ) -> 'provider' -> 'spend_minor',
+  'null'::jsonb,
+  'mixed currency suppresses combined spend'
+);
+reset role;
+set local role postgres;
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"9c111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+select lives_ok(
+  $$select public.create_campaign_draft(
+    'Board Isolation B',
+    'Board Isolation B v1',
+    'broad_public',
+    array['google_ads'],
+    'OD-LP-2026-000002',
+    jsonb_build_object('currency','INR','daily_budget_paise',1000,'total_budget_paise',5000),
+    jsonb_build_object('headline','H','primary_text','P','call_to_action','C','media_references', jsonb_build_array('m')),
+    jsonb_build_object('start_date','2026-09-01','end_date', null),
+    jsonb_build_object('logic','and','rules', jsonb_build_array(
+      jsonb_build_object('field','lead_stage','operator','equals','values', jsonb_build_array('qualified'))
+    )),
+    '9c000000-0000-0000-0000-00000000c101'
+  )$$,
+  'SA draft campaign B'
+);
+select lives_ok(
+  $$select public.request_campaign_approval(
+    (select id from public.campaign_versions where title = 'Board Isolation B v1' order by created_at desc limit 1),
+    (select lock_version from public.campaign_versions where title = 'Board Isolation B v1' order by created_at desc limit 1),
+    '9c000000-0000-0000-0000-00000000c102'
+  )$$,
+  'request approval B'
+);
+select lives_ok(
+  $$select public.decide_campaign_version(
+    (select id from public.campaign_versions where title = 'Board Isolation B v1' order by created_at desc limit 1),
+    'approved',
+    null,
+    '9c000000-0000-0000-0000-00000000c103'
+  )$$,
+  'approve B'
+);
+reset role;
+set local role postgres;
+
+insert into public.contacts (id, display_name, status) values
+  ('9ccaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', '9C-C Lead B', 'active')
+on conflict (id) do nothing;
+
+insert into public.leads (
+  id, submission_reference, contact_id, submitted_name, submitted_email, status, source,
+  primary_source_id, entry_method, service_code, property_code, timeline_code, planner_version, landing_path, locality,
+  attribution
+) values (
+  '9ccb2222-bbbb-bbbb-bbbb-bbbbbbbbbbb2',
+  '9ccb2222-bbbb-bbbb-bbbb-bbbbbbbbbbb2',
+  '9ccaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2',
+  '9C-C Lead B',
+  'lead9ccb@example.com',
+  'new',
+  'website-planner',
+  (select id from public.lead_sources where code = 'website_planner'),
+  'local_test',
+  'complete-home-interiors',
+  'apartment-3bhk',
+  'ready-now',
+  'v1',
+  '/planner',
+  'Pune',
+  jsonb_build_object(
+    'campaign_reference', (select c.campaign_reference from public.campaigns c join public.campaign_versions v on v.campaign_id = c.id where v.title = 'Board Isolation B v1' limit 1)
+  )
+);
+
+select lives_ok(
+  $$select private.upsert_campaign_conversion_feedback_event(
+      'QualifiedLead', 'lead', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa10',
+      'lead:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa10:QualifiedLead',
+      '9ccb2222-bbbb-bbbb-bbbb-bbbbbbbbbbb2',
+      '{}'::jsonb, now(), null, null
+    )$$,
+  'campaign B unattributed event'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"9c111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+select is(
+  public.get_campaign_metrics_board(
+    (select campaign_id from public.campaign_versions where title = 'Metrics Meta v1' limit 1)
+  ) ->> 'unattributed',
+  '1',
+  'campaign A unattributed is scoped to A identity'
+);
+select is(
+  public.get_campaign_metrics_board(
+    (select campaign_id from public.campaign_versions where title = 'Board Isolation B v1' limit 1)
+  ) ->> 'unattributed',
+  '2',
+  'campaign B unattributed does not leak onto A'
+);
+reset role;
+
+select lives_ok(
+  $$select public.enqueue_pending_attributable_campaign_conversion_feedback()$$,
+  'pending feedback sweep is replay-safe'
 );
 
 select finish();

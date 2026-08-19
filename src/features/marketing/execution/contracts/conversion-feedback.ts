@@ -1,3 +1,5 @@
+import type { CampaignProviderClickIdentifier } from "./click-identifiers.ts";
+
 export type ConversionFeedbackType =
   | "LeadCreated"
   | "QualifiedLead"
@@ -12,7 +14,9 @@ export interface CampaignConversionFeedbackCommand {
   readonly runReference: string;
   readonly runTargetReference: string;
   readonly providerChannel: "meta_ads" | "google_ads";
-  readonly clickId: string | null;
+  readonly clickIdentifiers: readonly CampaignProviderClickIdentifier[];
+  readonly conversionActionResource: string | null;
+  readonly pixelOrDatasetId: string | null;
   readonly valueMinor: number | null;
   readonly currency: string | null;
 }

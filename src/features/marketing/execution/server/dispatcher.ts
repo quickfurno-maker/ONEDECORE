@@ -8,6 +8,10 @@ import type { CampaignProviderCommand, CampaignProviderOutcome } from "./provide
 import type { PaidAdsChannel } from "../contracts/run-lifecycle.ts";
 import type { CampaignOperationType } from "../contracts/run-lifecycle.ts";
 import type { ConversionFeedbackType } from "../contracts/conversion-feedback.ts";
+import { parseCampaignApprovedExecutionSpec } from "../domain/approved-execution-spec.ts";
+import { parseMetricsSyncOperationKey } from "../domain/metrics-window.ts";
+import { parseCapturedClickIdentifiers } from "../contracts/click-identifiers.ts";
+import { resolveGoogleAdsProviderConfig, resolveMetaAdsProviderConfig } from "./provider-config.ts";
 
 const DEFAULT_BATCH = 5;
 const MAX_BATCH = 10;
@@ -24,6 +28,40 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 export type CampaignExecutionAdmin = ReturnType<typeof createAdminClient>;
+
+async function loadApprovedSpec(
+  admin: CampaignExecutionAdmin,
+  runId: string
+): Promise<{ readonly ok: true; readonly spec: NonNullable<CampaignProviderCommand["approvedSpec"]> } | { readonly ok: false; readonly code: string }> {
+  const { data: runRow } = await admin
+    .from("campaign_runs")
+    .select("campaign_version_id, configuration_hash, provider_channel, targeting_mode")
+    .eq("id", runId)
+    .maybeSingle();
+  const run = asRecord(runRow);
+  const versionId = String(run.campaign_version_id ?? "");
+  const { data: versionRow } = await admin
+    .from("campaign_versions")
+    .select(
+      "id, status, configuration_hash, audience_rule_hash, budget_snapshot, creative_snapshot, intended_window_snapshot, destination_reference"
+    )
+    .eq("id", versionId)
+    .maybeSingle();
+  const version = asRecord(versionRow);
+  return parseCampaignApprovedExecutionSpec({
+    campaignVersionId: String(version.id ?? versionId),
+    versionStatus: String(version.status ?? ""),
+    versionConfigurationHash: String(version.configuration_hash ?? ""),
+    runConfigurationHash: String(run.configuration_hash ?? ""),
+    providerChannel: String(run.provider_channel ?? ""),
+    targetingMode: String(run.targeting_mode ?? ""),
+    audienceRuleHash: version.audience_rule_hash == null ? null : String(version.audience_rule_hash),
+    budgetSnapshot: version.budget_snapshot,
+    creativeSnapshot: version.creative_snapshot,
+    intendedWindowSnapshot: version.intended_window_snapshot,
+    destinationReference: version.destination_reference == null ? null : String(version.destination_reference),
+  });
+}
 
 export async function dispatchCampaignRunOperations(options?: {
   readonly maxBatch?: number;
@@ -70,7 +108,7 @@ export async function dispatchCampaignRunOperations(options?: {
 
     const { data: runRow } = await admin
       .from("campaign_runs")
-      .select("run_reference, provider_channel, targeting_mode")
+      .select("run_reference, provider_channel, targeting_mode, configuration_hash, campaign_version_id")
       .eq("id", runId)
       .maybeSingle();
     const { data: targetRow } = await admin
@@ -106,6 +144,22 @@ export async function dispatchCampaignRunOperations(options?: {
       continue;
     }
 
+    let approvedSpec: CampaignProviderCommand["approvedSpec"] = null;
+    if (operationType === "create" || operationType === "activate") {
+      const loaded = await loadApprovedSpec(admin, runId);
+      if (!loaded.ok) {
+        await admin.rpc("fail_campaign_run_operation", {
+          p_operation_id: operationId,
+          p_error_code: loaded.code,
+          p_retry: false,
+        });
+        outcomes.push("failed");
+        processed += 1;
+        continue;
+      }
+      approvedSpec = loaded.spec;
+    }
+
     const command: CampaignProviderCommand = {
       operationType,
       operationKey: String(claim.operation_key),
@@ -113,22 +167,32 @@ export async function dispatchCampaignRunOperations(options?: {
       runReference: String(runRow?.run_reference),
       runTargetReference: String(targetRow?.run_target_reference),
       boundProviderCampaignId: targetRow?.provider_campaign_id ?? null,
+      approvedSpec,
     };
 
     const provider = resolvedForChannel.provider;
 
     if (operationType === "metrics_sync") {
-      const windowEnd = new Date();
-      const windowStart = new Date(windowEnd.getTime() - 24 * 60 * 60 * 1000);
+      const window = parseMetricsSyncOperationKey(String(claim.operation_key));
+      if (!window) {
+        await admin.rpc("fail_campaign_run_operation", {
+          p_operation_id: operationId,
+          p_error_code: "CAMPAIGN_METRICS_WINDOW_REQUIRED",
+          p_retry: false,
+        });
+        outcomes.push("failed");
+        processed += 1;
+        continue;
+      }
       const metrics = await provider.fetchMetrics(command, {
-        windowStartIso: windowStart.toISOString(),
-        windowEndIso: windowEnd.toISOString(),
+        windowStartIso: window.windowStartIso,
+        windowEndIso: window.windowEndIso,
       });
       if (metrics.kind === "success") {
         await admin.rpc("upsert_campaign_metric_snapshot", {
           p_campaign_run_target_id: targetId,
-          p_window_start: windowStart.toISOString(),
-          p_window_end: windowEnd.toISOString(),
+          p_window_start: window.windowStartIso,
+          p_window_end: window.windowEndIso,
           p_currency: metrics.snapshot.currency,
           p_spend_minor: metrics.snapshot.spendMinor,
           p_impressions: metrics.snapshot.impressions,
@@ -174,7 +238,7 @@ export async function dispatchCampaignRunOperations(options?: {
       const { data: eventRow } = await admin
         .from("campaign_conversion_feedback_events")
         .select(
-          "event_reference, conversion_type, conversion_occurred_at, attribution_state, value_minor, currency, provider_channel"
+          "event_reference, conversion_type, conversion_occurred_at, attribution_state, value_minor, currency, provider_channel, lead_id"
         )
         .eq("id", eventId)
         .maybeSingle();
@@ -189,18 +253,31 @@ export async function dispatchCampaignRunOperations(options?: {
         processed += 1;
         continue;
       }
-      const command: CampaignConversionFeedbackCommand = {
+      let attribution: Record<string, unknown> = {};
+      if (event.lead_id) {
+        const { data: leadRow } = await admin
+          .from("leads")
+          .select("attribution")
+          .eq("id", String(event.lead_id))
+          .maybeSingle();
+        attribution = asRecord(asRecord(leadRow).attribution);
+      }
+      const googleConfig = resolveGoogleAdsProviderConfig(env);
+      const metaConfig = resolveMetaAdsProviderConfig(env);
+      const feedbackCommand: CampaignConversionFeedbackCommand = {
         eventReference: String(event.event_reference),
         conversionType: String(event.conversion_type) as ConversionFeedbackType,
         occurredAt: String(event.conversion_occurred_at),
         runReference: String(runRow?.run_reference),
         runTargetReference: String(targetRow?.run_target_reference),
         providerChannel: channel,
-        clickId: null,
+        clickIdentifiers: parseCapturedClickIdentifiers(attribution),
+        conversionActionResource: googleConfig.ok ? googleConfig.config.conversionActionResource : null,
+        pixelOrDatasetId: metaConfig.ok ? metaConfig.config.datasetId : null,
         valueMinor: event.value_minor == null ? null : Number(event.value_minor),
         currency: event.currency == null ? null : String(event.currency),
       };
-      const feedback = await provider.submitConversionFeedback(command);
+      const feedback = await provider.submitConversionFeedback(feedbackCommand);
       if (feedback.kind === "blocked") {
         await admin.rpc("mark_campaign_conversion_feedback_state", {
           p_event_id: eventId,
@@ -359,5 +436,11 @@ export async function reconcileCampaignRunOperation(
     if (resolveError) throw resolveError;
     return "reconcile_found";
   }
-  return "reconcile_not_found";
+  if (status.kind === "not_found") {
+    return "reconcile_not_found";
+  }
+  if (status.kind === "auth_config") {
+    return status.errorCode;
+  }
+  return "needs_reconcile";
 }

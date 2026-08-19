@@ -17,15 +17,22 @@ export async function resolveTrustedRunAttribution(input: {
   readonly signed: SignedCampaignExecutionContext;
   readonly client: ReturnType<typeof createAdminClient>;
   readonly hmacSecret: string | null;
+  readonly trustedLandingPublicationReference: string | null;
   readonly nowMs?: number;
 }): Promise<{ readonly ok: true; readonly identity: TrustedRunAttribution } | { readonly ok: false }> {
   if (!input.hmacSecret) return { ok: false };
+  if (!input.trustedLandingPublicationReference) return { ok: false };
   const verified = verifyCampaignExecutionContext(
     input.hmacSecret,
     input.signed,
     input.nowMs ?? Date.now()
   );
   if (!verified.valid) return { ok: false };
+  if (
+    input.signed.context.landingPublicationReference !== input.trustedLandingPublicationReference
+  ) {
+    return { ok: false };
+  }
 
   const { data, error } = await input.client.rpc("verify_campaign_execution_context_binding", {
     p_run_reference: input.signed.context.runReference,

@@ -1,4 +1,7 @@
 import type { CampaignConversionFeedbackCommand, CampaignConversionFeedbackOutcome } from "../contracts/conversion-feedback.ts";
+import { selectMetaCapiIdentifiers } from "../contracts/click-identifiers.ts";
+import { CAMPAIGN_APPROVED_SNAPSHOT_PROVIDER_INCOMPATIBLE } from "../contracts/approved-execution-spec.ts";
+import { buildMetaPausedCreatePlan } from "../domain/meta-paused-plan.ts";
 import type { MetaAdsProviderConfig } from "./provider-config.ts";
 import type {
   CampaignExecutionProvider,
@@ -85,12 +88,17 @@ export class MetaAdsCampaignExecutionProvider implements CampaignExecutionProvid
   }
 
   async create(command: CampaignProviderCommand): Promise<CampaignProviderOutcome> {
-    const result = await this.mutate(`${this.accountPath()}/campaigns`, {
-      name: `ONEDECORE ${command.runReference}`,
-      objective: "OUTCOME_LEADS",
-      status: "PAUSED",
-      special_ad_categories: "[]",
-    });
+    if (!command.approvedSpec) {
+      return { kind: "validation_failure", errorCode: CAMPAIGN_APPROVED_SNAPSHOT_PROVIDER_INCOMPATIBLE };
+    }
+    if (!this.config.pageId) {
+      return { kind: "validation_failure", errorCode: "CAMPAIGN_PROVIDER_CONFIG_MISSING" };
+    }
+    const planned = buildMetaPausedCreatePlan(command.approvedSpec, { pageId: this.config.pageId });
+    if (!planned.ok) {
+      return { kind: "validation_failure", errorCode: planned.code };
+    }
+    const result = await this.mutate(`${this.accountPath()}${planned.plan.urlPath}`, planned.plan.params);
     if (result.kind === "success") {
       return { ...result, providerStatus: "PAUSED" };
     }
@@ -143,14 +151,20 @@ export class MetaAdsCampaignExecutionProvider implements CampaignExecutionProvid
         headers: this.authHeaders(),
       });
       if (response.status === 404) return { kind: "not_found", errorCode: "META_NOT_FOUND" };
-      if (response.status >= 500 || response.status === 429) {
-        return { kind: "not_found", errorCode: "META_TRANSIENT" };
+      if (response.status === 401 || response.status === 403) {
+        return { kind: "auth_config", errorCode: "META_AUTH" };
+      }
+      if (response.status === 429 || response.status >= 500) {
+        return { kind: "transient", errorCode: "META_TRANSIENT" };
+      }
+      if (response.status < 200 || response.status >= 300) {
+        return { kind: "auth_config", errorCode: "META_STATUS" };
       }
       const parsed = JSON.parse(response.bodyText) as { id?: string; status?: string };
       if (!parsed.id) return { kind: "not_found", errorCode: "META_NOT_FOUND" };
       return { kind: "found", providerCampaignId: parsed.id, providerStatus: parsed.status ?? "UNKNOWN" };
     } catch {
-      return { kind: "not_found", errorCode: "META_TIMEOUT_UNKNOWN" };
+      return { kind: "timeout_unknown", errorCode: "META_TIMEOUT_UNKNOWN" };
     }
   }
 
@@ -195,12 +209,21 @@ export class MetaAdsCampaignExecutionProvider implements CampaignExecutionProvid
   }
 
   buildConversionFeedbackRequest(command: CampaignConversionFeedbackCommand): Record<string, unknown> {
+    const datasetId = command.pixelOrDatasetId ?? this.config.datasetId;
+    if (!datasetId) {
+      return { errorCode: "CAMPAIGN_CONVERSION_DATASET_MISSING" };
+    }
+    const capi = selectMetaCapiIdentifiers(command.clickIdentifiers);
+    const userData: Record<string, string> = {};
+    if (capi.fbc) userData.fbc = capi.fbc;
+    if (capi.fbp) userData.fbp = capi.fbp;
     return {
+      dataset_id: datasetId,
       event_name: command.conversionType,
       event_time: command.occurredAt,
       event_id: command.eventReference,
       action_source: "website",
-      user_data: command.clickId ? { fbc: command.clickId } : {},
+      user_data: userData,
       custom_data:
         command.valueMinor != null
           ? { currency: command.currency, value: command.valueMinor / 100 }

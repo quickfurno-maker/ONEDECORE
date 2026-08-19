@@ -312,6 +312,10 @@ export async function handleLeadIntakeRequest(
           signed: intakeValue.campaignExecutionContext,
           client: (deps.createAdminClient ?? createAdminClient)(),
           hmacSecret: executionSecret,
+          trustedLandingPublicationReference:
+            typeof intakeValue.attribution.publication_reference === "string"
+              ? intakeValue.attribution.publication_reference
+              : null,
         });
         if (runTrusted.ok) {
           intakeValue = {

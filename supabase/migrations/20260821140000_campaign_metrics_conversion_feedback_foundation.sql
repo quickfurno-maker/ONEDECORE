@@ -276,6 +276,21 @@ begin
 
   if v_id is null then
     select id into v_id from public.campaign_conversion_feedback_events where source_event_key = p_source_event_key;
+  else
+    if v_state = 'attributable' and v_run_id is not null and v_target_id is not null then
+      insert into public.campaign_run_operations (
+        campaign_run_id, campaign_run_target_id, operation_type, operation_state,
+        operation_key, request_hash
+      ) values (
+        v_run_id,
+        v_target_id,
+        'conversion_feedback',
+        'pending',
+        'conversion_feedback:' || v_id::text,
+        private.marketing_sha256(v_id::text || '|conversion_feedback')
+      )
+      on conflict (operation_key) do nothing;
+    end if;
   end if;
   return v_id;
 end;
@@ -618,8 +633,46 @@ begin
 end;
 $$;
 
+drop function if exists public.enqueue_campaign_metrics_sync(uuid);
+
+create or replace function private.enqueue_campaign_metrics_sync_window(
+  p_run public.campaign_runs,
+  p_target_id uuid,
+  p_window_start date
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_key text;
+  v_hash text;
+begin
+  if p_window_start is null then
+    raise exception 'CAMPAIGN_VALIDATION' using errcode = '22023';
+  end if;
+  v_key := 'ms:' || p_target_id::text || ':' || to_char(p_window_start, 'YYYY-MM-DD');
+  v_hash := private.marketing_sha256(p_target_id::text || '|metrics_sync|' || v_key);
+  insert into public.campaign_run_operations (
+    campaign_run_id, campaign_run_target_id, operation_type, operation_state,
+    operation_key, request_hash
+  ) values (
+    p_run.id, p_target_id, 'metrics_sync', 'pending', v_key, v_hash
+  )
+  on conflict (operation_key) do nothing
+  returning id into v_id;
+  if v_id is null then
+    select o.id into v_id from public.campaign_run_operations o where o.operation_key = v_key;
+  end if;
+  return v_id;
+end;
+$$;
+
 create or replace function public.enqueue_campaign_metrics_sync(
-  p_campaign_run_id uuid
+  p_campaign_run_id uuid,
+  p_window_start date default null
 )
 returns jsonb
 language plpgsql
@@ -630,14 +683,21 @@ declare
   v_run public.campaign_runs%rowtype;
   v_target public.campaign_run_targets%rowtype;
   v_id uuid;
+  v_day date;
 begin
   select * into v_run from public.campaign_runs where id = p_campaign_run_id for update;
   if not found then
     raise exception 'CAMPAIGN_NOT_FOUND_OR_FORBIDDEN' using errcode = 'P0002';
   end if;
   select t.* into v_target from public.campaign_run_targets as t where t.campaign_run_id = v_run.id;
-  v_id := private.enqueue_unique_campaign_run_operation(v_run, v_target.id, 'metrics_sync');
-  return jsonb_build_object('outcome_code', 'ok', 'operation_id', v_id);
+  v_day := coalesce(p_window_start, ((timezone('utc', now()))::date - 1));
+  v_id := private.enqueue_campaign_metrics_sync_window(v_run, v_target.id, v_day);
+  return jsonb_build_object(
+    'outcome_code', 'ok',
+    'operation_id', v_id,
+    'window_start', (v_day::timestamp at time zone 'utc'),
+    'window_end', ((v_day + 1)::timestamp at time zone 'utc')
+  );
 end;
 $$;
 
@@ -659,19 +719,69 @@ begin
 
   select jsonb_build_object(
     'campaign_id', p_campaign_id,
-    'provider', coalesce((
-      select jsonb_build_object(
-        'spend_minor', coalesce(sum(s.spend_minor), 0),
-        'impressions', coalesce(sum(s.impressions), 0),
-        'clicks', coalesce(sum(s.clicks), 0),
-        'provider_conversions', coalesce(sum(s.provider_conversions), 0),
-        'currency', min(s.currency)
+    'provider', (
+      with snaps as (
+        select s.currency, s.spend_minor, s.impressions, s.clicks, s.provider_conversions
+        from public.campaign_metric_snapshots s
+        join public.campaign_runs r on r.id = s.campaign_run_id
+        join public.campaign_versions v on v.id = r.campaign_version_id
+        where v.campaign_id = p_campaign_id
+      ),
+      buckets as (
+        select
+          currency,
+          sum(spend_minor) as spend_minor,
+          sum(impressions) as impressions,
+          sum(clicks) as clicks,
+          sum(provider_conversions) as provider_conversions
+        from snaps
+        group by currency
       )
-      from public.campaign_metric_snapshots s
-      join public.campaign_runs r on r.id = s.campaign_run_id
-      join public.campaign_versions v on v.id = r.campaign_version_id
-      where v.campaign_id = p_campaign_id
-    ), jsonb_build_object('spend_minor', 0, 'impressions', 0, 'clicks', 0, 'provider_conversions', 0, 'currency', 'INR')),
+      select case
+        when (select count(*) from buckets) = 0 then
+          jsonb_build_object(
+            'mixed_currency', false,
+            'spend_minor', 0,
+            'impressions', 0,
+            'clicks', 0,
+            'provider_conversions', 0,
+            'currency', 'INR',
+            'currencies', '[]'::jsonb
+          )
+        when (select count(*) from buckets) = 1 then
+          (select jsonb_build_object(
+            'mixed_currency', false,
+            'spend_minor', spend_minor,
+            'impressions', impressions,
+            'clicks', clicks,
+            'provider_conversions', provider_conversions,
+            'currency', currency,
+            'currencies', jsonb_build_array(jsonb_build_object(
+              'currency', currency,
+              'spend_minor', spend_minor,
+              'impressions', impressions,
+              'clicks', clicks,
+              'provider_conversions', provider_conversions
+            ))
+          ) from buckets)
+        else
+          jsonb_build_object(
+            'mixed_currency', true,
+            'spend_minor', null,
+            'impressions', (select sum(impressions) from buckets),
+            'clicks', (select sum(clicks) from buckets),
+            'provider_conversions', (select sum(provider_conversions) from buckets),
+            'currency', null,
+            'currencies', (select coalesce(jsonb_agg(jsonb_build_object(
+              'currency', currency,
+              'spend_minor', spend_minor,
+              'impressions', impressions,
+              'clicks', clicks,
+              'provider_conversions', provider_conversions
+            ) order by currency), '[]'::jsonb) from buckets)
+          )
+      end
+    ),
     'crm', jsonb_build_object(
       'LeadCreated', (
         select count(*) from public.campaign_conversion_feedback_events e
@@ -707,8 +817,21 @@ begin
     'unattributed', (
       select count(*) from public.campaign_conversion_feedback_events e
       where e.attribution_state in ('not_attributable', 'ambiguous_target')
-        and e.lead_id in (
-          select l.id from public.leads l
+        and (
+          exists (
+            select 1
+            from public.campaign_runs r
+            join public.campaign_versions v on v.id = r.campaign_version_id
+            where v.campaign_id = p_campaign_id
+              and e.campaign_run_id = r.id
+          )
+          or exists (
+            select 1
+            from public.leads l
+            join public.campaigns c on c.campaign_reference = nullif(l.attribution->>'campaign_reference', '')
+            where l.id = e.lead_id
+              and c.id = p_campaign_id
+          )
         )
     ),
     'feedback', coalesce((
@@ -831,14 +954,14 @@ grant select on table public.campaign_conversion_feedback_events to authenticate
 alter function public.verify_campaign_execution_context_binding(text, text, text, text, integer, text) owner to postgres;
 alter function public.upsert_campaign_metric_snapshot(uuid, timestamptz, timestamptz, text, bigint, bigint, bigint, bigint, text, text) owner to postgres;
 alter function public.mark_campaign_conversion_feedback_state(uuid, text, text, text) owner to postgres;
-alter function public.enqueue_campaign_metrics_sync(uuid) owner to postgres;
+alter function public.enqueue_campaign_metrics_sync(uuid, date) owner to postgres;
 alter function public.get_campaign_metrics_board(uuid) owner to postgres;
 alter function public.complete_campaign_run_operation(uuid, text, jsonb) owner to postgres;
 
 revoke all on function public.verify_campaign_execution_context_binding(text, text, text, text, integer, text) from public, anon, authenticated;
 revoke all on function public.upsert_campaign_metric_snapshot(uuid, timestamptz, timestamptz, text, bigint, bigint, bigint, bigint, text, text) from public, anon, authenticated;
 revoke all on function public.mark_campaign_conversion_feedback_state(uuid, text, text, text) from public, anon, authenticated;
-revoke all on function public.enqueue_campaign_metrics_sync(uuid) from public, anon, authenticated;
+revoke all on function public.enqueue_campaign_metrics_sync(uuid, date) from public, anon, authenticated;
 revoke all on function public.get_campaign_metrics_board(uuid) from public, anon;
 revoke all on function private.resolve_trusted_campaign_target_from_attribution(jsonb) from public, anon, authenticated;
 revoke all on function private.upsert_campaign_conversion_feedback_event(text, text, uuid, text, uuid, jsonb, timestamptz, bigint, text) from public, anon, authenticated;
@@ -846,7 +969,7 @@ revoke all on function private.upsert_campaign_conversion_feedback_event(text, t
 grant execute on function public.verify_campaign_execution_context_binding(text, text, text, text, integer, text) to service_role;
 grant execute on function public.upsert_campaign_metric_snapshot(uuid, timestamptz, timestamptz, text, bigint, bigint, bigint, bigint, text, text) to service_role;
 grant execute on function public.mark_campaign_conversion_feedback_state(uuid, text, text, text) to service_role;
-grant execute on function public.enqueue_campaign_metrics_sync(uuid) to service_role;
+grant execute on function public.enqueue_campaign_metrics_sync(uuid, date) to service_role;
 grant execute on function public.get_campaign_metrics_board(uuid) to authenticated;
 grant execute on function public.complete_campaign_run_operation(uuid, text, jsonb) to service_role;
 
@@ -891,3 +1014,37 @@ $$;
 alter function public.enqueue_campaign_conversion_feedback(uuid) owner to postgres;
 revoke all on function public.enqueue_campaign_conversion_feedback(uuid) from public, anon, authenticated;
 grant execute on function public.enqueue_campaign_conversion_feedback(uuid) to service_role;
+
+create or replace function public.enqueue_pending_attributable_campaign_conversion_feedback()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_row public.campaign_conversion_feedback_events%rowtype;
+  v_count integer := 0;
+begin
+  for v_row in
+    select e.*
+    from public.campaign_conversion_feedback_events e
+    where e.attribution_state = 'attributable'
+      and e.provider_submission_state = 'pending'
+      and e.campaign_run_id is not null
+      and e.campaign_run_target_id is not null
+      and not exists (
+        select 1 from public.campaign_run_operations o
+        where o.operation_key = 'conversion_feedback:' || e.id::text
+      )
+  loop
+    perform public.enqueue_campaign_conversion_feedback(v_row.id);
+    v_count := v_count + 1;
+  end loop;
+  return jsonb_build_object('outcome_code', 'ok', 'enqueued', v_count);
+end;
+$$;
+
+alter function public.enqueue_pending_attributable_campaign_conversion_feedback() owner to postgres;
+revoke all on function public.enqueue_pending_attributable_campaign_conversion_feedback() from public, anon, authenticated;
+grant execute on function public.enqueue_pending_attributable_campaign_conversion_feedback() to service_role;
+revoke all on function private.enqueue_campaign_metrics_sync_window(public.campaign_runs, uuid, date) from public, anon, authenticated;

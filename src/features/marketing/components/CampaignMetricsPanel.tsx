@@ -8,11 +8,12 @@ export interface CampaignMetricsBoardView {
   readonly adapterAvailable: boolean;
   readonly configMissing: boolean;
   readonly provider: {
-    readonly spendMinor: number;
+    readonly spendMinor: number | null;
     readonly impressions: number;
     readonly clicks: number;
     readonly providerConversions: number;
-    readonly currency: string;
+    readonly currency: string | null;
+    readonly mixedCurrency: boolean;
   };
   readonly crm: {
     readonly LeadCreated: number;
@@ -46,12 +47,13 @@ export function CampaignMetricsPanel({ board }: { readonly board: CampaignMetric
   }
 
   const { provider, crm } = board;
-  const cpc = safeRatio(provider.spendMinor, provider.clicks);
-  const cpl = safeRatio(provider.spendMinor, crm.LeadCreated);
-  const cpq = safeRatio(provider.spendMinor, crm.QualifiedLead);
-  const cpcx = safeRatio(provider.spendMinor, crm.ConsultationScheduled);
-  const cpp = safeRatio(provider.spendMinor, crm.ProposalSent);
-  const cpcc = safeRatio(provider.spendMinor, crm.CommercialConversion);
+  const costSuppressed = provider.mixedCurrency || provider.spendMinor == null || !provider.currency;
+  const cpc = costSuppressed ? null : safeRatio(provider.spendMinor, provider.clicks);
+  const cpl = costSuppressed ? null : safeRatio(provider.spendMinor, crm.LeadCreated);
+  const cpq = costSuppressed ? null : safeRatio(provider.spendMinor, crm.QualifiedLead);
+  const cpcx = costSuppressed ? null : safeRatio(provider.spendMinor, crm.ConsultationScheduled);
+  const cpp = costSuppressed ? null : safeRatio(provider.spendMinor, crm.ProposalSent);
+  const cpcc = costSuppressed ? null : safeRatio(provider.spendMinor, crm.CommercialConversion);
 
   return (
     <section className="space-y-3 rounded-xl border border-neutral-800 p-4">
@@ -68,7 +70,12 @@ export function CampaignMetricsPanel({ board }: { readonly board: CampaignMetric
       <div className="grid gap-3 text-sm text-neutral-300 sm:grid-cols-2">
         <div>
           <h3 className="font-medium text-neutral-100">Provider delivery</h3>
-          <p>Spend: {provider.spendMinor} {provider.currency} minor</p>
+          <p>
+            Spend:{" "}
+            {provider.mixedCurrency
+              ? "mixed currency — combined cost suppressed"
+              : `${provider.spendMinor ?? 0} ${provider.currency ?? "INR"} minor`}
+          </p>
           <p>Impressions: {provider.impressions}</p>
           <p>Clicks: {provider.clicks}</p>
           <p>Provider conversions: {provider.providerConversions}</p>
@@ -84,9 +91,9 @@ export function CampaignMetricsPanel({ board }: { readonly board: CampaignMetric
         </div>
       </div>
       <div className="text-xs text-neutral-400">
-        CPC {formatRatio(cpc, provider.currency)} · CPL {formatRatio(cpl, provider.currency)} · CPQL{" "}
-        {formatRatio(cpq, provider.currency)} · CP consult {formatRatio(cpcx, provider.currency)} · CP proposal{" "}
-        {formatRatio(cpp, provider.currency)} · CP commercial {formatRatio(cpcc, provider.currency)}
+        CPC {formatRatio(cpc, provider.currency ?? "")} · CPL {formatRatio(cpl, provider.currency ?? "")} · CPQL{" "}
+        {formatRatio(cpq, provider.currency ?? "")} · CP consult {formatRatio(cpcx, provider.currency ?? "")} · CP proposal{" "}
+        {formatRatio(cpp, provider.currency ?? "")} · CP commercial {formatRatio(cpcc, provider.currency ?? "")}
       </div>
       <p className="text-xs text-neutral-500">Unattributed / ambiguous conversions: {board.unattributedCount}</p>
       <ul className="text-xs text-neutral-500">

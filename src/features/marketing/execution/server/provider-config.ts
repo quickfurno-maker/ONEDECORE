@@ -11,6 +11,8 @@ export interface MetaAdsProviderConfig {
   readonly adAccountId: string;
   readonly accessToken: string;
   readonly graphVersion: string;
+  readonly pageId: string | null;
+  readonly datasetId: string | null;
 }
 
 export interface GoogleAdsProviderConfig {
@@ -20,6 +22,7 @@ export interface GoogleAdsProviderConfig {
   readonly clientSecret: string;
   readonly refreshToken: string;
   readonly loginCustomerId: string | null;
+  readonly conversionActionResource: string | null;
 }
 
 function read(env: Record<string, string | undefined>, name: string): string | null {
@@ -49,7 +52,16 @@ export function resolveMetaAdsProviderConfig(
   if (!adAccountId || !accessToken) {
     return { ok: false, code: "CAMPAIGN_PROVIDER_CONFIG_MISSING" };
   }
-  return { ok: true, config: { adAccountId, accessToken, graphVersion } };
+  return {
+    ok: true,
+    config: {
+      adAccountId,
+      accessToken,
+      graphVersion,
+      pageId: read(env, "ONEDECORE_META_ADS_PAGE_ID"),
+      datasetId: read(env, "ONEDECORE_META_ADS_DATASET_ID") ?? read(env, "ONEDECORE_META_ADS_PIXEL_ID"),
+    },
+  };
 }
 
 export function resolveGoogleAdsProviderConfig(
@@ -66,6 +78,14 @@ export function resolveGoogleAdsProviderConfig(
   }
   return {
     ok: true,
-    config: { customerId, developerToken, clientId, clientSecret, refreshToken, loginCustomerId },
+    config: {
+      customerId,
+      developerToken,
+      clientId,
+      clientSecret,
+      refreshToken,
+      loginCustomerId,
+      conversionActionResource: read(env, "ONEDECORE_GOOGLE_ADS_CONVERSION_ACTION"),
+    },
   };
 }

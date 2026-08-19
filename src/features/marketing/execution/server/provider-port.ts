@@ -1,7 +1,4 @@
-/**
- * Provider-neutral campaign execution port. No Meta/Google SDK types.
- */
-
+import type { CampaignApprovedExecutionSpec } from "../contracts/approved-execution-spec.ts";
 import type {
   CampaignConversionFeedbackCommand,
   CampaignConversionFeedbackOutcome,
@@ -28,7 +25,10 @@ export type CampaignProviderReconcileOutcome =
       readonly providerCampaignId: string;
       readonly providerStatus: string;
     }
-  | { readonly kind: "not_found"; readonly errorCode: string };
+  | { readonly kind: "not_found"; readonly errorCode: string }
+  | { readonly kind: "transient"; readonly errorCode: string }
+  | { readonly kind: "timeout_unknown"; readonly errorCode: string }
+  | { readonly kind: "auth_config"; readonly errorCode: string };
 
 export interface CampaignProviderCommand {
   readonly operationType: CampaignOperationType;
@@ -37,6 +37,7 @@ export interface CampaignProviderCommand {
   readonly runReference: string;
   readonly runTargetReference: string;
   readonly boundProviderCampaignId: string | null;
+  readonly approvedSpec?: CampaignApprovedExecutionSpec | null;
 }
 
 export interface CampaignProviderMetricWindow {
