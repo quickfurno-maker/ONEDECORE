@@ -3,7 +3,7 @@
 **Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9B architecture freeze and Phase 9D-A conceptual commerce freeze, August 18, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
-**Migrations Applied (Managed):** M1–M31 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. M31 **MANAGED_APPLIED_IMMUTABLE**.
+**Migrations Applied (Managed):** M1–M32 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. M32 **MANAGED_APPLIED**. M31 **MANAGED_APPLIED_IMMUTABLE**.
 
 ---
 
@@ -215,5 +215,5 @@ Forward-only M32 `20260819140000_landing_page_lab_experimentation_foundation.sql
 | `landing_exposures` | Privacy-safe unique denominator (HMAC visitor hash) |
 | `private.landing_lab_idempotency_requests` | Dedicated Landing Lab mutation ledger |
 
-Existing authoritative data is reused (`leads.landing_path`, `leads.attribution`, `lead_source_touchpoints`, CRM stages). No parallel attribution table. M31 is unchanged. Managed remains **M1–M31**; M32 **NOT** managed-applied.
+Existing authoritative data is reused (`leads.landing_path`, `leads.attribution`, `lead_source_touchpoints`, CRM stages). No parallel attribution table. M31 is unchanged. Managed is **M1–M32** (DEC-0084). Production Landing Lab remains **OFF**.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
