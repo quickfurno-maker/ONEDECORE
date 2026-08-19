@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
 **Document Status:** Locked Roadmap (truth-synced through Phase 9B architecture freeze, August 18, 2026)
-**Current Phase:** Phase 9B — Landing Page Lab (**REPOSITORY MERGED**; M32 not managed-applied). Phase 9A **COMPLETE**. Phase 9D-A **ARCHITECTURE_FROZEN**. Phase 9C **NOT STARTED**.
-**Next Phase:** Managed M32 recovery/apply (separate gate). Production Landing Lab remains disabled.
+**Current Phase:** Phase 9B — Landing Page Lab (**M32 MANAGED APPLIED**; production **OFF**). Phase 9A **COMPLETE**. Phase 9D-A **ARCHITECTURE_FROZEN**. Phase 9C **NOT STARTED**.
+**Next Phase:** Phase 9C is not started by M32 apply. Production Landing Lab remains disabled.
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; production **not** activated)
 
 ---
@@ -283,9 +283,12 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Dependencies:** Phase 8C complete (PR #61 merged); architecture PR #62 merged `caff9d0864e1546dff38646df4355dafa851a473`.
 - **Status:** **COMPLETE** — architecture COMPLETE_FROZEN; repository implementation COMPLETE; managed DB **CERTIFIED_M1_M31**; repository/managed **M1–M31**; pending **NONE**; M31 **MANAGED_APPLIED_IMMUTABLE**; production not activated.
 
-### Phase 9B (Landing Page Lab — Next Formal Implementation)
-- **Status:** Owner-approved roadmap placement; **NOT_STARTED** (no routes/schema/integrations).
-- **Dependencies:** 9A consent foundation complete; production use Phase 10 gated.
+### Phase 9B (Landing Page Lab)
+- **Objective:** Structured Landing Page Lab and deterministic experiments.
+- **Architecture freeze:** [ADR-0029](ADR/ADR-0029-phase-9b-landing-page-lab.md), DEC-0081, OD9B-1–OD9B-12.
+- **Repository:** PR #66 merged (`39f5a7a69998418bee943168cff218a0aa1f721e`); DEC-0082.
+- **Managed apply:** [M32 closeout](audits/phase-9b-m32-managed-apply-closeout.md), DEC-0084; managed **M1–M32**; pending **NONE**.
+- **Status:** **M32 MANAGED APPLIED** — production Landing Lab **OFF**. Phase 9C **NOT STARTED**.
 
 ### Phase 9C
 - **Status:** Roadmap-locked; **not implemented**. No Meta/Google campaign execution live.
@@ -342,6 +345,7 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - [Phase 9D roadmap lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md)
 - [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 - [Phase 9D-A entry audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)
+- [Phase 9B M32 managed apply closeout](audits/phase-9b-m32-managed-apply-closeout.md)
 
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
 ## Phase 9B Architecture Freeze Status
@@ -350,8 +354,16 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 
 Authority: **ADR-0029 / DEC-0081 / OD9B-1–OD9B-12**.
 
-M32 is present in the repository and **must not** be applied to managed OneDecore in this gate. Phase 9C and Phase 9D implementation remain excluded. Production activation remains Phase 10.
+M32 is present in the repository. Managed apply is recorded separately as **DEC-0084**. Phase 9C and Phase 9D-B remain excluded. Production activation remains Phase 10.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9B_M32_MANAGED_APPLY_START -->
+## Phase 9B M32 Managed Apply Status
+
+**Status:** `MANAGED_APPLIED (DEC-0084)` — production Landing Lab **OFF**
+
+Physical checkpoint **1412215555** (`2026-08-18T19:54:24.861Z`). CLI `npx supabase@2.109.1 db push --linked --yes` `2026-08-19T02:50:44Z`–`02:50:49Z`. Managed **M1–M32**, pending NONE. Closeout: [M32 managed apply](audits/phase-9b-m32-managed-apply-closeout.md).
+<!-- PHASE_9B_M32_MANAGED_APPLY_END -->
 
 <!-- PHASE_9D_A_ARCHITECTURE_FREEZE_START -->
 ## Phase 9D-A Architecture Freeze Status

@@ -5,7 +5,7 @@
 **Framework:** Next.js 16.2.11
 **Database:** Supabase PostgreSQL
 **Route Prefix:** Internal CRM uses `/admin`
-**Current Phase:** Phase 9A **COMPLETE**. Phase 9B **REPOSITORY MERGED** (PR #66 / `39f5a7a69998418bee943168cff218a0aa1f721e`; M32 not managed-applied). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030). Phase 9C **NOT STARTED**. Architecture PR #62 merged `caff9d0864e1546dff38646df4355dafa851a473`.
+**Current Phase:** Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production OFF). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030). Phase 9C **NOT STARTED**. Architecture PR #62 merged `caff9d0864e1546dff38646df4355dafa851a473`.
 
 ---
 
