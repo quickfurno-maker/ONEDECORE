@@ -1,11 +1,11 @@
 # 02 — TECHNICAL ARCHITECTURE AND REPOSITORY SPECIFICATION
 
-**Document Status:** Locked Architecture Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
+**Document Status:** Locked Architecture Baseline (truth-synced through Phase 9C architecture freeze, August 19, 2026)
 **Pattern:** Modular Monolith
 **Framework:** Next.js 16.2.11
 **Database:** Supabase PostgreSQL
 **Route Prefix:** Internal CRM uses `/admin`
-**Current Phase:** Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production OFF). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030). Phase 9C **NOT STARTED**. Architecture PR #62 merged `caff9d0864e1546dff38646df4355dafa851a473`.
+**Current Phase:** Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production OFF). Phase 9C **ARCHITECTURE_FROZEN** (ADR-0031 / DEC-0085; implementation NOT STARTED). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030). Architecture PR #62 merged `caff9d0864e1546dff38646df4355dafa851a473`.
 
 ---
 
@@ -121,6 +121,7 @@ OneDecore/
 - [ADR-0025: Phase 8B Designer Assignment and Design Collaboration](ADR/ADR-0025-phase-8b-designer-assignment-design-collaboration.md)
 - [ADR-0026: Phase 8C Project Execution Workspace](ADR/ADR-0026-phase-8c-project-execution-workspace.md)
 - [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
+- [ADR-0031: Phase 9C Campaign Execution Architecture Freeze](ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversion-feedback.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 
@@ -142,7 +143,8 @@ Phase 5A locks the following cross-cutting patterns for future implementation:
 | Design staffing | One Lead Designer + Supporting Designers; manual only |
 | AI | Provider adapter; human approval; structured outputs; audit |
 | WhatsApp | Official API; M18–M21 managed foundation (ingest, inbox read, send-intent, service-role dispatch); CRM consent authoritative; **not production-activated**; M19 purpose remains `WHATSAPP_SERVICE` |
-| Campaigns (Phase 9A managed M31) | Draft → pending_approval → approved/rejected; MARKETING via existing `consent_events`; DNC + channel suppression reused; freeze audience **rules** not recipient PII; no 9B FK; no 9C execution; M31 managed-applied immutable |
+| Campaigns (Phase 9A managed M31) | Draft → pending_approval → approved/rejected; MARKETING via existing `consent_events`; DNC + channel suppression reused; freeze audience **rules** not recipient PII; no 9B FK; M31 managed-applied immutable |
+| Campaign execution (Phase 9C) | **ARCHITECTURE_FROZEN** (ADR-0031); runs from approved versions only; Meta+Google port; n8n not correctness; production spend Phase 10; implementation not started |
 | Ready-made shop (Phase 9D) | Category `/shop` after 9C; guest checkout; simple variants; COD + online; webhook-authoritative payment; SKU stock not WMS; **9D-A FROZEN** (ADR-0030); **implementation not started** |
 
 Phase 6A delivers managed WhatsApp **data/webhook foundation** (migration 18). Phase 6B delivers managed **inbox/send-intent/dispatch foundations** (migrations 19–21) plus repository admin UI — **not production-activated**. Phase 8C project execution is **COMPLETE** (M30 managed). Phase 9A is **COMPLETE** (ADR-0027 / PR #62 / PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`). Phase 9A M31 is **managed-applied and immutable** (DEC-0080); `/admin/campaigns` is staff governance UI only. Phase 9D `/shop` is **not implemented**. Architecture freeze: [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md).
@@ -182,3 +184,11 @@ No new public lead API, no browser service-role use, no parallel attribution sto
 
 See ADR-0029.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
+## Phase 9C Architecture — Campaign Execution
+
+Campaign execution remains inside the modular monolith. Supabase owns run/operation truth. Server adapters call Meta Ads and Google Ads. n8n is not the correctness path. Approved `campaign_versions` stay immutable. Production live spend remains Phase 10 gated.
+
+See ADR-0031.
+<!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->

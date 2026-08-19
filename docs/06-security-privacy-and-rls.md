@@ -1,6 +1,6 @@
 # 06 — SECURITY, PRIVACY AND ROW LEVEL SECURITY (RLS) POLICIES
 
-**Document Status:** Locked Security Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
+**Document Status:** Locked Security Baseline (truth-synced through Phase 9C architecture freeze, August 19, 2026)
 **RLS Target:** 100% Coverage on API-Exposed Application Tables
 **Default Access:** Anonymous Access Denied for Private Schemas
 
@@ -159,7 +159,7 @@ The following security requirements are **locked in architecture** and must be e
 - **Consent minimization:** Reuse append-only `consent_events` for MARKETING. No parallel marketing-consent table. No mutable current-consent truth table. Historical rows are never edited/deleted. Staff RPC `record_marketing_consent_event` is Super Admin / Sales Manager only.
 - **No recipient PII snapshot** at approval. Audience artifact is a frozen rule version + hash. `broad_public` CRM PII export is **denied**. `direct_or_custom` requires current MARKETING grant; DNC and invalid/suppressed/archived target channels deny. Phase 9C rechecks before any later export/send.
 - **Staff MARKETING recording:** Super Admin and Sales Manager only; `actor_type = 'staff'`; insert-only evidence; never fabricate. SE/PM/Designer denied.
-- **Campaign RBAC:** `campaigns.read` / `draft` / `request_approval` / `approve` / `marketing_consents.manage`. No 9A execute/publish/schedule/pause/send. Super Admin may approve any pending version. Sales Manager **must not** approve own version at **database** authority. Legacy roles receive no automatic 9A grants. Kriti has no authoritative mutation/approval.
+- **Campaign RBAC:** `campaigns.read` / `draft` / `request_approval` / `approve` / `marketing_consents.manage`. No 9A execute/publish/schedule/pause/send. Super Admin may approve any pending version. Sales Manager **must not** approve own version at **database** authority. Legacy roles receive no automatic 9A grants. Kriti has no authoritative mutation/approval. Phase 9C adds conceptual `campaigns.execute` / `campaigns.pause` / `campaigns.metrics.read` (ADR-0031) — **not seeded in this freeze**.
 - **RLS:** 100% on exposed campaign tables; direct authenticated DML denied; no browser service role; fail closed; no provider tokens in campaign rows.
 - **n8n** is not consent, approval, or campaign truth.
 - **Approval** has no provider side effect and creates no send intent, schedule, run, or recipient list.
@@ -173,6 +173,7 @@ Browser cart totals are never authoritative. Online payment success is webhook/s
 - [Supabase Data Domains](05-supabase-data-domains.md)
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
+- [ADR-0031: Phase 9C Campaign Execution Architecture Freeze](ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversion-feedback.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 - [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
@@ -201,3 +202,15 @@ Browser cart totals are never authoritative. Online payment success is webhook/s
 - Service-role credentials remain server-only.
 - Production activation remains Phase 10 gated.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
+## Phase 9C Security, Privacy & RLS Contract
+
+- Future run/target/event/metric/feedback tables: 100% RLS; no anon writes; no authenticated direct DML.
+- Provider secrets never in campaign rows, Git, or the browser.
+- Execution-time MARKETING / DNC / suppression recheck before any CRM export.
+- No persistent raw PII recipient snapshot; hashed matching only when the provider requires it.
+- Conversion feedback does not roll back CRM on provider rejection.
+- Logs exclude tokens, raw PII, and unredacted provider payloads.
+- Production live spend remains Phase 10 gated (`ONEDECORE_CAMPAIGN_EXECUTION_MODE` default disabled).
+<!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->

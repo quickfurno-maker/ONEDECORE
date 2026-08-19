@@ -1,6 +1,6 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9B architecture freeze and Phase 9D-A conceptual commerce freeze, August 18, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9C architecture freeze and Phase 9D-A conceptual commerce freeze, August 19, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
 **Migrations Applied (Managed):** M1–M32 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. M32 **MANAGED_APPLIED**. M31 **MANAGED_APPLIED_IMMUTABLE**.
@@ -27,7 +27,7 @@
 ├─────────────────────────────────────────────────────────┤
 │ 8. AI Copilot Domain (requests, suggestions, approvals) │ PLANNED Phase 6C
 ├─────────────────────────────────────────────────────────┤
-│ 9. Marketing Domain (campaigns, audience rules, approvals) │ LIVE M31 managed (no runs)
+│ 9. Marketing Domain (campaigns, audience rules, approvals; 9C runs conceptual) │ LIVE M31; 9C ARCHITECTURE_FROZEN (no run tables)
 ├─────────────────────────────────────────────────────────┤
 │ 10. Operations Domain (import batches, audit, settings) │ PLANNED Phase 5D+
 ├─────────────────────────────────────────────────────────┤
@@ -217,3 +217,9 @@ Forward-only M32 `20260819140000_landing_page_lab_experimentation_foundation.sql
 
 Existing authoritative data is reused (`leads.landing_path`, `leads.attribution`, `lead_source_touchpoints`, CRM stages). No parallel attribution table. M31 is unchanged. Managed is **M1–M32** (DEC-0084). Production Landing Lab remains **OFF**.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
+### Phase 9C Campaign Execution Data Domain — conceptual only
+
+ADR-0031 conceptual tables (`campaign_runs`, `campaign_run_targets`, `campaign_run_operations`, `campaign_execution_events`, `campaign_metric_snapshots`, `campaign_conversion_feedback_events`, `private.marketing_execution_idempotency_requests`) are **not created**. Migration number is **unreserved**. Managed remains **M1–M32**. No parallel attribution or CRM-stage table.
+<!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->
