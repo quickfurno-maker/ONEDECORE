@@ -1,6 +1,6 @@
 # 01 — PRODUCT REQUIREMENTS DOCUMENT (PRD)
 
-**Document Status:** Locked PRD Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
+**Document Status:** Locked PRD Baseline (truth-synced through Phase 9C architecture freeze, August 19, 2026)
 **Scope:** ONEDECORE Version 1 Operating System
 **Target Market:** Pune, India
 
@@ -137,3 +137,13 @@ V1 excludes unrestricted HTML/code embeds, autonomous AI publishing/winner selec
 
 Canonical architecture: ADR-0029 / DEC-0081.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
+## Phase 9C Product Requirement — Campaign Execution & Conversion Feedback
+
+ONEDECORE will execute **approved** campaign versions through a provider-independent server adapter, starting with Meta Ads and Google Ads (**one run = one Ads provider**; dual paid channels require separate approved versions), and will send server-side conversion feedback derived from CRM stages. Commercial conversion is the accepted-quotation + Closed-Won event (`taxable_base_paise`), never double-counted against project creation. MARKETING consent is not Ads PII-sharing authority.
+
+V1 excludes autonomous AI spend, n8n-as-truth, email/WhatsApp marketing engines in 9C MVP, multi-tenant ad-account onboarding, and production spend before Phase 10.
+
+Canonical architecture: ADR-0031 / DEC-0085. Implementation is **not** started by this freeze.
+<!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->

@@ -1,6 +1,6 @@
 # 08 — META WHATSAPP, GROQ AI AND N8N AUTOMATION BOUNDARY
 
-**Document Status:** Locked Integration Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
+**Document Status:** Locked Integration Baseline (truth-synced through Phase 9C architecture freeze, August 19, 2026)
 **WhatsApp API:** Official Meta WhatsApp Cloud API Only
 **AI Provider:** Groq behind provider-independent adapter (planned Phase 6C)
 **n8n Role:** Stateless Async Event Bus & Notification Relay
@@ -116,6 +116,7 @@ Do not conflate disabled intake with future WhatsApp or campaign capabilities.
 - [ADR-0004: Server-Side Persistence Before n8n](ADR/ADR-0004-crm-before-n8n-persistence.md)
 - [ADR-0021: Groq Copilot and WhatsApp Boundary](ADR/ADR-0021-groq-copilot-and-whatsapp-boundary.md)
 - [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
+- [ADR-0031: Phase 9C Campaign Execution Architecture Freeze](ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversion-feedback.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 - [Security, Privacy & RLS](06-security-privacy-and-rls.md)
@@ -138,3 +139,9 @@ Phase 9B canonical persistence occurs in ONEDECORE/Supabase before any optional 
 
 WhatsApp MARKETING execution remains outside Phase 9B. Existing WHATSAPP_SERVICE boundaries remain unchanged. Provider/campaign execution belongs to Phase 9C and production activation remains Phase 10 gated.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
+## Phase 9C Automation Boundary
+
+n8n is not campaign-run, consent, provider-success, retry, or conversion truth. ONEDECORE server adapters own Meta Ads / Google Ads correctness (ADR-0031). WhatsApp MARKETING bulk-send remains **deferred** from 9C MVP. M19 `WHATSAPP_SERVICE` is unchanged. Live provider spend remains Phase 10 gated.
+<!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->

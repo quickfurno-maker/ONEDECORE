@@ -1,13 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced through Phase 9B architecture freeze, August 18, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced through Phase 9C architecture freeze, August 19, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 9B — Landing Page Lab (**M32 MANAGED APPLIED** / DEC-0084; production **OFF**). Phase 9A **COMPLETE**. Phase 9D-A **ARCHITECTURE_FROZEN** (docs, PR #67). Phase 9C **NOT STARTED**.
-**Next Phase:** Phase 9C is **not** started by this closeout. 9D-B remains blocked until 9C complete. Production Landing Lab and `/shop` stay disabled.
+**Current Phase:** Phase 9C — Campaign Execution, Attribution & Conversion Feedback (**ARCHITECTURE_FROZEN** / DEC-0085; implementation **NOT STARTED**). Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production **OFF**). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030).
+**Next Phase:** Phase 9C-B implementation after this freeze merges. 9D-B remains blocked until Phase 9C implementation/certification complete. Production Landing Lab, paid provider execution, and `/shop` stay disabled.
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; M31 immutable; production **not** activated)
 
 ---
@@ -231,6 +231,8 @@ WhatsApp production outbound, public lead activation, production deployment, **M
 - [Phase 9B M32 managed apply closeout](audits/phase-9b-m32-managed-apply-closeout.md)
 - [ADR-0030: Phase 9D e-commerce architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 - [Phase 9D-A entry audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)
+- [ADR-0031: Phase 9C campaign execution architecture freeze](ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversion-feedback.md)
+- [Phase 9C architecture freeze](audits/phase-9c-campaign-execution-attribution-feedback-architecture-freeze.md)
 
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
 ## Phase 9B Architecture Freeze — Landing Page Lab
@@ -252,8 +254,31 @@ Locked boundaries:
 - Phase 9C provider execution excluded;
 - Phase 10 remains the production activation gate.
 
-Next formal gate: separate managed M32 recovery/apply. Production activation remains Phase 10.
+Production activation remains Phase 10.
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
+## Phase 9C Architecture Freeze — Campaign Execution, Attribution & Conversion Feedback
+
+Phase 9C architecture is **FROZEN** under **ADR-0031 / DEC-0085 / OD9C-1–OD9C-18**. Implementation is **NOT STARTED**. No campaign_runs schema, provider SDK, worker, managed write, or live spend in this gate.
+
+Locked boundaries:
+
+- execute only immutable approved Phase 9A versions;
+- one run = one Ads provider target (Meta **or** Google); dual paid channels fail closed;
+- canonical run lifecycle `scheduled → running ↔ paused → completed` (`failed` / `cancelled`);
+- server-trusted `run_reference` / `run_target_reference`; no UTM/time guessing;
+- MARKETING consent is not Ads PII-sharing authority; Phase 10 provider-data-sharing gate fail-closed;
+- provider-independent port; Meta Ads + Google Ads MVP only;
+- email and WhatsApp MARKETING deferred; M19 `WHATSAPP_SERVICE` unchanged;
+- n8n never campaign/consent/attribution/retry truth;
+- current MARKETING / DNC / suppression recheck before any export;
+- CRM touchpoints remain attribution truth; provider metrics are evidence;
+- `CommercialConversion` once from accepted quotation + Closed-Won (`taxable_base_paise`);
+- production provider execution remains Phase 10 gated.
+
+9D-B remains blocked until Phase 9C implementation and certification complete.
+<!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->
 
 <!-- PHASE_9D_A_ARCHITECTURE_FREEZE_START -->
 ## Phase 9D-A Architecture Freeze — Ready-Made Furniture E-commerce
