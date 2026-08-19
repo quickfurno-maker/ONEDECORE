@@ -245,24 +245,17 @@ export async function cancelCampaignRunAction(formData: FormData): Promise<Campa
 
 export async function dispatchMockCampaignExecutionAction(): Promise<CampaignActionResult> {
   try {
-    const { getCampaignExecutionMode } = await import("../execution/server/execution-env.ts");
-    const mode = getCampaignExecutionMode();
-    if (mode === "sandbox" || mode === "live") {
-      return {
-        success: false,
-        message: "Sandbox/live Ads adapters are not implemented in Phase 9C-B.",
-        code: "CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED",
-      };
+    const { authorizeManualCampaignDispatch } = await import(
+      "../execution/server/manual-dispatch-auth.ts"
+    );
+    const auth = await authorizeManualCampaignDispatch();
+    if (!auth.ok) {
+      return { success: false, message: auth.message, code: auth.code };
     }
-    if (mode === "disabled") {
-      return { success: true, message: "Execution mode is DISABLED. No dispatch." };
-    }
-    const { dispatchCampaignRunOperations } = await import("../execution/server/dispatcher.ts");
-    const result = await dispatchCampaignRunOperations({ maxBatch: 5, workerId: "admin-manual" });
-    return {
-      success: true,
-      message: `Mock dispatch processed ${result.processed} operation(s). No live provider writes.`,
-    };
+    const { executeAuthorizedManualMockDispatch } = await import(
+      "../execution/server/manual-dispatch.ts"
+    );
+    return await executeAuthorizedManualMockDispatch({ authorize: async () => ({ ok: true }) });
   } catch (error) {
     const err = campaignErrorFromUnknown(error);
     return { success: false, message: err.message, code: err.code };

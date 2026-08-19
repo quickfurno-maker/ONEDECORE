@@ -6210,6 +6210,16 @@ export type Database = {
         }
         Returns: Json
       }
+      resolve_campaign_run_create_reconcile_found: {
+        Args: {
+          p_operation_id: string
+          p_provider_ad_group_id?: string | null
+          p_provider_ad_set_id?: string | null
+          p_provider_campaign_id: string
+          p_provider_status?: string | null
+        }
+        Returns: Json
+      }
       resume_campaign_run: {
         Args: { p_campaign_run_id: string; p_idempotency_key: string }
         Returns: Json

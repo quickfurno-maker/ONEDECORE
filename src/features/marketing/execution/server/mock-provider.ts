@@ -41,7 +41,14 @@ export class MockCampaignExecutionProvider implements CampaignExecutionProvider 
       providerCampaignId: this.objectId(command),
       providerAdSetId: `mock-adset-${command.runTargetReference}`,
       providerAdGroupId: null,
-      providerStatus: command.operationType === "pause" ? "PAUSED" : "ACTIVE",
+      providerStatus:
+        command.operationType === "create"
+          ? "CREATED"
+          : command.operationType === "pause"
+            ? "PAUSED"
+            : command.operationType === "cancel"
+              ? "CANCELLED"
+              : "ACTIVE",
     };
   }
 
@@ -72,7 +79,14 @@ export class MockCampaignExecutionProvider implements CampaignExecutionProvider 
     return {
       kind: "found",
       providerCampaignId: command.boundProviderCampaignId ?? this.objectId(command),
-      providerStatus: "ACTIVE",
+      providerStatus:
+        command.operationType === "create"
+          ? "CREATED"
+          : command.operationType === "pause"
+            ? "PAUSED"
+            : command.operationType === "cancel"
+              ? "CANCELLED"
+              : "ACTIVE",
     };
   }
 }

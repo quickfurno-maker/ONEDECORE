@@ -22,7 +22,9 @@ import { resolveCampaignExecutionCapabilities, visibleRunControls } from "../exe
 import { canShareProviderCustomerData } from "../execution/domain/provider-data-sharing.ts";
 import { MockCampaignExecutionProvider } from "../execution/server/mock-provider.ts";
 import { resolveCampaignExecutionProvider } from "../execution/server/provider-factory.ts";
-import { dispatchCampaignRunOperations, type CampaignExecutionAdmin } from "../execution/server/dispatcher.ts";
+import { dispatchCampaignRunOperations, reconcileCampaignRunOperation, type CampaignExecutionAdmin } from "../execution/server/dispatcher.ts";
+import { executeAuthorizedManualMockDispatch } from "../execution/server/manual-dispatch.ts";
+import { evaluateManualCampaignDispatchAuth } from "../execution/domain/manual-dispatch-auth.ts";
 import {
   signCampaignExecutionContext,
   verifyCampaignExecutionContext,
@@ -262,6 +264,182 @@ describe("Phase 9C-B dispatcher", () => {
       admin: timeoutAdmin,
     });
     assert.deepEqual([...timeout.outcomes], ["needs_reconcile"]);
+  });
+});
+
+describe("Phase 9C-B reconcile and manual dispatch auth", () => {
+  test("reconcile_found calls resolution RPC not ordinary bind", async () => {
+    const rpcCalls: Array<{ name: string }> = [];
+    const admin = {
+      async rpc(name: string) {
+        rpcCalls.push({ name });
+        if (name === "get_campaign_run_operation_for_reconcile") {
+          return {
+            data: {
+              outcome_code: "found",
+              operation_type: "create",
+              operation_key: "create:OD-CR-2026-000001",
+              provider_channel: "meta_ads",
+              run_reference: "OD-CR-2026-000001",
+              run_target_reference: "OD-CRT-2026-000001",
+              provider_campaign_id: null,
+            },
+            error: null,
+          };
+        }
+        if (name === "bind_campaign_run_operation") {
+          throw new Error("ordinary bind must not be used for reconcile_found");
+        }
+        return { data: { outcome_code: "reconcile_found" }, error: null };
+      },
+    } as unknown as CampaignExecutionAdmin;
+
+    const outcome = await reconcileCampaignRunOperation("11111111-1111-1111-1111-111111111111", {
+      env: {
+        ONEDECORE_CAMPAIGN_EXECUTION_MODE: "mock",
+        ONEDECORE_CAMPAIGN_EXECUTION_MOCK_SCENARIO: "reconcile_found",
+      },
+      admin,
+    });
+    assert.equal(outcome, "reconcile_found");
+    assert.equal(rpcCalls.some((c) => c.name === "resolve_campaign_run_create_reconcile_found"), true);
+    assert.equal(rpcCalls.some((c) => c.name === "bind_campaign_run_operation"), false);
+  });
+
+  test("reconcile_not_found leaves unresolved and does not recreate", async () => {
+    const rpcCalls: Array<{ name: string }> = [];
+    const admin = {
+      async rpc(name: string) {
+        rpcCalls.push({ name });
+        if (name === "get_campaign_run_operation_for_reconcile") {
+          return {
+            data: {
+              outcome_code: "found",
+              operation_type: "create",
+              operation_key: "create:OD-CR-2026-000001",
+              provider_channel: "meta_ads",
+              run_reference: "OD-CR-2026-000001",
+              run_target_reference: "OD-CRT-2026-000001",
+              provider_campaign_id: null,
+            },
+            error: null,
+          };
+        }
+        return { data: { outcome_code: "ok" }, error: null };
+      },
+    } as unknown as CampaignExecutionAdmin;
+
+    const outcome = await reconcileCampaignRunOperation("11111111-1111-1111-1111-111111111111", {
+      env: {
+        ONEDECORE_CAMPAIGN_EXECUTION_MODE: "mock",
+        ONEDECORE_CAMPAIGN_EXECUTION_MOCK_SCENARIO: "reconcile_not_found",
+      },
+      admin,
+    });
+    assert.equal(outcome, "reconcile_not_found");
+    assert.equal(rpcCalls.some((c) => c.name === "resolve_campaign_run_create_reconcile_found"), false);
+    assert.equal(rpcCalls.some((c) => c.name === "bind_campaign_run_operation"), false);
+    assert.equal(rpcCalls.some((c) => c.name === "claim_campaign_run_operation"), false);
+  });
+
+  test("unauthorized manual dispatch is denied before service-role work", async () => {
+    let dispatched = false;
+    const result = await executeAuthorizedManualMockDispatch({
+      authorize: async () => ({
+        ok: false,
+        code: "CAMPAIGN_UNAUTHORIZED",
+        message: "denied",
+      }),
+      getMode: () => "mock",
+      dispatch: async () => {
+        dispatched = true;
+        return { mode: "mock", processed: 1, outcomes: ["succeeded"] };
+      },
+    });
+    assert.equal(result.success, false);
+    assert.equal(result.code, "CAMPAIGN_UNAUTHORIZED");
+    assert.equal(dispatched, false);
+  });
+
+  test("SA/SM authorization is accepted for manual dispatch", async () => {
+    assert.equal(
+      evaluateManualCampaignDispatchAuth({
+        hasActiveStaffSession: true,
+        canExecuteCampaigns: true,
+      }).ok,
+      true
+    );
+    let dispatched = false;
+    const result = await executeAuthorizedManualMockDispatch({
+      authorize: async () => ({ ok: true }),
+      getMode: () => "mock",
+      dispatch: async () => {
+        dispatched = true;
+        return { mode: "mock", processed: 1, outcomes: ["succeeded"] };
+      },
+    });
+    assert.equal(result.success, true);
+    assert.equal(dispatched, true);
+  });
+
+  test("sales executive and unauthenticated are denied", () => {
+    assert.equal(
+      evaluateManualCampaignDispatchAuth({
+        hasActiveStaffSession: true,
+        canExecuteCampaigns: false,
+      }).ok,
+      false
+    );
+    assert.equal(
+      evaluateManualCampaignDispatchAuth({
+        hasActiveStaffSession: false,
+        canExecuteCampaigns: false,
+      }).ok,
+      false
+    );
+  });
+
+  test("disabled mode still authorizes before treating as admin operation", async () => {
+    let authorized = false;
+    let dispatched = false;
+    const result = await executeAuthorizedManualMockDispatch({
+      authorize: async () => {
+        authorized = true;
+        return { ok: true };
+      },
+      getMode: () => "disabled",
+      dispatch: async () => {
+        dispatched = true;
+        return { mode: "disabled", processed: 1, outcomes: [] };
+      },
+    });
+    assert.equal(authorized, true);
+    assert.equal(dispatched, false);
+    assert.equal(result.success, true);
+  });
+
+  test("live and sandbox fail closed after authorization without dispatcher", async () => {
+    let dispatched = false;
+    const live = await executeAuthorizedManualMockDispatch({
+      authorize: async () => ({ ok: true }),
+      getMode: () => "live",
+      dispatch: async () => {
+        dispatched = true;
+        return { mode: "live", processed: 1, outcomes: [] };
+      },
+    });
+    const sandbox = await executeAuthorizedManualMockDispatch({
+      authorize: async () => ({ ok: true }),
+      getMode: () => "sandbox",
+      dispatch: async () => {
+        dispatched = true;
+        return { mode: "sandbox", processed: 1, outcomes: [] };
+      },
+    });
+    assert.equal(live.success, false);
+    assert.equal(sandbox.success, false);
+    assert.equal(live.code, "CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED");
+    assert.equal(dispatched, false);
   });
 });
 

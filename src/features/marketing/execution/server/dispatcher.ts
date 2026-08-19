@@ -151,18 +151,30 @@ export async function dispatchCampaignRunOperations(options?: {
   };
 }
 
-export async function reconcileCampaignRunOperation(operationId: string): Promise<string> {
-  const resolved = resolveCampaignExecutionProvider();
+export async function reconcileCampaignRunOperation(
+  operationId: string,
+  options?: {
+    readonly env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
+    readonly admin?: CampaignExecutionAdmin;
+  }
+): Promise<string> {
+  const env = options?.env ?? process.env;
+  const resolved = resolveCampaignExecutionProvider(env);
   if (!resolved.ok) return resolved.code;
-  const admin = createAdminClient();
+  const admin = options?.admin ?? createAdminClient();
   const { data, error } = await admin.rpc("get_campaign_run_operation_for_reconcile", {
     p_operation_id: operationId,
   });
   if (error) throw error;
   const row = asRecord(data);
-  if (String(row.outcome_code) !== "found") return "not_found";
+  if (String(row.outcome_code) !== "found") {
+    return String(row.outcome_code ?? "not_found");
+  }
+  if (String(row.operation_type) !== "create") {
+    return "reconcile_not_found";
+  }
   const status = await resolved.provider.getStatus({
-    operationType: "sync",
+    operationType: "create",
     operationKey: String(row.operation_key),
     providerChannel: String(row.provider_channel) as PaidAdsChannel,
     runReference: String(row.run_reference),
@@ -170,11 +182,12 @@ export async function reconcileCampaignRunOperation(operationId: string): Promis
     boundProviderCampaignId: (row.provider_campaign_id as string | null) ?? null,
   });
   if (status.kind === "found") {
-    await admin.rpc("bind_campaign_run_operation", {
+    const { error: resolveError } = await admin.rpc("resolve_campaign_run_create_reconcile_found", {
       p_operation_id: operationId,
       p_provider_campaign_id: status.providerCampaignId,
       p_provider_status: status.providerStatus,
     });
+    if (resolveError) throw resolveError;
     return "reconcile_found";
   }
   return "reconcile_not_found";

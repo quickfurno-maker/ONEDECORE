@@ -430,6 +430,53 @@ begin
 end;
 $$;
 
+-- Deterministic once-per-run-type enqueue for activate/cancel cleanup (replay-safe).
+create or replace function private.enqueue_unique_campaign_run_operation(
+  p_run public.campaign_runs,
+  p_target_id uuid,
+  p_type text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_key text;
+  v_hash text;
+begin
+  select o.id into v_id
+  from public.campaign_run_operations o
+  where o.campaign_run_id = p_run.id
+    and o.operation_type = p_type
+    and o.operation_state in ('pending', 'claimed', 'succeeded', 'needs_reconcile')
+  order by o.created_at asc
+  limit 1;
+  if v_id is not null then
+    return v_id;
+  end if;
+
+  v_key := p_run.run_reference || ':' || p_type || ':once';
+  v_hash := private.marketing_sha256(p_run.id::text || '|' || p_type || '|once');
+  insert into public.campaign_run_operations (
+    campaign_run_id, campaign_run_target_id, operation_type, operation_state,
+    operation_key, request_hash
+  ) values (
+    p_run.id, p_target_id, p_type, 'pending', v_key, v_hash
+  )
+  on conflict (operation_key) do nothing
+  returning id into v_id;
+
+  if v_id is null then
+    select o.id into v_id
+    from public.campaign_run_operations o
+    where o.operation_key = v_key;
+  end if;
+  return v_id;
+end;
+$$;
+
 -- ----------------------------------------------------------------------------
 -- 5. Staff RPCs
 -- ----------------------------------------------------------------------------
@@ -734,11 +781,11 @@ begin
   update public.campaign_run_operations
   set operation_state = 'cancelled', completed_at = now()
   where campaign_run_id = v_run.id
-    and operation_state in ('pending', 'claimed');
+    and operation_state = 'pending';
 
   v_op_id := null;
   if v_target.provider_campaign_id is not null then
-    v_op_id := private.enqueue_campaign_run_operation(v_run, v_target.id, 'cancel');
+    v_op_id := private.enqueue_unique_campaign_run_operation(v_run, v_target.id, 'cancel');
   end if;
 
   perform private.append_campaign_execution_event(
@@ -787,7 +834,6 @@ begin
       operation_state = 'claimed'
       and claim_expires_at is not null
       and claim_expires_at < now()
-      and attempt_count < max_attempts
     )
   order by next_attempt_at asc
   for update skip locked
@@ -799,7 +845,13 @@ begin
 
   if v_op.operation_state = 'claimed' and v_op.attempt_count >= v_op.max_attempts then
     update public.campaign_run_operations
-    set operation_state = 'needs_reconcile', last_error_code = 'CLAIM_EXPIRED_UNKNOWN', completed_at = now()
+    set
+      operation_state = 'needs_reconcile',
+      last_error_code = 'CLAIM_EXPIRED_UNKNOWN',
+      completed_at = now(),
+      claimed_by = null,
+      claimed_at = null,
+      claim_expires_at = null
     where id = v_op.id;
     perform private.append_campaign_execution_event(
       v_op.campaign_run_id, v_op.campaign_run_target_id, v_op.id,
@@ -903,7 +955,7 @@ declare
   v_op public.campaign_run_operations%rowtype;
   v_run public.campaign_runs%rowtype;
   v_target public.campaign_run_targets%rowtype;
-  v_activate uuid;
+  v_follow_on uuid;
 begin
   if p_outcome_code is null or length(trim(p_outcome_code)) not between 1 and 80 then
     raise exception 'CAMPAIGN_VALIDATION' using errcode = '22023';
@@ -925,7 +977,11 @@ begin
   select * into v_target from public.campaign_run_targets where id = v_op.campaign_run_target_id;
 
   if v_op.operation_type = 'create' then
-    v_activate := private.enqueue_campaign_run_operation(v_run, v_target.id, 'activate');
+    if v_run.status = 'scheduled' then
+      v_follow_on := private.enqueue_unique_campaign_run_operation(v_run, v_target.id, 'activate');
+    elsif v_run.status = 'cancelled' and v_target.provider_campaign_id is not null then
+      v_follow_on := private.enqueue_unique_campaign_run_operation(v_run, v_target.id, 'cancel');
+    end if;
   elsif v_op.operation_type = 'activate' and v_run.status = 'scheduled' then
     update public.campaign_runs
     set status = 'running', activated_at = now(), activated_by = requested_by, lock_version = lock_version + 1
@@ -953,7 +1009,7 @@ begin
   return jsonb_build_object(
     'outcome_code', 'succeeded',
     'operation_id', v_op.id,
-    'activate_operation_id', v_activate
+    'follow_on_operation_id', v_follow_on
   );
 end;
 $$;
@@ -1066,6 +1122,13 @@ begin
   if not found then
     return jsonb_build_object('outcome_code', 'not_found');
   end if;
+  if v_op.operation_state is distinct from 'needs_reconcile' then
+    return jsonb_build_object(
+      'outcome_code', 'ineligible',
+      'operation_id', v_op.id,
+      'operation_state', v_op.operation_state
+    );
+  end if;
   select * into v_run from public.campaign_runs where id = v_op.campaign_run_id;
   select * into v_target from public.campaign_run_targets where id = v_op.campaign_run_target_id;
   return jsonb_build_object(
@@ -1078,6 +1141,103 @@ begin
     'run_target_reference', v_target.run_target_reference,
     'provider_channel', v_run.provider_channel,
     'provider_campaign_id', v_target.provider_campaign_id
+  );
+end;
+$$;
+
+create or replace function public.resolve_campaign_run_create_reconcile_found(
+  p_operation_id uuid,
+  p_provider_campaign_id text,
+  p_provider_ad_set_id text default null,
+  p_provider_ad_group_id text default null,
+  p_provider_status text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_op public.campaign_run_operations%rowtype;
+  v_run public.campaign_runs%rowtype;
+  v_target public.campaign_run_targets%rowtype;
+  v_follow_on uuid;
+begin
+  if p_provider_campaign_id is null
+     or length(trim(p_provider_campaign_id)) not between 1 and 128
+     or trim(p_provider_campaign_id) ~ '[[:cntrl:]]' then
+    raise exception 'CAMPAIGN_VALIDATION' using errcode = '22023';
+  end if;
+
+  select * into v_op from public.campaign_run_operations where id = p_operation_id for update;
+  if not found then
+    raise exception 'CAMPAIGN_NOT_FOUND_OR_FORBIDDEN' using errcode = 'P0002';
+  end if;
+  if v_op.operation_type is distinct from 'create' then
+    raise exception 'CAMPAIGN_RECONCILE_CREATE_ONLY' using errcode = '22023';
+  end if;
+
+  select * into v_run from public.campaign_runs where id = v_op.campaign_run_id for update;
+  select * into v_target from public.campaign_run_targets where id = v_op.campaign_run_target_id for update;
+
+  if v_op.operation_state = 'succeeded'
+     and v_target.provider_campaign_id is not distinct from trim(p_provider_campaign_id) then
+    if v_run.status = 'scheduled' then
+      v_follow_on := private.enqueue_unique_campaign_run_operation(v_run, v_target.id, 'activate');
+    elsif v_run.status = 'cancelled' then
+      v_follow_on := private.enqueue_unique_campaign_run_operation(v_run, v_target.id, 'cancel');
+    end if;
+    return jsonb_build_object(
+      'outcome_code', 'reconcile_found',
+      'operation_id', v_op.id,
+      'follow_on_operation_id', v_follow_on,
+      'run_status', v_run.status,
+      'replay', true
+    );
+  end if;
+
+  if v_op.operation_state is distinct from 'needs_reconcile' then
+    raise exception 'CAMPAIGN_OPERATION_NOT_RECONCILABLE' using errcode = '22023';
+  end if;
+
+  if v_target.provider_campaign_id is not null
+     and v_target.provider_campaign_id is distinct from trim(p_provider_campaign_id) then
+    raise exception 'CAMPAIGN_PROVIDER_OBJECT_CONFLICT' using errcode = '22023';
+  end if;
+
+  update public.campaign_run_targets
+  set
+    provider_campaign_id = coalesce(provider_campaign_id, trim(p_provider_campaign_id)),
+    provider_ad_set_id = coalesce(p_provider_ad_set_id, provider_ad_set_id),
+    provider_ad_group_id = coalesce(p_provider_ad_group_id, provider_ad_group_id),
+    provider_status = coalesce(p_provider_status, provider_status),
+    last_synced_at = now()
+  where id = v_target.id
+  returning * into v_target;
+
+  update public.campaign_run_operations
+  set operation_state = 'succeeded', last_error_code = null, completed_at = coalesce(completed_at, now())
+  where id = v_op.id;
+
+  if v_run.status = 'scheduled' then
+    v_follow_on := private.enqueue_unique_campaign_run_operation(v_run, v_target.id, 'activate');
+  elsif v_run.status = 'cancelled' then
+    v_follow_on := private.enqueue_unique_campaign_run_operation(v_run, v_target.id, 'cancel');
+  else
+    raise exception 'CAMPAIGN_RECONCILE_INCOMPATIBLE_RUN_STATE' using errcode = '22023';
+  end if;
+
+  perform private.append_campaign_execution_event(
+    v_op.campaign_run_id, v_op.campaign_run_target_id, v_op.id,
+    'create_reconcile_found', 'reconcile_found', v_target.provider_campaign_id,
+    jsonb_build_object('run_status', v_run.status), null, 'service'
+  );
+
+  return jsonb_build_object(
+    'outcome_code', 'reconcile_found',
+    'operation_id', v_op.id,
+    'follow_on_operation_id', v_follow_on,
+    'run_status', v_run.status
   );
 end;
 $$;
@@ -1129,6 +1289,7 @@ alter function public.complete_campaign_run_operation(uuid, text, jsonb) owner t
 alter function public.fail_campaign_run_operation(uuid, text, boolean) owner to postgres;
 alter function public.mark_campaign_run_operation_needs_reconcile(uuid, text) owner to postgres;
 alter function public.get_campaign_run_operation_for_reconcile(uuid) owner to postgres;
+alter function public.resolve_campaign_run_create_reconcile_found(uuid, text, text, text, text) owner to postgres;
 
 revoke all on function public.create_campaign_run(uuid, uuid) from public, anon;
 revoke all on function public.pause_campaign_run(uuid, uuid) from public, anon;
@@ -1140,6 +1301,7 @@ revoke all on function public.complete_campaign_run_operation(uuid, text, jsonb)
 revoke all on function public.fail_campaign_run_operation(uuid, text, boolean) from public, anon, authenticated;
 revoke all on function public.mark_campaign_run_operation_needs_reconcile(uuid, text) from public, anon, authenticated;
 revoke all on function public.get_campaign_run_operation_for_reconcile(uuid) from public, anon, authenticated;
+revoke all on function public.resolve_campaign_run_create_reconcile_found(uuid, text, text, text, text) from public, anon, authenticated;
 
 grant execute on function public.create_campaign_run(uuid, uuid) to authenticated;
 grant execute on function public.pause_campaign_run(uuid, uuid) to authenticated;
@@ -1151,6 +1313,7 @@ grant execute on function public.complete_campaign_run_operation(uuid, text, jso
 grant execute on function public.fail_campaign_run_operation(uuid, text, boolean) to service_role;
 grant execute on function public.mark_campaign_run_operation_needs_reconcile(uuid, text) to service_role;
 grant execute on function public.get_campaign_run_operation_for_reconcile(uuid) to service_role;
+grant execute on function public.resolve_campaign_run_create_reconcile_found(uuid, text, text, text, text) to service_role;
 
 revoke all on function private.generate_campaign_run_reference() from public, anon, authenticated;
 revoke all on function private.generate_campaign_run_target_reference() from public, anon, authenticated;
@@ -1159,3 +1322,4 @@ revoke all on function private.marketing_execution_idempotency_lookup(uuid, text
 revoke all on function private.marketing_execution_idempotency_store(uuid, text, uuid, text, jsonb) from public, anon, authenticated;
 revoke all on function private.append_campaign_execution_event(uuid, uuid, uuid, text, text, text, jsonb, uuid, text) from public, anon, authenticated;
 revoke all on function private.enqueue_campaign_run_operation(public.campaign_runs, uuid, text) from public, anon, authenticated;
+revoke all on function private.enqueue_unique_campaign_run_operation(public.campaign_runs, uuid, text) from public, anon, authenticated;

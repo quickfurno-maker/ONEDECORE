@@ -23,9 +23,10 @@ Repository-only Phase 9C-B: campaign run/target/operation/event schema, RBAC, mo
 ## Migration
 
 - File: `supabase/migrations/20260820140000_campaign_execution_foundation.sql` (M33)
-- Git blob: `afae5ab143f92b9663bde0354837ca72c9bd0621`
-- Raw SHA-256: `B50C2141FDCBAB303F3146B90F95DF436E6CD08F827764B93C6473375904CCFD`
-- Forward-only. M1–M32 unmodified.
+- Git blob: `326ef4f2770ca5021f9e273605f0e7a5f6aaf992`
+- Raw SHA-256: `C87D4B478EA6C76520A715C58D669238F425DAFB1D595DB6FEE50A80DE277C84`
+- Pre-correction (never managed-applied): blob `afae5ab143f92b9663bde0354837ca72c9bd0621` / SHA-256 `B50C2141FDCBAB303F3146B90F95DF436E6CD08F827764B93C6473375904CCFD`
+- Forward-only. M1–M32 unmodified. **No M34.**
 - **Not** managed-applied in this gate.
 
 ## Tables
@@ -50,7 +51,7 @@ Cancel: Super Admin only (narrow ADR-0031 reading). SM may execute/pause/resume.
 ## Staff / worker RPCs
 
 Staff: `create_campaign_run`, `pause_campaign_run`, `resume_campaign_run`, `cancel_campaign_run`.  
-Service-role: `claim_campaign_run_operation`, `bind_campaign_run_operation`, `complete_campaign_run_operation`, `fail_campaign_run_operation`, `mark_campaign_run_operation_needs_reconcile`, `get_campaign_run_operation_for_reconcile`.
+Service-role: `claim_campaign_run_operation`, `bind_campaign_run_operation`, `complete_campaign_run_operation`, `fail_campaign_run_operation`, `mark_campaign_run_operation_needs_reconcile`, `get_campaign_run_operation_for_reconcile`, `resolve_campaign_run_create_reconcile_found`.
 
 OD9C-A: dual paid channels fail with `MULTI_PROVIDER_EXECUTION_REQUIRES_SEPARATE_APPROVED_VERSIONS`. Deferred email/WhatsApp stored, not executed.
 
@@ -69,3 +70,13 @@ OD9C-C: `canShareProviderCustomerData` always denies identifier sharing in 9C-B.
 ## Managed
 
 Read-only dry-run must propose **only** this M33 file. Do not apply.
+
+## Same-PR correction (unmerged / unmanaged M33)
+
+In-place M33 + app/test fixes (no M34, no managed write):
+
+1. Expired `claimed` rows are selectable regardless of `attempt_count`. At `max_attempts` they move to `needs_reconcile` (`CLAIM_EXPIRED_UNKNOWN`); below max they reclaim and increment.
+2. `reconcile_found` uses `resolve_campaign_run_create_reconcile_found` (not ordinary bind). Scheduled → one activate; cancelled → one cancel cleanup; replay is unique. Provider `not_found` does not recreate.
+3. `cancel_campaign_run` cancels pending only. In-flight `claimed` create can bind/complete; cancelled runs never activate and enqueue one provider cancel if an object is bound.
+4. Manual mock-dispatch Server Action authorizes active staff + `campaigns.execute` before any service-role dispatcher work. SA/SM allowed; other roles denied. Internal bearer route unchanged.
+
