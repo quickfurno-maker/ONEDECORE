@@ -353,6 +353,261 @@ export type Database = {
           },
         ]
       }
+      campaign_execution_events: {
+        Row: {
+          actor_id: string | null
+          actor_kind: string
+          campaign_run_id: string
+          campaign_run_operation_id: string | null
+          campaign_run_target_id: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          occurred_at: string
+          outcome_code: string
+          provider_object_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_kind?: string
+          campaign_run_id: string
+          campaign_run_operation_id?: string | null
+          campaign_run_target_id?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          outcome_code: string
+          provider_object_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_kind?: string
+          campaign_run_id?: string
+          campaign_run_operation_id?: string | null
+          campaign_run_target_id?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          outcome_code?: string
+          provider_object_id?: string | null
+        }
+        Relationships: []
+      }
+      campaign_run_operations: {
+        Row: {
+          attempt_count: number
+          campaign_run_id: string
+          campaign_run_target_id: string
+          claim_expires_at: string | null
+          claimed_at: string | null
+          claimed_by: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_error_code: string | null
+          max_attempts: number
+          next_attempt_at: string
+          operation_key: string
+          operation_state: string
+          operation_type: string
+          request_hash: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          campaign_run_id: string
+          campaign_run_target_id: string
+          claim_expires_at?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error_code?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          operation_key: string
+          operation_state?: string
+          operation_type: string
+          request_hash: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          campaign_run_id?: string
+          campaign_run_target_id?: string
+          claim_expires_at?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error_code?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          operation_key?: string
+          operation_state?: string
+          operation_type?: string
+          request_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_run_operations_campaign_run_id_fkey"
+            columns: ["campaign_run_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_run_targets: {
+        Row: {
+          account_reference: string | null
+          campaign_run_id: string
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          provider_ad_group_id: string | null
+          provider_ad_set_id: string | null
+          provider_campaign_id: string | null
+          provider_channel: string
+          provider_status: string | null
+          run_target_reference: string
+          updated_at: string
+        }
+        Insert: {
+          account_reference?: string | null
+          campaign_run_id: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          provider_ad_group_id?: string | null
+          provider_ad_set_id?: string | null
+          provider_campaign_id?: string | null
+          provider_channel: string
+          provider_status?: string | null
+          run_target_reference: string
+          updated_at?: string
+        }
+        Update: {
+          account_reference?: string | null
+          campaign_run_id?: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          provider_ad_group_id?: string | null
+          provider_ad_set_id?: string | null
+          provider_campaign_id?: string | null
+          provider_channel?: string
+          provider_status?: string | null
+          run_target_reference?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_run_targets_campaign_run_id_fkey"
+            columns: ["campaign_run_id"]
+            isOneToOne: true
+            referencedRelation: "campaign_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_runs: {
+        Row: {
+          activated_at: string | null
+          activated_by: string | null
+          audience_rule_hash: string
+          campaign_version_id: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          configuration_hash: string
+          created_at: string
+          deferred_channels: string[]
+          destination_snapshot: Json
+          failed_at: string | null
+          failure_code: string | null
+          failure_reason: string | null
+          id: string
+          lock_version: number
+          paused_at: string | null
+          provider_channel: string
+          requested_at: string
+          requested_by: string
+          run_reference: string
+          scheduled_for: string
+          status: string
+          targeting_mode: string
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          activated_by?: string | null
+          audience_rule_hash: string
+          campaign_version_id: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          completed_at?: string | null
+          configuration_hash: string
+          created_at?: string
+          deferred_channels?: string[]
+          destination_snapshot: Json
+          failed_at?: string | null
+          failure_code?: string | null
+          failure_reason?: string | null
+          id?: string
+          lock_version?: number
+          paused_at?: string | null
+          provider_channel: string
+          requested_at?: string
+          requested_by: string
+          run_reference: string
+          scheduled_for?: string
+          status?: string
+          targeting_mode: string
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          activated_by?: string | null
+          audience_rule_hash?: string
+          campaign_version_id?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          completed_at?: string | null
+          configuration_hash?: string
+          created_at?: string
+          deferred_channels?: string[]
+          destination_snapshot?: Json
+          failed_at?: string | null
+          failure_code?: string | null
+          failure_reason?: string | null
+          id?: string
+          lock_version?: number
+          paused_at?: string | null
+          provider_channel?: string
+          requested_at?: string
+          requested_by?: string
+          run_reference?: string
+          scheduled_for?: string
+          status?: string
+          targeting_mode?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_runs_campaign_version_id_fkey"
+            columns: ["campaign_version_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_versions: {
         Row: {
           budget_snapshot: Json
@@ -4803,6 +5058,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      bind_campaign_run_operation: {
+        Args: {
+          p_operation_id: string
+          p_provider_ad_group_id?: string | null
+          p_provider_ad_set_id?: string | null
+          p_provider_campaign_id: string
+          p_provider_status?: string | null
+        }
+        Returns: Json
+      }
+      cancel_campaign_run: {
+        Args: { p_campaign_run_id: string; p_idempotency_key: string }
+        Returns: Json
+      }
       cancel_leave_request: {
         Args: { p_reason: string; p_request_id: string }
         Returns: Json
@@ -4852,6 +5121,10 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_campaign_run_operation: {
+        Args: { p_claim_ttl_seconds?: number; p_worker_id: string }
+        Returns: Json
+      }
       claim_whatsapp_send_intent_for_dispatch: {
         Args: {
           p_provider_attempt_key: string
@@ -4869,6 +5142,14 @@ export type Database = {
           send_intent_id: string
           sender_e164: string
         }[]
+      }
+      complete_campaign_run_operation: {
+        Args: {
+          p_operation_id: string
+          p_outcome_code: string
+          p_safe_metadata?: Json
+        }
+        Returns: Json
       }
       complete_lead_follow_up: {
         Args: { p_follow_up_id: string; p_outcome?: string }
@@ -4986,6 +5267,10 @@ export type Database = {
           p_targeting_mode: string
           p_title: string
         }
+        Returns: Json
+      }
+      create_campaign_run: {
+        Args: { p_campaign_version_id: string; p_idempotency_key: string }
         Returns: Json
       }
       create_holiday: {
@@ -5355,6 +5640,14 @@ export type Database = {
         Args: { p_idempotency_key: string; p_version_id: string }
         Returns: Json
       }
+      fail_campaign_run_operation: {
+        Args: {
+          p_error_code: string
+          p_operation_id: string
+          p_retry?: boolean
+        }
+        Returns: Json
+      }
       finalize_project_design_deliverable_version: {
         Args: { p_idempotency_key: string; p_version_id: string }
         Returns: Json
@@ -5366,6 +5659,10 @@ export type Database = {
           p_quotation_id: string
           p_version_id: string
         }
+        Returns: Json
+      }
+      get_campaign_run_operation_for_reconcile: {
+        Args: { p_operation_id: string }
         Returns: Json
       }
       get_contact_marketing_consent_state: {
@@ -5506,6 +5803,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mark_campaign_run_operation_needs_reconcile: {
+        Args: { p_error_code?: string; p_operation_id: string }
+        Returns: Json
+      }
       mark_quotation_pdf_document_ready: {
         Args: {
           p_file_size_bytes: number
@@ -5533,6 +5834,10 @@ export type Database = {
           p_reporting_manager_id: string
           p_role_code: string
         }
+        Returns: Json
+      }
+      pause_campaign_run: {
+        Args: { p_campaign_run_id: string; p_idempotency_key: string }
         Returns: Json
       }
       preview_campaign_audience: {
@@ -5903,6 +6208,10 @@ export type Database = {
           p_source_type: string
           p_storage_object_path?: string
         }
+        Returns: Json
+      }
+      resume_campaign_run: {
+        Args: { p_campaign_run_id: string; p_idempotency_key: string }
         Returns: Json
       }
       resume_project_design: {

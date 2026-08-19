@@ -93,11 +93,11 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(m23Blob, FROZEN_HASHES.M23_GIT_BLOB);
   });
 
-  test("repository has M1–M31 baseline, M32 landing lab, and fail-closed against M33+", () => {
+  test("repository has M1–M32 baseline, M33 9C-B execution foundation, and fail-closed against M34+", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 32, "Migration count must be exactly 32");
+    assert.equal(files.length, 33, "Migration count must be exactly 33");
 
     const phase6c = files.filter((f) => f.startsWith("20260809"));
     assert.equal(phase6c.length, 1);
@@ -150,8 +150,12 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(phase9b_m32.length, 1);
     assert.equal(phase9b_m32[0], "20260819140000_landing_page_lab_experimentation_foundation.sql");
 
-    const m32Plus = files.filter((f) => f > "20260819140000_landing_page_lab_experimentation_foundation.sql");
-    assert.equal(m32Plus.length, 0, "No M33+ migration files allowed");
+    const phase9c_m33 = files.filter((f) => f.startsWith("20260820"));
+    assert.equal(phase9c_m33.length, 1);
+    assert.equal(phase9c_m33[0], "20260820140000_campaign_execution_foundation.sql");
+
+    const m33Plus = files.filter((f) => f > "20260820140000_campaign_execution_foundation.sql");
+    assert.equal(m33Plus.length, 0, "No M34+ migration files allowed");
   });
 });
 

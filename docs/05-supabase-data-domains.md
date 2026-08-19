@@ -1,6 +1,6 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9C architecture freeze and Phase 9D-A conceptual commerce freeze, August 19, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9C-B repository implementation, August 19, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
 **Migrations Applied (Managed):** M1–M32 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. M32 **MANAGED_APPLIED**. M31 **MANAGED_APPLIED_IMMUTABLE**.
@@ -160,7 +160,7 @@ Reuse live CRM consent: `contacts`, `contact_channels`, `consent_events` (`purpo
 | `campaign_audience_rule_versions` | Frozen normalized rule JSON + SHA-256 hash; **no PII members** | **MANAGED M31** — certified empty at apply |
 | `campaign_approvals` | Append-only approved/rejected evidence | **MANAGED M31** — certified empty at apply |
 | `private.marketing_idempotency_requests` | Retry-safe Phase 9A mutations | **MANAGED M31** — certified empty at apply |
-| `campaign_runs` / provider objects / spend | Execution | **EXCLUDED — Phase 9C** |
+| `campaign_runs` / `campaign_run_targets` / operations / events | Execution foundation (9C-B) | **Repository M33** — **not** managed-applied |
 | Recipient / member snapshots / CRM export tables | PII lists | **EXCLUDED — not 9A** |
 | Landing-page tables / campaign→landing FK | Landing Lab | **M32 in repository; no M31 FK; not managed-applied** |
 
@@ -219,7 +219,7 @@ Existing authoritative data is reused (`leads.landing_path`, `leads.attribution`
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_END -->
 
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
-### Phase 9C Campaign Execution Data Domain — conceptual only
+### Phase 9C Campaign Execution Data Domain
 
-ADR-0031 conceptual tables (`campaign_runs` with `run_reference`, `campaign_run_targets` MVP one-to-one/`run_target_reference`, `campaign_run_operations`, `campaign_execution_events`, `campaign_metric_snapshots`, `campaign_conversion_feedback_events`, `private.marketing_execution_idempotency_requests`) are **not created**. Migration number is **unreserved**. Managed remains **M1–M32**. No parallel attribution or CRM-stage table.
+9C-B (DEC-0086 / M33 repository): `campaign_runs` (`run_reference`), `campaign_run_targets` (one-to-one / `run_target_reference`), `campaign_run_operations`, `campaign_execution_events`, `private.marketing_execution_idempotency_requests`. Metric/feedback tables remain **not created** (9C-C). Managed remains **M1–M32**. No parallel attribution or CRM-stage table.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->

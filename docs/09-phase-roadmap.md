@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced through Phase 9C architecture freeze, August 19, 2026)
-**Current Phase:** Phase 9C — Campaign Execution, Attribution & Conversion Feedback (**ARCHITECTURE_FROZEN**; implementation **NOT STARTED**). Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (production **OFF**). Phase 9D-A **ARCHITECTURE_FROZEN**.
-**Next Phase:** Phase 9C-B implementation after ADR-0031 merge. Production Landing Lab and paid provider execution remain disabled.
+**Document Status:** Locked Roadmap (truth-synced through Phase 9C-B repository implementation, August 19, 2026)
+**Current Phase:** Phase 9C-B **REPOSITORY IMPLEMENTED** (DEC-0086; not managed-applied). Phase 9C-A **MERGED**. Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (production **OFF**). Phase 9C-C **NOT STARTED**. Phase 9D-A **ARCHITECTURE_FROZEN**.
+**Next Phase:** Review/merge 9C-B then Phase 9C-C. Production Landing Lab and paid provider execution remain disabled.
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; production **not** activated)
 
 ---
@@ -288,13 +288,13 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Architecture freeze:** [ADR-0029](ADR/ADR-0029-phase-9b-landing-page-lab.md), DEC-0081, OD9B-1–OD9B-12.
 - **Repository:** PR #66 merged (`39f5a7a69998418bee943168cff218a0aa1f721e`); DEC-0082.
 - **Managed apply:** [M32 closeout](audits/phase-9b-m32-managed-apply-closeout.md), DEC-0084; managed **M1–M32**; pending **NONE**.
-- **Status:** **M32 MANAGED APPLIED** — production Landing Lab **OFF**. Phase 9C architecture **FROZEN** (DEC-0085); 9C implementation **NOT STARTED**.
+- **Status:** **M32 MANAGED APPLIED** — production Landing Lab **OFF**. Phase 9C-A architecture **FROZEN** (DEC-0085) **MERGED**. Phase 9C-B repository implementation **DEC-0086** (managed still M1–M32). 9C-C **NOT STARTED**.
 
 ### Phase 9C
 - **Objective:** Campaign execution, attribution comparison, and server-side conversion feedback.
 - **Architecture freeze:** [ADR-0031](ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversion-feedback.md), [9C-A audit](audits/phase-9c-campaign-execution-attribution-feedback-architecture-freeze.md), DEC-0085, OD9C-1–OD9C-18.
-- **Subphases:** 9C-A this freeze; 9C-B execution foundation (mocked providers); 9C-C Meta+Google adapters + feedback + metrics + certification.
-- **Status:** **ARCHITECTURE_FROZEN** — implementation **NOT STARTED**. No schema, SDK, managed write, or live spend. Production execution remains Phase 10 gated.
+- **Subphases:** 9C-A freeze **MERGED**; 9C-B mock execution foundation **repository implemented** (DEC-0086, M33 not managed-applied); 9C-C Meta+Google adapters + feedback + metrics + certification **NOT STARTED**.
+- **Status:** **9C-B REPOSITORY IMPLEMENTATION** — Phase 9C **not** complete. No live spend. Managed **M1–M32**.
 
 ### Phase 9D (Ready-Made Furniture E-commerce)
 - **Objective:** Premium mobile-first category-based ready-made furniture store under `/shop`.
@@ -381,9 +381,9 @@ No commerce migration, `/shop` runtime, payment SDK, or managed write in this ga
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
 ## Phase 9C Architecture Freeze Status
 
-**Status:** `ARCHITECTURE_FROZEN (DEC-0085)` — implementation **NOT STARTED**
+**Status:** `ARCHITECTURE_FROZEN (DEC-0085)` + `9C-B REPOSITORY IMPLEMENTED (DEC-0086)` — Phase 9C **not** complete; 9C-C **NOT STARTED**
 
-Authority: **ADR-0031 / DEC-0085 / OD9C-1–OD9C-18 / OD9C-A–C**.
+Authority: **ADR-0031 / DEC-0085 / DEC-0086 / OD9C-1–OD9C-18 / OD9C-A–C**.
 
-No campaign_runs schema, Meta/Google Ads SDK, worker, managed write, or live spend in this gate. Production execution remains Phase 10 gated. 9D-B remains blocked until 9C implementation/certification complete.
+M33 exists in the repository and is **not** managed-applied. No Meta/Google Ads SDK. No live spend. Production execution remains Phase 10 gated. 9D-B remains blocked until 9C implementation/certification complete.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->

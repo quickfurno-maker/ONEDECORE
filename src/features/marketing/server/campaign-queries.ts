@@ -170,6 +170,74 @@ export async function getCampaignDetail(campaignId: string): Promise<CampaignDet
   };
 }
 
+export interface CampaignRunListItem {
+  readonly id: string;
+  readonly runReference: string;
+  readonly campaignVersionId: string;
+  readonly providerChannel: string;
+  readonly status: string;
+  readonly targetingMode: CampaignTargetingMode;
+  readonly deferredChannels: readonly string[];
+  readonly destinationSnapshot: Record<string, Json | undefined>;
+  readonly requestedAt: string;
+  readonly target: {
+    readonly runTargetReference: string;
+    readonly providerCampaignId: string | null;
+    readonly providerStatus: string | null;
+  } | null;
+  readonly operations: readonly {
+    readonly operationType: string;
+    readonly operationState: string;
+  }[];
+}
+
+export async function listCampaignRunsForCampaign(
+  campaignId: string
+): Promise<readonly CampaignRunListItem[]> {
+  const detail = await getCampaignDetail(campaignId);
+  if (!detail) return [];
+  const versionIds = detail.versions.map((version) => version.id);
+  if (versionIds.length === 0) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("campaign_runs")
+    .select(
+      "id, run_reference, campaign_version_id, provider_channel, status, targeting_mode, deferred_channels, destination_snapshot, requested_at, campaign_run_targets(run_target_reference, provider_campaign_id, provider_status), campaign_run_operations(operation_type, operation_state, created_at)"
+    )
+    .in("campaign_version_id", versionIds)
+    .order("requested_at", { ascending: false });
+  if (error) throw error;
+
+  return ((data ?? []) as unknown as Array<Record<string, unknown>>).map((row) => {
+    const targets = row.campaign_run_targets as Array<Record<string, unknown>> | Record<string, unknown> | null;
+    const target = Array.isArray(targets) ? targets[0] : targets;
+    const operations = (row.campaign_run_operations as Array<Record<string, unknown>> | null) ?? [];
+    return {
+      id: String(row.id),
+      runReference: String(row.run_reference),
+      campaignVersionId: String(row.campaign_version_id),
+      providerChannel: String(row.provider_channel),
+      status: String(row.status),
+      targetingMode: row.targeting_mode as CampaignTargetingMode,
+      deferredChannels: (row.deferred_channels as string[] | null) ?? [],
+      destinationSnapshot: (row.destination_snapshot as Record<string, Json | undefined>) ?? {},
+      requestedAt: String(row.requested_at),
+      target: target
+        ? {
+            runTargetReference: String(target.run_target_reference),
+            providerCampaignId: (target.provider_campaign_id as string | null) ?? null,
+            providerStatus: (target.provider_status as string | null) ?? null,
+          }
+        : null,
+      operations: operations.map((operation) => ({
+        operationType: String(operation.operation_type),
+        operationState: String(operation.operation_state),
+      })),
+    };
+  });
+}
+
 export async function previewCampaignAudience(
   campaignVersionId: string
 ): Promise<AudiencePreviewAggregates | null> {

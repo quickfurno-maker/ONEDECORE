@@ -28,7 +28,7 @@ export default async function AdminCampaignsPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-100">Campaigns</h1>
         <p className="mt-1 text-xs text-neutral-400">
-          Approval governance only — campaign execution is not active.
+          Approval governance only. Mock execution foundation — no live provider writes. Production activation Phase 10.
         </p>
       </div>
       <PrebuildBanner />
