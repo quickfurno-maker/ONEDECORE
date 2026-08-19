@@ -383,7 +383,7 @@ No commerce migration, `/shop` runtime, payment SDK, or managed write in this ga
 
 **Status:** `ARCHITECTURE_FROZEN (DEC-0085)` — implementation **NOT STARTED**
 
-Authority: **ADR-0031 / DEC-0085 / OD9C-1–OD9C-18**.
+Authority: **ADR-0031 / DEC-0085 / OD9C-1–OD9C-18 / OD9C-A–C**.
 
 No campaign_runs schema, Meta/Google Ads SDK, worker, managed write, or live spend in this gate. Production execution remains Phase 10 gated. 9D-B remains blocked until 9C implementation/certification complete.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->

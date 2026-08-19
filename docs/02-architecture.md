@@ -188,7 +188,7 @@ See ADR-0029.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
 ## Phase 9C Architecture — Campaign Execution
 
-Campaign execution remains inside the modular monolith. Supabase owns run/operation truth. Server adapters call Meta Ads and Google Ads. n8n is not the correctness path. Approved `campaign_versions` stay immutable. Production live spend remains Phase 10 gated.
+Campaign execution remains inside the modular monolith. Supabase owns run/operation truth. **One run binds one Ads provider target.** Server adapters call Meta Ads **or** Google Ads for that run. n8n is not the correctness path. Approved `campaign_versions` stay immutable. Production live spend and provider CRM-identifier sharing remain Phase 10 gated.
 
 See ADR-0031.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->

@@ -141,7 +141,7 @@ Canonical architecture: ADR-0029 / DEC-0081.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
 ## Phase 9C Product Requirement — Campaign Execution & Conversion Feedback
 
-ONEDECORE will execute **approved** campaign versions through a provider-independent server adapter, starting with Meta Ads and Google Ads, and will send server-side conversion feedback derived from CRM stages. Commercial conversion is the accepted-quotation + Closed-Won event (`taxable_base_paise`), never double-counted against project creation.
+ONEDECORE will execute **approved** campaign versions through a provider-independent server adapter, starting with Meta Ads and Google Ads (**one run = one Ads provider**; dual paid channels require separate approved versions), and will send server-side conversion feedback derived from CRM stages. Commercial conversion is the accepted-quotation + Closed-Won event (`taxable_base_paise`), never double-counted against project creation. MARKETING consent is not Ads PII-sharing authority.
 
 V1 excludes autonomous AI spend, n8n-as-truth, email/WhatsApp marketing engines in 9C MVP, multi-tenant ad-account onboarding, and production spend before Phase 10.
 

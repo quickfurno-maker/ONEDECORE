@@ -5,7 +5,7 @@
 **Starting `origin/main`:** `aaaa1236447d213e13b0170f669bc6e83ae2f872` (PR #68 two-parent merge)  
 **Worktree:** `C:\Users\KESHAV SHARMA\Desktop\OneDecore-phase9c`  
 **Branch:** `phase-9c-architecture-freeze`  
-**Authority:** ADR-0031 / DEC-0085 / OD9C-1–OD9C-18  
+**Authority:** ADR-0031 / DEC-0085 / OD9C-1–OD9C-18 plus clarifications **OD9C-A / OD9C-B / OD9C-C** (PR #69 correction)
 **Managed project:** `lpurlfmpvriyvpkujvyl`
 
 This document freezes architecture. It does **not** implement schema, workers, SDKs, or provider writes.
@@ -94,32 +94,35 @@ See [ADR-0031](../ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversio
 
 | Code | Lock |
 | :--- | :--- |
-| OD9C-1 | Approved immutable version only |
-| OD9C-2 | `scheduled → running ↔ paused → completed`; `failed` / `cancelled` |
+| OD9C-1 | Approved immutable version only; executable Ads channel unambiguous per OD9C-A |
+| OD9C-2 | `scheduled → running ↔ paused → completed`; `failed` / `cancelled`; **one provider target** |
 | OD9C-3 | Port + Meta/Google MVP; email & WhatsApp MARKETING deferred |
 | OD9C-4 | Direct adapters; n8n not correctness |
 | OD9C-5 | Single ONEDECORE account per provider |
-| OD9C-6 | Current eligibility recheck before export |
-| OD9C-7 | No persistent raw PII recipient snapshot |
-| OD9C-8 | Lean run/target/operation/event/metric/feedback + private execution idempotency |
-| OD9C-9 | Resolve opaque destination at execution; no M31 rewrite |
-| OD9C-10 | CRM touchpoints = attribution truth; provider = evidence |
-| OD9C-11 | Five CRM-derived events; commercial once from acceptance/Closed-Won |
-| OD9C-12 | Click-ID first; hashed PII minimized |
-| OD9C-13 | Provider spend + CRM funnel derived metrics |
+| OD9C-6 | Current eligibility recheck before export; MARKETING ≠ Ads PII-sharing (OD9C-C) |
+| OD9C-7 | No persistent raw PII recipient snapshot; live upload OFF until OD9C-C gate |
+| OD9C-8 | Lean run/target/operation/event/metric/feedback; **one target/run**; `run_reference` / `run_target_reference` |
+| OD9C-9 | Resolve opaque destination at execution; server-signed run execution context; no M31 rewrite |
+| OD9C-10 | CRM touchpoints = attribution truth; no UTM/time/run guessing |
+| OD9C-11 | Five CRM-derived events; commercial once from acceptance/Closed-Won; submit only with unique target |
+| OD9C-12 | Click-ID first; hashed CRM IDs only under OD9C-C |
+| OD9C-13 | Provider spend + CRM funnel derived metrics; run metrics only deterministic attribution |
 | OD9C-14 | `campaigns.execute` / `pause` / `metrics.read`; SA + SM |
 | OD9C-15 | Replay-safe operations; reconcile unknown creates |
 | OD9C-16 | DB truth + server worker; Phase 10 activates scheduler |
 | OD9C-17 | Server secrets; verified callbacks |
 | OD9C-18 | Phase 10 production gate |
+| OD9C-A | `ONE_RUN_ONE_PROVIDER_TARGET_MVP` |
+| OD9C-B | `SERVER_TRUSTED_RUN_TARGET_ATTRIBUTION_NO_TIME_GUESSING` |
+| OD9C-C | `PROVIDER_DATA_SHARING_FAIL_CLOSED_SEPARATE_FROM_MARKETING_CONSENT` |
 
 ---
 
 ## 5. Lifecycle / provider / worker
 
-**Run lifecycle:** OD9C-2. Adapters map provider native states.
+**Run lifecycle:** OD9C-2 on **one** Ads provider target (OD9C-A). Adapters map provider native states. Dual Meta+Google paid intent on one approved version fails closed (`MULTI_PROVIDER_EXECUTION_REQUIRES_SEPARATE_APPROVED_VERSIONS`).
 
-**Port:** `CampaignExecutionProvider` — Meta + Google adapters. SDK types stay inside adapters.
+**Port:** `CampaignExecutionProvider` — Meta **or** Google adapter for that run. SDK types stay inside adapters.
 
 **Worker:** `campaign_run_operations` claimed atomically; Hostinger-compatible cron; default execution mode `disabled`; local manual trigger allowed.
 
@@ -129,17 +132,17 @@ See [ADR-0031](../ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversio
 
 **broad_public:** provider targeting only; no CRM PII export.
 
-**direct_or_custom:** derive at execution; recheck MARKETING/DNC/suppression; hash as required; membership evidence without raw PII snapshot; withdrawal → governed removal.
+**direct_or_custom:** derive at execution; recheck MARKETING/DNC/suppression **and** OD9C-C provider-data-sharing eligibility; hash only when the Phase 10 sharing gate is ON; membership evidence without raw PII snapshot; withdrawal → governed removal. Live custom-audience upload remains OFF until that gate. If the gate is not established, MVP may ship `broad_public` first and keep `direct_or_custom` upload disabled.
 
 Zero eligible recipients → fail closed (no silent `broad_public` conversion).
 
-**Destination:** server resolves opaque `destination_reference` to URL or live Landing Lab publication; snapshot evidence; fail if unavailable. Production `/lp/*` still Phase 10.
+**Destination:** server resolves opaque `destination_reference` to URL or live Landing Lab publication; snapshot evidence; fail if unavailable. Production `/lp/*` still Phase 10. Landing Lab runs also issue a **server-signed execution context** (`run_reference` / `run_target_reference`); browser/query run IDs are never trusted.
 
-**Attribution:** existing CRM/Landing Lab stores only.
+**Attribution:** existing CRM/Landing Lab stores only. No time-window or UTM-only run guessing. Click IDs are evidence, not a run guess.
 
-**Feedback events:** `LeadCreated`, `QualifiedLead`, `ConsultationScheduled`, `ProposalSent`, `CommercialConversion`.
+**Feedback events:** `LeadCreated`, `QualifiedLead`, `ConsultationScheduled`, `ProposalSent`, `CommercialConversion`. Submit to a provider only when one deterministic run target is resolved; else local `not_attributable` / `ambiguous_target`.
 
-**Commercial trigger:** `quotation_acceptance_id` from `accept_quotation_by_capability`; value `taxable_base_paise`; never again on project create.
+**Commercial trigger (UNCHANGED):** `quotation_acceptance_id` from `accept_quotation_by_capability`; value `taxable_base_paise`; never again on project create. Acceptance + Closed-Won are the same authoritative transition.
 
 **Identifiers:** `fbclid`/`gclid` first; `wbraid`/`gbraid`/`fbc`/`fbp` only if 9C implementation proves required (forward-only; no M32 rewrite in this gate).
 
@@ -157,7 +160,7 @@ Polling for status/metrics; outbound conversion APIs; Ads inbound webhooks defer
 
 ## 8. Conceptual schema / migration sequencing
 
-Conceptual tables: ADR-0031 §5 / OD9C-8.
+Conceptual tables: ADR-0031 §5 / OD9C-8. MVP: one `campaign_run_target` per run (`UNIQUE(campaign_run_id)`); `run_reference` / `run_target_reference` required.
 
 **Do not reserve M33.** Implementation after this PR merges allocates **NEXT-AVAILABLE-FOR-9C-IMPLEMENTATION** from then-current main. 9D-B remains unreserved until after 9C complete.
 
@@ -205,3 +208,17 @@ Optional one-time split of 9C-C if review size requires it.
 - start 9D-B;
 - touch protected stashes;
 - auto-merge this PR.
+
+---
+
+## 14. PR #69 architecture correction (this commit)
+
+Independent review blockers closed on the **same** unmerged PR (no new ADR/DEC):
+
+| Blocker | Lock | Resolution |
+| :--- | :--- | :--- |
+| A multi-provider run/budget | OD9C-A | One run = one Ads target; both Meta+Google paid channels fail closed; no invented budget split; no partial aggregate state |
+| B run/target attribution | OD9C-B | `run_reference` / `run_target_reference`; server-signed Landing Lab execution context; no UTM/time guessing; feedback only with unique target |
+| C provider data-sharing | OD9C-C | MARKETING ≠ Ads PII-sharing; Phase 10 fail-closed sharing gate; no real hashed CRM IDs before that gate; `direct_or_custom` may stay disabled |
+
+`CommercialConversion` trigger **unchanged**.

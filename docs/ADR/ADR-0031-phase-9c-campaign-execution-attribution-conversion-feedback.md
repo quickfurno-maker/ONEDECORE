@@ -4,7 +4,7 @@
 **Date:** 2026-08-19  
 **Phase:** 9C — Campaign Execution, Attribution & Conversion Feedback  
 **Owner authorization:** recommended OD9C locks as written in the Phase 9C entry-audit gate  
-**Decision:** DEC-0085 / OD9C-1–OD9C-18  
+**Decision:** DEC-0085 / OD9C-1–OD9C-18 plus unmerged-PR clarifications **OD9C-A / OD9C-B / OD9C-C**
 **Implementation migration:** **NEXT-AVAILABLE-FOR-9C-IMPLEMENTATION** — **NOT CREATED / NOT RESERVED** in this gate  
 **Production activation:** **NONE**
 
@@ -71,8 +71,8 @@ Run creation must verify:
 - exact configuration hash / approved snapshot identity;
 - exact audience rule hash;
 - approval still authoritative (`campaign_approvals.decision = approved`);
-- requested provider channels ⊆ approved `intended_channels`;
-- budget / creative / intended window come from the approved snapshot;
+- the run’s single executable Ads channel is in approved `intended_channels` and is unambiguous per **OD9C-A**;
+- budget / creative / intended window / destination come from that approved snapshot for **that one** provider execution (no post-approval budget split);
 - no silent mutation of the approved version.
 
 Any substantive change to audience, creative, budget, destination, or provider channel configuration requires a **new governed campaign version** and approval (ADR-0027). Sales Manager self-approval denial remains database authority.
@@ -98,6 +98,7 @@ exceptions: failed | cancelled
 - Retries do **not** create duplicate runs or duplicate provider campaigns.
 - Provider status is **evidence**, not sole database truth.
 - Adapters map native provider states into this canonical set.
+- Canonical run state applies to **exactly one** Ads provider target (**OD9C-A**). There is no partial-success or mixed pause/running aggregate across Meta and Google.
 
 No generic workflow engine.
 
@@ -158,7 +159,8 @@ For `direct_or_custom`, immediately before any provider export/action, re-evalua
 - target `contact_channels` active/valid and not suppressed/archived;
 - campaign/version still approved;
 - audience rule still the exact frozen hash;
-- provider policy eligibility.
+- provider policy eligibility;
+- **provider-data-sharing eligibility** (**OD9C-C**). MARKETING consent is necessary where campaign eligibility requires it; it is **not** blanket authority to upload raw or hashed CRM identifiers to an Ads provider.
 
 Never export an approval-time PII snapshot.
 
@@ -181,6 +183,8 @@ If direct/custom audience support is implemented in 9C-C:
 
 CRM eligibility truth ≠ provider audience membership evidence.
 
+Until the Phase 10 **provider-data-sharing production gate** is ON, live custom-audience upload and live hashed/enhanced customer matching remain **OFF**. If that gate cannot be established, 9C MVP may ship `broad_public` provider execution first and keep `direct_or_custom` provider upload **disabled**. Never silently downgrade `direct_or_custom` to `broad_public`.
+
 ---
 
 ### OD9C-8 — Campaign run / provider evidence data model
@@ -191,8 +195,8 @@ Conceptual persistence (NO SQL in this gate):
 
 | Concept | Role |
 | :--- | :--- |
-| `public.campaign_runs` | UUID; `campaign_version_id`; canonical state; timestamps; requested_by / activated_by; immutable approved hashes; bounded failure/cancel reason; **no secret; no PII list** |
-| `public.campaign_run_targets` | run + provider/channel; non-secret account ref; provider campaign/ad-set/ad-group IDs; provider lifecycle snapshot; last sync; **no secret** |
+| `public.campaign_runs` | UUID; non-PII canonical `run_reference`; `campaign_version_id`; **exactly one** executable Ads channel (`meta_ads` **or** `google_ads`); canonical state; timestamps; requested_by / activated_by; immutable approved hashes; bounded failure/cancel reason; **no secret; no PII list** |
+| `public.campaign_run_targets` | **MVP one-to-one with run** (conceptual `UNIQUE(campaign_run_id)`); non-PII canonical `run_target_reference`; the same single provider/channel; non-secret account ref; provider campaign/ad-set/ad-group IDs; provider lifecycle snapshot; last sync; **no secret** |
 | `public.campaign_run_operations` | claimable command queue (create/activate/pause/resume/cancel/sync/export/feedback) |
 | `public.campaign_execution_events` | append-only operation/event evidence; bounded safe metadata |
 | `public.campaign_metric_snapshots` | append-only or upsert-by-window; impressions/clicks/`spend_minor`/provider conversions; currency; fetched_at; **not a finance ledger** |
@@ -222,8 +226,11 @@ For Landing Lab destinations:
 - require a valid publication identity;
 - require production-live eligibility at **actual production activation** (Phase 10 public gate);
 - snapshot the resolved URL/reference into execution evidence;
+- at run preparation, issue a **server-signed/opaque execution context** binding at minimum: `run_reference`, `run_target_reference`, provider/channel, campaign reference/version, landing publication identity, issued/version fields as needed (**OD9C-B**);
+- no PII in that token/context; HMAC/server-only verification or equivalent; not authentication;
+- the Landing Lab server validates the execution context before any run/target identity is written into existing bounded `leads.attribution` / `lead_source_touchpoints` metadata (forward-only 9C enrichment; **no** parallel attribution table; **no** M32 rewrite);
 - do **not** retrofit an M31 FK;
-- do **not** let provider/browser self-assert canonical landing identity.
+- do **not** let provider/browser self-assert canonical landing identity or canonical run identity.
 
 ---
 
@@ -233,7 +240,13 @@ For Landing Lab destinations:
 
 CRM attribution truth remains `leads.landing_path`, `leads.attribution`, `lead_source_touchpoints`, verified Landing Lab context, and UTM/click identifiers.
 
+A `campaign_version` may have **multiple runs over time**. Campaign version + timestamps are **not** sufficient to identify which run/target produced a lead (**OD9C-B**).
+
+Never infer canonical run identity from UTM alone, timestamp overlap, “currently active run”, or a provider/browser-supplied internal reference without server verification. Provider click IDs (`gclid`, `fbclid`, and later bounded click identifiers) are evidence; they MUST NOT be used to guess a run by time or `campaign_version` alone.
+
 Provider metrics are delivery evidence. Never force provider conversion counts to equal CRM counts. Do not create another authoritative lead attribution store.
+
+Run-level CRM funnel metrics include **only** deterministically mapped leads. Ambiguous/unattributed CRM conversions remain visible separately. Campaign/version totals may still be reported without fabricating run attribution.
 
 ---
 
@@ -253,6 +266,8 @@ MVP conversion events:
 
 Each event: deterministic idempotency identity from the CRM source event; exactly-once logical intent; provider retries replay the same identity; provider rejection does **not** roll back CRM.
 
+A provider conversion-feedback **submission** is allowed only when **one** deterministic provider target is resolved from trusted evidence: validated ONEDECORE run/target context, **or** a later adapter contract mapping that uniquely resolves a provider identifier/object to a recorded run target. If the target is missing or ambiguous: preserve CRM truth; retain local conversion-feedback evidence as `not_attributable` / `ambiguous_target` (or equivalent); **do not guess**; **do not submit** to a provider target. Click-ID and conversion feedback also obey **OD9C-C** (not-raw-PII is not automatic permission to send).
+
 ---
 
 ### OD9C-12 — Privacy-safe feedback identifiers
@@ -263,7 +278,7 @@ Prefer existing verified `gclid` / `fbclid` (and bounded UTM). Do not modify M32
 
 Forward-only 9C implementation may add bounded capture of `wbraid` / `gbraid` / `fbc` / `fbp` **only if** the chosen provider contract requires them for matching — without rewriting M32 attribution authority.
 
-Hashed customer identifiers: normalize server-side; hash exactly per provider contract; never log raw PII; send only under explicit data-sharing eligibility. Purchase/lead does **not** grant MARKETING consent. Conversion measurement ≠ outbound MARKETING consent, but provider sharing must still be policy-safe.
+Hashed customer identifiers: normalize server-side; hash exactly per provider contract; never log raw PII; send only under **OD9C-C** provider-data-sharing eligibility. Purchase/lead does **not** grant MARKETING consent. Conversion measurement ≠ outbound MARKETING consent. MARKETING consent is **not** silent authority to share CRM identifiers with Ads platforms.
 
 ---
 
@@ -343,7 +358,51 @@ Provider secrets: env/secret store only. Verify account/customer IDs against ser
 
 **LOCK:** `PHASE10_PRODUCTION_ACTIVATION`
 
-Phase 9C implementation/certification does **not** activate Meta/Google live spend, public Landing Lab, public lead intake, WhatsApp marketing, or email marketing. Sandbox/mock adapters may be used before Phase 10.
+Phase 9C implementation/certification does **not** activate Meta/Google live spend, public Landing Lab, public lead intake, WhatsApp marketing, or email marketing. Sandbox/mock adapters may be used before Phase 10. Live CRM PII / hashed CRM identifier sharing with Ads providers remains **OFF** until the separate Phase 10 provider-data-sharing production gate (**OD9C-C**).
+
+---
+
+### OD9C-A — One run = one provider target (MVP)
+
+**LOCK:** `ONE_RUN_ONE_PROVIDER_TARGET_MVP`
+
+Clarifies OD9C-1, OD9C-2, and OD9C-8. Does not reopen M31.
+
+1. One `campaign_run` represents exactly **one** executable Ads provider/channel: `meta_ads` **or** `google_ads`.
+2. One run has exactly **one** `campaign_run_target` row in 9C MVP (conceptual `UNIQUE(campaign_run_id)`). The target table may still exist for provider evidence.
+3. A run never aggregates Meta + Google execution state: no partial run state, no cross-provider pause/completion ambiguity.
+4. An approved version is executable in 9C MVP only when paid-provider allocation is unambiguous: it must contain **exactly one** supported paid Ads channel among `meta_ads | google_ads`. If it contains **both**, 9C **FAILS CLOSED** with `MULTI_PROVIDER_EXECUTION_REQUIRES_SEPARATE_APPROVED_VERSIONS`. The operator creates separate governed/approved versions for Meta and Google. M31 may still store multiple `intended_channels` as governance metadata; 9C declines ambiguous multi-paid-provider execution in MVP.
+5. `email` and `whatsapp` remain deferred and are **never** silently ignored as if they were executed provider targets.
+6. Budget / creative / destination used by a run are the exact approved snapshot for that **one** provider execution. 9C MUST NOT invent a provider budget split after approval.
+7. Multi-provider aggregate orchestration and shared-budget allocation are **deferred post-MVP**.
+
+---
+
+### OD9C-B — Trusted run/target attribution bridge
+
+**LOCK:** `SERVER_TRUSTED_RUN_TARGET_ATTRIBUTION_NO_TIME_GUESSING`
+
+Clarifies OD9C-9, OD9C-10, and OD9C-11.
+
+Every run has a non-PII `run_reference`. Every provider target has a non-PII `run_target_reference` (even with one target per run). Browser/query-supplied run identity is **never** canonical merely because it is present.
+
+Landing Lab destinations use the server-signed execution context in OD9C-9. Provider conversion feedback and run-level CRM metrics follow the deterministic-resolution rules in OD9C-10 / OD9C-11.
+
+---
+
+### OD9C-C — Provider data-sharing eligibility
+
+**LOCK:** `PROVIDER_DATA_SHARING_FAIL_CLOSED_SEPARATE_FROM_MARKETING_CONSENT`
+
+Clarifies OD9C-6, OD9C-7, and OD9C-12. Does **not** invent a second consent store. Canonical consent remains `consent_events`.
+
+1. MARKETING consent is necessary where campaign eligibility requires it; 9C MUST NOT treat it as blanket authority to upload raw or hashed CRM identifiers to Meta/Google.
+2. Provider-linked customer data sharing (custom-audience matching and hashed identifiers for conversion matching) requires an additional explicit **server-side provider-data-sharing eligibility decision**.
+3. That decision is a fail-closed policy/gate derived from: canonical consent where applicable; current privacy configuration / owner-approved production policy; provider/purpose; Phase 10 production/legal/privacy activation state.
+4. Until Phase 10 explicitly enables the **provider-data-sharing production gate**: no real CRM PII or hashed CRM identifier leaves ONEDECORE for Meta/Google; 9C-B/9C-C use mock/test-safe non-customer data only; live custom-audience upload remains OFF; live enhanced/hashed customer matching remains OFF.
+5. Click identifiers and conversion-feedback payloads also obey that gate and provider/privacy policy. “Not raw PII” is not automatic permission to send.
+6. `direct_or_custom` execution must fail closed or remain provider-export **disabled** if provider-data-sharing eligibility is not established. Never silently downgrade to `broad_public`.
+7. If implementation cannot establish the gate, 9C MVP may ship `broad_public` provider execution first and keep `direct_or_custom` provider upload disabled. That is an acceptable MVP outcome.
 
 ---
 
@@ -359,15 +418,19 @@ Phase 9C implementation/certification does **not** activate Meta/Google live spe
 | 6 | Unresolvable destination: fail closed; no provider activate; `DESTINATION_UNAVAILABLE` |
 | 7 | Zero `direct_or_custom` eligibility: fail closed; do not silently switch to `broad_public` |
 | 8 | MARKETING withdrawn after upload: eligibility truth updates immediately; enqueue governed provider removal; pause further export of that contact |
-| 9 | Meta: `fbclid`/`fbc` first; Google: `gclid`/`wbraid`/`gbraid` if present; hashed PII only when required and eligible |
+| 9 | Meta: `fbclid`/`fbc` first; Google: `gclid`/`wbraid`/`gbraid` if present; hashed CRM identifiers only when required **and** OD9C-C gate is ON |
 | 10 | Monetary value **only** on `CommercialConversion` |
 | 11 | Unique `(conversion_type, source_entity_id)` / CRM event id; provider retries reuse it |
 | 12 | Store UTC windows; `spend_minor` + provider currency as reported; V1 no FX conversion; flag currency mismatch vs configured INR |
 | 13 | Sync compares desired vs provider snapshot; append `provider_drift`; operator resolves |
-| 14 | Logs: run/operation/provider object ids, error class, HTTP status — never tokens, raw PII, or unredacted payloads |
+| 14 | Logs: run/operation/provider object ids / `run_reference` / `run_target_reference`, error class, HTTP status — never tokens, raw PII, or unredacted payloads |
 | 15 | MVP: **polling** for status/metrics both providers; **outbound** conversion upload/CAPI; inbound Ads webhooks deferred |
-| 16 | Minimum surface: create/status, pause/resume, insights/metrics, conversion upload; custom audience create/add/remove only if `direct_or_custom` is in 9C-C scope |
+| 16 | Minimum surface: create/status, pause/resume, insights/metrics, conversion upload; custom audience create/add/remove only if `direct_or_custom` is in 9C-C **and** OD9C-C gate is ON |
 | 17 | See §7 deferred list |
+| 18 | One run = one Ads provider target; both Meta+Google on one approved version → `MULTI_PROVIDER_EXECUTION_REQUIRES_SEPARATE_APPROVED_VERSIONS`; no invented budget split |
+| 19 | Canonical `run_reference` / `run_target_reference`; Landing Lab server-signed execution context; no UTM/time/active-run guessing |
+| 20 | Provider feedback submit only with one deterministic target; else local `not_attributable` / `ambiguous_target` |
+| 21 | MARKETING ≠ Ads PII-sharing authority; Phase 10 provider-data-sharing gate fail-closed; `broad_public`-first is an acceptable MVP if `direct_or_custom` upload stays disabled |
 
 ---
 
@@ -383,14 +446,15 @@ Tables listed in OD9C-8 are conceptual. RLS on all API-exposed tables. Direct au
 
 ```text
 approved campaign_version
+  (exactly one paid Ads channel among meta_ads | google_ads)
         │
         ▼
-campaign_runs + campaign_run_operations   (Supabase truth)
+one campaign_run + one campaign_run_target + operations   (Supabase truth)
         │
         ▼
 CampaignExecutionProvider (server port)
-   ├─ MetaAdsAdapter
-   └─ GoogleAdsAdapter
+   ├─ MetaAdsAdapter   (only if run channel = meta_ads)
+   └─ GoogleAdsAdapter (only if run channel = google_ads)
         │
         ▼
 provider APIs (Phase 10 live / mock-sandbox before)
@@ -402,7 +466,7 @@ Admin: extend `/admin/campaigns/[campaignId]` with run controls and metrics. No 
 
 ## 7. Explicitly deferred
 
-Multi-tenant ad-account onboarding; agency hierarchy; marketing-automation builder; Kafka/Redis/Temporal; warehouse; ML/autonomous bidding or creative; auto winner / auto spend redistribution; email delivery platform; WhatsApp MARKETING bulk-send; SMS; TikTok/LinkedIn/Pinterest; multi-touch/probabilistic attribution; CDP/identity graph; finance ledger / ad-invoice reconciliation; generic webhook framework; long-lived raw provider payload archive.
+Multi-tenant ad-account onboarding; agency hierarchy; marketing-automation builder; Kafka/Redis/Temporal; warehouse; ML/autonomous bidding or creative; auto winner / auto spend redistribution; email delivery platform; WhatsApp MARKETING bulk-send; SMS; TikTok/LinkedIn/Pinterest; multi-touch/probabilistic attribution; CDP/identity graph; finance ledger / ad-invoice reconciliation; generic webhook framework; long-lived raw provider payload archive; **multi-provider aggregate orchestration / shared-budget split across Meta and Google on one run or one approved version**.
 
 ---
 
@@ -431,7 +495,7 @@ If 9C-C is too large for review, split once into provider execution vs conversio
 
 **Positive:** lean path to Meta/Google execution without weakening 9A/9B CRM truth; replay-safe operations; Phase 10 still owns live spend.
 
-**Trade-offs:** email/WhatsApp marketing not in 9C MVP; SM can start approved paid runs; polling not real-time webhooks; no FX conversion; custom-audience export is minimized and eligibility-rechecked, not a CDP.
+**Trade-offs:** email/WhatsApp marketing not in 9C MVP; SM can start approved paid runs; polling not real-time webhooks; no FX conversion; custom-audience export is minimized and eligibility-rechecked, not a CDP; Meta and Google paid intent on one approved version requires **separate** approved versions in MVP; `direct_or_custom` provider upload may stay disabled if the provider-data-sharing gate is not ON.
 
 These are intentional.
 

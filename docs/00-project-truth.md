@@ -265,7 +265,10 @@ Phase 9C architecture is **FROZEN** under **ADR-0031 / DEC-0085 / OD9C-1–OD9C-
 Locked boundaries:
 
 - execute only immutable approved Phase 9A versions;
+- one run = one Ads provider target (Meta **or** Google); dual paid channels fail closed;
 - canonical run lifecycle `scheduled → running ↔ paused → completed` (`failed` / `cancelled`);
+- server-trusted `run_reference` / `run_target_reference`; no UTM/time guessing;
+- MARKETING consent is not Ads PII-sharing authority; Phase 10 provider-data-sharing gate fail-closed;
 - provider-independent port; Meta Ads + Google Ads MVP only;
 - email and WhatsApp MARKETING deferred; M19 `WHATSAPP_SERVICE` unchanged;
 - n8n never campaign/consent/attribution/retry truth;

@@ -221,5 +221,5 @@ Existing authoritative data is reused (`leads.landing_path`, `leads.attribution`
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
 ### Phase 9C Campaign Execution Data Domain — conceptual only
 
-ADR-0031 conceptual tables (`campaign_runs`, `campaign_run_targets`, `campaign_run_operations`, `campaign_execution_events`, `campaign_metric_snapshots`, `campaign_conversion_feedback_events`, `private.marketing_execution_idempotency_requests`) are **not created**. Migration number is **unreserved**. Managed remains **M1–M32**. No parallel attribution or CRM-stage table.
+ADR-0031 conceptual tables (`campaign_runs` with `run_reference`, `campaign_run_targets` MVP one-to-one/`run_target_reference`, `campaign_run_operations`, `campaign_execution_events`, `campaign_metric_snapshots`, `campaign_conversion_feedback_events`, `private.marketing_execution_idempotency_requests`) are **not created**. Migration number is **unreserved**. Managed remains **M1–M32**. No parallel attribution or CRM-stage table.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->

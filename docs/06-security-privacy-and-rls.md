@@ -209,8 +209,14 @@ Browser cart totals are never authoritative. Online payment success is webhook/s
 - Future run/target/event/metric/feedback tables: 100% RLS; no anon writes; no authenticated direct DML.
 - Provider secrets never in campaign rows, Git, or the browser.
 - Execution-time MARKETING / DNC / suppression recheck before any CRM export.
-- No persistent raw PII recipient snapshot; hashed matching only when the provider requires it.
-- Conversion feedback does not roll back CRM on provider rejection.
+- MARKETING consent is **not** silent authority to upload raw or hashed CRM identifiers to Meta/Google Ads.
+- Provider-linked customer data sharing (custom audiences, hashed matching, conversion payloads that carry customer identifiers) requires a separate fail-closed **provider-data-sharing production gate** (Phase 10 / owner-approved privacy policy). Canonical consent remains `consent_events`; no second consent table.
+- Until that gate is ON: no real CRM PII or hashed CRM identifier leaves ONEDECORE for Ads; 9C uses mock/test-safe non-customer data; live custom-audience upload and live enhanced matching remain OFF.
+- Click IDs / conversion feedback also obey the sharing gate. “Not raw PII” is not automatic permission to send.
+- `direct_or_custom` must fail closed or remain export-disabled if sharing eligibility is not established; never silently downgrade to `broad_public`. Shipping `broad_public` first is an acceptable MVP.
+- No persistent raw PII recipient snapshot.
+- Canonical `run_reference` / `run_target_reference` are non-PII. Browser/query run identity is never trusted without server verification of a signed execution context.
+- Conversion feedback does not roll back CRM on provider rejection. Ambiguous run/target → no provider submit.
 - Logs exclude tokens, raw PII, and unredacted provider payloads.
 - Production live spend remains Phase 10 gated (`ONEDECORE_CAMPAIGN_EXECUTION_MODE` default disabled).
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->
