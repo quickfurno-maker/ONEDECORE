@@ -1,0 +1,436 @@
+/**
+ * Phase 9C-C — Meta/Google adapters, gates, attribution, metrics, feedback.
+ * All HTTP is injected. CI must not contact live Ads hosts.
+ */
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, test } from "node:test";
+import { CAMPAIGN_OPERATION_TYPES } from "../execution/contracts/run-lifecycle.ts";
+import { canShareProviderCustomerData } from "../execution/domain/provider-data-sharing.ts";
+import { safeRatio } from "../execution/domain/metric-ratios.ts";
+import { googleMicrosToSpendMinor, spendMinorToNumber } from "../execution/server/money.ts";
+import {
+  assertProviderUrlAllowed,
+  createMemoryProviderHttpTransport,
+  redactProviderHeaders,
+} from "../execution/server/provider-http.ts";
+import {
+  GOOGLE_ADS_API_VERSION,
+  META_MARKETING_API_VERSION,
+  resolveGoogleAdsProviderConfig,
+  resolveMetaAdsProviderConfig,
+} from "../execution/server/provider-config.ts";
+import { MetaAdsCampaignExecutionProvider } from "../execution/server/meta-ads-provider.ts";
+import { GoogleAdsCampaignExecutionProvider } from "../execution/server/google-ads-provider.ts";
+import {
+  CAMPAIGN_PRODUCTION_GATE_OFF,
+  CAMPAIGN_SANDBOX_TRANSPORT_UNAVAILABLE,
+  resolveCampaignExecutionProvider,
+} from "../execution/server/provider-factory.ts";
+import {
+  rejectUnsignedRunGuess,
+  signCampaignExecutionContext,
+  verifyCampaignExecutionContext,
+  type CampaignExecutionContext,
+} from "../execution/server/execution-context-crypto.ts";
+import { ignoreUnsignedRunQuery } from "../execution/server/verify-execution-context.ts";
+
+const root = process.cwd();
+const metaInsights = readFileSync(
+  join(root, "src/features/marketing/__tests__/fixtures/meta-insights.json"),
+  "utf8"
+);
+const googleMetrics = readFileSync(
+  join(root, "src/features/marketing/__tests__/fixtures/google-metrics.json"),
+  "utf8"
+);
+
+const command = {
+  operationType: "create" as const,
+  operationKey: "create:OD-CR-2026-000002",
+  providerChannel: "meta_ads" as const,
+  runReference: "OD-CR-2026-000002",
+  runTargetReference: "OD-CRT-2026-000002",
+  boundProviderCampaignId: "120000000000000001",
+};
+
+const metaConfig = {
+  adAccountId: "act_123",
+  accessToken: "secret-meta-token",
+  graphVersion: META_MARKETING_API_VERSION,
+};
+
+const googleConfig = {
+  customerId: "1234567890",
+  developerToken: "secret-dev-token",
+  clientId: "client-id",
+  clientSecret: "client-secret",
+  refreshToken: "secret-refresh",
+  loginCustomerId: null as string | null,
+};
+
+function sampleContext(overrides: Partial<CampaignExecutionContext> = {}): CampaignExecutionContext {
+  return {
+    version: 1,
+    runReference: "OD-CR-2026-000001",
+    runTargetReference: "OD-CRT-2026-000001",
+    providerChannel: "meta_ads",
+    campaignReference: "OD-C-2026-000001",
+    campaignVersionNumber: 1,
+    landingPublicationReference: "OD-LP-2026-000001",
+    issuedAt: "2026-08-19T00:00:00.000Z",
+    expiresAt: "2026-08-20T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+describe("Phase 9C-C operation types", () => {
+  test("includes metrics_sync and conversion_feedback", () => {
+    assert.ok(CAMPAIGN_OPERATION_TYPES.includes("metrics_sync"));
+    assert.ok(CAMPAIGN_OPERATION_TYPES.includes("conversion_feedback"));
+  });
+});
+
+describe("Phase 9C-C money normalization", () => {
+  test("Google micros convert exactly to spend_minor", () => {
+    assert.equal(spendMinorToNumber(googleMicrosToSpendMinor(BigInt(2500000))), 250);
+    assert.throws(() => googleMicrosToSpendMinor(BigInt(1)));
+  });
+
+  test("divide-by-zero ratios are null", () => {
+    assert.equal(safeRatio(100, 0), null);
+    assert.equal(safeRatio(100, 4), 25);
+  });
+});
+
+describe("Phase 9C-C transport redaction and network block", () => {
+  test("redacts authorization developer-token and cookies", () => {
+    const redacted = redactProviderHeaders({
+      Authorization: "Bearer secret-meta-token",
+      "developer-token": "secret-dev-token",
+      Cookie: "sid=abc",
+      Accept: "application/json",
+    });
+    assert.equal(redacted.Authorization, "[redacted]");
+    assert.equal(redacted["developer-token"], "[redacted]");
+    assert.equal(redacted.Cookie, "[redacted]");
+    assert.equal(redacted.Accept, "application/json");
+  });
+
+  test("blocks live Ads hosts unless explicitly allowed", () => {
+    assert.throws(() => assertProviderUrlAllowed("https://graph.facebook.com/v26.0/act_1", false));
+    assert.throws(() => assertProviderUrlAllowed("https://googleads.googleapis.com/v25/customers/1", false));
+    assert.throws(() => assertProviderUrlAllowed("https://oauth2.googleapis.com/token", false));
+  });
+});
+
+describe("Phase 9C-C Meta adapter", () => {
+  test("maps create request and never uses live fetch", async () => {
+    let seenAuth = "";
+    const transport = createMemoryProviderHttpTransport((input) => {
+      seenAuth = input.headers.Authorization ?? "";
+      assert.match(input.url, /graph\.facebook\.com\/v26\.0\/act_123\/campaigns/);
+      assert.match(input.body ?? "", /OUTCOME_LEADS/);
+      return { status: 200, bodyText: JSON.stringify({ id: "120000000000000001" }) };
+    });
+    const provider = new MetaAdsCampaignExecutionProvider(metaConfig, transport);
+    const result = await provider.create({ ...command, boundProviderCampaignId: null });
+    assert.equal(result.kind, "success");
+    if (result.kind === "success") assert.equal(result.providerCampaignId, "120000000000000001");
+    assert.equal(seenAuth, "Bearer secret-meta-token");
+    assert.equal(redactProviderHeaders({ Authorization: seenAuth }).Authorization, "[redacted]");
+  });
+
+  test("classifies validation transient timeout and reconcile", async () => {
+    const provider = new MetaAdsCampaignExecutionProvider(
+      metaConfig,
+      createMemoryProviderHttpTransport(() => ({ status: 400, bodyText: "{}" }))
+    );
+    assert.equal((await provider.create(command)).kind, "validation_failure");
+
+    const transient = new MetaAdsCampaignExecutionProvider(
+      metaConfig,
+      createMemoryProviderHttpTransport(() => ({ status: 429, bodyText: "{}" }))
+    );
+    assert.equal((await transient.pause(command)).kind, "transient_failure");
+
+    const timeout = new MetaAdsCampaignExecutionProvider(
+      metaConfig,
+      createMemoryProviderHttpTransport(() => {
+        throw new Error("aborted");
+      })
+    );
+    assert.equal((await timeout.activate(command)).kind, "timeout_unknown");
+
+    const found = new MetaAdsCampaignExecutionProvider(
+      metaConfig,
+      createMemoryProviderHttpTransport(() => ({
+        status: 200,
+        bodyText: JSON.stringify({ id: command.boundProviderCampaignId, status: "PAUSED" }),
+      }))
+    );
+    assert.equal((await found.getStatus(command)).kind, "found");
+
+    const missing = new MetaAdsCampaignExecutionProvider(
+      metaConfig,
+      createMemoryProviderHttpTransport(() => ({ status: 404, bodyText: "{}" }))
+    );
+    assert.equal((await missing.getStatus(command)).kind, "not_found");
+  });
+
+  test("maps insights spend without floating multiply", async () => {
+    const provider = new MetaAdsCampaignExecutionProvider(
+      metaConfig,
+      createMemoryProviderHttpTransport(() => ({ status: 200, bodyText: metaInsights }))
+    );
+    const metrics = await provider.fetchMetrics(command, {
+      windowStartIso: "2026-08-01T00:00:00.000Z",
+      windowEndIso: "2026-08-02T00:00:00.000Z",
+    });
+    assert.equal(metrics.kind, "success");
+    if (metrics.kind === "success") {
+      assert.equal(metrics.snapshot.spendMinor, 1250);
+      assert.equal(metrics.snapshot.impressions, 100);
+      assert.equal(metrics.snapshot.clicks, 4);
+      assert.equal(metrics.snapshot.providerConversions, 1);
+    }
+  });
+
+  test("builds conversion feedback request and blocks submit", async () => {
+    const provider = new MetaAdsCampaignExecutionProvider(metaConfig, createMemoryProviderHttpTransport(() => {
+      throw new Error("no network");
+    }));
+    const built = provider.buildConversionFeedbackRequest({
+      eventReference: "OD-CFE-2026-000001",
+      conversionType: "LeadCreated",
+      occurredAt: "2026-08-19T00:00:00.000Z",
+      runReference: "OD-CR-2026-000002",
+      runTargetReference: "OD-CRT-2026-000002",
+      providerChannel: "meta_ads",
+      clickId: "fb.1.1",
+      valueMinor: null,
+      currency: null,
+    });
+    assert.equal(built.event_id, "OD-CFE-2026-000001");
+    const submitted = await provider.submitConversionFeedback({
+      eventReference: "OD-CFE-2026-000001",
+      conversionType: "LeadCreated",
+      occurredAt: "2026-08-19T00:00:00.000Z",
+      runReference: "OD-CR-2026-000002",
+      runTargetReference: "OD-CRT-2026-000002",
+      providerChannel: "meta_ads",
+      clickId: "fb.1.1",
+      valueMinor: null,
+      currency: null,
+    });
+    assert.equal(submitted.kind, "blocked");
+  });
+});
+
+describe("Phase 9C-C Google adapter", () => {
+  test("creates budget then campaign with injected transport", async () => {
+    const urls: string[] = [];
+    const transport = createMemoryProviderHttpTransport((input) => {
+      urls.push(input.url);
+      if (input.url.includes("oauth2.googleapis.com")) {
+        return { status: 200, bodyText: JSON.stringify({ access_token: "ya29.fake" }) };
+      }
+      if (input.url.includes("campaignBudgets:mutate")) {
+        return {
+          status: 200,
+          bodyText: JSON.stringify({ results: [{ resourceName: "customers/1234567890/campaignBudgets/1" }] }),
+        };
+      }
+      assert.match(input.body ?? "", /campaignBudget/);
+      return {
+        status: 200,
+        bodyText: JSON.stringify({ results: [{ resourceName: "customers/1234567890/campaigns/9" }] }),
+      };
+    });
+    const provider = new GoogleAdsCampaignExecutionProvider(googleConfig, transport);
+    const result = await provider.create({ ...command, providerChannel: "google_ads", boundProviderCampaignId: null });
+    assert.equal(result.kind, "success");
+    assert.ok(urls.some((url) => url.includes(`googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/`)));
+    assert.equal(
+      redactProviderHeaders({ "developer-token": "secret-dev-token" })["developer-token"],
+      "[redacted]"
+    );
+  });
+
+  test("maps micros metrics and status", async () => {
+    const transport = createMemoryProviderHttpTransport((input) => {
+      if (input.url.includes("oauth2.googleapis.com")) {
+        return { status: 200, bodyText: JSON.stringify({ access_token: "ya29.fake" }) };
+      }
+      if (input.body?.includes("metrics.cost_micros")) {
+        return { status: 200, bodyText: googleMetrics };
+      }
+      return {
+        status: 200,
+        bodyText: JSON.stringify({
+          results: [{ campaign: { resourceName: "customers/1234567890/campaigns/9", status: "PAUSED" } }],
+        }),
+      };
+    });
+    const provider = new GoogleAdsCampaignExecutionProvider(googleConfig, transport);
+    const status = await provider.getStatus({
+      ...command,
+      providerChannel: "google_ads",
+      boundProviderCampaignId: "customers/1234567890/campaigns/9",
+    });
+    assert.equal(status.kind, "found");
+    const metrics = await provider.fetchMetrics(
+      {
+        ...command,
+        providerChannel: "google_ads",
+        boundProviderCampaignId: "customers/1234567890/campaigns/9",
+      },
+      { windowStartIso: "2026-08-01T00:00:00.000Z", windowEndIso: "2026-08-02T00:00:00.000Z" }
+    );
+    assert.equal(metrics.kind, "success");
+    if (metrics.kind === "success") assert.equal(metrics.snapshot.spendMinor, 250);
+  });
+
+  test("rate-limit and timeout unknown", async () => {
+    const transient = new GoogleAdsCampaignExecutionProvider(
+      googleConfig,
+      createMemoryProviderHttpTransport((input) => {
+        if (input.url.includes("oauth2.googleapis.com")) {
+          return { status: 200, bodyText: JSON.stringify({ access_token: "ya29.fake" }) };
+        }
+        return { status: 429, bodyText: "{}" };
+      })
+    );
+    assert.equal(
+      (
+        await transient.pause({
+          ...command,
+          providerChannel: "google_ads",
+          boundProviderCampaignId: "customers/1234567890/campaigns/9",
+        })
+      ).kind,
+      "transient_failure"
+    );
+    const timeout = new GoogleAdsCampaignExecutionProvider(
+      googleConfig,
+      createMemoryProviderHttpTransport(() => {
+        throw new Error("aborted");
+      })
+    );
+    assert.equal((await timeout.create({ ...command, providerChannel: "google_ads" })).kind, "timeout_unknown");
+  });
+
+  test("conversion feedback builder stays local", async () => {
+    const provider = new GoogleAdsCampaignExecutionProvider(
+      googleConfig,
+      createMemoryProviderHttpTransport(() => {
+        throw new Error("no network");
+      })
+    );
+    const built = provider.buildConversionFeedbackRequest({
+      eventReference: "OD-CFE-2026-000002",
+      conversionType: "CommercialConversion",
+      occurredAt: "2026-08-19T00:00:00.000Z",
+      runReference: "OD-CR-2026-000002",
+      runTargetReference: "OD-CRT-2026-000002",
+      providerChannel: "google_ads",
+      clickId: "Cj0ABC",
+      valueMinor: 12345,
+      currency: "INR",
+    });
+    assert.equal(built.orderId, "OD-CFE-2026-000002");
+    const submitted = await provider.submitConversionFeedback({
+      eventReference: "OD-CFE-2026-000002",
+      conversionType: "CommercialConversion",
+      occurredAt: "2026-08-19T00:00:00.000Z",
+      runReference: "OD-CR-2026-000002",
+      runTargetReference: "OD-CRT-2026-000002",
+      providerChannel: "google_ads",
+      clickId: "Cj0ABC",
+      valueMinor: 12345,
+      currency: "INR",
+    });
+    assert.equal(submitted.kind, "blocked");
+    assert.equal(submitted.errorCode, "PROVIDER_DATA_SHARING_GATE_OFF");
+  });
+});
+
+describe("Phase 9C-C factory gates", () => {
+  test("config missing is fail-closed without network", () => {
+    assert.equal(resolveMetaAdsProviderConfig({}).ok, false);
+    assert.equal(resolveGoogleAdsProviderConfig({}).ok, false);
+  });
+
+  test("sandbox without transport gate fail closed", () => {
+    const sandbox = resolveCampaignExecutionProvider({
+      ONEDECORE_CAMPAIGN_EXECUTION_MODE: "sandbox",
+      ONEDECORE_META_ADS_ACCOUNT_ID: "act_1",
+      ONEDECORE_META_ADS_ACCESS_TOKEN: "token",
+    });
+    assert.equal(sandbox.ok, false);
+    if (!sandbox.ok) assert.equal(sandbox.code, CAMPAIGN_SANDBOX_TRANSPORT_UNAVAILABLE);
+  });
+
+  test("live credentials do not enable production", () => {
+    const live = resolveCampaignExecutionProvider({
+      ONEDECORE_CAMPAIGN_EXECUTION_MODE: "live",
+      ONEDECORE_CAMPAIGN_PRODUCTION_ENABLED: "false",
+      ONEDECORE_META_ADS_ACCOUNT_ID: "act_1",
+      ONEDECORE_META_ADS_ACCESS_TOKEN: "token",
+    });
+    assert.equal(live.ok, false);
+    if (!live.ok) assert.equal(live.code, CAMPAIGN_PRODUCTION_GATE_OFF);
+  });
+
+  test("data sharing remains blocked even if flag is true in 9C-C", () => {
+    const decision = canShareProviderCustomerData({
+      provider: "meta_ads",
+      purpose: "conversion_identifier",
+      targetingMode: "broad_public",
+      executionMode: "live",
+      productionSharingEnabled: true,
+      marketingConsentGranted: true,
+    });
+    assert.equal(decision.allowed, false);
+    assert.equal(decision.code, "PROVIDER_CUSTOMER_DATA_TRANSPORT_BLOCKED_IN_9C_C");
+  });
+});
+
+describe("Phase 9C-C trusted attribution", () => {
+  test("valid signed context verifies; expired and tampered fail", () => {
+    const secret = "phase-9c-c-execution-hmac-secret-32chars";
+    const signed = signCampaignExecutionContext(secret, sampleContext());
+    const now = Date.parse("2026-08-19T12:00:00.000Z");
+    assert.equal(verifyCampaignExecutionContext(secret, signed, now).valid, true);
+    assert.equal(verifyCampaignExecutionContext(secret, signed, Date.parse("2026-08-21T00:00:00.000Z")).valid, false);
+    assert.equal(
+      verifyCampaignExecutionContext(secret, { ...signed, signature: "00".repeat(32) }, now).valid,
+      false
+    );
+  });
+
+  test("unsigned run query is ignored and never guessed from UTM/time", () => {
+    ignoreUnsignedRunQuery({ run_reference: "OD-CR-2026-000001", utm_campaign: "spring" });
+    assert.throws(() =>
+      rejectUnsignedRunGuess({
+        utmCampaign: "spring",
+        nowIso: "2026-08-19T12:00:00.000Z",
+        queryRunId: "OD-CR-2026-000001",
+      })
+    );
+  });
+});
+
+describe("Phase 9C-C admin metrics source", () => {
+  test("panel source contains production and sharing banners and no secret tokens", () => {
+    const src = readFileSync(
+      join(root, "src/features/marketing/components/CampaignMetricsPanel.tsx"),
+      "utf8"
+    );
+    assert.match(src, /Production campaign gate/);
+    assert.match(src, /Provider-data-sharing gate/);
+    assert.match(src, /taxable_base_paise/);
+    assert.doesNotMatch(src, /ACCESS_TOKEN|developer-token|ya29\./);
+  });
+});

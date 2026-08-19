@@ -2,6 +2,10 @@
  * Provider-neutral campaign execution port. No Meta/Google SDK types.
  */
 
+import type {
+  CampaignConversionFeedbackCommand,
+  CampaignConversionFeedbackOutcome,
+} from "../contracts/conversion-feedback.ts";
 import type { PaidAdsChannel } from "../contracts/run-lifecycle.ts";
 import type { CampaignOperationType } from "../contracts/run-lifecycle.ts";
 
@@ -15,7 +19,8 @@ export type CampaignProviderOutcome =
     }
   | { readonly kind: "transient_failure"; readonly errorCode: string }
   | { readonly kind: "validation_failure"; readonly errorCode: string }
-  | { readonly kind: "timeout_unknown"; readonly errorCode: string };
+  | { readonly kind: "timeout_unknown"; readonly errorCode: string }
+  | { readonly kind: "policy_denied"; readonly errorCode: string };
 
 export type CampaignProviderReconcileOutcome =
   | {
@@ -34,12 +39,40 @@ export interface CampaignProviderCommand {
   readonly boundProviderCampaignId: string | null;
 }
 
+export interface CampaignProviderMetricWindow {
+  readonly windowStartIso: string;
+  readonly windowEndIso: string;
+}
+
+export interface CampaignProviderMetricSnapshot {
+  readonly spendMinor: number;
+  readonly impressions: number;
+  readonly clicks: number;
+  readonly providerConversions: number;
+  readonly currency: string;
+  readonly providerRevision: string | null;
+}
+
+export type CampaignProviderMetricsOutcome =
+  | { readonly kind: "success"; readonly snapshot: CampaignProviderMetricSnapshot }
+  | { readonly kind: "transient_failure"; readonly errorCode: string }
+  | { readonly kind: "validation_failure"; readonly errorCode: string }
+  | { readonly kind: "timeout_unknown"; readonly errorCode: string };
+
 export interface CampaignExecutionProvider {
-  readonly code: "mock";
+  readonly code: "mock" | "meta_ads" | "google_ads";
   create(command: CampaignProviderCommand): Promise<CampaignProviderOutcome>;
   activate(command: CampaignProviderCommand): Promise<CampaignProviderOutcome>;
   pause(command: CampaignProviderCommand): Promise<CampaignProviderOutcome>;
   resume(command: CampaignProviderCommand): Promise<CampaignProviderOutcome>;
   cancel(command: CampaignProviderCommand): Promise<CampaignProviderOutcome>;
   getStatus(command: CampaignProviderCommand): Promise<CampaignProviderReconcileOutcome>;
+  fetchMetrics(
+    command: CampaignProviderCommand,
+    window: CampaignProviderMetricWindow
+  ): Promise<CampaignProviderMetricsOutcome>;
+  buildConversionFeedbackRequest(command: CampaignConversionFeedbackCommand): Record<string, unknown>;
+  submitConversionFeedback(
+    command: CampaignConversionFeedbackCommand
+  ): Promise<CampaignConversionFeedbackOutcome>;
 }

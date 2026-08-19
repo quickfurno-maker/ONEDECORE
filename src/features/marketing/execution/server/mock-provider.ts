@@ -89,6 +89,35 @@ export class MockCampaignExecutionProvider implements CampaignExecutionProvider 
               : "ACTIVE",
     };
   }
+
+  async fetchMetrics(): Promise<import("./provider-port.ts").CampaignProviderMetricsOutcome> {
+    if (this.scenario === "transient_failure") {
+      return { kind: "transient_failure", errorCode: "MOCK_TRANSIENT" };
+    }
+    return {
+      kind: "success",
+      snapshot: {
+        spendMinor: 0,
+        impressions: 0,
+        clicks: 0,
+        providerConversions: 0,
+        currency: "INR",
+        providerRevision: "mock",
+      },
+    };
+  }
+
+  buildConversionFeedbackRequest(command: import("../contracts/conversion-feedback.ts").CampaignConversionFeedbackCommand) {
+    return {
+      event_reference: command.eventReference,
+      conversion_type: command.conversionType,
+      provider: "mock",
+    };
+  }
+
+  async submitConversionFeedback() {
+    return { kind: "blocked" as const, errorCode: "PROVIDER_DATA_SHARING_GATE_OFF" };
+  }
 }
 
 export function parseMockScenario(raw: string | null | undefined): MockCampaignScenario {

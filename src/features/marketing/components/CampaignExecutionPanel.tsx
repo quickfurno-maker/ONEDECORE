@@ -163,7 +163,7 @@ export function CampaignExecutionPanel({
           );
         })}
       </ul>
-      <p className="text-xs text-neutral-500">Metrics dashboard is a Phase 9C-C placeholder. Spend/feedback not implemented.</p>
+      <p className="text-xs text-neutral-500">Live provider writes remain Phase 10 gated. Metrics are shown below when campaigns.metrics.read is granted.</p>
     </section>
   );
 }

@@ -22,9 +22,14 @@ import {
 interface LiveLandingLeadFormProps {
   readonly block: LeadFormPlaceholderBlock;
   readonly signedContext: SignedPublicationContext;
+  readonly campaignExecutionContext?: unknown;
 }
 
-export function LiveLandingLeadForm({ block, signedContext }: LiveLandingLeadFormProps) {
+export function LiveLandingLeadForm({
+  block,
+  signedContext,
+  campaignExecutionContext,
+}: LiveLandingLeadFormProps) {
   const startedAt = useMemo(() => new Date().toISOString(), []);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -63,6 +68,7 @@ export function LiveLandingLeadForm({ block, signedContext }: LiveLandingLeadFor
         formStartedAt: startedAt,
       },
       landingPublicationContext: signedContext,
+      campaignExecutionContext: campaignExecutionContext ?? undefined,
     };
     setStatus("submitting");
     try {

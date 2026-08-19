@@ -395,6 +395,102 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_conversion_feedback_events: {
+        Row: {
+          attribution_state: string
+          campaign_run_id: string | null
+          campaign_run_target_id: string | null
+          conversion_occurred_at: string
+          conversion_type: string
+          created_at: string
+          currency: string | null
+          event_reference: string
+          id: string
+          lead_id: string | null
+          metadata: Json
+          provider_channel: string | null
+          provider_error_code: string | null
+          provider_submission_id: string | null
+          provider_submission_state: string
+          source_entity_id: string
+          source_entity_type: string
+          source_event_key: string
+          updated_at: string
+          value_minor: number | null
+        }
+        Insert: {
+          attribution_state: string
+          campaign_run_id?: string | null
+          campaign_run_target_id?: string | null
+          conversion_occurred_at: string
+          conversion_type: string
+          created_at?: string
+          currency?: string | null
+          event_reference: string
+          id?: string
+          lead_id?: string | null
+          metadata?: Json
+          provider_channel?: string | null
+          provider_error_code?: string | null
+          provider_submission_id?: string | null
+          provider_submission_state: string
+          source_entity_id: string
+          source_entity_type: string
+          source_event_key: string
+          updated_at?: string
+          value_minor?: number | null
+        }
+        Update: {
+          attribution_state?: string
+          [key: string]: unknown
+        }
+        Relationships: []
+      }
+      campaign_metric_snapshots: {
+        Row: {
+          campaign_run_id: string
+          campaign_run_target_id: string
+          clicks: number
+          created_at: string
+          currency: string
+          fetched_at: string
+          id: string
+          impressions: number
+          metadata: Json
+          provider_account_ref: string | null
+          provider_channel: string
+          provider_conversions: number
+          provider_revision: string | null
+          spend_minor: number
+          updated_at: string
+          window_end: string
+          window_start: string
+        }
+        Insert: {
+          campaign_run_id: string
+          campaign_run_target_id: string
+          clicks: number
+          created_at?: string
+          currency: string
+          fetched_at?: string
+          id?: string
+          impressions: number
+          metadata?: Json
+          provider_account_ref?: string | null
+          provider_channel: string
+          provider_conversions: number
+          provider_revision?: string | null
+          spend_minor: number
+          updated_at?: string
+          window_end: string
+          window_start: string
+        }
+        Update: {
+          campaign_run_id?: string
+          [key: string]: unknown
+        }
+        Relationships: []
+      }
       campaign_run_operations: {
         Row: {
           attempt_count: number
@@ -5646,6 +5742,53 @@ export type Database = {
           p_operation_id: string
           p_retry?: boolean
         }
+        Returns: Json
+      }
+      get_campaign_metrics_board: {
+        Args: { p_campaign_id: string }
+        Returns: Json
+      }
+      verify_campaign_execution_context_binding: {
+        Args: {
+          p_campaign_reference: string
+          p_campaign_version_number: number
+          p_landing_publication_reference: string
+          p_provider_channel: string
+          p_run_reference: string
+          p_run_target_reference: string
+        }
+        Returns: Json
+      }
+      upsert_campaign_metric_snapshot: {
+        Args: {
+          p_campaign_run_target_id: string
+          p_clicks: number
+          p_currency: string
+          p_impressions: number
+          p_provider_account_ref?: string
+          p_provider_conversions: number
+          p_provider_revision?: string
+          p_spend_minor: number
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: Json
+      }
+      mark_campaign_conversion_feedback_state: {
+        Args: {
+          p_event_id: string
+          p_provider_error_code?: string
+          p_provider_submission_id?: string
+          p_provider_submission_state: string
+        }
+        Returns: Json
+      }
+      enqueue_campaign_metrics_sync: {
+        Args: { p_campaign_run_id: string }
+        Returns: Json
+      }
+      enqueue_campaign_conversion_feedback: {
+        Args: { p_event_id: string }
         Returns: Json
       }
       finalize_project_design_deliverable_version: {

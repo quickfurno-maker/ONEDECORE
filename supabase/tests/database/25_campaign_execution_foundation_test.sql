@@ -92,12 +92,14 @@ select ok(
 );
 
 select ok(
-  not exists (
+  exists (
     select 1 from information_schema.tables
     where table_schema = 'public'
       and table_name in ('campaign_metric_snapshots', 'campaign_conversion_feedback_events')
+    group by table_schema
+    having count(*) = 2
   ),
-  '9C-C metric/feedback tables absent'
+  '9C-C metric/feedback tables exist after M34'
 );
 
 select ok(

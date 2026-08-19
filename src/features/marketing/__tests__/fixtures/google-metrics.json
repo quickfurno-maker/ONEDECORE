@@ -1,0 +1,12 @@
+{
+  "results": [
+    {
+      "metrics": {
+        "impressions": "20",
+        "clicks": "2",
+        "costMicros": "2500000",
+        "conversions": 1
+      }
+    }
+  ]
+}

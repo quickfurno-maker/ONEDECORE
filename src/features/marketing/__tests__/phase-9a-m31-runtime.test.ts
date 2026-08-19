@@ -92,7 +92,7 @@ describe("Phase 9A M31 runtime containment", () => {
     assert.match(detail, /createNextCampaignVersionAction|Create next version|CampaignVersionForms/);
     assert.match(nav, /\/admin\/campaigns/);
     assert.doesNotMatch(list, /Schedule|Pause|Publish|Bulk execute|ROAS|spend/i);
-    assert.doesNotMatch(detail, /meta\.com|googleads|whatsapp.*MARKETING send/i);
+    assert.doesNotMatch(detail, /meta\.com|googleads\.googleapis|whatsapp.*MARKETING send/i);
   });
 
   test("marketing consent UI records instruction evidence and keeps DNC separate", () => {

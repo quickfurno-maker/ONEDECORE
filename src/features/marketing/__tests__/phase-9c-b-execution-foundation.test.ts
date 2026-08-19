@@ -35,8 +35,11 @@ import {
 import {
   getCampaignExecutionMode,
   getCampaignExecutionHmacSecret,
-  CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED,
 } from "../execution/server/execution-env.ts";
+import {
+  CAMPAIGN_PRODUCTION_GATE_OFF,
+  CAMPAIGN_SANDBOX_TRANSPORT_UNAVAILABLE,
+} from "../execution/server/provider-factory.ts";
 
 const root = process.cwd();
 const hmacSecret = "phase-9c-b-execution-hmac-secret-32chars";
@@ -149,8 +152,8 @@ describe("Phase 9C-B execution mode factory", () => {
     const live = resolveCampaignExecutionProvider({ ONEDECORE_CAMPAIGN_EXECUTION_MODE: "live" });
     assert.equal(sandbox.ok, false);
     assert.equal(live.ok, false);
-    if (!sandbox.ok) assert.equal(sandbox.code, CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED);
-    if (!live.ok) assert.equal(live.code, CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED);
+    if (!sandbox.ok) assert.equal(sandbox.code, CAMPAIGN_SANDBOX_TRANSPORT_UNAVAILABLE);
+    if (!live.ok) assert.equal(live.code, CAMPAIGN_PRODUCTION_GATE_OFF);
   });
 });
 
@@ -209,7 +212,7 @@ describe("Phase 9C-B dispatcher", () => {
       env: { ONEDECORE_CAMPAIGN_EXECUTION_MODE: "live" },
     });
     assert.equal(live.processed, 0);
-    assert.equal(live.code, CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED);
+    assert.equal(live.code, CAMPAIGN_PRODUCTION_GATE_OFF);
   });
 
   test("mock success completes", async () => {
@@ -438,7 +441,8 @@ describe("Phase 9C-B reconcile and manual dispatch auth", () => {
     });
     assert.equal(live.success, false);
     assert.equal(sandbox.success, false);
-    assert.equal(live.code, "CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED");
+    assert.equal(live.code, "CAMPAIGN_PRODUCTION_GATE_OFF");
+    assert.equal(sandbox.code, "CAMPAIGN_SANDBOX_TRANSPORT_UNAVAILABLE");
     assert.equal(dispatched, false);
   });
 });

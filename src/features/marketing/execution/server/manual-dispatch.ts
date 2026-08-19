@@ -31,11 +31,18 @@ export async function executeAuthorizedManualMockDispatch(
 
   const getMode = deps.getMode ?? getCampaignExecutionMode;
   const mode = getMode();
-  if (mode === "sandbox" || mode === "live") {
+  if (mode === "live") {
     return {
       success: false,
-      message: "Sandbox/live Ads adapters are not implemented in Phase 9C-B.",
-      code: "CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED",
+      message: "Live campaign execution remains fail-closed until Phase 10 production activation.",
+      code: "CAMPAIGN_PRODUCTION_GATE_OFF",
+    };
+  }
+  if (mode === "sandbox") {
+    return {
+      success: false,
+      message: "Sandbox Ads transport is unavailable without an explicit sandbox transport gate.",
+      code: "CAMPAIGN_SANDBOX_TRANSPORT_UNAVAILABLE",
     };
   }
   if (mode === "disabled") {

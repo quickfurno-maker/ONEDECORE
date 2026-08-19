@@ -5,11 +5,14 @@ import {
   getCampaignDetail,
   listCampaignRunsForCampaign,
   previewCampaignAudience,
+  getCampaignMetricsBoard,
 } from "@/features/marketing/server/campaign-queries";
 import { CampaignVersionForms } from "@/features/marketing/components/CampaignVersionForms";
 import { CampaignExecutionPanel } from "@/features/marketing/components/CampaignExecutionPanel";
 import { PrebuildBanner } from "@/features/marketing/components/PrebuildBanner";
+import { CampaignMetricsPanel, type CampaignMetricsBoardView } from "@/features/marketing/components/CampaignMetricsPanel";
 import { getCampaignExecutionMode, isProviderDataSharingEnabled } from "@/features/marketing/execution/server/execution-env";
+import { isCampaignProductionEnabled, resolveMetaAdsProviderConfig, resolveGoogleAdsProviderConfig } from "@/features/marketing/execution/server/provider-config";
 import type { CrmRoleCode } from "@/features/crm/contracts/permissions";
 
 interface AdminCampaignDetailPageProps {
@@ -33,8 +36,14 @@ export default async function AdminCampaignDetailPage({ params }: AdminCampaignD
   const latest = [...detail.versions].sort((a, b) => b.versionNumber - a.versionNumber)[0];
   const preview = latest ? await previewCampaignAudience(latest.id).catch(() => null) : null;
   const runs = await listCampaignRunsForCampaign(campaignId);
+  const metricsRaw = permissions.canReadCampaignMetrics
+    ? await getCampaignMetricsBoard(campaignId)
+    : null;
   const executionMode = getCampaignExecutionMode();
   const sharingEnabled = isProviderDataSharingEnabled();
+  const productionEnabled = isCampaignProductionEnabled();
+  const metaConfig = resolveMetaAdsProviderConfig();
+  const googleConfig = resolveGoogleAdsProviderConfig();
   const role: CrmRoleCode = permissions.isSuperAdmin
     ? "super_admin"
     : permissions.isSalesManager
@@ -92,6 +101,42 @@ export default async function AdminCampaignDetailPage({ params }: AdminCampaignD
         sharingEnabled={sharingEnabled}
         versions={detail.versions}
         runs={runs}
+      />
+      <CampaignMetricsPanel
+        board={
+          metricsRaw
+            ? ({
+                productionEnabled,
+                sharingEnabled,
+                adapterAvailable: true,
+                configMissing: !metaConfig.ok && !googleConfig.ok,
+                provider: {
+                  spendMinor: Number((metricsRaw.provider as Record<string, unknown> | undefined)?.spend_minor ?? 0),
+                  impressions: Number((metricsRaw.provider as Record<string, unknown> | undefined)?.impressions ?? 0),
+                  clicks: Number((metricsRaw.provider as Record<string, unknown> | undefined)?.clicks ?? 0),
+                  providerConversions: Number(
+                    (metricsRaw.provider as Record<string, unknown> | undefined)?.provider_conversions ?? 0
+                  ),
+                  currency: String((metricsRaw.provider as Record<string, unknown> | undefined)?.currency ?? "INR"),
+                },
+                crm: {
+                  LeadCreated: Number((metricsRaw.crm as Record<string, unknown> | undefined)?.LeadCreated ?? 0),
+                  QualifiedLead: Number((metricsRaw.crm as Record<string, unknown> | undefined)?.QualifiedLead ?? 0),
+                  ConsultationScheduled: Number(
+                    (metricsRaw.crm as Record<string, unknown> | undefined)?.ConsultationScheduled ?? 0
+                  ),
+                  ProposalSent: Number((metricsRaw.crm as Record<string, unknown> | undefined)?.ProposalSent ?? 0),
+                  CommercialConversion: Number(
+                    (metricsRaw.crm as Record<string, unknown> | undefined)?.CommercialConversion ?? 0
+                  ),
+                },
+                unattributedCount: Number(metricsRaw.unattributed ?? 0),
+                feedback: Array.isArray(metricsRaw.feedback)
+                  ? (metricsRaw.feedback as CampaignMetricsBoardView["feedback"])
+                  : [],
+              } satisfies CampaignMetricsBoardView)
+            : null
+        }
       />
     </div>
   );

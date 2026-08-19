@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced through Phase 9C-B repository implementation, August 19, 2026)
-**Current Phase:** Phase 9C-B **REPOSITORY IMPLEMENTED** (DEC-0086; not managed-applied). Phase 9C-A **MERGED**. Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (production **OFF**). Phase 9C-C **NOT STARTED**. Phase 9D-A **ARCHITECTURE_FROZEN**.
-**Next Phase:** Review/merge 9C-B then Phase 9C-C. Production Landing Lab and paid provider execution remain disabled.
+**Document Status:** Locked Roadmap (truth-synced through Phase 9C-C repository implementation, August 19, 2026)
+**Current Phase:** Phase 9C-C **REPOSITORY IMPLEMENTED** (DEC-0087; not managed-applied). Phase 9C-B **MERGED**. Phase 9C-A **MERGED**. Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (production **OFF**). Phase 9D-A **ARCHITECTURE_FROZEN**.
+**Next Phase:** Review/merge 9C-C then recovery-gated managed apply of M33 then M34. Production Landing Lab and paid provider execution remain disabled.
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; production **not** activated)
 
 ---
@@ -288,12 +288,12 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Architecture freeze:** [ADR-0029](ADR/ADR-0029-phase-9b-landing-page-lab.md), DEC-0081, OD9B-1–OD9B-12.
 - **Repository:** PR #66 merged (`39f5a7a69998418bee943168cff218a0aa1f721e`); DEC-0082.
 - **Managed apply:** [M32 closeout](audits/phase-9b-m32-managed-apply-closeout.md), DEC-0084; managed **M1–M32**; pending **NONE**.
-- **Status:** **M32 MANAGED APPLIED** — production Landing Lab **OFF**. Phase 9C-A architecture **FROZEN** (DEC-0085) **MERGED**. Phase 9C-B repository implementation **DEC-0086** (managed still M1–M32). 9C-C **NOT STARTED**.
+- **Status:** **M32 MANAGED APPLIED** — production Landing Lab **OFF**. Phase 9C-A architecture **FROZEN** (DEC-0085) **MERGED**. Phase 9C-B **MERGED** (DEC-0086 / PR #70). 9C-C repository **DEC-0087** (managed still M1–M32).
 
 ### Phase 9C
 - **Objective:** Campaign execution, attribution comparison, and server-side conversion feedback.
 - **Architecture freeze:** [ADR-0031](ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversion-feedback.md), [9C-A audit](audits/phase-9c-campaign-execution-attribution-feedback-architecture-freeze.md), DEC-0085, OD9C-1–OD9C-18.
-- **Subphases:** 9C-A freeze **MERGED**; 9C-B mock execution foundation **repository implemented** (DEC-0086, M33 not managed-applied); 9C-C Meta+Google adapters + feedback + metrics + certification **NOT STARTED**.
+- **Subphases:** 9C-A freeze **MERGED**; 9C-B mock execution foundation **MERGED** (DEC-0086, M33 not managed-applied); 9C-C Meta+Google adapters + feedback + metrics **repository implemented** (DEC-0087); certification/managed apply **NOT** done.
 - **Status:** **9C-B REPOSITORY IMPLEMENTATION** — Phase 9C **not** complete. No live spend. Managed **M1–M32**.
 
 ### Phase 9D (Ready-Made Furniture E-commerce)
@@ -381,7 +381,7 @@ No commerce migration, `/shop` runtime, payment SDK, or managed write in this ga
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
 ## Phase 9C Architecture Freeze Status
 
-**Status:** `ARCHITECTURE_FROZEN (DEC-0085)` + `9C-B REPOSITORY IMPLEMENTED (DEC-0086)` — Phase 9C **not** complete; 9C-C **NOT STARTED**
+**Status:** `ARCHITECTURE_FROZEN (DEC-0085)` + `9C-B MERGED (DEC-0086)` + `9C-C REPOSITORY IMPLEMENTED (DEC-0087)` — Phase 9C **not** complete until managed apply + certification
 
 Authority: **ADR-0031 / DEC-0085 / DEC-0086 / OD9C-1–OD9C-18 / OD9C-A–C**.
 

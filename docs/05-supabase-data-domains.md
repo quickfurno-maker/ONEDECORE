@@ -221,5 +221,5 @@ Existing authoritative data is reused (`leads.landing_path`, `leads.attribution`
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
 ### Phase 9C Campaign Execution Data Domain
 
-9C-B (DEC-0086 / M33 repository): `campaign_runs` (`run_reference`), `campaign_run_targets` (one-to-one / `run_target_reference`), `campaign_run_operations`, `campaign_execution_events`, `private.marketing_execution_idempotency_requests`. Metric/feedback tables remain **not created** (9C-C). Managed remains **M1–M32**. No parallel attribution or CRM-stage table.
+9C-C (DEC-0087 / repository M1–M34): `campaign_metric_snapshots`, `campaign_conversion_feedback_events`; M33 `campaign_run_operations` extended forward-only with `metrics_sync` and `conversion_feedback`. Trusted run/target enrich existing `leads.attribution` / `lead_source_touchpoints`. Managed remains **M1–M32**. No parallel attribution or CRM-stage table.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->

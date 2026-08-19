@@ -43,6 +43,7 @@ const ROOT_KEYS = new Set([
   "attribution",
   "antiBot",
   "landingPublicationContext",
+  "campaignExecutionContext",
 ]);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -116,6 +117,77 @@ function parseSignedPublicationContext(
             : null,
       issuedAt,
       expiresAt: ctx.expiresAt == null ? null : asString(ctx.expiresAt),
+    },
+  };
+}
+
+function parseSignedCampaignExecutionContext(
+  raw: unknown,
+  fields: string[]
+): import("../../marketing/execution/server/execution-context-crypto.ts").SignedCampaignExecutionContext | null {
+  if (raw == null) return null;
+  if (!isPlainObject(raw)) {
+    fields.push("campaignExecutionContext");
+    return null;
+  }
+  rejectUnknownKeys(raw, new Set(["context", "signature"]), "campaignExecutionContext", fields);
+  const signature = asString(raw.signature);
+  if (!signature || signature.length > 128 || !/^[0-9a-f]+$/i.test(signature)) {
+    fields.push("campaignExecutionContext.signature");
+  }
+  if (!isPlainObject(raw.context)) {
+    fields.push("campaignExecutionContext.context");
+    return null;
+  }
+  const ctx = raw.context;
+  rejectUnknownKeys(
+    ctx,
+    new Set([
+      "version",
+      "runReference",
+      "runTargetReference",
+      "providerChannel",
+      "campaignReference",
+      "campaignVersionNumber",
+      "landingPublicationReference",
+      "issuedAt",
+      "expiresAt",
+    ]),
+    "campaignExecutionContext.context",
+    fields
+  );
+  const runReference = asString(ctx.runReference);
+  const runTargetReference = asString(ctx.runTargetReference);
+  const providerChannel = asString(ctx.providerChannel);
+  const campaignReference = asString(ctx.campaignReference);
+  const issuedAt = asString(ctx.issuedAt);
+  const expiresAt = asString(ctx.expiresAt);
+  if (
+    !runReference ||
+    !runTargetReference ||
+    (providerChannel !== "meta_ads" && providerChannel !== "google_ads") ||
+    !campaignReference ||
+    !issuedAt ||
+    !expiresAt ||
+    ctx.version !== 1 ||
+    typeof ctx.campaignVersionNumber !== "number"
+  ) {
+    fields.push("campaignExecutionContext.context");
+    return null;
+  }
+  return {
+    signature: signature ?? "",
+    context: {
+      version: 1,
+      runReference,
+      runTargetReference,
+      providerChannel,
+      campaignReference,
+      campaignVersionNumber: ctx.campaignVersionNumber,
+      landingPublicationReference:
+        ctx.landingPublicationReference == null ? null : asString(ctx.landingPublicationReference),
+      issuedAt,
+      expiresAt,
     },
   };
 }
@@ -526,6 +598,10 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
       "utmContent",
       "fbclid",
       "gclid",
+      "wbraid",
+      "gbraid",
+      "fbc",
+      "fbp",
     ]),
     "attribution",
     fields
@@ -547,6 +623,10 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     "utmContent",
     "fbclid",
     "gclid",
+    "wbraid",
+    "gbraid",
+    "fbc",
+    "fbp",
   ] as const) {
     if (input.attribution[key] != null) {
       const val = asString(input.attribution[key]);
@@ -566,6 +646,10 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
 
   const landingPublicationContext = parseSignedPublicationContext(
     input.landingPublicationContext,
+    fields
+  );
+  const campaignExecutionContext = parseSignedCampaignExecutionContext(
+    input.campaignExecutionContext,
     fields
   );
 
@@ -620,6 +704,7 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
       landingPath: landingPath!,
       attribution,
       landingPublicationContext,
+      campaignExecutionContext,
       consentServicePhone: true,
       consentServiceEmail: emailChannelRequested,
       consentWhatsapp,
