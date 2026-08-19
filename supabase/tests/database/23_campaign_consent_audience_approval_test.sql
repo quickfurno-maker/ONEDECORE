@@ -11,8 +11,8 @@ select ok(exists (select 1 from public.permissions where code = 'campaigns.reque
 select ok(exists (select 1 from public.permissions where code = 'campaigns.approve'), 'campaigns.approve exists');
 select ok(exists (select 1 from public.permissions where code = 'marketing_consents.manage'), 'marketing_consents.manage exists');
 select ok(not exists (select 1 from public.permissions where code in (
-  'campaigns.execute', 'campaigns.publish', 'campaigns.schedule', 'campaigns.pause', 'campaigns.send', 'campaigns.provider_manage'
-)), 'no Phase 9A execution permissions');
+  'campaigns.publish', 'campaigns.schedule', 'campaigns.send', 'campaigns.provider_manage'
+)), 'no Phase 9A publish/schedule/send/provider_manage permissions');
 
 select is(
   (
@@ -56,7 +56,7 @@ select ok(not exists (
     and table_name in (
       'contact_suppressions', 'campaign_members', 'campaign_recipients',
       'campaign_audience_members', 'campaign_recipient_snapshots',
-      'campaign_runs', 'campaign_jobs', 'campaign_delivery_jobs',
+      'campaign_jobs', 'campaign_delivery_jobs',
       'campaign_provider_objects', 'campaign_spend', 'campaign_conversions',
       'campaign_attribution', 'experiments'
     )

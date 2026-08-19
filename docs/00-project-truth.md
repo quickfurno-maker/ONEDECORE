@@ -1,13 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced through Phase 9C architecture freeze, August 19, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced through Phase 9C-B repository implementation, August 19, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 9C — Campaign Execution, Attribution & Conversion Feedback (**ARCHITECTURE_FROZEN** / DEC-0085; implementation **NOT STARTED**). Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production **OFF**). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030).
-**Next Phase:** Phase 9C-B implementation after this freeze merges. 9D-B remains blocked until Phase 9C implementation/certification complete. Production Landing Lab, paid provider execution, and `/shop` stay disabled.
+**Current Phase:** Phase 9C-B — Campaign Execution Foundation (**REPOSITORY IMPLEMENTED** / DEC-0086; **not merged**; managed apply **NOT** done). Phase 9C-A architecture freeze **MERGED** (DEC-0085 / PR #69). Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production **OFF**). Phase 9C-C **NOT STARTED**. Phase 9D-A **ARCHITECTURE_FROZEN**. Phase 9D-B **BLOCKED**.
+**Next Phase:** Independent review + merge of 9C-B, then Phase 9C-C. 9D-B remains blocked until Phase 9C implementation/certification complete. Production Landing Lab, paid provider execution, and `/shop` stay disabled.
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; M31 immutable; production **not** activated)
 
 ---
@@ -108,7 +108,7 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Project execution workspace (migration 30) | Managed-applied 2026-08-17 (Phase 8C M30); PR #61 **MERGED** `8f4f3ecf082450e82ab15f02703c951e50f0817e` |
 | Campaign consent, audience & approval foundation (migration 31) | Managed-applied 2026-08-18 (Phase 9A M31); PR #63 **MERGED** `26e6346ef6722b7c6ff5908c12f208854b513ad6`; architecture PR #62 **MERGED** `caff9d0864e1546dff38646df4355dafa851a473` |
 | Landing Page Lab foundation (migration 32) | Managed-applied 2026-08-19 (Phase 9B M32); production Landing Lab **OFF**; DEC-0084 |
-| Migration alignment | Repository: **M1–M32**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M32**; pending **NONE**; M32 **MANAGED_APPLIED**; M31 **immutable** |
+| Migration alignment | Repository: **M1–M33** (M33 9C-B **not** managed-applied); Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M32**; pending on managed **M33 only after a later authorized apply**; M32 **MANAGED_APPLIED**; M31 **immutable** |
 
 CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed database (`lpurlfmpvriyvpkujvyl`) through **M27**. Phase 7B is **COMPLETE** (PR #55 merged). Phase 8A is **COMPLETE** (PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; managed **M1–M28**). Phase 8B is **COMPLETE** (OD8B-1–OD8B-8 / ADR-0025 / DEC-0073–DEC-0074; PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`; managed **M1–M29**). Phase 8C is **COMPLETE** (OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; architecture PR #60 merged `5b4a7f300e63b438884a2b440a69a569d91b9e5d`; implementation PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; managed **M1–M30**). Phase 9A architecture is frozen (OD9A-1–OD9A-6 / ADR-0027 / DEC-0077; architecture PR #62 true merge `caff9d0864e1546dff38646df4355dafa851a473`). Phase 9A repository implementation is **REPOSITORY_COMPLETE** (DEC-0078). Phase 9A managed apply is **CERTIFIED** (DEC-0080; M31 applied 2026-08-18; managed **M1–M31**; pending **NONE**; M31 immutable). PR #63 **MERGED** `26e6346ef6722b7c6ff5908c12f208854b513ad6`. Phase 9D is **ROADMAP_LOCKED** (DEC-0079 / ADR-0028; implementation **NOT STARTED**). **Production deployment pending** (Phase 10); **public intake remains inactive**.
 
@@ -260,7 +260,7 @@ Production activation remains Phase 10.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
 ## Phase 9C Architecture Freeze — Campaign Execution, Attribution & Conversion Feedback
 
-Phase 9C architecture is **FROZEN** under **ADR-0031 / DEC-0085 / OD9C-1–OD9C-18**. Implementation is **NOT STARTED**. No campaign_runs schema, provider SDK, worker, managed write, or live spend in this gate.
+Phase 9C architecture is **FROZEN** under **ADR-0031 / DEC-0085 / OD9C-1–OD9C-18**. Phase 9C-B repository implementation is recorded in **DEC-0086** (mock foundation only). Phase 9C-C (real adapters, metrics, feedback) is **NOT STARTED**. Managed remains **M1–M32**. No live Ads writes.
 
 Locked boundaries:
 

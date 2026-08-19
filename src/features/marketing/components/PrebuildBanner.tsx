@@ -5,7 +5,7 @@ export function CampaignGovernanceBanner() {
       aria-live="polite"
       className="rounded-md border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200"
     >
-      Approval governance only — campaign execution is not active.
+      Approval governance only. Mock execution foundation — no live provider writes. Production activation Phase 10.
     </div>
   );
 }

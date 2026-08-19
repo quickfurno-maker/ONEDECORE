@@ -131,7 +131,7 @@ export async function decideCampaignVersionAction(formData: FormData): Promise<C
     });
     if (error) throw error;
     revalidatePath(`/admin/campaigns/${String(formData.get("campaignId"))}`);
-    return { success: true, message: "Decision recorded. Execution is not active." };
+    return { success: true, message: "Decision recorded. Live provider writes remain off." };
   } catch (error) {
     const err = campaignErrorFromUnknown(error);
     return { success: false, message: err.message, code: err.code };
@@ -173,6 +173,89 @@ export async function recordMarketingConsentAction(formData: FormData): Promise<
       success: true,
       message: "Recorded evidence of the customer instruction. This does not bypass DNC and does not send marketing.",
     };
+  } catch (error) {
+    const err = campaignErrorFromUnknown(error);
+    return { success: false, message: err.message, code: err.code };
+  }
+}
+
+export async function createCampaignRunAction(formData: FormData): Promise<CampaignActionResult> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("create_campaign_run", {
+      p_campaign_version_id: String(formData.get("campaignVersionId")),
+      p_idempotency_key: newKey(),
+    });
+    if (error) throw error;
+    revalidatePath(`/admin/campaigns/${String(formData.get("campaignId"))}`);
+    return { success: true, message: "Mock run scheduled. No live provider write." };
+  } catch (error) {
+    const err = campaignErrorFromUnknown(error);
+    return { success: false, message: err.message, code: err.code };
+  }
+}
+
+export async function pauseCampaignRunAction(formData: FormData): Promise<CampaignActionResult> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("pause_campaign_run", {
+      p_campaign_run_id: String(formData.get("campaignRunId")),
+      p_idempotency_key: newKey(),
+    });
+    if (error) throw error;
+    revalidatePath(`/admin/campaigns/${String(formData.get("campaignId"))}`);
+    return { success: true, message: "Pause queued. Provider-paused is acknowledged after mock dispatch." };
+  } catch (error) {
+    const err = campaignErrorFromUnknown(error);
+    return { success: false, message: err.message, code: err.code };
+  }
+}
+
+export async function resumeCampaignRunAction(formData: FormData): Promise<CampaignActionResult> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("resume_campaign_run", {
+      p_campaign_run_id: String(formData.get("campaignRunId")),
+      p_idempotency_key: newKey(),
+    });
+    if (error) throw error;
+    revalidatePath(`/admin/campaigns/${String(formData.get("campaignId"))}`);
+    return { success: true, message: "Resume queued." };
+  } catch (error) {
+    const err = campaignErrorFromUnknown(error);
+    return { success: false, message: err.message, code: err.code };
+  }
+}
+
+export async function cancelCampaignRunAction(formData: FormData): Promise<CampaignActionResult> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("cancel_campaign_run", {
+      p_campaign_run_id: String(formData.get("campaignRunId")),
+      p_idempotency_key: newKey(),
+    });
+    if (error) throw error;
+    revalidatePath(`/admin/campaigns/${String(formData.get("campaignId"))}`);
+    return { success: true, message: "Run cancelled." };
+  } catch (error) {
+    const err = campaignErrorFromUnknown(error);
+    return { success: false, message: err.message, code: err.code };
+  }
+}
+
+export async function dispatchMockCampaignExecutionAction(): Promise<CampaignActionResult> {
+  try {
+    const { authorizeManualCampaignDispatch } = await import(
+      "../execution/server/manual-dispatch-auth.ts"
+    );
+    const auth = await authorizeManualCampaignDispatch();
+    if (!auth.ok) {
+      return { success: false, message: auth.message, code: auth.code };
+    }
+    const { executeAuthorizedManualMockDispatch } = await import(
+      "../execution/server/manual-dispatch.ts"
+    );
+    return await executeAuthorizedManualMockDispatch({ authorize: async () => ({ ok: true }) });
   } catch (error) {
     const err = campaignErrorFromUnknown(error);
     return { success: false, message: err.message, code: err.code };
