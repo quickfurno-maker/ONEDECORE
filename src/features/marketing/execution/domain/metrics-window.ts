@@ -36,3 +36,22 @@ export function parseMetricsSyncOperationKey(operationKey: string): CanonicalUtc
   if (!match) return null;
   return utcCalendarDayWindow(match[2] ?? "");
 }
+
+/** Google Ads GAQL BETWEEN is inclusive at both ends. Canonical [D, D+1) must query exactly D. */
+export function googleAdsSegmentsDateEquals(window: CanonicalUtcDayWindow): string {
+  return window.date;
+}
+
+/**
+ * Meta Insights time_range: official Ad Account Insights docs (developers.facebook.com
+ * documentation/ads-commerce/marketing-api/reference/ad-account/insights):
+ * since = beginning midnight of that day;
+ * until = beginning midnight of the following day of that until date.
+ * Therefore since=D and until=D is exactly calendar day D / canonical [D, D+1).
+ */
+export function metaInsightsTimeRangeForCanonicalDay(window: CanonicalUtcDayWindow): {
+  readonly since: string;
+  readonly until: string;
+} {
+  return { since: window.date, until: window.date };
+}

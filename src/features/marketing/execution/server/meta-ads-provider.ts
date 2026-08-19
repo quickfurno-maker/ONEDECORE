@@ -13,6 +13,14 @@ import type {
 } from "./provider-port.ts";
 import type { ProviderHttpTransport } from "./provider-http.ts";
 import { isProviderDataSharingEnabled } from "./execution-env.ts";
+import { metaInsightsTimeRangeForCanonicalDay, utcCalendarDayWindow } from "../domain/metrics-window.ts";
+import { normalizeProviderCurrencyCode, requireMatchingProviderCurrency } from "../domain/provider-currency.ts";
+
+function isAccountCurrencyResult(
+  value: { readonly ok: true; readonly currency: string } | CampaignProviderOutcome
+): value is { readonly ok: true; readonly currency: string } {
+  return "ok" in value && value.ok === true;
+}
 
 function classifyMetaStatus(status: number, body: string): CampaignProviderOutcome {
   if (status === 400 || status === 422) {
@@ -43,6 +51,7 @@ function classifyMetaStatus(status: number, body: string): CampaignProviderOutco
 
 export class MetaAdsCampaignExecutionProvider implements CampaignExecutionProvider {
   public readonly code = "meta_ads" as const;
+  private accountCurrency: string | null = null;
   private readonly config: MetaAdsProviderConfig;
   private readonly transport: ProviderHttpTransport;
   private readonly env: NodeJS.ProcessEnv | Record<string, string | undefined>;
@@ -87,6 +96,38 @@ export class MetaAdsCampaignExecutionProvider implements CampaignExecutionProvid
     }
   }
 
+  private async readAccountCurrency(): Promise<
+    | { readonly ok: true; readonly currency: string }
+    | CampaignProviderOutcome
+  > {
+    if (this.accountCurrency) return { ok: true, currency: this.accountCurrency };
+    try {
+      const response = await this.transport.request({
+        method: "GET",
+        url: `${this.accountPath()}?fields=currency`,
+        headers: this.authHeaders(),
+      });
+      if (response.status === 429 || response.status >= 500) {
+        return { kind: "transient_failure", errorCode: "META_TRANSIENT" };
+      }
+      if (response.status === 401 || response.status === 403) {
+        return { kind: "validation_failure", errorCode: "META_AUTH" };
+      }
+      if (response.status < 200 || response.status >= 300) {
+        return { kind: "validation_failure", errorCode: "META_CURRENCY_READ" };
+      }
+      const parsed = JSON.parse(response.bodyText) as { currency?: string };
+      const currency = normalizeProviderCurrencyCode(parsed.currency);
+      if (!currency) {
+        return { kind: "validation_failure", errorCode: "META_CURRENCY_READ" };
+      }
+      this.accountCurrency = currency;
+      return { ok: true, currency };
+    } catch {
+      return { kind: "timeout_unknown", errorCode: "META_TIMEOUT_UNKNOWN" };
+    }
+  }
+
   async create(command: CampaignProviderCommand): Promise<CampaignProviderOutcome> {
     if (!command.approvedSpec) {
       return { kind: "validation_failure", errorCode: CAMPAIGN_APPROVED_SNAPSHOT_PROVIDER_INCOMPATIBLE };
@@ -97,6 +138,12 @@ export class MetaAdsCampaignExecutionProvider implements CampaignExecutionProvid
     const planned = buildMetaPausedCreatePlan(command.approvedSpec, { pageId: this.config.pageId });
     if (!planned.ok) {
       return { kind: "validation_failure", errorCode: planned.code };
+    }
+    const account = await this.readAccountCurrency();
+    if (!isAccountCurrencyResult(account)) return account;
+    const currency = requireMatchingProviderCurrency(account.currency, command.approvedSpec.budget.currency);
+    if (!currency.ok) {
+      return { kind: "validation_failure", errorCode: currency.code };
     }
     const result = await this.mutate(`${this.accountPath()}${planned.plan.urlPath}`, planned.plan.params);
     if (result.kind === "success") {
@@ -174,16 +221,25 @@ export class MetaAdsCampaignExecutionProvider implements CampaignExecutionProvid
   ): Promise<CampaignProviderMetricsOutcome> {
     const id = command.boundProviderCampaignId;
     if (!id) return { kind: "validation_failure", errorCode: "META_OBJECT_REQUIRED" };
+    const day = utcCalendarDayWindow(window.windowStartIso.slice(0, 10));
+    if (!day || day.windowEndIso !== window.windowEndIso) {
+      return { kind: "validation_failure", errorCode: "CAMPAIGN_METRICS_WINDOW_REQUIRED" };
+    }
     try {
-      const since = window.windowStartIso.slice(0, 10);
-      const until = window.windowEndIso.slice(0, 10);
-      const url = `https://graph.facebook.com/${this.config.graphVersion}/${id}/insights?fields=impressions,clicks,spend,actions&time_range=${encodeURIComponent(JSON.stringify({ since, until }))}`;
+      const { since, until } = metaInsightsTimeRangeForCanonicalDay(day);
+      const url = `https://graph.facebook.com/${this.config.graphVersion}/${id}/insights?fields=impressions,clicks,spend,actions,account_currency&time_range=${encodeURIComponent(JSON.stringify({ since, until }))}`;
       const response = await this.transport.request({ method: "GET", url, headers: this.authHeaders() });
       if (response.status === 429 || response.status >= 500) {
         return { kind: "transient_failure", errorCode: "META_TRANSIENT" };
       }
       const parsed = JSON.parse(response.bodyText) as {
-        data?: Array<{ impressions?: string; clicks?: string; spend?: string; actions?: Array<{ action_type?: string; value?: string }> }>;
+        data?: Array<{
+          impressions?: string;
+          clicks?: string;
+          spend?: string;
+          account_currency?: string;
+          actions?: Array<{ action_type?: string; value?: string }>;
+        }>;
       };
       const row = parsed.data?.[0];
       const spend = String(row?.spend ?? "0");
@@ -192,6 +248,10 @@ export class MetaAdsCampaignExecutionProvider implements CampaignExecutionProvid
       if (!Number.isInteger(spendMinor) || spendMinor < 0) {
         return { kind: "validation_failure", errorCode: "META_SPEND_INVALID" };
       }
+      const currency = normalizeProviderCurrencyCode(row?.account_currency);
+      if (!currency) {
+        return { kind: "validation_failure", errorCode: "META_CURRENCY_READ" };
+      }
       return {
         kind: "success",
         snapshot: {
@@ -199,7 +259,7 @@ export class MetaAdsCampaignExecutionProvider implements CampaignExecutionProvid
           impressions: Number(row?.impressions ?? 0),
           clicks: Number(row?.clicks ?? 0),
           providerConversions: Number(row?.actions?.find((a) => a.action_type === "lead")?.value ?? 0),
-          currency: "INR",
+          currency,
           providerRevision: `${since}:${until}`,
         },
       };

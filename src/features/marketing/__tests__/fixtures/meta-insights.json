@@ -4,6 +4,7 @@
       "impressions": "100",
       "clicks": "4",
       "spend": "12.50",
+      "account_currency": "INR",
       "actions": [{ "action_type": "lead", "value": "1" }]
     }
   ]

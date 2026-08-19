@@ -1,6 +1,6 @@
 # Phase 9C-C — Providers, Conversion Feedback & Metrics Implementation
 
-**Status:** `REPOSITORY_IMPLEMENTED` + **CORRECTION GATE** (PR #71 open, not merged)
+**Status:** `REPOSITORY_IMPLEMENTED` + **SECOND CORRECTION GATE** (PR #71 open, not merged)
 **Authority:** ADR-0031 / DEC-0085 / DEC-0086 / **DEC-0087** / OD9C-1–OD9C-18 / OD9C-A / OD9C-B / OD9C-C
 **Date:** 2026-08-19
 **Branch:** `phase-9c-c-providers-feedback-metrics`
@@ -19,10 +19,12 @@ Repository-only Phase 9C-C: Meta Ads + Google Ads adapters behind the existing p
 - Phase 9D-B
 - Weakening ADR-0031
 
-## Official provider contract assumptions (2026-08-19 correction recheck)
+## Official provider contract assumptions (2026-08-19 second correction recheck)
 
-- **Meta Marketing / Graph API:** Graph changelog fetch timed out during the correction gate. Continue **v26.0** from the prior official changelog plus loaded Marketing API v26.0 references: [Ad Campaign Group](https://developers.facebook.com/docs/marketing-api/reference/ad-campaign-group/), [Ad Set](https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-campaign), [Ad](https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/adgroup), [Lead ads create](https://developers.facebook.com/docs/marketing-api/guides/lead-ads/create/). Lean website/traffic MVP uses nested `POST /act_{id}/ads` with `campaign_spec.objective=OUTCOME_TRAFFIC`, approved budget/window/geo/destination/creative only; native ON_AD lead forms are **not** invented. Insights unchanged. CAPI builder uses captured `fbc`/`fbp` only — **transport blocked**.
-- **Google Ads API:** latest released major **v25** per [sunset dates](https://developers.google.com/google-ads/api/docs/sunset-dates). Search create uses `customers/{id}/googleAds:mutate` with CampaignBudget (approved `amountMicros`), PAUSED SEARCH campaign, ad group, approved keyword, RSA (official minimum 3 headlines / 2 descriptions). Click conversions: [upload clicks](https://developers.google.com/google-ads/api/docs/conversions/upload-clicks) — `conversionAction` resource from server config; exactly one of `gclid`/`gbraid`/`wbraid`. `cost_micros` → `spend_minor` by `micros / 10000`. **Transport blocked**.
+- **Meta Marketing / Graph API:** Continue **v26.0**. Official [Ad Account Insights](https://developers.facebook.com/docs/marketing-api/reference/ad-account/insights/): `time_range.since` is the beginning midnight of that day; `time_range.until` is the beginning midnight of the **following day of that until date**. Canonical `[D 00:00Z, D+1 00:00Z)` therefore uses `since=D` and `until=D` (not until=D+1). Ad account currency is read from `GET act_{id}?fields=currency`; Insights snapshots use `account_currency`. CAPI builder uses captured `fbc`/`fbp` only — **transport blocked**.
+- **Google Ads API:** latest released major **v25**. Official [GAQL date ranges](https://developers.google.com/google-ads/api/docs/query/date-ranges) document `segments.date BETWEEN start AND end` as an inclusive custom range. Canonical day D therefore queries `segments.date = 'D'` only. Account currency is `SELECT customer.currency_code FROM customer`. RSA still requires ≥3 headlines and ≥2 descriptions. Click conversions: exactly one of `gclid`/`gbraid`/`wbraid` plus `conversion_action`. **Transport blocked**.
+- Provider CREATE and metrics fail closed on `CAMPAIGN_PROVIDER_CURRENCY_MISMATCH` when account currency ≠ approved INR snapshot. No FX.
+- Runtime approved spec: `campaign_versions` has no `audience_rule_hash`; load run hashes + version snapshots + frozen `campaign_audience_rule_versions.rule_hash` (+ optional `campaign_approvals`). Query `{data,error}` is inspected; PostgREST errors do not parse as `{}`.
 - No ADR-0031 contradiction. Insufficient approved snapshot fails closed with `CAMPAIGN_APPROVED_SNAPSHOT_PROVIDER_INCOMPATIBLE`.
 
 ## Migration

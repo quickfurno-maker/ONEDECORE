@@ -15,10 +15,19 @@ import type { ProviderHttpTransport } from "./provider-http.ts";
 import { GOOGLE_ADS_API_VERSION } from "./provider-config.ts";
 import { googleMicrosToSpendMinor, spendMinorToNumber } from "./money.ts";
 import { isProviderDataSharingEnabled } from "./execution-env.ts";
+import { googleAdsSegmentsDateEquals, utcCalendarDayWindow } from "../domain/metrics-window.ts";
+import { requireMatchingProviderCurrency, normalizeProviderCurrencyCode } from "../domain/provider-currency.ts";
+
+function isAccountCurrencyResult(
+  value: { readonly ok: true; readonly currency: string } | { readonly kind: string; readonly errorCode: string }
+): value is { readonly ok: true; readonly currency: string } {
+  return "ok" in value && value.ok === true;
+}
 
 export class GoogleAdsCampaignExecutionProvider implements CampaignExecutionProvider {
   public readonly code = "google_ads" as const;
   private accessToken: string | null = null;
+  private accountCurrency: string | null = null;
   private readonly config: GoogleAdsProviderConfig;
   private readonly transport: ProviderHttpTransport;
   private readonly env: NodeJS.ProcessEnv | Record<string, string | undefined>;
@@ -75,6 +84,49 @@ export class GoogleAdsCampaignExecutionProvider implements CampaignExecutionProv
     return headers;
   }
 
+  private async readAccountCurrency(): Promise<
+    | { readonly ok: true; readonly currency: string }
+    | { readonly kind: "timeout_unknown"; readonly errorCode: string }
+    | { readonly kind: "validation_failure"; readonly errorCode: string }
+    | { readonly kind: "transient_failure"; readonly errorCode: string }
+  > {
+    if (this.accountCurrency) return { ok: true, currency: this.accountCurrency };
+    const token = await this.bearer();
+    if (typeof token !== "string") return token;
+    try {
+      const response = await this.transport.request({
+        method: "POST",
+        url: `${this.customerPath()}/googleAds:search`,
+        headers: this.headers(token),
+        body: JSON.stringify({
+          query: "SELECT customer.currency_code FROM customer",
+        }),
+      });
+      if (response.status === 429 || response.status >= 500) {
+        return { kind: "transient_failure", errorCode: "GOOGLE_ADS_TRANSIENT" };
+      }
+      if (response.status === 401 || response.status === 403) {
+        return { kind: "validation_failure", errorCode: "GOOGLE_ADS_AUTH" };
+      }
+      if (response.status < 200 || response.status >= 300) {
+        return { kind: "validation_failure", errorCode: "GOOGLE_ADS_CURRENCY_READ" };
+      }
+      const parsed = JSON.parse(response.bodyText) as {
+        results?: Array<{ customer?: { currencyCode?: string; currency_code?: string } }>;
+      };
+      const currency = normalizeProviderCurrencyCode(
+        parsed.results?.[0]?.customer?.currencyCode ?? parsed.results?.[0]?.customer?.currency_code
+      );
+      if (!currency) {
+        return { kind: "validation_failure", errorCode: "GOOGLE_ADS_CURRENCY_READ" };
+      }
+      this.accountCurrency = currency;
+      return { ok: true, currency };
+    } catch {
+      return { kind: "timeout_unknown", errorCode: "GOOGLE_ADS_TIMEOUT_UNKNOWN" };
+    }
+  }
+
   private async mutateCampaigns(operations: unknown[]): Promise<CampaignProviderOutcome> {
     const token = await this.bearer();
     if (typeof token !== "string") return token;
@@ -112,6 +164,12 @@ export class GoogleAdsCampaignExecutionProvider implements CampaignExecutionProv
     const planned = buildGoogleSearchPausedCreatePlan(command.approvedSpec, this.config.customerId);
     if (!planned.ok) {
       return { kind: "validation_failure", errorCode: planned.code };
+    }
+    const account = await this.readAccountCurrency();
+    if (!isAccountCurrencyResult(account)) return account;
+    const currency = requireMatchingProviderCurrency(account.currency, command.approvedSpec.budget.currency);
+    if (!currency.ok) {
+      return { kind: "validation_failure", errorCode: currency.code };
     }
     const token = await this.bearer();
     if (typeof token !== "string") return token;
@@ -244,13 +302,19 @@ export class GoogleAdsCampaignExecutionProvider implements CampaignExecutionProv
     if (!command.boundProviderCampaignId) {
       return { kind: "validation_failure", errorCode: "GOOGLE_ADS_OBJECT_REQUIRED" };
     }
+    const day = utcCalendarDayWindow(window.windowStartIso.slice(0, 10));
+    if (!day || day.windowEndIso !== window.windowEndIso) {
+      return { kind: "validation_failure", errorCode: "CAMPAIGN_METRICS_WINDOW_REQUIRED" };
+    }
+    const account = await this.readAccountCurrency();
+    if (!isAccountCurrencyResult(account)) return account;
     try {
       const response = await this.transport.request({
         method: "POST",
         url: `${this.customerPath()}/googleAds:search`,
         headers: this.headers(token),
         body: JSON.stringify({
-          query: `SELECT metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions FROM campaign WHERE campaign.resource_name = '${command.boundProviderCampaignId}' AND segments.date BETWEEN '${window.windowStartIso.slice(0, 10)}' AND '${window.windowEndIso.slice(0, 10)}'`,
+          query: `SELECT metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions FROM campaign WHERE campaign.resource_name = '${command.boundProviderCampaignId}' AND segments.date = '${googleAdsSegmentsDateEquals(day)}'`,
         }),
       });
       if (response.status === 429 || response.status >= 500) {
@@ -276,8 +340,8 @@ export class GoogleAdsCampaignExecutionProvider implements CampaignExecutionProv
           impressions,
           clicks,
           providerConversions: Math.trunc(conversions),
-          currency: "INR",
-          providerRevision: `${window.windowStartIso}:${window.windowEndIso}`,
+          currency: account.currency,
+          providerRevision: `${day.windowStartIso}:${day.windowEndIso}`,
         },
       };
     } catch (error) {

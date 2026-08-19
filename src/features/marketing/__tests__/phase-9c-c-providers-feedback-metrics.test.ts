@@ -43,8 +43,18 @@ import {
   parseCapturedClickIdentifiers,
   selectMetaCapiIdentifiers,
 } from "../execution/contracts/click-identifiers.ts";
-import { metricsSyncOperationKey, parseMetricsSyncOperationKey } from "../execution/domain/metrics-window.ts";
+import { metricsSyncOperationKey, parseMetricsSyncOperationKey, googleAdsSegmentsDateEquals, metaInsightsTimeRangeForCanonicalDay, utcCalendarDayWindow } from "../execution/domain/metrics-window.ts";
 import { spendMinorToGoogleMicros } from "../execution/server/money.ts";
+import {
+  CAMPAIGN_APPROVAL_HASH_MISMATCH,
+  CAMPAIGN_APPROVED_SNAPSHOT_READ_FAILED,
+  CAMPAIGN_AUDIENCE_RULE_HASH_MISMATCH,
+  CAMPAIGN_FROZEN_AUDIENCE_RULE_MISSING,
+  CAMPAIGN_VERSIONS_APPROVED_SPEC_SELECT,
+  loadApprovedExecutionSpec,
+  type ApprovedSpecStore,
+} from "../execution/server/load-approved-execution-spec.ts";
+import { CAMPAIGN_PROVIDER_CURRENCY_MISMATCH } from "../execution/domain/provider-currency.ts";
 
 const root = process.cwd();
 const metaInsights = readFileSync(
@@ -197,6 +207,9 @@ describe("Phase 9C-C Meta adapter", () => {
     let seenAuth = "";
     let seenBody = "";
     const transport = createMemoryProviderHttpTransport((input) => {
+      if (input.method === "GET" && input.url.includes("fields=currency")) {
+        return { status: 200, bodyText: JSON.stringify({ currency: "INR" }) };
+      }
       seenAuth = input.headers.Authorization ?? "";
       seenBody = input.body ?? "";
       assert.match(input.url, /graph\.facebook\.com\/v26\.0\/act_123\/ads/);
@@ -313,6 +326,7 @@ describe("Phase 9C-C Meta adapter", () => {
     assert.equal(metrics.kind, "success");
     if (metrics.kind === "success") {
       assert.equal(metrics.snapshot.spendMinor, 1250);
+      assert.equal(metrics.snapshot.currency, "INR");
       assert.equal(metrics.snapshot.impressions, 100);
       assert.equal(metrics.snapshot.clicks, 4);
       assert.equal(metrics.snapshot.providerConversions, 1);
@@ -400,6 +414,9 @@ describe("Phase 9C-C Google adapter", () => {
       if (input.url.includes("oauth2.googleapis.com")) {
         return { status: 200, bodyText: JSON.stringify({ access_token: "ya29.fake" }) };
       }
+      if (input.body?.includes("customer.currency_code")) {
+        return { status: 200, bodyText: JSON.stringify({ results: [{ customer: { currencyCode: "INR" } }] }) };
+      }
       mutateBody = input.body ?? "";
       assert.match(input.url, /googleAds:mutate/);
       return {
@@ -439,6 +456,9 @@ describe("Phase 9C-C Google adapter", () => {
     const transport = createMemoryProviderHttpTransport((input) => {
       if (input.url.includes("oauth2.googleapis.com")) {
         return { status: 200, bodyText: JSON.stringify({ access_token: "ya29.fake" }) };
+      }
+      if (input.body?.includes("customer.currency_code")) {
+        return { status: 200, bodyText: JSON.stringify({ results: [{ customer: { currencyCode: "INR" } }] }) };
       }
       if (input.body?.includes("metrics.cost_micros")) {
         return { status: 200, bodyText: googleMetrics };
@@ -485,7 +505,39 @@ describe("Phase 9C-C Google adapter", () => {
       { windowStartIso: "2026-08-01T00:00:00.000Z", windowEndIso: "2026-08-02T00:00:00.000Z" }
     );
     assert.equal(metrics.kind, "success");
-    if (metrics.kind === "success") assert.equal(metrics.snapshot.spendMinor, 250);
+    if (metrics.kind === "success") {
+      assert.equal(metrics.snapshot.spendMinor, 250);
+      assert.equal(metrics.snapshot.currency, "INR");
+    }
+    const queries: string[] = [];
+    const dated = new GoogleAdsCampaignExecutionProvider(
+      googleConfig,
+      createMemoryProviderHttpTransport((input) => {
+        if (input.url.includes("oauth2.googleapis.com")) {
+          return { status: 200, bodyText: JSON.stringify({ access_token: "ya29.fake" }) };
+        }
+        if (input.body?.includes("customer.currency_code")) {
+          return { status: 200, bodyText: JSON.stringify({ results: [{ customer: { currencyCode: "INR" } }] }) };
+        }
+        queries.push(input.body ?? "");
+        return { status: 200, bodyText: googleMetrics };
+      })
+    );
+    const d1 = utcCalendarDayWindow("2026-08-18");
+    const d2 = utcCalendarDayWindow("2026-08-19");
+    assert.ok(d1 && d2);
+    await dated.fetchMetrics(
+      { ...command, providerChannel: "google_ads", boundProviderCampaignId: "customers/1234567890/campaigns/9" },
+      { windowStartIso: d1.windowStartIso, windowEndIso: d1.windowEndIso }
+    );
+    await dated.fetchMetrics(
+      { ...command, providerChannel: "google_ads", boundProviderCampaignId: "customers/1234567890/campaigns/9" },
+      { windowStartIso: d2.windowStartIso, windowEndIso: d2.windowEndIso }
+    );
+    assert.match(queries[0] ?? "", /segments\.date = '2026-08-18'/);
+    assert.match(queries[1] ?? "", /segments\.date = '2026-08-19'/);
+    assert.doesNotMatch(queries[0] ?? "", /2026-08-19/);
+    assert.doesNotMatch(queries[1] ?? "", /2026-08-18/);
   });
 
   test("rate-limit and timeout unknown", async () => {
@@ -734,6 +786,249 @@ describe("Phase 9C-C approved spec and metrics windows", () => {
     const second = parseMetricsSyncOperationKey(metricsSyncOperationKey("33333333-3333-3333-3333-333333333333", "2026-08-02"));
     assert.equal(first?.windowEndIso, second?.windowStartIso);
     assert.equal(parseMetricsSyncOperationKey("run:metrics_sync:once"), null);
+  });
+
+  test("Google GAQL uses equality on D only for [D, D+1)", () => {
+    const d1 = utcCalendarDayWindow("2026-08-18");
+    const d2 = utcCalendarDayWindow("2026-08-19");
+    assert.ok(d1 && d2);
+    assert.equal(googleAdsSegmentsDateEquals(d1), "2026-08-18");
+    assert.equal(googleAdsSegmentsDateEquals(d2), "2026-08-19");
+    assert.notEqual(googleAdsSegmentsDateEquals(d1), googleAdsSegmentsDateEquals(d2));
+    const googleSrc = readFileSync(join(root, "src/features/marketing/execution/server/google-ads-provider.ts"), "utf8");
+    assert.match(googleSrc, /segments\.date = '/);
+    assert.doesNotMatch(googleSrc, /segments\.date BETWEEN/);
+  });
+
+  test("Meta Insights since=until=D for canonical day", () => {
+    const d1 = utcCalendarDayWindow("2026-08-18");
+    const d2 = utcCalendarDayWindow("2026-08-19");
+    assert.ok(d1 && d2);
+    assert.deepEqual(metaInsightsTimeRangeForCanonicalDay(d1), { since: "2026-08-18", until: "2026-08-18" });
+    assert.deepEqual(metaInsightsTimeRangeForCanonicalDay(d2), { since: "2026-08-19", until: "2026-08-19" });
+  });
+});
+
+describe("Phase 9C-C approved spec runtime source", () => {
+  const RULE = "11".repeat(32);
+  const versionId = "44444444-4444-4444-4444-444444444444";
+  const runId = "22222222-2222-2222-2222-222222222222";
+
+  function store(overrides: Record<string, { data: Record<string, unknown> | null; error: { message?: string } | null }>): ApprovedSpecStore {
+    const tables: Record<string, { data: Record<string, unknown> | null; error: { message?: string } | null }> = {
+      campaign_runs: {
+        data: {
+          campaign_version_id: versionId,
+          configuration_hash: HASH,
+          audience_rule_hash: RULE,
+          provider_channel: "meta_ads",
+          targeting_mode: "broad_public",
+        },
+        error: null,
+      },
+      campaign_versions: {
+        data: {
+          id: versionId,
+          status: "approved",
+          configuration_hash: HASH,
+          budget_snapshot: { currency: "INR", daily_budget_paise: 2500, total_budget_paise: null },
+          creative_snapshot: {
+            headline: "Home interiors",
+            primary_text: "Book a consult today in Pune",
+            call_to_action: "LEARN_MORE",
+            media_references: [],
+            geo_country_codes: ["IN"],
+            destination_url: "https://onedecore.in/lp/home-interiors",
+          },
+          intended_window_snapshot: { start_date: "2026-09-01", end_date: null },
+          destination_reference: "https://onedecore.in/lp/home-interiors",
+        },
+        error: null,
+      },
+      campaign_audience_rule_versions: {
+        data: { rule_hash: RULE, frozen_at: "2026-08-19T00:00:00.000Z" },
+        error: null,
+      },
+      campaign_approvals: {
+        data: { decision: "approved", configuration_hash: HASH, rule_hash: RULE },
+        error: null,
+      },
+      ...overrides,
+    };
+    return {
+      from(table: string) {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  maybeSingle: async () => tables[table] ?? { data: null, error: null },
+                };
+              },
+            };
+          },
+        };
+      },
+    };
+  }
+
+  test("valid run/version/rule/approval loads spec", async () => {
+    const loaded = await loadApprovedExecutionSpec(store({}), runId);
+    assert.equal(loaded.ok, true);
+  });
+
+  test("version query error fails deterministically", async () => {
+    const loaded = await loadApprovedExecutionSpec(
+      store({ campaign_versions: { data: null, error: { message: "column does not exist" } } }),
+      runId
+    );
+    assert.equal(loaded.ok, false);
+    if (!loaded.ok) assert.equal(loaded.code, CAMPAIGN_APPROVED_SNAPSHOT_READ_FAILED);
+  });
+
+  test("missing frozen rule fails", async () => {
+    const loaded = await loadApprovedExecutionSpec(
+      store({ campaign_audience_rule_versions: { data: null, error: null } }),
+      runId
+    );
+    assert.equal(loaded.ok, false);
+    if (!loaded.ok) assert.equal(loaded.code, CAMPAIGN_FROZEN_AUDIENCE_RULE_MISSING);
+  });
+
+  test("run rule hash mismatch fails", async () => {
+    const loaded = await loadApprovedExecutionSpec(
+      store({
+        campaign_runs: {
+          data: {
+            campaign_version_id: versionId,
+            configuration_hash: HASH,
+            audience_rule_hash: "22".repeat(32),
+            provider_channel: "meta_ads",
+            targeting_mode: "broad_public",
+          },
+          error: null,
+        },
+      }),
+      runId
+    );
+    assert.equal(loaded.ok, false);
+    if (!loaded.ok) assert.equal(loaded.code, CAMPAIGN_AUDIENCE_RULE_HASH_MISMATCH);
+  });
+
+  test("approval hash mismatch fails", async () => {
+    const loaded = await loadApprovedExecutionSpec(
+      store({
+        campaign_approvals: {
+          data: { decision: "approved", configuration_hash: "ff".repeat(32), rule_hash: RULE },
+          error: null,
+        },
+      }),
+      runId
+    );
+    assert.equal(loaded.ok, false);
+    if (!loaded.ok) assert.equal(loaded.code, CAMPAIGN_APPROVAL_HASH_MISMATCH);
+  });
+
+  test("campaign_versions select does not request audience_rule_hash", () => {
+    assert.doesNotMatch(CAMPAIGN_VERSIONS_APPROVED_SPEC_SELECT, /audience_rule_hash/);
+    const src = readFileSync(join(root, "src/features/marketing/execution/server/load-approved-execution-spec.ts"), "utf8");
+    assert.match(src, /CAMPAIGN_VERSIONS_APPROVED_SPEC_SELECT/);
+    const dispatcher = readFileSync(join(root, "src/features/marketing/execution/server/dispatcher.ts"), "utf8");
+    assert.doesNotMatch(dispatcher, /campaign_versions[\s\S]{0,200}audience_rule_hash/);
+  });
+});
+
+describe("Phase 9C-C provider currency authority", () => {
+  test("Google INR account allows create; USD denies before mutate", async () => {
+    let mutated = false;
+    const inr = new GoogleAdsCampaignExecutionProvider(
+      googleConfig,
+      createMemoryProviderHttpTransport((input) => {
+        if (input.url.includes("oauth2.googleapis.com")) {
+          return { status: 200, bodyText: JSON.stringify({ access_token: "ya29.fake" }) };
+        }
+        if (input.body?.includes("customer.currency_code")) {
+          return { status: 200, bodyText: JSON.stringify({ results: [{ customer: { currencyCode: "INR" } }] }) };
+        }
+        mutated = true;
+        return {
+          status: 200,
+          bodyText: JSON.stringify({
+            mutateOperationResponses: [{ campaignResult: { resourceName: "customers/1234567890/campaigns/9" } }],
+          }),
+        };
+      })
+    );
+    const allowed = await inr.create({
+      ...command,
+      providerChannel: "google_ads",
+      boundProviderCampaignId: null,
+      approvedSpec: googleCompatibleSpec(),
+    });
+    assert.equal(allowed.kind, "success");
+    assert.equal(mutated, true);
+
+    let usdMutated = false;
+    const usd = new GoogleAdsCampaignExecutionProvider(
+      googleConfig,
+      createMemoryProviderHttpTransport((input) => {
+        if (input.url.includes("oauth2.googleapis.com")) {
+          return { status: 200, bodyText: JSON.stringify({ access_token: "ya29.fake" }) };
+        }
+        if (input.body?.includes("customer.currency_code")) {
+          return { status: 200, bodyText: JSON.stringify({ results: [{ customer: { currencyCode: "USD" } }] }) };
+        }
+        usdMutated = true;
+        throw new Error("mutate must not run");
+      })
+    );
+    const denied = await usd.create({
+      ...command,
+      providerChannel: "google_ads",
+      boundProviderCampaignId: null,
+      approvedSpec: googleCompatibleSpec(),
+    });
+    assert.equal(denied.kind, "validation_failure");
+    if (denied.kind === "validation_failure") assert.equal(denied.errorCode, CAMPAIGN_PROVIDER_CURRENCY_MISMATCH);
+    assert.equal(usdMutated, false);
+  });
+
+  test("Meta INR allows create; mismatch denies; insights use account_currency", async () => {
+    const allowed = await new MetaAdsCampaignExecutionProvider(
+      metaConfig,
+      createMemoryProviderHttpTransport((input) => {
+        if (input.method === "GET" && input.url.includes("fields=currency")) {
+          return { status: 200, bodyText: JSON.stringify({ currency: "INR" }) };
+        }
+        return { status: 200, bodyText: JSON.stringify({ id: "120000000000000001" }) };
+      })
+    ).create({ ...command, boundProviderCampaignId: null, approvedSpec: metaCompatibleSpec() });
+    assert.equal(allowed.kind, "success");
+
+    let adsCalled = false;
+    const denied = await new MetaAdsCampaignExecutionProvider(
+      metaConfig,
+      createMemoryProviderHttpTransport((input) => {
+        if (input.method === "GET" && input.url.includes("fields=currency")) {
+          return { status: 200, bodyText: JSON.stringify({ currency: "USD" }) };
+        }
+        adsCalled = true;
+        throw new Error("ads mutate must not run");
+      })
+    ).create({ ...command, boundProviderCampaignId: null, approvedSpec: metaCompatibleSpec() });
+    assert.equal(denied.kind, "validation_failure");
+    if (denied.kind === "validation_failure") assert.equal(denied.errorCode, CAMPAIGN_PROVIDER_CURRENCY_MISMATCH);
+    assert.equal(adsCalled, false);
+
+    const metrics = await new MetaAdsCampaignExecutionProvider(
+      metaConfig,
+      createMemoryProviderHttpTransport(() => ({ status: 200, bodyText: metaInsights }))
+    ).fetchMetrics(command, {
+      windowStartIso: "2026-08-01T00:00:00.000Z",
+      windowEndIso: "2026-08-02T00:00:00.000Z",
+    });
+    assert.equal(metrics.kind, "success");
+    if (metrics.kind === "success") assert.equal(metrics.snapshot.currency, "INR");
   });
 });
 

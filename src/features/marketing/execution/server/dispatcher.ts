@@ -8,10 +8,10 @@ import type { CampaignProviderCommand, CampaignProviderOutcome } from "./provide
 import type { PaidAdsChannel } from "../contracts/run-lifecycle.ts";
 import type { CampaignOperationType } from "../contracts/run-lifecycle.ts";
 import type { ConversionFeedbackType } from "../contracts/conversion-feedback.ts";
-import { parseCampaignApprovedExecutionSpec } from "../domain/approved-execution-spec.ts";
 import { parseMetricsSyncOperationKey } from "../domain/metrics-window.ts";
 import { parseCapturedClickIdentifiers } from "../contracts/click-identifiers.ts";
 import { resolveGoogleAdsProviderConfig, resolveMetaAdsProviderConfig } from "./provider-config.ts";
+import { loadApprovedExecutionSpec, type ApprovedSpecStore } from "./load-approved-execution-spec.ts";
 
 const DEFAULT_BATCH = 5;
 const MAX_BATCH = 10;
@@ -28,40 +28,6 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 export type CampaignExecutionAdmin = ReturnType<typeof createAdminClient>;
-
-async function loadApprovedSpec(
-  admin: CampaignExecutionAdmin,
-  runId: string
-): Promise<{ readonly ok: true; readonly spec: NonNullable<CampaignProviderCommand["approvedSpec"]> } | { readonly ok: false; readonly code: string }> {
-  const { data: runRow } = await admin
-    .from("campaign_runs")
-    .select("campaign_version_id, configuration_hash, provider_channel, targeting_mode")
-    .eq("id", runId)
-    .maybeSingle();
-  const run = asRecord(runRow);
-  const versionId = String(run.campaign_version_id ?? "");
-  const { data: versionRow } = await admin
-    .from("campaign_versions")
-    .select(
-      "id, status, configuration_hash, audience_rule_hash, budget_snapshot, creative_snapshot, intended_window_snapshot, destination_reference"
-    )
-    .eq("id", versionId)
-    .maybeSingle();
-  const version = asRecord(versionRow);
-  return parseCampaignApprovedExecutionSpec({
-    campaignVersionId: String(version.id ?? versionId),
-    versionStatus: String(version.status ?? ""),
-    versionConfigurationHash: String(version.configuration_hash ?? ""),
-    runConfigurationHash: String(run.configuration_hash ?? ""),
-    providerChannel: String(run.provider_channel ?? ""),
-    targetingMode: String(run.targeting_mode ?? ""),
-    audienceRuleHash: version.audience_rule_hash == null ? null : String(version.audience_rule_hash),
-    budgetSnapshot: version.budget_snapshot,
-    creativeSnapshot: version.creative_snapshot,
-    intendedWindowSnapshot: version.intended_window_snapshot,
-    destinationReference: version.destination_reference == null ? null : String(version.destination_reference),
-  });
-}
 
 export async function dispatchCampaignRunOperations(options?: {
   readonly maxBatch?: number;
@@ -106,16 +72,28 @@ export async function dispatchCampaignRunOperations(options?: {
     const runId = String(claim.campaign_run_id);
     const targetId = String(claim.campaign_run_target_id);
 
-    const { data: runRow } = await admin
+    const runQuery = await admin
       .from("campaign_runs")
       .select("run_reference, provider_channel, targeting_mode, configuration_hash, campaign_version_id")
       .eq("id", runId)
       .maybeSingle();
-    const { data: targetRow } = await admin
+    const targetQuery = await admin
       .from("campaign_run_targets")
       .select("run_target_reference, provider_campaign_id")
       .eq("id", targetId)
       .maybeSingle();
+    if (runQuery.error || targetQuery.error || !runQuery.data) {
+      await admin.rpc("fail_campaign_run_operation", {
+        p_operation_id: operationId,
+        p_error_code: "CAMPAIGN_APPROVED_SNAPSHOT_READ_FAILED",
+        p_retry: false,
+      });
+      outcomes.push("failed");
+      processed += 1;
+      continue;
+    }
+    const runRow = runQuery.data;
+    const targetRow = targetQuery.data;
 
     const channel = String(runRow?.provider_channel) as PaidAdsChannel;
     const resolvedForChannel = resolveCampaignExecutionProvider(env, { channel });
@@ -146,7 +124,7 @@ export async function dispatchCampaignRunOperations(options?: {
 
     let approvedSpec: CampaignProviderCommand["approvedSpec"] = null;
     if (operationType === "create" || operationType === "activate") {
-      const loaded = await loadApprovedSpec(admin, runId);
+      const loaded = await loadApprovedExecutionSpec(admin as unknown as ApprovedSpecStore, runId);
       if (!loaded.ok) {
         await admin.rpc("fail_campaign_run_operation", {
           p_operation_id: operationId,

@@ -171,13 +171,29 @@ function fakeAdmin(claim: Record<string, unknown>): CampaignExecutionAdmin {
       }
       return { data: { outcome_code: "ok" }, error: null };
     },
-    from() {
+    from(table: string) {
       return {
         select() {
           return {
             eq() {
               return {
                 async maybeSingle() {
+                  if (table === "campaign_audience_rule_versions") {
+                    return {
+                      data: { rule_hash: "b".repeat(64), frozen_at: "2026-08-19T00:00:00.000Z" },
+                      error: null,
+                    };
+                  }
+                  if (table === "campaign_approvals") {
+                    return {
+                      data: {
+                        decision: "approved",
+                        configuration_hash: "a".repeat(64),
+                        rule_hash: "b".repeat(64),
+                      },
+                      error: null,
+                    };
+                  }
                   return {
                     data: {
                       run_reference: "OD-CR-2026-000001",
@@ -185,9 +201,9 @@ function fakeAdmin(claim: Record<string, unknown>): CampaignExecutionAdmin {
                       targeting_mode: "broad_public",
                       campaign_version_id: "44444444-4444-4444-4444-444444444444",
                       configuration_hash: "a".repeat(64),
+                      audience_rule_hash: "b".repeat(64),
                       id: "44444444-4444-4444-4444-444444444444",
                       status: "approved",
-                      audience_rule_hash: "b".repeat(64),
                       budget_snapshot: { currency: "INR", daily_budget_paise: 1000, total_budget_paise: 5000 },
                       creative_snapshot: {
                         headline: "Complete home interiors",
