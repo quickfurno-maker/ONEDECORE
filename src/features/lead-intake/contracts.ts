@@ -92,6 +92,10 @@ export interface LeadIntakeRequestBody {
     readonly utmContent?: string;
     readonly fbclid?: string;
     readonly gclid?: string;
+    readonly wbraid?: string;
+    readonly gbraid?: string;
+    readonly fbc?: string;
+    readonly fbp?: string;
   };
   readonly antiBot: {
     readonly website: string;
@@ -132,6 +136,20 @@ export interface ValidatedLeadIntake {
   readonly landingPath: string;
   readonly attribution: Record<string, string>;
   readonly landingPublicationContext: SignedPublicationContext | null;
+  readonly campaignExecutionContext: {
+    readonly signature: string;
+    readonly context: {
+      readonly version: 1;
+      readonly runReference: string;
+      readonly runTargetReference: string;
+      readonly providerChannel: "meta_ads" | "google_ads";
+      readonly campaignReference: string;
+      readonly campaignVersionNumber: number;
+      readonly landingPublicationReference: string | null;
+      readonly issuedAt: string;
+      readonly expiresAt: string;
+    };
+  } | null;
   readonly consentServicePhone: true;
   readonly consentServiceEmail: boolean;
   readonly consentWhatsapp: boolean;

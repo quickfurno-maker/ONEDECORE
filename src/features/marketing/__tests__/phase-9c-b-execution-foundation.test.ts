@@ -35,8 +35,11 @@ import {
 import {
   getCampaignExecutionMode,
   getCampaignExecutionHmacSecret,
-  CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED,
 } from "../execution/server/execution-env.ts";
+import {
+  CAMPAIGN_PRODUCTION_GATE_OFF,
+  CAMPAIGN_SANDBOX_TRANSPORT_UNAVAILABLE,
+} from "../execution/server/provider-factory.ts";
 
 const root = process.cwd();
 const hmacSecret = "phase-9c-b-execution-hmac-secret-32chars";
@@ -149,8 +152,8 @@ describe("Phase 9C-B execution mode factory", () => {
     const live = resolveCampaignExecutionProvider({ ONEDECORE_CAMPAIGN_EXECUTION_MODE: "live" });
     assert.equal(sandbox.ok, false);
     assert.equal(live.ok, false);
-    if (!sandbox.ok) assert.equal(sandbox.code, CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED);
-    if (!live.ok) assert.equal(live.code, CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED);
+    if (!sandbox.ok) assert.equal(sandbox.code, CAMPAIGN_SANDBOX_TRANSPORT_UNAVAILABLE);
+    if (!live.ok) assert.equal(live.code, CAMPAIGN_PRODUCTION_GATE_OFF);
   });
 });
 
@@ -168,17 +171,48 @@ function fakeAdmin(claim: Record<string, unknown>): CampaignExecutionAdmin {
       }
       return { data: { outcome_code: "ok" }, error: null };
     },
-    from() {
+    from(table: string) {
       return {
         select() {
           return {
             eq() {
               return {
                 async maybeSingle() {
+                  if (table === "campaign_audience_rule_versions") {
+                    return {
+                      data: { rule_hash: "b".repeat(64), frozen_at: "2026-08-19T00:00:00.000Z" },
+                      error: null,
+                    };
+                  }
+                  if (table === "campaign_approvals") {
+                    return {
+                      data: {
+                        decision: "approved",
+                        configuration_hash: "a".repeat(64),
+                        rule_hash: "b".repeat(64),
+                      },
+                      error: null,
+                    };
+                  }
                   return {
                     data: {
                       run_reference: "OD-CR-2026-000001",
                       provider_channel: "meta_ads",
+                      targeting_mode: "broad_public",
+                      campaign_version_id: "44444444-4444-4444-4444-444444444444",
+                      configuration_hash: "a".repeat(64),
+                      audience_rule_hash: "b".repeat(64),
+                      id: "44444444-4444-4444-4444-444444444444",
+                      status: "approved",
+                      budget_snapshot: { currency: "INR", daily_budget_paise: 1000, total_budget_paise: 5000 },
+                      creative_snapshot: {
+                        headline: "Complete home interiors",
+                        primary_text: "Book a consultation",
+                        call_to_action: "LEARN_MORE",
+                        media_references: [],
+                      },
+                      intended_window_snapshot: { start_date: "2026-09-01", end_date: null },
+                      destination_reference: "OD-LP-2026-000001",
                       run_target_reference: "OD-CRT-2026-000001",
                       provider_campaign_id: null,
                     },
@@ -209,7 +243,7 @@ describe("Phase 9C-B dispatcher", () => {
       env: { ONEDECORE_CAMPAIGN_EXECUTION_MODE: "live" },
     });
     assert.equal(live.processed, 0);
-    assert.equal(live.code, CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED);
+    assert.equal(live.code, CAMPAIGN_PRODUCTION_GATE_OFF);
   });
 
   test("mock success completes", async () => {
@@ -438,7 +472,8 @@ describe("Phase 9C-B reconcile and manual dispatch auth", () => {
     });
     assert.equal(live.success, false);
     assert.equal(sandbox.success, false);
-    assert.equal(live.code, "CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED");
+    assert.equal(live.code, "CAMPAIGN_PRODUCTION_GATE_OFF");
+    assert.equal(sandbox.code, "CAMPAIGN_SANDBOX_TRANSPORT_UNAVAILABLE");
     assert.equal(dispatched, false);
   });
 });

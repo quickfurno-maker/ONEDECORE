@@ -59,8 +59,8 @@ export function canShareProviderCustomerData(
 
   return {
     allowed: false,
-    code: "PROVIDER_DATA_SHARING_NOT_IMPLEMENTED_IN_9C_B",
+    code: "PROVIDER_CUSTOMER_DATA_TRANSPORT_BLOCKED_IN_9C_C",
     reason:
-      "Even with a production sharing flag, Phase 9C-B has no real Ads adapters and must not send CRM identifiers.",
+      "Phase 9C-C implements adapters but still blocks outbound CRM identifier transport until Phase 10 production/privacy gates.",
   };
 }

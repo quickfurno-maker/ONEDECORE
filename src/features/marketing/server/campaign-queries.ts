@@ -281,3 +281,12 @@ export async function getMarketingConsentState(
     outreachBlocked: Boolean(row.outreach_blocked),
   };
 }
+
+export async function getCampaignMetricsBoard(campaignId: string): Promise<Record<string, unknown> | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_campaign_metrics_board", {
+    p_campaign_id: campaignId,
+  });
+  if (error) return null;
+  return data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+}

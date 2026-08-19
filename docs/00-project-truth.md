@@ -1,13 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced through Phase 9C-B repository implementation, August 19, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced through Phase 9C-C repository implementation, August 19, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 9C-B — Campaign Execution Foundation (**REPOSITORY IMPLEMENTED** / DEC-0086; **not merged**; managed apply **NOT** done). Phase 9C-A architecture freeze **MERGED** (DEC-0085 / PR #69). Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production **OFF**). Phase 9C-C **NOT STARTED**. Phase 9D-A **ARCHITECTURE_FROZEN**. Phase 9D-B **BLOCKED**.
-**Next Phase:** Independent review + merge of 9C-B, then Phase 9C-C. 9D-B remains blocked until Phase 9C implementation/certification complete. Production Landing Lab, paid provider execution, and `/shop` stay disabled.
+**Current Phase:** Phase 9C-C — Providers, Feedback & Metrics (**REPOSITORY IMPLEMENTED** / DEC-0087; **not merged**; managed apply **NOT** done). Phase 9C-B **MERGED** (DEC-0086 / PR #70). Phase 9C-A architecture freeze **MERGED** (DEC-0085 / PR #69). Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production **OFF**). Phase 9D-A **ARCHITECTURE_FROZEN**. Phase 9D-B **BLOCKED**.
+**Next Phase:** Independent review + merge of 9C-C, then recovery-gated managed apply of M33 then the 9C-C migration. 9D-B remains blocked until Phase 9C implementation/certification complete. Production Landing Lab, paid provider execution, and `/shop` stay disabled.
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; M31 immutable; production **not** activated)
 
 ---
@@ -260,7 +260,7 @@ Production activation remains Phase 10.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
 ## Phase 9C Architecture Freeze — Campaign Execution, Attribution & Conversion Feedback
 
-Phase 9C architecture is **FROZEN** under **ADR-0031 / DEC-0085 / OD9C-1–OD9C-18**. Phase 9C-B repository implementation is recorded in **DEC-0086** (mock foundation only). Phase 9C-C (real adapters, metrics, feedback) is **NOT STARTED**. Managed remains **M1–M32**. No live Ads writes.
+Phase 9C architecture is **FROZEN** under **ADR-0031 / DEC-0085 / OD9C-1–OD9C-18**. Phase 9C-B repository implementation is **MERGED** (**DEC-0086** / PR #70). Phase 9C-C repository implementation is recorded in **DEC-0087** (adapters + metrics + feedback; live OFF). Phase 9C is **not** complete until managed apply + certification. Managed remains **M1–M32**. No live Ads writes.
 
 Locked boundaries:
 

@@ -29,6 +29,8 @@ export const CAMPAIGN_OPERATION_TYPES = [
   "resume",
   "cancel",
   "sync",
+  "metrics_sync",
+  "conversion_feedback",
 ] as const;
 
 export type CampaignOperationType = (typeof CAMPAIGN_OPERATION_TYPES)[number];

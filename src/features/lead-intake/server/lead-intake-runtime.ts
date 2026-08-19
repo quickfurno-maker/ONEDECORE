@@ -12,6 +12,8 @@ import {
 } from "./lead-intake-validation.ts";
 import { resolveTrustedLandingIdentity } from "../../landing-lab/server/verify-live-publication-context.ts";
 import { getLandingLabHmacSecret } from "../../landing-lab/server/landing-lab-env.ts";
+import { resolveTrustedRunAttribution } from "../../marketing/execution/server/verify-execution-context.ts";
+import { getCampaignExecutionHmacSecret } from "../../marketing/execution/server/execution-env.ts";
 import type { ValidatedLeadIntake } from "../contracts.ts";
 import { deriveNetworkIdentifier } from "./request-canonicalisation.ts";
 import {
@@ -301,6 +303,32 @@ export async function handleLeadIntakeRequest(
     };
   }
 
+  let intakeValue = trusted.value;
+  if (intakeValue.campaignExecutionContext) {
+    const executionSecret = getCampaignExecutionHmacSecret();
+    if (executionSecret) {
+      try {
+        const runTrusted = await resolveTrustedRunAttribution({
+          signed: intakeValue.campaignExecutionContext,
+          client: (deps.createAdminClient ?? createAdminClient)(),
+          hmacSecret: executionSecret,
+          trustedLandingPublicationReference:
+            typeof intakeValue.attribution.publication_reference === "string"
+              ? intakeValue.attribution.publication_reference
+              : null,
+        });
+        if (runTrusted.ok) {
+          intakeValue = {
+            ...intakeValue,
+            attribution: { ...intakeValue.attribution, ...runTrusted.identity },
+          };
+        }
+      } catch {
+        // Invalid/expired/mismatch: do not write run identity; continue public lead.
+      }
+    }
+  }
+
   const network = deriveNetworkIdentifier({
     mode,
     trustProxy: env.trustProxy,
@@ -309,7 +337,7 @@ export async function handleLeadIntakeRequest(
   });
 
   const result = await submitValidatedLeadIntake(
-    trusted.value,
+    intakeValue,
     {
       mode,
       hashSecret: env.hashSecret,

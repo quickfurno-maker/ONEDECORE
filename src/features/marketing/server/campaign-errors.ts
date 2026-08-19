@@ -12,7 +12,10 @@ export type CampaignActionCode =
   | "CAMPAIGN_CANCEL_SUPER_ADMIN_ONLY"
   | "CAMPAIGN_RUN_INVALID_TRANSITION"
   | "CAMPAIGN_NO_PAID_ADS_CHANNEL"
-  | "CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED";
+  | "CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED"
+  | "CAMPAIGN_PRODUCTION_GATE_OFF"
+  | "CAMPAIGN_SANDBOX_TRANSPORT_UNAVAILABLE"
+  | "CAMPAIGN_PROVIDER_CONFIG_MISSING";
 
 export class CampaignActionError extends Error {
   public readonly code: CampaignActionCode;
@@ -90,6 +93,24 @@ export function campaignErrorFromUnknown(error: unknown): CampaignActionError {
     return new CampaignActionError(
       "CAMPAIGN_NO_PAID_ADS_CHANNEL",
       "This approved version has no paid Ads channel to execute."
+    );
+  }
+  if (combined.includes("CAMPAIGN_PRODUCTION_GATE_OFF")) {
+    return new CampaignActionError(
+      "CAMPAIGN_PRODUCTION_GATE_OFF",
+      "Live campaign execution remains fail-closed until Phase 10 production activation."
+    );
+  }
+  if (combined.includes("CAMPAIGN_SANDBOX_TRANSPORT_UNAVAILABLE")) {
+    return new CampaignActionError(
+      "CAMPAIGN_SANDBOX_TRANSPORT_UNAVAILABLE",
+      "Sandbox Ads transport is unavailable without an explicit sandbox transport gate."
+    );
+  }
+  if (combined.includes("CAMPAIGN_PROVIDER_CONFIG_MISSING")) {
+    return new CampaignActionError(
+      "CAMPAIGN_PROVIDER_CONFIG_MISSING",
+      "Required Ads provider configuration is missing."
     );
   }
   if (combined.includes("CAMPAIGN_PROVIDER_ADAPTER_NOT_IMPLEMENTED")) {

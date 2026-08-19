@@ -111,6 +111,7 @@ function validatedFixture(
     landingPath: "/",
     attribution: { landingPath: "/" },
     landingPublicationContext: null,
+    campaignExecutionContext: null,
     consentServicePhone: true,
     consentServiceEmail: true,
     consentWhatsapp: false,

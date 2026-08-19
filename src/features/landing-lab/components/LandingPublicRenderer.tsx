@@ -5,14 +5,17 @@ import type { SignedPublicationContext } from "../contracts/publication-context.
 interface LandingPublicRendererProps {
   readonly blocks: readonly LandingBlock[];
   readonly signedContext: SignedPublicationContext;
+  readonly campaignExecutionContext?: unknown;
 }
 
 function PublicBlock({
   block,
   signedContext,
+  campaignExecutionContext,
 }: {
   readonly block: LandingBlock;
   readonly signedContext: SignedPublicationContext;
+  readonly campaignExecutionContext?: unknown;
 }) {
   switch (block.type) {
     case "hero":
@@ -114,7 +117,13 @@ function PublicBlock({
         </section>
       );
     case "lead_form_placeholder":
-      return <LiveLandingLeadForm block={block} signedContext={signedContext} />;
+      return (
+        <LiveLandingLeadForm
+          block={block}
+          signedContext={signedContext}
+          campaignExecutionContext={campaignExecutionContext}
+        />
+      );
     case "footer":
       return (
         <footer className="border-t border-neutral-800 pt-4 text-sm text-neutral-500">
@@ -130,11 +139,20 @@ function PublicBlock({
   }
 }
 
-export function LandingPublicRenderer({ blocks, signedContext }: LandingPublicRendererProps) {
+export function LandingPublicRenderer({
+  blocks,
+  signedContext,
+  campaignExecutionContext,
+}: LandingPublicRendererProps) {
   return (
     <div className="space-y-10">
       {blocks.map((block) => (
-        <PublicBlock key={block.blockId} block={block} signedContext={signedContext} />
+        <PublicBlock
+          key={block.blockId}
+          block={block}
+          signedContext={signedContext}
+          campaignExecutionContext={campaignExecutionContext}
+        />
       ))}
     </div>
   );
