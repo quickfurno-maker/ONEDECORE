@@ -2,10 +2,9 @@
 
 **Status:** `PREPARATION_FROZEN` (docs only; **not** 9D-C implementation; **not** 9D-B closeout)
 **Date:** 2026-08-20
-**Starting main:** `06b6d2ea5f1cf4d886be497a8eed7ce8d1d52e58` (PR #73 true merge)
-**Branch / worktree:** `phase-9d-c-admin-storefront-prep` / `C:\Users\KESHAV SHARMA\Desktop\OneDecore-phase9d-c-prep`
-**Authority:** ADR-0028 / ADR-0030 / ADR-0032 / DEC-0079 / DEC-0083 / DEC-0089 / DEC-0090 / OD9D-1–OD9D-12
-**Scope:** docs only. No M36. No `commerce_service_areas`. No `/shop`. No checkout. No payment. No managed write. No deploy.
+**Starting main (homepage lock):** `e1aa6ca5d412fb03d9e92835098236c8254b42c0` (PR #74 true merge)
+**Authority:** ADR-0028 / ADR-0030 / ADR-0032 / DEC-0079 / DEC-0083 / DEC-0089 / DEC-0090 / DEC-0091 / OD9D-1–OD9D-12
+**Scope:** docs only. No M36. No `commerce_service_areas`. No `/shop`. No homepage runtime. No checkout. No payment. No managed write. No deploy.
 
 ---
 
@@ -73,7 +72,7 @@ Normative text: [ADR-0032](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c
 | Service areas | Items 31 and 34 only. Next forward-only migration **after** certified M35; timestamp **unreserved**; **not** this gate; do not call it M36 |
 | Launch city | Pune first; later cities from Admin |
 | GIS | Forbidden |
-| Homepage | One brand; ~70% interiors / ~30% furniture; admin-driven furniture categories + featured |
+| Homepage | One brand; ~70% interiors / ~30% furniture; admin-driven furniture categories + featured; **section order and UX locked in ADR-0032 §9.1 / DEC-0091**; no fake cart; compact mobile length |
 | Page builder | Forbidden |
 | Cart in 9D-C | No functional cart; 9D-D owns cart/checkout |
 | Production | Phase 10 only; not an admin toggle |
@@ -83,7 +82,7 @@ Normative text: [ADR-0032](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c
 
 ## 4. Allowed now vs forbidden now
 
-**Allowed:** business catalogue preparation, image preparation, this admin/UX spec, SEO copy in existing fields.
+**Allowed:** business catalogue preparation, image preparation, this admin/UX spec, SEO copy in existing fields, homepage **design** preparation (no runtime).
 
 **Forbidden now:** M36 or any post-M35 SQL, service-area DB, `/shop` implementation, checkout, payment, deployment, 9D-B closeout impersonation, M35 managed apply.
 
@@ -99,3 +98,13 @@ Normative text: [ADR-0032](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c
 - No CRM lead or MARKETING consent from commerce
 - No project conversion from furniture
 - Protected stashes untouched
+
+---
+
+## 6. Unified homepage design lock (DEC-0091)
+
+Normative: [ADR-0032 §9.1](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md). Checklist: [docs/design/phase-9d-c-unified-homepage.md](../design/phase-9d-c-unified-homepage.md).
+
+Locked order: Header → Hero → Two Journeys → Trust Strip → Interior Services → Modular Kitchen Feature → Shop Furniture Categories → Featured Furniture → Portfolio → Why ONEDECORE → Interior Process → Pincode Checker → Testimonials → Dual CTA → Footer.
+
+No homepage runtime in this documentation. Cart icon only in 9D-D. Search/wishlist icons only when those 9D-C features exist.

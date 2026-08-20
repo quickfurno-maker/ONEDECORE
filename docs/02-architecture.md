@@ -1,11 +1,11 @@
 # 02 — TECHNICAL ARCHITECTURE AND REPOSITORY SPECIFICATION
 
-**Document Status:** Locked Architecture Baseline (truth-synced through Phase 9D-C admin/storefront preparation freeze, August 20, 2026)
+**Document Status:** Locked Architecture Baseline (truth-synced through Phase 9D-C unified homepage design lock, August 20, 2026)
 **Pattern:** Modular Monolith
 **Framework:** Next.js 16.2.11
 **Database:** Supabase PostgreSQL
 **Route Prefix:** Internal CRM uses `/admin`
-**Current Phase:** Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production OFF). Phase 9C **M33/M34 MANAGED APPLY CERTIFIED** (DEC-0088; production OFF). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030). Phase 9D-B **REPOSITORY MERGED** (DEC-0089; repo M1–M35; managed M1–M34; M35 not applied). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090; `/shop` not started).
+**Current Phase:** Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production OFF). Phase 9C **M33/M34 MANAGED APPLY CERTIFIED** (DEC-0088; production OFF). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030). Phase 9D-B **REPOSITORY MERGED** (DEC-0089; repo M1–M35; managed M1–M34; M35 not applied). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090) + **homepage design locked** (DEC-0091; `/shop` not started).
 
 ---
 
