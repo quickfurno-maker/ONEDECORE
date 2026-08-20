@@ -1,6 +1,6 @@
 # 06 — SECURITY, PRIVACY AND ROW LEVEL SECURITY (RLS) POLICIES
 
-**Document Status:** Locked Security Baseline (truth-synced through Phase 9C managed apply certification, August 20, 2026)
+**Document Status:** Locked Security Baseline (truth-synced through Phase 9D-B repository implementation, August 20, 2026)
 **RLS Target:** 100% Coverage on API-Exposed Application Tables
 **Default Access:** Anonymous Access Denied for Private Schemas
 
@@ -165,9 +165,9 @@ The following security requirements are **locked in architecture** and must be e
 - **n8n** is not consent, approval, or campaign truth.
 - **Approval** has no provider side effect and creates no send intent, schedule, run, or recipient list.
 
-## 11. Phase 9D commerce security (**architecture frozen** — **not implemented**)
+## 11. Phase 9D commerce security (9D-B catalogue foundation **repository-implemented**; public `/shop` **not** started)
 
-Browser cart totals are never authoritative. Online payment success is webhook/server verified; webhooks are signature-checked and **idempotent**. A paid webhook **after** inventory-hold expiry must attempt a fresh stock commit or cancel the order **without overselling**; payment stays `paid` if money was received (`payment_failed` is not used for that case). Guest tracking: POST order reference + mobile; server issues a **15-minute HttpOnly signed cookie** scoped to `/shop/order`. The URL `orderReference` alone never authorizes PII; raw mobile is not placed in query/URL. Commerce SKU stock is not warehouse ERP. No MARKETING consent from purchase. Tax rates are explicit admin configuration (no architecture-seeded statutory GST percentage). See [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md).
+9D-B staff mutations use `authorize()` inside SECURITY DEFINER RPCs; FORCE RLS; no anon catalogue SELECT; no authenticated table DML. Media: session + `commerce.catalog.manage` before service-role uploads. Inventory: Super Admin `commerce.inventory.manage` signed delta only; `reserved_qty` not staff-writable. Tax rates are explicit admin configuration (no architecture-seeded statutory GST percentage). Browser cart totals remain future 9D-D authority (not in this gate). See [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md) and [DEC-0089](10-decision-register.md).
 
 ## 12. Related Governance Documents
 

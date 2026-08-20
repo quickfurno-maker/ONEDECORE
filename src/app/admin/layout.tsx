@@ -10,6 +10,7 @@ import { hasAnyWhatsappInboxReadPermission } from "@/features/whatsapp/server/wh
 import { hasAnyProjectReadPermission } from "@/features/projects/server/project-permissions";
 import { hasAnyCampaignReadPermission } from "@/features/marketing/server/campaign-permissions";
 import { hasLandingPagesReadPermission } from "@/features/landing-lab/server/landing-permissions";
+import { hasAnyCommerceReadPermission } from "@/features/commerce/server/commerce-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await requireStaffPermission("admin.access", "/admin");
-  const [showCrmLink, showWhatsappLink, showStaffLink, showAttendanceLink, showLeaveLink, showProjectsLink, showCampaignsLink, showLandingLabLink] =
+  const [showCrmLink, showWhatsappLink, showStaffLink, showAttendanceLink, showLeaveLink, showProjectsLink, showCampaignsLink, showLandingLabLink, showCommerceLink] =
     await Promise.all([
       hasAnyCrmLeadReadPermission(),
       hasAnyWhatsappInboxReadPermission(),
@@ -30,6 +31,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       hasAnyProjectReadPermission(),
       hasAnyCampaignReadPermission(),
       hasLandingPagesReadPermission(),
+      hasAnyCommerceReadPermission(),
     ]);
 
   return (
@@ -123,6 +125,14 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
               >
                 Landing Lab
+              </Link>
+            ) : null}
+            {showCommerceLink ? (
+              <Link
+                href="/admin/commerce"
+                className="inline-flex min-h-11 items-center text-xs font-medium text-neutral-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+              >
+                Commerce
               </Link>
             ) : null}
             {showWhatsappLink ? (
