@@ -827,6 +827,636 @@ export type Database = {
           },
         ]
       }
+      commerce_categories: {
+        Row: {
+          category_reference: string
+          cod_allowed_override: boolean | null
+          created_at: string
+          created_by: string
+          free_shipping_eligible_override: boolean | null
+          id: string
+          name: string
+          parent_category_id: string | null
+          seo_description: string | null
+          seo_title: string | null
+          shipping_charge_paise_override: number | null
+          short_description: string | null
+          slug: string
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          category_reference: string
+          cod_allowed_override?: boolean | null
+          created_at?: string
+          created_by: string
+          free_shipping_eligible_override?: boolean | null
+          id?: string
+          name: string
+          parent_category_id?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          shipping_charge_paise_override?: number | null
+          short_description?: string | null
+          slug: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          category_reference?: string
+          cod_allowed_override?: boolean | null
+          created_at?: string
+          created_by?: string
+          free_shipping_eligible_override?: boolean | null
+          id?: string
+          name?: string
+          parent_category_id?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          shipping_charge_paise_override?: number | null
+          short_description?: string | null
+          slug?: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_categories_parent_category_id_fkey"
+            columns: ["parent_category_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_categories_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_inventory: {
+        Row: {
+          available_qty: number | null
+          reserved_qty: number
+          stock_on_hand: number
+          updated_at: string
+          updated_by: string | null
+          variant_id: string
+        }
+        Insert: {
+          available_qty?: number | null
+          reserved_qty?: number
+          stock_on_hand?: number
+          updated_at?: string
+          updated_by?: string | null
+          variant_id: string
+        }
+        Update: {
+          available_qty?: number | null
+          reserved_qty?: number
+          stock_on_hand?: number
+          updated_at?: string
+          updated_by?: string | null
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_inventory_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_inventory_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: true
+            referencedRelation: "commerce_product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_pincodes: {
+        Row: {
+          eta_max_days: number
+          eta_min_days: number
+          pincode: string
+          serviceable: boolean
+          updated_at: string
+          updated_by: string | null
+          zone_code: string | null
+        }
+        Insert: {
+          eta_max_days?: number
+          eta_min_days?: number
+          pincode: string
+          serviceable: boolean
+          updated_at?: string
+          updated_by?: string | null
+          zone_code?: string | null
+        }
+        Update: {
+          eta_max_days?: number
+          eta_min_days?: number
+          pincode?: string
+          serviceable?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          zone_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_pincodes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_product_media: {
+        Row: {
+          alt_text: string
+          created_at: string
+          created_by: string
+          id: string
+          is_primary: boolean
+          original_bucket: string
+          original_path: string
+          product_id: string
+          public_bucket: string
+          public_path: string
+          sort_order: number
+          status: string
+          updated_at: string
+          variant_id: string | null
+        }
+        Insert: {
+          alt_text?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_primary?: boolean
+          original_bucket?: string
+          original_path: string
+          product_id: string
+          public_bucket?: string
+          public_path: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Update: {
+          alt_text?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_primary?: boolean
+          original_bucket?: string
+          original_path?: string
+          product_id?: string
+          public_bucket?: string
+          public_path?: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_product_media_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_product_media_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_product_media_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_product_specifications: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          product_id: string
+          sort_order: number
+          specification_key: string
+          specification_value: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          product_id: string
+          sort_order?: number
+          specification_key: string
+          specification_value: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          product_id?: string
+          sort_order?: number
+          specification_key?: string
+          specification_value?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_product_specifications_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_product_specifications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_product_specifications_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_product_variants: {
+        Row: {
+          availability_mode: string
+          compare_at_price_paise: number | null
+          created_at: string
+          created_by: string
+          display_name: string | null
+          id: string
+          option_values: Json
+          product_id: string
+          selling_price_paise: number
+          sku: string
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          availability_mode?: string
+          compare_at_price_paise?: number | null
+          created_at?: string
+          created_by: string
+          display_name?: string | null
+          id?: string
+          option_values?: Json
+          product_id: string
+          selling_price_paise: number
+          sku: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          availability_mode?: string
+          compare_at_price_paise?: number | null
+          created_at?: string
+          created_by?: string
+          display_name?: string | null
+          id?: string
+          option_values?: Json
+          product_id?: string
+          selling_price_paise?: number
+          sku?: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_product_variants_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_product_variants_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_products: {
+        Row: {
+          archived_at: string | null
+          category_id: string
+          cod_allowed_override: boolean | null
+          created_at: string
+          created_by: string
+          featured: boolean
+          free_shipping_eligible_override: boolean | null
+          full_description: string
+          hsn_sac_code: string | null
+          id: string
+          lock_version: number
+          name: string
+          product_reference: string
+          published_at: string | null
+          seo_description: string | null
+          seo_title: string | null
+          shipping_charge_paise_override: number | null
+          short_description: string | null
+          slug: string
+          status: string
+          tax_rate_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          category_id: string
+          cod_allowed_override?: boolean | null
+          created_at?: string
+          created_by: string
+          featured?: boolean
+          free_shipping_eligible_override?: boolean | null
+          full_description?: string
+          hsn_sac_code?: string | null
+          id?: string
+          lock_version?: number
+          name: string
+          product_reference: string
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          shipping_charge_paise_override?: number | null
+          short_description?: string | null
+          slug: string
+          status?: string
+          tax_rate_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          category_id?: string
+          cod_allowed_override?: boolean | null
+          created_at?: string
+          created_by?: string
+          featured?: boolean
+          free_shipping_eligible_override?: boolean | null
+          full_description?: string
+          hsn_sac_code?: string | null
+          id?: string
+          lock_version?: number
+          name?: string
+          product_reference?: string
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          shipping_charge_paise_override?: number | null
+          short_description?: string | null
+          slug?: string
+          status?: string
+          tax_rate_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_products_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_products_tax_rate_id_fkey"
+            columns: ["tax_rate_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_tax_rates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_products_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_related_products: {
+        Row: {
+          product_id: string
+          related_product_id: string
+          sort_order: number
+        }
+        Insert: {
+          product_id: string
+          related_product_id: string
+          sort_order?: number
+        }
+        Update: {
+          product_id?: string
+          related_product_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_related_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_related_products_related_product_id_fkey"
+            columns: ["related_product_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_shipping_settings: {
+        Row: {
+          assembly_install_note: string | null
+          cod_enabled_global: boolean
+          default_shipping_charge_paise: number
+          free_shipping_threshold_paise: number | null
+          id: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          assembly_install_note?: string | null
+          cod_enabled_global?: boolean
+          default_shipping_charge_paise?: number
+          free_shipping_threshold_paise?: number | null
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          assembly_install_note?: string | null
+          cod_enabled_global?: boolean
+          default_shipping_charge_paise?: number
+          free_shipping_threshold_paise?: number | null
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_shipping_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_tax_rates: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          rate_basis_points: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          rate_basis_points: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          rate_basis_points?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_tax_rates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_tax_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_tax_settings: {
+        Row: {
+          gst_inclusive_display: boolean
+          id: number
+          tax_required_for_publish: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          gst_inclusive_display?: boolean
+          id?: number
+          tax_required_for_publish?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          gst_inclusive_display?: boolean
+          id?: number
+          tax_required_for_publish?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_tax_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_events: {
         Row: {
           actor_type: string
@@ -4887,6 +5517,15 @@ export type Database = {
         }
         Returns: Json
       }
+      adjust_commerce_inventory: {
+        Args: {
+          p_delta: number
+          p_idempotency_key: string
+          p_reason: string
+          p_variant_id: string
+        }
+        Returns: Json
+      }
       admin_create_quotation_tax_profile: {
         Args: {
           p_code: string
@@ -4977,6 +5616,18 @@ export type Database = {
         }
         Returns: Json
       }
+      archive_commerce_product: {
+        Args: {
+          p_expected_lock_version: number
+          p_id: string
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
+      archive_commerce_product_media: {
+        Args: { p_idempotency_key: string; p_media_id: string }
+        Returns: Json
+      }
       archive_holiday: { Args: { p_holiday_id: string }; Returns: Json }
       archive_quotation_draft: {
         Args: { p_expected_lock_version: number; p_quotation_id: string }
@@ -5038,6 +5689,17 @@ export type Database = {
         Returns: Json
       }
       authorize: { Args: { requested_permission: string }; Returns: boolean }
+      authorize_commerce_product_media_upload: {
+        Args: {
+          p_alt_text: string
+          p_idempotency_key: string
+          p_is_primary: boolean
+          p_product_id: string
+          p_sort_order: number
+          p_variant_id: string | null
+        }
+        Returns: Json
+      }
       bind_whatsapp_send_intent_dispatch: {
         Args: {
           p_dispatch_attempt_id: string
@@ -5367,6 +6029,17 @@ export type Database = {
       }
       create_campaign_run: {
         Args: { p_campaign_version_id: string; p_idempotency_key: string }
+        Returns: Json
+      }
+      create_commerce_product: {
+        Args: {
+          p_category_id: string
+          p_full_description: string
+          p_idempotency_key: string
+          p_name: string
+          p_short_description: string | null
+          p_slug: string
+        }
         Returns: Json
       }
       create_holiday: {
@@ -5732,6 +6405,15 @@ export type Database = {
         }
         Returns: Json
       }
+      finalize_commerce_product_media: {
+        Args: {
+          p_idempotency_key: string
+          p_media_id: string
+          p_original_path: string
+          p_public_path: string
+        }
+        Returns: Json
+      }
       freeze_landing_page_version: {
         Args: { p_idempotency_key: string; p_version_id: string }
         Returns: Json
@@ -5746,6 +6428,127 @@ export type Database = {
       }
       get_campaign_metrics_board: {
         Args: { p_campaign_id: string }
+        Returns: Json
+      }
+      publish_commerce_product: {
+        Args: {
+          p_expected_lock_version: number
+          p_id: string
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
+      replace_commerce_product_specifications: {
+        Args: { p_idempotency_key: string; p_product_id: string; p_specs: Json }
+        Returns: Json
+      }
+      replace_commerce_related_products: {
+        Args: {
+          p_idempotency_key: string
+          p_product_id: string
+          p_related_ids: string[]
+        }
+        Returns: Json
+      }
+      set_commerce_category_status: {
+        Args: { p_id: string; p_idempotency_key: string; p_status: string }
+        Returns: Json
+      }
+      set_commerce_variant_status: {
+        Args: { p_id: string; p_idempotency_key: string; p_status: string }
+        Returns: Json
+      }
+      update_commerce_product: {
+        Args: {
+          p_category_id: string
+          p_cod_allowed_override: boolean | null
+          p_expected_lock_version: number
+          p_featured: boolean
+          p_free_shipping_eligible_override: boolean | null
+          p_full_description: string
+          p_hsn_sac_code: string | null
+          p_id: string
+          p_idempotency_key: string
+          p_name: string
+          p_seo_description: string | null
+          p_seo_title: string | null
+          p_shipping_charge_paise_override: number | null
+          p_short_description: string | null
+          p_slug: string
+          p_tax_rate_id: string | null
+        }
+        Returns: Json
+      }
+      update_commerce_shipping_settings: {
+        Args: {
+          p_assembly_install_note: string | null
+          p_cod_enabled_global: boolean
+          p_default_shipping_charge_paise: number
+          p_free_shipping_threshold_paise: number | null
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
+      update_commerce_tax_settings: {
+        Args: {
+          p_idempotency_key: string
+          p_tax_required_for_publish: boolean
+        }
+        Returns: Json
+      }
+      upsert_commerce_category: {
+        Args: {
+          p_cod_allowed_override: boolean | null
+          p_free_shipping_eligible_override: boolean | null
+          p_id: string | null
+          p_idempotency_key: string
+          p_name: string
+          p_parent_id: string | null
+          p_seo_description: string | null
+          p_seo_title: string | null
+          p_shipping_charge_paise_override: number | null
+          p_short_description: string | null
+          p_slug: string
+          p_sort_order: number
+        }
+        Returns: Json
+      }
+      upsert_commerce_pincode: {
+        Args: {
+          p_eta_max_days: number
+          p_eta_min_days: number
+          p_idempotency_key: string
+          p_pincode: string
+          p_serviceable: boolean
+          p_zone_code: string | null
+        }
+        Returns: Json
+      }
+      upsert_commerce_product_variant: {
+        Args: {
+          p_availability_mode: string
+          p_compare_at_price_paise: number | null
+          p_display_name: string | null
+          p_id: string | null
+          p_idempotency_key: string
+          p_option_values: Json
+          p_product_id: string
+          p_selling_price_paise: number
+          p_sku: string
+          p_sort_order: number
+        }
+        Returns: Json
+      }
+      upsert_commerce_tax_rate: {
+        Args: {
+          p_code: string
+          p_description: string | null
+          p_id: string | null
+          p_idempotency_key: string
+          p_is_active: boolean
+          p_name: string
+          p_rate_basis_points: number
+        }
         Returns: Json
       }
       verify_campaign_execution_context_binding: {

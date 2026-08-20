@@ -1,14 +1,14 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced through Phase 9C managed apply certification, August 20, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced through Phase 9D-B repository implementation, August 20, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 9C — Campaign execution, feedback & metrics (**MANAGED APPLY CERTIFIED** / DEC-0088; M33 then M34 on managed OneDecore; production **OFF**). Phase 9C-C repository **MERGED** (DEC-0087 / PR #71). Phase 9C-B **MERGED** (DEC-0086 / PR #70). Phase 9C-A architecture freeze **MERGED** (DEC-0085 / PR #69). Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production **OFF**). Phase 9D-A **ARCHITECTURE_FROZEN**. Phase 9D-B **BLOCKED** until this closeout is independently reviewed and merged.
-**Next Phase:** Independent review/merge of the Phase 9C managed-apply closeout PR. Then Phase 9D-B may start. Production Landing Lab, paid provider execution, and `/shop` stay disabled.
-**Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; M31 immutable; production **not** activated)
+**Current Phase:** Phase 9D-B — Ready-made furniture catalogue/inventory foundation (**REPOSITORY IMPLEMENTED** / DEC-0089; repository **M1–M35**; managed **M1–M34**; M35 **not** applied). Phase 9C **MANAGED APPLY CERTIFIED** (DEC-0088). Phase 9D-A **ARCHITECTURE_FROZEN**. Public `/shop` **not started**. Production **OFF**.
+**Next Phase:** Independent review/merge of the Phase 9D-B PR, then recovery-qualified managed apply/certification of M35. Then 9D-C may start. Production Landing Lab, paid provider execution, and `/shop` stay disabled.
+**Previous Phase:** Phase 9C — Campaign execution, feedback & metrics (**COMPLETE** / DEC-0088; M1–M34 managed)
 
 ---
 
@@ -58,7 +58,7 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 ├─────────────────────────────────────────────────────────┤
 │ 10. Controlled n8n Workflows (async notification bus)  │
 ├─────────────────────────────────────────────────────────┤
-│ 11. Ready-Made Furniture Shop (/shop) (9D-A frozen; implementation blocked) │
+│ 11. Ready-Made Furniture Shop (/shop) (9D-B catalogue admin foundation; public /shop not started) │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -110,6 +110,7 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Landing Page Lab foundation (migration 32) | Managed-applied 2026-08-19 (Phase 9B M32); production Landing Lab **OFF**; DEC-0084 |
 | Campaign execution foundation (migration 33) | Managed-applied 2026-08-20 after M32 (Phase 9C-B M33); production execution **OFF**; DEC-0088 |
 | Campaign metrics & conversion feedback foundation (migration 34) | Managed-applied 2026-08-20 immediately after M33 (Phase 9C-C M34); DEC-0088 |
+| Commerce catalogue & inventory foundation (migration 35) | Repository-only 9D-B (DEC-0089); **not** managed-applied; managed remains M1–M34 |
 | Migration alignment | Repository: **M1–M34**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M34**; pending **NONE**; M33/M34 **MANAGED_APPLIED**; M32 **MANAGED_APPLIED**; M31 **immutable** |
 
 CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed database (`lpurlfmpvriyvpkujvyl`) through **M27**. Phase 7B is **COMPLETE** (PR #55 merged). Phase 8A is **COMPLETE** (PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; managed **M1–M28**). Phase 8B is **COMPLETE** (OD8B-1–OD8B-8 / ADR-0025 / DEC-0073–DEC-0074; PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`; managed **M1–M29**). Phase 8C is **COMPLETE** (OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; architecture PR #60 merged `5b4a7f300e63b438884a2b440a69a569d91b9e5d`; implementation PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; managed **M1–M30**). Phase 9A architecture is frozen (OD9A-1–OD9A-6 / ADR-0027 / DEC-0077; architecture PR #62 true merge `caff9d0864e1546dff38646df4355dafa851a473`). Phase 9A repository implementation is **REPOSITORY_COMPLETE** (DEC-0078). Phase 9A managed apply is **CERTIFIED** (DEC-0080; M31 applied 2026-08-18; managed **M1–M31**; pending **NONE**; M31 immutable). PR #63 **MERGED** `26e6346ef6722b7c6ff5908c12f208854b513ad6`. Phase 9D is **ROADMAP_LOCKED** (DEC-0079 / ADR-0028; implementation **NOT STARTED**). **Production deployment pending** (Phase 10); **public intake remains inactive**.
@@ -281,6 +282,12 @@ Locked boundaries:
 
 9D-B remains blocked until Phase 9C implementation and certification complete.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9D_B_IMPLEMENTATION_START -->
+## Phase 9D-B — Catalogue & Inventory Foundation
+
+Phase 9D-B repository implementation is recorded as **DEC-0089** / [audit](audits/phase-9d-b-commerce-catalogue-inventory-foundation.md). Architecture remains **ADR-0030**. Repository **M1–M35**. Managed **M1–M34**. Public `/shop` is **not** implemented. Checkout/payments are **not** implemented. Production remains **OFF**. 9D-C starts only after independent review, merge, and recovery-qualified managed apply of M35.
+<!-- PHASE_9D_B_IMPLEMENTATION_END -->
 
 <!-- PHASE_9D_A_ARCHITECTURE_FREEZE_START -->
 ## Phase 9D-A Architecture Freeze — Ready-Made Furniture E-commerce

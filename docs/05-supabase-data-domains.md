@@ -1,6 +1,6 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9C managed apply certification, August 20, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9D-B repository implementation, August 20, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
 **Migrations Applied (Managed):** M1–M34 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. M34 **MANAGED_APPLIED**. M33 **MANAGED_APPLIED**. M32 **MANAGED_APPLIED**. M31 **MANAGED_APPLIED_IMMUTABLE**.
@@ -223,3 +223,9 @@ Existing authoritative data is reused (`leads.landing_path`, `leads.attribution`
 
 9C-C (DEC-0087 / PR #71) plus managed apply (DEC-0088): `campaign_metric_snapshots`, `campaign_conversion_feedback_events`; M33 `campaign_run_operations` extended forward-only with `metrics_sync` and `conversion_feedback`. Trusted run/target enrich existing `leads.attribution` / `lead_source_touchpoints`. Managed **M1–M34**. No parallel attribution or CRM-stage table.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9D_B_IMPLEMENTATION_START -->
+### Phase 9D-B Commerce Catalogue / Inventory Domain
+
+M35 (DEC-0089): `commerce_categories`, `commerce_products`, `commerce_product_variants`, `commerce_product_media`, `commerce_product_specifications`, `commerce_inventory`, `commerce_related_products`, `commerce_pincodes`, `commerce_shipping_settings`, `commerce_tax_rates`, `commerce_tax_settings`. Dedicated buckets `commerce-product-originals` / `commerce-product-public`. No order/payment tables. Repository **M1–M35**. Managed **M1–M34**.
+<!-- PHASE_9D_B_IMPLEMENTATION_END -->
