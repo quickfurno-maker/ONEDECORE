@@ -1,11 +1,11 @@
 # 02 — TECHNICAL ARCHITECTURE AND REPOSITORY SPECIFICATION
 
-**Document Status:** Locked Architecture Baseline (truth-synced through Phase 9D-B repository implementation, August 20, 2026)
+**Document Status:** Locked Architecture Baseline (truth-synced through Phase 9D-C admin/storefront preparation freeze, August 20, 2026)
 **Pattern:** Modular Monolith
 **Framework:** Next.js 16.2.11
 **Database:** Supabase PostgreSQL
 **Route Prefix:** Internal CRM uses `/admin`
-**Current Phase:** Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production OFF). Phase 9C **M33/M34 MANAGED APPLY CERTIFIED** (DEC-0088; production OFF). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030). Phase 9D-B **REPOSITORY IMPLEMENTED** (DEC-0089; repo M1–M35; managed M1–M34; `/shop` not started).
+**Current Phase:** Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production OFF). Phase 9C **M33/M34 MANAGED APPLY CERTIFIED** (DEC-0088; production OFF). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030). Phase 9D-B **REPOSITORY MERGED** (DEC-0089; repo M1–M35; managed M1–M34; M35 not applied). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090; `/shop` not started).
 
 ---
 
@@ -124,6 +124,7 @@ OneDecore/
 - [ADR-0031: Phase 9C Campaign Execution Architecture Freeze](ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversion-feedback.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
+- [ADR-0032: Commerce admin control and 9D-C storefront preparation](ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md)
 
 ---
 
