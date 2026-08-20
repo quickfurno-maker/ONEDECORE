@@ -6491,7 +6491,6 @@ export type Database = {
       }
       update_commerce_tax_settings: {
         Args: {
-          p_gst_inclusive_display: boolean
           p_idempotency_key: string
           p_tax_required_for_publish: boolean
         }

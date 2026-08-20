@@ -16,15 +16,9 @@ export function TaxSettingsForm({ settings }: { readonly settings: CommerceTaxSe
       }}
     >
       <h2 className="text-sm font-semibold text-neutral-100">Tax settings</h2>
-      <label className="flex min-h-11 items-center gap-2 text-xs text-neutral-200">
-        <input
-          type="checkbox"
-          name="gstInclusiveDisplay"
-          value="true"
-          defaultChecked={settings?.gst_inclusive_display ?? true}
-        />
-        GST-inclusive display
-      </label>
+      <p className="rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-neutral-200">
+        GST-inclusive pricing — locked for ONEDECORE MVP
+      </p>
       <label className="flex min-h-11 items-center gap-2 text-xs text-neutral-200">
         <input
           type="checkbox"

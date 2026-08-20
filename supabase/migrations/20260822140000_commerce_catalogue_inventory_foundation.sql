@@ -79,7 +79,8 @@ create table public.commerce_tax_settings (
   tax_required_for_publish boolean not null default true,
   updated_at timestamptz not null default now(),
   updated_by uuid references public.profiles(id) on delete restrict,
-  constraint chk_commerce_tax_settings_singleton check (id = 1)
+  constraint chk_commerce_tax_settings_singleton check (id = 1),
+  constraint chk_commerce_tax_settings_gst_inclusive check (gst_inclusive_display is true)
 );
 insert into public.commerce_tax_settings(id) values (1) on conflict (id) do nothing;
 
@@ -236,13 +237,25 @@ begin new.updated_at := now(); return new; end $$;
 create or replace function private.commerce_reject_category_parent()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
+  if tg_op = 'UPDATE' and new.parent_category_id is not distinct from old.parent_category_id then
+    return new;
+  end if;
   if new.parent_category_id = new.id then
     raise exception 'COMMERCE_VALIDATION' using errcode = '22023';
   end if;
-  if new.parent_category_id is not null and exists (
-    select 1 from public.commerce_categories c where c.id = new.parent_category_id and c.parent_category_id is not null
-  ) then
-    raise exception 'COMMERCE_VALIDATION' using errcode = '22023';
+  if new.parent_category_id is not null then
+    if not exists (
+      select 1 from public.commerce_categories p
+      where p.id = new.parent_category_id and p.parent_category_id is null
+    ) then
+      raise exception 'COMMERCE_VALIDATION' using errcode = '22023';
+    end if;
+    if exists (
+      select 1 from public.commerce_categories ch
+      where ch.parent_category_id = new.id
+    ) then
+      raise exception 'COMMERCE_VALIDATION' using errcode = '22023';
+    end if;
   end if;
   return new;
 end $$;
@@ -433,9 +446,9 @@ create or replace function public.upsert_commerce_tax_rate(p_id uuid,p_code text
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare a uuid; h text; x jsonb; r public.commerce_tax_rates%rowtype; op text:='upsert_commerce_tax_rate'; begin a:=private.commerce_require_actor('commerce.settings.manage'); h:=private.commerce_sha256(jsonb_build_array(p_id,p_code,p_name,p_rate_basis_points,p_description,p_is_active)::text); perform private.commerce_idempotency_xact_lock(a,op,p_idempotency_key); x:=private.commerce_idempotency_lookup(a,op,p_idempotency_key,h); if x is not null then return x; end if; if p_id is null then insert into public.commerce_tax_rates(code,name,rate_basis_points,description,is_active,created_by,updated_by) values(trim(p_code),trim(p_name),p_rate_basis_points,p_description,coalesce(p_is_active,true),a,a) returning * into r; else update public.commerce_tax_rates set code=trim(p_code),name=trim(p_name),rate_basis_points=p_rate_basis_points,description=p_description,is_active=coalesce(p_is_active,true),updated_by=a where id=p_id returning * into r; if not found then raise exception 'COMMERCE_NOT_FOUND' using errcode='P0002'; end if; end if; x=jsonb_build_object('id',r.id,'code',r.code,'rate_basis_points',r.rate_basis_points,'is_active',r.is_active); perform private.commerce_idempotency_store(a,op,p_idempotency_key,h,x); return x; end $$;
 
-create or replace function public.update_commerce_tax_settings(p_gst_inclusive_display boolean,p_tax_required_for_publish boolean,p_idempotency_key uuid)
+create or replace function public.update_commerce_tax_settings(p_tax_required_for_publish boolean,p_idempotency_key uuid)
 returns jsonb language plpgsql security definer set search_path = '' as $$
-declare a uuid; h text; x jsonb; r public.commerce_tax_settings%rowtype; op text:='update_commerce_tax_settings'; begin a:=private.commerce_require_actor('commerce.settings.manage'); h:=private.commerce_sha256(jsonb_build_array(p_gst_inclusive_display,p_tax_required_for_publish)::text); perform private.commerce_idempotency_xact_lock(a,op,p_idempotency_key); x:=private.commerce_idempotency_lookup(a,op,p_idempotency_key,h); if x is not null then return x; end if; update public.commerce_tax_settings set gst_inclusive_display=p_gst_inclusive_display,tax_required_for_publish=p_tax_required_for_publish,updated_by=a where id=1 returning * into r; x=jsonb_build_object('id',r.id,'gst_inclusive_display',r.gst_inclusive_display,'tax_required_for_publish',r.tax_required_for_publish); perform private.commerce_idempotency_store(a,op,p_idempotency_key,h,x); return x; end $$;
+declare a uuid; h text; x jsonb; r public.commerce_tax_settings%rowtype; op text:='update_commerce_tax_settings'; begin a:=private.commerce_require_actor('commerce.settings.manage'); h:=private.commerce_sha256(jsonb_build_array(p_tax_required_for_publish)::text); perform private.commerce_idempotency_xact_lock(a,op,p_idempotency_key); x:=private.commerce_idempotency_lookup(a,op,p_idempotency_key,h); if x is not null then return x; end if; update public.commerce_tax_settings set tax_required_for_publish=p_tax_required_for_publish,updated_by=a where id=1 returning * into r; x=jsonb_build_object('id',r.id,'gst_inclusive_display',r.gst_inclusive_display,'tax_required_for_publish',r.tax_required_for_publish); perform private.commerce_idempotency_store(a,op,p_idempotency_key,h,x); return x; end $$;
 
 create or replace function public.upsert_commerce_pincode(p_pincode text,p_serviceable boolean,p_zone_code text,p_eta_min_days integer,p_eta_max_days integer,p_idempotency_key uuid)
 returns jsonb language plpgsql security definer set search_path = '' as $$
@@ -452,7 +465,41 @@ declare a uuid; h text; x jsonb; m uuid:=gen_random_uuid(); op text:='authorize_
 
 create or replace function public.finalize_commerce_product_media(p_media_id uuid,p_original_path text,p_public_path text,p_idempotency_key uuid)
 returns jsonb language plpgsql security definer set search_path = '' as $$
-declare a uuid; h text; x jsonb; m public.commerce_product_media%rowtype; op text:='finalize_commerce_product_media'; begin a:=private.commerce_require_actor('commerce.catalog.manage'); h:=private.commerce_sha256(jsonb_build_array(p_media_id,p_original_path,p_public_path)::text); perform private.commerce_idempotency_xact_lock(a,op,p_idempotency_key); x:=private.commerce_idempotency_lookup(a,op,p_idempotency_key,h); if x is not null then return x; end if; select * into m from public.commerce_product_media where id=p_media_id for update; if not found then raise exception 'COMMERCE_NOT_FOUND' using errcode='P0002'; end if; if m.original_path<>p_original_path or m.public_path<>p_public_path then raise exception 'COMMERCE_VALIDATION' using errcode='22023'; end if; if m.is_primary then update public.commerce_product_media set is_primary=false,updated_at=now() where product_id=m.product_id and id<>m.id and status='active'; end if; update public.commerce_product_media set status='active',updated_at=now() where id=m.id; x=jsonb_build_object('media_id',m.id,'status','active'); perform private.commerce_idempotency_store(a,op,p_idempotency_key,h,x); return x; end $$;
+declare a uuid; h text; x jsonb; m public.commerce_product_media%rowtype; op text:='finalize_commerce_product_media';
+begin
+  a:=private.commerce_require_actor('commerce.catalog.manage');
+  h:=private.commerce_sha256(jsonb_build_array(p_media_id,p_original_path,p_public_path)::text);
+  perform private.commerce_idempotency_xact_lock(a,op,p_idempotency_key);
+  x:=private.commerce_idempotency_lookup(a,op,p_idempotency_key,h);
+  if x is not null then return x; end if;
+  select * into m from public.commerce_product_media where id = p_media_id for update;
+  if not found then raise exception 'COMMERCE_NOT_FOUND' using errcode='P0002'; end if;
+  if m.original_bucket <> 'commerce-product-originals'
+     or m.public_bucket <> 'commerce-product-public'
+     or m.original_path <> p_original_path
+     or m.public_path <> p_public_path then
+    raise exception 'COMMERCE_VALIDATION' using errcode='22023';
+  end if;
+  if not exists (
+       select 1 from storage.objects o
+       where o.bucket_id = m.original_bucket and o.name = m.original_path
+     )
+     or not exists (
+       select 1 from storage.objects o
+       where o.bucket_id = m.public_bucket and o.name = m.public_path
+     ) then
+    raise exception 'COMMERCE_MEDIA_OBJECT_MISSING' using errcode='22023';
+  end if;
+  if m.is_primary then
+    update public.commerce_product_media
+       set is_primary = false, updated_at = now()
+     where product_id = m.product_id and id <> m.id and status = 'active';
+  end if;
+  update public.commerce_product_media set status = 'active', updated_at = now() where id = m.id;
+  x := jsonb_build_object('media_id', m.id, 'status', 'active');
+  perform private.commerce_idempotency_store(a,op,p_idempotency_key,h,x);
+  return x;
+end $$;
 
 create or replace function public.archive_commerce_product_media(p_media_id uuid,p_idempotency_key uuid)
 returns jsonb language plpgsql security definer set search_path = '' as $$
@@ -501,7 +548,7 @@ grant execute on function public.replace_commerce_product_specifications(uuid,js
 grant execute on function public.replace_commerce_related_products(uuid,uuid[],uuid) to authenticated;
 grant execute on function public.adjust_commerce_inventory(uuid,integer,text,uuid) to authenticated;
 grant execute on function public.upsert_commerce_tax_rate(uuid,text,text,integer,text,boolean,uuid) to authenticated;
-grant execute on function public.update_commerce_tax_settings(boolean,boolean,uuid) to authenticated;
+grant execute on function public.update_commerce_tax_settings(boolean,uuid) to authenticated;
 grant execute on function public.upsert_commerce_pincode(text,boolean,text,integer,integer,uuid) to authenticated;
 grant execute on function public.update_commerce_shipping_settings(bigint,bigint,boolean,text,uuid) to authenticated;
 grant execute on function public.authorize_commerce_product_media_upload(uuid,uuid,text,boolean,integer,uuid) to authenticated;

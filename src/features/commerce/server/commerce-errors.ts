@@ -1,6 +1,7 @@
 export type CommerceActionCode =
   | "COMMERCE_UNAUTHORIZED"
   | "COMMERCE_VALIDATION"
+  | "COMMERCE_MEDIA_OBJECT_MISSING"
   | "COMMERCE_NOT_FOUND"
   | "COMMERCE_PUBLISH_NOT_READY"
   | "COMMERCE_INVENTORY_UNDERFLOW"
@@ -58,6 +59,12 @@ export function commerceErrorFromUnknown(error: unknown): CommerceActionError {
   }
   if (combined.includes("COMMERCE_NOT_FOUND")) {
     return new CommerceActionError("COMMERCE_NOT_FOUND", "The commerce record was not found.");
+  }
+  if (combined.includes("COMMERCE_MEDIA_OBJECT_MISSING")) {
+    return new CommerceActionError(
+      "COMMERCE_MEDIA_OBJECT_MISSING",
+      "The original and public derivative storage objects must both exist before media can be finalized."
+    );
   }
   if (combined.includes("COMMERCE_VALIDATION")) {
     return new CommerceActionError("COMMERCE_VALIDATION", "The commerce request is invalid.");

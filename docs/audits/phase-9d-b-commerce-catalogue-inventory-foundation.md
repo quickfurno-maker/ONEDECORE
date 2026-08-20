@@ -25,11 +25,18 @@ No ADR-0030 contradiction was found. No new ADR.
 ## Migration
 
 - File: `supabase/migrations/20260822140000_commerce_catalogue_inventory_foundation.sql` (**M35**)
-- Git blob: `d8f2ff7c407f4011a63136cdabf5fde3b39efe7b`
-- Raw SHA-256 (LF): `9EF6887847842894E488D94944EA08268AB644A49D0DB93A7FE09E0033E626D9`
+- Git blob: `172e96a8a55c4d3596ccd5f4fc5ec6208c568496`
+- Raw SHA-256 (LF): `1D8DDD6377CDA301DDC52F26757AA9D09294B2E41EE6CD6B807B51DCAD2C8742`
+- Pre-correction (superseded in place): blob `d8f2ff7c407f4011a63136cdabf5fde3b39efe7b` / SHA-256 `9EF6887847842894E488D94944EA08268AB644A49D0DB93A7FE09E0033E626D9`
 - M1–M34 **unchanged**
 - Forward-only. **Not** managed-applied.
-- No following migration reserved.
+- No M36. No following migration reserved.
+
+## Same-PR correction (unmanaged M35 in place)
+
+- Media finalize fails closed unless both exact `storage.objects` rows exist (`COMMERCE_MEDIA_OBJECT_MISSING`); prior primary is not demoted on failure.
+- `gst_inclusive_display` CHECK `is true`; `update_commerce_tax_settings` mutates only `tax_required_for_publish`; admin UI is read-only locked copy.
+- Category parent trigger: parent must be a root; the moved category must have zero children.
 
 ## Tables
 
@@ -45,7 +52,7 @@ No ADR-0030 contradiction was found. No new ADR.
 | `commerce_pincodes` | 6-digit; ETA min ≤ max |
 | `commerce_shipping_settings` | Singleton; paise charges |
 | `commerce_tax_rates` | Integer basis points; **no statutory GST seed** |
-| `commerce_tax_settings` | Singleton; GST-inclusive display policy; tax-required-for-publish |
+| `commerce_tax_settings` | Singleton; GST-inclusive display **locked true** for MVP; tax-required-for-publish remains mutable |
 | `private.commerce_idempotency_requests` | Staff mutation ledger |
 
 No `commerce_orders`, `commerce_order_items`, `commerce_order_delivery`, `commerce_payments`, `commerce_payment_events`, `commerce_order_events`.
@@ -77,10 +84,10 @@ No `commerce_orders`, `commerce_order_items`, `commerce_order_delivery`, `commer
 
 ## Tests
 
-- pgTAP: `27_commerce_catalogue_inventory_foundation_test.sql` (67 assertions); identity counts 82 permissions / 97 public tables
-- App: `npm run test:phase-9d-b` (18)
+- pgTAP: `27_commerce_catalogue_inventory_foundation_test.sql` (88/88); local `supabase test db` **1651/1651** PASS; identity counts 82 permissions / 97 public tables
+- App: `npm run test:phase-9d-b` (22 pass)
 - Image pipeline: 17 pass
-- Full `npm run test:app` after 6B ledger update to M35 / fail-closed M36+
+- Full `npm run test:app` 930/930 after 6B ledger update to M35 / fail-closed M36+
 
 ## Managed (read-only this gate)
 

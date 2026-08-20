@@ -68,6 +68,34 @@ describe("Phase 9D-B RBAC and migration contracts", () => {
     );
   });
 
+  test("GST-inclusive display is a locked database invariant", () => {
+    const sql = readFileSync(migrationPath, "utf8");
+    assert.match(sql, /chk_commerce_tax_settings_gst_inclusive check \(gst_inclusive_display is true\)/);
+    assert.match(
+      sql,
+      /create or replace function public\.update_commerce_tax_settings\(p_tax_required_for_publish boolean,p_idempotency_key uuid\)/
+    );
+    assert.doesNotMatch(sql, /p_gst_inclusive_display/);
+  });
+
+  test("finalize_commerce_product_media proves both storage.objects exist", () => {
+    const sql = readFileSync(migrationPath, "utf8");
+    const finalize = sql.slice(sql.indexOf("create or replace function public.finalize_commerce_product_media"));
+    assert.match(finalize, /select \* into m from public\.commerce_product_media where id = p_media_id for update/);
+    assert.match(finalize, /from storage\.objects o/);
+    assert.match(finalize, /COMMERCE_MEDIA_OBJECT_MISSING/);
+    assert.ok(
+      finalize.indexOf("COMMERCE_MEDIA_OBJECT_MISSING") < finalize.indexOf("set status = 'active'")
+    );
+  });
+
+  test("category parent trigger rejects reparenting a root that already has children", () => {
+    const sql = readFileSync(migrationPath, "utf8");
+    const trigger = sql.slice(sql.indexOf("private.commerce_reject_category_parent"));
+    assert.match(trigger, /ch\.parent_category_id = new\.id/);
+    assert.match(trigger, /p\.parent_category_id is null/);
+  });
+
   test("inventory RPC has no reserved_qty argument", () => {
     const sql = readFileSync(migrationPath, "utf8");
     assert.match(
@@ -92,6 +120,18 @@ describe("Phase 9D-B admin surface and storefront gate", () => {
       files.some((file) => file.replace(/\\/g, "/").includes("/shop")),
       false
     );
+  });
+
+  test("admin tax settings has no editable GST-inclusive false path", () => {
+    const form = readFileSync(
+      join(root, "src/features/commerce/components/TaxSettingsForm.tsx"),
+      "utf8"
+    );
+    const action = readFileSync(join(root, "src/features/commerce/server/commerce-actions.ts"), "utf8");
+    assert.match(form, /GST-inclusive pricing — locked for ONEDECORE MVP/);
+    assert.doesNotMatch(form, /gstInclusiveDisplay/);
+    assert.doesNotMatch(form, /type="checkbox"[\s\S]*GST-inclusive/);
+    assert.doesNotMatch(action, /p_gst_inclusive_display/);
   });
 
   test("admin commerce routes exist", () => {

@@ -50,7 +50,7 @@ export default async function AdminCommercePage() {
         <p>Inventory foundation ready: {overview.inventoryReady ? "yes" : "no"}.</p>
         <p>Settings singleton ready: {overview.settingsReady ? "yes" : "no"}.</p>
         <p>Tax required for publish: {overview.taxRequiredForPublish ? "yes" : "no"}.</p>
-        <p>GST-inclusive display: {overview.gstInclusiveDisplay ? "yes" : "no"}.</p>
+        <p>GST-inclusive pricing — locked for ONEDECORE MVP.</p>
         <p>Default shipping (paise): {overview.defaultShippingChargePaise}</p>
       </div>
     </div>

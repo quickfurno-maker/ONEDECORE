@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 9D-B commerce catalogue / inventory foundation pgTAP
 
 begin;
-select plan(67);
+select plan(88);
 
 select has_table('public', 'commerce_categories', 'commerce_categories exists');
 select has_table('public', 'commerce_products', 'commerce_products exists');
@@ -93,6 +93,12 @@ select is(
   'no statutory GST rate is seeded'
 );
 
+select is(
+  (select gst_inclusive_display from public.commerce_tax_settings where id = 1),
+  true,
+  'initial gst_inclusive_display is true'
+);
+
 insert into auth.users (id, instance_id, email, aud, role) values
   ('9d111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'sa_9d@onedecore.in', 'authenticated', 'authenticated'),
   ('9d222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', 'sm_9d@onedecore.in', 'authenticated', 'authenticated'),
@@ -129,6 +135,13 @@ select throws_ok(
   '42501',
   NULL,
   'authenticated cannot alter reserved_qty via table DML'
+);
+
+select throws_ok(
+  $$update public.commerce_tax_settings set gst_inclusive_display = false where id = 1$$,
+  '42501',
+  NULL,
+  'authenticated DML cannot set gst_inclusive_display false'
 );
 
 reset role;
@@ -173,7 +186,7 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$select public.update_commerce_tax_settings(true, true, '9d000000-0000-0000-0000-000000000004')$$,
+  $$select public.update_commerce_tax_settings(true, '9d000000-0000-0000-0000-000000000004')$$,
   '42501',
   NULL,
   'sales_manager cannot mutate tax settings'
@@ -187,8 +200,32 @@ select throws_ok(
 );
 
 reset role;
+select throws_ok(
+  $$update public.commerce_tax_settings set gst_inclusive_display = false where id = 1$$,
+  '23514',
+  NULL,
+  'gst_inclusive_display cannot be stored as false'
+);
 select set_config('request.jwt.claims', '{"sub":"9d111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 set local role authenticated;
+
+select lives_ok(
+  $$select public.update_commerce_tax_settings(true, '9d000000-0000-0000-0000-000000000006')$$,
+  'SA can update tax_required_for_publish without mutating GST-inclusive display'
+);
+
+select is(
+  (select gst_inclusive_display from public.commerce_tax_settings where id = 1),
+  true,
+  'authorized tax settings RPC cannot make gst_inclusive_display false'
+);
+
+select throws_ok(
+  $$select public.update_commerce_tax_settings(false, true, '9d000000-0000-0000-0000-000000000007')$$,
+  '42883',
+  NULL,
+  'gst_inclusive_display is not a mutable update_commerce_tax_settings argument'
+);
 
 select ok(
   (select public.upsert_commerce_category(null,'Sofas','sofas',null,'Living seating',null,null,10,null,null,null,'9d000000-0000-0000-0000-000000000010')->>'category_reference')
@@ -230,6 +267,50 @@ select throws_ok(
   '22023',
   NULL,
   'category cannot parent itself'
+);
+
+select lives_ok(
+  $$select public.upsert_commerce_category(null,'Beds','beds',null,null,null,null,2,null,null,null,'9d000000-0000-0000-0000-000000000015')$$,
+  'second root category can be created'
+);
+
+select throws_ok(
+  $$select public.upsert_commerce_category(
+      (select id from public.commerce_categories where slug='sofas'),
+      'Sofas','sofas',
+      (select id from public.commerce_categories where slug='beds'),
+      'Living seating',null,null,10,null,null,null,'9d000000-0000-0000-0000-000000000016')$$,
+  '22023',
+  NULL,
+  'root that already has a child cannot be reparented under another root'
+);
+
+select lives_ok(
+  $$select public.upsert_commerce_category(
+      (select id from public.commerce_categories where slug='sectionals'),
+      'Sectionals','sectionals',
+      null,null,null,null,1,null,null,null,'9d000000-0000-0000-0000-000000000017')$$,
+  'child without descendants can be promoted back to a root'
+);
+
+select lives_ok(
+  $$select public.upsert_commerce_category(
+      (select id from public.commerce_categories where slug='sofas'),
+      'Sofas','sofas',
+      (select id from public.commerce_categories where slug='beds'),
+      'Living seating',null,null,10,null,null,null,'9d000000-0000-0000-0000-000000000018')$$,
+  'childless root may become a subcategory of another root'
+);
+
+select throws_ok(
+  $$select public.upsert_commerce_category(
+      (select id from public.commerce_categories where slug='beds'),
+      'Beds','beds',
+      (select id from public.commerce_categories where slug='sofas'),
+      null,null,null,2,null,null,null,'9d000000-0000-0000-0000-000000000019')$$,
+  '22023',
+  NULL,
+  'cycle via reparenting a parent under its child is rejected'
 );
 
 select ok(
@@ -369,13 +450,116 @@ select lives_ok(
   'SA can authorize product media'
 );
 
+reset role;
+select set_config('request.jwt.claims', '{"sub":"9d333333-3333-3333-3333-333333333333","role":"authenticated"}', true);
+set local role authenticated;
+
+select throws_ok(
+  $$select public.finalize_commerce_product_media(
+      (select id from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      (select original_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      (select public_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      '9d000000-0000-0000-0000-000000000132')$$,
+  '42501',
+  NULL,
+  'unauthorized staff cannot finalize product media'
+);
+
+reset role;
+select set_config('request.jwt.claims', '{"sub":"9d111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+set local role authenticated;
+
+select throws_ok(
+  $$select public.finalize_commerce_product_media(
+      (select id from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      (select original_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      (select public_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      '9d000000-0000-0000-0000-000000000033')$$,
+  '22023',
+  NULL,
+  'finalize without storage objects is rejected'
+);
+
+reset role;
+insert into storage.objects (bucket_id, name, owner, owner_id, metadata)
+select 'commerce-product-originals', m.original_path, '9d111111-1111-1111-1111-111111111111', '9d111111-1111-1111-1111-111111111111', '{}'::jsonb
+from public.commerce_product_media m
+join public.commerce_products p on p.id = m.product_id
+where p.slug = 'linen-sofa'
+order by m.created_at
+limit 1;
+select set_config('request.jwt.claims', '{"sub":"9d111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+set local role authenticated;
+
+select throws_ok(
+  $$select public.finalize_commerce_product_media(
+      (select id from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      (select original_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      (select public_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      '9d000000-0000-0000-0000-000000000133')$$,
+  '22023',
+  NULL,
+  'finalize with original object only is rejected'
+);
+
+reset role;
+update storage.objects o
+   set name = m.original_path || '.held-aside'
+  from public.commerce_product_media m
+  join public.commerce_products p on p.id = m.product_id
+ where p.slug = 'linen-sofa'
+   and o.bucket_id = 'commerce-product-originals'
+   and o.name = m.original_path;
+insert into storage.objects (bucket_id, name, owner, owner_id, metadata)
+select 'commerce-product-public', m.public_path, '9d111111-1111-1111-1111-111111111111', '9d111111-1111-1111-1111-111111111111', '{}'::jsonb
+from public.commerce_product_media m
+join public.commerce_products p on p.id = m.product_id
+where p.slug = 'linen-sofa'
+order by m.created_at
+limit 1;
+select set_config('request.jwt.claims', '{"sub":"9d111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+set local role authenticated;
+
+select throws_ok(
+  $$select public.finalize_commerce_product_media(
+      (select id from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      (select original_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      (select public_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      '9d000000-0000-0000-0000-000000000233')$$,
+  '22023',
+  NULL,
+  'finalize with public object only is rejected'
+);
+
+select throws_ok(
+  $$select public.finalize_commerce_product_media(
+      (select id from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      'wrong/path/original',
+      (select public_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      '9d000000-0000-0000-0000-000000000333')$$,
+  '22023',
+  NULL,
+  'finalize with mismatched paths is rejected'
+);
+
+reset role;
+update storage.objects o
+   set name = m.original_path
+  from public.commerce_product_media m
+  join public.commerce_products p on p.id = m.product_id
+ where p.slug = 'linen-sofa'
+   and o.bucket_id = 'commerce-product-originals'
+   and o.name = m.original_path || '.held-aside';
+select set_config('request.jwt.claims', '{"sub":"9d111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+set local role authenticated;
+
 select lives_ok(
   $$select public.finalize_commerce_product_media(
-      (select id from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') limit 1),
-      (select original_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') limit 1),
-      (select public_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') limit 1),
-      '9d000000-0000-0000-0000-000000000033')$$,
-  'SA can finalize primary public derivative metadata'
+      (select id from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      (select original_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      (select public_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') order by created_at limit 1),
+      '9d000000-0000-0000-0000-000000000034')$$,
+  'finalize succeeds when both exact storage objects exist'
 );
 
 select is(
@@ -384,6 +568,67 @@ select is(
      and is_primary and status = 'active'),
   1,
   'exactly one active primary image per product'
+);
+
+select lives_ok(
+  $$select public.authorize_commerce_product_media_upload(
+      (select id from public.commerce_products where slug='linen-sofa'),
+      null,'Replacement sofa image',true,1,'9d000000-0000-0000-0000-000000000035')$$,
+  'SA can authorize a second primary candidate'
+);
+
+select throws_ok(
+  $$select public.finalize_commerce_product_media(
+      (select id from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') and status = 'archived' order by created_at desc limit 1),
+      (select original_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') and status = 'archived' order by created_at desc limit 1),
+      (select public_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') and status = 'archived' order by created_at desc limit 1),
+      '9d000000-0000-0000-0000-000000000036')$$,
+  '22023',
+  NULL,
+  'failed replacement finalization does not activate the new row'
+);
+
+select is(
+  (select count(*)::integer from public.commerce_product_media
+   where product_id = (select id from public.commerce_products where slug='linen-sofa')
+     and is_primary and status = 'active'),
+  1,
+  'existing active primary is preserved when replacement finalization fails'
+);
+
+reset role;
+insert into storage.objects (bucket_id, name, owner, owner_id, metadata)
+select m.original_bucket, m.original_path, '9d111111-1111-1111-1111-111111111111', '9d111111-1111-1111-1111-111111111111', '{}'::jsonb
+from public.commerce_product_media m
+join public.commerce_products p on p.id = m.product_id
+where p.slug = 'linen-sofa' and m.status = 'archived'
+order by m.created_at desc
+limit 1;
+insert into storage.objects (bucket_id, name, owner, owner_id, metadata)
+select m.public_bucket, m.public_path, '9d111111-1111-1111-1111-111111111111', '9d111111-1111-1111-1111-111111111111', '{}'::jsonb
+from public.commerce_product_media m
+join public.commerce_products p on p.id = m.product_id
+where p.slug = 'linen-sofa' and m.status = 'archived'
+order by m.created_at desc
+limit 1;
+select set_config('request.jwt.claims', '{"sub":"9d111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+set local role authenticated;
+
+select lives_ok(
+  $$select public.finalize_commerce_product_media(
+      (select id from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') and status = 'archived' order by created_at desc limit 1),
+      (select original_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') and status = 'archived' order by created_at desc limit 1),
+      (select public_path from public.commerce_product_media where product_id = (select id from public.commerce_products where slug='linen-sofa') and status = 'archived' order by created_at desc limit 1),
+      '9d000000-0000-0000-0000-000000000037')$$,
+  'successful replacement finalization activates the new primary'
+);
+
+select is(
+  (select count(*)::integer from public.commerce_product_media
+   where product_id = (select id from public.commerce_products where slug='linen-sofa')
+     and is_primary and status = 'active'),
+  1,
+  'replacement primary demotes the previous primary'
 );
 
 select lives_ok(

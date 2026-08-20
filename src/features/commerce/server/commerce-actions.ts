@@ -404,7 +404,6 @@ export async function updateCommerceTaxSettingsAction(formData: FormData): Promi
     runRpc(
       "update_commerce_tax_settings",
       {
-        p_gst_inclusive_display: parseCheckboxBoolean(formData, "gstInclusiveDisplay"),
         p_tax_required_for_publish: parseCheckboxBoolean(formData, "taxRequiredForPublish"),
         p_idempotency_key: newKey(),
       },
