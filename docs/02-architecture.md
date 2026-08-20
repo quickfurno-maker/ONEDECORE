@@ -1,11 +1,11 @@
 # 02 — TECHNICAL ARCHITECTURE AND REPOSITORY SPECIFICATION
 
-**Document Status:** Locked Architecture Baseline (truth-synced through Phase 9D-C three-layer public-site journey lock, August 20, 2026)
+**Document Status:** Locked Architecture Baseline (truth-synced through Phase 9D-C balanced mixed homepage lock, August 20, 2026)
 **Pattern:** Modular Monolith
 **Framework:** Next.js 16.2.11
 **Database:** Supabase PostgreSQL
 **Route Prefix:** Internal CRM uses `/admin`
-**Current Phase:** Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production OFF). Phase 9C **M33/M34 MANAGED APPLY CERTIFIED** (DEC-0088; production OFF). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030). Phase 9D-B **REPOSITORY MERGED** (DEC-0089; repo M1–M35; managed M1–M34; M35 not applied). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090) + **three-layer public journey locked** (DEC-0092; `/` `/interiors` `/shop` not started).
+**Current Phase:** Phase 9A **COMPLETE**. Phase 9B **M32 MANAGED APPLIED** (DEC-0084; production OFF). Phase 9C **M33/M34 MANAGED APPLY CERTIFIED** (DEC-0088; production OFF). Phase 9D-A **ARCHITECTURE_FROZEN** (ADR-0030). Phase 9D-B **REPOSITORY MERGED** (DEC-0089; repo M1–M35; managed M1–M34; M35 not applied). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090) + **three-layer journey** (DEC-0092) + **balanced mixed homepage locked** (DEC-0093; `/` `/interiors` `/shop` not started).
 
 ---
 
@@ -147,7 +147,7 @@ Phase 5A locks the following cross-cutting patterns for future implementation:
 | WhatsApp | Official API; M18–M21 managed foundation (ingest, inbox read, send-intent, service-role dispatch); CRM consent authoritative; **not production-activated**; M19 purpose remains `WHATSAPP_SERVICE` |
 | Campaigns (Phase 9A managed M31) | Draft → pending_approval → approved/rejected; MARKETING via existing `consent_events`; DNC + channel suppression reused; freeze audience **rules** not recipient PII; no 9B FK; M31 managed-applied immutable |
 | Campaign execution (Phase 9C) | Architecture frozen (ADR-0031); 9C-B/9C-C merged; M33 then M34 managed-applied (DEC-0088); production spend Phase 10 |
-| Ready-made shop (Phase 9D) | Category `/shop` after 9C; guest checkout; simple variants; COD + online; webhook-authoritative payment; SKU stock not WMS; **9D-A FROZEN** (ADR-0030); **9D-B catalogue/inventory admin foundation** (DEC-0089); public `/` `/interiors` `/shop` **not started** (DEC-0092 journey lock; docs only) |
+| Ready-made shop (Phase 9D) | Category `/shop` after 9C; guest checkout; simple variants; COD + online; webhook-authoritative payment; SKU stock not WMS; **9D-A FROZEN** (ADR-0030); **9D-B catalogue/inventory admin foundation** (DEC-0089); public `/` `/interiors` `/shop` **not started** (DEC-0092 layers; DEC-0093 balanced `/`; docs only) |
 
 Phase 6A delivers managed WhatsApp **data/webhook foundation** (migration 18). Phase 6B delivers managed **inbox/send-intent/dispatch foundations** (migrations 19–21) plus repository admin UI — **not production-activated**. Phase 8C project execution is **COMPLETE** (M30 managed). Phase 9A is **COMPLETE** (ADR-0027 / PR #62 / PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`). Phase 9A M31 is **managed-applied and immutable** (DEC-0080); `/admin/campaigns` is staff governance UI only. Phase 9D `/shop` is **not implemented**. Architecture freeze: [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md).
 
