@@ -51,3 +51,43 @@ export function assertCommerceMaybeRow<T>(
   }
   return result.data;
 }
+
+export function readCommerceProductRow<T>(
+  result: CommerceQueryResult<T | null>,
+  context: string
+): { readonly status: "found"; readonly row: T } | { readonly status: "not_found" } {
+  const row = assertCommerceMaybeRow(result, context);
+  if (row == null) {
+    return { status: "not_found" };
+  }
+  return { status: "found", row };
+}
+
+export function assembleCommerceSettings<TRate, TTax, TShip, TPin>(results: {
+  readonly taxRates: CommerceQueryResult<readonly TRate[] | TRate[] | null>;
+  readonly taxSettings: CommerceQueryResult<TTax | null>;
+  readonly shipping: CommerceQueryResult<TShip | null>;
+  readonly pincodes: CommerceQueryResult<readonly TPin[] | TPin[] | null>;
+}): {
+  readonly taxRates: TRate[];
+  readonly taxSettings: TTax | null;
+  readonly shipping: TShip | null;
+  readonly pincodes: TPin[];
+} {
+  return {
+    taxRates: assertCommerceReadList(results.taxRates, "commerce_tax_rates"),
+    taxSettings: assertCommerceMaybeRow(results.taxSettings, "commerce_tax_settings"),
+    shipping: assertCommerceMaybeRow(results.shipping, "commerce_shipping_settings"),
+    pincodes: assertCommerceReadList(results.pincodes, "commerce_pincodes"),
+  };
+}
+
+export function countProductsByCategory(
+  products: readonly { readonly category_id: string }[]
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const product of products) {
+    counts[product.category_id] = (counts[product.category_id] ?? 0) + 1;
+  }
+  return counts;
+}

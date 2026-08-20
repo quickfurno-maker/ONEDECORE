@@ -9,8 +9,10 @@ import { TaxSettingsForm } from "@/features/commerce/components/TaxSettingsForm"
 import { ShippingSettingsForm } from "@/features/commerce/components/ShippingSettingsForm";
 import { PincodeForm } from "@/features/commerce/components/PincodeForm";
 import { CommercePageHeader } from "@/features/commerce/components/CommercePageHeader";
+import { CommerceDataUnavailable } from "@/features/commerce/components/CommerceDataUnavailable";
 import { DashboardPanel } from "@/features/admin-ops/components/DashboardPanel.tsx";
 import { formatInrFromPaise } from "@/features/crm/contracts/sales-target-contracts.ts";
+import { isCommerceReadError } from "@/features/commerce/domain/commerce-read";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +29,24 @@ export default async function AdminCommerceSettingsPage() {
   if (!permissions.canRead) {
     redirect("/auth/forbidden");
   }
-  const settings = await getCommerceSettings();
+  let settings: Awaited<ReturnType<typeof getCommerceSettings>> | null = null;
+  try {
+    settings = await getCommerceSettings();
+  } catch (error) {
+    if (!isCommerceReadError(error)) {
+      throw error;
+    }
+  }
+  if (!settings) {
+    return (
+      <div className="mx-auto max-w-[1600px] space-y-6">
+        <CommercePageHeader title="Commerce settings" subtitle="Tax, shipping, COD, and pincode serviceability." />
+        <StorefrontDisabledBanner />
+        <CommerceAdminLinks />
+        <CommerceDataUnavailable title="Commerce settings unavailable" />
+      </div>
+    );
+  }
   const serviceable = settings.pincodes.filter((row) => row.serviceable).length;
   const groups = new Map<string, number>();
   for (const row of settings.pincodes.filter((item) => item.serviceable)) {

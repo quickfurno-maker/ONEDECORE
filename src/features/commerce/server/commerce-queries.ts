@@ -3,9 +3,11 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { isPublicationReady } from "../domain/publication";
 import {
+  assembleCommerceSettings,
   assertCommerceMaybeRow,
   assertCommerceReadList,
   readCommerceInventoryList,
+  readCommerceProductRow,
 } from "../domain/commerce-read";
 
 type CommerceTable =
@@ -180,8 +182,7 @@ export async function listCommerceCategories(): Promise<readonly CommerceCategor
     )
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
-  if (error || !data) return [];
-  return data as CommerceCategoryRow[];
+  return assertCommerceReadList({ data, error }, "commerce_categories") as CommerceCategoryRow[];
 }
 
 export async function listRootCommerceCategories(): Promise<readonly CommerceCategoryRow[]> {
@@ -207,30 +208,28 @@ export async function listCommerceProducts(filters?: {
     query = query.or(`name.ilike.%${safe}%,slug.ilike.%${safe}%,product_reference.ilike.%${safe}%`);
   }
   const { data, error } = await query.order("updated_at", { ascending: false });
-  if (error || !data) return [];
-  return data as CommerceProductListItem[];
+  return assertCommerceReadList({ data, error }, "commerce_products") as CommerceProductListItem[];
 }
 
 export async function getCommerceProductDetail(productId: string): Promise<CommerceProductDetail | null> {
+  return getCommerceProductDetailForWorkspace(productId);
+}
+
+export async function getCommerceProductDetailForWorkspace(
+  productId: string
+): Promise<CommerceProductDetail | null> {
   const supabase = await createClient();
-  const { data: product, error } = await fromCommerce(supabase, "commerce_products")
+  const productRes = await fromCommerce(supabase, "commerce_products")
     .select(
       "id, product_reference, category_id, name, slug, short_description, full_description, status, tax_rate_id, hsn_sac_code, shipping_charge_paise_override, cod_allowed_override, free_shipping_eligible_override, seo_title, seo_description, featured, lock_version, updated_at, published_at"
     )
     .eq("id", productId)
     .maybeSingle();
-  if (error || !product) return null;
-  const row = product as CommerceProductDetail["product"];
+  const found = readCommerceProductRow(productRes, "commerce_products");
+  if (found.status === "not_found") return null;
+  const row = found.row as unknown as CommerceProductDetail["product"];
 
-  const [
-    { data: category },
-    { data: variants },
-    { data: media },
-    { data: specs },
-    { data: related },
-    { data: taxRates },
-    { data: taxSettings },
-  ] = await Promise.all([
+  const [categoryRes, variantsRes, mediaRes, specsRes, relatedRes, taxRatesRes, taxSettingsRes] = await Promise.all([
     fromCommerce(supabase, "commerce_categories")
       .select(
         "id, category_reference, name, slug, parent_category_id, short_description, seo_title, seo_description, sort_order, status, shipping_charge_paise_override, cod_allowed_override, free_shipping_eligible_override"
@@ -262,25 +261,34 @@ export async function getCommerceProductDetail(productId: string): Promise<Comme
       .maybeSingle(),
   ]);
 
-  const variantRows = (variants ?? []) as CommerceVariantRow[];
+  const categoryRow = assertCommerceMaybeRow(categoryRes, "commerce_categories") as CommerceCategoryRow | null;
+  const variantRows = assertCommerceReadList(variantsRes, "commerce_product_variants") as CommerceVariantRow[];
+  const mediaRows = assertCommerceReadList(mediaRes, "commerce_product_media") as CommerceMediaRow[];
+  const specRows = assertCommerceReadList(specsRes, "commerce_product_specifications") as CommerceSpecRow[];
+  const relatedLinks = assertCommerceReadList(relatedRes, "commerce_related_products") as {
+    related_product_id: string;
+  }[];
+  const taxRatesRows = assertCommerceReadList(taxRatesRes, "commerce_tax_rates") as CommerceTaxRateRow[];
+  const taxSettingsRow = assertCommerceMaybeRow(taxSettingsRes, "commerce_tax_settings") as CommerceTaxSettingsRow | null;
+
   const variantIds = variantRows.map((item) => item.id);
-  const { data: inventory } = variantIds.length
-    ? await fromCommerce(supabase, "commerce_inventory")
-        .select("variant_id, stock_on_hand, reserved_qty, available_qty")
-        .in("variant_id", variantIds)
-    : { data: [] as never[] };
+  let inventoryRows: CommerceInventoryRow[] = [];
+  if (variantIds.length) {
+    const inventoryRes = await fromCommerce(supabase, "commerce_inventory")
+      .select("variant_id, stock_on_hand, reserved_qty, available_qty")
+      .in("variant_id", variantIds);
+    inventoryRows = assertCommerceReadList(inventoryRes, "commerce_inventory") as CommerceInventoryRow[];
+  }
 
-  const relatedIds = ((related ?? []) as { related_product_id: string }[]).map((item) => item.related_product_id);
-  const { data: relatedProducts } = relatedIds.length
-    ? await fromCommerce(supabase, "commerce_products")
-        .select("id, product_reference, name, slug, status, featured, category_id, lock_version, updated_at")
-        .in("id", relatedIds)
-    : { data: [] as never[] };
+  const relatedIds = relatedLinks.map((item) => item.related_product_id);
+  let relatedProducts: CommerceProductListItem[] = [];
+  if (relatedIds.length) {
+    const relatedProductsRes = await fromCommerce(supabase, "commerce_products")
+      .select("id, product_reference, name, slug, status, featured, category_id, lock_version, updated_at")
+      .in("id", relatedIds);
+    relatedProducts = assertCommerceReadList(relatedProductsRes, "commerce_products") as CommerceProductListItem[];
+  }
 
-  const categoryRow = (category as CommerceCategoryRow | null) ?? null;
-  const mediaRows = (media ?? []) as CommerceMediaRow[];
-  const taxSettingsRow = (taxSettings as CommerceTaxSettingsRow | null) ?? null;
-  const taxRatesRows = (taxRates ?? []) as CommerceTaxRateRow[];
   const hasActiveTaxRate =
     row.tax_rate_id != null && taxRatesRows.some((rate) => rate.id === row.tax_rate_id && rate.is_active);
   const hasActivePricedVariant = variantRows.some(
@@ -294,11 +302,11 @@ export async function getCommerceProductDetail(productId: string): Promise<Comme
     product: row,
     category: categoryRow,
     variants: variantRows,
-    inventory: (inventory ?? []) as CommerceInventoryRow[],
+    inventory: inventoryRows,
     media: mediaRows,
-    specifications: (specs ?? []) as CommerceSpecRow[],
+    specifications: specRows,
     relatedProductIds: relatedIds,
-    relatedProducts: (relatedProducts ?? []) as CommerceProductListItem[],
+    relatedProducts,
     taxRates: taxRatesRows,
     taxSettings: taxSettingsRow,
     publicationReady: isPublicationReady({
@@ -319,7 +327,7 @@ export async function getCommerceSettings(): Promise<{
   readonly pincodes: readonly CommercePincodeRow[];
 }> {
   const supabase = await createClient();
-  const [{ data: taxRates }, { data: taxSettings }, { data: shipping }, { data: pincodes }] = await Promise.all([
+  const [taxRatesRes, taxSettingsRes, shippingRes, pincodesRes] = await Promise.all([
     fromCommerce(supabase, "commerce_tax_rates")
       .select("id, code, name, rate_basis_points, description, is_active")
       .order("code", { ascending: true }),
@@ -335,11 +343,17 @@ export async function getCommerceSettings(): Promise<{
       .select("pincode, serviceable, zone_code, eta_min_days, eta_max_days, updated_at")
       .order("pincode", { ascending: true }),
   ]);
+  const settings = assembleCommerceSettings({
+    taxRates: taxRatesRes,
+    taxSettings: taxSettingsRes,
+    shipping: shippingRes,
+    pincodes: pincodesRes,
+  });
   return {
-    taxRates: (taxRates ?? []) as CommerceTaxRateRow[],
-    taxSettings: (taxSettings as CommerceTaxSettingsRow | null) ?? null,
-    shipping: (shipping as CommerceShippingSettingsRow | null) ?? null,
-    pincodes: (pincodes ?? []) as CommercePincodeRow[],
+    taxRates: settings.taxRates as CommerceTaxRateRow[],
+    taxSettings: settings.taxSettings as CommerceTaxSettingsRow | null,
+    shipping: settings.shipping as CommerceShippingSettingsRow | null,
+    pincodes: settings.pincodes as CommercePincodeRow[],
   };
 }
 

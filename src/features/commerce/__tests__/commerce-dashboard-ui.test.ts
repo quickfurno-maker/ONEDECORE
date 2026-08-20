@@ -9,9 +9,12 @@ import { join } from "node:path";
 import { describe, test } from "node:test";
 import { buildCommerceDashboardSnapshot, applyCommerceActionLabels } from "../domain/commerce-dashboard.ts";
 import {
+  assembleCommerceSettings,
   assertCommerceReadList,
   CommerceReadError,
+  countProductsByCategory,
   readCommerceInventoryList,
+  readCommerceProductRow,
 } from "../domain/commerce-read.ts";
 
 const root = process.cwd();
@@ -244,5 +247,105 @@ describe("Commerce dashboard read-only actions", () => {
     assert.match(view, /canManageCatalog/);
     assert.match(view, /canManageInventory/);
     assert.match(view, /canManageSettings/);
+  });
+});
+
+describe("Commerce settings and category read truth", () => {
+  test("failed tax rates query is not zero tax rates", () => {
+    assert.throws(
+      () =>
+        assembleCommerceSettings({
+          taxRates: { data: null, error: { message: "relation does not exist" } },
+          taxSettings: { data: null, error: null },
+          shipping: { data: null, error: null },
+          pincodes: { data: [], error: null },
+        }),
+      (error: unknown) => error instanceof CommerceReadError && error.context === "commerce_tax_rates"
+    );
+  });
+
+  test("failed pincode query is not zero pincodes", () => {
+    assert.throws(
+      () =>
+        assembleCommerceSettings({
+          taxRates: { data: [], error: null },
+          taxSettings: { data: null, error: null },
+          shipping: { data: null, error: null },
+          pincodes: { data: null, error: { message: "permission denied" } },
+        }),
+      (error: unknown) => error instanceof CommerceReadError && error.context === "commerce_pincodes"
+    );
+  });
+
+  test("failed shipping read is not treated as unconfigured shipping", () => {
+    assert.throws(
+      () =>
+        assembleCommerceSettings({
+          taxRates: { data: [], error: null },
+          taxSettings: { data: { gst_inclusive_display: true, tax_required_for_publish: true }, error: null },
+          shipping: { data: null, error: { message: "timeout" } },
+          pincodes: { data: [], error: null },
+        }),
+      (error: unknown) => error instanceof CommerceReadError && error.context === "commerce_shipping_settings"
+    );
+    const emptyShipping = assembleCommerceSettings({
+      taxRates: { data: [], error: null },
+      taxSettings: { data: { gst_inclusive_display: true, tax_required_for_publish: true }, error: null },
+      shipping: { data: null, error: null },
+      pincodes: { data: [], error: null },
+    });
+    assert.equal(emptyShipping.shipping, null);
+  });
+
+  test("failed categories query is not an empty category tree", () => {
+    assert.throws(
+      () => assertCommerceReadList({ data: null, error: { message: "could not find table" } }, "commerce_categories"),
+      (error: unknown) => error instanceof CommerceReadError && error.context === "commerce_categories"
+    );
+  });
+
+  test("failed products query is not category product count 0", () => {
+    assert.throws(
+      () => assertCommerceReadList({ data: null, error: { message: "could not find table" } }, "commerce_products"),
+      CommerceReadError
+    );
+    const counts = countProductsByCategory([]);
+    assert.deepEqual(counts, {});
+  });
+
+  test("successful empty categories and pincodes remain empty", () => {
+    const categories = assertCommerceReadList({ data: [], error: null }, "commerce_categories");
+    const settings = assembleCommerceSettings({
+      taxRates: { data: [], error: null },
+      taxSettings: { data: null, error: null },
+      shipping: { data: null, error: null },
+      pincodes: { data: [], error: null },
+    });
+    assert.deepEqual(categories, []);
+    assert.equal(settings.pincodes.length, 0);
+    assert.equal(settings.taxRates.length, 0);
+  });
+
+  test("product not-found is distinct from product-read failure", () => {
+    assert.deepEqual(readCommerceProductRow({ data: null, error: null }, "commerce_products"), {
+      status: "not_found",
+    });
+    assert.throws(
+      () => readCommerceProductRow({ data: null, error: { message: "db down" } }, "commerce_products"),
+      (error: unknown) =>
+        error instanceof CommerceReadError && !String(error.message).includes("db down")
+    );
+  });
+
+  test("generic error UI contains no raw Postgres or Supabase message", () => {
+    const ui = readFileSync(
+      join(root, "src/features/commerce/components/CommerceDataUnavailable.tsx"),
+      "utf8"
+    );
+    assert.match(ui, /Commerce data unavailable/);
+    assert.doesNotMatch(ui, /postgres|supabase|relation does not exist|42P01|PGRST/i);
+    const error = new CommerceReadError("commerce_tax_rates");
+    assert.equal(error.message, "Commerce data unavailable");
+    assert.doesNotMatch(error.message, /postgres|supabase/i);
   });
 });

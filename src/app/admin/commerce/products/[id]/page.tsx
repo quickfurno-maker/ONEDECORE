@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getStaffClaims } from "@/server/auth/session";
 import { probeCommercePermissions } from "@/features/commerce/server/commerce-permissions";
-import { getCommerceProductDetail, listCommerceCategories } from "@/features/commerce/server/commerce-queries";
+import { getCommerceProductDetailForWorkspace, listCommerceCategories } from "@/features/commerce/server/commerce-queries";
 import { StorefrontDisabledBanner } from "@/features/commerce/components/StorefrontDisabledBanner";
 import { CommerceAdminLinks } from "@/features/commerce/components/CommerceAdminLinks";
 import { ProductGeneralForm } from "@/features/commerce/components/ProductGeneralForm";
@@ -15,6 +15,8 @@ import { CommercePageHeader } from "@/features/commerce/components/CommercePageH
 import { ProductDetailShell, ProductSection } from "@/features/commerce/components/ProductDetailShell";
 import { VariantSummaryTable } from "@/features/commerce/components/VariantSummaryTable";
 import { ProductMediaGallery } from "@/features/commerce/components/ProductMediaGallery";
+import { CommerceDataUnavailable } from "@/features/commerce/components/CommerceDataUnavailable";
+import { isCommerceReadError } from "@/features/commerce/domain/commerce-read";
 
 interface AdminCommerceProductDetailPageProps {
   readonly params: Promise<{ id: string }>;
@@ -32,8 +34,26 @@ export default async function AdminCommerceProductDetailPage({ params }: AdminCo
   if (!permissions.canRead) {
     redirect("/auth/forbidden");
   }
-  const [detail, categories] = await Promise.all([getCommerceProductDetail(id), listCommerceCategories()]);
-  if (!detail) notFound();
+  let detail: Awaited<ReturnType<typeof getCommerceProductDetailForWorkspace>> | undefined;
+  let categories: Awaited<ReturnType<typeof listCommerceCategories>> | undefined;
+  try {
+    const loaded = await Promise.all([getCommerceProductDetailForWorkspace(id), listCommerceCategories()]);
+    detail = loaded[0];
+    categories = loaded[1];
+  } catch (error) {
+    if (!isCommerceReadError(error)) {
+      throw error;
+    }
+    return (
+      <div className="mx-auto max-w-[1600px] space-y-6">
+        <CommercePageHeader title="Product" subtitle="Catalogue command centre." />
+        <StorefrontDisabledBanner />
+        <CommerceAdminLinks />
+        <CommerceDataUnavailable title="Product data unavailable" />
+      </div>
+    );
+  }
+  if (!detail || !categories) notFound();
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6">
