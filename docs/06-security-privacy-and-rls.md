@@ -1,6 +1,6 @@
 # 06 — SECURITY, PRIVACY AND ROW LEVEL SECURITY (RLS) POLICIES
 
-**Document Status:** Locked Security Baseline (truth-synced through Phase 9C-B repository implementation, August 19, 2026)
+**Document Status:** Locked Security Baseline (truth-synced through Phase 9C managed apply certification, August 20, 2026)
 **RLS Target:** 100% Coverage on API-Exposed Application Tables
 **Default Access:** Anonymous Access Denied for Private Schemas
 
@@ -159,7 +159,7 @@ The following security requirements are **locked in architecture** and must be e
 - **Consent minimization:** Reuse append-only `consent_events` for MARKETING. No parallel marketing-consent table. No mutable current-consent truth table. Historical rows are never edited/deleted. Staff RPC `record_marketing_consent_event` is Super Admin / Sales Manager only.
 - **No recipient PII snapshot** at approval. Audience artifact is a frozen rule version + hash. `broad_public` CRM PII export is **denied**. `direct_or_custom` requires current MARKETING grant; DNC and invalid/suppressed/archived target channels deny. Phase 9C rechecks before any later export/send.
 - **Staff MARKETING recording:** Super Admin and Sales Manager only; `actor_type = 'staff'`; insert-only evidence; never fabricate. SE/PM/Designer denied.
-- **Campaign RBAC:** `campaigns.read` / `draft` / `request_approval` / `approve` / `marketing_consents.manage` (9A). Phase 9C-B seeds `campaigns.execute` / `campaigns.pause` / `campaigns.metrics.read` for Super Admin + Sales Manager only (DEC-0086). 9C-C metric/feedback tables: authenticated SELECT via `campaigns.metrics.read` only; worker RPCs `service_role`. Super Admin may approve any pending version. Sales Manager **must not** approve own version at **database** authority. Super Admin may cancel runs; Sales Manager may execute/pause/resume. Legacy roles receive no automatic campaign grants. Kriti has no authoritative execute/pause/spend role.
+- **Campaign RBAC:** `campaigns.read` / `draft` / `request_approval` / `approve` / `marketing_consents.manage` (9A). Phase 9C seeds `campaigns.execute` / `campaigns.pause` / `campaigns.metrics.read` for Super Admin + Sales Manager only (DEC-0086 / DEC-0088). 9C-C metric/feedback tables: authenticated SELECT via `campaigns.metrics.read` only; worker RPCs `service_role`. Super Admin may approve any pending version. Sales Manager **must not** approve own version at **database** authority. Super Admin may cancel runs; Sales Manager may execute/pause/resume. Legacy roles receive no automatic campaign grants. Kriti has no authoritative execute/pause/spend role.
 - **Provider secrets:** Ads access tokens, refresh tokens, and developer tokens are server env only — never campaign/metric/feedback rows.
 - **RLS:** 100% on exposed campaign tables; direct authenticated DML denied; no browser service role; fail closed; no provider tokens in campaign rows.
 - **n8n** is not consent, approval, or campaign truth.
