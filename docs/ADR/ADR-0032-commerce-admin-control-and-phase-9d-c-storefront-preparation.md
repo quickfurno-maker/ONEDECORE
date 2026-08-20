@@ -216,29 +216,165 @@ Storefront listings driven by category status, `sort_order`, and published produ
 
 ## 9. Locked homepage strategy
 
-**One** unified `onedecore.in` homepage. No separate domains. No choose-a-site splash.
+**One** unified `onedecore.in` homepage. No separate interiors homepage, furniture homepage, gateway/splash chooser, or separate ecommerce visual identity. No marketplace-looking homepage.
 
-Initial balance: **~70% Interiors / ~30% Furniture**.
+Brand line remains: **“One Vision. Complete Interiors.”**
 
-Journeys remain separate:
+Initial visual/content balance: **~70% Interiors / ~30% Furniture**. Interiors remain the primary hero journey. Furniture is a strong second journey in the **same** visual language.
 
-- **DESIGN MY HOME** — Full Home Interiors, Modular Kitchen, Wardrobes, Renovation, Portfolio, Consultation  
-- **SHOP FURNITURE** — Sofas, Beds, Dining, Tables, Storage, Chairs (labels from **admin** root categories, not hardcoded SKUs)
+Journeys remain conversion-separate:
 
-Structure:
+- **Interiors:** Homepage → service / portfolio → Consultation → CRM lead
+- **Commerce:** Homepage → Shop / category / PDP → future cart (9D-D) → future checkout
 
-1. Hero — “One Vision. Complete Interiors.” CTA 1 Start Your Interior Project; CTA 2 Shop Furniture  
-2. Two journey cards — Plan Your Home / Shop Your Home  
-3. Interior services  
-4. Furniture categories — admin-driven active roots  
-5. Featured furniture — admin-driven published featured products  
-6. Portfolio / Real Homes  
-7. Why ONEDECORE  
-8. Dual CTA — Book Consultation / Shop Furniture  
+Never auto-create CRM lead, MARKETING consent, or project from furniture browse. Never put Add to Cart inside interior services. Never use Get Consultation as the primary product-card action.
+
+**Do not implement this homepage in this gate.** Runtime waits for the 9D-C entry sequence (M35 cert + 9D-B closeout merge).
+
+### 9.1 Unified ONEDECORE Homepage Design Lock
+
+Normative 9D-C homepage implementation target. Supporting checklist: [unified homepage design](../design/phase-9d-c-unified-homepage.md).
+
+#### Header / navigation
+
+Desktop: ONEDECORE logo; primary nav **Interiors**, **Modular Kitchen**, **Portfolio**, **Shop Furniture**, **About**; primary CTA **Get Free Consultation**.
+
+Commerce utilities:
+
+- Search icon only once 9D-C shop search exists
+- Wishlist icon only once browser-local wishlist exists
+- Cart icon **only** when functional cart exists in **9D-D**
+
+Do **not** show a fake/non-functional cart in 9D-C.
+
+Header: compact, premium, sticky after scroll, slightly reduced height after scroll, no clutter. Mobile: logo + menu; search only when implemented; no permanent oversized sticky bar covering content.
+
+#### Hero
+
+Interior-first. High-quality completed ONEDECORE-style residential interior; furniture appears **naturally in the room**. No product cut-out collage, sale banner, or carousel.
+
+- Headline: **ONE VISION. COMPLETE INTERIORS.**
+- Support: “Beautiful interiors, modular kitchens and furniture — designed for the way you live.”
+- Primary CTA: **Start Your Interior Project**
+- Secondary CTA: **Shop Furniture**
+- Optional proof: Design • Manufacture • Execute • Furnish
+
+Motion: restrained image scale/parallax, subtle text reveal. No particles, excessive floating text. Minimal motion on mobile.
+
+#### Two-journey section (immediately below hero)
+
+Title: **How would you like to begin?**
+
+| | Plan Your Home | Shop Your Home |
+| :--- | :--- | :--- |
+| Includes | Full Home Interiors, Modular Kitchens, Wardrobes, Renovation | Sofas, Beds, Dining, Tables, Storage (production labels from admin roots) |
+| CTA | Explore Interior Services | Shop Furniture |
+
+Desktop visual weight **~60% Plan / ~40% Shop**. Mobile: stack Plan then Shop. Not a site-selection gateway.
+
+#### Trust strip
+
+Compact: End-to-End Interiors, In-House Manufacturing, Custom Furniture, Quality Control, After-Sales Support. Short labels/icons only.
+
+#### Interior services
+
+Title: **Everything your home needs, under one vision.** Cards: Full Home Interiors, Modular Kitchen, Wardrobes, Renovation, Design Consultation. These remain **service cards**. Never Add to Cart / Buy now here.
+
+#### Modular kitchen feature
+
+Headline: **Designed around the way you cook.** Benefits: custom layouts, machine-finished precision, smart storage, end-to-end installation. CTA **Explore Modular Kitchens**; optional **Get Kitchen Estimate**. Must not be weakened by ecommerce.
+
+#### Furniture category entry
+
+Title: **Furniture for the way you live.** Subtitle: “Thoughtfully selected pieces to complete your ONEDECORE home.”
+
+9D-C source: `commerce_categories` where parent is null, status active, ordered by `sort_order`. **No hardcoded production category list.** Show up to six main roots. Example labels (Sofas, Beds, Dining, Tables, Storage, Chairs) are illustrative only. Mobile: 2-column compact cards. No oversized category cards.
+
+#### Featured furniture
+
+Title: **Featured Furniture.** Source: `commerce_products` with `status = published` and `featured = true`. Price: authoritative variant price, GST-inclusive; valid compare-at if present. Image: active finalized **public derivative** only. Desktop 4–8 max; mobile 4 then View All. Card: image, name, price, availability / made-to-order; wishlist only when 9D-C browser-local wishlist exists. **No fake cart.** CTA **View All Furniture**. Homepage must not become a long product catalogue.
+
+#### Portfolio / Real Homes
+
+Title: **Real homes. Designed and completed by ONEDECORE.** Bridges interiors and furniture visually. Optional: “Love this look? Explore furniture inspired by our interiors.” Portfolio **must not** depend on commerce data.
+
+#### Why ONEDECORE
+
+One team from design to delivery; in-house manufacturing; customisation; quality control; after-sales support. Numeric counters **only** if verified. No fabricated statistics.
+
+#### Interior process
+
+1. Consultation 2. Design 3. Manufacture 4. Installation & Handover. Interior funnel only.
+
+#### Pincode delivery checker
+
+Copy: **Check furniture delivery availability.** Input pincode; CTA **Check Availability**. Authority: exact `commerce_pincodes` row with `serviceable = true`. City is display/grouping only. This interaction must **not** create order, cart, or checkout.
+
+#### Testimonials
+
+Retain existing social proof. Compact slider or grid. Not a very tall mobile section. Furniture/interior labels only when data supports them.
+
+#### Final dual CTA
+
+Headline: **Design your home. Furnish it beautifully.** Primary **Start Your Interior Project**. Secondary **Shop Furniture**.
+
+#### Footer
+
+ONEDECORE (short description, social); INTERIORS (Full Home Interiors, Modular Kitchen, Wardrobes, Renovation, Portfolio); SHOP (admin-driven major categories where practical, Shop All); COMPANY (About, Contact, Privacy, Terms); SUPPORT (Furniture Delivery, Pincode Availability, Consultation, WhatsApp). **Do not** expose Order Tracking until the order phase authorizes it.
+
+#### Visual language
+
+Premium contemporary Indian interiors brand: warm neutrals, ivory/off-white, charcoal, existing ONEDECORE accent used sparingly; high-quality interior photography and clean furniture images; generous but controlled whitespace; refined borders/shadows; elegant headlines; modern readable body. Avoid marketplace styling, ecommerce red/orange sale language, giant discount badges, excessive gradients, too many rounded cards, SaaS dashboard look, over-animation, noisy carousels, or visual split that makes furniture feel like another brand.
+
+#### Mobile length
+
+Homepage must not become excessively long: compact hero; stacked two-journey cards; 2-column furniture categories where usable; max 4 featured products before View All; portfolio preview only; compact testimonials; no huge whitespace; no long homepage FAQ; collapse secondary text where appropriate; keep clear section rhythm.
+
+#### Admin-driven commerce (no page builder)
+
+| Content | Source |
+| :--- | :--- |
+| Categories | `commerce_categories` parent null, active, `sort_order` |
+| Featured | `commerce_products` published + `featured = true` |
+| Prices | `commerce_product_variants` |
+| Inventory / mode | `commerce_inventory` / availability mode |
+| Images | `commerce_product_media` finalized active public derivative |
+| SEO | existing category/product SEO fields |
+
+Do **not** hardcode commerce data in homepage source.
+
+#### Performance
+
+Optimized responsive hero; public product derivatives; lazy-load below fold; server-rendered commerce browse where appropriate; minimal client JS; no autoplay hero video; no animation library for trivial transitions; protect Core Web Vitals.
+
+#### SEO
+
+Homepage remains brand authority for Interiors, Modular Kitchens, **and** Furniture — not furniture-only. Internal links: Interiors, Modular Kitchen, Portfolio, Shop, major categories. Product JSON-LD primarily on PDP; BreadcrumbList on category/PDP. Do not overload homepage with product structured data.
+
+#### Locked section order
+
+1. Header
+2. Hero
+3. Two Journeys
+4. Trust Strip
+5. Interior Services
+6. Modular Kitchen Feature
+7. Shop Furniture Categories
+8. Featured Furniture
+9. Portfolio / Real Homes
+10. Why ONEDECORE
+11. Interior Process
+12. Furniture Pincode Checker
+13. Testimonials
+14. Final Dual CTA
+15. Footer
+
+This order keeps interiors dominant, introduces shop early enough to discover, preserves existing ONEDECORE strengths, limits ecommerce clutter, and keeps mobile scanning manageable.
 
 ---
 
 ## 10. Phase 9D-C public storefront UX (prepared; not implemented)
+
 
 **Do not implement until the entry gate in the header.**
 
@@ -289,5 +425,6 @@ SEO (9D-C generates from admin fields): canonical URLs, Product JSON-LD, Breadcr
 ## Related
 
 - [Preparation audit](../audits/phase-9d-c-commerce-admin-storefront-preparation.md)
+- [Unified homepage design](../design/phase-9d-c-unified-homepage.md)
 - [9D-B implementation](../audits/phase-9d-b-commerce-catalogue-inventory-foundation.md)
-- DEC-0089, DEC-0090
+- DEC-0089, DEC-0090, DEC-0091

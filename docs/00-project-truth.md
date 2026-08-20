@@ -1,12 +1,12 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced through Phase 9D-C admin/storefront preparation freeze, August 20, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced through Phase 9D-C unified homepage design lock, August 20, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 9D-B **REPOSITORY MERGED** (DEC-0089; PR #73 `06b6d2ea5f1cf4d886be497a8eed7ce8d1d52e58`; repo **M1–M35**; managed **M1–M34**; M35 **not** applied; 9D-B closeout **not started**). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090; **code not started**). Production **OFF**.
+**Current Phase:** Phase 9D-B **REPOSITORY MERGED** (DEC-0089; PR #73; repo **M1–M35**; managed **M1–M34**; M35 **not** applied; 9D-B closeout **not started**). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090) with **homepage design locked** (ADR-0032 §9.1 / DEC-0091; **code not started**). Production **OFF**.
 **Next Phase:** Recovery-qualified managed apply/certification of M35, then 9D-B docs-only closeout merge. Then 9D-C may start. Production, `/shop` runtime, checkout, and payments stay disabled until their gates.
 **Previous Phase:** Phase 9C — Campaign execution, feedback & metrics (**COMPLETE** / DEC-0088; M1–M34 managed)
 
@@ -236,6 +236,7 @@ WhatsApp production outbound, public lead activation, production deployment, **M
 - [Phase 9D-A entry audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)
 - [ADR-0031: Phase 9C campaign execution architecture freeze](ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversion-feedback.md)
 - [ADR-0032: Commerce admin control and 9D-C storefront preparation](ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md)
+- [ADR-0032 unified homepage design](design/phase-9d-c-unified-homepage.md)
 - [Phase 9D-C preparation](audits/phase-9d-c-commerce-admin-storefront-preparation.md)
 - [Phase 9C architecture freeze](audits/phase-9c-campaign-execution-attribution-feedback-architecture-freeze.md)
 
@@ -294,7 +295,7 @@ Phase 9D-B repository implementation is recorded as **DEC-0089** / [audit](audit
 <!-- PHASE_9D_C_PREPARATION_FREEZE_START -->
 ## Phase 9D-C — Admin Control & Storefront Preparation
 
-Owner lock is **ADR-0032 / DEC-0090** / [audit](audits/phase-9d-c-commerce-admin-storefront-preparation.md). Docs only. Catalogue operations must be admin-controlled. Pincode remains serviceability authority; cities are grouping/display (schema after certified M35). Homepage remains one ONEDECORE brand (~70% interiors / ~30% furniture) with admin-driven furniture categories and featured products. **No M36. No `/shop` code. 9D-C BLOCKED** until M35 managed certification and 9D-B closeout merge.
+Owner lock is **ADR-0032 / DEC-0090** / [audit](audits/phase-9d-c-commerce-admin-storefront-preparation.md). Homepage visual/IA lock is **ADR-0032 §9.1 / DEC-0091** / [design](design/phase-9d-c-unified-homepage.md). Docs only. Catalogue operations must be admin-controlled. Pincode remains serviceability authority; cities are grouping/display (schema after certified M35). Homepage remains one ONEDECORE brand (~70% interiors / ~30% furniture) with admin-driven furniture categories and featured products. **No M36. No `/shop` code. No homepage runtime in this documentation. 9D-C BLOCKED** until M35 managed certification and 9D-B closeout merge.
 <!-- PHASE_9D_C_PREPARATION_FREEZE_END -->
 
 <!-- PHASE_9D_A_ARCHITECTURE_FREEZE_START -->

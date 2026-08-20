@@ -107,5 +107,5 @@ The documented `/consultation` path must not be treated as a mounted route unles
 <!-- PHASE_9D_A_ARCHITECTURE_FREEZE_START -->
 ## Phase 9D-A Public/Admin Route Freeze (not mounted)
 
-Canonical shop routes are frozen in ADR-0030. They are **not implemented**. Homepage furniture categories and featured products will bind to admin catalogue data in 9D-C (ADR-0032); this gate does not mount `/shop` or change the public homepage. Sitemap must not list guest track URLs as public indexable pages until 9D-C/F. `/shop/order/[orderReference]` is authorized only by a short-lived server tracking cookie after POST `/shop/track`, not by the URL alone. `/shop` is not `/portfolio` and not `/consultation`.
+Canonical shop routes are frozen in ADR-0030. They are **not implemented**. Homepage furniture categories and featured products will bind to admin catalogue data in 9D-C (ADR-0032 §9.1 / DEC-0091); this documentation does not mount `/shop` or change the public homepage runtime. Sitemap must not list guest track URLs as public indexable pages until 9D-C/F. `/shop/order/[orderReference]` is authorized only by a short-lived server tracking cookie after POST `/shop/track`, not by the URL alone. `/shop` is not `/portfolio` and not `/consultation`.
 <!-- PHASE_9D_A_ARCHITECTURE_FREEZE_END -->
