@@ -12,7 +12,7 @@ Repository-only Phase 9C-C: Meta Ads + Google Ads adapters behind the existing p
 
 ## Explicitly out of scope / not done in this gate
 
-- Managed Supabase apply (`lpurlfmpvriyvpkujvyl` remains M1–M32)
+- Managed Supabase apply of M33 then M34 is recorded in DEC-0088 / [managed apply closeout](phase-9c-managed-apply-closeout.md) (production still OFF)
 - Production Landing Lab `/lp/*` activation
 - Real Meta or Google Ads mutations, spend, custom audiences, hashed PII, live conversion upload
 - Production scheduler
@@ -80,11 +80,6 @@ Signed context via `/lp/[slug]?odecx=` (opaque). Unsigned `run_reference` query 
 
 ## Managed
 
-Read-only dry-run (`db push --linked --dry-run`, not applied) proposes **only**:
-
-1. `20260820140000_campaign_execution_foundation.sql`
-2. `20260821140000_campaign_metrics_conversion_feedback_foundation.sql`
-
-Remote history remains M1–M32. Later apply requires a qualified recovery checkpoint newer than post-M32.
+M33 then M34 were applied 2026-08-20 (DEC-0088 / [closeout](phase-9c-managed-apply-closeout.md)). Remote history is **M1–M34**, pending **NONE**. Production/sharing remain OFF.
 
 `/admin/campaigns/[campaignId]` Metrics / Conversion Feedback panel. `campaigns.metrics.read`. Production/sharing OFF banners. No secrets rendered.

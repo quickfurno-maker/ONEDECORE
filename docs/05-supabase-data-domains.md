@@ -1,9 +1,9 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
-**Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9C-B repository implementation, August 19, 2026)
+**Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9C managed apply certification, August 20, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
-**Migrations Applied (Managed):** M1–M32 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. M32 **MANAGED_APPLIED**. M31 **MANAGED_APPLIED_IMMUTABLE**.
+**Migrations Applied (Managed):** M1–M34 on OneDecore `lpurlfmpvriyvpkujvyl`. Pending **NONE**. M34 **MANAGED_APPLIED**. M33 **MANAGED_APPLIED**. M32 **MANAGED_APPLIED**. M31 **MANAGED_APPLIED_IMMUTABLE**.
 
 ---
 
@@ -221,5 +221,5 @@ Existing authoritative data is reused (`leads.landing_path`, `leads.attribution`
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
 ### Phase 9C Campaign Execution Data Domain
 
-9C-C (DEC-0087 / repository M1–M34): `campaign_metric_snapshots`, `campaign_conversion_feedback_events`; M33 `campaign_run_operations` extended forward-only with `metrics_sync` and `conversion_feedback`. Trusted run/target enrich existing `leads.attribution` / `lead_source_touchpoints`. Managed remains **M1–M32**. No parallel attribution or CRM-stage table.
+9C-C (DEC-0087 / PR #71) plus managed apply (DEC-0088): `campaign_metric_snapshots`, `campaign_conversion_feedback_events`; M33 `campaign_run_operations` extended forward-only with `metrics_sync` and `conversion_feedback`. Trusted run/target enrich existing `leads.attribution` / `lead_source_touchpoints`. Managed **M1–M34**. No parallel attribution or CRM-stage table.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->
