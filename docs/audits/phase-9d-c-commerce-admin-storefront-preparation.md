@@ -3,8 +3,8 @@
 **Status:** `PREPARATION_FROZEN` (docs only; **not** 9D-C implementation; **not** 9D-B closeout)
 **Date:** 2026-08-20
 **Starting main (homepage lock):** `e1aa6ca5d412fb03d9e92835098236c8254b42c0` (PR #74 true merge)
-**Authority:** ADR-0028 / ADR-0030 / ADR-0032 / DEC-0079 / DEC-0083 / DEC-0089 / DEC-0090 / DEC-0091 / OD9D-1–OD9D-12
-**Scope:** docs only. No M36. No `commerce_service_areas`. No `/shop`. No homepage runtime. No checkout. No payment. No managed write. No deploy.
+**Authority:** ADR-0028 / ADR-0030 / ADR-0032 / DEC-0079 / DEC-0083 / DEC-0089 / DEC-0090 / DEC-0091 / DEC-0092 / OD9D-1–OD9D-12
+**Scope:** docs only. No M36. No `commerce_service_areas`. No `/shop`. No `/interiors`. No homepage runtime. No checkout. No payment. No managed write. No deploy.
 
 ---
 
@@ -72,7 +72,7 @@ Normative text: [ADR-0032](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c
 | Service areas | Items 31 and 34 only. Next forward-only migration **after** certified M35; timestamp **unreserved**; **not** this gate; do not call it M36 |
 | Launch city | Pune first; later cities from Admin |
 | GIS | Forbidden |
-| Homepage | One brand; ~70% interiors / ~30% furniture; admin-driven furniture categories + featured; **section order and UX locked in ADR-0032 §9.1 / DEC-0091**; no fake cart; compact mobile length |
+| Homepage | One brand; root `/` ~60–65% interiors/kitchen / ~35–40% furniture; dedicated `/interiors` conversion; dedicated `/shop`; admin-driven furniture categories + featured; **three-layer journey locked in ADR-0032 §9.2 / DEC-0092**; no fake cart; compact mobile length |
 | Page builder | Forbidden |
 | Cart in 9D-C | No functional cart; 9D-D owns cart/checkout |
 | Production | Phase 10 only; not an admin toggle |
@@ -84,7 +84,7 @@ Normative text: [ADR-0032](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c
 
 **Allowed:** business catalogue preparation, image preparation, this admin/UX spec, SEO copy in existing fields, homepage **design** preparation (no runtime).
 
-**Forbidden now:** M36 or any post-M35 SQL, service-area DB, `/shop` implementation, checkout, payment, deployment, 9D-B closeout impersonation, M35 managed apply.
+**Forbidden now:** M36 or any post-M35 SQL, service-area DB, `/shop` or `/interiors` implementation, homepage runtime rewrite, checkout, payment, deployment, 9D-B closeout impersonation, M35 managed apply.
 
 ---
 
@@ -94,7 +94,7 @@ Normative text: [ADR-0032](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c
 - 9D-D / 9D-E / 9D-F / Phase 10 **NOT STARTED**
 - M35 **NOT** managed-applied
 - 9D-B closeout **NOT STARTED**
-- No `/shop`, cart, checkout, commerce orders, payments, SDKs, webhooks
+- No `/shop`, `/interiors`, cart, checkout, commerce orders, payments, SDKs, webhooks
 - No CRM lead or MARKETING consent from commerce
 - No project conversion from furniture
 - Protected stashes untouched
@@ -103,8 +103,14 @@ Normative text: [ADR-0032](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c
 
 ## 6. Unified homepage design lock (DEC-0091)
 
-Normative: [ADR-0032 §9.1](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md). Checklist: [docs/design/phase-9d-c-unified-homepage.md](../design/phase-9d-c-unified-homepage.md).
+Normative visual language: [ADR-0032 §9.1](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md). DEC-0091 ratio, “no separate interiors homepage”, Kitchen header target, and root section order are **superseded by §9.2 / DEC-0092**. Remaining §9.1 visual/funnel/admin/no-fake-cart/phase locks remain.
 
-Locked order: Header → Hero → Two Journeys → Trust Strip → Interior Services → Modular Kitchen Feature → Shop Furniture Categories → Featured Furniture → Portfolio → Why ONEDECORE → Interior Process → Pincode Checker → Testimonials → Dual CTA → Footer.
+## 6.1 Three-layer public journey (DEC-0092)
 
-No homepage runtime in this documentation. Cart icon only in 9D-D. Search/wishlist icons only when those 9D-C features exist.
+Normative: [ADR-0032 §9.2](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md). Checklists: [unified homepage](../design/phase-9d-c-unified-homepage.md), [three-layer public site](../design/phase-9d-c-three-layer-public-site.md).
+
+Layers: `/` mixed brand homepage (~60–65 / ~35–40) **above** `/interiors` (Interiors + Kitchen conversion) and `/shop` (commerce). MVP kitchens nav: `/interiors#modular-kitchen`. No default `/modular-kitchen` page.
+
+Root `/` order: Header → Mixed hero → Two journeys → Trust → Interior/kitchen **preview** → Shop categories → Modular kitchen feature → Featured furniture → Portfolio → Why → Process → Pincode → Testimonials → Dual CTA → Footer.
+
+No homepage, `/interiors`, or `/shop` runtime in this documentation. Cart icon only in 9D-D. Search/wishlist icons only when those 9D-C features exist.

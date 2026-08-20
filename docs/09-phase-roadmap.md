@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced through Phase 9D-C unified homepage design lock, August 20, 2026)
-**Current Phase:** Phase 9D-B **REPOSITORY MERGED** (DEC-0089; PR #73; repo M1–M35; managed M1–M34; M35 not applied; closeout not started). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090) + **homepage design locked** (DEC-0091; code not started). Phase 9C **MANAGED APPLY CERTIFIED** (DEC-0088).
+**Document Status:** Locked Roadmap (truth-synced through Phase 9D-C three-layer public-site journey lock, August 20, 2026)
+**Current Phase:** Phase 9D-B **REPOSITORY MERGED** (DEC-0089; PR #73; repo M1–M35; managed M1–M34; M35 not applied; closeout not started). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090) + **three-layer public journey locked** (DEC-0092; code not started). Phase 9C **MANAGED APPLY CERTIFIED** (DEC-0088).
 **Next Phase:** Recovery-qualified managed apply of M35, then 9D-B docs closeout merge, then 9D-C. Production remains disabled.
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; production **not** activated)
 
@@ -301,7 +301,7 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Roadmap lock:** [Phase 9D lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md), [ADR-0028](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md), DEC-0079, OD9D-1–OD9D-12.
 - **Architecture freeze:** [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md), [9D-A audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md), DEC-0083.
 - **Placement:** after 9C, before Phase 10. **9D-C blocked** until M35 is recovery-qualified managed-applied **and** 9D-B docs closeout is merged.
-- **Status:** **9D-A ARCHITECTURE FROZEN**. **9D-B REPOSITORY MERGED** (DEC-0089 / M35 / PR #73). **9D-C PREPARATION FROZEN** (ADR-0032 / DEC-0090). **Homepage design locked** (ADR-0032 §9.1 / DEC-0091). No `/shop` runtime, checkout, or payment provider. Managed still **M1–M34**.
+- **Status:** **9D-A ARCHITECTURE FROZEN**. **9D-B REPOSITORY MERGED** (DEC-0089 / M35 / PR #73). **9D-C PREPARATION FROZEN** (ADR-0032 / DEC-0090). **Three-layer public journey locked** (ADR-0032 §9.2 / DEC-0092). No `/shop` or `/interiors` runtime, checkout, or payment provider. Managed still **M1–M34**.
 
 ### Phase 10
 - **Objective:** Security hardening, full E2E, performance budgets, Hostinger VPS deployment.
@@ -384,9 +384,9 @@ M35 is merged in the repository (PR #73). Managed remains **M1–M34**. 9D-C cod
 <!-- PHASE_9D_C_PREPARATION_FREEZE_START -->
 ## Phase 9D-C Admin / Storefront Preparation Status
 
-**Status:** `PREPARATION_FROZEN (DEC-0090)` + `HOMEPAGE_DESIGN_LOCKED (DEC-0091)` — 9D-C **code NOT STARTED**
+**Status:** `PREPARATION_FROZEN (DEC-0090)` + `HOMEPAGE_DESIGN_LOCKED (DEC-0091)` + `THREE_LAYER_PUBLIC_JOURNEY_LOCKED (DEC-0092)` — 9D-C **code NOT STARTED**
 
-Authority: **ADR-0032 / DEC-0090 / DEC-0091**. No M36. No `/shop`. No homepage runtime. No service-area table. Production **OFF**.
+Authority: **ADR-0032 / DEC-0090 / DEC-0091 / DEC-0092**. No M36. No `/shop`. No `/interiors`. No homepage runtime. No service-area table. Production **OFF**.
 <!-- PHASE_9D_C_PREPARATION_FREEZE_END -->
 
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
