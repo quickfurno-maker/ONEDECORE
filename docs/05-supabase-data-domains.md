@@ -228,4 +228,6 @@ Existing authoritative data is reused (`leads.landing_path`, `leads.attribution`
 ### Phase 9D-B Commerce Catalogue / Inventory Domain
 
 M35 (DEC-0089): `commerce_categories`, `commerce_products`, `commerce_product_variants`, `commerce_product_media`, `commerce_product_specifications`, `commerce_inventory`, `commerce_related_products`, `commerce_pincodes`, `commerce_shipping_settings`, `commerce_tax_rates`, `commerce_tax_settings`. Dedicated buckets `commerce-product-originals` / `commerce-product-public`. No order/payment tables. Repository **M1–M35**. Managed **M1–M34**.
+
+9D-C preparation (ADR-0032 / DEC-0090): conceptual `commerce_service_areas` plus nullable `commerce_pincodes.service_area_id` — **not created**. Timestamp **unreserved** until after certified M35. Pincode remains serviceability authority.
 <!-- PHASE_9D_B_IMPLEMENTATION_END -->

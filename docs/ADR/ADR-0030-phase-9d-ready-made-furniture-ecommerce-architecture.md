@@ -392,4 +392,5 @@ Exceptions: payment_failed | cancelled
 
 - [9D-A entry audit](../audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)
 - [ADR-0028 roadmap lock](ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
-- DEC-0079, DEC-0083
+- DEC-0079, DEC-0083, DEC-0090
+- [ADR-0032 admin/storefront preparation](ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md)

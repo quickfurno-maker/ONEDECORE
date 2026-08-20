@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced through Phase 9C managed apply certification, August 20, 2026)
-**Current Phase:** Phase 9D-B **REPOSITORY IMPLEMENTED** (DEC-0089; repo M1–M35; managed M1–M34). Phase 9C **MANAGED APPLY CERTIFIED** (DEC-0088). Phase 9D-A **ARCHITECTURE_FROZEN**.
-**Next Phase:** Independent review/merge of Phase 9D-B, then recovery-qualified managed apply of M35. Then 9D-C. Production Landing Lab and paid provider execution remain disabled.
+**Document Status:** Locked Roadmap (truth-synced through Phase 9D-C admin/storefront preparation freeze, August 20, 2026)
+**Current Phase:** Phase 9D-B **REPOSITORY MERGED** (DEC-0089; PR #73; repo M1–M35; managed M1–M34; M35 not applied; closeout not started). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090; code not started). Phase 9C **MANAGED APPLY CERTIFIED** (DEC-0088).
+**Next Phase:** Recovery-qualified managed apply of M35, then 9D-B docs closeout merge, then 9D-C. Production remains disabled.
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; production **not** activated)
 
 ---
@@ -300,8 +300,8 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Objective:** Premium mobile-first category-based ready-made furniture store under `/shop`.
 - **Roadmap lock:** [Phase 9D lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md), [ADR-0028](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md), DEC-0079, OD9D-1–OD9D-12.
 - **Architecture freeze:** [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md), [9D-A audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md), DEC-0083.
-- **Placement:** after 9C, before Phase 10. **9D-C blocked** until 9D-B is independently reviewed, merged, and recovery-qualified managed-applied.
-- **Status:** **9D-A ARCHITECTURE FROZEN**. **9D-B REPOSITORY IMPLEMENTED** (DEC-0089 / M35). No `/shop` runtime, checkout, or payment provider. Managed still **M1–M34**.
+- **Placement:** after 9C, before Phase 10. **9D-C blocked** until M35 is recovery-qualified managed-applied **and** 9D-B docs closeout is merged.
+- **Status:** **9D-A ARCHITECTURE FROZEN**. **9D-B REPOSITORY MERGED** (DEC-0089 / M35 / PR #73). **9D-C PREPARATION FROZEN** (ADR-0032 / DEC-0090). No `/shop` runtime, checkout, or payment provider. Managed still **M1–M34**.
 
 ### Phase 10
 - **Objective:** Security hardening, full E2E, performance budgets, Hostinger VPS deployment.
@@ -347,6 +347,7 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - [ADR-0028: Phase 9D ready-made furniture e-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [Phase 9D roadmap lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md)
 - [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
+- [ADR-0032: Commerce admin control and 9D-C storefront preparation](ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md)
 - [Phase 9D-A entry audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)
 - [Phase 9D-B catalogue/inventory foundation](audits/phase-9d-b-commerce-catalogue-inventory-foundation.md)
 - [Phase 9B M32 managed apply closeout](audits/phase-9b-m32-managed-apply-closeout.md)
@@ -376,8 +377,16 @@ Physical checkpoint **1412215555** (`2026-08-18T19:54:24.861Z`). CLI `npx supaba
 
 Authority: **ADR-0028 / ADR-0030 / DEC-0079 / DEC-0083 / DEC-0089 / OD9D-1–OD9D-12**.
 
-M35 is repository-only. Managed remains **M1–M34**. 9D-C blocked until this gate is independently reviewed, merged, and recovery-qualified managed-applied.
+M35 is merged in the repository (PR #73). Managed remains **M1–M34**. 9D-C code is blocked until recovery-qualified managed apply of M35 **and** 9D-B docs closeout merge. Admin/storefront preparation: [ADR-0032](ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md) / DEC-0090.
 <!-- PHASE_9D_A_ARCHITECTURE_FREEZE_END -->
+
+<!-- PHASE_9D_C_PREPARATION_FREEZE_START -->
+## Phase 9D-C Admin / Storefront Preparation Status
+
+**Status:** `PREPARATION_FROZEN (DEC-0090)` — 9D-C **code NOT STARTED**
+
+Authority: **ADR-0032 / DEC-0090**. No M36. No `/shop`. No service-area table. Production **OFF**.
+<!-- PHASE_9D_C_PREPARATION_FREEZE_END -->
 
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
 ## Phase 9C Architecture Freeze Status
