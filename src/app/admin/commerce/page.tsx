@@ -5,14 +5,14 @@ import { loadCommerceCatalogueGraph } from "@/features/commerce/server/commerce-
 import { StorefrontDisabledBanner } from "@/features/commerce/components/StorefrontDisabledBanner";
 import { CommerceAdminLinks } from "@/features/commerce/components/CommerceAdminLinks";
 import { CommerceDashboardView } from "@/features/commerce/components/CommerceDashboardView";
+import { CommerceDataUnavailable } from "@/features/commerce/components/CommerceDataUnavailable";
 import {
   CommerceGhostButton,
   CommerceGoldButton,
   CommercePageHeader,
 } from "@/features/commerce/components/CommercePageHeader";
 import { buildCommerceDashboardSnapshot } from "@/features/commerce/domain/commerce-dashboard";
-import { QuickActionsMenu } from "@/features/admin-ops/components/QuickActionsMenu.tsx";
-import { resolveOpsNavFlags } from "@/features/admin-ops/server/resolve-ops-nav-flags.ts";
+import { isCommerceReadError } from "@/features/commerce/domain/commerce-read";
 
 export const dynamic = "force-dynamic";
 
@@ -26,23 +26,37 @@ export default async function AdminCommercePage() {
   if (!session) {
     redirect("/auth/login?next=%2Fadmin%2Fcommerce");
   }
-  const [permissions, flags] = await Promise.all([probeCommercePermissions(), resolveOpsNavFlags()]);
+  const permissions = await probeCommercePermissions();
   if (!permissions.canRead) {
     redirect("/auth/forbidden");
   }
-  const graph = await loadCommerceCatalogueGraph({ includeInventory: permissions.canRead });
-  const snapshot = buildCommerceDashboardSnapshot({
-    products: graph.products,
-    categories: graph.categories,
-    variants: graph.variants,
-    media: graph.media,
-    taxRates: graph.taxRates,
-    taxRequiredForPublish: graph.taxSettings?.tax_required_for_publish ?? true,
-    gstInclusiveDisplay: graph.taxSettings?.gst_inclusive_display ?? true,
-    shippingPresent: graph.shipping != null,
-    pincodes: graph.pincodes,
-    inventory: graph.inventory,
-  });
+
+  let graph: Awaited<ReturnType<typeof loadCommerceCatalogueGraph>> | null = null;
+  let loadFailed = false;
+  try {
+    graph = await loadCommerceCatalogueGraph({ includeInventory: permissions.canRead });
+  } catch (error) {
+    if (!isCommerceReadError(error)) {
+      throw error;
+    }
+    loadFailed = true;
+  }
+
+  const snapshot = graph
+    ? buildCommerceDashboardSnapshot({
+        products: graph.products,
+        categories: graph.categories,
+        variants: graph.variants,
+        media: graph.media,
+        taxRates: graph.taxRates,
+        taxRequiredForPublish: graph.taxSettings?.tax_required_for_publish ?? true,
+        gstInclusiveDisplay: graph.taxSettings?.gst_inclusive_display ?? true,
+        shippingPresent: graph.shipping != null,
+        pincodes: graph.pincodes,
+        inventory: graph.inventory,
+        inventoryStatus: graph.inventoryStatus,
+      })
+    : null;
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 lg:space-y-7">
@@ -51,7 +65,6 @@ export default async function AdminCommercePage() {
         subtitle="Catalogue, inventory and storefront readiness."
         actions={
           <>
-            <QuickActionsMenu flags={flags} />
             {permissions.canManageCatalog ? (
               <CommerceGoldButton href="/admin/commerce/products">+ Add Product</CommerceGoldButton>
             ) : null}
@@ -63,7 +76,16 @@ export default async function AdminCommercePage() {
       />
       <StorefrontDisabledBanner />
       <CommerceAdminLinks />
-      <CommerceDashboardView snapshot={snapshot} canManageCatalog={permissions.canManageCatalog} />
+      {loadFailed || !snapshot ? (
+        <CommerceDataUnavailable />
+      ) : (
+        <CommerceDashboardView
+          snapshot={snapshot}
+          canManageCatalog={permissions.canManageCatalog}
+          canManageInventory={permissions.canManageInventory}
+          canManageSettings={permissions.canManageSettings}
+        />
+      )}
     </div>
   );
 }

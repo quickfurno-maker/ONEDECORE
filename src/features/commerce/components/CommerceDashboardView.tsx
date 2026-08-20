@@ -5,6 +5,7 @@ import { NeedsAttentionPanel } from "@/features/admin-ops/components/NeedsAttent
 import { OpsIcon } from "@/features/admin-ops/components/OpsIcon.tsx";
 import { formatInrFromPaise } from "@/features/crm/contracts/sales-target-contracts.ts";
 import type { CommerceDashboardSnapshot } from "../domain/commerce-dashboard.ts";
+import { applyCommerceActionLabels } from "../domain/commerce-dashboard.ts";
 
 function Bar({ value, max, color }: { value: number; max: number; color: string }) {
   const width = max > 0 ? Math.max(4, Math.round((value / max) * 100)) : 0;
@@ -21,14 +22,23 @@ function Bar({ value, max, color }: { value: number; max: number; color: string 
 export function CommerceDashboardView({
   snapshot,
   canManageCatalog,
+  canManageInventory,
+  canManageSettings,
 }: {
   readonly snapshot: CommerceDashboardSnapshot;
   readonly canManageCatalog: boolean;
+  readonly canManageInventory: boolean;
+  readonly canManageSettings: boolean;
 }) {
   const healthTotal = snapshot.health.published + snapshot.health.draft + snapshot.health.archived;
   const healthMax = Math.max(healthTotal, 1);
   const distMax = Math.max(...snapshot.distribution.map((row) => row.published), 1);
   const invMax = Math.max(...(snapshot.inventory?.byRootCategory.map((row) => row.available) ?? [0]), 1);
+  const attention = applyCommerceActionLabels(snapshot.attention, {
+    canManageCatalog,
+    canManageInventory,
+    canManageSettings,
+  });
 
   return (
     <div className="space-y-6 lg:space-y-7">
@@ -105,12 +115,16 @@ export function CommerceDashboardView({
             )}
           </DashboardPanel>
         </div>
-        <NeedsAttentionPanel items={snapshot.attention} />
+        <NeedsAttentionPanel items={attention} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <DashboardPanel title="Inventory Snapshot">
-          {snapshot.inventory ? (
+          {snapshot.inventoryStatus === "unavailable" ? (
+            <p className="text-sm text-[var(--od-muted)]">Inventory data unavailable.</p>
+          ) : snapshot.inventoryStatus === "omitted" ? (
+            <p className="text-sm text-[var(--od-muted)]">Inventory figures are hidden for this permission.</p>
+          ) : snapshot.inventory ? (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                 <div>
@@ -254,13 +268,15 @@ export function CommerceDashboardView({
           title="Delivery Coverage"
           action={
             <Link href="/admin/commerce/settings" className="text-xs font-medium text-[var(--od-gold)]">
-              Manage Pincodes
+              {canManageSettings ? "Manage Pincodes" : "View Pincodes"}
             </Link>
           }
         >
           {snapshot.coverage.serviceable === 0 && snapshot.coverage.unserviceable === 0 ? (
             <p className="text-sm text-[var(--od-muted)]">
-              No serviceable pincodes. Add delivery pincodes before storefront activation.
+              {canManageSettings
+                ? "No serviceable pincodes. Add delivery pincodes before storefront activation."
+                : "No serviceable pincodes are configured."}
             </p>
           ) : (
             <div className="space-y-3">

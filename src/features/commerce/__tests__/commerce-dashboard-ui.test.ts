@@ -7,7 +7,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
-import { buildCommerceDashboardSnapshot } from "../domain/commerce-dashboard.ts";
+import { buildCommerceDashboardSnapshot, applyCommerceActionLabels } from "../domain/commerce-dashboard.ts";
+import {
+  assertCommerceReadList,
+  CommerceReadError,
+  readCommerceInventoryList,
+} from "../domain/commerce-read.ts";
 
 const root = process.cwd();
 
@@ -30,6 +35,7 @@ describe("Commerce dashboard UI phase gates", () => {
     assert.match(page, /Catalogue, inventory and storefront readiness/);
     assert.match(page, /\+ Add Product/);
     assert.match(page, /Manage Categories/);
+    assert.doesNotMatch(page, /QuickActionsMenu/);
   });
 
   test("storefront banner copy is unchanged", () => {
@@ -108,6 +114,7 @@ describe("Commerce dashboard UI phase gates", () => {
       inventory: [
         { variant_id: "v1", stock_on_hand: 4, reserved_qty: 1, available_qty: 3 },
       ],
+      inventoryStatus: "ok",
     });
     assert.equal(snapshot.health.published, 1);
     assert.equal(snapshot.kpis.some((item) => item.label === "Published Products"), true);
@@ -118,5 +125,124 @@ describe("Commerce dashboard UI phase gates", () => {
     assert.equal(snapshot.featured[0]?.name, "Milano Sofa");
     assert.equal(snapshot.coverage.serviceable, 1);
     assert.equal(snapshot.readiness.readyPublished, 1);
+  });
+});
+
+describe("Commerce dashboard read truth", () => {
+  test("successful empty query is empty catalogue, not unavailable", () => {
+    const rows = assertCommerceReadList({ data: [], error: null }, "commerce_products");
+    assert.deepEqual(rows, []);
+    const snapshot = buildCommerceDashboardSnapshot({
+      products: [],
+      categories: [],
+      variants: [],
+      media: [],
+      taxRates: [],
+      taxRequiredForPublish: true,
+      gstInclusiveDisplay: true,
+      shippingPresent: true,
+      pincodes: [],
+      inventory: [],
+      inventoryStatus: "ok",
+    });
+    assert.equal(snapshot.health.published, 0);
+    assert.equal(snapshot.inventory?.zeroStock, 0);
+  });
+
+  test("failed query throws unavailable instead of empty catalogue", () => {
+    assert.throws(
+      () => assertCommerceReadList({ data: null, error: { message: "relation does not exist" } }, "commerce_products"),
+      (error: unknown) =>
+        error instanceof CommerceReadError &&
+        error.message === "Commerce data unavailable" &&
+        !String(error.message).includes("relation does not exist")
+    );
+  });
+
+  test("failed inventory query is unavailable, not zero stock", () => {
+    const inventory = readCommerceInventoryList({ data: null, error: { message: "permission denied" } });
+    assert.equal(inventory.status, "unavailable");
+    const snapshot = buildCommerceDashboardSnapshot({
+      products: [],
+      categories: [],
+      variants: [
+        {
+          id: "v1",
+          product_id: "p1",
+          sku: "od-sf-001",
+          status: "active",
+          availability_mode: "ready_stock",
+          selling_price_paise: 100,
+        },
+      ],
+      media: [],
+      taxRates: [],
+      taxRequiredForPublish: true,
+      gstInclusiveDisplay: true,
+      shippingPresent: true,
+      pincodes: [],
+      inventory: null,
+      inventoryStatus: "unavailable",
+    });
+    assert.equal(snapshot.inventory, null);
+    assert.equal(snapshot.inventoryStatus, "unavailable");
+    assert.equal(snapshot.kpis.some((item) => item.id === "zero-stock"), false);
+  });
+});
+
+describe("Commerce dashboard read-only actions", () => {
+  test("commerce.read without manage flags uses view wording", () => {
+    const snapshot = buildCommerceDashboardSnapshot({
+      products: [
+        {
+          id: "p1",
+          product_reference: "OD-1",
+          name: "Milano Sofa",
+          slug: "milano-sofa",
+          status: "draft",
+          featured: true,
+          category_id: "c1",
+          tax_rate_id: null,
+          updated_at: "2026-08-01T00:00:00.000Z",
+        },
+      ],
+      categories: [
+        {
+          id: "c1",
+          name: "Sofas",
+          parent_category_id: null,
+          status: "active",
+          seo_title: null,
+          seo_description: null,
+          sort_order: 0,
+        },
+      ],
+      variants: [],
+      media: [],
+      taxRates: [],
+      taxRequiredForPublish: true,
+      gstInclusiveDisplay: true,
+      shippingPresent: false,
+      pincodes: [],
+      inventory: [],
+      inventoryStatus: "ok",
+    });
+    const labeled = applyCommerceActionLabels(snapshot.attention, {
+      canManageCatalog: false,
+      canManageInventory: false,
+      canManageSettings: false,
+    });
+    for (const item of labeled) {
+      assert.doesNotMatch(item.actionLabel, /Fix Media|Adjust Inventory|Manage Pincodes|Manage Settings|^Variants$|^Publication$/);
+      assert.match(item.actionLabel, /^View /);
+      assert.match(item.href, /^\/admin\/commerce\//);
+    }
+    const view = readFileSync(
+      join(root, "src/features/commerce/components/CommerceDashboardView.tsx"),
+      "utf8"
+    );
+    assert.match(view, /canManageCatalog/);
+    assert.match(view, /canManageInventory/);
+    assert.match(view, /canManageSettings/);
   });
 });

@@ -1,11 +1,20 @@
 import { isPublicationReady } from "./publication.ts";
 
+export type CommerceAttentionKind = "catalog" | "inventory" | "pincodes" | "settings";
+
+export interface CommerceDashboardCapabilities {
+  readonly canManageCatalog: boolean;
+  readonly canManageInventory: boolean;
+  readonly canManageSettings: boolean;
+}
+
 export interface CommerceAttentionItem {
   readonly id: string;
   readonly title: string;
   readonly detail: string;
   readonly href: string;
   readonly actionLabel: string;
+  readonly actionKind: CommerceAttentionKind;
   readonly tone: "urgent" | "attention" | "info";
 }
 
@@ -90,6 +99,7 @@ export interface CommerceDashboardInput {
   readonly shippingPresent: boolean;
   readonly pincodes: readonly DashboardPincode[];
   readonly inventory: readonly DashboardInventory[] | null;
+  readonly inventoryStatus: "ok" | "unavailable" | "omitted";
 }
 
 export interface CatalogueHealth {
@@ -162,6 +172,7 @@ export interface CommerceDashboardSnapshot {
   readonly health: CatalogueHealth;
   readonly attention: readonly CommerceAttentionItem[];
   readonly inventory: InventorySnapshot | null;
+  readonly inventoryStatus: "ok" | "unavailable" | "omitted";
   readonly readiness: StorefrontReadiness;
   readonly featured: readonly FeaturedPreview[];
   readonly distribution: readonly CategoryDistributionRow[];
@@ -245,6 +256,7 @@ export function buildCommerceDashboardSnapshot(input: CommerceDashboardInput): C
       detail,
       href: `/admin/commerce/products/${product.id}${hash ? `#${hash}` : ""}`,
       actionLabel,
+      actionKind: "catalog",
       tone,
     });
   };
@@ -286,7 +298,7 @@ export function buildCommerceDashboardSnapshot(input: CommerceDashboardInput): C
     }
   }
 
-  if (input.inventory) {
+  if (input.inventoryStatus === "ok") {
     for (const variant of readyStock) {
       const inv = inventoryByVariant.get(variant.id);
       const available = availableFor(inv);
@@ -300,6 +312,7 @@ export function buildCommerceDashboardSnapshot(input: CommerceDashboardInput): C
             ? `/admin/commerce/products/${product.id}#inventory`
             : "/admin/commerce/products",
           actionLabel: "Inventory",
+          actionKind: "inventory",
           tone: "urgent",
         });
         if (product) attentionProductIds.add(product.id);
@@ -314,6 +327,7 @@ export function buildCommerceDashboardSnapshot(input: CommerceDashboardInput): C
       detail: "No serviceable pincodes configured",
       href: "/admin/commerce/settings",
       actionLabel: "Manage Pincodes",
+      actionKind: "pincodes",
       tone: "urgent",
     });
   }
@@ -324,6 +338,7 @@ export function buildCommerceDashboardSnapshot(input: CommerceDashboardInput): C
       detail: "Default shipping configuration is missing",
       href: "/admin/commerce/settings",
       actionLabel: "Settings",
+      actionKind: "settings",
       tone: "attention",
     });
   }
@@ -337,7 +352,7 @@ export function buildCommerceDashboardSnapshot(input: CommerceDashboardInput): C
   };
 
   let inventory: InventorySnapshot | null = null;
-  if (input.inventory) {
+  if (input.inventoryStatus === "ok") {
     let availableUnits = 0;
     let reservedUnits = 0;
     let zeroStock = 0;
@@ -574,6 +589,7 @@ export function buildCommerceDashboardSnapshot(input: CommerceDashboardInput): C
     health,
     attention: cappedAttention,
     inventory,
+    inventoryStatus: input.inventoryStatus,
     readiness,
     featured,
     distribution,
@@ -655,6 +671,36 @@ export function buildProductWorkspaceRows(input: {
       updatedAt: product.updated_at,
       hasPublicPrimary: hasActivePrimaryPublic(product.id, input.media),
       availabilityMode,
+    };
+  });
+}
+
+export function applyCommerceActionLabels(
+  items: readonly CommerceAttentionItem[],
+  capabilities: CommerceDashboardCapabilities
+): readonly CommerceAttentionItem[] {
+  return items.map((item) => {
+    if (item.actionKind === "catalog") {
+      return {
+        ...item,
+        actionLabel: capabilities.canManageCatalog ? item.actionLabel : "View Product",
+      };
+    }
+    if (item.actionKind === "inventory") {
+      return {
+        ...item,
+        actionLabel: capabilities.canManageInventory ? "Adjust Inventory" : "View Inventory",
+      };
+    }
+    if (item.actionKind === "pincodes") {
+      return {
+        ...item,
+        actionLabel: capabilities.canManageSettings ? "Manage Pincodes" : "View Pincodes",
+      };
+    }
+    return {
+      ...item,
+      actionLabel: capabilities.canManageSettings ? "Manage Settings" : "View Settings",
     };
   });
 }

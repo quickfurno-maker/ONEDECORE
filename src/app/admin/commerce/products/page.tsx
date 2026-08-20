@@ -7,7 +7,9 @@ import { StorefrontDisabledBanner } from "@/features/commerce/components/Storefr
 import { CommerceAdminLinks } from "@/features/commerce/components/CommerceAdminLinks";
 import { CommercePageHeader } from "@/features/commerce/components/CommercePageHeader";
 import { ProductWorkspaceTable } from "@/features/commerce/components/ProductWorkspaceTable";
+import { CommerceDataUnavailable } from "@/features/commerce/components/CommerceDataUnavailable";
 import { buildProductWorkspaceRows } from "@/features/commerce/domain/commerce-dashboard";
+import { isCommerceReadError } from "@/features/commerce/domain/commerce-read";
 
 export const dynamic = "force-dynamic";
 
@@ -42,17 +44,34 @@ export default async function AdminCommerceProductsPage({ searchParams }: AdminC
   const featured = params.featured ?? "all";
   const mode = params.mode ?? "all";
   const media = params.media ?? "all";
-  const workspace = await listCommerceProductWorkspace({
-    q,
-    status,
-    includeInventory: permissions.canRead,
-  });
+  let workspace: Awaited<ReturnType<typeof listCommerceProductWorkspace>> | null = null;
+  try {
+    workspace = await listCommerceProductWorkspace({
+      q,
+      status,
+      includeInventory: permissions.canRead,
+    });
+  } catch (error) {
+    if (!isCommerceReadError(error)) {
+      throw error;
+    }
+  }
+  if (!workspace) {
+    return (
+      <div className="mx-auto max-w-[1600px] space-y-6">
+        <CommercePageHeader title="Products" subtitle="Catalogue workspace. Public /shop is off." />
+        <StorefrontDisabledBanner />
+        <CommerceAdminLinks />
+        <CommerceDataUnavailable title="Product catalogue unavailable" />
+      </div>
+    );
+  }
   const rows = buildProductWorkspaceRows({
     products: workspace.products,
     categories: workspace.categories,
     variants: workspace.variants,
     media: workspace.media,
-    inventory: permissions.canRead ? workspace.inventory : null,
+    inventory: workspace.inventoryStatus === "ok" ? workspace.inventory : null,
   }).filter((row) => {
     if (category !== "all") {
       const match = workspace.products.find((product) => product.id === row.id);
