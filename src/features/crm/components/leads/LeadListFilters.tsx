@@ -1,20 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState } from "react";
+import { useId } from "react";
 import { LEAD_STAGE_CODES } from "../../contracts/lead-stages.ts";
 import { formatCrmCodeLabel } from "../../contracts/crm-labels.ts";
 import type {
   CrmAssigneeDirectoryEntry,
   CrmLeadSourceOption,
 } from "../../contracts/lead-detail-dtos.ts";
-import type { LeadListQuery } from "../../contracts/lead-list-query.ts";
+import {
+  buildLeadListHref,
+  type LeadListQuery,
+} from "../../contracts/lead-list-query.ts";
 
 interface LeadListFiltersProps {
   readonly query: LeadListQuery;
   readonly sources: readonly CrmLeadSourceOption[];
   readonly assignees: readonly CrmAssigneeDirectoryEntry[];
   readonly showBroadFilters: boolean;
+  readonly view: "table" | "pipeline";
+}
+
+function Chip({ label, href }: { label: string; href: string }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex min-h-8 items-center rounded-full border border-[var(--od-border-strong)] px-3 text-xs text-[var(--od-text-2)] hover:text-[var(--od-text)]"
+    >
+      {label} ×
+    </Link>
+  );
 }
 
 export function LeadListFilters({
@@ -22,159 +37,130 @@ export function LeadListFilters({
   sources,
   assignees,
   showBroadFilters,
+  view,
 }: LeadListFiltersProps) {
   const formId = useId();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const selectClass =
+    "min-h-10 rounded-[8px] border border-[var(--od-border)] bg-[var(--od-elevated)] px-3 text-sm text-[var(--od-text)]";
+  const sourceLabel = sources.find((source) => source.id === query.sourceId)?.displayName;
+  const assigneeLabel = assignees.find((row) => row.userId === query.assigneeId)?.displayName;
 
   return (
-    <section
-      aria-labelledby={`${formId}-heading`}
-      className="rounded-lg border border-neutral-800 bg-neutral-900/50"
-    >
-      <div className="flex items-center justify-between gap-3 border-b border-neutral-800 px-4 py-3">
-        <h2 id={`${formId}-heading`} className="text-sm font-semibold text-neutral-100">
-          Filters
-        </h2>
-        <button
-          type="button"
-          className="min-h-11 rounded-md border border-neutral-700 px-3 py-2 text-xs font-medium text-neutral-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 md:hidden"
-          aria-expanded={mobileOpen}
-          aria-controls={`${formId}-panel`}
-          onClick={() => setMobileOpen((open) => !open)}
-        >
-          {mobileOpen ? "Hide filters" : "Show filters"}
-        </button>
-      </div>
-
+    <section className="space-y-3" aria-labelledby={`${formId}-heading`}>
+      <h2 id={`${formId}-heading`} className="sr-only">
+        Filters
+      </h2>
       <form
-        id={`${formId}-panel`}
         action="/admin/crm/leads"
         method="get"
-        className={`grid gap-4 px-4 py-4 md:grid-cols-2 xl:grid-cols-4 ${mobileOpen ? "block" : "hidden md:grid"}`}
+        className="flex flex-wrap items-center gap-2"
       >
-        <div>
-          <label htmlFor={`${formId}-q`} className="mb-1 block text-xs font-medium text-neutral-400">
-            Search name or locality
-          </label>
-          <input
-            id={`${formId}-q`}
-            name="q"
-            type="search"
-            defaultValue={query.q ?? ""}
-            maxLength={100}
-            className="min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-          />
-        </div>
-
-        <div>
-          <label htmlFor={`${formId}-status`} className="mb-1 block text-xs font-medium text-neutral-400">
-            Status
-          </label>
-          <select
-            id={`${formId}-status`}
-            name="status"
-            defaultValue={query.status ?? ""}
-            className="min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-          >
-            <option value="">All statuses</option>
-            {LEAD_STAGE_CODES.map((status) => (
-              <option key={status} value={status}>
-                {formatCrmCodeLabel(status)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor={`${formId}-source`} className="mb-1 block text-xs font-medium text-neutral-400">
-            Source
-          </label>
-          <select
-            id={`${formId}-source`}
-            name="sourceId"
-            defaultValue={query.sourceId ?? ""}
-            className="min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-          >
-            <option value="">All sources</option>
-            {sources.map((source) => (
-              <option key={source.id} value={source.id}>
-                {source.displayName}
-              </option>
-            ))}
-          </select>
-        </div>
-
+        <input type="hidden" name="view" value={view} />
+        <input
+          id={`${formId}-q`}
+          name="q"
+          type="search"
+          placeholder="Search leads..."
+          defaultValue={query.q ?? ""}
+          maxLength={100}
+          className="min-h-10 min-w-[200px] flex-1 rounded-[8px] border border-[var(--od-border)] bg-[var(--od-elevated)] px-3 text-sm"
+        />
+        <select id={`${formId}-status`} name="status" defaultValue={query.status ?? ""} className={selectClass}>
+          <option value="">Status</option>
+          {LEAD_STAGE_CODES.map((status) => (
+            <option key={status} value={status}>
+              {formatCrmCodeLabel(status.replaceAll("_", "-"))}
+            </option>
+          ))}
+        </select>
+        <select id={`${formId}-source`} name="sourceId" defaultValue={query.sourceId ?? ""} className={selectClass}>
+          <option value="">Source</option>
+          {sources.map((source) => (
+            <option key={source.id} value={source.id}>
+              {source.displayName}
+            </option>
+          ))}
+        </select>
         {showBroadFilters ? (
           <>
-            <div>
-              <label htmlFor={`${formId}-assignment`} className="mb-1 block text-xs font-medium text-neutral-400">
-                Assignment
-              </label>
-              <select
-                id={`${formId}-assignment`}
-                name="assignment"
-                defaultValue={query.assignment ?? ""}
-                className="min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-              >
-                <option value="">All leads</option>
-                <option value="assigned">Assigned</option>
-                <option value="unassigned">Unassigned</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor={`${formId}-assignee`} className="mb-1 block text-xs font-medium text-neutral-400">
-                Sales executive
-              </label>
-              <select
-                id={`${formId}-assignee`}
-                name="assigneeId"
-                defaultValue={query.assigneeId ?? ""}
-                className="min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-              >
-                <option value="">All executives</option>
-                {assignees.map((assignee) => (
-                  <option key={assignee.userId} value={assignee.userId}>
-                    {assignee.displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              id={`${formId}-assignment`}
+              name="assignment"
+              defaultValue={query.assignment ?? ""}
+              className={selectClass}
+            >
+              <option value="">Assignment</option>
+              <option value="assigned">Assigned</option>
+              <option value="unassigned">Unassigned</option>
+            </select>
+            <select
+              id={`${formId}-assignee`}
+              name="assigneeId"
+              defaultValue={query.assigneeId ?? ""}
+              className={selectClass}
+            >
+              <option value="">Assignee</option>
+              {assignees.map((assignee) => (
+                <option key={assignee.userId} value={assignee.userId}>
+                  {assignee.displayName}
+                </option>
+              ))}
+            </select>
           </>
         ) : null}
-
-        <div>
-          <label htmlFor={`${formId}-follow-up`} className="mb-1 block text-xs font-medium text-neutral-400">
-            Follow-up due
-          </label>
-          <select
-            id={`${formId}-follow-up`}
-            name="followUpDue"
-            defaultValue={query.followUpDue ?? ""}
-            className="min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-          >
-            <option value="">Any</option>
-            <option value="overdue">Overdue</option>
-            <option value="today">Due today</option>
-            <option value="upcoming">Upcoming</option>
-          </select>
-        </div>
-
-        <div className="flex flex-wrap items-end gap-2 md:col-span-2 xl:col-span-4">
-          <button
-            type="submit"
-            className="min-h-11 rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
-          >
-            Apply filters
-          </button>
-          <Link
-            href="/admin/crm/leads"
-            className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-          >
-            Reset
-          </Link>
-        </div>
+        <select
+          id={`${formId}-follow-up`}
+          name="followUpDue"
+          defaultValue={query.followUpDue ?? ""}
+          className={selectClass}
+        >
+          <option value="">Follow-up</option>
+          <option value="overdue">Overdue</option>
+          <option value="today">Due today</option>
+          <option value="upcoming">Upcoming</option>
+        </select>
+        <button
+          type="submit"
+          className="min-h-10 rounded-[8px] bg-[var(--od-gold)] px-4 text-sm font-semibold text-[#1a1408]"
+        >
+          Apply
+        </button>
+        <Link
+          href={view === "pipeline" ? "/admin/crm/leads?view=pipeline" : "/admin/crm/leads"}
+          className="inline-flex min-h-10 items-center rounded-[8px] border border-[var(--od-border)] px-3 text-sm text-[var(--od-text-2)]"
+        >
+          Clear
+        </Link>
       </form>
+      <div className="flex flex-wrap gap-2">
+        {query.q ? (
+          <Chip label={`Search: ${query.q}`} href={buildLeadListHref(query, view, "q")} />
+        ) : null}
+        {query.status ? (
+          <Chip
+            label={formatCrmCodeLabel(query.status.replaceAll("_", "-"))}
+            href={buildLeadListHref(query, view, "status")}
+          />
+        ) : null}
+        {query.sourceId ? (
+          <Chip
+            label={sourceLabel ?? "Source"}
+            href={buildLeadListHref(query, view, "sourceId")}
+          />
+        ) : null}
+        {query.assignment ? (
+          <Chip label={query.assignment} href={buildLeadListHref(query, view, "assignment")} />
+        ) : null}
+        {query.assigneeId ? (
+          <Chip
+            label={assigneeLabel ?? "Assignee"}
+            href={buildLeadListHref(query, view, "assigneeId")}
+          />
+        ) : null}
+        {query.followUpDue ? (
+          <Chip label={query.followUpDue} href={buildLeadListHref(query, view, "followUpDue")} />
+        ) : null}
+      </div>
     </section>
   );
 }

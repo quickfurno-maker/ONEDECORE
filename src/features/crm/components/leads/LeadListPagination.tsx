@@ -31,16 +31,16 @@ export function LeadListPagination({
   return (
     <nav
       aria-label="Lead list pagination"
-      className="flex items-center justify-between gap-3 border-t border-neutral-800 pt-4"
+      className="flex items-center justify-between gap-3 border-t border-[var(--od-border)] pt-4"
     >
-      <p className="text-sm text-neutral-400">
+      <p className="text-sm text-[var(--od-muted)]">
         Page {pagination.page}
       </p>
       <div className="flex gap-2">
         {pagination.hasPreviousPage ? (
           <Link
             href={buildPageHref(query, pagination.page - 1)}
-            className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+            className="inline-flex min-h-11 items-center rounded-[8px] border border-[var(--od-border-strong)] px-4 py-2 text-sm font-medium text-[var(--od-text-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
           >
             Previous
           </Link>
@@ -48,7 +48,7 @@ export function LeadListPagination({
         {pagination.hasNextPage ? (
           <Link
             href={buildPageHref(query, pagination.page + 1)}
-            className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+            className="inline-flex min-h-11 items-center rounded-[8px] border border-[var(--od-border-strong)] px-4 py-2 text-sm font-medium text-[var(--od-text-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
           >
             Next
           </Link>

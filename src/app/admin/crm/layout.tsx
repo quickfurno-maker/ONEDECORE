@@ -30,7 +30,7 @@ export default async function CrmLayout({ children }: { children: ReactNode }) {
     <div className="space-y-6">
       <a
         href="#crm-main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-neutral-800 focus:px-3 focus:py-2 focus:text-sm focus:text-neutral-100"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-[var(--od-elevated)] focus:px-3 focus:py-2 focus:text-sm focus:text-[var(--od-text)]"
       >
         Skip to CRM content
       </a>

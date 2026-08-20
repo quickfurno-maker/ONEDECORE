@@ -273,9 +273,10 @@ describe("Phase 5C1 route and UI contracts", () => {
     });
   }
 
-  test("CRM index redirects to leads", () => {
+  test("CRM index is a sales overview workspace", () => {
     const pageSrc = readFileSync(join(root, "src/app/admin/crm/page.tsx"), "utf8");
-    assert.match(pageSrc, /redirect\("\/admin\/crm\/leads"\)/);
+    assert.match(pageSrc, /Sales workspace/);
+    assert.doesNotMatch(pageSrc, /redirect\("\/admin\/crm\/leads"\)/);
   });
 
   test("lead detail uses notFound for inaccessible leads", () => {

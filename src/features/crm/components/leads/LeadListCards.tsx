@@ -14,49 +14,60 @@ function formatTimestamp(value: string): string {
   }).format(new Date(value));
 }
 
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
 export function LeadListCards({ items }: LeadListCardsProps) {
   return (
     <div className="space-y-3 md:hidden">
       {items.map((item) => (
         <article
           key={item.id}
-          className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4"
+          className="rounded-[12px] border border-[var(--od-border)] bg-[var(--od-surface)] p-4"
         >
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-base font-semibold text-neutral-50">
-                <Link
-                  href={`/admin/crm/leads/${item.id}`}
-                  className="text-amber-300 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-                >
+            <Link
+              href={`/admin/crm/leads/${item.id}`}
+              className="flex min-w-0 items-start gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--od-elevated)] text-xs font-semibold">
+                {initials(item.submittedName)}
+              </span>
+              <span>
+                <span className="block text-base font-semibold text-[var(--od-text)]">
                   {item.submittedName}
-                </Link>
-              </h3>
-              <p className="mt-1 text-xs text-neutral-500">
-                {formatCrmCodeLabel(item.serviceCode)} · {item.locality ?? "No locality"}
-              </p>
-            </div>
+                </span>
+                <span className="mt-1 block text-xs text-[var(--od-muted)]">
+                  {formatCrmCodeLabel(item.serviceCode)} · {item.locality ?? "No locality"}
+                </span>
+              </span>
+            </Link>
             <LeadStatusBadge status={item.status} />
           </div>
 
-          <dl className="mt-4 grid grid-cols-2 gap-3 text-xs text-neutral-400">
+          <dl className="mt-4 grid grid-cols-2 gap-3 text-xs text-[var(--od-muted)]">
             <div>
-              <dt className="font-medium text-neutral-500">Source</dt>
-              <dd className="mt-1 text-neutral-200">{item.primarySourceLabel}</dd>
+              <dt className="font-medium">Source</dt>
+              <dd className="mt-1 text-[var(--od-text-2)]">{item.primarySourceLabel}</dd>
             </div>
             <div>
-              <dt className="font-medium text-neutral-500">Assignee</dt>
-              <dd className="mt-1 text-neutral-200">{item.assigneeLabel}</dd>
+              <dt className="font-medium">Assignee</dt>
+              <dd className="mt-1 text-[var(--od-text-2)]">{item.assigneeLabel}</dd>
             </div>
             <div>
-              <dt className="font-medium text-neutral-500">Follow-up</dt>
-              <dd className="mt-1 text-neutral-200">
+              <dt className="font-medium">Follow-up</dt>
+              <dd className="mt-1 text-[var(--od-text-2)]">
                 {item.nextFollowUpDue ? formatTimestamp(item.nextFollowUpDue) : "—"}
               </dd>
             </div>
             <div>
-              <dt className="font-medium text-neutral-500">Updated</dt>
-              <dd className="mt-1 text-neutral-200">{formatTimestamp(item.updatedAt)}</dd>
+              <dt className="font-medium">Updated</dt>
+              <dd className="mt-1 text-[var(--od-text-2)]">{formatTimestamp(item.updatedAt)}</dd>
             </div>
           </dl>
         </article>

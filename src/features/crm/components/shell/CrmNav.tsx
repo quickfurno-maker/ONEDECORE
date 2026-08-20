@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface CrmNavProps {
-  readonly currentPath: string;
+  readonly currentPath?: string;
   readonly showImports?: boolean;
   readonly showAssignmentRules?: boolean;
   readonly showTargets?: boolean;
@@ -21,7 +24,10 @@ export function CrmNav({
   targetsLabel = "Sales Targets",
   reportsLabel = "Reports",
 }: CrmNavProps) {
+  const pathname = usePathname();
+  const activePath = currentPath && currentPath !== "/admin/crm" ? currentPath : pathname;
   const items = [
+    { href: "/admin/crm", label: "Overview" },
     ...BASE_NAV_ITEMS,
     ...(showTargets
       ? [{ href: "/admin/crm/targets", label: targetsLabel } as const]
@@ -43,20 +49,26 @@ export function CrmNav({
   ];
 
   return (
-    <nav aria-label="CRM workspace" className="flex flex-wrap gap-2">
+    <nav aria-label="CRM workspace" className="flex flex-wrap gap-1 rounded-[10px] border border-[var(--od-border)] bg-[var(--od-surface)] p-1">
       {items.map((item) => {
-        const isActive = currentPath.startsWith(item.href);
+        const isActive =
+          item.href === "/admin/crm"
+            ? activePath === "/admin/crm"
+            : activePath.startsWith(item.href);
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={isActive ? "page" : undefined}
-            className={`min-h-11 rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 ${
+            className={`relative inline-flex min-h-10 items-center rounded-[8px] px-3 text-[13px] font-medium transition ${
               isActive
-                ? "bg-neutral-800 text-neutral-50"
-                : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
+                ? "bg-[var(--od-gold)]/12 text-[var(--od-text)]"
+                : "text-[var(--od-text-2)] hover:bg-[var(--od-hover)]"
             }`}
           >
+            {isActive ? (
+              <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-[var(--od-gold)]" />
+            ) : null}
             {item.label}
           </Link>
         );

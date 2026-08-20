@@ -166,3 +166,28 @@ export function hasLeadListActiveFilters(query: LeadListQuery): boolean {
       query.followUpDue
   );
 }
+
+export function buildLeadListHref(
+  query: LeadListQuery,
+  view: "table" | "pipeline",
+  clear?: "q" | "status" | "sourceId" | "assignment" | "assigneeId" | "followUpDue"
+): string {
+  const params = new URLSearchParams();
+  if (view === "pipeline") {
+    params.set("view", "pipeline");
+  }
+  const q = clear === "q" ? null : query.q;
+  const status = clear === "status" ? null : query.status;
+  const sourceId = clear === "sourceId" ? null : query.sourceId;
+  const assignment = clear === "assignment" ? null : query.assignment;
+  const assigneeId = clear === "assigneeId" ? null : query.assigneeId;
+  const followUpDue = clear === "followUpDue" ? null : query.followUpDue;
+  if (q) params.set("q", q);
+  if (status) params.set("status", status);
+  if (sourceId) params.set("sourceId", sourceId);
+  if (assignment) params.set("assignment", assignment);
+  if (assigneeId) params.set("assigneeId", assigneeId);
+  if (followUpDue) params.set("followUpDue", followUpDue);
+  const value = params.toString();
+  return value ? `/admin/crm/leads?${value}` : "/admin/crm/leads";
+}
