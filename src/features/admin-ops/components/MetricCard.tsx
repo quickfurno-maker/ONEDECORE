@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { OpsKpiItem } from "../types.ts";
+import { OpsIcon, iconForKpi } from "./OpsIcon.tsx";
 
 const ACCENT: Record<OpsKpiItem["accent"], string> = {
   purple: "text-[#8E5CF5] bg-[#8E5CF5]/15",
@@ -52,8 +53,11 @@ export function MetricCard({ item, index }: { item: OpsKpiItem; index: number })
       style={{ animationDelay: `${index * 40}ms` }}
     >
       <div className="flex items-start justify-between gap-3">
-        <span className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${ACCENT[item.accent]}`}>
-          {item.label.slice(0, 1)}
+        <span
+          className={`flex h-9 w-9 items-center justify-center rounded-full ${ACCENT[item.accent]}`}
+          style={{ boxShadow: `0 0 16px color-mix(in srgb, ${LINE[item.accent]} 28%, transparent)` }}
+        >
+          <OpsIcon name={iconForKpi(item.id)} className="h-4 w-4" />
         </span>
       </div>
       <p className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--od-muted)]">

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { formatCrmCodeLabel } from "@/features/crm/contracts/crm-labels.ts";
 import type { OpsIdentity } from "../types.ts";
@@ -12,7 +13,7 @@ const ROLE_PRIORITY = [
   "designer",
 ] as const;
 
-export async function fetchOpsIdentity(
+export const fetchOpsIdentity = cache(async function fetchOpsIdentity(
   userId: string,
   email: string | null
 ): Promise<OpsIdentity> {
@@ -40,4 +41,4 @@ export async function fetchOpsIdentity(
     firstName,
     roleLabel: primary ? formatCrmCodeLabel(primary.replaceAll("_", "-")) : null,
   };
-}
+});

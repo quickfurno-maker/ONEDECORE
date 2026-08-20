@@ -1,10 +1,17 @@
 import Link from "next/link";
-import { LEAD_STAGE_CODES } from "../../contracts/lead-stages.ts";
 import { formatCrmCodeLabel } from "../../contracts/crm-labels.ts";
+import { PIPELINE_STAGE_PREVIEW_SIZE } from "../../contracts/lead-list-query.ts";
 import type { CrmLeadListItem } from "../../contracts/lead-dtos.ts";
+import type { LeadStageCode } from "../../contracts/lead-stages.ts";
+
+export interface LeadPipelineStageColumn {
+  readonly status: LeadStageCode;
+  readonly total: number;
+  readonly items: readonly CrmLeadListItem[];
+}
 
 interface LeadPipelineBoardProps {
-  readonly items: readonly CrmLeadListItem[];
+  readonly stages: readonly LeadPipelineStageColumn[];
 }
 
 function ageLabel(iso: string): string {
@@ -15,24 +22,24 @@ function ageLabel(iso: string): string {
   return `${days}d`;
 }
 
-export function LeadPipelineBoard({ items }: LeadPipelineBoardProps) {
+export function LeadPipelineBoard({ stages }: LeadPipelineBoardProps) {
   return (
     <div className="hidden gap-3 overflow-x-auto pb-2 md:flex">
-      {LEAD_STAGE_CODES.map((status) => {
-        const column = items.filter((item) => item.status === status);
+      {stages.map((stage) => {
+        const preview = stage.items.slice(0, PIPELINE_STAGE_PREVIEW_SIZE);
         return (
           <section
-            key={status}
+            key={stage.status}
             className="w-64 shrink-0 rounded-[12px] border border-[var(--od-border)] bg-[var(--od-surface)] p-3"
           >
             <header className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold">
-                {formatCrmCodeLabel(status.replaceAll("_", "-"))}
+                {formatCrmCodeLabel(stage.status.replaceAll("_", "-"))}
               </h3>
-              <span className="text-xs text-[var(--od-muted)]">{column.length}</span>
+              <span className="text-xs font-medium text-[var(--od-text-2)]">{stage.total}</span>
             </header>
             <ul className="space-y-2">
-              {column.map((item) => (
+              {preview.map((item) => (
                 <li key={item.id}>
                   <Link
                     href={`/admin/crm/leads/${item.id}`}
@@ -49,6 +56,14 @@ export function LeadPipelineBoard({ items }: LeadPipelineBoardProps) {
                 </li>
               ))}
             </ul>
+            {stage.total > preview.length ? (
+              <Link
+                href={`/admin/crm/leads?status=${encodeURIComponent(stage.status)}`}
+                className="mt-3 inline-flex min-h-8 items-center text-xs font-medium text-[var(--od-gold)]"
+              >
+                View all {stage.total}
+              </Link>
+            ) : null}
           </section>
         );
       })}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { OpsIcon } from "@/features/admin-ops/components/OpsIcon.tsx";
 import type { OpsNavFlags } from "../types.ts";
 
 interface QuickActionsMenuProps {
@@ -54,7 +55,7 @@ export function QuickActionsMenu({ flags }: QuickActionsMenuProps) {
         className="inline-flex min-h-10 items-center gap-2 rounded-[8px] border border-[var(--od-gold)]/50 px-3 text-sm font-medium text-[var(--od-gold)] transition hover:bg-[var(--od-gold)]/10"
       >
         Quick Actions
-        <span aria-hidden="true">▾</span>
+        <OpsIcon name="spark" className="h-4 w-4" />
       </button>
       {open ? (
         <ul

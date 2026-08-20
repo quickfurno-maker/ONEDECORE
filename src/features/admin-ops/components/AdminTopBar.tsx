@@ -1,8 +1,10 @@
 "use client";
 
+import { useRef } from "react";
 import { CommandPalette } from "./CommandPalette.tsx";
 import { QuickActionsMenu } from "./QuickActionsMenu.tsx";
 import { UserMenu } from "./UserMenu.tsx";
+import { OpsIcon } from "./OpsIcon.tsx";
 import type { OpsCommandRoute, OpsIdentity, OpsNavFlags } from "../types.ts";
 
 interface AdminTopBarProps {
@@ -24,6 +26,8 @@ export function AdminTopBar({
   onCloseCommand,
   onOpenMobileNav,
 }: AdminTopBarProps) {
+  const searchButtonRef = useRef<HTMLButtonElement>(null);
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-[var(--od-border)] bg-[var(--od-bg)]/95 px-4 backdrop-blur-sm">
       <button
@@ -32,15 +36,16 @@ export function AdminTopBar({
         onClick={onOpenMobileNav}
         aria-label="Open navigation"
       >
-        ☰
+        <OpsIcon name="menu" />
       </button>
       <div className="mx-auto flex w-full max-w-xl flex-1 justify-center">
         <button
+          ref={searchButtonRef}
           type="button"
           onClick={onOpenCommand}
-          className="flex min-h-10 w-full items-center gap-2 rounded-full border border-[var(--od-border)] bg-[var(--od-surface)] px-4 text-left text-sm text-[var(--od-muted)] transition hover:border-[var(--od-border-strong)]"
+          className="flex min-h-10 w-full items-center gap-2 rounded-full border border-[var(--od-border)] bg-[var(--od-surface)] px-4 text-left text-sm text-[var(--od-muted)] transition hover:border-[var(--od-border-strong)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
         >
-          <span aria-hidden="true">⌕</span>
+          <OpsIcon name="search" className="h-4 w-4" />
           <span className="flex-1">Search anything...</span>
           <kbd className="hidden rounded border border-[var(--od-border)] px-1.5 py-0.5 text-[11px] sm:inline">
             Ctrl + K
@@ -51,7 +56,12 @@ export function AdminTopBar({
         <QuickActionsMenu flags={flags} />
         <UserMenu identity={identity} />
       </div>
-      <CommandPalette open={commandOpen} routes={routes} onClose={onCloseCommand} />
+      <CommandPalette
+        open={commandOpen}
+        routes={routes}
+        onClose={onCloseCommand}
+        returnFocusRef={searchButtonRef}
+      />
     </header>
   );
 }

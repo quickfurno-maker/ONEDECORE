@@ -10,19 +10,8 @@ import { TargetPanel } from "@/features/admin-ops/components/TargetPanel.tsx";
 import { QuickActionsMenu } from "@/features/admin-ops/components/QuickActionsMenu.tsx";
 import { loadOpsDashboardSnapshot } from "@/features/admin-ops/server/dashboard-snapshot.ts";
 import { fetchOpsIdentity } from "@/features/admin-ops/server/ops-identity.ts";
-import type { OpsNavFlags } from "@/features/admin-ops/types.ts";
+import { resolveOpsNavFlags } from "@/features/admin-ops/server/resolve-ops-nav-flags.ts";
 import { requireStaffPermission } from "@/server/auth";
-import { hasAnyCrmLeadReadPermission } from "@/features/crm/server/crm-permissions";
-import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
-import { hasAnyStaffNavPermission } from "@/features/staff-admin/server/staff-permissions";
-import { hasAnyAttendanceNavPermission } from "@/features/staff-attendance/server/attendance-auth";
-import { hasAnyLeaveNavPermission } from "@/features/staff-leave/server/leave-auth";
-import { hasAnyWhatsappInboxReadPermission } from "@/features/whatsapp/server/whatsapp-permissions";
-import { hasAnyProjectReadPermission } from "@/features/projects/server/project-permissions";
-import { hasAnyCampaignReadPermission } from "@/features/marketing/server/campaign-permissions";
-import { hasLandingPagesReadPermission } from "@/features/landing-lab/server/landing-permissions";
-import { hasAnyCommerceReadPermission } from "@/features/commerce/server/commerce-permissions";
-import { probeQuotationPermissions } from "@/features/quotations/server/quotation-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -41,60 +30,9 @@ function greeting(hour: number): string {
   return "Good evening";
 }
 
-async function flagsForDashboard(): Promise<OpsNavFlags> {
-  const [
-    showCrmLink,
-    showWhatsappLink,
-    showStaffLink,
-    showAttendanceLink,
-    showLeaveLink,
-    showProjectsLink,
-    showCampaignsLink,
-    showLandingLabLink,
-    showCommerceLink,
-  ] = await Promise.all([
-    hasAnyCrmLeadReadPermission(),
-    hasAnyWhatsappInboxReadPermission(),
-    hasAnyStaffNavPermission(),
-    hasAnyAttendanceNavPermission(),
-    hasAnyLeaveNavPermission(),
-    hasAnyProjectReadPermission(),
-    hasAnyCampaignReadPermission(),
-    hasLandingPagesReadPermission(),
-    hasAnyCommerceReadPermission(),
-  ]);
-  const crmContext = showCrmLink ? await getCrmAccessContext() : null;
-  const quotationPermissions = showCrmLink
-    ? await probeQuotationPermissions().catch(() => ({
-        canReadQuotations: false,
-        canCreateQuotations: false,
-        canEditQuotations: false,
-      }))
-    : { canReadQuotations: false, canCreateQuotations: false, canEditQuotations: false };
-  return {
-    crm: showCrmLink,
-    quotations: showCrmLink,
-    projects: showProjectsLink,
-    whatsapp: showWhatsappLink,
-    campaigns: showCampaignsLink,
-    landingLab: showLandingLabLink,
-    commerce: showCommerceLink,
-    staff: showStaffLink,
-    attendance: showAttendanceLink,
-    leave: showLeaveLink,
-    crmLeads: showCrmLink,
-    crmTargets: crmContext?.canReadSalesTargets ?? false,
-    crmReports: crmContext?.canReadCrmReporting ?? false,
-    crmImports: crmContext?.canBulkImportLeads ?? false,
-    crmAssignmentRules: crmContext?.canManageLeadAssignmentRules ?? false,
-    createLead: crmContext?.canCreateLeads ?? false,
-    createQuotation: quotationPermissions.canCreateQuotations,
-  };
-}
-
 export default async function AdminPage() {
   const session = await requireStaffPermission("admin.access", "/admin");
-  const flags = await flagsForDashboard();
+  const flags = await resolveOpsNavFlags();
   const [identity, snapshot] = await Promise.all([
     fetchOpsIdentity(session.userId, session.email),
     loadOpsDashboardSnapshot(flags),
@@ -108,7 +46,7 @@ export default async function AdminPage() {
   );
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-6 lg:space-y-7">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-[30px] font-semibold tracking-tight text-[var(--od-text)]">
@@ -132,7 +70,7 @@ export default async function AdminPage() {
       </div>
 
       {snapshot.kpis.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           {snapshot.kpis.map((item, index) => (
             <MetricCard key={item.id} item={item} index={index} />
           ))}

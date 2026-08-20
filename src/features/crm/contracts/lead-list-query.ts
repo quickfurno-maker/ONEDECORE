@@ -156,6 +156,8 @@ export function parseLeadListQuery(
   };
 }
 
+export const PIPELINE_STAGE_PREVIEW_SIZE = 8;
+
 export function hasLeadListActiveFilters(query: LeadListQuery): boolean {
   return Boolean(
     query.q ||
@@ -177,7 +179,8 @@ export function buildLeadListHref(
     params.set("view", "pipeline");
   }
   const q = clear === "q" ? null : query.q;
-  const status = clear === "status" ? null : query.status;
+  const status =
+    view === "pipeline" || clear === "status" ? null : query.status;
   const sourceId = clear === "sourceId" ? null : query.sourceId;
   const assignment = clear === "assignment" ? null : query.assignment;
   const assigneeId = clear === "assigneeId" ? null : query.assigneeId;

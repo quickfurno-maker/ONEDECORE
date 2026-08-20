@@ -11,6 +11,7 @@ import {
   crmOverviewNavFlags,
   loadOpsDashboardSnapshot,
 } from "@/features/admin-ops/server/dashboard-snapshot.ts";
+import { resolveOpsNavFlags } from "@/features/admin-ops/server/resolve-ops-nav-flags.ts";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,13 @@ export default async function CrmOverviewPage() {
     return null;
   }
 
-  const snapshot = await loadOpsDashboardSnapshot(crmOverviewNavFlags(context));
+  const flags = await resolveOpsNavFlags();
+  const snapshot = await loadOpsDashboardSnapshot(
+    crmOverviewNavFlags(context, {
+      quotations: flags.quotations,
+      createQuotation: flags.createQuotation,
+    })
+  );
 
   return (
     <div className="space-y-6">

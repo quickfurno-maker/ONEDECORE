@@ -41,7 +41,8 @@ export function LeadListFilters({
 }: LeadListFiltersProps) {
   const formId = useId();
   const selectClass =
-    "min-h-10 rounded-[8px] border border-[var(--od-border)] bg-[var(--od-elevated)] px-3 text-sm text-[var(--od-text)]";
+    "min-h-10 rounded-[8px] border border-[var(--od-border)] bg-[var(--od-elevated)] px-3 text-sm text-[var(--od-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]";
+  const filterQuery = view === "pipeline" ? { ...query, status: null } : query;
   const sourceLabel = sources.find((source) => source.id === query.sourceId)?.displayName;
   const assigneeLabel = assignees.find((row) => row.userId === query.assigneeId)?.displayName;
 
@@ -61,19 +62,34 @@ export function LeadListFilters({
           name="q"
           type="search"
           placeholder="Search leads..."
+          aria-label="Search leads"
           defaultValue={query.q ?? ""}
           maxLength={100}
-          className="min-h-10 min-w-[200px] flex-1 rounded-[8px] border border-[var(--od-border)] bg-[var(--od-elevated)] px-3 text-sm"
+          className="min-h-10 min-w-[200px] flex-1 rounded-[8px] border border-[var(--od-border)] bg-[var(--od-elevated)] px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
         />
-        <select id={`${formId}-status`} name="status" defaultValue={query.status ?? ""} className={selectClass}>
-          <option value="">Status</option>
-          {LEAD_STAGE_CODES.map((status) => (
-            <option key={status} value={status}>
-              {formatCrmCodeLabel(status.replaceAll("_", "-"))}
-            </option>
-          ))}
-        </select>
-        <select id={`${formId}-source`} name="sourceId" defaultValue={query.sourceId ?? ""} className={selectClass}>
+        {view === "pipeline" ? null : (
+          <select
+            id={`${formId}-status`}
+            name="status"
+            defaultValue={query.status ?? ""}
+            aria-label="Filter by status"
+            className={selectClass}
+          >
+            <option value="">Status</option>
+            {LEAD_STAGE_CODES.map((status) => (
+              <option key={status} value={status}>
+                {formatCrmCodeLabel(status.replaceAll("_", "-"))}
+              </option>
+            ))}
+          </select>
+        )}
+        <select
+          id={`${formId}-source`}
+          name="sourceId"
+          defaultValue={query.sourceId ?? ""}
+          aria-label="Filter by source"
+          className={selectClass}
+        >
           <option value="">Source</option>
           {sources.map((source) => (
             <option key={source.id} value={source.id}>
@@ -87,6 +103,7 @@ export function LeadListFilters({
               id={`${formId}-assignment`}
               name="assignment"
               defaultValue={query.assignment ?? ""}
+              aria-label="Filter by assignment"
               className={selectClass}
             >
               <option value="">Assignment</option>
@@ -97,6 +114,7 @@ export function LeadListFilters({
               id={`${formId}-assignee`}
               name="assigneeId"
               defaultValue={query.assigneeId ?? ""}
+              aria-label="Filter by assignee"
               className={selectClass}
             >
               <option value="">Assignee</option>
@@ -112,6 +130,7 @@ export function LeadListFilters({
           id={`${formId}-follow-up`}
           name="followUpDue"
           defaultValue={query.followUpDue ?? ""}
+          aria-label="Filter by follow-up due"
           className={selectClass}
         >
           <option value="">Follow-up</option>
@@ -133,32 +152,32 @@ export function LeadListFilters({
         </Link>
       </form>
       <div className="flex flex-wrap gap-2">
-        {query.q ? (
-          <Chip label={`Search: ${query.q}`} href={buildLeadListHref(query, view, "q")} />
+        {filterQuery.q ? (
+          <Chip label={`Search: ${filterQuery.q}`} href={buildLeadListHref(filterQuery, view, "q")} />
         ) : null}
-        {query.status ? (
+        {filterQuery.status ? (
           <Chip
-            label={formatCrmCodeLabel(query.status.replaceAll("_", "-"))}
-            href={buildLeadListHref(query, view, "status")}
+            label={formatCrmCodeLabel(filterQuery.status.replaceAll("_", "-"))}
+            href={buildLeadListHref(filterQuery, view, "status")}
           />
         ) : null}
-        {query.sourceId ? (
+        {filterQuery.sourceId ? (
           <Chip
             label={sourceLabel ?? "Source"}
-            href={buildLeadListHref(query, view, "sourceId")}
+            href={buildLeadListHref(filterQuery, view, "sourceId")}
           />
         ) : null}
-        {query.assignment ? (
-          <Chip label={query.assignment} href={buildLeadListHref(query, view, "assignment")} />
+        {filterQuery.assignment ? (
+          <Chip label={filterQuery.assignment} href={buildLeadListHref(filterQuery, view, "assignment")} />
         ) : null}
-        {query.assigneeId ? (
+        {filterQuery.assigneeId ? (
           <Chip
             label={assigneeLabel ?? "Assignee"}
-            href={buildLeadListHref(query, view, "assigneeId")}
+            href={buildLeadListHref(filterQuery, view, "assigneeId")}
           />
         ) : null}
-        {query.followUpDue ? (
-          <Chip label={query.followUpDue} href={buildLeadListHref(query, view, "followUpDue")} />
+        {filterQuery.followUpDue ? (
+          <Chip label={filterQuery.followUpDue} href={buildLeadListHref(filterQuery, view, "followUpDue")} />
         ) : null}
       </div>
     </section>

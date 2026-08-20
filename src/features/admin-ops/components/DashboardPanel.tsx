@@ -24,7 +24,7 @@ export function DashboardPanel({
       } ${className}`}
     >
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-[17px] font-semibold text-[var(--od-text)]">{title}</h2>
+        <h2 className="text-[17px] font-semibold tracking-tight text-[var(--od-text)]">{title}</h2>
         {action}
       </div>
       {children}

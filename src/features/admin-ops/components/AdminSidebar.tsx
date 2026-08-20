@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import type { OpsNavFlags } from "../types.ts";
+import { OpsIcon, iconForHref, type OpsIconName } from "./OpsIcon.tsx";
 
 interface AdminSidebarProps {
   readonly flags: OpsNavFlags;
@@ -23,18 +24,22 @@ interface AdminSidebarProps {
 interface NavItem {
   readonly href: string;
   readonly label: string;
+  readonly icon: OpsIconName;
+  readonly children?: readonly NavItem[];
 }
 
 interface NavGroup {
   readonly id: string;
   readonly label: string;
   readonly items: readonly NavItem[];
-  readonly nested?: boolean;
 }
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/admin") {
     return pathname === "/admin";
+  }
+  if (href === "/admin/crm") {
+    return pathname === "/admin/crm";
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -44,61 +49,58 @@ function buildGroups(flags: OpsNavFlags, hrefs: AdminSidebarProps["hrefs"]): rea
     {
       id: "overview",
       label: "Overview",
-      items: [{ href: "/admin", label: "Dashboard" }],
+      items: [{ href: "/admin", label: "Dashboard", icon: "dashboard" }],
     },
   ];
 
   const sales: NavItem[] = [];
   if (flags.crm) {
-    sales.push({ href: "/admin/crm", label: "CRM" });
+    const children: NavItem[] = [
+      { href: "/admin/crm", label: "Overview", icon: "crm" },
+      { href: hrefs.crmLeads, label: "Leads", icon: "leads" },
+    ];
+    if (flags.crmTargets) {
+      children.push({ href: "/admin/crm/targets", label: "Sales Targets", icon: "targets" });
+    }
+    if (flags.crmReports) {
+      children.push({ href: "/admin/crm/reports", label: "Reports", icon: "reports" });
+    }
+    if (flags.crmImports) {
+      children.push({ href: "/admin/crm/imports", label: "Imports", icon: "imports" });
+    }
+    if (flags.crmAssignmentRules) {
+      children.push({
+        href: "/admin/crm/settings/assignment-rules",
+        label: "Assignment Rules",
+        icon: "rules",
+      });
+    }
+    sales.push({ href: "/admin/crm", label: "CRM", icon: "crm", children });
   }
   if (flags.quotations) {
-    sales.push({ href: "/admin/quotations", label: "Quotations" });
+    sales.push({ href: "/admin/quotations", label: "Quotations", icon: "quotations" });
   }
   if (flags.projects) {
-    sales.push({ href: hrefs.projects, label: "Projects" });
+    sales.push({ href: hrefs.projects, label: "Projects", icon: "projects" });
   }
   if (sales.length > 0) {
     groups.push({ id: "sales", label: "Sales & CRM", items: sales });
-  }
-
-  const crmNested: NavItem[] = [];
-  if (flags.crm) {
-    crmNested.push({ href: hrefs.crmLeads, label: "Leads" });
-  }
-  if (flags.crmTargets) {
-    crmNested.push({ href: "/admin/crm/targets", label: "Sales Targets" });
-  }
-  if (flags.crmReports) {
-    crmNested.push({ href: "/admin/crm/reports", label: "Reports" });
-  }
-  if (flags.crmImports) {
-    crmNested.push({ href: "/admin/crm/imports", label: "Imports" });
-  }
-  if (flags.crmAssignmentRules) {
-    crmNested.push({
-      href: "/admin/crm/settings/assignment-rules",
-      label: "Assignment Rules",
-    });
-  }
-  if (crmNested.length > 0) {
-    groups.push({ id: "crm-nested", label: "CRM", items: crmNested, nested: true });
   }
 
   if (flags.whatsapp) {
     groups.push({
       id: "comms",
       label: "Communication",
-      items: [{ href: hrefs.whatsappInbox, label: "WhatsApp Inbox" }],
+      items: [{ href: hrefs.whatsappInbox, label: "WhatsApp Inbox", icon: "whatsapp" }],
     });
   }
 
   const marketing: NavItem[] = [];
   if (flags.campaigns) {
-    marketing.push({ href: hrefs.campaigns, label: "Campaigns" });
+    marketing.push({ href: hrefs.campaigns, label: "Campaigns", icon: "campaigns" });
   }
   if (flags.landingLab) {
-    marketing.push({ href: "/admin/landing-pages", label: "Landing Lab" });
+    marketing.push({ href: "/admin/landing-pages", label: "Landing Lab", icon: "landing" });
   }
   if (marketing.length > 0) {
     groups.push({ id: "marketing", label: "Marketing", items: marketing });
@@ -109,10 +111,10 @@ function buildGroups(flags: OpsNavFlags, hrefs: AdminSidebarProps["hrefs"]): rea
       id: "commerce",
       label: "Commerce",
       items: [
-        { href: "/admin/commerce", label: "Overview" },
-        { href: "/admin/commerce/products", label: "Products" },
-        { href: "/admin/commerce/categories", label: "Categories" },
-        { href: "/admin/commerce/settings", label: "Settings" },
+        { href: "/admin/commerce", label: "Overview", icon: "commerce" },
+        { href: "/admin/commerce/products", label: "Products", icon: "products" },
+        { href: "/admin/commerce/categories", label: "Categories", icon: "categories" },
+        { href: "/admin/commerce/settings", label: "Settings", icon: "settings" },
       ],
     });
   }
@@ -120,18 +122,18 @@ function buildGroups(flags: OpsNavFlags, hrefs: AdminSidebarProps["hrefs"]): rea
   groups.push({
     id: "content",
     label: "Content",
-    items: [{ href: "/admin/portfolio", label: "Portfolio CMS" }],
+    items: [{ href: "/admin/portfolio", label: "Portfolio CMS", icon: "portfolio" }],
   });
 
   const people: NavItem[] = [];
   if (flags.staff) {
-    people.push({ href: "/admin/staff", label: "Staff" });
+    people.push({ href: "/admin/staff", label: "Staff", icon: "staff" });
   }
   if (flags.attendance) {
-    people.push({ href: hrefs.attendance, label: "Attendance" });
+    people.push({ href: hrefs.attendance, label: "Attendance", icon: "attendance" });
   }
   if (flags.leave) {
-    people.push({ href: "/admin/leave", label: "Leave" });
+    people.push({ href: "/admin/leave", label: "Leave", icon: "leave" });
   }
   if (people.length > 0) {
     groups.push({ id: "people", label: "People", items: people });
@@ -143,14 +145,18 @@ function buildGroups(flags: OpsNavFlags, hrefs: AdminSidebarProps["hrefs"]): rea
 function NavLink({
   href,
   label,
+  icon,
   active,
   collapsed,
+  nested,
   onNavigate,
 }: {
   href: string;
   label: string;
+  icon: OpsIconName;
   active: boolean;
   collapsed: boolean;
+  nested?: boolean;
   onNavigate?: () => void;
 }) {
   return (
@@ -159,21 +165,19 @@ function NavLink({
       title={collapsed ? label : undefined}
       aria-current={active ? "page" : undefined}
       onClick={onNavigate}
-      className={`group relative flex min-h-10 items-center rounded-[8px] px-3 text-[13px] transition duration-150 ${
+      className={`group relative flex min-h-10 items-center gap-3 rounded-[8px] px-3 text-[13px] transition duration-150 ${
         active
           ? "bg-[var(--od-gold)]/10 text-[var(--od-text)]"
           : "text-[var(--od-text-2)] hover:bg-[var(--od-hover)] hover:text-[var(--od-text)]"
-      } ${collapsed ? "justify-center" : ""}`}
+      } ${collapsed ? "justify-center px-0" : ""} ${nested && !collapsed ? "pl-9" : ""}`}
     >
       {active ? (
         <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[var(--od-gold)]" />
       ) : null}
+      <span className={active ? "text-[var(--od-gold)]" : "text-current"}>
+        <OpsIcon name={icon} className="h-[18px] w-[18px]" />
+      </span>
       <span className={collapsed ? "sr-only" : ""}>{label}</span>
-      {collapsed ? (
-        <span aria-hidden="true" className="text-[11px] font-semibold">
-          {label.slice(0, 1)}
-        </span>
-      ) : null}
     </Link>
   );
 }
@@ -192,8 +196,8 @@ export function AdminSidebar({
 
   const body = (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center justify-between border-b border-[var(--od-border)] px-4">
-        <div className={collapsed ? "mx-auto text-center" : ""}>
+      <div className="flex h-16 items-center justify-between border-b border-[var(--od-border)] px-3">
+        <div className={collapsed ? "mx-auto text-center" : "min-w-0"}>
           <p className="font-serif text-lg font-semibold tracking-tight text-[var(--od-gold)]">
             {collapsed ? "OD" : "ONEDECORE"}
           </p>
@@ -205,68 +209,81 @@ export function AdminSidebar({
         </div>
         <button
           type="button"
-          className="hidden min-h-9 min-w-9 items-center justify-center rounded-[8px] text-[var(--od-muted)] hover:bg-[var(--od-hover)] lg:flex"
+          className="hidden min-h-9 min-w-9 items-center justify-center rounded-[8px] text-[var(--od-muted)] hover:bg-[var(--od-hover)] hover:text-[var(--od-text)] lg:flex"
           onClick={onToggleCollapse}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {collapsed ? "›" : "‹"}
+          <OpsIcon name={collapsed ? "expand" : "collapse"} className="h-4 w-4" />
         </button>
       </div>
-      <nav aria-label="Operations" className="flex-1 space-y-4 overflow-y-auto px-2 py-4">
-        {groups.map((group) => {
-          if (group.nested) {
-            return (
-              <div key={group.id}>
-                {collapsed ? null : (
-                  <button
-                    type="button"
-                    className="mb-1 flex w-full items-center justify-between px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--od-muted)]"
-                    onClick={() => setCrmOpen((value) => !value)}
-                    aria-expanded={crmOpen}
-                  >
-                    {group.label}
-                    <span>{crmOpen ? "–" : "+"}</span>
-                  </button>
-                )}
-                {collapsed || crmOpen ? (
-                  <div className="space-y-0.5">
-                    {group.items.map((item) => (
-                      <NavLink
-                        key={item.href}
-                        href={item.href}
-                        label={item.label}
-                        active={isActive(pathname, item.href)}
-                        collapsed={collapsed}
-                        onNavigate={onCloseMobile}
-                      />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            );
-          }
-          return (
-            <div key={group.id}>
-              {collapsed ? null : (
-                <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--od-muted)]">
-                  {group.label}
-                </p>
-              )}
-              <div className="space-y-0.5">
-                {group.items.map((item) => (
+      <nav aria-label="Operations" className="flex-1 space-y-5 overflow-y-auto px-2 py-4">
+        {groups.map((group) => (
+          <div key={group.id}>
+            {collapsed ? null : (
+              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--od-muted)]">
+                {group.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                if (item.children && item.children.length > 0) {
+                  return (
+                    <div key={item.href}>
+                      <div className="flex items-center">
+                        <div className="min-w-0 flex-1">
+                          <NavLink
+                            href={item.href}
+                            label={item.label}
+                            icon={item.icon}
+                            active={isActive(pathname, item.href)}
+                            collapsed={collapsed}
+                            onNavigate={onCloseMobile}
+                          />
+                        </div>
+                        {collapsed ? null : (
+                          <button
+                            type="button"
+                            className="mr-1 flex min-h-8 min-w-8 items-center justify-center rounded-[6px] text-[var(--od-muted)] hover:bg-[var(--od-hover)]"
+                            aria-expanded={crmOpen}
+                            aria-label={crmOpen ? "Collapse CRM" : "Expand CRM"}
+                            onClick={() => setCrmOpen((value) => !value)}
+                          >
+                            <OpsIcon name="chevron" className={`h-3.5 w-3.5 transition ${crmOpen ? "rotate-90" : ""}`} />
+                          </button>
+                        )}
+                      </div>
+                      {collapsed || !crmOpen
+                        ? null
+                        : item.children.map((child) => (
+                              <NavLink
+                                key={`${item.href}-${child.href}-${child.label}`}
+                                href={child.href}
+                                label={child.label}
+                                icon={child.icon}
+                                active={isActive(pathname, child.href)}
+                                collapsed={false}
+                                nested
+                                onNavigate={onCloseMobile}
+                              />
+                            ))}
+                    </div>
+                  );
+                }
+                return (
                   <NavLink
                     key={item.href}
                     href={item.href}
                     label={item.label}
+                    icon={item.icon ?? iconForHref(item.href)}
                     active={isActive(pathname, item.href)}
                     collapsed={collapsed}
                     onNavigate={onCloseMobile}
                   />
-                ))}
-              </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </nav>
     </div>
   );

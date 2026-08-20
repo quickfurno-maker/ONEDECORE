@@ -4,16 +4,24 @@ import { CrmPageHeader } from "@/features/crm/components/shell/CrmPageHeader";
 import { LeadListCards } from "@/features/crm/components/leads/LeadListCards";
 import { LeadListEmpty } from "@/features/crm/components/leads/LeadListEmpty";
 import { LeadListFilters } from "@/features/crm/components/leads/LeadListFilters";
-import { parseLeadListQuery, buildLeadListHref } from "@/features/crm/contracts/lead-list-query";
+import {
+  parseLeadListQuery,
+  buildLeadListHref,
+  PIPELINE_STAGE_PREVIEW_SIZE,
+} from "@/features/crm/contracts/lead-list-query";
 import { LeadListPagination } from "@/features/crm/components/leads/LeadListPagination";
 import { LeadListTable } from "@/features/crm/components/leads/LeadListTable";
 import { LeadPipelineBoard } from "@/features/crm/components/leads/LeadPipelineBoard";
+import { LEAD_STAGE_CODES } from "@/features/crm/contracts/lead-stages";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
 import {
   fetchActiveLeadSources,
   fetchCrmAssigneeDirectory,
 } from "@/features/crm/server/crm-lead-queries";
-import { getLeadListPageForCurrentUser } from "@/features/crm/server/crm-lead-repository";
+import {
+  countLeadListForCurrentUser,
+  getLeadListPageForCurrentUser,
+} from "@/features/crm/server/crm-lead-repository";
 
 export const dynamic = "force-dynamic";
 
@@ -41,19 +49,30 @@ export default async function CrmLeadsPage({ searchParams }: CrmLeadsPageProps) 
     return null;
   }
 
-  const listQuery =
+  const pipelineBase = { ...query, status: null, page: 1, pageSize: PIPELINE_STAGE_PREVIEW_SIZE };
+  const [page, sources, assignees, pipelineStages] = await Promise.all([
     view === "pipeline"
-      ? { ...query, status: null, pageSize: 50, page: 1 }
-      : query;
-
-  const [page, sources, assignees] = await Promise.all([
-    getLeadListPageForCurrentUser(listQuery),
+      ? Promise.resolve(null)
+      : getLeadListPageForCurrentUser(query),
     fetchActiveLeadSources(),
     fetchCrmAssigneeDirectory(context),
+    view === "pipeline"
+      ? Promise.all(
+          LEAD_STAGE_CODES.map(async (status) => {
+            const stageQuery = { ...pipelineBase, status };
+            const [total, preview] = await Promise.all([
+              countLeadListForCurrentUser(stageQuery),
+              getLeadListPageForCurrentUser(stageQuery),
+            ]);
+            return { status, total, items: preview.items };
+          })
+        )
+      : Promise.resolve([]),
   ]);
 
   const tableHref = buildLeadListHref(query, "table");
   const pipelineHref = buildLeadListHref(query, "pipeline");
+  const pipelineEmpty = pipelineStages.every((stage) => stage.total === 0);
 
   return (
     <div className="space-y-6">
@@ -88,30 +107,33 @@ export default async function CrmLeadsPage({ searchParams }: CrmLeadsPageProps) 
       </div>
 
       <LeadListFilters
-        query={query}
+        query={view === "pipeline" ? pipelineBase : query}
         sources={sources}
         assignees={assignees}
         showBroadFilters={context.canReadBroad}
         view={view}
       />
 
-      {page.items.length === 0 ? (
+      {view === "pipeline" ? (
+        pipelineEmpty ? (
+          <LeadListEmpty filtered={Boolean(pipelineBase.q || pipelineBase.sourceId || pipelineBase.assignment || pipelineBase.assigneeId || pipelineBase.followUpDue)} canCreate={context.canCreateLeads} />
+        ) : (
+          <>
+            <LeadPipelineBoard stages={pipelineStages} />
+            <p className="text-xs text-[var(--od-muted)]">
+              Stage totals are RLS-scoped counts. Cards are a preview of {PIPELINE_STAGE_PREVIEW_SIZE} per stage. Drag-and-drop is not enabled.
+            </p>
+          </>
+        )
+      ) : page && page.items.length === 0 ? (
         <LeadListEmpty filtered={page.hasActiveFilters} canCreate={context.canCreateLeads} />
-      ) : view === "pipeline" ? (
-        <>
-          <LeadPipelineBoard items={page.items} />
-          <LeadListCards items={page.items} />
-          <p className="text-xs text-[var(--od-muted)]">
-            Read-only board of the current queue (max 50). Stages match canonical CRM statuses. Drag-and-drop is not enabled.
-          </p>
-        </>
-      ) : (
+      ) : page ? (
         <>
           <LeadListTable items={page.items} />
           <LeadListCards items={page.items} />
           <LeadListPagination query={query} pagination={page.pagination} />
         </>
-      )}
+      ) : null}
     </div>
   );
 }

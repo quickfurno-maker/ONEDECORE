@@ -37,10 +37,13 @@ export interface OpsDashboardSnapshot {
   readonly trend: readonly number[];
 }
 
-export function crmOverviewNavFlags(context: CrmAccessContext): OpsNavFlags {
+export function crmOverviewNavFlags(
+  context: CrmAccessContext,
+  quotationAccess: { readonly quotations: boolean; readonly createQuotation: boolean }
+): OpsNavFlags {
   return {
     crm: true,
-    quotations: true,
+    quotations: quotationAccess.quotations,
     projects: false,
     whatsapp: false,
     campaigns: false,
@@ -55,7 +58,7 @@ export function crmOverviewNavFlags(context: CrmAccessContext): OpsNavFlags {
     crmImports: context.canBulkImportLeads,
     crmAssignmentRules: context.canManageLeadAssignmentRules,
     createLead: context.canCreateLeads,
-    createQuotation: false,
+    createQuotation: quotationAccess.createQuotation,
   };
 }
 
