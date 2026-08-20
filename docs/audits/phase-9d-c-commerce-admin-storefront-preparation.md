@@ -64,12 +64,13 @@ Normative text: [ADR-0032](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c
 | :--- | :--- |
 | Admin-first | Items 1–38 in ADR-0032 §1 must not require source edits |
 | Single admin | Extend `/admin/commerce*`; no second commerce admin |
-| RBAC | Unchanged; no fake order/payment UI |
+| RBAC | Exact M35 codes only: SA `commerce.read`, `commerce.catalog.manage`, `commerce.inventory.manage`, `commerce.orders.manage`, `commerce.payments.read`, `commerce.settings.manage`; SM `commerce.read`, `commerce.orders.manage`, `commerce.payments.read`; others none. No aliases. No fake order/payment UI |
 | Depth | Root → subcategory only |
 | GST display | Locked true; no toggle |
 | Tax rates | Staff-configured; no statutory % seed |
+| Featured / category order | Item 35 uses existing M35 `commerce_products.featured`. Item 36 uses existing M35 `commerce_categories.sort_order`. No page-builder or extra feature-ordering schema. Optional `featured_rank` later only if needed |
 | Pincode vs city | Pincode is serviceability authority; city is grouping/display |
-| Service areas | Next forward-only migration **after** certified M35; timestamp **unreserved**; **not** this gate |
+| Service areas | Items 31 and 34 only. Next forward-only migration **after** certified M35; timestamp **unreserved**; **not** this gate; do not call it M36 |
 | Launch city | Pune first; later cities from Admin |
 | GIS | Forbidden |
 | Homepage | One brand; ~70% interiors / ~30% furniture; admin-driven furniture categories + featured |

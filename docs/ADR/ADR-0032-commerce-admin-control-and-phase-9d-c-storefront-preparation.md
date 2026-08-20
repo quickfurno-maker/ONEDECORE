@@ -61,7 +61,11 @@ Normal catalogue and store operations MUST be operable from the existing ONEDECO
 37. Pincode availability data  
 38. Basic storefront SEO already represented by catalogue fields  
 
-Items 31 and 34–36 that need schema beyond M35 are **specified here** and implemented only **after** the 9D-C entry gate (service-area master in the **next available** forward-only migration after certified M35 — **not created in this gate**).
+Schema vs existing M35 fields:
+
+- **Items 31 and 34** (serviceable cities/service areas; city/state/zone display data) require the future lean `commerce_service_areas` model (nullable `commerce_pincodes.service_area_id`). That migration is **specified here** and implemented only **after** the 9D-C entry gate — **next available** forward-only timestamp after certified M35; **not created in this gate**; do **not** call it M36; timestamp remains **unreserved**.
+- **Item 35** (homepage/storefront featured product selection) uses existing M35 `commerce_products.featured`. No extra page-builder or feature-ordering schema is authorized. Optional `featured_rank` later **only if** evidence shows it is necessary (see §8).
+- **Item 36** (store category ordering) uses existing M35 `commerce_categories.sort_order`.
 
 ---
 
@@ -77,15 +81,15 @@ Canonical admin routes (do **not** create a second commerce admin):
 
 After the 9D-C entry gate, **add** `/admin/commerce/service-areas` (and city detail) as an extension of this shell — not a parallel CMS.
 
-RBAC remains ADR-0030 / M35:
+RBAC remains ADR-0030 / M35. Canonical codes are exact; do not alias or rename:
 
 | Role | Permissions |
 | :--- | :--- |
-| Super Admin | `commerce.read`, `catalog.manage`, `inventory.manage`, `orders.manage`, `payments.read`, `settings.manage` |
-| Sales Manager | `commerce.read`, `orders.manage`, `payments.read` |
+| Super Admin | `commerce.read`, `commerce.catalog.manage`, `commerce.inventory.manage`, `commerce.orders.manage`, `commerce.payments.read`, `commerce.settings.manage` |
+| Sales Manager | `commerce.read`, `commerce.orders.manage`, `commerce.payments.read` |
 | All others | none |
 
-Until order/payment phases exist: **do not** show fake functional order/payment management. `orders.manage` / `payments.read` stay seeded for later subphases only.
+Until order/payment phases exist: **do not** show fake functional order/payment management. `commerce.orders.manage` / `commerce.payments.read` stay seeded for later subphases only.
 
 Inventory **mutation** remains Super Admin (`commerce.inventory.manage`).
 
