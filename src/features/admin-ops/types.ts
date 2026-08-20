@@ -16,6 +16,9 @@ export interface OpsNavFlags {
   readonly crmAssignmentRules: boolean;
   readonly createLead: boolean;
   readonly createQuotation: boolean;
+  readonly commerceCatalog: boolean;
+  readonly commerceInventory: boolean;
+  readonly commerceSettings: boolean;
 }
 
 export interface OpsIdentity {

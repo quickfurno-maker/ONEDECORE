@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const linkClass =
-  "inline-flex min-h-11 items-center text-xs font-medium text-amber-300 hover:text-amber-200";
+  "inline-flex min-h-10 items-center text-xs font-medium text-[var(--od-gold)] hover:text-[var(--od-text)]";
 
 export function CommerceAdminLinks() {
   return (

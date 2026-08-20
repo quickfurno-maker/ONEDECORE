@@ -1,13 +1,22 @@
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getStaffClaims } from "@/server/auth/session";
 import { probeCommercePermissions } from "@/features/commerce/server/commerce-permissions";
-import { listCommerceCategories, listRootCommerceCategories } from "@/features/commerce/server/commerce-queries";
+import {
+  listCommerceCategories,
+  listCommerceProducts,
+  listRootCommerceCategories,
+} from "@/features/commerce/server/commerce-queries";
 import { CategoryForm } from "@/features/commerce/components/CategoryForm";
 import { StorefrontDisabledBanner } from "@/features/commerce/components/StorefrontDisabledBanner";
 import { CommerceAdminLinks } from "@/features/commerce/components/CommerceAdminLinks";
+import { CommercePageHeader } from "@/features/commerce/components/CommercePageHeader";
+import { CategoryTree } from "@/features/commerce/components/CategoryTree";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Commerce categories | OneDecore Admin",
+  title: "Commerce categories | ONEDECORE Operations",
 };
 
 export default async function AdminCommerceCategoriesPage() {
@@ -19,35 +28,33 @@ export default async function AdminCommerceCategoriesPage() {
   if (!permissions.canRead) {
     redirect("/auth/forbidden");
   }
-  const [categories, roots] = await Promise.all([listCommerceCategories(), listRootCommerceCategories()]);
+  const [categories, roots, products] = await Promise.all([
+    listCommerceCategories(),
+    listRootCommerceCategories(),
+    listCommerceProducts(),
+  ]);
+  const productCounts: Record<string, number> = {};
+  for (const product of products) {
+    productCounts[product.category_id] = (productCounts[product.category_id] ?? 0) + 1;
+  }
+  const editors: Record<string, ReactNode> = {};
+  for (const category of categories) {
+    editors[category.id] = permissions.canManageCatalog ? (
+      <CategoryForm category={category} rootCategories={roots} />
+    ) : (
+      <p className="mt-2 text-xs text-[var(--od-muted)]">
+        {category.category_reference} · {category.slug}
+      </p>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-100">Categories</h1>
-        <p className="mt-1 text-xs text-neutral-400">Parents may only be root categories.</p>
-      </div>
+    <div className="mx-auto max-w-[1600px] space-y-6">
+      <CommercePageHeader title="Categories" subtitle="Root categories and one subcategory depth." />
       <StorefrontDisabledBanner />
       <CommerceAdminLinks />
       {permissions.canManageCatalog ? <CategoryForm rootCategories={roots} /> : null}
-      <div className="space-y-4">
-        {categories.length === 0 ? (
-          <p className="text-sm text-neutral-500">No categories yet.</p>
-        ) : (
-          categories.map((category) =>
-            permissions.canManageCatalog ? (
-              <CategoryForm key={category.id} category={category} rootCategories={roots} />
-            ) : (
-              <div key={category.id} className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 text-sm text-neutral-200">
-                <p className="font-medium">{category.name}</p>
-                <p className="text-xs text-neutral-400">
-                  {category.category_reference} · {category.slug} · {category.status}
-                </p>
-              </div>
-            )
-          )
-        )}
-      </div>
+      <CategoryTree categories={categories} productCounts={productCounts} editors={editors} />
     </div>
   );
 }

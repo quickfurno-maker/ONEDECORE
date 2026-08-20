@@ -45,6 +45,7 @@ export interface CommerceProductListItem {
   readonly featured: boolean;
   readonly category_id: string;
   readonly lock_version: number;
+  readonly updated_at: string;
 }
 
 export interface CommerceVariantRow {
@@ -113,6 +114,7 @@ export interface CommercePincodeRow {
   readonly zone_code: string | null;
   readonly eta_min_days: number;
   readonly eta_max_days: number;
+  readonly updated_at: string;
 }
 
 export interface CommerceProductDetail {
@@ -134,6 +136,8 @@ export interface CommerceProductDetail {
     readonly seo_description: string | null;
     readonly featured: boolean;
     readonly lock_version: number;
+    readonly updated_at: string;
+    readonly published_at: string | null;
   };
   readonly category: CommerceCategoryRow | null;
   readonly variants: readonly CommerceVariantRow[];
@@ -186,7 +190,7 @@ export async function listCommerceProducts(filters?: {
 }): Promise<readonly CommerceProductListItem[]> {
   const supabase = await createClient();
   let query = fromCommerce(supabase, "commerce_products").select(
-    "id, product_reference, name, slug, status, featured, category_id, lock_version"
+    "id, product_reference, name, slug, status, featured, category_id, lock_version, updated_at"
   );
   const status = filters?.status?.trim();
   if (status && status !== "all") {
@@ -206,7 +210,7 @@ export async function getCommerceProductDetail(productId: string): Promise<Comme
   const supabase = await createClient();
   const { data: product, error } = await fromCommerce(supabase, "commerce_products")
     .select(
-      "id, product_reference, category_id, name, slug, short_description, full_description, status, tax_rate_id, hsn_sac_code, shipping_charge_paise_override, cod_allowed_override, free_shipping_eligible_override, seo_title, seo_description, featured, lock_version"
+      "id, product_reference, category_id, name, slug, short_description, full_description, status, tax_rate_id, hsn_sac_code, shipping_charge_paise_override, cod_allowed_override, free_shipping_eligible_override, seo_title, seo_description, featured, lock_version, updated_at, published_at"
     )
     .eq("id", productId)
     .maybeSingle();
@@ -264,7 +268,7 @@ export async function getCommerceProductDetail(productId: string): Promise<Comme
   const relatedIds = ((related ?? []) as { related_product_id: string }[]).map((item) => item.related_product_id);
   const { data: relatedProducts } = relatedIds.length
     ? await fromCommerce(supabase, "commerce_products")
-        .select("id, product_reference, name, slug, status, featured, category_id, lock_version")
+        .select("id, product_reference, name, slug, status, featured, category_id, lock_version, updated_at")
         .in("id", relatedIds)
     : { data: [] as never[] };
 
@@ -323,7 +327,7 @@ export async function getCommerceSettings(): Promise<{
       .eq("id", 1)
       .maybeSingle(),
     fromCommerce(supabase, "commerce_pincodes")
-      .select("pincode, serviceable, zone_code, eta_min_days, eta_max_days")
+      .select("pincode, serviceable, zone_code, eta_min_days, eta_max_days, updated_at")
       .order("pincode", { ascending: true }),
   ]);
   return {
@@ -382,5 +386,129 @@ export async function getCommerceOverview(): Promise<CommerceOverview> {
     defaultShippingChargePaise: ship?.default_shipping_charge_paise ?? 0,
     inventoryReady,
     settingsReady,
+  };
+}
+
+export async function loadCommerceCatalogueGraph(options: {
+  readonly includeInventory: boolean;
+}): Promise<{
+  readonly products: readonly {
+    readonly id: string;
+    readonly product_reference: string;
+    readonly name: string;
+    readonly slug: string;
+    readonly status: string;
+    readonly featured: boolean;
+    readonly category_id: string;
+    readonly tax_rate_id: string | null;
+    readonly updated_at: string;
+  }[];
+  readonly categories: readonly CommerceCategoryRow[];
+  readonly variants: readonly CommerceVariantRow[];
+  readonly media: readonly Pick<
+    CommerceMediaRow,
+    "product_id" | "status" | "is_primary" | "public_path"
+  >[];
+  readonly inventory: readonly CommerceInventoryRow[] | null;
+  readonly taxRates: readonly CommerceTaxRateRow[];
+  readonly taxSettings: CommerceTaxSettingsRow | null;
+  readonly shipping: CommerceShippingSettingsRow | null;
+  readonly pincodes: readonly CommercePincodeRow[];
+}> {
+  const supabase = await createClient();
+  const [
+    { data: products },
+    categories,
+    { data: variants },
+    { data: media },
+    { data: taxRates },
+    settings,
+  ] = await Promise.all([
+    fromCommerce(supabase, "commerce_products").select(
+      "id, product_reference, name, slug, status, featured, category_id, tax_rate_id, updated_at"
+    ),
+    listCommerceCategories(),
+    fromCommerce(supabase, "commerce_product_variants").select(
+      "id, product_id, sku, option_values, display_name, selling_price_paise, compare_at_price_paise, status, availability_mode, sort_order"
+    ),
+    fromCommerce(supabase, "commerce_product_media").select("product_id, status, is_primary, public_path"),
+    fromCommerce(supabase, "commerce_tax_rates").select("id, code, name, rate_basis_points, description, is_active"),
+    getCommerceSettings(),
+  ]);
+
+  let inventory: CommerceInventoryRow[] | null = null;
+  if (options.includeInventory) {
+    const { data } = await fromCommerce(supabase, "commerce_inventory").select(
+      "variant_id, stock_on_hand, reserved_qty, available_qty"
+    );
+    inventory = (data ?? []) as CommerceInventoryRow[];
+  }
+
+  return {
+    products: (products ?? []) as {
+      readonly id: string;
+      readonly product_reference: string;
+      readonly name: string;
+      readonly slug: string;
+      readonly status: string;
+      readonly featured: boolean;
+      readonly category_id: string;
+      readonly tax_rate_id: string | null;
+      readonly updated_at: string;
+    }[],
+    categories,
+    variants: (variants ?? []) as CommerceVariantRow[],
+    media: (media ?? []) as Pick<CommerceMediaRow, "product_id" | "status" | "is_primary" | "public_path">[],
+    inventory,
+    taxRates: (taxRates ?? []) as CommerceTaxRateRow[],
+    taxSettings: settings.taxSettings,
+    shipping: settings.shipping,
+    pincodes: settings.pincodes,
+  };
+}
+
+export async function listCommerceProductWorkspace(filters?: {
+  readonly q?: string;
+  readonly status?: string;
+  readonly includeInventory?: boolean;
+}): Promise<{
+  readonly products: readonly CommerceProductListItem[];
+  readonly categories: readonly CommerceCategoryRow[];
+  readonly variants: readonly CommerceVariantRow[];
+  readonly media: readonly Pick<CommerceMediaRow, "product_id" | "status" | "is_primary" | "public_path">[];
+  readonly inventory: readonly CommerceInventoryRow[];
+}> {
+  const products = await listCommerceProducts(filters);
+  const categories = await listCommerceCategories();
+  const ids = products.map((row) => row.id);
+  if (ids.length === 0) {
+    return { products, categories, variants: [], media: [], inventory: [] };
+  }
+  const supabase = await createClient();
+  const [{ data: variants }, { data: media }] = await Promise.all([
+    fromCommerce(supabase, "commerce_product_variants")
+      .select(
+        "id, product_id, sku, option_values, display_name, selling_price_paise, compare_at_price_paise, status, availability_mode, sort_order"
+      )
+      .in("product_id", ids),
+    fromCommerce(supabase, "commerce_product_media")
+      .select("product_id, status, is_primary, public_path")
+      .in("product_id", ids),
+  ]);
+  const variantRows = (variants ?? []) as CommerceVariantRow[];
+  const variantIds = variantRows.map((row) => row.id);
+  let inventory: CommerceInventoryRow[] = [];
+  if (filters?.includeInventory !== false && variantIds.length) {
+    const { data } = await fromCommerce(supabase, "commerce_inventory")
+      .select("variant_id, stock_on_hand, reserved_qty, available_qty")
+      .in("variant_id", variantIds);
+    inventory = (data ?? []) as CommerceInventoryRow[];
+  }
+  return {
+    products,
+    categories,
+    variants: variantRows,
+    media: (media ?? []) as Pick<CommerceMediaRow, "product_id" | "status" | "is_primary" | "public_path">[],
+    inventory,
   };
 }

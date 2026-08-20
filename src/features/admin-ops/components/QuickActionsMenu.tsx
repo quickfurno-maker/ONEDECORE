@@ -36,8 +36,20 @@ export function QuickActionsMenu({ flags }: QuickActionsMenuProps) {
     flags.whatsapp
       ? { href: "/admin/whatsapp/inbox", label: "Open WhatsApp" }
       : null,
-    flags.commerce
+    flags.commerce && !flags.commerceCatalog
       ? { href: "/admin/commerce/products", label: "Products" }
+      : null,
+    flags.commerceCatalog
+      ? { href: "/admin/commerce/products", label: "+ Add Product" }
+      : null,
+    flags.commerceCatalog
+      ? { href: "/admin/commerce/categories", label: "+ Add Category" }
+      : null,
+    flags.commerceInventory
+      ? { href: "/admin/commerce/products", label: "Adjust Inventory" }
+      : null,
+    flags.commerceSettings
+      ? { href: "/admin/commerce/settings", label: "Manage Pincodes" }
       : null,
   ].filter((item): item is { href: string; label: string } => item !== null);
 
@@ -63,7 +75,7 @@ export function QuickActionsMenu({ flags }: QuickActionsMenuProps) {
           className="absolute right-0 z-40 mt-2 min-w-48 overflow-hidden rounded-[10px] border border-[var(--od-border-strong)] bg-[var(--od-elevated)] py-1 shadow-xl"
         >
           {actions.map((action) => (
-            <li key={action.href}>
+            <li key={`${action.href}:${action.label}`}>
               <a
                 href={action.href}
                 className="block min-h-10 px-3 py-2 text-sm text-[var(--od-text-2)] hover:bg-[var(--od-hover)] hover:text-[var(--od-text)]"

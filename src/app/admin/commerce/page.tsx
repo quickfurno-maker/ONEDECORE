@@ -1,13 +1,24 @@
 import { redirect } from "next/navigation";
 import { getStaffClaims } from "@/server/auth/session";
 import { probeCommercePermissions } from "@/features/commerce/server/commerce-permissions";
-import { getCommerceOverview } from "@/features/commerce/server/commerce-queries";
+import { loadCommerceCatalogueGraph } from "@/features/commerce/server/commerce-queries";
 import { StorefrontDisabledBanner } from "@/features/commerce/components/StorefrontDisabledBanner";
 import { CommerceAdminLinks } from "@/features/commerce/components/CommerceAdminLinks";
+import { CommerceDashboardView } from "@/features/commerce/components/CommerceDashboardView";
+import {
+  CommerceGhostButton,
+  CommerceGoldButton,
+  CommercePageHeader,
+} from "@/features/commerce/components/CommercePageHeader";
+import { buildCommerceDashboardSnapshot } from "@/features/commerce/domain/commerce-dashboard";
+import { QuickActionsMenu } from "@/features/admin-ops/components/QuickActionsMenu.tsx";
+import { resolveOpsNavFlags } from "@/features/admin-ops/server/resolve-ops-nav-flags.ts";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Commerce | OneDecore Admin",
-  description: "Phase 9D-B commerce catalogue and inventory admin",
+  title: "Commerce | ONEDECORE Operations",
+  description: "Catalogue, inventory and storefront readiness.",
 };
 
 export default async function AdminCommercePage() {
@@ -15,44 +26,44 @@ export default async function AdminCommercePage() {
   if (!session) {
     redirect("/auth/login?next=%2Fadmin%2Fcommerce");
   }
-  const permissions = await probeCommercePermissions();
+  const [permissions, flags] = await Promise.all([probeCommercePermissions(), resolveOpsNavFlags()]);
   if (!permissions.canRead) {
     redirect("/auth/forbidden");
   }
-  const overview = await getCommerceOverview();
+  const graph = await loadCommerceCatalogueGraph({ includeInventory: permissions.canRead });
+  const snapshot = buildCommerceDashboardSnapshot({
+    products: graph.products,
+    categories: graph.categories,
+    variants: graph.variants,
+    media: graph.media,
+    taxRates: graph.taxRates,
+    taxRequiredForPublish: graph.taxSettings?.tax_required_for_publish ?? true,
+    gstInclusiveDisplay: graph.taxSettings?.gst_inclusive_display ?? true,
+    shippingPresent: graph.shipping != null,
+    pincodes: graph.pincodes,
+    inventory: graph.inventory,
+  });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-100">Commerce</h1>
-        <p className="mt-1 text-xs text-neutral-400">Catalogue and inventory foundation. No public storefront in this phase.</p>
-      </div>
+    <div className="mx-auto max-w-[1600px] space-y-6 lg:space-y-7">
+      <CommercePageHeader
+        title="Commerce"
+        subtitle="Catalogue, inventory and storefront readiness."
+        actions={
+          <>
+            <QuickActionsMenu flags={flags} />
+            {permissions.canManageCatalog ? (
+              <CommerceGoldButton href="/admin/commerce/products">+ Add Product</CommerceGoldButton>
+            ) : null}
+            {permissions.canManageCatalog ? (
+              <CommerceGhostButton href="/admin/commerce/categories">Manage Categories</CommerceGhostButton>
+            ) : null}
+          </>
+        }
+      />
       <StorefrontDisabledBanner />
       <CommerceAdminLinks />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          ["Categories", overview.categoryCount],
-          ["Products", overview.productCount],
-          ["Drafts", overview.draftCount],
-          ["Published", overview.publishedCount],
-          ["Archived", overview.archivedCount],
-          ["Variants", overview.variantCount],
-          ["Tax rates", overview.taxRateCount],
-          ["Pincodes", overview.pincodeCount],
-        ].map(([label, value]) => (
-          <div key={String(label)} className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-            <p className="text-[10px] uppercase tracking-wider text-neutral-500">{label}</p>
-            <p className="mt-1 text-lg font-semibold text-neutral-100">{value}</p>
-          </div>
-        ))}
-      </div>
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 text-xs text-neutral-300">
-        <p>Inventory foundation ready: {overview.inventoryReady ? "yes" : "no"}.</p>
-        <p>Settings singleton ready: {overview.settingsReady ? "yes" : "no"}.</p>
-        <p>Tax required for publish: {overview.taxRequiredForPublish ? "yes" : "no"}.</p>
-        <p>GST-inclusive pricing — locked for ONEDECORE MVP.</p>
-        <p>Default shipping (paise): {overview.defaultShippingChargePaise}</p>
-      </div>
+      <CommerceDashboardView snapshot={snapshot} canManageCatalog={permissions.canManageCatalog} />
     </div>
   );
 }

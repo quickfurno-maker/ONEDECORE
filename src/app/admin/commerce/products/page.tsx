@@ -1,18 +1,29 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getStaffClaims } from "@/server/auth/session";
 import { probeCommercePermissions } from "@/features/commerce/server/commerce-permissions";
-import { listCommerceCategories, listCommerceProducts } from "@/features/commerce/server/commerce-queries";
+import { listCommerceProductWorkspace } from "@/features/commerce/server/commerce-queries";
 import { ProductCreateForm } from "@/features/commerce/components/ProductCreateForm";
 import { StorefrontDisabledBanner } from "@/features/commerce/components/StorefrontDisabledBanner";
 import { CommerceAdminLinks } from "@/features/commerce/components/CommerceAdminLinks";
+import { CommercePageHeader } from "@/features/commerce/components/CommercePageHeader";
+import { ProductWorkspaceTable } from "@/features/commerce/components/ProductWorkspaceTable";
+import { buildProductWorkspaceRows } from "@/features/commerce/domain/commerce-dashboard";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Commerce products | OneDecore Admin",
+  title: "Commerce products | ONEDECORE Operations",
 };
 
 interface AdminCommerceProductsPageProps {
-  readonly searchParams: Promise<{ q?: string; status?: string }>;
+  readonly searchParams: Promise<{
+    q?: string;
+    status?: string;
+    category?: string;
+    featured?: string;
+    mode?: string;
+    media?: string;
+  }>;
 }
 
 export default async function AdminCommerceProductsPage({ searchParams }: AdminCommerceProductsPageProps) {
@@ -27,80 +38,50 @@ export default async function AdminCommerceProductsPage({ searchParams }: AdminC
   const params = await searchParams;
   const q = params.q ?? "";
   const status = params.status ?? "all";
-  const [products, categories] = await Promise.all([
-    listCommerceProducts({ q, status }),
-    listCommerceCategories(),
-  ]);
+  const category = params.category ?? "all";
+  const featured = params.featured ?? "all";
+  const mode = params.mode ?? "all";
+  const media = params.media ?? "all";
+  const workspace = await listCommerceProductWorkspace({
+    q,
+    status,
+    includeInventory: permissions.canRead,
+  });
+  const rows = buildProductWorkspaceRows({
+    products: workspace.products,
+    categories: workspace.categories,
+    variants: workspace.variants,
+    media: workspace.media,
+    inventory: permissions.canRead ? workspace.inventory : null,
+  }).filter((row) => {
+    if (category !== "all") {
+      const match = workspace.products.find((product) => product.id === row.id);
+      if (match?.category_id !== category) return false;
+    }
+    if (featured === "true" && !row.featured) return false;
+    if (featured === "false" && row.featured) return false;
+    if (mode === "ready_stock" && row.availabilityMode !== "ready_stock" && row.availabilityMode !== "mixed") {
+      return false;
+    }
+    if (mode === "made_to_order" && row.availabilityMode !== "made_to_order" && row.availabilityMode !== "mixed") {
+      return false;
+    }
+    if (media === "ready" && !row.hasPublicPrimary) return false;
+    if (media === "missing" && row.hasPublicPrimary) return false;
+    return true;
+  });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-100">Products</h1>
-        <p className="mt-1 text-xs text-neutral-400">Search and filter catalogue drafts. Public /shop is off.</p>
-      </div>
+    <div className="mx-auto max-w-[1600px] space-y-6">
+      <CommercePageHeader title="Products" subtitle="Catalogue workspace. Public /shop is off." />
       <StorefrontDisabledBanner />
       <CommerceAdminLinks />
-      <form className="flex flex-wrap gap-3" method="get">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Search name, slug, reference"
-          className="min-h-11 min-w-56 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
-        />
-        <select
-          name="status"
-          defaultValue={status}
-          className="min-h-11 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
-        >
-          <option value="all">All statuses</option>
-          <option value="draft">draft</option>
-          <option value="published">published</option>
-          <option value="archived">archived</option>
-        </select>
-        <button
-          type="submit"
-          className="inline-flex min-h-11 items-center rounded-md bg-neutral-800 px-3 py-2 text-xs font-semibold text-neutral-100"
-        >
-          Filter
-        </button>
-      </form>
-      {permissions.canManageCatalog ? <ProductCreateForm categories={categories} /> : null}
-      <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/60">
-        <table className="w-full text-left text-xs">
-          <thead className="border-b border-neutral-800 bg-neutral-950 text-[10px] uppercase tracking-wider text-neutral-400">
-            <tr>
-              <th className="p-3">Reference</th>
-              <th className="p-3">Name</th>
-              <th className="p-3">Slug</th>
-              <th className="p-3">Status</th>
-              <th className="p-3 text-right">Open</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-900 text-neutral-200">
-            {products.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-8 text-center text-neutral-500">
-                  No products yet.
-                </td>
-              </tr>
-            ) : (
-              products.map((product) => (
-                <tr key={product.id}>
-                  <td className="p-3 font-medium">{product.product_reference}</td>
-                  <td className="p-3">{product.name}</td>
-                  <td className="p-3">{product.slug}</td>
-                  <td className="p-3">{product.status}</td>
-                  <td className="p-3 text-right">
-                    <Link href={`/admin/commerce/products/${product.id}`} className="text-amber-300 hover:text-amber-200">
-                      Open
-                    </Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {permissions.canManageCatalog ? <ProductCreateForm categories={workspace.categories} /> : null}
+      <ProductWorkspaceTable
+        rows={rows}
+        categories={workspace.categories}
+        filters={{ q, status, category, featured, mode, media }}
+      />
     </div>
   );
 }

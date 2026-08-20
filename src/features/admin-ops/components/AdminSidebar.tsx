@@ -41,6 +41,9 @@ function isActive(pathname: string, href: string): boolean {
   if (href === "/admin/crm") {
     return pathname === "/admin/crm";
   }
+  if (href === "/admin/commerce") {
+    return pathname === "/admin/commerce";
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -111,10 +114,17 @@ function buildGroups(flags: OpsNavFlags, hrefs: AdminSidebarProps["hrefs"]): rea
       id: "commerce",
       label: "Commerce",
       items: [
-        { href: "/admin/commerce", label: "Overview", icon: "commerce" },
-        { href: "/admin/commerce/products", label: "Products", icon: "products" },
-        { href: "/admin/commerce/categories", label: "Categories", icon: "categories" },
-        { href: "/admin/commerce/settings", label: "Settings", icon: "settings" },
+        {
+          href: "/admin/commerce",
+          label: "Commerce",
+          icon: "commerce",
+          children: [
+            { href: "/admin/commerce", label: "Overview", icon: "commerce" },
+            { href: "/admin/commerce/products", label: "Products", icon: "products" },
+            { href: "/admin/commerce/categories", label: "Categories", icon: "categories" },
+            { href: "/admin/commerce/settings", label: "Settings", icon: "settings" },
+          ],
+        },
       ],
     });
   }
@@ -192,7 +202,10 @@ export function AdminSidebar({
 }: AdminSidebarProps) {
   const pathname = usePathname();
   const groups = buildGroups(flags, hrefs);
-  const [crmOpen, setCrmOpen] = useState(true);
+  const [openParents, setOpenParents] = useState<Record<string, boolean>>({
+    "/admin/crm": true,
+    "/admin/commerce": true,
+  });
 
   const body = (
     <div className="flex h-full flex-col">
@@ -227,6 +240,7 @@ export function AdminSidebar({
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 if (item.children && item.children.length > 0) {
+                  const expanded = openParents[item.href] !== false;
                   return (
                     <div key={item.href}>
                       <div className="flex items-center">
@@ -235,7 +249,11 @@ export function AdminSidebar({
                             href={item.href}
                             label={item.label}
                             icon={item.icon}
-                            active={isActive(pathname, item.href)}
+                            active={
+                              item.href === "/admin/commerce"
+                                ? pathname.startsWith("/admin/commerce")
+                                : isActive(pathname, item.href)
+                            }
                             collapsed={collapsed}
                             onNavigate={onCloseMobile}
                           />
@@ -244,15 +262,17 @@ export function AdminSidebar({
                           <button
                             type="button"
                             className="mr-1 flex min-h-8 min-w-8 items-center justify-center rounded-[6px] text-[var(--od-muted)] hover:bg-[var(--od-hover)]"
-                            aria-expanded={crmOpen}
-                            aria-label={crmOpen ? "Collapse CRM" : "Expand CRM"}
-                            onClick={() => setCrmOpen((value) => !value)}
+                            aria-expanded={expanded}
+                            aria-label={expanded ? `Collapse ${item.label}` : `Expand ${item.label}`}
+                            onClick={() =>
+                              setOpenParents((value) => ({ ...value, [item.href]: !expanded }))
+                            }
                           >
-                            <OpsIcon name="chevron" className={`h-3.5 w-3.5 transition ${crmOpen ? "rotate-90" : ""}`} />
+                            <OpsIcon name="chevron" className={`h-3.5 w-3.5 transition ${expanded ? "rotate-90" : ""}`} />
                           </button>
                         )}
                       </div>
-                      {collapsed || !crmOpen
+                      {collapsed || !expanded
                         ? null
                         : item.children.map((child) => (
                               <NavLink
