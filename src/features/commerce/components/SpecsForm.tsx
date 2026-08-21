@@ -46,7 +46,7 @@ export function SpecsForm({
       ) : null}
       <button
         type="submit"
-        className="inline-flex min-h-11 items-center rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-neutral-950"
+        className="inline-flex min-h-11 items-center rounded-[8px] bg-[var(--od-gold)] px-3 py-2 text-xs font-semibold text-[#1a1408]"
       >
         Replace specifications
       </button>

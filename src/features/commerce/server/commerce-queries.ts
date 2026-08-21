@@ -2,6 +2,13 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { isPublicationReady } from "../domain/publication";
+import {
+  assembleCommerceSettings,
+  assertCommerceMaybeRow,
+  assertCommerceReadList,
+  readCommerceInventoryList,
+  readCommerceProductRow,
+} from "../domain/commerce-read";
 
 type CommerceTable =
   | "commerce_categories"
@@ -45,6 +52,7 @@ export interface CommerceProductListItem {
   readonly featured: boolean;
   readonly category_id: string;
   readonly lock_version: number;
+  readonly updated_at: string;
 }
 
 export interface CommerceVariantRow {
@@ -113,6 +121,7 @@ export interface CommercePincodeRow {
   readonly zone_code: string | null;
   readonly eta_min_days: number;
   readonly eta_max_days: number;
+  readonly updated_at: string;
 }
 
 export interface CommerceProductDetail {
@@ -134,6 +143,8 @@ export interface CommerceProductDetail {
     readonly seo_description: string | null;
     readonly featured: boolean;
     readonly lock_version: number;
+    readonly updated_at: string;
+    readonly published_at: string | null;
   };
   readonly category: CommerceCategoryRow | null;
   readonly variants: readonly CommerceVariantRow[];
@@ -171,8 +182,7 @@ export async function listCommerceCategories(): Promise<readonly CommerceCategor
     )
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
-  if (error || !data) return [];
-  return data as CommerceCategoryRow[];
+  return assertCommerceReadList({ data, error }, "commerce_categories") as CommerceCategoryRow[];
 }
 
 export async function listRootCommerceCategories(): Promise<readonly CommerceCategoryRow[]> {
@@ -186,7 +196,7 @@ export async function listCommerceProducts(filters?: {
 }): Promise<readonly CommerceProductListItem[]> {
   const supabase = await createClient();
   let query = fromCommerce(supabase, "commerce_products").select(
-    "id, product_reference, name, slug, status, featured, category_id, lock_version"
+    "id, product_reference, name, slug, status, featured, category_id, lock_version, updated_at"
   );
   const status = filters?.status?.trim();
   if (status && status !== "all") {
@@ -198,30 +208,28 @@ export async function listCommerceProducts(filters?: {
     query = query.or(`name.ilike.%${safe}%,slug.ilike.%${safe}%,product_reference.ilike.%${safe}%`);
   }
   const { data, error } = await query.order("updated_at", { ascending: false });
-  if (error || !data) return [];
-  return data as CommerceProductListItem[];
+  return assertCommerceReadList({ data, error }, "commerce_products") as CommerceProductListItem[];
 }
 
 export async function getCommerceProductDetail(productId: string): Promise<CommerceProductDetail | null> {
+  return getCommerceProductDetailForWorkspace(productId);
+}
+
+export async function getCommerceProductDetailForWorkspace(
+  productId: string
+): Promise<CommerceProductDetail | null> {
   const supabase = await createClient();
-  const { data: product, error } = await fromCommerce(supabase, "commerce_products")
+  const productRes = await fromCommerce(supabase, "commerce_products")
     .select(
-      "id, product_reference, category_id, name, slug, short_description, full_description, status, tax_rate_id, hsn_sac_code, shipping_charge_paise_override, cod_allowed_override, free_shipping_eligible_override, seo_title, seo_description, featured, lock_version"
+      "id, product_reference, category_id, name, slug, short_description, full_description, status, tax_rate_id, hsn_sac_code, shipping_charge_paise_override, cod_allowed_override, free_shipping_eligible_override, seo_title, seo_description, featured, lock_version, updated_at, published_at"
     )
     .eq("id", productId)
     .maybeSingle();
-  if (error || !product) return null;
-  const row = product as CommerceProductDetail["product"];
+  const found = readCommerceProductRow(productRes, "commerce_products");
+  if (found.status === "not_found") return null;
+  const row = found.row as unknown as CommerceProductDetail["product"];
 
-  const [
-    { data: category },
-    { data: variants },
-    { data: media },
-    { data: specs },
-    { data: related },
-    { data: taxRates },
-    { data: taxSettings },
-  ] = await Promise.all([
+  const [categoryRes, variantsRes, mediaRes, specsRes, relatedRes, taxRatesRes, taxSettingsRes] = await Promise.all([
     fromCommerce(supabase, "commerce_categories")
       .select(
         "id, category_reference, name, slug, parent_category_id, short_description, seo_title, seo_description, sort_order, status, shipping_charge_paise_override, cod_allowed_override, free_shipping_eligible_override"
@@ -253,25 +261,34 @@ export async function getCommerceProductDetail(productId: string): Promise<Comme
       .maybeSingle(),
   ]);
 
-  const variantRows = (variants ?? []) as CommerceVariantRow[];
+  const categoryRow = assertCommerceMaybeRow(categoryRes, "commerce_categories") as CommerceCategoryRow | null;
+  const variantRows = assertCommerceReadList(variantsRes, "commerce_product_variants") as CommerceVariantRow[];
+  const mediaRows = assertCommerceReadList(mediaRes, "commerce_product_media") as CommerceMediaRow[];
+  const specRows = assertCommerceReadList(specsRes, "commerce_product_specifications") as CommerceSpecRow[];
+  const relatedLinks = assertCommerceReadList(relatedRes, "commerce_related_products") as {
+    related_product_id: string;
+  }[];
+  const taxRatesRows = assertCommerceReadList(taxRatesRes, "commerce_tax_rates") as CommerceTaxRateRow[];
+  const taxSettingsRow = assertCommerceMaybeRow(taxSettingsRes, "commerce_tax_settings") as CommerceTaxSettingsRow | null;
+
   const variantIds = variantRows.map((item) => item.id);
-  const { data: inventory } = variantIds.length
-    ? await fromCommerce(supabase, "commerce_inventory")
-        .select("variant_id, stock_on_hand, reserved_qty, available_qty")
-        .in("variant_id", variantIds)
-    : { data: [] as never[] };
+  let inventoryRows: CommerceInventoryRow[] = [];
+  if (variantIds.length) {
+    const inventoryRes = await fromCommerce(supabase, "commerce_inventory")
+      .select("variant_id, stock_on_hand, reserved_qty, available_qty")
+      .in("variant_id", variantIds);
+    inventoryRows = assertCommerceReadList(inventoryRes, "commerce_inventory") as CommerceInventoryRow[];
+  }
 
-  const relatedIds = ((related ?? []) as { related_product_id: string }[]).map((item) => item.related_product_id);
-  const { data: relatedProducts } = relatedIds.length
-    ? await fromCommerce(supabase, "commerce_products")
-        .select("id, product_reference, name, slug, status, featured, category_id, lock_version")
-        .in("id", relatedIds)
-    : { data: [] as never[] };
+  const relatedIds = relatedLinks.map((item) => item.related_product_id);
+  let relatedProducts: CommerceProductListItem[] = [];
+  if (relatedIds.length) {
+    const relatedProductsRes = await fromCommerce(supabase, "commerce_products")
+      .select("id, product_reference, name, slug, status, featured, category_id, lock_version, updated_at")
+      .in("id", relatedIds);
+    relatedProducts = assertCommerceReadList(relatedProductsRes, "commerce_products") as CommerceProductListItem[];
+  }
 
-  const categoryRow = (category as CommerceCategoryRow | null) ?? null;
-  const mediaRows = (media ?? []) as CommerceMediaRow[];
-  const taxSettingsRow = (taxSettings as CommerceTaxSettingsRow | null) ?? null;
-  const taxRatesRows = (taxRates ?? []) as CommerceTaxRateRow[];
   const hasActiveTaxRate =
     row.tax_rate_id != null && taxRatesRows.some((rate) => rate.id === row.tax_rate_id && rate.is_active);
   const hasActivePricedVariant = variantRows.some(
@@ -285,11 +302,11 @@ export async function getCommerceProductDetail(productId: string): Promise<Comme
     product: row,
     category: categoryRow,
     variants: variantRows,
-    inventory: (inventory ?? []) as CommerceInventoryRow[],
+    inventory: inventoryRows,
     media: mediaRows,
-    specifications: (specs ?? []) as CommerceSpecRow[],
+    specifications: specRows,
     relatedProductIds: relatedIds,
-    relatedProducts: (relatedProducts ?? []) as CommerceProductListItem[],
+    relatedProducts,
     taxRates: taxRatesRows,
     taxSettings: taxSettingsRow,
     publicationReady: isPublicationReady({
@@ -310,7 +327,7 @@ export async function getCommerceSettings(): Promise<{
   readonly pincodes: readonly CommercePincodeRow[];
 }> {
   const supabase = await createClient();
-  const [{ data: taxRates }, { data: taxSettings }, { data: shipping }, { data: pincodes }] = await Promise.all([
+  const [taxRatesRes, taxSettingsRes, shippingRes, pincodesRes] = await Promise.all([
     fromCommerce(supabase, "commerce_tax_rates")
       .select("id, code, name, rate_basis_points, description, is_active")
       .order("code", { ascending: true }),
@@ -323,14 +340,20 @@ export async function getCommerceSettings(): Promise<{
       .eq("id", 1)
       .maybeSingle(),
     fromCommerce(supabase, "commerce_pincodes")
-      .select("pincode, serviceable, zone_code, eta_min_days, eta_max_days")
+      .select("pincode, serviceable, zone_code, eta_min_days, eta_max_days, updated_at")
       .order("pincode", { ascending: true }),
   ]);
+  const settings = assembleCommerceSettings({
+    taxRates: taxRatesRes,
+    taxSettings: taxSettingsRes,
+    shipping: shippingRes,
+    pincodes: pincodesRes,
+  });
   return {
-    taxRates: (taxRates ?? []) as CommerceTaxRateRow[],
-    taxSettings: (taxSettings as CommerceTaxSettingsRow | null) ?? null,
-    shipping: (shipping as CommerceShippingSettingsRow | null) ?? null,
-    pincodes: (pincodes ?? []) as CommercePincodeRow[],
+    taxRates: settings.taxRates as CommerceTaxRateRow[],
+    taxSettings: settings.taxSettings as CommerceTaxSettingsRow | null,
+    shipping: settings.shipping as CommerceShippingSettingsRow | null,
+    pincodes: settings.pincodes as CommercePincodeRow[],
   };
 }
 
@@ -383,4 +406,195 @@ export async function getCommerceOverview(): Promise<CommerceOverview> {
     inventoryReady,
     settingsReady,
   };
+}
+
+export async function loadCommerceCatalogueGraph(options: {
+  readonly includeInventory: boolean;
+}): Promise<{
+  readonly products: readonly {
+    readonly id: string;
+    readonly product_reference: string;
+    readonly name: string;
+    readonly slug: string;
+    readonly status: string;
+    readonly featured: boolean;
+    readonly category_id: string;
+    readonly tax_rate_id: string | null;
+    readonly updated_at: string;
+  }[];
+  readonly categories: readonly CommerceCategoryRow[];
+  readonly variants: readonly CommerceVariantRow[];
+  readonly media: readonly Pick<
+    CommerceMediaRow,
+    "product_id" | "status" | "is_primary" | "public_path"
+  >[];
+  readonly inventory: readonly CommerceInventoryRow[] | null;
+  readonly inventoryStatus: "ok" | "unavailable" | "omitted";
+  readonly taxRates: readonly CommerceTaxRateRow[];
+  readonly taxSettings: CommerceTaxSettingsRow | null;
+  readonly shipping: CommerceShippingSettingsRow | null;
+  readonly pincodes: readonly CommercePincodeRow[];
+}> {
+  const supabase = await createClient();
+  const [productsRes, categoriesRes, variantsRes, mediaRes, taxRatesRes, taxSettingsRes, shippingRes, pincodesRes] =
+    await Promise.all([
+      fromCommerce(supabase, "commerce_products").select(
+        "id, product_reference, name, slug, status, featured, category_id, tax_rate_id, updated_at"
+      ),
+      fromCommerce(supabase, "commerce_categories").select(
+        "id, category_reference, name, slug, parent_category_id, short_description, seo_title, seo_description, sort_order, status, shipping_charge_paise_override, cod_allowed_override, free_shipping_eligible_override"
+      ),
+      fromCommerce(supabase, "commerce_product_variants").select(
+        "id, product_id, sku, option_values, display_name, selling_price_paise, compare_at_price_paise, status, availability_mode, sort_order"
+      ),
+      fromCommerce(supabase, "commerce_product_media").select("product_id, status, is_primary, public_path"),
+      fromCommerce(supabase, "commerce_tax_rates").select("id, code, name, rate_basis_points, description, is_active"),
+      fromCommerce(supabase, "commerce_tax_settings")
+        .select("gst_inclusive_display, tax_required_for_publish")
+        .eq("id", 1)
+        .maybeSingle(),
+      fromCommerce(supabase, "commerce_shipping_settings")
+        .select("default_shipping_charge_paise, free_shipping_threshold_paise, cod_enabled_global, assembly_install_note")
+        .eq("id", 1)
+        .maybeSingle(),
+      fromCommerce(supabase, "commerce_pincodes")
+        .select("pincode, serviceable, zone_code, eta_min_days, eta_max_days, updated_at")
+        .order("pincode", { ascending: true }),
+    ]);
+
+  const products = assertCommerceReadList(productsRes, "commerce_products") as {
+    readonly id: string;
+    readonly product_reference: string;
+    readonly name: string;
+    readonly slug: string;
+    readonly status: string;
+    readonly featured: boolean;
+    readonly category_id: string;
+    readonly tax_rate_id: string | null;
+    readonly updated_at: string;
+  }[];
+  const categories = assertCommerceReadList(categoriesRes, "commerce_categories") as CommerceCategoryRow[];
+  const variants = assertCommerceReadList(variantsRes, "commerce_product_variants") as CommerceVariantRow[];
+  const media = assertCommerceReadList(mediaRes, "commerce_product_media") as Pick<
+    CommerceMediaRow,
+    "product_id" | "status" | "is_primary" | "public_path"
+  >[];
+  const taxRates = assertCommerceReadList(taxRatesRes, "commerce_tax_rates") as CommerceTaxRateRow[];
+  const taxSettings = assertCommerceMaybeRow(taxSettingsRes, "commerce_tax_settings") as CommerceTaxSettingsRow | null;
+  const shipping = assertCommerceMaybeRow(shippingRes, "commerce_shipping_settings") as CommerceShippingSettingsRow | null;
+  const pincodes = assertCommerceReadList(pincodesRes, "commerce_pincodes") as CommercePincodeRow[];
+
+  let inventory: CommerceInventoryRow[] | null = null;
+  let inventoryStatus: "ok" | "unavailable" | "omitted" = "omitted";
+  if (options.includeInventory) {
+    const inventoryRes = await fromCommerce(supabase, "commerce_inventory").select(
+      "variant_id, stock_on_hand, reserved_qty, available_qty"
+    );
+    const inventoryRead = readCommerceInventoryList(inventoryRes);
+    if (inventoryRead.status === "unavailable") {
+      inventoryStatus = "unavailable";
+      inventory = null;
+    } else {
+      inventoryStatus = "ok";
+      inventory = inventoryRead.rows as CommerceInventoryRow[];
+    }
+  }
+
+  return {
+    products,
+    categories,
+    variants,
+    media,
+    inventory,
+    inventoryStatus,
+    taxRates,
+    taxSettings,
+    shipping,
+    pincodes,
+  };
+}
+
+export async function listCommerceProductWorkspace(filters?: {
+  readonly q?: string;
+  readonly status?: string;
+  readonly includeInventory?: boolean;
+}): Promise<{
+  readonly products: readonly CommerceProductListItem[];
+  readonly categories: readonly CommerceCategoryRow[];
+  readonly variants: readonly CommerceVariantRow[];
+  readonly media: readonly Pick<CommerceMediaRow, "product_id" | "status" | "is_primary" | "public_path">[];
+  readonly inventory: readonly CommerceInventoryRow[] | null;
+  readonly inventoryStatus: "ok" | "unavailable" | "omitted";
+}> {
+  const supabase = await createClient();
+  let productQuery = fromCommerce(supabase, "commerce_products").select(
+    "id, product_reference, name, slug, status, featured, category_id, lock_version, updated_at"
+  );
+  const status = filters?.status?.trim();
+  if (status && status !== "all") {
+    productQuery = productQuery.eq("status", status);
+  }
+  const q = filters?.q?.trim();
+  if (q) {
+    const safe = q.replace(/[%*,]/g, " ").slice(0, 120);
+    productQuery = productQuery.or(`name.ilike.%${safe}%,slug.ilike.%${safe}%,product_reference.ilike.%${safe}%`);
+  }
+
+  const [productsRes, categoriesRes] = await Promise.all([
+    productQuery.order("updated_at", { ascending: false }),
+    fromCommerce(supabase, "commerce_categories").select(
+      "id, category_reference, name, slug, parent_category_id, short_description, seo_title, seo_description, sort_order, status, shipping_charge_paise_override, cod_allowed_override, free_shipping_eligible_override"
+    ),
+  ]);
+  const products = assertCommerceReadList(productsRes, "commerce_products") as CommerceProductListItem[];
+  const categories = assertCommerceReadList(categoriesRes, "commerce_categories") as CommerceCategoryRow[];
+  const ids = products.map((row) => row.id);
+  if (ids.length === 0) {
+    return {
+      products,
+      categories,
+      variants: [],
+      media: [],
+      inventory: filters?.includeInventory === false ? null : [],
+      inventoryStatus: filters?.includeInventory === false ? "omitted" : "ok",
+    };
+  }
+
+  const [variantsRes, mediaRes] = await Promise.all([
+    fromCommerce(supabase, "commerce_product_variants")
+      .select(
+        "id, product_id, sku, option_values, display_name, selling_price_paise, compare_at_price_paise, status, availability_mode, sort_order"
+      )
+      .in("product_id", ids),
+    fromCommerce(supabase, "commerce_product_media")
+      .select("product_id, status, is_primary, public_path")
+      .in("product_id", ids),
+  ]);
+  const variants = assertCommerceReadList(variantsRes, "commerce_product_variants") as CommerceVariantRow[];
+  const media = assertCommerceReadList(mediaRes, "commerce_product_media") as Pick<
+    CommerceMediaRow,
+    "product_id" | "status" | "is_primary" | "public_path"
+  >[];
+  const variantIds = variants.map((row) => row.id);
+
+  let inventory: CommerceInventoryRow[] | null = null;
+  let inventoryStatus: "ok" | "unavailable" | "omitted" = "omitted";
+  if (filters?.includeInventory === false) {
+    return { products, categories, variants, media, inventory: null, inventoryStatus: "omitted" };
+  }
+  if (variantIds.length === 0) {
+    return { products, categories, variants, media, inventory: [], inventoryStatus: "ok" };
+  }
+  const inventoryRes = await fromCommerce(supabase, "commerce_inventory")
+    .select("variant_id, stock_on_hand, reserved_qty, available_qty")
+    .in("variant_id", variantIds);
+  const inventoryRead = readCommerceInventoryList(inventoryRes);
+  if (inventoryRead.status === "unavailable") {
+    inventoryStatus = "unavailable";
+    inventory = null;
+  } else {
+    inventoryStatus = "ok";
+    inventory = inventoryRead.rows as CommerceInventoryRow[];
+  }
+  return { products, categories, variants, media, inventory, inventoryStatus };
 }

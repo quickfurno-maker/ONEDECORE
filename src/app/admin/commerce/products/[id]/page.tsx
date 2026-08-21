@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getStaffClaims } from "@/server/auth/session";
 import { probeCommercePermissions } from "@/features/commerce/server/commerce-permissions";
-import { getCommerceProductDetail, listCommerceCategories } from "@/features/commerce/server/commerce-queries";
+import { getCommerceProductDetailForWorkspace, listCommerceCategories } from "@/features/commerce/server/commerce-queries";
 import { StorefrontDisabledBanner } from "@/features/commerce/components/StorefrontDisabledBanner";
 import { CommerceAdminLinks } from "@/features/commerce/components/CommerceAdminLinks";
 import { ProductGeneralForm } from "@/features/commerce/components/ProductGeneralForm";
@@ -11,10 +11,18 @@ import { SpecsForm } from "@/features/commerce/components/SpecsForm";
 import { RelatedForm } from "@/features/commerce/components/RelatedForm";
 import { InventoryAdjustForm } from "@/features/commerce/components/InventoryAdjustForm";
 import { PublishArchiveButtons } from "@/features/commerce/components/PublishArchiveButtons";
+import { CommercePageHeader } from "@/features/commerce/components/CommercePageHeader";
+import { ProductDetailShell, ProductSection } from "@/features/commerce/components/ProductDetailShell";
+import { VariantSummaryTable } from "@/features/commerce/components/VariantSummaryTable";
+import { ProductMediaGallery } from "@/features/commerce/components/ProductMediaGallery";
+import { CommerceDataUnavailable } from "@/features/commerce/components/CommerceDataUnavailable";
+import { isCommerceReadError } from "@/features/commerce/domain/commerce-read";
 
 interface AdminCommerceProductDetailPageProps {
   readonly params: Promise<{ id: string }>;
 }
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminCommerceProductDetailPage({ params }: AdminCommerceProductDetailPageProps) {
   const { id } = await params;
@@ -26,104 +34,113 @@ export default async function AdminCommerceProductDetailPage({ params }: AdminCo
   if (!permissions.canRead) {
     redirect("/auth/forbidden");
   }
-  const [detail, categories] = await Promise.all([getCommerceProductDetail(id), listCommerceCategories()]);
-  if (!detail) notFound();
+  let detail: Awaited<ReturnType<typeof getCommerceProductDetailForWorkspace>> | undefined;
+  let categories: Awaited<ReturnType<typeof listCommerceCategories>> | undefined;
+  try {
+    const loaded = await Promise.all([getCommerceProductDetailForWorkspace(id), listCommerceCategories()]);
+    detail = loaded[0];
+    categories = loaded[1];
+  } catch (error) {
+    if (!isCommerceReadError(error)) {
+      throw error;
+    }
+    return (
+      <div className="mx-auto max-w-[1600px] space-y-6">
+        <CommercePageHeader title="Product" subtitle="Catalogue command centre." />
+        <StorefrontDisabledBanner />
+        <CommerceAdminLinks />
+        <CommerceDataUnavailable title="Product data unavailable" />
+      </div>
+    );
+  }
+  if (!detail || !categories) notFound();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-100">{detail.product.name}</h1>
-        <p className="mt-1 text-xs text-neutral-400">
-          {detail.product.product_reference} · {detail.product.status} · lock {detail.product.lock_version}
-        </p>
-      </div>
+    <div className="mx-auto max-w-[1600px] space-y-6">
+      <CommercePageHeader
+        title={detail.product.name}
+        subtitle={`${detail.product.product_reference} · ${detail.product.status} · lock ${detail.product.lock_version}`}
+      />
       <StorefrontDisabledBanner />
       <CommerceAdminLinks />
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">General</h2>
-        {permissions.canManageCatalog ? (
-          <ProductGeneralForm detail={detail} categories={categories} taxRates={detail.taxRates} />
-        ) : (
-          <p className="text-sm text-neutral-300">{detail.product.slug}</p>
-        )}
-      </section>
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">Variants & Price</h2>
-        <div className="space-y-2 text-xs text-neutral-300">
-          {detail.variants.map((variant) => (
-            <p key={variant.id}>
-              {variant.sku} · {variant.selling_price_paise} paise · {variant.status}
-            </p>
-          ))}
-        </div>
-        {permissions.canManageCatalog ? (
-          <>
-            {detail.variants.map((variant) => (
-              <VariantForm key={variant.id} productId={detail.product.id} variant={variant} />
-            ))}
-            <VariantForm productId={detail.product.id} />
-          </>
-        ) : null}
-      </section>
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">Media</h2>
-        {permissions.canManageCatalog ? (
-          <MediaUploadForm productId={detail.product.id} variants={detail.variants} media={detail.media} />
-        ) : (
-          <ul className="text-xs text-neutral-300">
-            {detail.media.map((item) => (
-              <li key={item.id}>{item.public_path}</li>
-            ))}
-          </ul>
-        )}
-      </section>
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">Specifications</h2>
-        {permissions.canManageCatalog ? (
-          <SpecsForm productId={detail.product.id} specifications={detail.specifications} />
-        ) : (
-          <ul className="text-xs text-neutral-300">
-            {detail.specifications.map((spec) => (
-              <li key={spec.id}>
-                {spec.specification_key}: {spec.specification_value}
+      <ProductDetailShell
+        detail={detail}
+        railActions={
+          permissions.canManageCatalog ? (
+            <PublishArchiveButtons
+              productId={detail.product.id}
+              lockVersion={detail.product.lock_version}
+              status={detail.product.status}
+              publicationReady={detail.publicationReady}
+            />
+          ) : null
+        }
+      >
+        <ProductSection id="overview" title="Overview">
+          {permissions.canManageCatalog ? (
+            <ProductGeneralForm detail={detail} categories={categories} taxRates={detail.taxRates} />
+          ) : (
+            <p className="text-sm text-[var(--od-text-2)]">{detail.product.slug}</p>
+          )}
+        </ProductSection>
+        <ProductSection id="variants" title="Variants & Pricing">
+          <VariantSummaryTable variants={detail.variants} inventory={detail.inventory} />
+          {permissions.canManageCatalog ? (
+            <>
+              {detail.variants.map((variant) => (
+                <VariantForm key={variant.id} productId={detail.product.id} variant={variant} />
+              ))}
+              <VariantForm productId={detail.product.id} />
+            </>
+          ) : null}
+        </ProductSection>
+        <ProductSection id="media" title="Media">
+          <ProductMediaGallery media={detail.media} variants={detail.variants} />
+          {permissions.canManageCatalog ? (
+            <MediaUploadForm productId={detail.product.id} variants={detail.variants} media={detail.media} />
+          ) : null}
+        </ProductSection>
+        <ProductSection id="inventory" title="Inventory">
+          <ul className="space-y-1 text-sm text-[var(--od-text-2)]">
+            {detail.inventory.map((row) => (
+              <li key={row.variant_id}>
+                on hand {row.stock_on_hand} · reserved {row.reserved_qty} · available {row.available_qty}
               </li>
             ))}
           </ul>
-        )}
-      </section>
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">Related</h2>
-        {permissions.canManageCatalog ? (
-          <RelatedForm productId={detail.product.id} relatedIds={detail.relatedProductIds} />
-        ) : (
-          <ul className="text-xs text-neutral-300">
-            {detail.relatedProducts.map((item) => (
-              <li key={item.id}>{item.name}</li>
-            ))}
-          </ul>
-        )}
-      </section>
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">Inventory</h2>
-        <ul className="text-xs text-neutral-300">
-          {detail.inventory.map((row) => (
-            <li key={row.variant_id}>
-              on hand {row.stock_on_hand} · reserved {row.reserved_qty} · available {row.available_qty}
-            </li>
-          ))}
-        </ul>
-        {permissions.canManageInventory ? (
-          <InventoryAdjustForm productId={detail.product.id} variants={detail.variants} inventory={detail.inventory} />
-        ) : null}
-      </section>
-      {permissions.canManageCatalog ? (
-        <PublishArchiveButtons
-          productId={detail.product.id}
-          lockVersion={detail.product.lock_version}
-          status={detail.product.status}
-          publicationReady={detail.publicationReady}
-        />
-      ) : null}
+          {permissions.canManageInventory ? (
+            <InventoryAdjustForm productId={detail.product.id} variants={detail.variants} inventory={detail.inventory} />
+          ) : null}
+        </ProductSection>
+        <ProductSection id="specifications" title="Specifications">
+          {permissions.canManageCatalog ? (
+            <SpecsForm productId={detail.product.id} specifications={detail.specifications} />
+          ) : (
+            <ul className="text-sm text-[var(--od-text-2)]">
+              {detail.specifications.map((spec) => (
+                <li key={spec.id}>
+                  {spec.specification_key}: {spec.specification_value}
+                </li>
+              ))}
+            </ul>
+          )}
+        </ProductSection>
+        <ProductSection id="seo" title="SEO">
+          <p className="text-sm text-[var(--od-text-2)]">Title: {detail.product.seo_title || "—"}</p>
+          <p className="text-sm text-[var(--od-text-2)]">Meta: {detail.product.seo_description || "—"}</p>
+        </ProductSection>
+        <ProductSection id="related" title="Related Products">
+          {permissions.canManageCatalog ? (
+            <RelatedForm productId={detail.product.id} relatedIds={detail.relatedProductIds} />
+          ) : (
+            <ul className="text-sm text-[var(--od-text-2)]">
+              {detail.relatedProducts.map((item) => (
+                <li key={item.id}>{item.name}</li>
+              ))}
+            </ul>
+          )}
+        </ProductSection>
+      </ProductDetailShell>
     </div>
   );
 }

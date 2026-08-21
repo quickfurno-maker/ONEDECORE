@@ -59,6 +59,9 @@ export function crmOverviewNavFlags(
     crmAssignmentRules: context.canManageLeadAssignmentRules,
     createLead: context.canCreateLeads,
     createQuotation: quotationAccess.createQuotation,
+    commerceCatalog: false,
+    commerceInventory: false,
+    commerceSettings: false,
   };
 }
 

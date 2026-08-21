@@ -10,7 +10,10 @@ import { hasAnyWhatsappInboxReadPermission } from "@/features/whatsapp/server/wh
 import { hasAnyProjectReadPermission } from "@/features/projects/server/project-permissions.ts";
 import { hasAnyCampaignReadPermission } from "@/features/marketing/server/campaign-permissions.ts";
 import { hasLandingPagesReadPermission } from "@/features/landing-lab/server/landing-permissions.ts";
-import { hasAnyCommerceReadPermission } from "@/features/commerce/server/commerce-permissions.ts";
+import {
+  hasAnyCommerceReadPermission,
+  probeCommercePermissions,
+} from "@/features/commerce/server/commerce-permissions.ts";
 import { probeQuotationPermissions } from "@/features/quotations/server/quotation-permissions.ts";
 import type { OpsNavFlags } from "../types.ts";
 
@@ -46,6 +49,13 @@ export const resolveOpsNavFlags = cache(async (): Promise<OpsNavFlags> => {
   ]);
 
   const crmContext = showCrmLink ? await getCrmAccessContext() : null;
+  const commercePermissions = showCommerceLink
+    ? await probeCommercePermissions()
+    : {
+        canManageCatalog: false,
+        canManageInventory: false,
+        canManageSettings: false,
+      };
 
   return {
     crm: showCrmLink,
@@ -65,5 +75,8 @@ export const resolveOpsNavFlags = cache(async (): Promise<OpsNavFlags> => {
     crmAssignmentRules: crmContext?.canManageLeadAssignmentRules ?? false,
     createLead: crmContext?.canCreateLeads ?? false,
     createQuotation: quotationPermissions.canCreateQuotations,
+    commerceCatalog: commercePermissions.canManageCatalog,
+    commerceInventory: commercePermissions.canManageInventory,
+    commerceSettings: commercePermissions.canManageSettings,
   };
 });

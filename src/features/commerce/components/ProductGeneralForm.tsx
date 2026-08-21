@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { updateCommerceProductAction } from "../server/commerce-actions";
 import type { CommerceCategoryRow, CommerceProductDetail, CommerceTaxRateRow } from "../server/commerce-queries";
+import { commerceGoldButtonClass, commerceInputClass } from "../ui/commerce-classes";
+import { basisPointsToPercentInput, mapRupeesFieldToPaise, paiseToRupeesInput } from "../ui/operator-units";
 
-const inputClass =
-  "mt-1 w-full min-h-11 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100";
+const inputClass = commerceInputClass;
 
 interface ProductGeneralFormProps {
   readonly detail: CommerceProductDetail;
@@ -21,6 +22,16 @@ export function ProductGeneralForm({ detail, categories, taxRates }: ProductGene
     <form
       className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4"
       action={async (formData) => {
+        const conversionError = mapRupeesFieldToPaise(
+          formData,
+          "shippingChargeRupeesOverride",
+          "shippingChargePaiseOverride",
+          false
+        );
+        if (conversionError) {
+          setMessage(conversionError);
+          return;
+        }
         const result = await updateCommerceProductAction(formData);
         setMessage(result.message);
       }}
@@ -60,7 +71,7 @@ export function ProductGeneralForm({ detail, categories, taxRates }: ProductGene
           <option value="">None</option>
           {taxRates.map((rate) => (
             <option key={rate.id} value={rate.id}>
-              {rate.code} ({rate.rate_basis_points} bps)
+              {rate.code} ({basisPointsToPercentInput(rate.rate_basis_points)}%)
             </option>
           ))}
         </select>
@@ -70,13 +81,15 @@ export function ProductGeneralForm({ detail, categories, taxRates }: ProductGene
         <input name="hsnSacCode" defaultValue={product.hsn_sac_code ?? ""} className={inputClass} />
       </label>
       <label className="block text-xs text-neutral-400">
-        Shipping override (paise)
+        Shipping override (₹)
         <input
-          name="shippingChargePaiseOverride"
-          type="number"
-          step={1}
-          min={0}
-          defaultValue={product.shipping_charge_paise_override ?? ""}
+          name="shippingChargeRupeesOverride"
+          inputMode="decimal"
+          defaultValue={
+            product.shipping_charge_paise_override == null
+              ? ""
+              : paiseToRupeesInput(product.shipping_charge_paise_override)
+          }
           className={inputClass}
         />
       </label>
@@ -135,10 +148,7 @@ export function ProductGeneralForm({ detail, categories, taxRates }: ProductGene
           {message}
         </p>
       ) : null}
-      <button
-        type="submit"
-        className="inline-flex min-h-11 items-center rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-neutral-950"
-      >
+      <button type="submit" className={commerceGoldButtonClass}>
         Save general
       </button>
     </form>

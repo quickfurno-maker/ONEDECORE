@@ -130,5 +130,12 @@ export function iconForKpi(id: string): OpsIconName {
   if (id === "projects") return "briefcase";
   if (id === "whatsapp") return "message";
   if (id === "target") return "goal";
+  if (id === "published-products") return "products";
+  if (id === "draft-products") return "document";
+  if (id === "active-categories") return "categories";
+  if (id === "featured-products") return "spark";
+  if (id === "ready-stock") return "commerce";
+  if (id === "made-to-order") return "briefcase";
+  if (id === "zero-stock") return "alert";
   return "dashboard";
 }

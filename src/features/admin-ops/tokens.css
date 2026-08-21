@@ -55,3 +55,26 @@
 .od-ops .od-enter {
   animation: od-fade-up 200ms ease-out both;
 }
+
+.od-ops .ops-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #3d4652 #0b0f14;
+}
+
+.od-ops .ops-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.od-ops .ops-scrollbar::-webkit-scrollbar-track {
+  background: #0b0f14;
+}
+
+.od-ops .ops-scrollbar::-webkit-scrollbar-thumb {
+  background: #3d4652;
+  border-radius: 999px;
+}
+
+.od-ops .ops-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #5a6570;
+}

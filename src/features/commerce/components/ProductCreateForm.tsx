@@ -4,9 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createCommerceProductAction } from "../server/commerce-actions";
 import type { CommerceCategoryRow } from "../server/commerce-queries";
-
-const inputClass =
-  "mt-1 w-full min-h-11 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100";
+import { commerceGoldButtonClass, commerceInputClass } from "../ui/commerce-classes";
 
 export function ProductCreateForm({ categories }: { readonly categories: readonly CommerceCategoryRow[] }) {
   const router = useRouter();
@@ -14,7 +12,7 @@ export function ProductCreateForm({ categories }: { readonly categories: readonl
 
   return (
     <form
-      className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4"
+      className="space-y-3"
       action={async (formData) => {
         const result = await createCommerceProductAction(formData);
         setMessage(result.message);
@@ -23,10 +21,10 @@ export function ProductCreateForm({ categories }: { readonly categories: readonl
         }
       }}
     >
-      <h2 className="text-sm font-semibold text-neutral-100">Create product draft</h2>
-      <label className="block text-xs text-neutral-400">
+      <h2 className="text-sm font-semibold text-[var(--od-text)]">Create product draft</h2>
+      <label className="block text-xs text-[var(--od-muted)]">
         Category
-        <select name="categoryId" required className={inputClass}>
+        <select name="categoryId" required className={commerceInputClass}>
           <option value="">Select category</option>
           {categories.map((row) => (
             <option key={row.id} value={row.id}>
@@ -35,31 +33,28 @@ export function ProductCreateForm({ categories }: { readonly categories: readonl
           ))}
         </select>
       </label>
-      <label className="block text-xs text-neutral-400">
+      <label className="block text-xs text-[var(--od-muted)]">
         Name
-        <input name="name" required minLength={2} maxLength={200} className={inputClass} />
+        <input name="name" required minLength={2} maxLength={200} className={commerceInputClass} />
       </label>
-      <label className="block text-xs text-neutral-400">
+      <label className="block text-xs text-[var(--od-muted)]">
         Slug
-        <input name="slug" required minLength={2} maxLength={120} className={inputClass} />
+        <input name="slug" required minLength={2} maxLength={120} className={commerceInputClass} />
       </label>
-      <label className="block text-xs text-neutral-400">
+      <label className="block text-xs text-[var(--od-muted)]">
         Short description
-        <textarea name="shortDescription" className={inputClass} />
+        <textarea name="shortDescription" className={commerceInputClass} />
       </label>
-      <label className="block text-xs text-neutral-400">
+      <label className="block text-xs text-[var(--od-muted)]">
         Full description
-        <textarea name="fullDescription" className={inputClass} />
+        <textarea name="fullDescription" className={commerceInputClass} />
       </label>
       {message ? (
-        <p role="status" aria-live="polite" className="text-sm text-amber-200">
+        <p role="status" aria-live="polite" className="text-sm text-[var(--od-warning)]">
           {message}
         </p>
       ) : null}
-      <button
-        type="submit"
-        className="inline-flex min-h-11 items-center rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-neutral-950"
-      >
+      <button type="submit" className={commerceGoldButtonClass}>
         Create draft
       </button>
     </form>
