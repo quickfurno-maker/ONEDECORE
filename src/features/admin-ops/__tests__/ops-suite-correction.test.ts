@@ -162,4 +162,18 @@ describe("Operations Suite correction contracts", () => {
     assert.doesNotMatch(sidebar, /\/admin\/orders/);
     assert.doesNotMatch(sidebar, /Record Payment/);
   });
+
+  test("dashboard does not duplicate Quick Actions; top bar remains canonical", () => {
+    const page = readFileSync(join(root, "src/app/admin/page.tsx"), "utf8");
+    const topBar = readFileSync(
+      join(root, "src/features/admin-ops/components/AdminTopBar.tsx"),
+      "utf8"
+    );
+    assert.match(topBar, /import \{ QuickActionsMenu \} from "\.\/QuickActionsMenu\.tsx"/);
+    assert.match(topBar, /<QuickActionsMenu flags=\{flags\} \/>/);
+    assert.doesNotMatch(page, /QuickActionsMenu/);
+    assert.match(page, /flags\.createLead/);
+    assert.match(page, /\+ New Lead/);
+    assert.match(page, /href="\/admin\/crm\/leads\/new"/);
+  });
 });

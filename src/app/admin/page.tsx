@@ -7,7 +7,6 @@ import { ActivityFeed } from "@/features/admin-ops/components/ActivityFeed.tsx";
 import { SourceDonut } from "@/features/admin-ops/components/SourceDonut.tsx";
 import { RecentLeadsPanel } from "@/features/admin-ops/components/RecentLeadsPanel.tsx";
 import { TargetPanel } from "@/features/admin-ops/components/TargetPanel.tsx";
-import { QuickActionsMenu } from "@/features/admin-ops/components/QuickActionsMenu.tsx";
 import { loadOpsDashboardSnapshot } from "@/features/admin-ops/server/dashboard-snapshot.ts";
 import { fetchOpsIdentity } from "@/features/admin-ops/server/ops-identity.ts";
 import { resolveOpsNavFlags } from "@/features/admin-ops/server/resolve-ops-nav-flags.ts";
@@ -57,7 +56,6 @@ export default async function AdminPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <QuickActionsMenu flags={flags} />
           {flags.createLead ? (
             <Link
               href="/admin/crm/leads/new"
