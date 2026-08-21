@@ -222,6 +222,8 @@ Brand line remains: **“One Vision. Complete Interiors.”**
 
 **Supersession (DEC-0092 / §9.2):** the §9/§9.1 **~70% Interiors / ~30% Furniture** ratio is superseded by **~60–65% Interiors/Kitchen / ~35–40% Furniture** on root `/`. The §9/§9.1 prohibition on a **separate Interiors homepage** is superseded **only** to authorize dedicated `/interiors` as an Interiors + Kitchen conversion route. This is **not** a separate brand or site. `/shop` remains dedicated commerce. Root `/` remains the unified brand homepage **above** both funnels. All other §9/§9.1 visual, funnel, admin-driven commerce, no-fake-cart, mobile, performance, SEO, and phase locks remain unless directly incompatible with §9.2.
 
+**Supersession (DEC-0093 / §9.3):** three-layer architecture in §9.2 remains. Only root `/` **balance and composition** are refined: perceived **~50/50** Interiors+Kitchens / Furniture; two-journey desktop **50/50**; 16-section root order. Interiors are **not** described as visibly dominant on `/`. Dedicated `/interiors` and `/shop` conversion routes are unchanged.
+
 Journeys remain conversion-separate (routes refined in §9.2):
 
 - **Interiors:** `/` → `/interiors` → Consultation → CRM lead
@@ -517,6 +519,118 @@ SEO: `/` broad brand (interiors + kitchens + furniture); `/interiors` service-in
 
 When authorized: lean service areas + mixed `/` + `/interiors` + `/shop` (+ category/PDP/search) + authorized admin extensions. **Not this PR.**
 
+### 9.3 Owner refinement — balanced mixed homepage
+
+**Status:** Owner lock **DEC-0093**. Docs only. **9D-C runtime remains blocked** until M35 managed certification and 9D-B closeout merge. Does **not** reopen ADR-0030 or OD9D-1–OD9D-12. **No runtime is authorized.**
+
+1. **DEC-0092 three-layer architecture remains in force.** `/` sits above dedicated `/interiors` and dedicated `/shop`. One brand. One domain. No gateway/splash. Kitchens MVP remains `/interiors#modular-kitchen`.
+2. **Only root `/` balance/composition is refined.** `/interiors` remains dedicated service conversion. `/shop` remains dedicated commerce.
+3. **§9.2's ~60–65 / ~35–40 root ratio is superseded.**
+4. **New root target is perceived ~50/50** Interiors + Modular Kitchens / Furniture Ecommerce. Not pixel arithmetic. A visitor must understand within the first screen and first few sections that ONEDECORE both designs/builds interiors and kitchens **and** sells furniture. Neither line should feel secondary on `/`.
+5. **§9.2 two-journey ~55–60 / ~40–45 becomes 50/50** desktop visual width and importance. Mobile: Design then Shop, comparable image/copy/CTA/height.
+6. **§9.2 15-section root order is superseded** by the 16-section order below.
+7. Wording that describes interiors as **visibly dominant** on the root homepage is superseded for `/` only.
+8. **No fake cart.** Admin-driven commerce remains. GST-inclusive pricing, pincode exact authority, no page builder, performance/mobile/SEO principles, and 9D-C entry gates remain.
+
+#### Product principle
+
+`/` = brand discovery (not full service page, catalogue, checkout, CRM, or shop listing).
+`/interiors` = 100% Interiors + Kitchens service conversion.
+`/shop` = 100% furniture ecommerce conversion.
+
+#### Header
+
+ONEDECORE · Interiors → `/interiors` · Kitchens → `/interiors#modular-kitchen` · Portfolio → `/portfolio` · Shop Furniture → `/shop` · About. CTA **Get Free Consultation**. Shop Furniture is a **first-class** nav destination, not a small secondary link. Search / wishlist / cart icons: same as §9.1 (no fake cart in 9D-C).
+
+#### Balanced hero
+
+Premium completed residential scene: designed architecture, interior/kitchen detailing where practical, furniture naturally in-room. No cut-out collage, sale banner, or marketplace styling. Headline may remain **ONE VISION. COMPLETE INTERIORS.** Support must name interiors, modular kitchens, and furniture. Recommended: “Interiors, modular kitchens and furniture — designed together to make your home complete.” CTAs **Design My Home** → `/interiors` and **Shop Furniture** → `/shop` with near-equal prominence (about 50/50 to 55/45 maximum; not 80/20).
+
+#### Two primary journeys — 50/50
+
+Title: **How would you like to begin?** Not a gateway splash.
+
+- **Design Your Home** — Complete Home Interiors, Modular Kitchens, Wardrobes, Renovation. CTA **Explore Interiors & Kitchens** → `/interiors`
+- **Shop Your Home** — Sofas, Beds, Dining, Tables, Storage, Chairs (illustrative; production labels from admin). CTA **Shop Furniture** → `/shop`
+
+#### Combined trust strip
+
+Support **both** lines. Preferred concepts (truth-supported only): Design Expertise; In-House Manufacturing; Custom Furniture; Quality Control; Installation Support; After-Sales Support. Must not read as interiors-only.
+
+#### Interiors + kitchen preview
+
+Heading: **Spaces designed around your life.** Cards: Complete Home Interiors, Modular Kitchens, Wardrobes, Renovation — image, short value, link into `/interiors`. CTA **Explore Interiors** → `/interiors`. Not a duplicate of `/interiors`.
+
+#### Furniture category preview — equal visual weight
+
+Heading: **Furniture made for complete homes.** Source: `commerce_categories` parent NULL, active, `sort_order`, up to six roots. Lifestyle/room imagery where valid. No hardcoded production lists. CTA **Explore Furniture** → `/shop`. Visual mass comparable to the interiors preview.
+
+#### Signature bridge — Design it / Furnish it
+
+**DESIGNED BY ONEDECORE** + **FURNISHED BY ONEDECORE**. Center: **Design it. Furnish it. Live it.** Desktop two equal halves (planning/design/materials/manufacturing/installation vs sofas/beds/dining/storage/accent). Brand bridge only — not a catalogue or CRM form.
+
+#### Modular kitchen feature
+
+Heading: **Designed around the way you cook.** Layout, storage, machine-finished precision, hardware/appliances, finishes, installation. CTA **Explore Kitchens** → `/interiors#modular-kitchen`. Balances the following featured-furniture block.
+
+#### Featured furniture — comparable weight
+
+`commerce_products` published + `featured = true`. Desktop **4–6 recommended**, hard max **8**. Mobile max **4** before View All. Card: finalized public image, name, GST-inclusive price, valid compare-at, ready-stock / made-to-order, **View Product**. No fake cart. CTA **View All Furniture** → `/shop`.
+
+#### Real Homes / complete ONEDECORE look
+
+Portfolio as a bridge. Headings such as **Real Homes. Complete ONEDECORE Living.** or **Get the complete ONEDECORE look.** Links **View Project** and **Explore Furniture**. Do **not** claim products are from that project unless real mapping exists. No Shop-the-Look automation in this gate. If unmapped: “Explore furniture inspired by this look.” Portfolio remains independent of commerce data authority.
+
+#### Why ONEDECORE
+
+Heading: **One team. One standard. One complete home.** Balanced pillars: Interior Design + Execution; Modular Kitchen Expertise; In-House Manufacturing; Customisation; Furniture; Quality Control; After-Sales Support. No interiors-only card set. No fabricated stats.
+
+#### Dual process
+
+Replace interior-only process on `/`.
+
+- **Design Your Home:** Consult → Design → Manufacture → Install
+- **Shop Your Home:** informational only in 9D-C. Do not imply cart/checkout before 9D-D. Pre-activation safer wording: Browse → Choose → Check Availability → Delivery Flow. Runtime must follow the active phase.
+
+#### Pincode
+
+Heading: **Can we deliver furniture to your home?** Exact `commerce_pincodes` row with `serviceable = true`. No order/cart/checkout. Optional: Planning complete interiors? Book a consultation → `/interiors`.
+
+#### Testimonials
+
+Verified proof only. Interior testimonials may continue. Furniture testimonials only with genuine furniture evidence. Do **not** fabricate furniture reviews to force 50/50. Layout may balance; truth may not.
+
+#### Final 50/50 dual CTA
+
+Heading: **Design your home. Furnish it beautifully.** Equal panels: Design (Start Your Interior Project → `/interiors`) and Shop (Shop Furniture → `/shop`). Desktop 50/50. Mobile stacked, comparable height.
+
+#### Locked 16-section root `/` order
+
+1. Header
+2. Balanced mixed hero
+3. 50/50 two primary journeys
+4. Combined trust strip
+5. Interiors + kitchen preview
+6. Furniture category preview
+7. Design it / Furnish it signature bridge
+8. Modular kitchen feature
+9. Featured furniture
+10. Real Homes / complete ONEDECORE look
+11. Why ONEDECORE
+12. Dual process — design journey + shopping journey
+13. Furniture pincode checker
+14. Testimonials
+15. Final 50/50 dual CTA
+16. Footer
+
+#### Perceived balance (not identical blocks)
+
+Evaluate: first view (both offers + both CTAs); first three sections (both journeys equal); comparable major conversion sections; comparable image mass (ecommerce not tiny vs full-width interiors); recurring interior and shop CTAs; first-class Shop Furniture nav; mobile furniture not pushed so far that ONEDECORE reads interiors-only; copy naturally includes design + furniture. Do not force mathematical equality if it harms UX. Do not create a huge scroll just to hit 50/50. Depth lives on `/interiors` and `/shop`.
+
+#### Mobile / performance / SEO
+
+Compact hero; stacked journeys; 2-col category grid; compact service preview; max 4 featured before View All; concise bridge; compact trust and testimonials; portfolio preview not full listing; no long homepage FAQ. Responsive hero; optimized/public derivatives; lazy below-fold; minimal client JS; no autoplay hero video; no trivia animation library; Core Web Vitals. `/` broad brand (interiors + kitchens + furniture). `/interiors` service-intent. `/shop` commerce. Category/PDP transactional. No identical long copy. Product JSON-LD on PDP.
+
 ---
 
 ## 10. Phase 9D-C public storefront UX (prepared; not implemented)
@@ -526,7 +640,7 @@ When authorized: lean service areas + mixed `/` + `/interiors` + `/shop` (+ cate
 
 Then 9D-C implements:
 
-- mixed brand `/` (hierarchy in §9.2)
+- mixed brand `/` (balance/composition in §9.3; three-layer routes in §9.2)
 - `/interiors` (dedicated interiors + kitchen conversion)
 - `/shop`
 - `/shop/c/[slug]`
@@ -556,7 +670,7 @@ SEO (9D-C generates from admin fields): canonical URLs, Product JSON-LD, Breadcr
 | Gate | This ADR |
 | :--- | :--- |
 | 9D-B closeout | **Not** this document. Docs-only after M35 managed certification. |
-| **9D-C** | Mixed `/` + `/interiors` + `/shop` discovery + service-area admin + catalogue-driven furniture previews. **Blocked** until M35 certified + 9D-B closeout merged. |
+| **9D-C** | Balanced mixed `/` (§9.3) + `/interiors` + `/shop` discovery + service-area admin + catalogue-driven furniture previews. **Blocked** until M35 certified + 9D-B closeout merged. |
 | 9D-D+ | Cart, checkout, payments per ADR-0030. |
 
 ---
@@ -576,4 +690,4 @@ SEO (9D-C generates from admin fields): canonical URLs, Product JSON-LD, Breadcr
 - [Unified homepage design](../design/phase-9d-c-unified-homepage.md)
 - [Three-layer public site](../design/phase-9d-c-three-layer-public-site.md)
 - [9D-B implementation](../audits/phase-9d-b-commerce-catalogue-inventory-foundation.md)
-- DEC-0089, DEC-0090, DEC-0091, DEC-0092
+- DEC-0089, DEC-0090, DEC-0091, DEC-0092, DEC-0093

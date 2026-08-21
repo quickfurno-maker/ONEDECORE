@@ -1,12 +1,12 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced through Phase 9D-C three-layer public-site journey lock, August 20, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced through Phase 9D-C balanced mixed homepage lock, August 20, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 9D-B **REPOSITORY MERGED** (DEC-0089; PR #73; repo **M1–M35**; managed **M1–M34**; M35 **not** applied; 9D-B closeout **not started**). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090) with **homepage visual language** (DEC-0091) and **three-layer public journey locked** (ADR-0032 §9.2 / DEC-0092; **code not started**). Production **OFF**.
+**Current Phase:** Phase 9D-B **REPOSITORY MERGED** (DEC-0089; PR #73; repo **M1–M35**; managed **M1–M34**; M35 **not** applied; 9D-B closeout **not started**). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090) with **three-layer public journey** (DEC-0092) and **balanced mixed homepage locked** (ADR-0032 §9.3 / DEC-0093; **code not started**). Production **OFF**.
 **Next Phase:** Recovery-qualified managed apply/certification of M35, then 9D-B docs-only closeout merge. Then 9D-C may start. Production, `/shop` runtime, checkout, and payments stay disabled until their gates.
 **Previous Phase:** Phase 9C — Campaign execution, feedback & metrics (**COMPLETE** / DEC-0088; M1–M34 managed)
 
@@ -296,7 +296,7 @@ Phase 9D-B repository implementation is recorded as **DEC-0089** / [audit](audit
 <!-- PHASE_9D_C_PREPARATION_FREEZE_START -->
 ## Phase 9D-C — Admin Control & Storefront Preparation
 
-Owner lock is **ADR-0032 / DEC-0090** / [audit](audits/phase-9d-c-commerce-admin-storefront-preparation.md). Homepage visual language remains **ADR-0032 §9.1 / DEC-0091** except where **§9.2 / DEC-0092** supersedes it. Three-layer journey: [design](design/phase-9d-c-three-layer-public-site.md). Docs only. Catalogue operations must be admin-controlled. Pincode remains serviceability authority; cities are grouping/display (schema after certified M35). Public site is one ONEDECORE brand: mixed `/` (~60–65% interiors/kitchen / ~35–40% furniture), dedicated `/interiors`, dedicated `/shop`, admin-driven furniture categories and featured products. **No M36. No `/shop` or `/interiors` code. No homepage runtime in this documentation. 9D-C BLOCKED** until M35 managed certification and 9D-B closeout merge.
+Owner lock is **ADR-0032 / DEC-0090** / [audit](audits/phase-9d-c-commerce-admin-storefront-preparation.md). Three-layer routes remain **ADR-0032 §9.2 / DEC-0092**. Root `/` composition is **§9.3 / DEC-0093** (perceived ~50/50). [design](design/phase-9d-c-three-layer-public-site.md). Docs only. Catalogue operations must be admin-controlled. Pincode remains serviceability authority; cities are grouping/display (schema after certified M35). Public site is one ONEDECORE brand: mixed `/` (brand discovery), dedicated `/interiors`, dedicated `/shop`, admin-driven furniture categories and featured products. **No M36. No `/shop` or `/interiors` code. No homepage runtime in this documentation. 9D-C BLOCKED** until M35 managed certification and 9D-B closeout merge.
 <!-- PHASE_9D_C_PREPARATION_FREEZE_END -->
 
 <!-- PHASE_9D_A_ARCHITECTURE_FREEZE_START -->
