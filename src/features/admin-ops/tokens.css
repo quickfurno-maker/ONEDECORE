@@ -1,0 +1,57 @@
+.od-ops {
+  --od-bg: #090c10;
+  --od-sidebar: #0b0f14;
+  --od-surface: #10151b;
+  --od-elevated: #141a21;
+  --od-hover: #18202a;
+  --od-border: rgba(255, 255, 255, 0.07);
+  --od-border-strong: rgba(255, 255, 255, 0.12);
+  --od-text: #f5f3ee;
+  --od-text-2: #b7bdc5;
+  --od-muted: #747d88;
+  --od-gold: #d7a529;
+  --od-gold-hover: #e6b948;
+  --od-positive: #35c98c;
+  --od-warning: #e2a83b;
+  --od-danger: #ea6666;
+  --od-blue: #3e8ef7;
+  --od-purple: #8e5cf5;
+  --od-teal: #20c9b5;
+  --od-radius: 12px;
+  --od-radius-sm: 8px;
+  background: var(--od-bg);
+  color: var(--od-text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.od-ops *,
+.od-ops *::before,
+.od-ops *::after {
+  border-color: var(--od-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-ops *,
+  .od-ops *::before,
+  .od-ops *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes od-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.od-ops .od-enter {
+  animation: od-fade-up 200ms ease-out both;
+}

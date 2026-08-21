@@ -73,11 +73,11 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
     <div className="space-y-6">
       <CrmPageHeader
         title={lead.overview.submittedName}
-        description="Lead workspace with assignment controls and lifecycle collaboration for authorized staff."
+        description={`${lead.source.primarySourceLabel} · Created ${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date(lead.overview.createdAt))}`}
         actions={
           <Link
             href="/admin/crm/leads"
-            className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+            className="inline-flex min-h-11 items-center rounded-[8px] border border-[var(--od-border-strong)] px-4 py-2 text-sm font-medium text-[var(--od-text-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
           >
             Back to leads
           </Link>
@@ -86,7 +86,7 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
 
       <div className="flex flex-wrap items-center gap-3">
         <LeadStatusBadge status={leadStatus} />
-        <span className="text-sm text-neutral-400">
+        <span className="text-sm text-[var(--od-muted)]">
           Updated{" "}
           {new Intl.DateTimeFormat("en-IN", {
             dateStyle: "medium",
@@ -95,58 +95,59 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
         </span>
       </div>
 
-      <LeadStatusTransitionPanel
-        leadId={lead.id}
-        currentStatus={leadStatus}
-        resumeTargetStatus={lead.statusSummary.resumeTargetStatus}
-        canTransitionLeads={context?.canTransitionLeads ?? false}
-        closureReasons={closureReasons}
-      />
-
-      {/* Commercial Quotation Workspace Integration Card */}
-      <LeadDetailQuotationPanel
-        leadId={lead.id}
-        submittedName={lead.overview.submittedName}
-        existingDraft={existingDraft}
-        canCreateQuotation={quotationPermissions.canCreateQuotations}
-        canEditQuotation={quotationPermissions.canEditQuotations}
-      />
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <LeadDetailOverview overview={lead.overview} />
-        <LeadDetailContact contact={lead.contact} />
-        <LeadDetailSourcePanel source={lead.source} />
-        <LeadDetailAssignmentPanel
-          assignment={lead.assignment}
-          leadId={lead.id}
-          leadStatus={leadStatus}
-          leadUpdatedAt={lead.overview.updatedAt}
-          canAssignLeads={context?.canAssignLeads ?? false}
-          assigneeDirectory={assigneeDirectory}
-        />
-        <LeadDetailTimeline timeline={lead.timeline} />
-        <LeadDetailNotes
-          notes={lead.notes}
-          leadId={lead.id}
-          canManageLeadNotes={context?.canManageLeadNotes ?? false}
-          showComposer={!isTerminal}
-        />
-        <LeadDetailFollowUps
-          leadId={lead.id}
-          followUps={lead.followUps}
-          canManageLeadFollowUps={context?.canManageLeadFollowUps ?? false}
-          canChooseFollowUpOwner={context?.canReadBroad ?? false}
-          showComposer={!isTerminal}
-          assigneeDirectory={assigneeDirectory}
-        />
-        <LeadDetailConsentSummary items={lead.consentSummary} />
-        <MarketingConsentPanel
-          leadId={lead.id}
-          contactId={lead.contact.id}
-          canManage={campaignPermissions.canManageMarketingConsent}
-          state={marketingConsentState}
-        />
-        <LeadDetailStatusSummary summary={lead.statusSummary} />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="space-y-6">
+          <LeadStatusTransitionPanel
+            leadId={lead.id}
+            currentStatus={leadStatus}
+            resumeTargetStatus={lead.statusSummary.resumeTargetStatus}
+            canTransitionLeads={context?.canTransitionLeads ?? false}
+            closureReasons={closureReasons}
+          />
+          <LeadDetailOverview overview={lead.overview} />
+          <LeadDetailTimeline timeline={lead.timeline} />
+          <LeadDetailNotes
+            notes={lead.notes}
+            leadId={lead.id}
+            canManageLeadNotes={context?.canManageLeadNotes ?? false}
+            showComposer={!isTerminal}
+          />
+          <LeadDetailQuotationPanel
+            leadId={lead.id}
+            submittedName={lead.overview.submittedName}
+            existingDraft={existingDraft}
+            canCreateQuotation={quotationPermissions.canCreateQuotations}
+            canEditQuotation={quotationPermissions.canEditQuotations}
+          />
+          <LeadDetailFollowUps
+            leadId={lead.id}
+            followUps={lead.followUps}
+            canManageLeadFollowUps={context?.canManageLeadFollowUps ?? false}
+            canChooseFollowUpOwner={context?.canReadBroad ?? false}
+            showComposer={!isTerminal}
+            assigneeDirectory={assigneeDirectory}
+          />
+        </div>
+        <aside className="space-y-6 xl:sticky xl:top-20 xl:self-start">
+          <LeadDetailContact contact={lead.contact} />
+          <LeadDetailAssignmentPanel
+            assignment={lead.assignment}
+            leadId={lead.id}
+            leadStatus={leadStatus}
+            leadUpdatedAt={lead.overview.updatedAt}
+            canAssignLeads={context?.canAssignLeads ?? false}
+            assigneeDirectory={assigneeDirectory}
+          />
+          <LeadDetailSourcePanel source={lead.source} />
+          <LeadDetailStatusSummary summary={lead.statusSummary} />
+          <LeadDetailConsentSummary items={lead.consentSummary} />
+          <MarketingConsentPanel
+            leadId={lead.id}
+            contactId={lead.contact.id}
+            canManage={campaignPermissions.canManageMarketingConsent}
+            state={marketingConsentState}
+          />
+        </aside>
       </div>
     </div>
   );

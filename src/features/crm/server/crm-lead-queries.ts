@@ -191,6 +191,81 @@ function buildAssigneeLabelMap(
   return Object.fromEntries(directory.map((entry) => [entry.userId, entry.displayName]));
 }
 
+type LeadListFilterBuilder = {
+  in: (column: string, values: readonly string[]) => LeadListFilterBuilder;
+  eq: (column: string, value: string) => LeadListFilterBuilder;
+  not: (column: string, operator: string, value: null) => LeadListFilterBuilder;
+  is: (column: string, value: null) => LeadListFilterBuilder;
+};
+
+async function constrainLeadListRequest(
+  request: LeadListFilterBuilder,
+  context: CrmAccessContext,
+  query: LeadListQuery
+) {
+  let next = request;
+  if (query.q) {
+    const leadIds = await fetchLeadIdsForTextSearch(query.q);
+    if (leadIds.length === 0) {
+      return null;
+    }
+    next = next.in("id", [...leadIds]);
+  }
+
+  if (query.status) {
+    next = next.eq("status", query.status);
+  }
+
+  if (query.sourceId) {
+    next = next.eq("primary_source_id", query.sourceId);
+  }
+
+  if (context.canReadBroad) {
+    if (query.assignment === "assigned") {
+      next = next.not("assigned_to", "is", null);
+    } else if (query.assignment === "unassigned") {
+      next = next.is("assigned_to", null);
+    }
+
+    if (query.assigneeId) {
+      next = next.eq("assigned_to", query.assigneeId);
+    }
+  }
+
+  if (query.followUpDue) {
+    const leadIds = await fetchLeadIdsForFollowUpDueFilter(query.followUpDue);
+    if (leadIds.length === 0) {
+      return null;
+    }
+    next = next.in("id", [...leadIds]);
+  }
+
+  return next;
+}
+
+export async function countLeadListForQuery(
+  context: CrmAccessContext,
+  query: LeadListQuery
+): Promise<number> {
+  const supabase = await createClient();
+  const constrained = await constrainLeadListRequest(
+    supabase.from("leads").select("id", { count: "exact", head: true }),
+    context,
+    query
+  );
+  if (!constrained) {
+    return 0;
+  }
+  const { count, error } = await (constrained as unknown as Promise<{
+    count: number | null;
+    error: { message: string } | null;
+  }>);
+  if (error) {
+    throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+  }
+  return count ?? 0;
+}
+
 export async function queryLeadListPage(
   context: CrmAccessContext,
   query: LeadListQuery
@@ -199,69 +274,39 @@ export async function queryLeadListPage(
   const assigneeDirectory = await fetchCrmAssigneeDirectory(context);
   const assigneeLabels = buildAssigneeLabelMap(assigneeDirectory);
 
-  let request = supabase
-    .from("leads")
-    .select(CRM_LEAD_LIST_SELECT)
-    .order("updated_at", { ascending: false })
-    .order("id", { ascending: false });
+  const constrained = await constrainLeadListRequest(
+    supabase
+      .from("leads")
+      .select(CRM_LEAD_LIST_SELECT)
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: false }),
+    context,
+    query
+  );
 
-  if (query.q) {
-    const leadIds = await fetchLeadIdsForTextSearch(query.q);
-    if (leadIds.length === 0) {
-      return {
-        items: [],
-        pagination: {
-          page: query.page,
-          pageSize: query.pageSize,
-          hasNextPage: false,
-          hasPreviousPage: query.page > 1,
-        },
-        hasActiveFilters: hasLeadListActiveFilters(query),
-      };
-    }
-    request = request.in("id", [...leadIds]);
-  }
-
-  if (query.status) {
-    request = request.eq("status", query.status);
-  }
-
-  if (query.sourceId) {
-    request = request.eq("primary_source_id", query.sourceId);
-  }
-
-  if (context.canReadBroad) {
-    if (query.assignment === "assigned") {
-      request = request.not("assigned_to", "is", null);
-    } else if (query.assignment === "unassigned") {
-      request = request.is("assigned_to", null);
-    }
-
-    if (query.assigneeId) {
-      request = request.eq("assigned_to", query.assigneeId);
-    }
-  }
-
-  if (query.followUpDue) {
-    const leadIds = await fetchLeadIdsForFollowUpDueFilter(query.followUpDue);
-    if (leadIds.length === 0) {
-      return {
-        items: [],
-        pagination: {
-          page: query.page,
-          pageSize: query.pageSize,
-          hasNextPage: false,
-          hasPreviousPage: query.page > 1,
-        },
-        hasActiveFilters: hasLeadListActiveFilters(query),
-      };
-    }
-    request = request.in("id", [...leadIds]);
+  if (!constrained) {
+    return {
+      items: [],
+      pagination: {
+        page: query.page,
+        pageSize: query.pageSize,
+        hasNextPage: false,
+        hasPreviousPage: query.page > 1,
+      },
+      hasActiveFilters: hasLeadListActiveFilters(query),
+    };
   }
 
   const from = (query.page - 1) * query.pageSize;
   const to = from + query.pageSize;
-  const { data, error } = await request.range(from, to);
+  const { data, error } = await (
+    constrained as unknown as {
+      range: (
+        from: number,
+        to: number
+      ) => Promise<{ data: unknown; error: { message: string } | null }>;
+    }
+  ).range(from, to);
 
   if (error) {
     throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");

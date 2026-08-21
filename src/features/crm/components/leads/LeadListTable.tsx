@@ -14,24 +14,29 @@ function formatTimestamp(value: string): string {
   }).format(new Date(value));
 }
 
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
 export function LeadListTable({ items }: LeadListTableProps) {
   return (
-    <div className="hidden overflow-x-auto rounded-lg border border-neutral-800 md:block">
-      <table className="min-w-full divide-y divide-neutral-800 text-sm">
+    <div className="hidden overflow-x-auto rounded-[12px] border border-[var(--od-border)] md:block">
+      <table className="min-w-full text-sm">
         <caption className="sr-only">CRM leads</caption>
-        <thead className="bg-neutral-900/80 text-left text-xs uppercase tracking-wide text-neutral-400">
+        <thead className="sticky top-0 bg-[var(--od-elevated)] text-left text-xs uppercase tracking-wide text-[var(--od-muted)]">
           <tr>
             <th scope="col" className="px-4 py-3 font-semibold">
               Lead
             </th>
             <th scope="col" className="px-4 py-3 font-semibold">
+              Requirement
+            </th>
+            <th scope="col" className="px-4 py-3 font-semibold">
               Status
-            </th>
-            <th scope="col" className="px-4 py-3 font-semibold">
-              Service
-            </th>
-            <th scope="col" className="px-4 py-3 font-semibold">
-              Locality
             </th>
             <th scope="col" className="px-4 py-3 font-semibold">
               Source
@@ -40,41 +45,54 @@ export function LeadListTable({ items }: LeadListTableProps) {
               Assignee
             </th>
             <th scope="col" className="px-4 py-3 font-semibold">
-              Next follow-up
+              Locality
             </th>
             <th scope="col" className="px-4 py-3 font-semibold">
-              Updated
+              Follow-up
+            </th>
+            <th scope="col" className="px-4 py-3 font-semibold">
+              Created
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-800 bg-neutral-950/40">
+        <tbody>
           {items.map((item) => (
-            <tr key={item.id} className="hover:bg-neutral-900/50">
-              <td className="px-4 py-3">
+            <tr
+              key={item.id}
+              className="h-14 border-t border-[var(--od-border)] transition hover:bg-[var(--od-hover)]"
+            >
+              <td className="px-4">
                 <Link
                   href={`/admin/crm/leads/${item.id}`}
-                  className="font-medium text-amber-300 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                  className="flex items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
                 >
-                  {item.submittedName}
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--od-elevated)] text-xs font-semibold">
+                    {initials(item.submittedName)}
+                  </span>
+                  <span>
+                    <span className="block font-medium text-[var(--od-text)]">
+                      {item.submittedName}
+                    </span>
+                    <span className="block text-xs text-[var(--od-muted)]">
+                      {formatCrmCodeLabel(item.entryMethod)}
+                    </span>
+                  </span>
                 </Link>
-                <p className="mt-1 text-xs text-neutral-500">
-                  {formatCrmCodeLabel(item.entryMethod)}
-                </p>
               </td>
-              <td className="px-4 py-3">
-                <LeadStatusBadge status={item.status} />
-              </td>
-              <td className="px-4 py-3 text-neutral-300">
+              <td className="px-4 text-[var(--od-text-2)]">
                 {formatCrmCodeLabel(item.serviceCode)}
               </td>
-              <td className="px-4 py-3 text-neutral-300">{item.locality ?? "—"}</td>
-              <td className="px-4 py-3 text-neutral-300">{item.primarySourceLabel}</td>
-              <td className="px-4 py-3 text-neutral-300">{item.assigneeLabel}</td>
-              <td className="px-4 py-3 text-neutral-300">
+              <td className="px-4">
+                <LeadStatusBadge status={item.status} />
+              </td>
+              <td className="px-4 text-[var(--od-text-2)]">{item.primarySourceLabel}</td>
+              <td className="px-4 text-[var(--od-text-2)]">{item.assigneeLabel}</td>
+              <td className="px-4 text-[var(--od-text-2)]">{item.locality ?? "—"}</td>
+              <td className="px-4 text-[var(--od-text-2)]">
                 {item.nextFollowUpDue ? formatTimestamp(item.nextFollowUpDue) : "—"}
               </td>
-              <td className="px-4 py-3 text-neutral-400">
-                {formatTimestamp(item.updatedAt)}
+              <td className="px-4 text-[var(--od-muted)]">
+                {formatTimestamp(item.createdAt)}
               </td>
             </tr>
           ))}

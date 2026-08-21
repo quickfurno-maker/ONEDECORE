@@ -15,6 +15,7 @@ import { formatMarketingTouchSummary } from "./crm-attribution-summary.ts";
 import {
   fetchCrmAssigneeDirectory,
   queryLeadListPage,
+  countLeadListForQuery,
 } from "./crm-lead-queries.ts";
 
 /**
@@ -58,6 +59,21 @@ export async function getLeadListPageForCurrentUser(
   }
 
   return queryLeadListPage(context, query);
+}
+
+export async function countLeadListForCurrentUser(
+  query: LeadListQuery
+): Promise<number> {
+  const context = await getCrmAccessContext();
+  if (!context) {
+    throw new CrmError({
+      code: "AUTH_REQUIRED",
+      message: "Authentication required",
+      httpStatus: 401,
+    });
+  }
+
+  return countLeadListForQuery(context, query);
 }
 
 export async function getLeadDetailForCurrentUser(
