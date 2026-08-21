@@ -1,13 +1,11 @@
-import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getStaffClaims } from "@/server/auth/session";
 import { probeCommercePermissions } from "@/features/commerce/server/commerce-permissions";
 import { listCommerceCategories, listCommerceProducts } from "@/features/commerce/server/commerce-queries";
-import { CategoryForm } from "@/features/commerce/components/CategoryForm";
 import { StorefrontDisabledBanner } from "@/features/commerce/components/StorefrontDisabledBanner";
 import { CommerceAdminLinks } from "@/features/commerce/components/CommerceAdminLinks";
 import { CommercePageHeader } from "@/features/commerce/components/CommercePageHeader";
-import { CategoryTree } from "@/features/commerce/components/CategoryTree";
+import { CategoriesWorkspace } from "@/features/commerce/components/CategoriesWorkspace";
 import { CommerceDataUnavailable } from "@/features/commerce/components/CommerceDataUnavailable";
 import { countProductsByCategory, isCommerceReadError } from "@/features/commerce/domain/commerce-read";
 
@@ -50,26 +48,11 @@ export default async function AdminCommerceCategoriesPage() {
     );
   }
 
-  const roots = categories.filter((row) => row.parent_category_id === null);
-  const productCounts = countProductsByCategory(products);
-  const editors: Record<string, ReactNode> = {};
-  for (const category of categories) {
-    editors[category.id] = permissions.canManageCatalog ? (
-      <CategoryForm category={category} rootCategories={roots} />
-    ) : (
-      <p className="mt-2 text-xs text-[var(--od-muted)]">
-        {category.category_reference} · {category.slug}
-      </p>
-    );
-  }
-
   return (
-    <div className="mx-auto max-w-[1600px] space-y-6">
-      <CommercePageHeader title="Categories" subtitle="Root categories and one subcategory depth." />
-      <StorefrontDisabledBanner />
-      <CommerceAdminLinks />
-      {permissions.canManageCatalog ? <CategoryForm rootCategories={roots} /> : null}
-      <CategoryTree categories={categories} productCounts={productCounts} editors={editors} />
-    </div>
+    <CategoriesWorkspace
+      canManageCatalog={permissions.canManageCatalog}
+      categories={categories}
+      productCounts={countProductsByCategory(products)}
+    />
   );
 }

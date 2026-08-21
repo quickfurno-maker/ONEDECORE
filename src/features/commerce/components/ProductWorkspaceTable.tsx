@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { formatInrFromPaise } from "@/features/crm/contracts/sales-target-contracts.ts";
 import type { ProductWorkspaceRow } from "../domain/commerce-dashboard.ts";
 import type { CommerceCategoryRow } from "../server/commerce-queries.ts";
@@ -16,6 +17,7 @@ export function ProductWorkspaceTable({
   rows,
   categories,
   filters,
+  emptyState,
 }: {
   readonly rows: readonly ProductWorkspaceRow[];
   readonly categories: readonly CommerceCategoryRow[];
@@ -27,6 +29,7 @@ export function ProductWorkspaceTable({
     readonly mode: string;
     readonly media: string;
   };
+  readonly emptyState?: ReactNode;
 }) {
   return (
     <div className="space-y-4">
@@ -76,10 +79,12 @@ export function ProductWorkspaceTable({
       </form>
 
       {rows.length === 0 ? (
-        <div className="rounded-[12px] border border-[var(--od-border)] bg-[var(--od-surface)] p-8 text-center">
-          <p className="text-sm text-[var(--od-text)]">No products yet</p>
-          <p className="mt-1 text-xs text-[var(--od-muted)]">Start by creating your first catalogue product.</p>
-        </div>
+        emptyState ?? (
+          <div className="rounded-[12px] border border-[var(--od-border)] bg-[var(--od-surface)] p-8 text-center">
+            <p className="text-sm text-[var(--od-text)]">No products match these filters</p>
+            <p className="mt-1 text-xs text-[var(--od-muted)]">Adjust filters to see catalogue products.</p>
+          </div>
+        )
       ) : (
         <>
           <div className="grid gap-3 md:hidden">

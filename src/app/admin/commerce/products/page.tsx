@@ -2,11 +2,10 @@ import { redirect } from "next/navigation";
 import { getStaffClaims } from "@/server/auth/session";
 import { probeCommercePermissions } from "@/features/commerce/server/commerce-permissions";
 import { listCommerceProductWorkspace } from "@/features/commerce/server/commerce-queries";
-import { ProductCreateForm } from "@/features/commerce/components/ProductCreateForm";
 import { StorefrontDisabledBanner } from "@/features/commerce/components/StorefrontDisabledBanner";
 import { CommerceAdminLinks } from "@/features/commerce/components/CommerceAdminLinks";
 import { CommercePageHeader } from "@/features/commerce/components/CommercePageHeader";
-import { ProductWorkspaceTable } from "@/features/commerce/components/ProductWorkspaceTable";
+import { ProductsWorkspace } from "@/features/commerce/components/ProductsWorkspace";
 import { CommerceDataUnavailable } from "@/features/commerce/components/CommerceDataUnavailable";
 import { buildProductWorkspaceRows } from "@/features/commerce/domain/commerce-dashboard";
 import { isCommerceReadError } from "@/features/commerce/domain/commerce-read";
@@ -91,16 +90,12 @@ export default async function AdminCommerceProductsPage({ searchParams }: AdminC
   });
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-6">
-      <CommercePageHeader title="Products" subtitle="Catalogue workspace. Public /shop is off." />
-      <StorefrontDisabledBanner />
-      <CommerceAdminLinks />
-      {permissions.canManageCatalog ? <ProductCreateForm categories={workspace.categories} /> : null}
-      <ProductWorkspaceTable
-        rows={rows}
-        categories={workspace.categories}
-        filters={{ q, status, category, featured, mode, media }}
-      />
-    </div>
+    <ProductsWorkspace
+      canManageCatalog={permissions.canManageCatalog}
+      categories={workspace.categories}
+      rows={rows}
+      filters={{ q, status, category, featured, mode, media }}
+      catalogueEmpty={workspace.products.length === 0}
+    />
   );
 }

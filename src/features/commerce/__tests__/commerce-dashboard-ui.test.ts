@@ -16,6 +16,15 @@ import {
   readCommerceInventoryList,
   readCommerceProductRow,
 } from "../domain/commerce-read.ts";
+import {
+  basisPointsToPercentInput,
+  mapPercentFieldToBasisPoints,
+  mapRupeesFieldToPaise,
+  paiseToRupeesInput,
+  percentStringToBasisPoints,
+  rupeesStringToPaise,
+} from "../ui/operator-units.ts";
+import { isDrawerEscapeKey } from "../ui/drawer-keys.ts";
 
 const root = process.cwd();
 
@@ -347,5 +356,129 @@ describe("Commerce settings and category read truth", () => {
     const error = new CommerceReadError("commerce_tax_rates");
     assert.equal(error.message, "Commerce data unavailable");
     assert.doesNotMatch(error.message, /postgres|supabase/i);
+  });
+});
+
+describe("Commerce operations workspace UX", () => {
+  test("product create form is on-demand, not in the products page flow", () => {
+    const page = readFileSync(join(root, "src/app/admin/commerce/products/page.tsx"), "utf8");
+    const workspace = readFileSync(
+      join(root, "src/features/commerce/components/ProductsWorkspace.tsx"),
+      "utf8"
+    );
+    assert.doesNotMatch(page, /ProductCreateForm/);
+    assert.match(workspace, /CommerceActionDrawer/);
+    assert.match(workspace, /ProductCreateForm/);
+    assert.match(workspace, /canManageCatalog/);
+    assert.match(workspace, /Create Category/);
+    assert.match(workspace, /Create your first category before adding products/);
+    assert.match(workspace, /Build your furniture catalogue/);
+  });
+
+  test("category create form is on-demand and example names are display-only", () => {
+    const page = readFileSync(join(root, "src/app/admin/commerce/categories/page.tsx"), "utf8");
+    const workspace = readFileSync(
+      join(root, "src/features/commerce/components/CategoriesWorkspace.tsx"),
+      "utf8"
+    );
+    const classes = readFileSync(join(root, "src/features/commerce/ui/commerce-classes.ts"), "utf8");
+    const actions = readFileSync(join(root, "src/features/commerce/server/commerce-actions.ts"), "utf8");
+    const tree = readFileSync(join(root, "src/features/commerce/components/CategoryTree.tsx"), "utf8");
+    assert.doesNotMatch(page, /CategoryForm/);
+    assert.match(workspace, /CommerceActionDrawer/);
+    assert.match(workspace, /Create First Category/);
+    assert.match(classes, /Sofas.*Beds.*Dining.*Chairs.*Storage/);
+    assert.doesNotMatch(actions, /Sofas|Beds|Dining/);
+    assert.match(tree, /parent_category_id === null/);
+    assert.match(tree, /parent_category_id === id/);
+    assert.doesNotMatch(tree, /drag/i);
+  });
+
+  test("settings and operator forms use rupees and percent, not storage units", () => {
+    const settingsPage = readFileSync(join(root, "src/app/admin/commerce/settings/page.tsx"), "utf8");
+    const workspace = readFileSync(
+      join(root, "src/features/commerce/components/SettingsWorkspace.tsx"),
+      "utf8"
+    );
+    const shipping = readFileSync(
+      join(root, "src/features/commerce/components/ShippingSettingsForm.tsx"),
+      "utf8"
+    );
+    const taxRate = readFileSync(join(root, "src/features/commerce/components/TaxRateForm.tsx"), "utf8");
+    const taxSettings = readFileSync(
+      join(root, "src/features/commerce/components/TaxSettingsForm.tsx"),
+      "utf8"
+    );
+    const category = readFileSync(join(root, "src/features/commerce/components/CategoryForm.tsx"), "utf8");
+    const variant = readFileSync(join(root, "src/features/commerce/components/VariantForm.tsx"), "utf8");
+    const product = readFileSync(
+      join(root, "src/features/commerce/components/ProductGeneralForm.tsx"),
+      "utf8"
+    );
+    const combined = `${shipping}\n${taxRate}\n${category}\n${variant}\n${product}\n${workspace}`;
+    assert.match(settingsPage, /SettingsWorkspace/);
+    assert.match(shipping, /Default shipping charge \(₹\)/);
+    assert.match(taxRate, /Rate \(%\)/);
+    assert.match(workspace, /Locked ON/);
+    assert.match(workspace, /No tax rates configured/);
+    assert.match(workspace, /No pincodes configured/);
+    assert.match(workspace, /pincode-level/);
+    assert.match(taxSettings, /GST-inclusive pricing — locked for ONEDECORE MVP/);
+    assert.doesNotMatch(taxSettings, /gstInclusiveDisplay/);
+    assert.doesNotMatch(combined, /Rate \(basis points\)|Shipping override \(paise\)|Selling price \(paise\)|Default shipping charge \(paise\)|\bbps\)/);
+    assert.match(shipping, /defaultShippingChargePaise/);
+    assert.match(taxRate, /rateBasisPoints/);
+  });
+
+  test("rupee and percent conversions are exact", () => {
+    assert.equal(rupeesStringToPaise("499"), 49900);
+    assert.equal(rupeesStringToPaise("499.50"), 49950);
+    assert.equal(rupeesStringToPaise("499.5"), 49950);
+    assert.equal(rupeesStringToPaise("499.555"), null);
+    assert.equal(rupeesStringToPaise("-1"), null);
+    assert.equal(paiseToRupeesInput(49900), "499");
+    assert.equal(paiseToRupeesInput(49950), "499.50");
+    assert.equal(percentStringToBasisPoints("18"), 1800);
+    assert.equal(percentStringToBasisPoints("18.25"), 1825);
+    assert.equal(percentStringToBasisPoints("100.01"), null);
+    assert.equal(basisPointsToPercentInput(1800), "18");
+    assert.equal(basisPointsToPercentInput(1825), "18.25");
+    const money = new FormData();
+    money.set("shippingChargeRupeesOverride", "12.50");
+    assert.equal(mapRupeesFieldToPaise(money, "shippingChargeRupeesOverride", "shippingChargePaiseOverride", false), null);
+    assert.equal(money.get("shippingChargePaiseOverride"), "1250");
+    const percent = new FormData();
+    percent.set("ratePercent", "18");
+    assert.equal(mapPercentFieldToBasisPoints(percent, "ratePercent", "rateBasisPoints"), null);
+    assert.equal(percent.get("rateBasisPoints"), "1800");
+  });
+
+  test("commerce subnav and sidebar preserve current-route and focus-visible", () => {
+    const links = readFileSync(
+      join(root, "src/features/commerce/components/CommerceAdminLinks.tsx"),
+      "utf8"
+    );
+    const sidebar = readFileSync(
+      join(root, "src/features/admin-ops/components/AdminSidebar.tsx"),
+      "utf8"
+    );
+    const drawer = readFileSync(
+      join(root, "src/features/commerce/components/CommerceActionDrawer.tsx"),
+      "utf8"
+    );
+    const tokens = readFileSync(join(root, "src/features/admin-ops/tokens.css"), "utf8");
+    assert.match(links, /usePathname/);
+    assert.match(links, /aria-current=\{current \? "page"/);
+    assert.match(sidebar, /groupActive/);
+    assert.match(sidebar, /focus-visible:outline/);
+    assert.match(sidebar, /ops-scrollbar/);
+    assert.match(tokens, /scrollbar-color/);
+    assert.match(tokens, /::-webkit-scrollbar/);
+    assert.match(drawer, /role="dialog"/);
+    assert.match(drawer, /aria-modal="true"/);
+    assert.match(drawer, /isDrawerEscapeKey/);
+    assert.match(drawer, /previous\?\.focus/);
+    assert.equal(isDrawerEscapeKey("Escape"), true);
+    assert.equal(isDrawerEscapeKey("Enter"), false);
   });
 });

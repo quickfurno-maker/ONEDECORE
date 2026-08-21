@@ -157,6 +157,7 @@ function NavLink({
   label,
   icon,
   active,
+  groupActive,
   collapsed,
   nested,
   onNavigate,
@@ -165,6 +166,7 @@ function NavLink({
   label: string;
   icon: OpsIconName;
   active: boolean;
+  groupActive?: boolean;
   collapsed: boolean;
   nested?: boolean;
   onNavigate?: () => void;
@@ -175,16 +177,18 @@ function NavLink({
       title={collapsed ? label : undefined}
       aria-current={active ? "page" : undefined}
       onClick={onNavigate}
-      className={`group relative flex min-h-10 items-center gap-3 rounded-[8px] px-3 text-[13px] transition duration-150 ${
+      className={`group relative flex min-h-10 items-center gap-3 rounded-[8px] px-3 text-[13px] outline-none transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)] ${
         active
           ? "bg-[var(--od-gold)]/10 text-[var(--od-text)]"
-          : "text-[var(--od-text-2)] hover:bg-[var(--od-hover)] hover:text-[var(--od-text)]"
+          : groupActive
+            ? "text-[var(--od-text)]"
+            : "text-[var(--od-text-2)] hover:bg-[var(--od-hover)] hover:text-[var(--od-text)]"
       } ${collapsed ? "justify-center px-0" : ""} ${nested && !collapsed ? "pl-9" : ""}`}
     >
       {active ? (
         <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[var(--od-gold)]" />
       ) : null}
-      <span className={active ? "text-[var(--od-gold)]" : "text-current"}>
+      <span className={active ? "text-[var(--od-gold)]" : groupActive ? "text-[var(--od-gold)]/80" : "text-current"}>
         <OpsIcon name={icon} className="h-[18px] w-[18px]" />
       </span>
       <span className={collapsed ? "sr-only" : ""}>{label}</span>
@@ -209,8 +213,12 @@ export function AdminSidebar({
 
   const body = (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center justify-between border-b border-[var(--od-border)] px-3">
-        <div className={collapsed ? "mx-auto text-center" : "min-w-0"}>
+      <div
+        className={`relative flex h-16 items-center border-b border-[var(--od-border)] ${
+          collapsed ? "justify-center px-2" : "justify-between px-4"
+        }`}
+      >
+        <div className={collapsed ? "text-center" : "min-w-0 pl-0.5"}>
           <p className="font-serif text-lg font-semibold tracking-tight text-[var(--od-gold)]">
             {collapsed ? "OD" : "ONEDECORE"}
           </p>
@@ -222,14 +230,16 @@ export function AdminSidebar({
         </div>
         <button
           type="button"
-          className="hidden min-h-9 min-w-9 items-center justify-center rounded-[8px] text-[var(--od-muted)] hover:bg-[var(--od-hover)] hover:text-[var(--od-text)] lg:flex"
+          className={`hidden min-h-9 min-w-9 items-center justify-center rounded-[8px] text-[var(--od-muted)] hover:bg-[var(--od-hover)] hover:text-[var(--od-text)] lg:flex ${
+            collapsed ? "absolute right-1.5" : ""
+          }`}
           onClick={onToggleCollapse}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <OpsIcon name={collapsed ? "expand" : "collapse"} className="h-4 w-4" />
         </button>
       </div>
-      <nav aria-label="Operations" className="flex-1 space-y-5 overflow-y-auto px-2 py-4">
+      <nav aria-label="Operations" className="ops-scrollbar flex-1 space-y-5 overflow-y-auto px-2 py-4">
         {groups.map((group) => (
           <div key={group.id}>
             {collapsed ? null : (
@@ -249,11 +259,8 @@ export function AdminSidebar({
                             href={item.href}
                             label={item.label}
                             icon={item.icon}
-                            active={
-                              item.href === "/admin/commerce"
-                                ? pathname.startsWith("/admin/commerce")
-                                : isActive(pathname, item.href)
-                            }
+                            active={false}
+                            groupActive={pathname === item.href || pathname.startsWith(`${item.href}/`)}
                             collapsed={collapsed}
                             onNavigate={onCloseMobile}
                           />
