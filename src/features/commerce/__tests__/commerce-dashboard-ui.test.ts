@@ -678,6 +678,23 @@ describe("Commerce drawer focus restoration origin", () => {
   });
 });
 
+describe("Commerce server-action type boundary", () => {
+  test("commerce-actions does not re-export CommerceActionResult at runtime", () => {
+    const src = readFileSync(join(root, "src/features/commerce/server/commerce-actions.ts"), "utf8");
+    assert.match(src, /^"use server";/m);
+    assert.doesNotMatch(src, /export type \{ CommerceActionResult \}/);
+    assert.doesNotMatch(src, /export type \{[^}]*CommerceActionResult/);
+    assert.match(src, /type CommerceActionResult/);
+    assert.match(src, /from "\.\/commerce-errors"/);
+    assert.match(src, /export async function upsertCommerceCategoryAction/);
+    const actionExports = src.match(/^export async function \w+Action\(/gm) ?? [];
+    assert.equal(actionExports.length > 0, true);
+    for (const line of actionExports) {
+      assert.match(line, /^export async function /);
+    }
+  });
+});
+
 function mockFocusable(id: string) {
   return {
     id,
