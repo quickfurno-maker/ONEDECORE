@@ -21,11 +21,13 @@ function Bar({ value, max, color }: { value: number; max: number; color: string 
 
 export function CommerceDashboardView({
   snapshot,
+  hasCategories,
   canManageCatalog,
   canManageInventory,
   canManageSettings,
 }: {
   readonly snapshot: CommerceDashboardSnapshot;
+  readonly hasCategories: boolean;
   readonly canManageCatalog: boolean;
   readonly canManageInventory: boolean;
   readonly canManageSettings: boolean;
@@ -66,16 +68,31 @@ export function CommerceDashboardView({
             {healthTotal === 0 ? (
               <div className="space-y-3">
                 <p className="text-sm text-[var(--od-text)]">No products yet</p>
-                <p className="text-xs text-[var(--od-muted)]">
-                  Start by creating your first catalogue product.
-                </p>
-                {canManageCatalog ? (
-                  <Link
-                    href="/admin/commerce/products"
-                    className="inline-flex min-h-10 items-center rounded-[8px] bg-[var(--od-gold)] px-4 text-sm font-semibold text-[#1a1408]"
-                  >
-                    Add Product
-                  </Link>
+                {canManageCatalog && hasCategories ? (
+                  <>
+                    <p className="text-xs text-[var(--od-muted)]">
+                      Start by creating your first catalogue product.
+                    </p>
+                    <Link
+                      href="/admin/commerce/products"
+                      className="inline-flex min-h-10 items-center rounded-[8px] bg-[var(--od-gold)] px-4 text-sm font-semibold text-[#1a1408]"
+                    >
+                      Add Product
+                    </Link>
+                  </>
+                ) : null}
+                {canManageCatalog && !hasCategories ? (
+                  <>
+                    <p className="text-xs text-[var(--od-muted)]">
+                      Create a category before adding products.
+                    </p>
+                    <Link
+                      href="/admin/commerce/categories"
+                      className="inline-flex min-h-10 items-center rounded-[8px] bg-[var(--od-gold)] px-4 text-sm font-semibold text-[#1a1408]"
+                    >
+                      Create Category
+                    </Link>
+                  </>
                 ) : null}
               </div>
             ) : (

@@ -57,6 +57,8 @@ export default async function AdminCommercePage() {
         inventoryStatus: graph.inventoryStatus,
       })
     : null;
+  const graphLoaded = graph != null && !loadFailed;
+  const hasCategories = graph != null && graph.categories.length > 0;
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 lg:space-y-7">
@@ -64,14 +66,16 @@ export default async function AdminCommercePage() {
         title="Commerce"
         subtitle="Catalogue, inventory and storefront readiness."
         actions={
-          <>
-            {permissions.canManageCatalog ? (
-              <CommerceGoldButton href="/admin/commerce/products">+ Add Product</CommerceGoldButton>
-            ) : null}
-            {permissions.canManageCatalog ? (
-              <CommerceGhostButton href="/admin/commerce/categories">Manage Categories</CommerceGhostButton>
-            ) : null}
-          </>
+          permissions.canManageCatalog && graphLoaded ? (
+            hasCategories ? (
+              <>
+                <CommerceGoldButton href="/admin/commerce/products">+ Add Product</CommerceGoldButton>
+                <CommerceGhostButton href="/admin/commerce/categories">Manage Categories</CommerceGhostButton>
+              </>
+            ) : (
+              <CommerceGoldButton href="/admin/commerce/categories">Create Category</CommerceGoldButton>
+            )
+          ) : null
         }
       />
       <StorefrontDisabledBanner />
@@ -81,6 +85,7 @@ export default async function AdminCommercePage() {
       ) : (
         <CommerceDashboardView
           snapshot={snapshot}
+          hasCategories={hasCategories}
           canManageCatalog={permissions.canManageCatalog}
           canManageInventory={permissions.canManageInventory}
           canManageSettings={permissions.canManageSettings}

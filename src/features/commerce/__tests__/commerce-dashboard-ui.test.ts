@@ -51,6 +51,32 @@ describe("Commerce dashboard UI phase gates", () => {
     assert.doesNotMatch(page, /QuickActionsMenu/);
   });
 
+  test("overview header and catalogue health follow category-first onboarding", () => {
+    const page = readFileSync(join(root, "src/app/admin/commerce/page.tsx"), "utf8");
+    const view = readFileSync(
+      join(root, "src/features/commerce/components/CommerceDashboardView.tsx"),
+      "utf8"
+    );
+    assert.match(page, /graph\.categories\.length/);
+    assert.match(page, /Create Category/);
+    assert.match(page, /href="\/admin\/commerce\/categories"/);
+    assert.match(page, /href="\/admin\/commerce\/products"/);
+    assert.match(page, /hasCategories=\{hasCategories\}/);
+    assert.match(page, /graphLoaded/);
+    assert.match(page, /permissions\.canManageCatalog && graphLoaded/);
+    assert.doesNotMatch(page, /role === "super_admin"/);
+    assert.match(view, /hasCategories/);
+    assert.match(view, /canManageCatalog && hasCategories/);
+    assert.match(view, /canManageCatalog && !hasCategories/);
+    assert.match(view, /Create a category before adding products/);
+    assert.match(view, /href="\/admin\/commerce\/categories"/);
+    assert.match(view, />\s*Create Category\s*</);
+    assert.match(view, /href="\/admin\/commerce\/products"/);
+    assert.match(view, />\s*Add Product\s*</);
+    assert.doesNotMatch(view, /healthTotal === 0[\s\S]*canManageCatalog \? \(/);
+    assert.doesNotMatch(`${page}\n${view}`, /\bAOV\b|Abandoned cart|\/shop activation|Orders Today|Record Payment/i);
+  });
+
   test("storefront banner copy is unchanged", () => {
     const src = readFileSync(
       join(root, "src/features/commerce/components/StorefrontDisabledBanner.tsx"),
