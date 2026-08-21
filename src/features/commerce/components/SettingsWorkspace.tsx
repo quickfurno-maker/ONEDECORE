@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { formatInrFromPaise } from "@/features/crm/contracts/sales-target-contracts.ts";
 import { CommerceActionDrawer } from "./CommerceActionDrawer";
 import { CommerceAdminLinks } from "./CommerceAdminLinks";
@@ -39,7 +39,6 @@ export function SettingsWorkspace({
   readonly pincodes: readonly CommercePincodeRow[];
 }) {
   const [panel, setPanel] = useState<SettingsPanel | null>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const serviceable = pincodes.filter((row) => row.serviceable).length;
   const groups = new Map<string, number>();
   for (const row of pincodes.filter((item) => item.serviceable)) {
@@ -72,12 +71,7 @@ export function SettingsWorkspace({
           <div className="mb-4 flex items-start justify-between gap-3">
             <h2 className="text-[17px] font-semibold text-[var(--od-text)]">Tax & GST</h2>
             {canManageSettings ? (
-              <button
-                ref={panel?.kind === "tax" ? triggerRef : undefined}
-                type="button"
-                className={commerceCompactButtonClass}
-                onClick={() => setPanel({ kind: "tax" })}
-              >
+              <button type="button" className={commerceCompactButtonClass} onClick={() => setPanel({ kind: "tax" })}>
                 Manage
               </button>
             ) : null}
@@ -219,7 +213,7 @@ export function SettingsWorkspace({
         </section>
       </div>
       {canManageSettings ? (
-        <CommerceActionDrawer open={panel != null} title={title} onClose={() => setPanel(null)} triggerRef={triggerRef}>
+        <CommerceActionDrawer open={panel != null} title={title} onClose={() => setPanel(null)}>
           {panel?.kind === "tax" ? (
             <div className="space-y-4">
               <TaxSettingsForm settings={taxSettings} />

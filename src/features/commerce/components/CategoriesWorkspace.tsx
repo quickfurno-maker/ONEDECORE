@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { CategoryForm } from "./CategoryForm";
 import { CategoryTree } from "./CategoryTree";
 import { CommerceActionDrawer } from "./CommerceActionDrawer";
@@ -25,7 +25,6 @@ export function CategoriesWorkspace({
   readonly productCounts: Readonly<Record<string, number>>;
 }) {
   const [mode, setMode] = useState<{ kind: "create" } | { kind: "edit"; category: CommerceCategoryRow } | null>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const roots = categories.filter((row) => row.parent_category_id === null);
   const editors: Record<string, ReactNode> = {};
   for (const category of categories) {
@@ -51,12 +50,7 @@ export function CategoriesWorkspace({
         subtitle="Root categories and one subcategory depth."
         actions={
           canManageCatalog ? (
-            <button
-              ref={triggerRef}
-              type="button"
-              className={commerceGoldButtonClass}
-              onClick={() => setMode({ kind: "create" })}
-            >
+            <button type="button" className={commerceGoldButtonClass} onClick={() => setMode({ kind: "create" })}>
               + Add Category
             </button>
           ) : null
@@ -87,7 +81,6 @@ export function CategoriesWorkspace({
           open={mode != null}
           title={mode?.kind === "edit" ? `Edit ${mode.category.name}` : "Add Category"}
           onClose={() => setMode(null)}
-          triggerRef={triggerRef}
         >
           {mode?.kind === "edit" ? (
             <CategoryForm category={mode.category} rootCategories={roots} />

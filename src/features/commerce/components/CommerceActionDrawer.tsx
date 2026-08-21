@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import type { ReactNode, RefObject } from "react";
-import { isDrawerEscapeKey } from "../ui/drawer-keys";
+import type { ReactNode } from "react";
+import { captureDrawerRestorationTarget, isDrawerEscapeKey, restoreDrawerFocus, type DrawerFocusTarget } from "../ui/drawer-keys";
 
 function focusableElements(root: HTMLElement): HTMLElement[] {
   return [...root.querySelectorAll<HTMLElement>(
@@ -14,24 +14,37 @@ export function CommerceActionDrawer({
   open,
   title,
   onClose,
-  triggerRef,
   children,
 }: {
   readonly open: boolean;
   readonly title: string;
   readonly onClose: () => void;
-  readonly triggerRef?: RefObject<HTMLElement | null>;
   readonly children: ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const onCloseRef = useRef(onClose);
+  const wasOpenRef = useRef(false);
+  const restorationTargetRef = useRef<DrawerFocusTarget | null>(null);
 
   useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    restorationTargetRef.current = captureDrawerRestorationTarget({
+      wasOpen: wasOpenRef.current,
+      isOpen: open,
+      currentlyFocused: document.activeElement,
+      existingTarget: restorationTargetRef.current,
+    });
+    wasOpenRef.current = open;
+
     if (!open) {
       return;
     }
+
     const panel = panelRef.current;
-    const previous = (triggerRef?.current ?? document.activeElement) as HTMLElement | null;
     const focusFirst = () => {
       const items = panel ? focusableElements(panel) : [];
       (items[0] ?? panel)?.focus();
@@ -43,7 +56,7 @@ export function CommerceActionDrawer({
     const onKeyDown = (event: KeyboardEvent) => {
       if (isDrawerEscapeKey(event.key)) {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !panel) {
@@ -70,9 +83,9 @@ export function CommerceActionDrawer({
       window.cancelAnimationFrame(frame);
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
-      previous?.focus();
+      restoreDrawerFocus(restorationTargetRef.current);
     };
-  }, [open, onClose, triggerRef]);
+  }, [open]);
 
   if (!open) {
     return null;

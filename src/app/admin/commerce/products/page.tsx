@@ -9,6 +9,7 @@ import { ProductsWorkspace } from "@/features/commerce/components/ProductsWorksp
 import { CommerceDataUnavailable } from "@/features/commerce/components/CommerceDataUnavailable";
 import { buildProductWorkspaceRows } from "@/features/commerce/domain/commerce-dashboard";
 import { isCommerceReadError } from "@/features/commerce/domain/commerce-read";
+import { shouldShowCatalogueOnboardingEmpty } from "@/features/commerce/ui/product-empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -95,7 +96,11 @@ export default async function AdminCommerceProductsPage({ searchParams }: AdminC
       categories={workspace.categories}
       rows={rows}
       filters={{ q, status, category, featured, mode, media }}
-      catalogueEmpty={workspace.products.length === 0}
+      catalogueEmpty={shouldShowCatalogueOnboardingEmpty({
+        rowCount: rows.length,
+        returnedProductCount: workspace.products.length,
+        filters: { q, status, category, featured, mode, media },
+      })}
     />
   );
 }

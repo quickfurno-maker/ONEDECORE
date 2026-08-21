@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { CommerceActionDrawer } from "./CommerceActionDrawer";
 import { ProductCreateForm } from "./ProductCreateForm";
@@ -33,7 +33,6 @@ export function ProductsWorkspace({
   readonly catalogueEmpty: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const hasCategories = categories.length > 0;
 
   return (
@@ -44,12 +43,7 @@ export function ProductsWorkspace({
         actions={
           canManageCatalog ? (
             hasCategories ? (
-              <button
-                ref={triggerRef}
-                type="button"
-                className={commerceGoldButtonClass}
-                onClick={() => setOpen(true)}
-              >
+              <button type="button" className={commerceGoldButtonClass} onClick={() => setOpen(true)}>
                 + Add Product
               </button>
             ) : (
@@ -96,7 +90,6 @@ export function ProductsWorkspace({
           open={open}
           title="Add Product"
           onClose={() => setOpen(false)}
-          triggerRef={triggerRef}
         >
           <ProductCreateForm categories={categories} />
         </CommerceActionDrawer>

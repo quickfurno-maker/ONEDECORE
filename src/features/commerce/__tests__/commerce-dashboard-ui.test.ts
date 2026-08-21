@@ -24,7 +24,8 @@ import {
   percentStringToBasisPoints,
   rupeesStringToPaise,
 } from "../ui/operator-units.ts";
-import { isDrawerEscapeKey } from "../ui/drawer-keys.ts";
+import { captureDrawerRestorationTarget, isDrawerEscapeKey, restoreDrawerFocus } from "../ui/drawer-keys.ts";
+import { shouldShowCatalogueOnboardingEmpty } from "../ui/product-empty-state.ts";
 
 const root = process.cwd();
 
@@ -477,8 +478,213 @@ describe("Commerce operations workspace UX", () => {
     assert.match(drawer, /role="dialog"/);
     assert.match(drawer, /aria-modal="true"/);
     assert.match(drawer, /isDrawerEscapeKey/);
-    assert.match(drawer, /previous\?\.focus/);
+    assert.match(drawer, /captureDrawerRestorationTarget/);
+    assert.match(drawer, /restoreDrawerFocus/);
+    assert.doesNotMatch(drawer, /triggerRef/);
     assert.equal(isDrawerEscapeKey("Escape"), true);
     assert.equal(isDrawerEscapeKey("Enter"), false);
   });
 });
+
+const idleFilters = {
+  q: "",
+  status: "all",
+  category: "all",
+  featured: "all",
+  mode: "all",
+  media: "all",
+};
+
+describe("Commerce catalogue empty-state truth", () => {
+  test("unfiltered empty catalogue uses onboarding empty state", () => {
+    assert.equal(
+      shouldShowCatalogueOnboardingEmpty({
+        rowCount: 0,
+        returnedProductCount: 0,
+        filters: idleFilters,
+      }),
+      true
+    );
+    const page = readFileSync(join(root, "src/app/admin/commerce/products/page.tsx"), "utf8");
+    const workspace = readFileSync(
+      join(root, "src/features/commerce/components/ProductsWorkspace.tsx"),
+      "utf8"
+    );
+    assert.match(page, /shouldShowCatalogueOnboardingEmpty/);
+    assert.doesNotMatch(page, /catalogueEmpty=\{workspace\.products\.length === 0\}/);
+    assert.match(workspace, /Build your furniture catalogue/);
+  });
+
+  test("q active with zero results is filtered empty, not onboarding", () => {
+    assert.equal(
+      shouldShowCatalogueOnboardingEmpty({
+        rowCount: 0,
+        returnedProductCount: 0,
+        filters: { ...idleFilters, q: "missing-sku" },
+      }),
+      false
+    );
+  });
+
+  test("status active with zero results is filtered empty, not onboarding", () => {
+    assert.equal(
+      shouldShowCatalogueOnboardingEmpty({
+        rowCount: 0,
+        returnedProductCount: 0,
+        filters: { ...idleFilters, status: "published" },
+      }),
+      false
+    );
+  });
+
+  test("category active with zero rows is filtered empty, not onboarding", () => {
+    assert.equal(
+      shouldShowCatalogueOnboardingEmpty({
+        rowCount: 0,
+        returnedProductCount: 3,
+        filters: { ...idleFilters, category: "sofas" },
+      }),
+      false
+    );
+  });
+
+  test("featured, mode, and media active with zero rows are filtered empty, not onboarding", () => {
+    assert.equal(
+      shouldShowCatalogueOnboardingEmpty({
+        rowCount: 0,
+        returnedProductCount: 2,
+        filters: { ...idleFilters, featured: "true" },
+      }),
+      false
+    );
+    assert.equal(
+      shouldShowCatalogueOnboardingEmpty({
+        rowCount: 0,
+        returnedProductCount: 2,
+        filters: { ...idleFilters, mode: "ready_stock" },
+      }),
+      false
+    );
+    assert.equal(
+      shouldShowCatalogueOnboardingEmpty({
+        rowCount: 0,
+        returnedProductCount: 2,
+        filters: { ...idleFilters, media: "missing" },
+      }),
+      false
+    );
+  });
+});
+
+describe("Commerce drawer focus restoration origin", () => {
+  test("header Add Product opener is restored on close and Escape", () => {
+    const header = mockFocusable("header");
+    const emptyState = mockFocusable("empty");
+    let target = captureDrawerRestorationTarget({
+      wasOpen: false,
+      isOpen: true,
+      currentlyFocused: header,
+      existingTarget: null,
+    });
+    assert.equal(target, header);
+    target = captureDrawerRestorationTarget({
+      wasOpen: true,
+      isOpen: true,
+      currentlyFocused: emptyState,
+      existingTarget: target,
+    });
+    assert.equal(target, header);
+    assert.equal(isDrawerEscapeKey("Escape"), true);
+    assert.equal(restoreDrawerFocus(target), true);
+    assert.equal(header.focusCalls, 1);
+    assert.equal(emptyState.focusCalls, 0);
+  });
+
+  test("empty-state Add Product and Create First Category restore their own buttons", () => {
+    const emptyAdd = mockFocusable("empty-add");
+    const createFirst = mockFocusable("create-first");
+    const emptyTarget = captureDrawerRestorationTarget({
+      wasOpen: false,
+      isOpen: true,
+      currentlyFocused: emptyAdd,
+      existingTarget: null,
+    });
+    assert.equal(emptyTarget, emptyAdd);
+    assert.equal(restoreDrawerFocus(emptyTarget), true);
+    const createTarget = captureDrawerRestorationTarget({
+      wasOpen: false,
+      isOpen: true,
+      currentlyFocused: createFirst,
+      existingTarget: null,
+    });
+    assert.equal(createTarget, createFirst);
+    assert.equal(restoreDrawerFocus(createTarget), true);
+    assert.equal(emptyAdd.focusCalls, 1);
+    assert.equal(createFirst.focusCalls, 1);
+  });
+
+  test("category Edit and settings Manage restore the exact opener after panel switches", () => {
+    const edit = mockFocusable("edit");
+    const manage = mockFocusable("manage");
+    const innerAddRate = mockFocusable("inner-add-rate");
+    const categoryTarget = captureDrawerRestorationTarget({
+      wasOpen: false,
+      isOpen: true,
+      currentlyFocused: edit,
+      existingTarget: null,
+    });
+    assert.equal(
+      captureDrawerRestorationTarget({
+        wasOpen: true,
+        isOpen: true,
+        currentlyFocused: innerAddRate,
+        existingTarget: categoryTarget,
+      }),
+      edit
+    );
+    assert.equal(restoreDrawerFocus(categoryTarget), true);
+    const settingsTarget = captureDrawerRestorationTarget({
+      wasOpen: false,
+      isOpen: true,
+      currentlyFocused: manage,
+      existingTarget: null,
+    });
+    assert.equal(
+      captureDrawerRestorationTarget({
+        wasOpen: true,
+        isOpen: true,
+        currentlyFocused: innerAddRate,
+        existingTarget: settingsTarget,
+      }),
+      manage
+    );
+    assert.equal(restoreDrawerFocus(settingsTarget), true);
+    assert.equal(edit.focusCalls, 1);
+    assert.equal(manage.focusCalls, 1);
+    assert.equal(innerAddRate.focusCalls, 0);
+    const products = readFileSync(
+      join(root, "src/features/commerce/components/ProductsWorkspace.tsx"),
+      "utf8"
+    );
+    const categories = readFileSync(
+      join(root, "src/features/commerce/components/CategoriesWorkspace.tsx"),
+      "utf8"
+    );
+    const settings = readFileSync(
+      join(root, "src/features/commerce/components/SettingsWorkspace.tsx"),
+      "utf8"
+    );
+    assert.doesNotMatch(`${products}\n${categories}\n${settings}`, /triggerRef/);
+  });
+});
+
+function mockFocusable(id: string) {
+  return {
+    id,
+    isConnected: true,
+    focusCalls: 0,
+    focus() {
+      this.focusCalls += 1;
+    },
+  };
+}
