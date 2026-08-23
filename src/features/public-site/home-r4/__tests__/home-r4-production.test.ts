@@ -76,15 +76,17 @@ describe("home-r4 production guards", () => {
 
   test("homepage is static and remains indexable without Portfolio fetch", () => {
     const page = read(pagePath);
+    const interiors = read(join(root, "src/app/interiors/page.tsx"));
     assert.doesNotMatch(page, /getFeaturedProjects/);
     assert.doesNotMatch(page, /force-dynamic/);
-    assert.doesNotMatch(page, /featured/);
-    assert.match(page, /ProductionHomePage/);
+    assert.match(page, /DiscoveryHomePage/);
     assert.doesNotMatch(page, /loadConceptFeatured/);
     assert.doesNotMatch(page, /design-concepts/);
     assert.doesNotMatch(page, /noindex/);
     assert.match(page, /index:\s*true/);
-    assert.match(page, /Complete Home Interiors in Pune/);
+    assert.match(page, /Interiors, Modular Kitchens & Furniture in Pune/);
+    assert.match(interiors, /InteriorsConversionPage/);
+    assert.match(interiors, /getLeadFormMode/);
   });
 
   test("homepage no longer mounts HomeProjects or project-preview copy", () => {

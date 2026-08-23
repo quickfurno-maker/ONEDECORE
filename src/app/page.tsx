@@ -1,20 +1,54 @@
 import type { Metadata } from "next";
-import { getLeadFormMode } from "@/features/lead-intake/public/lead-form-mode";
+import { SITE_CONFIG } from "@/config/site";
+import { isPublicCommerceReadFailure } from "@/features/commerce/public/public-errors";
+import {
+  getPublicCommerceCategories,
+  getPublicCommerceProducts,
+} from "@/features/commerce/public/public-cache";
 import { publicSiteFontVariables } from "@/features/public-site/fonts";
-import { ProductionHomePage } from "@/features/public-site/home-r4/ProductionHomePage";
+import {
+  DiscoveryHomePage,
+  type DiscoveryCommerceState,
+} from "@/features/public-site/discovery/DiscoveryHomePage";
 
 export const metadata: Metadata = {
-  title: "ONEDECORE — Complete Home Interiors in Pune",
+  title: `ONEDECORE — Interiors, Modular Kitchens & Furniture in Pune`,
   description:
-    "ONEDECORE designs, manufactures and installs complete home interiors, modular kitchens and custom wardrobes across Pune. Explore indicative pricing and start a free design consultation.",
+    "ONEDECORE is a complete-home brand in Pune for interiors, modular kitchens, and furniture. Design the home, then furnish it with the same team.",
+  alternates: { canonical: SITE_CONFIG.url },
   robots: { index: true, follow: true },
 };
 
-export default function HomePage() {
-  const leadFormMode = getLeadFormMode();
+async function loadDiscoveryCommerce(): Promise<DiscoveryCommerceState> {
+  try {
+    const [categories, featured] = await Promise.all([
+      getPublicCommerceCategories(),
+      getPublicCommerceProducts({
+        categorySlug: null,
+        query: null,
+        sort: "featured",
+        minPricePaise: null,
+        maxPricePaise: null,
+        availabilityMode: null,
+        featuredOnly: true,
+        limit: 8,
+        offset: 0,
+      }),
+    ]);
+    return { ok: true, categories, featured: featured.items };
+  } catch (error) {
+    if (isPublicCommerceReadFailure(error)) {
+      return { ok: false };
+    }
+    throw error;
+  }
+}
+
+export default async function HomePage() {
+  const commerce = await loadDiscoveryCommerce();
   return (
     <div className={publicSiteFontVariables}>
-      <ProductionHomePage leadFormMode={leadFormMode} />
+      <DiscoveryHomePage commerce={commerce} />
     </div>
   );
 }

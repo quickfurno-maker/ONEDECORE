@@ -962,9 +962,12 @@ describe("Phase 4A homepage and server-only guards", () => {
     assert.match(homePlan, /leadFormMode/);
     assert.match(homePlan, /copy-only/);
 
-    const page = readFileSync(join(root, "src/app/page.tsx"), "utf8");
-    assert.match(page, /getLeadFormMode/);
-    assert.match(page, /leadFormMode/);
+    const interiors = readFileSync(join(root, "src/app/interiors/page.tsx"), "utf8");
+    assert.match(interiors, /getLeadFormMode/);
+    assert.match(interiors, /leadFormMode/);
+    const discovery = readFileSync(join(root, "src/app/page.tsx"), "utf8");
+    assert.doesNotMatch(discovery, /getLeadFormMode/);
+    assert.doesNotMatch(discovery, /HomeLeadCapture/);
 
     const capture = readFileSync(
       join(root, "src/features/lead-intake/public/HomeLeadCapture.tsx"),
@@ -1009,11 +1012,12 @@ describe("Phase 4A homepage and server-only guards", () => {
 
   test("slash route remains static in app page", () => {
     const page = readFileSync(join(root, "src/app/page.tsx"), "utf8");
+    const interiors = readFileSync(join(root, "src/app/interiors/page.tsx"), "utf8");
     assert.doesNotMatch(page, /api\/public\/lead-intake/);
     assert.doesNotMatch(page, /submitLeadIntake/);
     assert.doesNotMatch(page, /export const dynamic\s*=\s*["']force-dynamic["']/);
-    assert.match(page, /getLeadFormMode/);
-    assert.match(page, /leadFormMode=\{leadFormMode\}/);
+    assert.match(interiors, /getLeadFormMode/);
+    assert.match(interiors, /leadFormMode=\{leadFormMode\}/);
   });
 
   test("suppression safety note is documented and unenforced in Phase 4A RPC", () => {

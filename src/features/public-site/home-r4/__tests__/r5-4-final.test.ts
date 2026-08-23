@@ -26,12 +26,12 @@ function read(name: string) {
 describe("R5.4 static homepage", () => {
   test("page.tsx has no getFeaturedProjects or force-dynamic", () => {
     const page = readFileSync(pagePath, "utf8");
+    const interiors = readFileSync(join(root, "src/app/interiors/page.tsx"), "utf8");
     assert.doesNotMatch(page, /getFeaturedProjects/);
     assert.doesNotMatch(page, /force-dynamic/);
-    assert.doesNotMatch(page, /async function/);
-    assert.match(page, /export default function HomePage/);
-    assert.match(page, /getLeadFormMode/);
-    assert.match(page, /<ProductionHomePage leadFormMode=\{leadFormMode\} \/>/);
+    assert.match(page, /DiscoveryHomePage/);
+    assert.match(interiors, /getLeadFormMode/);
+    assert.match(interiors, /<InteriorsConversionPage leadFormMode=\{leadFormMode\} \/>/);
   });
 
   test("ProductionHomePage has no featured prop or HomeProjects", () => {

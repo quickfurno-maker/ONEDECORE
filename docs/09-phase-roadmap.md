@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced through Phase 9D-C1 public storefront repository implementation, August 23, 2026)
-**Current Phase:** Phase 9D-C1 **REPOSITORY IMPLEMENTED** / **MANAGED APPLY PENDING**. Phase 9D-B **COMPLETE / CLOSED**. Managed still **M1–M35**. Phase 9D-C **not complete**. Production **OFF**.
-**Next Phase:** Phase 9D-C2 root 50/50 homepage + `/interiors` + public journey integration. Production remains disabled.
+**Document Status:** Locked Roadmap (truth-synced through Phase 9D-C2 repository implementation, August 23, 2026)
+**Current Phase:** Phase 9D-C **IMPLEMENTATION SUBSTANTIALLY COMPLETE / FINAL QA-CLOSEOUT PENDING**. Phase 9D-B **COMPLETE / CLOSED**. Managed **M1–M36**. Production **OFF**.
+**Next Phase:** 9D-C QA closeout, then 9D-D+ cart/checkout. Production remains disabled.
 **Previous Phase:** Phase 9C — Campaign Execution, Attribution & Conversion Feedback (**COMPLETE / MANAGED APPLY CERTIFIED** — DEC-0088; managed **M1–M34** at 9C closeout; production execution/spend **OFF**)
 
 ---
@@ -398,9 +398,9 @@ M35 is in the repository (PR #73) and managed-certified (2026-08-23). 9D-C is **
 <!-- PHASE_9D_C_PREPARATION_FREEZE_START -->
 ## Phase 9D-C Admin / Storefront Preparation Status
 
-**Status:** `PREPARATION_FROZEN (DEC-0090)` + `HOMEPAGE_DESIGN_LOCKED (DEC-0091)` + `THREE_LAYER_PUBLIC_JOURNEY_LOCKED (DEC-0092)` + `BALANCED_MIXED_HOMEPAGE_LOCKED (DEC-0093)` — 9D-C **READY / NEXT** (public storefront / public journey **NOT STARTED**)
+**Status:** `PREPARATION_FROZEN (DEC-0090)` + `HOMEPAGE_DESIGN_LOCKED (DEC-0091)` + `THREE_LAYER_PUBLIC_JOURNEY_LOCKED (DEC-0092)` + `BALANCED_MIXED_HOMEPAGE_LOCKED (DEC-0093)` — C1 **MERGED** (PR #82 / `34741dac…`) + C2 **REPOSITORY IMPLEMENTED**. Phase 9D-C **IMPLEMENTATION SUBSTANTIALLY COMPLETE / FINAL QA-CLOSEOUT PENDING**.
 
-Authority: **ADR-0032 / DEC-0090 / DEC-0091 / DEC-0092 / DEC-0093**. No M36 allocated by 9D-B closeout. No public `/shop`. No `/interiors` runtime. No checkout/payments. No service-area table. Production **OFF**.
+Authority: **ADR-0032 / DEC-0090 / DEC-0091 / DEC-0092 / DEC-0093**. Managed **M1–M36**. Public `/shop`, `/interiors`, and 50/50 `/` exist in repository. No checkout/payments. No service-area table. Production **OFF**. See [C2 audit](audits/phase-9d-c2-unified-home-interiors-implementation.md).
 <!-- PHASE_9D_C_PREPARATION_FREEZE_END -->
 
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->

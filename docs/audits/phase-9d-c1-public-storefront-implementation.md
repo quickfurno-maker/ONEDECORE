@@ -1,11 +1,12 @@
 # Phase 9D-C1 — Public Storefront Data Plane & Core `/shop`
 
-**Status:** `REPOSITORY_IMPLEMENTED` / `MANAGED_APPLY_PENDING`  
-**Date:** 2026-08-23  
-**Starting protected main:** `56cbf6a091f0c0e7f67adcc2c54a06d9395cafd8` (PR #81 merge)  
+**Status:** `MERGED` / `MANAGED_APPLIED_CERTIFIED` (current-state addendum 2026-08-23)
+**Date:** 2026-08-23
+**Starting protected main:** `56cbf6a091f0c0e7f67adcc2c54a06d9395cafd8` (PR #81 merge)
 **Branch:** `phase-9d-c1-public-storefront`
+**Merged to protected main:** `34741dac155aad67c1ae9f93bd41a2d7316c9b5a` (PR #82)
 
-Phase 9D-C is **not** complete. This gate is C1 only.
+Phase 9D-C is **not** closed. This file remains the C1 provenance record. C2 is a later repository gate.
 
 ## 1. Scope
 
@@ -20,7 +21,7 @@ Secure anonymous public commerce read surface plus core shop routes. No homepage
 | Git blob | `81a096f4c31c6003fdcf6e4595c84dfe0e806911` |
 | SHA-256 LF | `2CEAD7E36022D8A6B6855B27E5E54370633385B2E56FCFCC1D526760D7D20C53` |
 | M35 | Unchanged |
-| Managed apply | **NOT APPLIED** |
+| Managed apply | **APPLIED / CERTIFIED** on 2026-08-23 (post-merge; was pending at C1 repository entry) |
 
 Pre-merge audit (unmerged C1 only; migration corrected in place, not re-issued) found and fixed three public-read truth defects:
 
@@ -73,3 +74,7 @@ Wishlist and recently viewed are browser-local only (`localStorage`), capped, co
 - Production activation
 
 Warranty/care/assembly product fields do not exist on M35 products. Only `commerce_shipping_settings.assembly_install_note` is shown on a successful pincode check.
+
+## 6. Current-state addendum (after PR #82)
+
+Protected main `34741dac155aad67c1ae9f93bd41a2d7316c9b5a`. Managed history is **M1–M36**. Five public storefront RPCs are certified for `anon` EXECUTE. Anon raw commerce table SELECT remains denied. Private helper EXECUTE remains denied. Current managed public category count is **1**. Current managed published product count is **0**. Unknown pincode is not serviceable. Production remains **OFF**. C2 homepage/`/interiors` work is repository-only until independently merged.
