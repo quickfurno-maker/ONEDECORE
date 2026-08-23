@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 9D-D1 COD order engine pgTAP
 
 begin;
-select plan(76);
+select plan(90);
 
 select has_table('public', 'commerce_orders', 'commerce_orders exists');
 select has_table('public', 'commerce_order_items', 'commerce_order_items exists');
@@ -59,6 +59,153 @@ select is(
   (select has_function_privilege('authenticated', 'transition_commerce_order_fulfilment(uuid,text,text,uuid)', 'execute')),
   true,
   'authenticated can execute fulfilment rpc'
+);
+
+select has_function(
+  'private',
+  'commerce_public_rate_limit_xact_lock',
+  'rate-limit advisory lock helper exists'
+);
+select is(
+  (select has_function_privilege(
+     'anon',
+     'private.commerce_public_rate_limit_xact_lock(text,text,text)',
+     'execute'
+   )),
+  false,
+  'anon cannot execute rate-limit lock helper'
+);
+select is(
+  (select has_function_privilege(
+     'authenticated',
+     'private.commerce_public_rate_limit_xact_lock(text,text,text)',
+     'execute'
+   )),
+  false,
+  'authenticated cannot execute rate-limit lock helper'
+);
+select is(
+  (select has_function_privilege('anon', 'consume_commerce_public_rate_limit(text,text,text)', 'execute')),
+  false,
+  'anon cannot execute rate-limit rpc'
+);
+select is(
+  (select has_function_privilege('authenticated', 'consume_commerce_public_rate_limit(text,text,text)', 'execute')),
+  false,
+  'authenticated cannot execute rate-limit rpc'
+);
+select is(
+  (select has_function_privilege('service_role', 'consume_commerce_public_rate_limit(text,text,text)', 'execute')),
+  true,
+  'service_role can execute rate-limit rpc'
+);
+
+select ok(
+  (
+    select bool_and(not has_table_privilege('service_role', format('public.%I', t), 'insert'))
+    from unnest(array[
+      'commerce_orders','commerce_order_items','commerce_order_delivery','commerce_order_events'
+    ]) as t
+  ),
+  'service_role has no INSERT on order tables'
+);
+select ok(
+  (
+    select bool_and(not has_table_privilege('service_role', format('public.%I', t), 'update'))
+    from unnest(array[
+      'commerce_orders','commerce_order_items','commerce_order_delivery','commerce_order_events'
+    ]) as t
+  ),
+  'service_role has no UPDATE on order tables'
+);
+select ok(
+  (
+    select bool_and(not has_table_privilege('service_role', format('public.%I', t), 'delete'))
+    from unnest(array[
+      'commerce_orders','commerce_order_items','commerce_order_delivery','commerce_order_events'
+    ]) as t
+  ),
+  'service_role has no DELETE on order tables'
+);
+
+select ok(
+  (
+    select bool_and(pg_get_userbyid(p.proowner) = 'postgres')
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in (
+        'quote_public_commerce_cart',
+        'create_public_commerce_cod_order',
+        'verify_public_commerce_order_tracking_identity',
+        'get_public_commerce_order_tracking_snapshot',
+        'consume_commerce_public_rate_limit',
+        'transition_commerce_order_fulfilment',
+        'cancel_commerce_order'
+      )
+  ),
+  'all seven public M37 RPCs are owned by postgres'
+);
+select ok(
+  (
+    select bool_and(p.prosecdef)
+      and count(*) = 7
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in (
+        'quote_public_commerce_cart',
+        'create_public_commerce_cod_order',
+        'verify_public_commerce_order_tracking_identity',
+        'get_public_commerce_order_tracking_snapshot',
+        'consume_commerce_public_rate_limit',
+        'transition_commerce_order_fulfilment',
+        'cancel_commerce_order'
+      )
+  ),
+  'all seven public M37 RPCs are SECURITY DEFINER'
+);
+select ok(
+  (
+    select bool_and(
+      pg_get_functiondef(p.oid) like '%SET search_path TO ''''%'
+      or pg_get_functiondef(p.oid) like '%SET search_path = ''''%'
+    )
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in (
+        'quote_public_commerce_cart',
+        'create_public_commerce_cod_order',
+        'verify_public_commerce_order_tracking_identity',
+        'get_public_commerce_order_tracking_snapshot',
+        'consume_commerce_public_rate_limit',
+        'transition_commerce_order_fulfilment',
+        'cancel_commerce_order'
+      )
+  ),
+  'all seven public M37 RPCs use empty search_path'
+);
+
+select ok(
+  (
+    select pg_get_constraintdef(oid) ilike '%commerce_option_values_valid%'
+       and pg_get_constraintdef(oid) ilike '%pg_column_size%'
+    from pg_constraint
+    where conrelid = 'public.commerce_order_items'::regclass
+      and conname = 'chk_commerce_order_items_options'
+  ),
+  'order item option_values are structurally bounded'
+);
+select ok(
+  (
+    select pg_get_constraintdef(oid) ilike '%eta_min_days >= 0%'
+       and pg_get_constraintdef(oid) ilike '%eta_max_days >= eta_min_days%'
+    from pg_constraint
+    where conrelid = 'public.commerce_order_delivery'::regclass
+      and conname = 'chk_commerce_order_delivery_eta'
+  ),
+  'delivery ETA requires nonnegative min and max >= min'
 );
 
 -- Seed staff identities first so catalogue created_by FKs resolve

@@ -75,4 +75,30 @@ describe("Phase 9D-D1 repository contracts", () => {
     assert.ok(err instanceof CommerceOrderError);
     assert.equal(err.code, "COMMERCE_INVENTORY_UNAVAILABLE");
   });
+
+  test("generated types include exact M37 FK relationships and the seven public RPCs", () => {
+    const types = readFileSync(join(root, "src/types/database.generated.ts"), "utf8");
+    for (const name of [
+      "commerce_orders_contact_id_fkey",
+      "commerce_order_items_order_id_fkey",
+      "commerce_order_items_product_id_fkey",
+      "commerce_order_items_variant_id_fkey",
+      "commerce_order_delivery_order_id_fkey",
+      "commerce_order_events_order_id_fkey",
+      "commerce_order_events_actor_profile_id_fkey",
+    ]) {
+      assert.match(types, new RegExp(name));
+    }
+    for (const rpc of [
+      "quote_public_commerce_cart",
+      "create_public_commerce_cod_order",
+      "verify_public_commerce_order_tracking_identity",
+      "get_public_commerce_order_tracking_snapshot",
+      "consume_commerce_public_rate_limit",
+      "transition_commerce_order_fulfilment",
+      "cancel_commerce_order",
+    ]) {
+      assert.match(types, new RegExp(`${rpc}: \\{`));
+    }
+  });
 });

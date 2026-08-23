@@ -1472,6 +1472,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "commerce_order_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "commerce_order_events_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -1567,6 +1574,20 @@ export type Database = {
             referencedRelation: "commerce_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "commerce_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_order_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_product_variants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       commerce_orders: {
@@ -1648,7 +1669,15 @@ export type Database = {
           total_paise?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "commerce_orders_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       commerce_tax_rates: {
         Row: {
@@ -6341,7 +6370,7 @@ export type Database = {
       }
       transition_commerce_order_fulfilment: {
         Args: {
-          p_fulfilment_tracking_reference?: string
+          p_fulfilment_tracking_reference: string
           p_idempotency_key: string
           p_order_id: string
           p_to_status: string

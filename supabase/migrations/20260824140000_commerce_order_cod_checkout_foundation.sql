@@ -105,7 +105,11 @@ create table public.commerce_order_items (
   product_slug text not null,
   sku text not null,
   variant_display_name text,
-  option_values jsonb not null default '{}'::jsonb,
+  option_values jsonb not null default '{}'::jsonb
+    constraint chk_commerce_order_items_options check (
+      private.commerce_option_values_valid(option_values)
+      and pg_column_size(option_values) <= 1024
+    ),
   primary_image_public_path text,
   compare_at_unit_price_paise bigint
     constraint chk_commerce_order_items_compare check (
@@ -154,7 +158,9 @@ create table public.commerce_order_delivery (
   eta_max_days integer not null,
   assembly_install_note text,
   created_at timestamptz not null default now(),
-  constraint chk_commerce_order_delivery_eta check (eta_min_days <= eta_max_days)
+  constraint chk_commerce_order_delivery_eta check (
+    eta_min_days >= 0 and eta_max_days >= eta_min_days
+  )
 );
 
 create table public.commerce_order_events (
@@ -994,6 +1000,35 @@ begin
 end;
 $$;
 
+create or replace function private.commerce_public_rate_limit_xact_lock(
+  p_scope text,
+  p_operation text,
+  p_fingerprint_hash text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_scope not in ('network', 'phone')
+     or p_operation is null
+     or p_fingerprint_hash is null
+  then
+    perform private.commerce_order_raise('COMMERCE_ORDER_VALIDATION');
+  end if;
+  perform pg_advisory_xact_lock((
+    'x' || substr(
+      private.commerce_sha256(
+        'commerce-rate-limit|' || p_scope || '|' || p_operation || '|' || p_fingerprint_hash
+      ),
+      1,
+      16
+    )
+  )::bit(64)::bigint);
+end;
+$$;
+
 create or replace function public.consume_commerce_public_rate_limit(
   p_operation text,
   p_network_fingerprint_hash text,
@@ -1024,6 +1059,15 @@ begin
   end if;
   if p_operation = 'checkout' and p_phone_fingerprint_hash is null then
     perform private.commerce_order_raise('COMMERCE_ORDER_VALIDATION');
+  end if;
+
+  perform private.commerce_public_rate_limit_xact_lock(
+    'network', p_operation, p_network_fingerprint_hash
+  );
+  if p_phone_fingerprint_hash is not null then
+    perform private.commerce_public_rate_limit_xact_lock(
+      'phone', p_operation, p_phone_fingerprint_hash
+    );
   end if;
 
   net_limit := case p_operation when 'quote' then 60 when 'checkout' then 8 else 20 end;
@@ -1237,9 +1281,8 @@ begin
   loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
-    execute format('revoke all on table public.%I from public, anon, authenticated', t);
+    execute format('revoke all on table public.%I from public, anon, authenticated, service_role', t);
     execute format('grant select on table public.%I to authenticated', t);
-    execute format('grant all on table public.%I to service_role', t);
     execute format(
       'create policy %I on public.%I for select to authenticated using ((select public.authorize(''commerce.read'')))',
       t || '_commerce_read',
@@ -1263,6 +1306,51 @@ revoke all on function private.commerce_public_idempotency_store(text, uuid, tex
 revoke all on function private.commerce_resolve_shipping_charge_paise(bigint, bigint, bigint, boolean, boolean, bigint, bigint) from public, anon, authenticated;
 revoke all on function private.commerce_build_quote(jsonb, text, boolean) from public, anon, authenticated;
 revoke all on function private.commerce_public_quote_view(jsonb) from public, anon, authenticated;
+revoke all on function private.commerce_public_rate_limit_xact_lock(text, text, text) from public, anon, authenticated, service_role;
+
+do $$
+declare
+  r record;
+begin
+  for r in
+    select n.nspname, p.proname, pg_get_function_identity_arguments(p.oid) as args
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where p.prosecdef
+      and (
+        (
+          n.nspname = 'private'
+          and p.proname in (
+            'generate_commerce_order_reference',
+            'commerce_public_idempotency_xact_lock',
+            'commerce_public_idempotency_lookup',
+            'commerce_public_idempotency_store',
+            'commerce_build_quote',
+            'commerce_public_rate_limit_xact_lock'
+          )
+        )
+        or (
+          n.nspname = 'public'
+          and p.proname in (
+            'quote_public_commerce_cart',
+            'create_public_commerce_cod_order',
+            'verify_public_commerce_order_tracking_identity',
+            'get_public_commerce_order_tracking_snapshot',
+            'consume_commerce_public_rate_limit',
+            'transition_commerce_order_fulfilment',
+            'cancel_commerce_order'
+          )
+        )
+      )
+  loop
+    execute format(
+      'alter function %I.%I(%s) owner to postgres',
+      r.nspname,
+      r.proname,
+      r.args
+    );
+  end loop;
+end $$;
 
 revoke all on function public.quote_public_commerce_cart(jsonb, text, text) from public, anon, authenticated;
 revoke all on function public.create_public_commerce_cod_order(jsonb, jsonb, jsonb, uuid) from public, anon, authenticated;

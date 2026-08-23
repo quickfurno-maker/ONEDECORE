@@ -1,14 +1,29 @@
 /**
- * True local concurrency proof for COD oversell protection.
+ * True local concurrency proofs for COD oversell and public rate-limit admission.
  * Two independent postgres clients via the local Supabase DB container.
+ * Dedicated CI execution must fail if the container is absent — never skip.
  */
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { describe, test } from "node:test";
 
 const execFileAsync = promisify(execFile);
 const CONTAINER = "supabase_db_OneDecore";
+
+async function assertLocalDbAvailable(): Promise<void> {
+  try {
+    await execFileAsync("docker", ["inspect", CONTAINER]);
+  } catch {
+    throw new Error(
+      `D1 concurrency requires local container ${CONTAINER}. ` +
+        (process.env.ONEDECORE_REQUIRE_D1_CONCURRENCY === "1"
+          ? "ONEDECORE_REQUIRE_D1_CONCURRENCY=1 is set."
+          : "Start local Supabase before npm run test:phase-9d-d1-concurrency.")
+    );
+  }
+}
 
 async function psql(sql: string): Promise<string> {
   const { stdout, stderr } = await execFileAsync("docker", [
@@ -31,14 +46,13 @@ async function psql(sql: string): Promise<string> {
   return stdout.trim();
 }
 
+function sha256Hex(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
 describe("Phase 9D-D1 local COD concurrency", () => {
-  test("two simultaneous qty=1 COD calls against stock=1 yield one order", async (t) => {
-    try {
-      await execFileAsync("docker", ["inspect", CONTAINER]);
-    } catch {
-      t.skip("local Supabase DB container is not running");
-      return;
-    }
+  test("two simultaneous qty=1 COD calls against stock=1 yield one order", async () => {
+    await assertLocalDbAvailable();
 
     const suffix = Date.now().toString(36);
     const seq = String(Date.now()).slice(-6);
@@ -108,5 +122,92 @@ describe("Phase 9D-D1 local COD concurrency", () => {
     assert.equal(stock, "0,0");
     const orders = await psql(`select count(*)::text from public.commerce_order_items where sku = '${sku}'`);
     assert.equal(orders, "1");
+  });
+});
+
+describe("Phase 9D-D1 local rate-limit concurrency", () => {
+  test("checkout phone boundary admits exactly one of two simultaneous calls", async () => {
+    await assertLocalDbAvailable();
+    const nonce = `${Date.now().toString(36)}-${crypto.randomUUID()}`;
+    const networkHash = sha256Hex(`d1-checkout-net-${nonce}`);
+    const phoneHash = sha256Hex(`d1-checkout-phone-${nonce}`);
+
+    await psql(`
+      insert into private.commerce_public_request_attempts (
+        operation, network_fingerprint_hash, phone_fingerprint_hash
+      )
+      select 'checkout', '${networkHash}', '${phoneHash}'
+      from generate_series(1, 4);
+    `);
+
+    const callSql = `
+      select consume_commerce_public_rate_limit('checkout', '${networkHash}', '${phoneHash}')::text;
+    `;
+    const [first, second] = await Promise.allSettled([psql(callSql), psql(callSql)]);
+    const texts = [first, second].map((result) =>
+      result.status === "fulfilled" ? result.value : String(result.reason)
+    );
+    const parsed = texts.map((text) => {
+      const match = text.match(/\{.*\}/);
+      assert.ok(match, `expected json result, got ${text}`);
+      return JSON.parse(match[0]) as { allowed: boolean; retry_after_seconds: number };
+    });
+    const allowed = parsed.filter((row) => row.allowed).length;
+    const blocked = parsed.filter((row) => !row.allowed).length;
+    assert.equal(allowed, 1, `expected one allowed checkout, got ${texts.join(" | ")}`);
+    assert.equal(blocked, 1, `expected one blocked checkout, got ${texts.join(" | ")}`);
+    assert.ok(
+      parsed.some((row) => !row.allowed && row.retry_after_seconds > 0),
+      "blocked checkout must return retry_after_seconds > 0"
+    );
+
+    const phoneCount = await psql(`
+      select count(*)::text
+      from private.commerce_public_request_attempts
+      where operation = 'checkout' and phone_fingerprint_hash = '${phoneHash}'
+    `);
+    const networkCount = await psql(`
+      select count(*)::text
+      from private.commerce_public_request_attempts
+      where operation = 'checkout' and network_fingerprint_hash = '${networkHash}'
+    `);
+    assert.equal(phoneCount, "5");
+    assert.equal(networkCount, "5");
+  });
+
+  test("network-only track admits exactly one of two simultaneous calls at the cap", async () => {
+    await assertLocalDbAvailable();
+    const nonce = `${Date.now().toString(36)}-${crypto.randomUUID()}`;
+    const networkHash = sha256Hex(`d1-track-net-${nonce}`);
+
+    await psql(`
+      insert into private.commerce_public_request_attempts (
+        operation, network_fingerprint_hash, phone_fingerprint_hash
+      )
+      select 'track', '${networkHash}', null
+      from generate_series(1, 19);
+    `);
+
+    const callSql = `
+      select consume_commerce_public_rate_limit('track', '${networkHash}', null)::text;
+    `;
+    const [first, second] = await Promise.allSettled([psql(callSql), psql(callSql)]);
+    const texts = [first, second].map((result) =>
+      result.status === "fulfilled" ? result.value : String(result.reason)
+    );
+    const parsed = texts.map((text) => {
+      const match = text.match(/\{.*\}/);
+      assert.ok(match, `expected json result, got ${text}`);
+      return JSON.parse(match[0]) as { allowed: boolean; retry_after_seconds: number };
+    });
+    assert.equal(parsed.filter((row) => row.allowed).length, 1, `expected one allowed track, got ${texts.join(" | ")}`);
+    assert.equal(parsed.filter((row) => !row.allowed).length, 1, `expected one blocked track, got ${texts.join(" | ")}`);
+
+    const networkCount = await psql(`
+      select count(*)::text
+      from private.commerce_public_request_attempts
+      where operation = 'track' and network_fingerprint_hash = '${networkHash}'
+    `);
+    assert.equal(networkCount, "20");
   });
 });

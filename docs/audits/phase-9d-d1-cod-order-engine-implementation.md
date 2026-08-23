@@ -4,8 +4,8 @@
 **Date:** 2026-08-23
 **Starting protected main:** `bf6d5cca8daa77870229a15a8ff119b27f7362f9` (PR #83 merge)
 **Branch:** `phase-9d-d1-cod-order-engine`
-**Migration git blob:** `6225c6c431fa9d9b1dc39f23837fa72be1e67161`
-**Migration SHA-256 (LF):** `92c7c37f0abe0defcc0799badad7b3923c061f13416860e6ea3ac241397067a5`
+**Migration git blob:** `fe13e28e4a61607706bae32b5df33630ede2f9bd`
+**Migration SHA-256 (LF):** `cb27d7fb848f2983ce05056c0e47a2c0e06e4290cdca2b890674cf67542765fc`
 
 Phase 9D-C is **COMPLETE / CLOSED**. This gate implements only the database/order-engine half of 9D-D. Phase 9D-D is **not** complete. D2 (cart/checkout/tracking UI) follows after D1 merge and managed M37 certification. Production remains **OFF**.
 
@@ -44,9 +44,19 @@ GST-inclusive tax: `round(gross * rate_bp / (10000 + rate_bp))` using numeric ha
 ## 5. Tests
 
 - pgTAP: `supabase/tests/database/29_commerce_order_cod_checkout_foundation_test.sql`
-- App: `npm run test:phase-9d-d1`
-- Local concurrency: `phase-9d-d1-cod-concurrency.test.ts` (local Supabase only)
+- App contracts: `npm run test:phase-9d-d1` (umbrella) / `test:app` keeps only `phase-9d-d1-cod-order-engine.test.ts`
+- Dedicated concurrency: `npm run test:phase-9d-d1-concurrency` — fails if `supabase_db_OneDecore` is absent. Database Quality runs this after local reset. Application Quality does not.
 
-## 6. Managed apply
+## 6. Pre-merge security + concurrency corrections (PR #84)
+
+Corrected in place on unmerged/unmanaged M37. No M38. Production remains **OFF**.
+
+- Rate-limit admission is transaction-serialized: NETWORK advisory lock, then PHONE lock when present, then count/decide/insert. Prefix `commerce-rate-limit|`.
+- Direct `service_role` INSERT/UPDATE/DELETE on the four order tables is revoked. Staff read remains authenticated SELECT + `commerce.read` RLS. Mutations go through postgres-owned SECURITY DEFINER RPCs.
+- Every new M37 SECURITY DEFINER function is explicitly `OWNER TO postgres` with `search_path = ''`.
+- Hand-maintained generated types now include exact M37 FK relationships and RPC optionality matching SQL.
+- Database Quality now executes the two-client COD and rate-limit races with zero skips.
+
+## 7. Managed apply
 
 **NOT AUTHORIZED.** Managed history remains **M1–M36** until a later certification gate.
