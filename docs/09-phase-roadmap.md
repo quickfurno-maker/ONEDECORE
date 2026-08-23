@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced through Phase 9D-B M35 managed closeout, August 23, 2026)
-**Current Phase:** Phase 9D-B **COMPLETE / CLOSED**. Repository **M1–M35**. Managed **M1–M35**. M35 managed-certified. PR #80 catalogue admin UI merged. Phase 9D-C **NEXT / READY** (ADR-0032 / DEC-0090 / DEC-0092 / DEC-0093 preserved; public storefront not started). Phase 9C **MANAGED APPLY CERTIFIED** (DEC-0088). Production **OFF**.
-**Next Phase:** Phase 9D-C public storefront / public journey implementation. Production remains disabled.
+**Document Status:** Locked Roadmap (truth-synced through Phase 9D-C1 public storefront repository implementation, August 23, 2026)
+**Current Phase:** Phase 9D-C1 **REPOSITORY IMPLEMENTED** / **MANAGED APPLY PENDING**. Phase 9D-B **COMPLETE / CLOSED**. Managed still **M1–M35**. Phase 9D-C **not complete**. Production **OFF**.
+**Next Phase:** Phase 9D-C2 root 50/50 homepage + `/interiors` + public journey integration. Production remains disabled.
 **Previous Phase:** Phase 9C — Campaign Execution, Attribution & Conversion Feedback (**COMPLETE / MANAGED APPLY CERTIFIED** — DEC-0088; managed **M1–M34** at 9C closeout; production execution/spend **OFF**)
 
 ---

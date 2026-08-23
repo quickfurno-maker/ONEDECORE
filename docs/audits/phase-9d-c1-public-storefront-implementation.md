@@ -1,0 +1,67 @@
+# Phase 9D-C1 — Public Storefront Data Plane & Core `/shop`
+
+**Status:** `REPOSITORY_IMPLEMENTED` / `MANAGED_APPLY_PENDING`  
+**Date:** 2026-08-23  
+**Starting protected main:** `56cbf6a091f0c0e7f67adcc2c54a06d9395cafd8` (PR #81 merge)  
+**Branch:** `phase-9d-c1-public-storefront`
+
+Phase 9D-C is **not** complete. This gate is C1 only.
+
+## 1. Scope
+
+Secure anonymous public commerce read surface plus core shop routes. No homepage 50/50 rewrite. No `/interiors`. No cart, checkout, orders, or payments. Production **OFF**. Managed apply **not authorized** in this gate.
+
+## 2. Migration
+
+| Item | Value |
+| :--- | :--- |
+| File | `supabase/migrations/20260823140000_commerce_public_storefront_read_foundation.sql` |
+| Position | Next repository migration after M35 `20260822140000` |
+| Git blob | `1f06ab14c6c8dfe202d7a96e34645290fc5ea584` |
+| SHA-256 LF | `52D546931FEC6C914B2377A539901E18ED9E8320D899C53F86B82368A526C7FB` |
+| M35 | Unchanged |
+| Managed apply | **NOT APPLIED** |
+
+Public RPCs (SECURITY DEFINER, `search_path = ''`, EXECUTE to `anon` + `authenticated` only):
+
+- `list_public_commerce_categories()`
+- `search_public_commerce_products(...)`
+- `get_public_commerce_product(slug)`
+- `check_public_commerce_pincode(pincode)`
+- `list_public_commerce_sitemap()`
+
+No `GRANT SELECT` on commerce tables to `anon`. Draft/archived products, inactive categories, inactive variants, and archived media are excluded in SQL. Internal stock/reservation fields are not returned.
+
+## 3. Application
+
+Dedicated layer: `src/features/commerce/public/**`. Uses the public anon client (publishable key). Never service-role for browsing. RPC parse failures and RPC errors throw; they are not converted to fake empty lists at the query boundary.
+
+Routes:
+
+- `/shop`
+- `/shop/c/[slug]`
+- `/shop/product/[slug]`
+- `/shop/search`
+
+SEO: shop/category/PDP indexable when data is active/published. Search is `noindex,follow`. Sitemap adds `/shop` plus active category and published product URLs; a commerce read failure omits those dynamic URLs and does not invent entries.
+
+Wishlist and recently viewed are browser-local only (`localStorage`), capped, corrupt-tolerant. Rendered prices always come from the server.
+
+## 4. Tests
+
+- pgTAP: `supabase/tests/database/28_commerce_public_storefront_read_foundation_test.sql`
+- App: `npm run test:phase-9d-c1`
+
+## 5. Explicit omissions / C2
+
+- Root 50/50 homepage rewrite
+- `/interiors` and “Planning a complete home?” journey links
+- Homepage furniture categories / featured / pincode
+- Public journey/nav integration on the production homepage
+- Cart, checkout, orders, payments, inventory holds
+- `commerce_service_areas` / city schema
+- Customer accounts / wishlist database
+- Managed migration apply
+- Production activation
+
+Warranty/care/assembly product fields do not exist on M35 products. Only `commerce_shipping_settings.assembly_install_note` is shown on a successful pincode check.
