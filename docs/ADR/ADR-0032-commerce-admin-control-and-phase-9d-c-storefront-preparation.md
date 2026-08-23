@@ -16,6 +16,8 @@ This ADR **is** the owner lock for **admin-first catalogue operations** and the 
 
 Repository at freeze: main `06b6d2ea5f1cf4d886be497a8eed7ce8d1d52e58` (PR #73 merge). Repository **M1–M35**. Managed **M1–M34**. Production **OFF**.
 
+**Current status (2026-08-23):** those three gates are satisfied. 9D-B is **COMPLETE / CLOSED**. 9D-C is **READY / NEXT**. Canonical current truth: [00-project-truth](../00-project-truth.md) and [M35 closeout](../audits/phase-9d-b-m35-managed-apply-closeout.md). Architectural decisions in this ADR are unchanged.
+
 ---
 
 ## 1. Owner lock — admin-first commerce operations

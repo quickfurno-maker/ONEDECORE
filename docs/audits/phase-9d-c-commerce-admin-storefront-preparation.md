@@ -1,18 +1,18 @@
 # Phase 9D-C — Commerce Admin Control & Storefront Preparation Spec
 
-**Status:** `PREPARATION_FROZEN` (docs only; **not** 9D-C implementation; **not** 9D-B closeout)
-**Date:** 2026-08-20
+**Status:** `PREPARATION_FROZEN` (architecture unchanged) — Phase 9D-C **READY / NEXT**
+**Date:** 2026-08-20 (preparation freeze); current-status truth-sync 2026-08-23
 **Starting main (homepage lock):** `e1aa6ca5d412fb03d9e92835098236c8254b42c0` (PR #74 true merge)
 **Authority:** ADR-0028 / ADR-0030 / ADR-0032 / DEC-0079 / DEC-0083 / DEC-0089 / DEC-0090 / DEC-0091 / DEC-0092 / DEC-0093 / OD9D-1–OD9D-12
-**Scope:** docs only. No M36. No `commerce_service_areas`. No `/shop`. No `/interiors`. No homepage runtime. No checkout. No payment. No managed write. No deploy.
+**Scope of this file:** frozen preparation. This closeout does **not** implement `/shop`, `/interiors`, homepage runtime, checkout, payments, M36, or `commerce_service_areas`.
 
 ---
 
 ## 1. Sequence (locked)
 
-`9D-A freeze merged → 9D-B repository merged (PR #73 / main 06b6d2e) → M35 managed apply **pending** → 9D-B docs closeout **not started** → **9D-C BLOCKED** → 9D-D+`
+`9D-A complete → 9D-B repository complete (PR #73) → M35 managed certified → 9D-B closeout complete → 9D-C READY / NEXT → 9D-D+`
 
-9D-C code must **not** start until M35 is recovery-qualified managed-certified **and** 9D-B closeout is merged.
+9D-C may now start. Remaining 9D-C work is primarily the public storefront / public journey. Cart, checkout, orders, and payments remain **9D-D+**.
 
 ---
 
@@ -21,7 +21,7 @@
 | Area | State |
 | :--- | :--- |
 | Repository migrations | **M1–M35** |
-| Managed Supabase `lpurlfmpvriyvpkujvyl` | **M1–M34**; M35 **not** applied |
+| Managed Supabase `lpurlfmpvriyvpkujvyl` | **M1–M35**; latest `20260822140000` / `commerce_catalogue_inventory_foundation` |
 | Production | **OFF** |
 | Admin routes | `/admin/commerce`, `/categories`, `/products`, `/products/[id]`, `/settings` |
 | Public `/shop` | **absent** |
@@ -29,10 +29,9 @@
 | Service areas table | **absent** |
 | GST-inclusive display | CHECK-locked true; settings UI read-only |
 | Category depth | Root + one child; reparenting that would create grandchildren denied |
+| PR #80 | MERGED (`565fa12d10bc98163b30d1832a4aa06367913242`; exact head `0bd24c62c2711319a8daa2cc82352513f9bbe7fb`) |
 
-### 9D-B admin vs owner target (gap, not a reopen)
-
-Present in M35 + current admin (foundation; UX polish deferred to 9D-C entry):
+### Foundation still present (M35 + admin)
 
 - Category CRUD, SEO, overrides, archive, parent = root only
 - Product general fields including featured, SEO, tax, HSN, shipping overrides
@@ -43,15 +42,38 @@ Present in M35 + current admin (foundation; UX polish deferred to 9D-C entry):
 - Tax rates + shipping + pincodes on settings
 - Storefront-disabled / Phase 10 banner
 
-Not yet (allowed as **9D-C / post-closeout admin polish**, not this PR):
+### Delivered by PR #80 (do not treat as remaining 9D-C admin polish)
 
-- Dashboard cards as specified (featured SKU counts, cities, media warnings, quick actions)
-- Category tree presentation, child/product counts
-- Product list filters/columns as specified
-- Tabbed product detail / dedicated inventory list page
-- `/admin/commerce/service-areas`
-- Homepage 70/30 furniture from admin data
-- Public `/shop*`
+- Commerce overview / command centre
+- Products UX
+- Category tree UX
+- Settings / pincode UX
+- Permission-gated actions
+- Category-first empty state
+- No orders / payments / inventory nav
+- No public `/shop`
+
+### Remaining 9D-C (public journey + genuinely unresolved items)
+
+9D-C owns:
+
+- public `/shop` browse
+- category / storefront UX
+- product detail
+- search / filter / sort as frozen for MVP
+- public SEO
+- admin-driven categories / featured products on the public site
+- root balanced 50/50 homepage commerce integration
+- `/interiors` public journey
+- pincode / serviceability display / check only where existing authority permits
+- local wishlist only if still required by the locked MVP and cheap enough
+
+Still deferred (not 9D-C ownership unless a later gate says otherwise):
+
+- `/admin/commerce/service-areas` and any post-M35 service-area schema (timestamp unreserved; **not** M36 from this closeout)
+- dedicated inventory list page / further admin inventory nav (not required to start storefront)
+- tabbed product detail if still desired after PR #80
+- committed cart, checkout, order creation, payments (9D-D+)
 
 ---
 
@@ -76,27 +98,25 @@ Normative text: [ADR-0032](../ADR/ADR-0032-commerce-admin-control-and-phase-9d-c
 | Page builder | Forbidden |
 | Cart in 9D-C | No functional cart; 9D-D owns cart/checkout |
 | Production | Phase 10 only; not an admin toggle |
-| 9D-C code | Blocked until M35 cert + 9D-B closeout merge |
 
 ---
 
 ## 4. Allowed now vs forbidden now
 
-**Allowed:** business catalogue preparation, image preparation, this admin/UX spec, SEO copy in existing fields, homepage **design** preparation (no runtime).
+**Allowed for 9D-C implementation (separate gate):** public `/shop` and `/interiors` journey, homepage commerce integration per DEC-0093, storefront SEO, and genuinely remaining admin/storefront gaps listed above.
 
-**Forbidden now:** M36 or any post-M35 SQL, service-area DB, `/shop` or `/interiors` implementation, homepage runtime rewrite, checkout, payment, deployment, 9D-B closeout impersonation, M35 managed apply.
+**Forbidden in this closeout and still later-gated:** M36 or any post-M35 SQL, service-area DB, checkout, payment provider runtime, deployment, production activation.
 
 ---
 
 ## 5. Explicit not done
 
-- 9D-C **NOT STARTED**
+- 9D-C public storefront / public journey **NOT STARTED**
 - 9D-D / 9D-E / 9D-F / Phase 10 **NOT STARTED**
-- M35 **NOT** managed-applied
-- 9D-B closeout **NOT STARTED**
-- No `/shop`, `/interiors`, cart, checkout, commerce orders, payments, SDKs, webhooks
+- No public `/shop`, `/interiors` runtime, cart, checkout, commerce orders, payments, SDKs, webhooks
 - No CRM lead or MARKETING consent from commerce
 - No project conversion from furniture
+- No M36 allocated by 9D-B closeout
 - Protected stashes untouched
 
 ---

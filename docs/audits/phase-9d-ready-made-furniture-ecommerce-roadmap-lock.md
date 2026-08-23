@@ -1,6 +1,7 @@
 # Phase 9D — Ready-Made Furniture E-commerce (Roadmap Lock)
 
-**Status:** ROADMAP LOCKED — **implementation NOT STARTED**
+**Status:** ROADMAP LOCKED — August 17, 2026 historical entry (implementation was **NOT STARTED** at lock date)
+**Current status (2026-08-23):** 9D-A frozen; 9D-B **COMPLETE / CLOSED**; 9D-C **NEXT / READY**. Canonical current truth: [00-project-truth](../00-project-truth.md) and [M35 closeout](phase-9d-b-m35-managed-apply-closeout.md). Do not treat the August 17 entry-state below as present state.
 **Date:** August 17, 2026
 **Governance:** docs only; no schema, storage, public `/shop` runtime, admin commerce routes, or payment provider wiring
 **Architecture:** ADR-0028 / DEC-0079 / OD9D-1–OD9D-12

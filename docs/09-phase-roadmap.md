@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced through Phase 9D-C balanced mixed homepage lock, August 20, 2026)
-**Current Phase:** Phase 9D-B **REPOSITORY MERGED** (DEC-0089; PR #73; repo M1–M35; managed M1–M34; M35 not applied; closeout not started). Phase 9D-C **PREPARATION FROZEN** (ADR-0032 / DEC-0090) + **three-layer public journey** (DEC-0092) + **balanced mixed homepage locked** (DEC-0093; code not started). Phase 9C **MANAGED APPLY CERTIFIED** (DEC-0088).
-**Next Phase:** Recovery-qualified managed apply of M35, then 9D-B docs closeout merge, then 9D-C. Production remains disabled.
+**Document Status:** Locked Roadmap (truth-synced through Phase 9D-B M35 managed closeout, August 23, 2026)
+**Current Phase:** Phase 9D-B **COMPLETE / CLOSED**. Repository **M1–M35**. Managed **M1–M35**. M35 managed-certified. PR #80 catalogue admin UI merged. Phase 9D-C **NEXT / READY** (ADR-0032 / DEC-0090 / DEC-0092 / DEC-0093 preserved; public storefront not started). Phase 9C **MANAGED APPLY CERTIFIED** (DEC-0088). Production **OFF**.
+**Next Phase:** Phase 9D-C public storefront / public journey implementation. Production remains disabled.
 **Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; production **not** activated)
 
 ---
@@ -89,6 +89,16 @@ Phase 8C: Project Execution Workspace ──────────────
   • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; PR #61 true merge `8f4f3ecf…`; repository/managed M1–M30; pending NONE; production not activated
 Phase 9A: Campaign Consent, Audience & Approval Foundation ──────── COMPLETE
   • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077–DEC-0080; architecture PR #62 merged `caff9d0…`; M31 managed-applied immutable; PR #63 true merge `26e6346…`; production not activated
+Phase 9B: Landing Page Lab & Experimentation ─────────────────────── M32 MANAGED APPLIED
+  • DEC-0084; production Landing Lab OFF
+Phase 9C: Campaign Execution, Attribution & Conversion Feedback ──── COMPLETE
+  • DEC-0088; managed M1–M34 at 9C closeout; production spend OFF
+Phase 9D-A: E-commerce Architecture Freeze ────────────────────────── COMPLETE
+Phase 9D-B: Catalogue / Inventory Foundation ──────────────────────── COMPLETE / CLOSED
+  • Repository + managed M1–M35; M35 managed-certified
+  • Catalogue / inventory / RBAC / storage foundation
+  • Admin catalogue operations UI merged (PR #80)
+  • Production still OFF
 ```
 
 \*Phase 3 scope delivered to the extent proved by merged premium homepage (R4/R5), legal pages, and design tokens — not a separate numbered migration phase.
@@ -170,11 +180,14 @@ Phase 9C ──► Campaign Execution, Attribution & Conversion Feedback [ARCHIT
     │         • Server-side conversion feedback; CommercialConversion = accepted quotation + Closed-Won
     │         • Provider spend + CRM funnel metrics; no double counting; production still Phase 10
     ▼
-Phase 9D ──► Ready-Made Furniture E-commerce [9D-A FROZEN; 9D-B REPO IMPLEMENTED — /shop NOT STARTED]
-    │         • Category-based /shop (no Shop by Room / packages / marketplace / ERP)
-    │         • Guest checkout; simple variants; COD + online (provider chosen in 9D-A)
-    │         • Supabase catalogue/inventory/order/payment-state truth; immutable snapshots
-    │         • Existing /admin/commerce shell; WhatsApp support not order truth
+Phase 9D ──► Ready-Made Furniture E-commerce
+    │         • 9D-A architecture/freeze — COMPLETE
+    │         • 9D-B catalogue/inventory foundation — COMPLETE / CLOSED
+    │         •   M35 repo + managed; catalogue/inventory/RBAC/storage foundation
+    │         •   admin catalogue operations UI merged; production still OFF
+    │         • 9D-C — NEXT: public storefront / public journey; no checkout/order/payment ownership
+    │         • 9D-D / 9D-E / 9D-F — future
+    │         • Phase 10 remains the production activation gate
     ▼
 Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 ```
@@ -294,14 +307,14 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Objective:** Campaign execution, attribution comparison, and server-side conversion feedback.
 - **Architecture freeze:** [ADR-0031](ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversion-feedback.md), [9C-A audit](audits/phase-9c-campaign-execution-attribution-feedback-architecture-freeze.md), DEC-0085, OD9C-1–OD9C-18.
 - **Subphases:** 9C-A freeze **MERGED**; 9C-B mock execution foundation **MERGED** (DEC-0086); 9C-C Meta+Google adapters + feedback + metrics **MERGED** (DEC-0087 / PR #71); managed apply **CERTIFIED** (DEC-0088).
-- **Status:** **9C MANAGED APPLY CERTIFIED** — production spend **OFF**. Managed **M1–M34**. 9D-B remains blocked until closeout merge.
+- **Status:** **9C MANAGED APPLY CERTIFIED** — production spend **OFF**. Managed history at 9C closeout was **M1–M34**. 9D-B is now **COMPLETE / CLOSED**.
 
 ### Phase 9D (Ready-Made Furniture E-commerce)
 - **Objective:** Premium mobile-first category-based ready-made furniture store under `/shop`.
 - **Roadmap lock:** [Phase 9D lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md), [ADR-0028](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md), DEC-0079, OD9D-1–OD9D-12.
 - **Architecture freeze:** [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md), [9D-A audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md), DEC-0083.
-- **Placement:** after 9C, before Phase 10. **9D-C blocked** until M35 is recovery-qualified managed-applied **and** 9D-B docs closeout is merged.
-- **Status:** **9D-A ARCHITECTURE FROZEN**. **9D-B REPOSITORY MERGED** (DEC-0089 / M35 / PR #73). **9D-C PREPARATION FROZEN** (ADR-0032 / DEC-0090). **Three-layer public journey locked** (ADR-0032 §9.2 / DEC-0092). **Balanced mixed homepage locked** (ADR-0032 §9.3 / DEC-0093). No `/shop` or `/interiors` runtime, checkout, or payment provider. Managed still **M1–M34**.
+- **Placement:** after 9C, before Phase 10. Architecture lock is unchanged.
+- **Status:** **9D-A COMPLETE**. **9D-B COMPLETE / CLOSED** (DEC-0089 / M35 repo + managed / PR #73 + PR #80). **9D-C NEXT / READY** — public storefront / public journey; no functional checkout/order/payment ownership. **9D-D / 9D-E / 9D-F** remain future. Preparation freeze **ADR-0032 / DEC-0090 / DEC-0092 / DEC-0093** preserved. Production **OFF**. Phase 10 remains the production activation gate. Closeout: [M35 managed apply](audits/phase-9d-b-m35-managed-apply-closeout.md).
 
 ### Phase 10
 - **Objective:** Security hardening, full E2E, performance budgets, Hostinger VPS deployment.
@@ -351,6 +364,7 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - [Unified homepage design](design/phase-9d-c-unified-homepage.md)
 - [Phase 9D-A entry audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)
 - [Phase 9D-B catalogue/inventory foundation](audits/phase-9d-b-commerce-catalogue-inventory-foundation.md)
+- [Phase 9D-B M35 managed apply closeout](audits/phase-9d-b-m35-managed-apply-closeout.md)
 - [Phase 9B M32 managed apply closeout](audits/phase-9b-m32-managed-apply-closeout.md)
 
 <!-- PHASE_9B_ARCHITECTURE_FREEZE_START -->
@@ -374,19 +388,19 @@ Physical checkpoint **1412215555** (`2026-08-18T19:54:24.861Z`). CLI `npx supaba
 <!-- PHASE_9D_A_ARCHITECTURE_FREEZE_START -->
 ## Phase 9D-A Architecture Freeze Status
 
-**Status:** `ARCHITECTURE_FROZEN (DEC-0083)` + `9D-B REPOSITORY IMPLEMENTED (DEC-0089)` — public `/shop` **NOT STARTED**
+**Status:** `ARCHITECTURE_FROZEN (DEC-0083)` + `9D-B COMPLETE / CLOSED` — public `/shop` **NOT STARTED**
 
 Authority: **ADR-0028 / ADR-0030 / DEC-0079 / DEC-0083 / DEC-0089 / OD9D-1–OD9D-12**.
 
-M35 is merged in the repository (PR #73). Managed remains **M1–M34**. 9D-C code is blocked until recovery-qualified managed apply of M35 **and** 9D-B docs closeout merge. Admin/storefront preparation: [ADR-0032](ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md) / DEC-0090.
+M35 is in the repository (PR #73) and managed-certified (2026-08-23). 9D-C is **READY / NEXT** (public storefront). Admin/storefront preparation: [ADR-0032](ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md) / DEC-0090. Closeout: [M35 managed apply](audits/phase-9d-b-m35-managed-apply-closeout.md).
 <!-- PHASE_9D_A_ARCHITECTURE_FREEZE_END -->
 
 <!-- PHASE_9D_C_PREPARATION_FREEZE_START -->
 ## Phase 9D-C Admin / Storefront Preparation Status
 
-**Status:** `PREPARATION_FROZEN (DEC-0090)` + `HOMEPAGE_DESIGN_LOCKED (DEC-0091)` + `THREE_LAYER_PUBLIC_JOURNEY_LOCKED (DEC-0092)` + `BALANCED_MIXED_HOMEPAGE_LOCKED (DEC-0093)` — 9D-C **code NOT STARTED**
+**Status:** `PREPARATION_FROZEN (DEC-0090)` + `HOMEPAGE_DESIGN_LOCKED (DEC-0091)` + `THREE_LAYER_PUBLIC_JOURNEY_LOCKED (DEC-0092)` + `BALANCED_MIXED_HOMEPAGE_LOCKED (DEC-0093)` — 9D-C **READY / NEXT** (public storefront / public journey **NOT STARTED**)
 
-Authority: **ADR-0032 / DEC-0090 / DEC-0091 / DEC-0092 / DEC-0093**. No M36. No `/shop`. No `/interiors`. No homepage runtime. No service-area table. Production **OFF**.
+Authority: **ADR-0032 / DEC-0090 / DEC-0091 / DEC-0092 / DEC-0093**. No M36 allocated by 9D-B closeout. No public `/shop`. No `/interiors` runtime. No checkout/payments. No service-area table. Production **OFF**.
 <!-- PHASE_9D_C_PREPARATION_FREEZE_END -->
 
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->
@@ -396,5 +410,7 @@ Authority: **ADR-0032 / DEC-0090 / DEC-0091 / DEC-0092 / DEC-0093**. No M36. No 
 
 Authority: **ADR-0031 / DEC-0085 / DEC-0086 / OD9C-1–OD9C-18 / OD9C-A–C**.
 
-Managed **M1–M34** (DEC-0088). No Meta/Google live spend. Production execution remains Phase 10 gated. 9D-B repository implementation is DEC-0089 (M35 not managed-applied).
+Managed **M1–M34** at 9C certification (DEC-0088). No Meta/Google live spend. Production execution remains Phase 10 gated.
+
+**Current status (2026-08-23):** 9D-B is **COMPLETE / CLOSED**. Managed is now **M1–M35**. See [M35 closeout](audits/phase-9d-b-m35-managed-apply-closeout.md).
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->
