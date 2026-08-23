@@ -88,22 +88,28 @@
   position: fixed;
   top: 0;
   right: 0;
+  box-sizing: border-box;
   width: min(22rem, 92vw);
+  max-width: 100vw;
   height: 100dvh;
   padding: 1.25rem;
   background: var(--od-bg-raised);
-  transform: translateX(105%);
   visibility: hidden;
+  opacity: 0;
   pointer-events: none;
-  transition: transform 180ms ease, visibility 0s linear 180ms;
+  transition:
+    opacity 180ms ease,
+    visibility 0s linear 180ms;
   z-index: 60;
 }
 
 .od-site-header__drawer[data-open] {
-  transform: translateX(0);
   visibility: visible;
+  opacity: 1;
   pointer-events: auto;
-  transition: transform 180ms ease, visibility 0s;
+  transition:
+    opacity 180ms ease,
+    visibility 0s;
 }
 
 .od-site-header__drawerNav {

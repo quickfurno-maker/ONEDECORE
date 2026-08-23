@@ -133,10 +133,18 @@ describe("Phase 9D-C2 nav seo and shop", () => {
       css.indexOf(".od-site-header__drawer[data-open]"),
       css.indexOf(".od-site-header__drawerNav")
     );
+    assert.match(closed, /box-sizing:\s*border-box/);
+    assert.match(closed, /max-width:\s*100vw/);
     assert.match(closed, /visibility:\s*hidden/);
+    assert.match(closed, /opacity:\s*0/);
     assert.match(closed, /pointer-events:\s*none/);
+    assert.doesNotMatch(closed, /translateX\(\s*105%\s*\)/);
+    assert.doesNotMatch(closed, /translateX\(\s*[1-9]/);
+    assert.doesNotMatch(closed, /translate3d\(\s*[1-9]/);
     assert.match(opened, /visibility:\s*visible/);
+    assert.match(opened, /opacity:\s*1/);
     assert.match(opened, /pointer-events:\s*auto/);
+    assert.doesNotMatch(opened, /translateX\(/);
     assert.match(header, /Escape/);
     assert.match(header, /toggleRef\.current\?\.focus/);
     assert.match(header, /inert = true/);
