@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 9D-C1 public storefront read foundation pgTAP
 
 begin;
-select plan(33);
+select plan(45);
 
 select has_function('public', 'list_public_commerce_categories', 'list_public_commerce_categories exists');
 select has_function('public', 'search_public_commerce_products', 'search_public_commerce_products exists');
@@ -270,6 +270,170 @@ select ok(
     where e->>'slug' = 'hidden-cat'
   ),
   'sitemap includes only active categories and published products'
+);
+
+reset role;
+
+insert into public.commerce_categories (
+  id, category_reference, name, slug, parent_category_id, short_description, status, created_by
+) values
+  ('ee111111-1111-4111-8111-111111111111', 'OD-CC-2026-900101', 'Hidden Sofas', 'hidden-sofas', null, 'Root later archived', 'active', '9c111111-1111-4111-8111-111111111111'),
+  ('ee111111-1111-4111-8111-111111111112', 'OD-CC-2026-900102', 'Sectional Hidden', 'sectional-hidden', 'ee111111-1111-4111-8111-111111111111', 'Child stays active', 'active', '9c111111-1111-4111-8111-111111111111');
+
+insert into public.commerce_products (
+  id, product_reference, category_id, name, slug, short_description, full_description, status, featured, created_by, published_at
+) values
+  ('ee222222-2222-4222-8222-222222222221', 'OD-P-2026-900101', 'ee111111-1111-4111-8111-111111111112', 'Hidden Sectional', 'hidden-sectional', 'Child of later-archived root', 'Copy', 'published', false, '9c111111-1111-4111-8111-111111111111', now()),
+  ('ff222222-2222-4222-8222-222222222221', 'OD-P-2026-900201', 'aa111111-1111-4111-8111-111111111111', 'Mixed Availability Chair', 'mixed-avail-chair', 'Two modes', 'Copy', 'published', false, '9c111111-1111-4111-8111-111111111111', now()),
+  ('de222222-2222-4222-8222-222222222221', 'OD-P-2026-900301', 'aa111111-1111-4111-8111-111111111111', 'Media Leak Table', 'media-leak-table', 'Archived variant media', 'Copy', 'published', false, '9c111111-1111-4111-8111-111111111111', now());
+
+insert into public.commerce_product_variants (
+  id, product_id, sku, option_values, display_name, selling_price_paise, compare_at_price_paise, status, availability_mode, sort_order, created_by
+) values
+  ('ee333333-3333-4333-8333-333333333331', 'ee222222-2222-4222-8222-222222222221', 'hidden-sec', '{}'::jsonb, 'Default', 1110000, null, 'active', 'ready_stock', 0, '9c111111-1111-4111-8111-111111111111'),
+  ('ff333333-3333-4333-8333-333333333331', 'ff222222-2222-4222-8222-222222222221', 'mixed-ready', '{"finish":"oak"}'::jsonb, 'Ready', 1500000, null, 'active', 'ready_stock', 0, '9c111111-1111-4111-8111-111111111111'),
+  ('ff333333-3333-4333-8333-333333333332', 'ff222222-2222-4222-8222-222222222221', 'mixed-mto', '{"finish":"walnut"}'::jsonb, 'MTO', 2500000, null, 'active', 'made_to_order', 1, '9c111111-1111-4111-8111-111111111111'),
+  ('de333333-3333-4333-8333-333333333331', 'de222222-2222-4222-8222-222222222221', 'media-active', '{"finish":"live"}'::jsonb, 'Live', 1800000, null, 'active', 'ready_stock', 0, '9c111111-1111-4111-8111-111111111111'),
+  ('de333333-3333-4333-8333-333333333332', 'de222222-2222-4222-8222-222222222221', 'media-archived', '{"finish":"gone"}'::jsonb, 'Gone', 1900000, null, 'archived', 'ready_stock', 1, '9c111111-1111-4111-8111-111111111111');
+
+insert into public.commerce_inventory (variant_id, stock_on_hand, reserved_qty, updated_by) values
+  ('ee333333-3333-4333-8333-333333333331', 2, 0, '9c111111-1111-4111-8111-111111111111'),
+  ('ff333333-3333-4333-8333-333333333331', 0, 0, '9c111111-1111-4111-8111-111111111111'),
+  ('ff333333-3333-4333-8333-333333333332', 0, 0, '9c111111-1111-4111-8111-111111111111'),
+  ('de333333-3333-4333-8333-333333333331', 3, 0, '9c111111-1111-4111-8111-111111111111'),
+  ('de333333-3333-4333-8333-333333333332', 9, 0, '9c111111-1111-4111-8111-111111111111');
+
+insert into public.commerce_product_media (
+  id, product_id, variant_id, original_path, public_path, alt_text, is_primary, status, sort_order, created_by
+) values
+  ('de444444-4444-4444-8444-444444444441', 'de222222-2222-4222-8222-222222222221', 'de333333-3333-4333-8333-333333333332', 'de222222-2222-4222-8222-222222222221/de444444-4444-4444-8444-444444444441/original', 'de222222-2222-4222-8222-222222222221/de444444-4444-4444-8444-444444444441/derivative.webp', 'Archived variant media', true, 'active', 0, '9c111111-1111-4111-8111-111111111111'),
+  ('de444444-4444-4444-8444-444444444442', 'de222222-2222-4222-8222-222222222221', null, 'de222222-2222-4222-8222-222222222221/de444444-4444-4444-8444-444444444442/original', 'de222222-2222-4222-8222-222222222221/de444444-4444-4444-8444-444444444442/derivative.webp', 'Product-wide media', false, 'active', 1, '9c111111-1111-4111-8111-111111111111');
+
+insert into public.commerce_related_products (product_id, related_product_id, sort_order) values
+  ('bb111111-1111-4111-8111-111111111111', 'ee222222-2222-4222-8222-222222222221', 2);
+
+update public.commerce_categories
+set status = 'archived'
+where id = 'ee111111-1111-4111-8111-111111111111';
+
+set local role anon;
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+
+select ok(
+  not exists (
+    select 1 from jsonb_array_elements(public.list_public_commerce_categories()) e
+    where e->>'slug' in ('hidden-sofas', 'sectional-hidden')
+  ),
+  'list excludes archived root and its still-active child'
+);
+
+select ok(
+  not exists (
+    select 1
+    from jsonb_array_elements(
+      public.search_public_commerce_products(null,null,'featured',null,null,null,false,48,0) -> 'items'
+    ) e
+    where e->>'slug' = 'hidden-sectional'
+  ),
+  'general search excludes product under active child of archived root'
+);
+
+select is(
+  (public.search_public_commerce_products('sectional-hidden',null,'featured',null,null,null,false,12,0)->>'total')::integer,
+  0,
+  'direct child-slug search is empty when parent root is archived'
+);
+
+select is(
+  public.get_public_commerce_product('hidden-sectional'),
+  null,
+  'PDP slug under active child of archived root is not public'
+);
+
+select ok(
+  not exists (
+    select 1 from jsonb_array_elements(public.list_public_commerce_sitemap()->'categories') e
+    where e->>'slug' in ('hidden-sofas', 'sectional-hidden')
+  ),
+  'sitemap excludes archived root and its active child'
+);
+
+select ok(
+  not exists (
+    select 1 from jsonb_array_elements(public.list_public_commerce_sitemap()->'products') e
+    where e->>'slug' = 'hidden-sectional'
+  ),
+  'sitemap excludes product under active child of archived root'
+);
+
+select ok(
+  not exists (
+    select 1
+    from jsonb_array_elements(public.get_public_commerce_product('published-bed')->'related') e
+    where e->>'slug' = 'hidden-sectional'
+  )
+  and (public.get_public_commerce_product('published-bed')->'related'->0->>'slug') = 'king-published',
+  'related output excludes product hidden by inactive parent hierarchy'
+);
+
+select ok(
+  exists (
+    select 1
+    from jsonb_array_elements(
+      public.search_public_commerce_products(null,null,'featured',null,null,'ready_stock',false,48,0)->'items'
+    ) e
+    where e->>'slug' = 'mixed-avail-chair'
+      and (e->>'starting_price_paise')::bigint = 1500000
+      and (e->>'variant_count')::integer = 1
+      and e->>'availability_mode' = 'ready_stock'
+      and (e->>'is_available')::boolean is false
+  ),
+  'ready_stock filter uses only matching variant price, count, mode, and availability'
+);
+
+select ok(
+  exists (
+    select 1
+    from jsonb_array_elements(
+      public.search_public_commerce_products(null,null,'featured',null,null,'made_to_order',false,48,0)->'items'
+    ) e
+    where e->>'slug' = 'mixed-avail-chair'
+      and (e->>'starting_price_paise')::bigint = 2500000
+      and (e->>'variant_count')::integer = 1
+      and e->>'availability_mode' = 'made_to_order'
+      and (e->>'is_available')::boolean is true
+  ),
+  'made_to_order filter uses only matching variant price, count, mode, and availability'
+);
+
+select ok(
+  not exists (
+    select 1
+    from jsonb_array_elements(
+      public.search_public_commerce_products(null,null,'featured',null,null,'made_to_order',false,48,0)->'items'
+    ) e
+    where e->>'slug' = 'published-bed'
+  ),
+  'product with no variant in requested availability mode is excluded'
+);
+
+select ok(
+  (select jsonb_array_length(public.get_public_commerce_product('media-leak-table')->'media') = 1)
+  and (public.get_public_commerce_product('media-leak-table')->'media'->0->>'alt_text') = 'Product-wide media'
+  and (public.get_public_commerce_product('media-leak-table')->'media'->0->>'public_path')
+    = 'de222222-2222-4222-8222-222222222221/de444444-4444-4444-8444-444444444442/derivative.webp',
+  'public detail excludes active media attached to an archived variant'
+);
+
+select ok(
+  (
+    select e->>'primary_image_path'
+    from jsonb_array_elements(
+      public.search_public_commerce_products(null,'media-leak-table','featured',null,null,null,false,12,0)->'items'
+    ) e
+    where e->>'slug' = 'media-leak-table'
+  ) is null,
+  'archived-variant media cannot be the public card primary image'
 );
 
 reset role;

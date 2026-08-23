@@ -28,6 +28,54 @@ as $$
   end;
 $$;
 
+create or replace function private.commerce_public_category_visible(p_category_id uuid)
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.commerce_categories c
+    left join public.commerce_categories p on p.id = c.parent_category_id
+    where c.id = p_category_id
+      and c.status = 'active'
+      and (
+        c.parent_category_id is null
+        or (
+          p.id is not null
+          and p.status = 'active'
+          and p.parent_category_id is null
+        )
+      )
+  );
+$$;
+
+create or replace function private.commerce_public_media_visible(
+  p_product_id uuid,
+  p_variant_id uuid,
+  p_status text,
+  p_public_path text
+)
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  select p_status = 'active'
+    and coalesce(p_public_path, '') <> ''
+    and (
+      p_variant_id is null
+      or exists (
+        select 1
+        from public.commerce_product_variants mv
+        where mv.id = p_variant_id
+          and mv.product_id = p_product_id
+          and mv.status = 'active'
+      )
+    );
+$$;
+
 create or replace function public.list_public_commerce_categories()
 returns jsonb
 language plpgsql
@@ -68,9 +116,8 @@ begin
     from public.commerce_categories c
     left join public.commerce_categories p
       on p.id = c.parent_category_id
-     and p.status = 'active'
-    where c.status = 'active'
-      and (c.parent_category_id is null or p.id is not null)
+     and private.commerce_public_category_visible(p.id)
+    where private.commerce_public_category_visible(c.id)
   ) q;
   return result;
 end;
@@ -145,7 +192,7 @@ begin
     from (
       select c.id
       from public.commerce_categories c
-      where c.status = 'active'
+      where private.commerce_public_category_visible(c.id)
         and (
           c.slug = p_category_slug
           or (
@@ -154,9 +201,8 @@ begin
               select 1
               from public.commerce_categories r
               where r.id = c.parent_category_id
-                and r.status = 'active'
                 and r.slug = p_category_slug
-                and r.parent_category_id is null
+                and private.commerce_public_category_visible(r.id)
             )
           )
         )
@@ -195,13 +241,17 @@ begin
       (
         select count(*)::integer
         from public.commerce_product_variants v
-        where v.product_id = p.id and v.status = 'active'
+        where v.product_id = p.id
+          and v.status = 'active'
+          and (p_availability_mode is null or v.availability_mode = p_availability_mode)
       ) as variant_count,
       (
         select bool_or(private.commerce_public_variant_available(v.availability_mode, i.available_qty))
         from public.commerce_product_variants v
         left join public.commerce_inventory i on i.variant_id = v.id
-        where v.product_id = p.id and v.status = 'active'
+        where v.product_id = p.id
+          and v.status = 'active'
+          and (p_availability_mode is null or v.availability_mode = p_availability_mode)
       ) as is_available,
       (
         select case
@@ -210,24 +260,32 @@ begin
           else 'mixed'
         end
         from public.commerce_product_variants v
-        where v.product_id = p.id and v.status = 'active'
+        where v.product_id = p.id
+          and v.status = 'active'
+          and (p_availability_mode is null or v.availability_mode = p_availability_mode)
       ) as availability_mode,
       (
         select m.public_path
         from public.commerce_product_media m
-        where m.product_id = p.id and m.status = 'active' and m.is_primary and m.public_path <> ''
+        where m.product_id = p.id
+          and m.is_primary
+          and private.commerce_public_media_visible(m.product_id, m.variant_id, m.status, m.public_path)
         order by m.sort_order
         limit 1
       ) as primary_image_path,
       (
         select m.alt_text
         from public.commerce_product_media m
-        where m.product_id = p.id and m.status = 'active' and m.is_primary and m.public_path <> ''
+        where m.product_id = p.id
+          and m.is_primary
+          and private.commerce_public_media_visible(m.product_id, m.variant_id, m.status, m.public_path)
         order by m.sort_order
         limit 1
       ) as primary_image_alt
     from public.commerce_products p
-    join public.commerce_categories c on c.id = p.category_id and c.status = 'active'
+    join public.commerce_categories c
+      on c.id = p.category_id
+     and private.commerce_public_category_visible(c.id)
     where p.status = 'published'
       and (v_category_ids is null or p.category_id = any (v_category_ids))
       and (coalesce(p_featured_only, false) is false or p.featured)
@@ -364,7 +422,8 @@ begin
         order by m.is_primary desc, m.sort_order, m.created_at
       )
       from public.commerce_product_media m
-      where m.product_id = p.id and m.status = 'active' and m.public_path <> ''
+      where m.product_id = p.id
+        and private.commerce_public_media_visible(m.product_id, m.variant_id, m.status, m.public_path)
     ), '[]'::jsonb),
     'specifications', coalesce((
       select jsonb_agg(
@@ -403,13 +462,17 @@ begin
           'primary_image_path', (
             select m.public_path
             from public.commerce_product_media m
-            where m.product_id = rp.id and m.status = 'active' and m.is_primary and m.public_path <> ''
+            where m.product_id = rp.id
+              and m.is_primary
+              and private.commerce_public_media_visible(m.product_id, m.variant_id, m.status, m.public_path)
             limit 1
           ),
           'primary_image_alt', (
             select m.alt_text
             from public.commerce_product_media m
-            where m.product_id = rp.id and m.status = 'active' and m.is_primary and m.public_path <> ''
+            where m.product_id = rp.id
+              and m.is_primary
+              and private.commerce_public_media_visible(m.product_id, m.variant_id, m.status, m.public_path)
             limit 1
           ),
           'variant_count', (
@@ -440,13 +503,17 @@ begin
       join public.commerce_categories rc on rc.id = rp.category_id
       where rel.product_id = p.id
         and rp.status = 'published'
-        and rc.status = 'active'
+        and private.commerce_public_category_visible(rc.id)
     ), '[]'::jsonb)
   )
   into result
   from public.commerce_products p
-  join public.commerce_categories c on c.id = p.category_id and c.status = 'active'
-  left join public.commerce_categories parent on parent.id = c.parent_category_id and parent.status = 'active'
+  join public.commerce_categories c
+    on c.id = p.category_id
+   and private.commerce_public_category_visible(c.id)
+  left join public.commerce_categories parent
+    on parent.id = c.parent_category_id
+   and private.commerce_public_category_visible(parent.id)
   where p.slug = v_slug
     and p.status = 'published';
 
@@ -516,14 +583,7 @@ begin
         order by c.slug
       )
       from public.commerce_categories c
-      where c.status = 'active'
-        and (
-          c.parent_category_id is null
-          or exists (
-            select 1 from public.commerce_categories p
-            where p.id = c.parent_category_id and p.status = 'active'
-          )
-        )
+      where private.commerce_public_category_visible(c.id)
     ), '[]'::jsonb),
     'products', coalesce((
       select jsonb_agg(
@@ -531,7 +591,9 @@ begin
         order by p.slug
       )
       from public.commerce_products p
-      join public.commerce_categories c on c.id = p.category_id and c.status = 'active'
+      join public.commerce_categories c
+        on c.id = p.category_id
+       and private.commerce_public_category_visible(c.id)
       where p.status = 'published'
     ), '[]'::jsonb)
   );
@@ -550,6 +612,8 @@ begin
       and p.proname in (
         'commerce_public_like_pattern',
         'commerce_public_variant_available',
+        'commerce_public_category_visible',
+        'commerce_public_media_visible',
         'list_public_commerce_categories',
         'search_public_commerce_products',
         'get_public_commerce_product',

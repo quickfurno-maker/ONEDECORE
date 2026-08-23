@@ -17,10 +17,18 @@ Secure anonymous public commerce read surface plus core shop routes. No homepage
 | :--- | :--- |
 | File | `supabase/migrations/20260823140000_commerce_public_storefront_read_foundation.sql` |
 | Position | Next repository migration after M35 `20260822140000` |
-| Git blob | `1f06ab14c6c8dfe202d7a96e34645290fc5ea584` |
-| SHA-256 LF | `52D546931FEC6C914B2377A539901E18ED9E8320D899C53F86B82368A526C7FB` |
+| Git blob | `81a096f4c31c6003fdcf6e4595c84dfe0e806911` |
+| SHA-256 LF | `2CEAD7E36022D8A6B6855B27E5E54370633385B2E56FCFCC1D526760D7D20C53` |
 | M35 | Unchanged |
 | Managed apply | **NOT APPLIED** |
+
+Pre-merge audit (unmerged C1 only; migration corrected in place, not re-issued) found and fixed three public-read truth defects:
+
+1. Inactive-parent hierarchy leak — published products under an active child of an archived root were still searchable, openable by slug, related, and sitemap-listed.
+2. Availability-filter summary mismatch — `p_availability_mode` filtered price but not `variant_count` / `is_available` / `availability_mode`.
+3. Archived-variant media leak — active media attached to an archived variant could still appear as public gallery or card primary image.
+
+Public eligibility now uses one category predicate (`own status active` and root-or-active-root-parent) and one media predicate (active path plus product-wide or active same-product variant). Filtered cards compute every variant-derived field from matching variants only. Production remains **OFF**.
 
 Public RPCs (SECURITY DEFINER, `search_path = ''`, EXECUTE to `anon` + `authenticated` only):
 

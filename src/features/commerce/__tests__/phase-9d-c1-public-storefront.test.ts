@@ -77,6 +77,21 @@ describe("Phase 9D-C1 public parser contracts", () => {
     assert.equal(card.compareAtPricePaise, null);
   });
 
+  test("availability-filtered card keeps mode, count, and availability coherent", () => {
+    const card = parsePublicProductCard({
+      ...publishedCard,
+      starting_price_paise: 1500000,
+      compare_at_price_paise: null,
+      variant_count: 1,
+      availability_mode: "ready_stock",
+      is_available: false,
+    });
+    assert.equal(card.availabilityMode, "ready_stock");
+    assert.equal(card.variantCount, 1);
+    assert.equal(card.isAvailable, false);
+    assert.equal(card.startingPricePaise, 1500000);
+  });
+
   test("draft-like detail payload without published collections fails closed", () => {
     assert.throws(() => parsePublicProductDetail({ name: "Draft" }), PublicCommerceParseError);
   });
