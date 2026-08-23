@@ -12,7 +12,7 @@
 
 `9D-A complete → 9D-B repository complete (PR #73) → M35 managed certified → 9D-B closeout merge (this PR; final gate) → 9D-C READY / NEXT → 9D-D+`
 
-M35 is managed-certified. Repository and managed history are **M1–M35**. PR #80 is merged. This 9D-B docs-only closeout merge is the final remaining gate. After independent review and merge of this closeout, Phase 9D-B is **COMPLETE / CLOSED** and Phase 9D-C is **READY / NEXT** and may start. Remaining 9D-C work is primarily the public storefront / public journey. Cart, checkout, orders, and payments remain **9D-D+**.
+M35 is managed-certified. Repository and managed history are **M1–M35**. PR #80 is merged. This 9D-B docs-only closeout merge is the final remaining gate. After independent review and merge of this closeout, Phase 9D-B is **COMPLETE / CLOSED** and Phase 9D-C is **READY / NEXT** and may start. Remaining 9D-C work after this preparation freeze was the public storefront / public journey. **Current (2026-08-23):** C1 is merged (PR #82) and M36 is managed-certified. C2 repository implements `/`, `/interiors`, and unified public nav. Phase 9D-C is **IMPLEMENTATION SUBSTANTIALLY COMPLETE / FINAL QA-CLOSEOUT PENDING**. Cart, checkout, orders, and payments remain **9D-D+**. Production **OFF**.
 
 ---
 
