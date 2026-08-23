@@ -80,10 +80,11 @@ export function HomePlan({
 
   return (
     <section
-      id={PM_SECTION_IDS.plan}
+      id="consultation"
       className="pm-section pm-close"
       aria-labelledby="pm-close-title"
     >
+      <span id={PM_SECTION_IDS.plan} />
       <span className="pm-close__glow" aria-hidden="true" />
       <div className="dc-container pm-close__inner">
         <div className="pm-close__intro">
