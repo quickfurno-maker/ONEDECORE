@@ -377,7 +377,7 @@ describe("Phase 5F-B security and regression boundaries", () => {
   });
 
   test("public form remains copy-only by default in page wiring", () => {
-    const page = readFileSync(join(root, "src/app/page.tsx"), "utf8");
+    const page = readFileSync(join(root, "src/app/interiors/page.tsx"), "utf8");
     assert.match(page, /getLeadFormMode/);
     const homePlan = readFileSync(
       join(root, "src/features/public-site/home-r4/HomePlan.tsx"),
