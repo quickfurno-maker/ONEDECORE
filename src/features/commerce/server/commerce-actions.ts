@@ -10,8 +10,6 @@ import {
   type CommerceActionResult,
 } from "./commerce-errors";
 
-export type { CommerceActionResult };
-
 function newKey(): string {
   return crypto.randomUUID();
 }

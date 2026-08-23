@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { setCommerceVariantStatusAction, upsertCommerceProductVariantAction } from "../server/commerce-actions";
 import type { CommerceVariantRow } from "../server/commerce-queries";
+import { commerceGhostButtonClass, commerceGoldButtonClass, commerceInputClass } from "../ui/commerce-classes";
+import { mapRupeesFieldToPaise, paiseToRupeesInput } from "../ui/operator-units";
 
-const inputClass =
-  "mt-1 w-full min-h-11 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100";
+const inputClass = commerceInputClass;
 
 interface VariantFormProps {
   readonly productId: string;
@@ -21,6 +22,16 @@ export function VariantForm({ productId, variant }: VariantFormProps) {
       <form
         className="space-y-3"
         action={async (formData) => {
+          const sellingError = mapRupeesFieldToPaise(formData, "sellingPriceRupees", "sellingPricePaise", true);
+          if (sellingError) {
+            setMessage(sellingError);
+            return;
+          }
+          const compareError = mapRupeesFieldToPaise(formData, "compareAtPriceRupees", "compareAtPricePaise", false);
+          if (compareError) {
+            setMessage(compareError);
+            return;
+          }
           const result = await upsertCommerceProductVariantAction(formData);
           setMessage(result.message);
         }}
@@ -58,25 +69,23 @@ export function VariantForm({ productId, variant }: VariantFormProps) {
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-xs text-neutral-400">
-            Selling price (paise)
+            Selling price (₹)
             <input
-              name="sellingPricePaise"
-              type="number"
-              step={1}
-              min={0}
+              name="sellingPriceRupees"
+              inputMode="decimal"
               required
-              defaultValue={variant?.selling_price_paise ?? 0}
+              defaultValue={variant ? paiseToRupeesInput(variant.selling_price_paise) : "0"}
               className={inputClass}
             />
           </label>
           <label className="block text-xs text-neutral-400">
-            Compare-at (paise)
+            Compare-at (₹)
             <input
-              name="compareAtPricePaise"
-              type="number"
-              step={1}
-              min={0}
-              defaultValue={variant?.compare_at_price_paise ?? ""}
+              name="compareAtPriceRupees"
+              inputMode="decimal"
+              defaultValue={
+                variant?.compare_at_price_paise == null ? "" : paiseToRupeesInput(variant.compare_at_price_paise)
+              }
               className={inputClass}
             />
           </label>
@@ -97,10 +106,7 @@ export function VariantForm({ productId, variant }: VariantFormProps) {
             {message}
           </p>
         ) : null}
-        <button
-          type="submit"
-          className="inline-flex min-h-11 items-center rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-neutral-950"
-        >
+        <button type="submit" className={commerceGoldButtonClass}>
           {variant ? "Save variant" : "Create variant"}
         </button>
       </form>
@@ -114,10 +120,7 @@ export function VariantForm({ productId, variant }: VariantFormProps) {
           <input type="hidden" name="id" value={variant.id} />
           <input type="hidden" name="productId" value={productId} />
           <input type="hidden" name="status" value={variant.status === "archived" ? "active" : "archived"} />
-          <button
-            type="submit"
-            className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-200"
-          >
+          <button type="submit" className={commerceGhostButtonClass}>
             {variant.status === "archived" ? "Reactivate variant" : "Archive variant"}
           </button>
         </form>
