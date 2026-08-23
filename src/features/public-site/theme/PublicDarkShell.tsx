@@ -3,7 +3,7 @@ import Link from "next/link";
 import { publicSiteFontVariables } from "@/features/public-site/fonts";
 import { OneDecoreWordmark } from "@/features/public-site/home-r4/OneDecoreWordmark";
 
-export type PublicChromeNavCurrent = "portfolio" | "none";
+export type PublicChromeNavCurrent = "portfolio" | "shop" | "none";
 
 interface PublicDarkShellProps {
   readonly children: ReactNode;
@@ -50,6 +50,13 @@ export function PublicDarkShell({
               Portfolio
             </Link>
             <Link
+              href="/shop"
+              className="od-portfolio-chrome__link"
+              aria-current={navCurrent === "shop" ? "page" : undefined}
+            >
+              Shop
+            </Link>
+            <Link
               href="/#estimate"
               className="od-portfolio-chrome__link od-portfolio-chrome__cta"
               aria-label="Get Price Estimate"
@@ -75,6 +82,8 @@ export function PublicDarkShell({
             ONEDECORE · <Link href="/">Home</Link>
             {" · "}
             <Link href="/portfolio">Portfolio</Link>
+            {" · "}
+            <Link href="/shop">Shop</Link>
           </p>
           {footerNote ? (
             <p className="od-portfolio-footer__note">{footerNote}</p>
