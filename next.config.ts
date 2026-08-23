@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
         search: "",
       },
       {
+        protocol: "https",
+        hostname: "lpurlfmpvriyvpkujvyl.supabase.co",
+        port: "",
+        pathname: "/storage/v1/object/public/commerce-product-public/**",
+        search: "",
+      },
+      {
         protocol: "http",
         hostname: "127.0.0.1",
         port: "54321",
@@ -19,9 +26,23 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "http",
+        hostname: "127.0.0.1",
+        port: "54321",
+        pathname: "/storage/v1/object/public/commerce-product-public/**",
+        search: "",
+      },
+      {
+        protocol: "http",
         hostname: "localhost",
         port: "54321",
         pathname: "/storage/v1/object/public/portfolio-public/**",
+        search: "",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "54321",
+        pathname: "/storage/v1/object/public/commerce-product-public/**",
         search: "",
       },
     ],

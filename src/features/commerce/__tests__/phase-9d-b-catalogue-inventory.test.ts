@@ -113,13 +113,10 @@ describe("Phase 9D-B RBAC and migration contracts", () => {
 });
 
 describe("Phase 9D-B admin surface and storefront gate", () => {
-  test("no /shop route files", () => {
-    const appDir = join(root, "src/app");
-    const files = walkFiles(appDir);
-    assert.equal(
-      files.some((file) => file.replace(/\\/g, "/").includes("/shop")),
-      false
-    );
+  test("M35 foundation migration does not implement public /shop", () => {
+    const sql = readFileSync(migrationPath, "utf8");
+    assert.match(sql, /No public \/shop/);
+    assert.doesNotMatch(sql, /list_public_commerce_/);
   });
 
   test("admin tax settings has no editable GST-inclusive false path", () => {
@@ -158,9 +155,9 @@ describe("Phase 9D-B admin surface and storefront gate", () => {
     assert.match(src, /role="status"/);
   });
 
-  test("sitemap has no /shop", () => {
-    const sitemap = readFileSync(join(root, "src/app/sitemap.ts"), "utf8");
-    assert.doesNotMatch(sitemap, /\/shop/);
+  test("M35 foundation migration remains catalogue-only", () => {
+    const sql = readFileSync(migrationPath, "utf8");
+    assert.doesNotMatch(sql, /create table public\.commerce_orders/);
   });
 
   test("commerce feature has no razorpay or stripe", () => {

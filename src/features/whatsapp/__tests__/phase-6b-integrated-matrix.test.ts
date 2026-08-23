@@ -93,11 +93,11 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(m23Blob, FROZEN_HASHES.M23_GIT_BLOB);
   });
 
-  test("repository has M1–M34 baseline, M35 9D-B, and fail-closed against M36+", () => {
+  test("repository has M1–M35 baseline, 9D-C1 public read, and fail-closed against later files", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 35, "Migration count must be exactly 35");
+    assert.equal(files.length, 36, "Migration count must be exactly 36");
 
     const phase6c = files.filter((f) => f.startsWith("20260809"));
     assert.equal(phase6c.length, 1);
@@ -162,8 +162,12 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(phase9d_m35.length, 1);
     assert.equal(phase9d_m35[0], "20260822140000_commerce_catalogue_inventory_foundation.sql");
 
-    const m35Plus = files.filter((f) => f > "20260822140000_commerce_catalogue_inventory_foundation.sql");
-    assert.equal(m35Plus.length, 0, "No M36+ migration files allowed");
+    const phase9d_c1 = files.filter((f) => f.startsWith("20260823"));
+    assert.equal(phase9d_c1.length, 1);
+    assert.equal(phase9d_c1[0], "20260823140000_commerce_public_storefront_read_foundation.sql");
+
+    const later = files.filter((f) => f > "20260823140000_commerce_public_storefront_read_foundation.sql");
+    assert.equal(later.length, 0, "No migrations after 9D-C1 public storefront read foundation");
   });
 });
 
