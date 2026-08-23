@@ -69,9 +69,29 @@ export function PublicSiteHeader({
       }
     };
 
+    const inertTargets = Array.from(
+      new Set(
+        [
+          document.querySelector<HTMLElement>("main"),
+          document.querySelector<HTMLElement>(".od-site-footer"),
+          document.querySelector<HTMLElement>(".pm-sticky"),
+        ].filter((node): node is HTMLElement => node !== null)
+      )
+    );
+    for (const target of inertTargets) {
+      if ("inert" in target) {
+        (target as HTMLElement & { inert: boolean }).inert = true;
+      }
+    }
+
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
+      for (const target of inertTargets) {
+        if ("inert" in target) {
+          (target as HTMLElement & { inert: boolean }).inert = false;
+        }
+      }
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [close, open]);
@@ -147,9 +167,11 @@ export function PublicSiteHeader({
               {item.label}
             </Link>
           ))}
-          <Link href="/shop/search" onClick={() => setOpen(false)}>
-            Search furniture
-          </Link>
+          {current === "shop" || current === "home" ? (
+            <Link href="/shop/search" onClick={() => setOpen(false)}>
+              Search furniture
+            </Link>
+          ) : null}
           {showConsultation ? (
             <Link href={PUBLIC_CONSULTATION.href} onClick={() => setOpen(false)}>
               {PUBLIC_CONSULTATION.label}

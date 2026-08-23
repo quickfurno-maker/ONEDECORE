@@ -93,12 +93,17 @@
   padding: 1.25rem;
   background: var(--od-bg-raised);
   transform: translateX(105%);
-  transition: transform 180ms ease;
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 180ms ease, visibility 0s linear 180ms;
   z-index: 60;
 }
 
 .od-site-header__drawer[data-open] {
   transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition: transform 180ms ease, visibility 0s;
 }
 
 .od-site-header__drawerNav {

@@ -122,6 +122,30 @@ describe("Phase 9D-C2 nav seo and shop", () => {
     assert.doesNotMatch(shop, /HomeLeadCapture/);
   });
 
+  test("closed mobile drawer is not focusable and open drawer inerts background", () => {
+    const css = read("src/features/public-site/chrome/public-site-chrome.css");
+    const header = read("src/features/public-site/chrome/PublicSiteHeader.tsx");
+    const closed = css.slice(
+      css.indexOf(".od-site-header__drawer {"),
+      css.indexOf(".od-site-header__drawer[data-open]")
+    );
+    const opened = css.slice(
+      css.indexOf(".od-site-header__drawer[data-open]"),
+      css.indexOf(".od-site-header__drawerNav")
+    );
+    assert.match(closed, /visibility:\s*hidden/);
+    assert.match(closed, /pointer-events:\s*none/);
+    assert.match(opened, /visibility:\s*visible/);
+    assert.match(opened, /pointer-events:\s*auto/);
+    assert.match(header, /Escape/);
+    assert.match(header, /toggleRef\.current\?\.focus/);
+    assert.match(header, /inert = true/);
+    assert.match(header, /inert = false/);
+    assert.match(header, /querySelector<HTMLElement>\("main"\)/);
+    assert.match(header, /\.od-site-footer/);
+    assert.match(header, /\.pm-sticky/);
+  });
+
   test("public discovery and interiors copy has no cart CTA", () => {
     const files = walkFiles(join(root, "src/features/public-site/discovery")).concat(
       walkFiles(join(root, "src/features/public-site/interiors")),
