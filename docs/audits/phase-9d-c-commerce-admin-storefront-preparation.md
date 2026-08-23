@@ -1,6 +1,6 @@
 # Phase 9D-C — Commerce Admin Control & Storefront Preparation Spec
 
-**Status:** `PREPARATION_FROZEN` (architecture unchanged) — Phase 9D-C **READY / NEXT**
+**Status:** `PREPARATION_FROZEN` (architecture unchanged) — 9D-C becomes **READY / NEXT** only after this 9D-B closeout is independently reviewed and merged
 **Date:** 2026-08-20 (preparation freeze); current-status truth-sync 2026-08-23
 **Starting main (homepage lock):** `e1aa6ca5d412fb03d9e92835098236c8254b42c0` (PR #74 true merge)
 **Authority:** ADR-0028 / ADR-0030 / ADR-0032 / DEC-0079 / DEC-0083 / DEC-0089 / DEC-0090 / DEC-0091 / DEC-0092 / DEC-0093 / OD9D-1–OD9D-12
@@ -10,9 +10,9 @@
 
 ## 1. Sequence (locked)
 
-`9D-A complete → 9D-B repository complete (PR #73) → M35 managed certified → 9D-B closeout complete → 9D-C READY / NEXT → 9D-D+`
+`9D-A complete → 9D-B repository complete (PR #73) → M35 managed certified → 9D-B closeout merge (this PR; final gate) → 9D-C READY / NEXT → 9D-D+`
 
-9D-C may now start. Remaining 9D-C work is primarily the public storefront / public journey. Cart, checkout, orders, and payments remain **9D-D+**.
+M35 is managed-certified. Repository and managed history are **M1–M35**. PR #80 is merged. This 9D-B docs-only closeout merge is the final remaining gate. After independent review and merge of this closeout, Phase 9D-B is **COMPLETE / CLOSED** and Phase 9D-C is **READY / NEXT** and may start. Remaining 9D-C work is primarily the public storefront / public journey. Cart, checkout, orders, and payments remain **9D-D+**.
 
 ---
 

@@ -3,7 +3,7 @@
 **Document Status:** Locked Roadmap (truth-synced through Phase 9D-B M35 managed closeout, August 23, 2026)
 **Current Phase:** Phase 9D-B **COMPLETE / CLOSED**. Repository **M1–M35**. Managed **M1–M35**. M35 managed-certified. PR #80 catalogue admin UI merged. Phase 9D-C **NEXT / READY** (ADR-0032 / DEC-0090 / DEC-0092 / DEC-0093 preserved; public storefront not started). Phase 9C **MANAGED APPLY CERTIFIED** (DEC-0088). Production **OFF**.
 **Next Phase:** Phase 9D-C public storefront / public journey implementation. Production remains disabled.
-**Previous Phase:** Phase 9A — Campaign Consent, Audience & Approval Foundation (**COMPLETE** — PR #63 true merge `26e6346ef6722b7c6ff5908c12f208854b513ad6`; managed **M1–M31**; production **not** activated)
+**Previous Phase:** Phase 9C — Campaign Execution, Attribution & Conversion Feedback (**COMPLETE / MANAGED APPLY CERTIFIED** — DEC-0088; managed **M1–M34** at 9C closeout; production execution/spend **OFF**)
 
 ---
 
@@ -174,7 +174,7 @@ Phase 9B ──► Landing Page Lab & Experimentation [M32 MANAGED APPLIED — P
     │         • CRM lead-quality linkage; variant analytics; experiment history
     │         • Role-aware admin access; CRM/Supabase remains source of truth
     ▼
-Phase 9C ──► Campaign Execution, Attribution & Conversion Feedback [ARCHITECTURE FROZEN — NOT IMPLEMENTED]
+Phase 9C ──► Campaign Execution, Attribution & Conversion Feedback [COMPLETE / MANAGED APPLY CERTIFIED]
     │         • ADR-0031 / DEC-0085 / OD9C-1–OD9C-18
     │         • Meta/Google adapters from approved immutable versions (MVP)
     │         • Server-side conversion feedback; CommercialConversion = accepted quotation + Closed-Won
