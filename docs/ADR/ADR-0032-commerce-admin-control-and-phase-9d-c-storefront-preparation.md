@@ -16,6 +16,8 @@ This ADR **is** the owner lock for **admin-first catalogue operations** and the 
 
 Repository at freeze: main `06b6d2ea5f1cf4d886be497a8eed7ce8d1d52e58` (PR #73 merge). Repository **M1–M35**. Managed **M1–M34**. Production **OFF**.
 
+**Current status (2026-08-23):** M35 recovery/apply/certification gates are satisfied. This 9D-B docs-only closeout is the final remaining gate. Upon independent review and merge of this closeout, Phase 9D-B becomes **COMPLETE / CLOSED** and Phase 9D-C becomes **READY / NEXT**. Architectural decisions in this ADR are unchanged. Production remains **OFF**. Canonical current truth: [00-project-truth](../00-project-truth.md) and [M35 closeout](../audits/phase-9d-b-m35-managed-apply-closeout.md).
+
 ---
 
 ## 1. Owner lock — admin-first commerce operations
