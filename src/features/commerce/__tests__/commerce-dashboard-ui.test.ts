@@ -84,7 +84,7 @@ describe("Commerce dashboard UI phase gates", () => {
     );
     assert.match(
       src,
-      /Public \/shop is disabled\. Production remains OFF\. Checkout and payments are not in this phase\./
+      /Public \/shop production activation remains OFF\. Guest COD checkout is repository-only; online payments remain deferred to Phase 9D-E\./
     );
   });
 

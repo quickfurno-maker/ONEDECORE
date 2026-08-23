@@ -28,11 +28,9 @@ describe("Phase 9D-D1 repository contracts", () => {
     assert.doesNotMatch(sql, /grant execute on function public\.quote_public_commerce_cart[^\n]+ to anon/);
   });
 
-  test("D1 does not add cart checkout or track UI routes", () => {
-    assert.equal(existsSync(join(root, "src/app/shop/cart")), false);
-    assert.equal(existsSync(join(root, "src/app/shop/checkout")), false);
-    assert.equal(existsSync(join(root, "src/app/shop/track")), false);
-    assert.equal(existsSync(join(root, "src/app/shop/order")), false);
+  test("D1 does not add cart checkout or track UI routes (superseded by 9D-D2)", () => {
+    assert.ok(existsSync(join(root, "src/app/shop/cart/page.tsx")));
+    assert.ok(existsSync(join(root, "src/features/commerce/__tests__/phase-9d-d2-cart-checkout-tracking.test.ts")));
   });
 
   test("quote parser rejects stock leakage", () => {
