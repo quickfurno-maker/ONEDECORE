@@ -1371,6 +1371,314 @@ export type Database = {
           },
         ]
       }
+      commerce_order_delivery: {
+        Row: {
+          address_line_1: string
+          address_line_2: string | null
+          assembly_install_note: string | null
+          city: string
+          created_at: string
+          email: string | null
+          eta_max_days: number
+          eta_min_days: number
+          locality: string
+          mobile_e164: string
+          order_id: string
+          pincode: string
+          recipient_name: string
+          serviceable_snapshot: boolean
+          shipping_charge_paise: number
+          state: string
+        }
+        Insert: {
+          address_line_1: string
+          address_line_2?: string | null
+          assembly_install_note?: string | null
+          city: string
+          created_at?: string
+          email?: string | null
+          eta_max_days: number
+          eta_min_days: number
+          locality: string
+          mobile_e164: string
+          order_id: string
+          pincode: string
+          recipient_name: string
+          serviceable_snapshot?: boolean
+          shipping_charge_paise: number
+          state: string
+        }
+        Update: {
+          address_line_1?: string
+          address_line_2?: string | null
+          assembly_install_note?: string | null
+          city?: string
+          created_at?: string
+          email?: string | null
+          eta_max_days?: number
+          eta_min_days?: number
+          locality?: string
+          mobile_e164?: string
+          order_id?: string
+          pincode?: string
+          recipient_name?: string
+          serviceable_snapshot?: boolean
+          shipping_charge_paise?: number
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_order_delivery_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "commerce_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_order_events: {
+        Row: {
+          actor_kind: string
+          actor_profile_id: string | null
+          created_at: string
+          event_code: string
+          from_status: string | null
+          id: string
+          metadata: Json
+          order_id: string
+          to_status: string | null
+        }
+        Insert: {
+          actor_kind: string
+          actor_profile_id?: string | null
+          created_at?: string
+          event_code: string
+          from_status?: string | null
+          id?: string
+          metadata?: Json
+          order_id: string
+          to_status?: string | null
+        }
+        Update: {
+          actor_kind?: string
+          actor_profile_id?: string | null
+          created_at?: string
+          event_code?: string
+          from_status?: string | null
+          id?: string
+          metadata?: Json
+          order_id?: string
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_order_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_order_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_order_items: {
+        Row: {
+          availability_mode: string
+          compare_at_unit_price_paise: number | null
+          created_at: string
+          discount_paise: number
+          hsn_sac_code: string | null
+          id: string
+          line_number: number
+          line_total_paise: number
+          option_values: Json
+          order_id: string
+          primary_image_public_path: string | null
+          product_id: string
+          product_name: string
+          product_reference: string
+          product_slug: string
+          quantity: number
+          selling_unit_price_paise: number
+          sku: string
+          tax_paise: number
+          tax_rate_basis_points: number
+          tax_rate_code: string
+          taxable_paise: number
+          variant_display_name: string | null
+          variant_id: string
+        }
+        Insert: {
+          availability_mode: string
+          compare_at_unit_price_paise?: number | null
+          created_at?: string
+          discount_paise?: number
+          hsn_sac_code?: string | null
+          id?: string
+          line_number: number
+          line_total_paise: number
+          option_values?: Json
+          order_id: string
+          primary_image_public_path?: string | null
+          product_id: string
+          product_name: string
+          product_reference: string
+          product_slug: string
+          quantity: number
+          selling_unit_price_paise: number
+          sku: string
+          tax_paise: number
+          tax_rate_basis_points: number
+          tax_rate_code: string
+          taxable_paise: number
+          variant_display_name?: string | null
+          variant_id: string
+        }
+        Update: {
+          availability_mode?: string
+          compare_at_unit_price_paise?: number | null
+          created_at?: string
+          discount_paise?: number
+          hsn_sac_code?: string | null
+          id?: string
+          line_number?: number
+          line_total_paise?: number
+          option_values?: Json
+          order_id?: string
+          primary_image_public_path?: string | null
+          product_id?: string
+          product_name?: string
+          product_reference?: string
+          product_slug?: string
+          quantity?: number
+          selling_unit_price_paise?: number
+          sku?: string
+          tax_paise?: number
+          tax_rate_basis_points?: number
+          tax_rate_code?: string
+          taxable_paise?: number
+          variant_display_name?: string | null
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_order_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_orders: {
+        Row: {
+          cancellation_reason_code: string | null
+          cancelled_at: string | null
+          confirmed_at: string | null
+          contact_id: string | null
+          created_at: string
+          currency: string
+          customer_email: string | null
+          customer_mobile_e164: string
+          customer_name: string
+          delivered_at: string | null
+          discount_paise: number
+          fulfilment_tracking_reference: string | null
+          id: string
+          inventory_hold_expires_at: string | null
+          order_reference: string
+          payment_method: string
+          processing_at: string | null
+          shipped_at: string | null
+          shipping_paise: number
+          status: string
+          subtotal_paise: number
+          tax_paise: number
+          total_paise: number
+          updated_at: string
+        }
+        Insert: {
+          cancellation_reason_code?: string | null
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          customer_mobile_e164: string
+          customer_name: string
+          delivered_at?: string | null
+          discount_paise?: number
+          fulfilment_tracking_reference?: string | null
+          id?: string
+          inventory_hold_expires_at?: string | null
+          order_reference: string
+          payment_method: string
+          processing_at?: string | null
+          shipped_at?: string | null
+          shipping_paise: number
+          status: string
+          subtotal_paise: number
+          tax_paise: number
+          total_paise: number
+          updated_at?: string
+        }
+        Update: {
+          cancellation_reason_code?: string | null
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          customer_mobile_e164?: string
+          customer_name?: string
+          delivered_at?: string | null
+          discount_paise?: number
+          fulfilment_tracking_reference?: string | null
+          id?: string
+          inventory_hold_expires_at?: string | null
+          order_reference?: string
+          payment_method?: string
+          processing_at?: string | null
+          shipped_at?: string | null
+          shipping_paise?: number
+          status?: string
+          subtotal_paise?: number
+          tax_paise?: number
+          total_paise?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_orders_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commerce_tax_rates: {
         Row: {
           code: string
@@ -6029,6 +6337,48 @@ export type Database = {
       }
       create_campaign_run: {
         Args: { p_campaign_version_id: string; p_idempotency_key: string }
+        Returns: Json
+      }
+      cancel_commerce_order: {
+        Args: { p_idempotency_key: string; p_order_id: string; p_reason_code: string }
+        Returns: Json
+      }
+      consume_commerce_public_rate_limit: {
+        Args: {
+          p_network_fingerprint_hash: string
+          p_operation: string
+          p_phone_fingerprint_hash?: string
+        }
+        Returns: Json
+      }
+      create_public_commerce_cod_order: {
+        Args: {
+          p_customer: Json
+          p_delivery: Json
+          p_idempotency_key: string
+          p_lines: Json
+        }
+        Returns: Json
+      }
+      get_public_commerce_order_tracking_snapshot: {
+        Args: { p_order_reference: string }
+        Returns: Json
+      }
+      quote_public_commerce_cart: {
+        Args: { p_lines: Json; p_payment_method?: string; p_pincode: string }
+        Returns: Json
+      }
+      transition_commerce_order_fulfilment: {
+        Args: {
+          p_fulfilment_tracking_reference: string
+          p_idempotency_key: string
+          p_order_id: string
+          p_to_status: string
+        }
+        Returns: Json
+      }
+      verify_public_commerce_order_tracking_identity: {
+        Args: { p_mobile_e164: string; p_order_reference: string }
         Returns: Json
       }
       create_commerce_product: {

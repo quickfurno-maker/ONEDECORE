@@ -1,11 +1,13 @@
 # Phase 9D-C2 — Unified Homepage, `/interiors`, and Public Journey
 
-**Status:** `REPOSITORY_IMPLEMENTED`  
-**Date:** 2026-08-23  
-**Starting protected main:** `34741dac155aad67c1ae9f93bd41a2d7316c9b5a` (PR #82 merge)  
+**Status:** `MERGED` / Phase 9D-C **COMPLETE / CLOSED**
+**Date:** 2026-08-23
+**Starting protected main:** `34741dac155aad67c1ae9f93bd41a2d7316c9b5a` (PR #82 merge)
 **Branch:** `phase-9d-c2-unified-home`
+**Exact head:** `31e506a640b6edec901e23b5e4570cfcef810d44`
+**Merged to protected main:** `bf6d5cca8daa77870229a15a8ff119b27f7362f9` (PR #83)
 
-Phase 9D-C is **IMPLEMENTATION SUBSTANTIALLY COMPLETE / FINAL QA-CLOSEOUT PENDING**. This gate does **not** close 9D-C. Production remains **OFF**.
+Phase 9D-C is **COMPLETE / CLOSED**. Evidence: PR #82 merged; M36 managed-certified; PR #83 Quality Gate PASS; desktop 1440 QA PASS; mobile 320/390/430 overflow QA PASS; drawer focus/Escape/inert QA PASS; runtime/hydration NONE. Production remains **OFF**.
 
 ## 1. Scope
 
@@ -32,4 +34,4 @@ Root `/` as DEC-0093 16-section ~50/50 discovery. Dedicated `/interiors` convers
 
 ## 4. Explicit deferrals
 
-Cart, checkout, orders, payments, customer accounts, wishlist DB, `commerce_service_areas`, new cities, fabricated reviews, production activation, 9D-C formal closeout.
+Cart/checkout/tracking UI (9D-D2), payments (9D-E), customer accounts, wishlist DB, `commerce_service_areas`, new cities, fabricated reviews, production activation. Phase 9D-C closeout is complete.

@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 9D-B commerce catalogue / inventory foundation pgTAP
 
 begin;
-select plan(88);
+select plan(84);
 
 select has_table('public', 'commerce_categories', 'commerce_categories exists');
 select has_table('public', 'commerce_products', 'commerce_products exists');
@@ -15,12 +15,8 @@ select has_table('public', 'commerce_shipping_settings', 'commerce_shipping_sett
 select has_table('public', 'commerce_tax_rates', 'commerce_tax_rates exists');
 select has_table('public', 'commerce_tax_settings', 'commerce_tax_settings exists');
 
-select hasnt_table('public', 'commerce_orders', 'no commerce_orders in 9D-B');
-select hasnt_table('public', 'commerce_order_items', 'no commerce_order_items in 9D-B');
-select hasnt_table('public', 'commerce_order_delivery', 'no commerce_order_delivery in 9D-B');
 select hasnt_table('public', 'commerce_payments', 'no commerce_payments in 9D-B');
 select hasnt_table('public', 'commerce_payment_events', 'no commerce_payment_events in 9D-B');
-select hasnt_table('public', 'commerce_order_events', 'no commerce_order_events in 9D-B');
 
 select ok(
   (select public from storage.buckets where id = 'commerce-product-originals') is false

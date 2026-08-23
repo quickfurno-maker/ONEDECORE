@@ -6,7 +6,7 @@
 **Branch:** `phase-9d-c1-public-storefront`
 **Merged to protected main:** `34741dac155aad67c1ae9f93bd41a2d7316c9b5a` (PR #82)
 
-Phase 9D-C is **not** closed. This file remains the C1 provenance record. C2 is a later repository gate.
+Phase 9D-C is **COMPLETE / CLOSED**. This file remains the C1 provenance record. C2 merged as PR #83. Protected main after C2: `bf6d5cca8daa77870229a15a8ff119b27f7362f9`.
 
 ## 1. Scope
 

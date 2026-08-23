@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced through Phase 9D-C2 repository implementation, August 23, 2026)
-**Current Phase:** Phase 9D-C **IMPLEMENTATION SUBSTANTIALLY COMPLETE / FINAL QA-CLOSEOUT PENDING**. Phase 9D-B **COMPLETE / CLOSED**. Managed **M1–M36**. Production **OFF**.
-**Next Phase:** 9D-C QA closeout, then 9D-D+ cart/checkout. Production remains disabled.
+**Document Status:** Locked Roadmap (truth-synced through Phase 9D-C COMPLETE / CLOSED and 9D-D1 repository implementation, August 23, 2026)
+**Current Phase:** Phase 9D-D1 **REPOSITORY_IMPLEMENTED / MANAGED_APPLY_PENDING**. Phase 9D-C **COMPLETE / CLOSED**. Phase 9D-B **COMPLETE / CLOSED**. Managed **M1–M36**. Repository **M1–M37**. Production **OFF**.
+**Next Phase:** Managed M37 certification, then 9D-D2 cart/checkout/tracking UI. Production remains disabled.
 **Previous Phase:** Phase 9C — Campaign Execution, Attribution & Conversion Feedback (**COMPLETE / MANAGED APPLY CERTIFIED** — DEC-0088; managed **M1–M34** at 9C closeout; production execution/spend **OFF**)
 
 ---
@@ -185,8 +185,9 @@ Phase 9D ──► Ready-Made Furniture E-commerce
     │         • 9D-B catalogue/inventory foundation — COMPLETE / CLOSED
     │         •   M35 repo + managed; catalogue/inventory/RBAC/storage foundation
     │         •   admin catalogue operations UI merged; production still OFF
-    │         • 9D-C — NEXT: public storefront / public journey; no checkout/order/payment ownership
-    │         • 9D-D / 9D-E / 9D-F — future
+    │         • 9D-C — COMPLETE / CLOSED
+    │         • 9D-D1 — REPOSITORY_IMPLEMENTED / MANAGED_APPLY_PENDING (no UI)
+    │         • 9D-D2 / 9D-E / 9D-F — future
     │         • Phase 10 remains the production activation gate
     ▼
 Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
@@ -314,7 +315,7 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Roadmap lock:** [Phase 9D lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md), [ADR-0028](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md), DEC-0079, OD9D-1–OD9D-12.
 - **Architecture freeze:** [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md), [9D-A audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md), DEC-0083.
 - **Placement:** after 9C, before Phase 10. Architecture lock is unchanged.
-- **Status:** **9D-A COMPLETE**. **9D-B COMPLETE / CLOSED** (DEC-0089 / M35 repo + managed / PR #73 + PR #80). **9D-C NEXT / READY** — public storefront / public journey; no functional checkout/order/payment ownership. **9D-D / 9D-E / 9D-F** remain future. Preparation freeze **ADR-0032 / DEC-0090 / DEC-0092 / DEC-0093** preserved. Production **OFF**. Phase 10 remains the production activation gate. Closeout: [M35 managed apply](audits/phase-9d-b-m35-managed-apply-closeout.md).
+- **Status:** **9D-A COMPLETE**. **9D-B COMPLETE / CLOSED**. **9D-C COMPLETE / CLOSED** (PR #82 + PR #83 / protected main `bf6d5cca8daa77870229a15a8ff119b27f7362f9` / desktop+mobile QA PASS). **9D-D1 REPOSITORY_IMPLEMENTED / MANAGED_APPLY_PENDING**. **9D-D2 / 9D-E / 9D-F** remain future. Production **OFF**. Phase 10 remains the production activation gate. Closeout: [M35 managed apply](audits/phase-9d-b-m35-managed-apply-closeout.md). D1: [COD order engine](audits/phase-9d-d1-cod-order-engine-implementation.md).
 
 ### Phase 10
 - **Objective:** Security hardening, full E2E, performance budgets, Hostinger VPS deployment.
@@ -398,9 +399,9 @@ M35 is in the repository (PR #73) and managed-certified (2026-08-23). 9D-C is **
 <!-- PHASE_9D_C_PREPARATION_FREEZE_START -->
 ## Phase 9D-C Admin / Storefront Preparation Status
 
-**Status:** `PREPARATION_FROZEN (DEC-0090)` + `HOMEPAGE_DESIGN_LOCKED (DEC-0091)` + `THREE_LAYER_PUBLIC_JOURNEY_LOCKED (DEC-0092)` + `BALANCED_MIXED_HOMEPAGE_LOCKED (DEC-0093)` — C1 **MERGED** (PR #82 / `34741dac…`) + C2 **REPOSITORY IMPLEMENTED**. Phase 9D-C **IMPLEMENTATION SUBSTANTIALLY COMPLETE / FINAL QA-CLOSEOUT PENDING**.
+**Status:** Phase 9D-C **COMPLETE / CLOSED**. C1 **MERGED** (PR #82). C2 **MERGED** (PR #83 / exact head `31e506a` / protected main `bf6d5cca8daa77870229a15a8ff119b27f7362f9`). Desktop 1440 QA PASS. Mobile overflow + drawer a11y QA PASS.
 
-Authority: **ADR-0032 / DEC-0090 / DEC-0091 / DEC-0092 / DEC-0093**. Managed **M1–M36**. Public `/shop`, `/interiors`, and 50/50 `/` exist in repository. No checkout/payments. No service-area table. Production **OFF**. See [C2 audit](audits/phase-9d-c2-unified-home-interiors-implementation.md).
+Authority: **ADR-0032 / DEC-0090 / DEC-0091 / DEC-0092 / DEC-0093**. Managed **M1–M36**. Public `/shop`, `/interiors`, and 50/50 `/` exist. Checkout UI is 9D-D2. Production **OFF**. See [C2 audit](audits/phase-9d-c2-unified-home-interiors-implementation.md).
 <!-- PHASE_9D_C_PREPARATION_FREEZE_END -->
 
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_START -->

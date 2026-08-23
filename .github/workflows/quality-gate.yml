@@ -79,6 +79,11 @@ jobs:
       - name: Database lint and pgTAP tests
         run: npm run check:db
 
+      - name: Commerce D1 concurrency tests
+        env:
+          ONEDECORE_REQUIRE_D1_CONCURRENCY: "1"
+        run: npm run test:phase-9d-d1-concurrency
+
       - name: Stop local Supabase
         if: always()
         run: supabase stop --no-backup
