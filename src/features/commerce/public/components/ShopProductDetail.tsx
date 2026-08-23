@@ -7,6 +7,7 @@ import { COMMERCE_OPTION_KEYS } from "../../domain/option-values.ts";
 import { buildCommercePublicUrl } from "../public-url.ts";
 import type { PublicCommerceProductDetail, PublicCommerceVariant } from "../public-types.ts";
 import { ShopPincodeChecker } from "./ShopPincodeChecker.tsx";
+import { ShopPurchasePanel } from "./ShopPurchasePanel.tsx";
 import { ShopRecentlyViewedRecorder, ShopWishlistButton } from "./ShopWishlistButton.tsx";
 import { ShopProductCard } from "./ShopProductCard.tsx";
 
@@ -147,7 +148,7 @@ export function ShopProductDetail({ product }: { readonly product: PublicCommerc
           ))}
         </div>
 
-        <p className="od-shop-note">Ordering will be enabled at launch.</p>
+        <ShopPurchasePanel product={product} variant={variant} />
         <ShopWishlistButton
           slug={product.slug}
           name={product.name}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { OneDecoreWordmark } from "@/features/public-site/home-r4/OneDecoreWordmark";
+import { ShopCartLink } from "@/features/commerce/public/components/ShopCartLink";
 import {
   PUBLIC_CONSULTATION,
   PUBLIC_NAV_DESTINATIONS,
@@ -118,6 +119,9 @@ export function PublicSiteHeader({
               Search
             </Link>
           ) : null}
+          {current === "shop" ? (
+            <ShopCartLink className="od-site-header__util" />
+          ) : null}
           {showConsultation ? (
             <Link href={PUBLIC_CONSULTATION.href} className="od-site-header__cta">
               <span className="od-site-header__ctaFull">{PUBLIC_CONSULTATION.label}</span>
@@ -171,6 +175,9 @@ export function PublicSiteHeader({
             <Link href="/shop/search" onClick={() => setOpen(false)}>
               Search furniture
             </Link>
+          ) : null}
+          {current === "shop" ? (
+            <ShopCartLink className="od-site-header__drawerCart" />
           ) : null}
           {showConsultation ? (
             <Link href={PUBLIC_CONSULTATION.href} onClick={() => setOpen(false)}>

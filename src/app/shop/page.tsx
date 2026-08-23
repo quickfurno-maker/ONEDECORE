@@ -12,7 +12,7 @@ import type { PublicCommerceProductPage } from "@/features/commerce/public/publi
 export const metadata: Metadata = {
   title: `Furniture Shop — ${SITE_CONFIG.name}`,
   description:
-    "Browse ONEDECORE ready-made furniture. GST-inclusive prices. Public catalogue only — ordering opens at launch.",
+    "Browse ONEDECORE ready-made furniture. GST-inclusive prices. Add to cart and checkout with cash on delivery.",
   alternates: { canonical: absoluteUrl("shop") },
   robots: { index: true, follow: true },
 };
@@ -76,7 +76,7 @@ export default async function ShopPage() {
         <p className="od-shop__kicker">Ready-made furniture</p>
         <h1>Shop furniture, prepared with the same care as our interiors.</h1>
         <p className="od-shop__lede">
-          GST-inclusive prices. Browse published pieces only. Ordering will be enabled at launch.
+          GST-inclusive prices. Browse published pieces and checkout with cash on delivery.
         </p>
       </header>
 
