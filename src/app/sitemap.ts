@@ -3,9 +3,14 @@ import { getSitemapEntries } from "@/features/portfolio/public/public-portfolio-
 import { getPublicCommerceSitemap } from "@/features/commerce/public/public-cache";
 import { isPublicCommerceReadFailure } from "@/features/commerce/public/public-errors";
 import { SITE_CONFIG, absoluteUrl } from "@/config/site";
+import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
+
+/** Runtime gate must be readable without rebuild (DEC-0095). */
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const projectEntries = await getSitemapEntries();
+  const shopPublic = isShopPublicEnabled();
 
   const routes: MetadataRoute.Sitemap = [
     {
@@ -26,13 +31,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 0.9,
     },
-    {
+  ];
+
+  if (shopPublic) {
+    routes.push({
       url: absoluteUrl("shop"),
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.85,
-    },
-  ];
+    });
+  }
 
   for (const entry of projectEntries) {
     routes.push({
@@ -41,6 +49,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.8,
     });
+  }
+
+  if (!shopPublic) {
+    return routes;
   }
 
   try {

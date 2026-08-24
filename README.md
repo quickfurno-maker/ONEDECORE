@@ -2,11 +2,11 @@
 
 > **One Vision. Complete Interiors.**
 
-ONEDECORE is a premium interior-business operating system for Pune, India — combining a production public website and portfolio with a planned sales, quotation, project execution, design, WhatsApp, and marketing CRM backbone.
+ONEDECORE is a premium interior-business operating system for Pune, India — public website, portfolio, CRM, quotations, projects, WhatsApp foundations, marketing foundations, and COD-ready furniture commerce.
 
-**Current phase:** Phase 7A — Commercial Quotation Data & Draft Foundation (**ENTRY AUDIT & ARCHITECTURE FREEZE**).
-**Previous phase:** Phase 6D — Staff Administration, Attendance & Leave (**COMPLETE / CLOSED** — PR #51 merged).
-**Public intake:** inactive (`copy-only` browser gate; server `disabled`). **Production activation:** Phase 10 only.
+**Current phase:** Phase 10 — COD-only **production readiness** (owner activation pending).
+**Previous:** Phase 9D-F COD storefront certification (PR #87). Online payments remain **deferred** (9D-E local only).
+**Public shop gate:** fail-closed `ONEDECORE_SHOP_PUBLIC_ENABLED` (default off). **Deploy ≠ activate.**
 
 ---
 
@@ -16,61 +16,46 @@ ONEDECORE is a premium interior-business operating system for Pune, India — co
 - **Tagline:** One Vision. Complete Interiors.
 - **Domain:** `onedecore.in`
 - **Initial Launch Market:** Pune, India
-- **Core Services:** Complete Home Interiors · Modular Kitchens · Custom Wardrobes
-- **Deployment Target:** Hostinger VPS — **application not yet production-deployed** (Phase 10)
+- **Core Services:** Complete Home Interiors · Modular Kitchens · Custom Wardrobes · Ready-made furniture (COD)
+- **Deployment Target:** Hostinger VPS — readiness documented; **not activated in this gate**
 - **Repository:** Independent from QuickFurno and Jarvis
 
 ---
 
-## 2. What Is Live vs Planned
+## 2. Production posture (truth)
 
-### Merged on protected main / database-ready
-
-| Capability | Notes |
+| Item | Status |
 | :--- | :--- |
-| Premium public homepage (R4/R5) | Merged on `main`; not production-deployed |
-| Public portfolio | `/portfolio`, `/portfolio/[slug]`, SEO, sitemap |
-| Portfolio admin CMS | `/admin/portfolio` with secure media pipeline |
-| Staff authentication | Invitation-only email/password; Proxy session guard |
-| Database RBAC | `public.authorize`, active-profile enforcement |
-| CRM identity & data foundation (Phase 5B) | Migration 11 — merged; managed applied |
-| CRM read-only workspace (Phase 5C1) | `/admin/crm` — merged; managed migration 12 applied |
-| Lead assignment mutations (Phase 5C2A) | Assign/reassign/safe-unassign — merged; managed migration 13 applied |
-| Manual lead creation (Phase 5C2B) | Duplicate-safe flow — merged; managed migration 14 applied |
-| Lifecycle collaboration (Phase 5C2C) | Status/note/follow-up mutations — merged (PR #11) |
-| Bulk import & source assignment (Phase 5D) | Merged; managed migration 15 applied |
-| Sales targets & CRM reporting (Phase 5E) | Merged; managed migration 16 applied; internal/pre-production |
-| Lead intake **schema** | Migrations 9–10; identity hardening M17 applied managed |
-| Public lead form | **Merged; default `copy-only`; server `disabled`** |
-| Controlled public lead activation hardening (Phase 5F) | Merged (PR #17); M17 applied managed August 4, 2026; **public intake inactive** |
+| Repository migrations | **M1–M37** (no M38) |
+| Managed Supabase (`lpurlfmpvriyvpkujvyl`) | **M1–M37** per D1/D2 closeout evidence (re-confirm in dashboard before activate) |
+| Online payments | **DEFERRED** — no provider on `main` |
+| Public `/shop` | **OFF** until `ONEDECORE_SHOP_PUBLIC_ENABLED=true` |
+| Lead intake / WhatsApp / campaigns / Landing Lab | Separate fail-closed gates (unchanged) |
 
-Managed Supabase (**OneDecore**, `lpurlfmpvriyvpkujvyl`): migrations **1–24** aligned (M24 applied August 11, 2026).
-
-### Not yet complete
-
-Phase 5F formal closeout merge (this governance PR), WhatsApp (Phase 6), quotations (Phase 7), project conversion/execution (Phase 8), Landing Page Lab (Phase 9B — roadmap-locked, not implemented), **public lead activation**, and **production deployment** (Phase 10).
-
-See [Phase Roadmap](docs/09-phase-roadmap.md) and [Phase 5A Audit](docs/audits/phase-5a-crm-architecture-freeze.md).
+Authoritative docs: [Project Truth](docs/00-project-truth.md), [Roadmap](docs/09-phase-roadmap.md), [Phase 10 readiness audit](docs/audits/phase-10-cod-production-readiness.md).
 
 ---
 
-## 3. Product Architecture Domains
+## 3. Local development
 
-ONEDECORE spans ten integrated domains (public site, portfolio, secure intake, CRM, quotations, project execution, design, WhatsApp, AI copilot, campaigns). Domains 4–9 are architecture-frozen in Phase 5A and implemented in Phases 5B–9.
+```bash
+npm ci
+# copy .env.example → .env.local; set local Supabase keys + secrets
+# For full shop QA locally: ONEDECORE_SHOP_PUBLIC_ENABLED=true
+npm run db:start
+npm run db:reset
+npm run dev
+```
 
-Five locked V1 staff roles: `super_admin`, `sales_manager`, `sales_executive`, `project_manager`, `designer` — see [ADR-0019](docs/ADR/ADR-0019-five-role-crm-authorization-model.md).
+Node **24** (`engines` / `.nvmrc`).
 
 ---
 
-## 4. Core Architectural Boundaries
+## 4. Quality scripts
 
-- **Source of Truth:** Supabase PostgreSQL for all structured data.
-- **Authorization:** Server-side + RLS; UI hiding is not security.
-- **Database-Before-Automation:** Persist before n8n or outbound notifications.
-- **WhatsApp:** Official Meta Cloud API only (planned); no Web scraping.
-- **AI:** Human-controlled Groq copilot behind provider adapter (planned); no autonomous action.
-- **No-ERP:** No accounting, procurement, inventory, or labour dispatch.
-- **Public Intake:** Disabled by default; activation requires separate owner authority (Phase 5F).
+- `npm run check` — lint + typecheck + build
+- `npm run db:test` — pgTAP
+- `npm run test:phase-9d-f` / `npm run test:phase-10` — commerce certification contracts
 
 ---
 
@@ -78,30 +63,7 @@ Five locked V1 staff roles: `super_admin`, `sales_manager`, `sales_executive`, `
 
 | Document | Purpose |
 | :--- | :--- |
-| [Project Truth](docs/00-project-truth.md) | Governance baseline |
-| [Product Requirements](docs/01-product-requirements.md) | Live vs planned scope |
-| [Architecture](docs/02-architecture.md) | Technical structure |
-| [Data Domains](docs/05-supabase-data-domains.md) | Schema domains |
-| [Security & RLS](docs/06-security-privacy-and-rls.md) | Security contracts |
-| [CRM Boundary](docs/07-crm-and-quotation-boundary.md) | Pipeline & quotations |
-| [WhatsApp & AI Boundary](docs/08-whatsapp-and-n8n-boundary.md) | Integration rules |
-| [Phase Roadmap](docs/09-phase-roadmap.md) | Phases 1–10 |
-| [Decision Register](docs/10-decision-register.md) | Locked decisions |
-| [ADRs](docs/ADR/) | Architecture decisions |
-| [Audits](docs/audits/) | Phase audit reports |
-
----
-
-## 6. Engineering Baseline
-
-- **Framework:** Next.js 16.2.11 · React 19 · TypeScript 5 · Tailwind CSS v4
-- **Node:** 24.x LTS (`>=24 <25`) · npm 11.16.0
-- **Database:** Supabase (`lpurlfmpvriyvpkujvyl`, Mumbai) · **24 migrations applied** (M1–M24 managed aligned)
-- **Quality gates:** `npm run check` · `npm run check:db`
-- **Contributions:** [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md)
-
----
-
-## 7. License & Ownership
-
-Confidential and Proprietary. All rights reserved by ONEDECORE (`onedecore.in`).
+| [docs/00-project-truth.md](docs/00-project-truth.md) | Governance baseline |
+| [docs/09-phase-roadmap.md](docs/09-phase-roadmap.md) | Phase plan |
+| [docs/10-decision-register.md](docs/10-decision-register.md) | DEC register (through DEC-0095) |
+| [docs/audits/phase-10-cod-production-readiness.md](docs/audits/phase-10-cod-production-readiness.md) | Deploy/activate/rollback runbook |

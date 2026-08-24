@@ -9,12 +9,19 @@ import { buildBreadcrumbJsonLd, buildProductJsonLd } from "@/features/commerce/p
 import type { PublicCommerceProductDetail } from "@/features/commerce/public/public-types";
 import { serializeJsonLd, shopOpenGraph } from "@/features/commerce/public/shop-seo";
 import { buildCommercePublicUrl } from "@/features/commerce/public/public-url";
+import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  if (!isShopPublicEnabled()) {
+    return {
+      title: "Furniture shop — ONEDECORE",
+      robots: { index: false, follow: false },
+    };
+  }
   const { slug } = await params;
   try {
     const product = await getPublicCommerceProduct(slug);
