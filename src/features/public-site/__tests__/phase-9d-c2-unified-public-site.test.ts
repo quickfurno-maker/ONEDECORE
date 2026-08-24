@@ -44,13 +44,15 @@ describe("Phase 9D-C2 root discovery", () => {
     ]);
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     assert.match(page, /data-od-discovery-order=\{DISCOVERY_SECTION_ORDER\.join/);
-    assert.match(page, /How would you like to begin\?/);
+    assert.match(page, /Start with the way you need us\./);
     assert.match(page, /href="\/interiors"/);
     assert.match(page, /href="\/shop"/);
     assert.match(page, /\/interiors#modular-kitchen/);
     assert.match(page, /ShopPincodeChecker/);
     assert.match(page, /getPublicCommerceCategories|categories/);
     assert.match(page, /Our furniture collection is being prepared/);
+    assert.match(page, /commerce\.ok/);
+    assert.doesNotMatch(page, /role="alert"/);
     assert.doesNotMatch(page, /Add to Cart|Buy Now|Checkout/);
     assert.doesNotMatch(page, /submitLead|createLead|HomeLeadCapture/);
   });
