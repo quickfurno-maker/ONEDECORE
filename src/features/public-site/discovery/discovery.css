@@ -6,7 +6,7 @@
 }
 
 .od-disc-shell {
-  width: min(80rem, calc(100% - clamp(1rem, 4vw, 3rem) * 2));
+  width: min(80rem, calc(100% - clamp(2rem, 8vw, 6rem)));
   margin-inline: auto;
 }
 
@@ -92,7 +92,7 @@
 .od-disc-hero__copy {
   position: relative;
   z-index: 1;
-  width: min(80rem, calc(100% - clamp(1rem, 4vw, 3rem) * 2));
+  width: min(80rem, calc(100% - clamp(2rem, 8vw, 6rem)));
   margin-inline: auto;
 }
 

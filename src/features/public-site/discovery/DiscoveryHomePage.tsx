@@ -268,8 +268,8 @@ export function DiscoveryHomePage({
               <div className="od-disc-teaser">
                 <p>The ONEDECORE furniture collection is being prepared.</p>
                 <p className="od-disc-teaser__note">
-                  Our furniture collection is being prepared. Interiors consultation remains
-                  available now.
+                  Interiors consultation is available now while we prepare the furniture
+                  collection.
                 </p>
                 <Link href="/shop" className="od-disc-text-link">
                   Visit the furniture shop
