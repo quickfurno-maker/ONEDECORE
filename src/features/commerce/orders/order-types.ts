@@ -46,3 +46,51 @@ export type CommerceRateLimitResult = {
 export type CommerceTrackingIdentity = {
   matched: boolean;
 };
+
+export type CommerceTrackingSnapshotItem = {
+  lineNumber: number;
+  productName: string;
+  productSlug: string;
+  sku: string;
+  variantDisplayName: string | null;
+  quantity: number;
+  sellingUnitPricePaise: number;
+  lineTotalPaise: number;
+  availabilityMode: "ready_stock" | "made_to_order";
+  primaryImagePublicPath: string | null;
+};
+
+export type CommerceTrackingSnapshot = {
+  orderReference: string;
+  status: string;
+  paymentMethod: string;
+  currency: string;
+  createdAt: string;
+  confirmedAt: string | null;
+  processingAt: string | null;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  cancelledAt: string | null;
+  subtotalPaise: number;
+  discountPaise: number;
+  taxPaise: number;
+  shippingPaise: number;
+  totalPaise: number;
+  fulfilmentTrackingReference: string | null;
+  items: CommerceTrackingSnapshotItem[];
+  delivery: {
+    recipientName: string;
+    mobileE164: string;
+    email: string | null;
+    addressLine1: string;
+    addressLine2: string | null;
+    locality: string;
+    city: string;
+    state: string;
+    pincode: string;
+    shippingChargePaise: number;
+    etaMinDays: number;
+    etaMaxDays: number;
+    assemblyInstallNote: string | null;
+  };
+};

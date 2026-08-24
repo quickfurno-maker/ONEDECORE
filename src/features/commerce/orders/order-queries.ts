@@ -8,12 +8,14 @@ import {
   parseCommerceCodOrderReceipt,
   parseCommerceRateLimitResult,
   parseCommerceTrackingIdentity,
+  parseCommerceTrackingSnapshot,
 } from "./order-parsers.ts";
 import type {
   CommerceCartQuote,
   CommerceCodOrderReceipt,
   CommerceRateLimitResult,
   CommerceTrackingIdentity,
+  CommerceTrackingSnapshot,
 } from "./order-types.ts";
 
 type QuoteLines = ReadonlyArray<{ sku: string; quantity: number }>;
@@ -76,4 +78,15 @@ export async function verifyPublicCommerceOrderTrackingIdentity(input: {
   });
   if (error) throw normalizeCommerceOrderError(error);
   return parseCommerceTrackingIdentity(data);
+}
+
+export async function getPublicCommerceOrderTrackingSnapshot(input: {
+  orderReference: string;
+}): Promise<CommerceTrackingSnapshot> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("get_public_commerce_order_tracking_snapshot", {
+    p_order_reference: input.orderReference,
+  });
+  if (error) throw normalizeCommerceOrderError(error);
+  return parseCommerceTrackingSnapshot(data);
 }

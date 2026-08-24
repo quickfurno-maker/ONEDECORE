@@ -4,7 +4,7 @@
  */
 
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
 import { formatInrFromPaise } from "../../crm/contracts/sales-target-contracts.ts";
@@ -29,16 +29,6 @@ const migrationPath = join(
   root,
   "supabase/migrations/20260823140000_commerce_public_storefront_read_foundation.sql"
 );
-
-function walkFiles(dir: string, acc: string[] = []): string[] {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    const stat = statSync(full);
-    if (stat.isDirectory()) walkFiles(full, acc);
-    else acc.push(full);
-  }
-  return acc;
-}
 
 const publishedCard = {
   product_reference: "OD-P-2026-900001",
@@ -205,24 +195,18 @@ describe("Phase 9D-C1 repository contracts", () => {
     assert.doesNotMatch(sql, /razorpay|stripe|cashfree/i);
   });
 
-  test("shop routes exist and cart/checkout do not", () => {
+  test("shop browse routes exist (cart/checkout added in 9D-D2)", () => {
     assert.equal(existsSync(join(root, "src/app/shop/page.tsx")), true);
     assert.equal(existsSync(join(root, "src/app/shop/c/[slug]/page.tsx")), true);
     assert.equal(existsSync(join(root, "src/app/shop/product/[slug]/page.tsx")), true);
     assert.equal(existsSync(join(root, "src/app/shop/search/page.tsx")), true);
-    assert.equal(existsSync(join(root, "src/app/shop/cart")), false);
-    assert.equal(existsSync(join(root, "src/app/shop/checkout")), false);
+    assert.equal(existsSync(join(root, "src/app/shop/cart/page.tsx")), true);
+    assert.equal(existsSync(join(root, "src/app/shop/checkout/page.tsx")), true);
   });
 
-  test("storefront copy has no cart, buy now, or checkout CTA", () => {
-    const files = walkFiles(join(root, "src/features/commerce/public")).concat(
-      walkFiles(join(root, "src/app/shop"))
-    );
-    for (const file of files) {
-      if (!file.endsWith(".ts") && !file.endsWith(".tsx")) continue;
-      const src = readFileSync(file, "utf8");
-      assert.doesNotMatch(src, /Add to Cart|Buy Now|Proceed to checkout|Checkout now/i);
-    }
+  test("listing cards remain browse-first without Add to Cart", () => {
+    const card = readFileSync(join(root, "src/features/commerce/public/components/ShopProductCard.tsx"), "utf8");
+    assert.doesNotMatch(card, /Add to Cart|Buy Now|Proceed to checkout/i);
   });
 
   test("zero published products have an intentional empty state", () => {

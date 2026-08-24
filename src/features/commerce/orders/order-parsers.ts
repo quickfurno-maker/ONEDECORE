@@ -7,6 +7,8 @@ import type {
   CommerceQuoteLine,
   CommerceRateLimitResult,
   CommerceTrackingIdentity,
+  CommerceTrackingSnapshot,
+  CommerceTrackingSnapshotItem,
 } from "./order-types.ts";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -146,4 +148,69 @@ export function parseCommerceRateLimitResult(value: unknown): CommerceRateLimitR
 export function parseCommerceTrackingIdentity(value: unknown): CommerceTrackingIdentity {
   if (!isRecord(value)) throw new CommerceOrderParseError("track");
   return { matched: requireBool(value.matched, "track.matched") };
+}
+
+function parseTrackingItem(value: unknown, context: string): CommerceTrackingSnapshotItem {
+  if (!isRecord(value)) throw new CommerceOrderParseError(context);
+  const mode = requireString(value.availability_mode, `${context}.availability_mode`);
+  if (mode !== "ready_stock" && mode !== "made_to_order") {
+    throw new CommerceOrderParseError(`${context}.availability_mode`);
+  }
+  return {
+    lineNumber: requireInt(value.line_number, `${context}.line_number`),
+    productName: requireString(value.product_name, `${context}.product_name`),
+    productSlug: requireString(value.product_slug, `${context}.product_slug`),
+    sku: requireString(value.sku, `${context}.sku`),
+    variantDisplayName: optionalString(value.variant_display_name, `${context}.variant_display_name`),
+    quantity: requireInt(value.quantity, `${context}.quantity`),
+    sellingUnitPricePaise: requireInt(value.selling_unit_price_paise, `${context}.selling`),
+    lineTotalPaise: requireInt(value.line_total_paise, `${context}.line_total`),
+    availabilityMode: mode,
+    primaryImagePublicPath: optionalString(value.primary_image_public_path, `${context}.image`),
+  };
+}
+
+export function parseCommerceTrackingSnapshot(value: unknown): CommerceTrackingSnapshot {
+  if (!isRecord(value)) throw new CommerceOrderParseError("snapshot");
+  assertNoInternalKeys(value, "snapshot");
+  if (!Array.isArray(value.items)) throw new CommerceOrderParseError("snapshot.items");
+  const delivery = value.delivery;
+  if (!isRecord(delivery)) throw new CommerceOrderParseError("snapshot.delivery");
+  return {
+    orderReference: requireString(value.order_reference, "snapshot.order_reference"),
+    status: requireString(value.status, "snapshot.status"),
+    paymentMethod: requireString(value.payment_method, "snapshot.payment_method"),
+    currency: requireString(value.currency, "snapshot.currency"),
+    createdAt: requireString(value.created_at, "snapshot.created_at"),
+    confirmedAt: optionalString(value.confirmed_at, "snapshot.confirmed_at"),
+    processingAt: optionalString(value.processing_at, "snapshot.processing_at"),
+    shippedAt: optionalString(value.shipped_at, "snapshot.shipped_at"),
+    deliveredAt: optionalString(value.delivered_at, "snapshot.delivered_at"),
+    cancelledAt: optionalString(value.cancelled_at, "snapshot.cancelled_at"),
+    subtotalPaise: requireInt(value.subtotal_paise, "snapshot.subtotal"),
+    discountPaise: requireInt(value.discount_paise, "snapshot.discount"),
+    taxPaise: requireInt(value.tax_paise, "snapshot.tax"),
+    shippingPaise: requireInt(value.shipping_paise, "snapshot.shipping"),
+    totalPaise: requireInt(value.total_paise, "snapshot.total"),
+    fulfilmentTrackingReference: optionalString(
+      value.fulfilment_tracking_reference,
+      "snapshot.tracking_ref"
+    ),
+    items: value.items.map((line, index) => parseTrackingItem(line, `snapshot.items.${index}`)),
+    delivery: {
+      recipientName: requireString(delivery.recipient_name, "snapshot.delivery.recipient"),
+      mobileE164: requireString(delivery.mobile_e164, "snapshot.delivery.mobile"),
+      email: optionalString(delivery.email, "snapshot.delivery.email"),
+      addressLine1: requireString(delivery.address_line_1, "snapshot.delivery.line1"),
+      addressLine2: optionalString(delivery.address_line_2, "snapshot.delivery.line2"),
+      locality: requireString(delivery.locality, "snapshot.delivery.locality"),
+      city: requireString(delivery.city, "snapshot.delivery.city"),
+      state: requireString(delivery.state, "snapshot.delivery.state"),
+      pincode: requireString(delivery.pincode, "snapshot.delivery.pincode"),
+      shippingChargePaise: requireInt(delivery.shipping_charge_paise, "snapshot.delivery.ship"),
+      etaMinDays: requireInt(delivery.eta_min_days, "snapshot.delivery.eta_min"),
+      etaMaxDays: requireInt(delivery.eta_max_days, "snapshot.delivery.eta_max"),
+      assemblyInstallNote: optionalString(delivery.assembly_install_note, "snapshot.delivery.note"),
+    },
+  };
 }

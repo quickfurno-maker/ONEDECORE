@@ -103,9 +103,10 @@ describe("Phase 9D-C2 nav seo and shop", () => {
     assert.match(nav, /Shop Furniture/);
     assert.match(header, /Escape/);
     assert.doesNotMatch(nav, /\/modular-kitchen"/);
-    assert.doesNotMatch(nav + header, /cart|Cart|Order Tracking/);
+    assert.match(header, /ShopCartLink/);
+    assert.match(header, /current === "shop"/);
     assert.equal(existsSync(join(root, "src/app/modular-kitchen")), false);
-    assert.equal(existsSync(join(root, "src/app/shop/cart")), false);
+    assert.equal(existsSync(join(root, "src/app/shop/cart/page.tsx")), true);
   });
 
   test("sitemap adds interiors and keeps shop commerce entries", () => {
