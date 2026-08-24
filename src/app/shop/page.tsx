@@ -9,22 +9,31 @@ import { getPublicCommerceCategories, getPublicCommerceProducts } from "@/featur
 import type { PublicCommerceCategory } from "@/features/commerce/public/public-types";
 import type { PublicCommerceProductPage } from "@/features/commerce/public/public-types";
 import { shopOpenGraph } from "@/features/commerce/public/shop-seo";
+import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
 
 const SHOP_TITLE = `Furniture Shop — ${SITE_CONFIG.name}`;
 const SHOP_DESCRIPTION =
   "Browse ONEDECORE ready-made furniture. GST-inclusive prices. Add to cart and checkout with cash on delivery.";
 
-export const metadata: Metadata = {
-  title: SHOP_TITLE,
-  description: SHOP_DESCRIPTION,
-  alternates: { canonical: absoluteUrl("shop") },
-  robots: { index: true, follow: true },
-  openGraph: shopOpenGraph({
+export async function generateMetadata(): Promise<Metadata> {
+  if (!isShopPublicEnabled()) {
+    return {
+      title: "Furniture shop — ONEDECORE",
+      robots: { index: false, follow: false },
+    };
+  }
+  return {
     title: SHOP_TITLE,
     description: SHOP_DESCRIPTION,
-    url: absoluteUrl("shop"),
-  }),
-};
+    alternates: { canonical: absoluteUrl("shop") },
+    robots: { index: true, follow: true },
+    openGraph: shopOpenGraph({
+      title: SHOP_TITLE,
+      description: SHOP_DESCRIPTION,
+      url: absoluteUrl("shop"),
+    }),
+  };
+}
 
 async function loadShopHome(): Promise<
   | { ok: true; categories: PublicCommerceCategory[]; featured: PublicCommerceProductPage; newest: PublicCommerceProductPage }

@@ -12,6 +12,7 @@ import {
 } from "./commerce-fingerprints.ts";
 import { TRACKING_MISMATCH_MESSAGE, toCommercePublicMessage } from "./commerce-public-errors.ts";
 import { setCommerceTrackProofCookie } from "./commerce-track-cookie.ts";
+import { isShopPublicEnabled } from "./shop-public-gate.ts";
 
 export type TrackOrderState =
   | { status: "idle" }
@@ -30,6 +31,9 @@ export async function verifyOrderTracking(
   _prev: TrackOrderState,
   formData: FormData
 ): Promise<TrackOrderState> {
+  if (!isShopPublicEnabled()) {
+    return { status: "error", message: "Order tracking is not activated yet." };
+  }
   const orderReference = normalizeOrderReference(String(formData.get("orderReference") ?? ""));
   const mobileE164 = normalizeCommerceMobileE164(String(formData.get("mobile") ?? ""));
   if (!orderReference || !mobileE164) {

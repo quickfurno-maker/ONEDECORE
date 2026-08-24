@@ -14,6 +14,7 @@ import {
   type PublicCommerceSearchInput,
 } from "@/features/commerce/public/public-types";
 import { shopListingHasQueryDuplicates, shopOpenGraph } from "@/features/commerce/public/shop-seo";
+import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -21,6 +22,12 @@ interface PageProps {
 }
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+  if (!isShopPublicEnabled()) {
+    return {
+      title: "Furniture shop — ONEDECORE",
+      robots: { index: false, follow: false },
+    };
+  }
   const { slug } = await params;
   const filtered = shopListingHasQueryDuplicates(await searchParams);
   try {

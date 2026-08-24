@@ -18,6 +18,7 @@ import {
   reviewTokenMatchesRequest,
   verifyCommerceReviewToken,
 } from "./commerce-review-token.ts";
+import { isShopPublicEnabled } from "./shop-public-gate.ts";
 
 export type CheckoutQuoteState =
   | { status: "idle" }
@@ -122,6 +123,9 @@ export async function reviewCheckoutQuote(
   _prev: CheckoutQuoteState,
   formData: FormData
 ): Promise<CheckoutQuoteState> {
+  if (!isShopPublicEnabled()) {
+    return { status: "error", message: "Furniture ordering is not activated yet." };
+  }
   const pincode = boundedText(formData.get("pincode"), 6);
   const lines = parseLines(String(formData.get("lines") ?? ""));
   if (!lines || !/^[0-9]{6}$/.test(pincode)) {
@@ -160,6 +164,9 @@ export async function placeCodOrder(
   _prev: PlaceCodOrderState,
   formData: FormData
 ): Promise<PlaceCodOrderState> {
+  if (!isShopPublicEnabled()) {
+    return { status: "error", message: "Furniture ordering is not activated yet." };
+  }
   const pincode = boundedText(formData.get("pincode"), 6);
   const lines = parseLines(String(formData.get("lines") ?? ""));
   const reviewToken = boundedText(formData.get("reviewToken"), 4096);

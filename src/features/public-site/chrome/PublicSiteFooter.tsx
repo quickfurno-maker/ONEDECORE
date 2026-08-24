@@ -39,7 +39,8 @@ export function PublicSiteFooter({
         </div>
       </div>
       <p className="od-site-footer__base">
-        © {new Date().getFullYear()} {SITE_CONFIG.name}. Production ordering is not enabled.
+        © {new Date().getFullYear()} {SITE_CONFIG.name}. Public furniture shop stays gated until
+        owner activation.
       </p>
       {note ? <p className="od-site-footer__note">{note}</p> : null}
     </footer>

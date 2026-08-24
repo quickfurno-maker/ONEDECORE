@@ -78,11 +78,12 @@ describe("Phase 9D-F baseline and payment absence", () => {
     const banner = read("src/features/commerce/components/StorefrontDisabledBanner.tsx");
     assert.match(
       banner,
-      /Public \/shop production activation remains OFF\. Guest COD checkout is repository-only; online payments remain deferred to Phase 9D-E\./
+      /Public \/shop stays OFF until ONEDECORE_SHOP_PUBLIC_ENABLED=true\. Guest COD is fail-closed while the gate is off; online payments remain deferred to Phase 9D-E\./
     );
     const example = read(".env.example");
     assert.match(example, /ONEDECORE_PROVIDER_DATA_SHARING_ENABLED=false/);
-    assert.doesNotMatch(example, /ONEDECORE_SHOP_PRODUCTION=true|PRODUCTION_ACTIVATION=ON/);
+    assert.match(example, /ONEDECORE_SHOP_PUBLIC_ENABLED=false/);
+    assert.doesNotMatch(example, /NEXT_PUBLIC_ONEDECORE_SHOP_PUBLIC_ENABLED|PRODUCTION_ACTIVATION=ON/);
   });
 });
 
