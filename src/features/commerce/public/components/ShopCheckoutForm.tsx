@@ -178,12 +178,25 @@ export function ShopCheckoutForm() {
           />
           Delivery contact same as customer
         </label>
-        <fieldset disabled={sameAsCustomer}>
+        <fieldset>
           <legend>Delivery</legend>
           <label htmlFor="recipientName">Recipient name</label>
-          <input id="recipientName" name="recipientName" required maxLength={120} />
+          <input
+            id="recipientName"
+            name="recipientName"
+            required
+            maxLength={120}
+            disabled={sameAsCustomer}
+          />
           <label htmlFor="deliveryMobile">Mobile</label>
-          <input id="deliveryMobile" name="deliveryMobile" required inputMode="tel" maxLength={20} />
+          <input
+            id="deliveryMobile"
+            name="deliveryMobile"
+            required
+            inputMode="tel"
+            maxLength={20}
+            disabled={sameAsCustomer}
+          />
           <label htmlFor="addressLine1">Address line 1</label>
           <input id="addressLine1" name="addressLine1" required maxLength={160} />
           <label htmlFor="addressLine2">Address line 2 (optional)</label>

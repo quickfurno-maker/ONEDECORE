@@ -195,4 +195,13 @@ describe("Phase 9D-D2 repository contracts", () => {
     assert.match(form, /clearCart/);
     assert.match(form, /checkoutMode === "buy-now"/);
   });
+
+  test("same-as-customer disables delivery contact only, not address fields", () => {
+    const form = read("src/features/commerce/public/components/ShopCheckoutForm.tsx");
+    assert.doesNotMatch(form, /<fieldset disabled=\{sameAsCustomer\}>/);
+    assert.match(form, /id="recipientName"[\s\S]*disabled=\{sameAsCustomer\}/);
+    assert.match(form, /id="deliveryMobile"[\s\S]*disabled=\{sameAsCustomer\}/);
+    assert.match(form, /id="addressLine1" name="addressLine1" required/);
+    assert.match(form, /id="locality" name="locality" required/);
+  });
 });
