@@ -17,6 +17,15 @@ export const metadata: Metadata = {
     "ONEDECORE is a complete-home brand in Pune for interiors, modular kitchens, and furniture. Design the home, then furnish it with the same team.",
   alternates: { canonical: SITE_CONFIG.url },
   robots: { index: true, follow: true },
+  openGraph: {
+    title: `ONEDECORE — Interiors, Modular Kitchens & Furniture in Pune`,
+    description:
+      "ONEDECORE is a complete-home brand in Pune for interiors, modular kitchens, and furniture. Design the home, then furnish it with the same team.",
+    url: SITE_CONFIG.url,
+    siteName: SITE_CONFIG.name,
+    locale: SITE_CONFIG.locale,
+    type: "website",
+  },
 };
 
 async function loadDiscoveryCommerce(): Promise<DiscoveryCommerceState> {

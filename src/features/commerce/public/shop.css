@@ -221,6 +221,12 @@
 .od-shop-pincode__row {
   display: flex;
   gap: 0.55rem;
+  min-width: 0;
+}
+
+.od-shop-pincode__row input {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .od-shop-gallery {
@@ -403,6 +409,8 @@
 .od-shop-form input,
 .od-shop-form select {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 0.55rem 0.65rem;
   border-radius: 8px;
   border: 1px solid var(--od-line);
@@ -431,8 +439,8 @@
 }
 
 .od-shop-purchase__qtyControls button {
-  min-width: 2.25rem;
-  min-height: 2.25rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   border-radius: 8px;
   border: 1px solid var(--od-line);
   background: var(--od-bg-raised);
@@ -470,6 +478,7 @@
 .od-shop-cart__name {
   margin: 0 0 0.25rem;
   font-weight: 550;
+  overflow-wrap: anywhere;
 }
 
 .od-shop-checkout__review,

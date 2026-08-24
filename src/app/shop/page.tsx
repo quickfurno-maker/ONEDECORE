@@ -8,13 +8,22 @@ import { isPublicCommerceReadFailure } from "@/features/commerce/public/public-e
 import { getPublicCommerceCategories, getPublicCommerceProducts } from "@/features/commerce/public/public-cache";
 import type { PublicCommerceCategory } from "@/features/commerce/public/public-types";
 import type { PublicCommerceProductPage } from "@/features/commerce/public/public-types";
+import { shopOpenGraph } from "@/features/commerce/public/shop-seo";
+
+const SHOP_TITLE = `Furniture Shop — ${SITE_CONFIG.name}`;
+const SHOP_DESCRIPTION =
+  "Browse ONEDECORE ready-made furniture. GST-inclusive prices. Add to cart and checkout with cash on delivery.";
 
 export const metadata: Metadata = {
-  title: `Furniture Shop — ${SITE_CONFIG.name}`,
-  description:
-    "Browse ONEDECORE ready-made furniture. GST-inclusive prices. Add to cart and checkout with cash on delivery.",
+  title: SHOP_TITLE,
+  description: SHOP_DESCRIPTION,
   alternates: { canonical: absoluteUrl("shop") },
   robots: { index: true, follow: true },
+  openGraph: shopOpenGraph({
+    title: SHOP_TITLE,
+    description: SHOP_DESCRIPTION,
+    url: absoluteUrl("shop"),
+  }),
 };
 
 async function loadShopHome(): Promise<

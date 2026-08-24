@@ -13,14 +13,16 @@ import {
   type PublicCommerceProductPage,
   type PublicCommerceSearchInput,
 } from "@/features/commerce/public/public-types";
+import { shopListingHasQueryDuplicates, shopOpenGraph } from "@/features/commerce/public/shop-seo";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const filtered = shopListingHasQueryDuplicates(await searchParams);
   try {
     const categories = await getPublicCommerceCategories();
     const category = categories.find((row) => row.slug === slug);
@@ -30,11 +32,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const title = category.seoTitle ?? `${category.name} — ${SITE_CONFIG.name}`;
     const description =
       category.seoDescription ?? category.shortDescription ?? `Browse ${category.name} at ONEDECORE.`;
+    const url = absoluteUrl(`shop/c/${category.slug}`);
     return {
       title,
       description,
-      alternates: { canonical: absoluteUrl(`shop/c/${category.slug}`) },
-      robots: { index: true, follow: true },
+      alternates: { canonical: url },
+      robots: filtered ? { index: false, follow: true } : { index: true, follow: true },
+      openGraph: shopOpenGraph({ title, description, url }),
     };
   } catch {
     return { title: `Shop — ${SITE_CONFIG.name}`, robots: { index: false, follow: true } };
@@ -45,7 +49,12 @@ async function loadCategory(
   slug: string,
   query: PublicCommerceSearchInput
 ): Promise<
-  | { ok: true; category: PublicCommerceCategory; page: PublicCommerceProductPage }
+  | {
+      ok: true;
+      category: PublicCommerceCategory;
+      page: PublicCommerceProductPage;
+      parentName: string | null;
+    }
   | { ok: false }
 > {
   try {
@@ -57,7 +66,10 @@ async function loadCategory(
     if (!category) {
       notFound();
     }
-    return { ok: true, category, page };
+    const parentName = category.parentSlug
+      ? (categories.find((row) => row.slug === category.parentSlug)?.name ?? category.parentSlug)
+      : null;
+    return { ok: true, category, page, parentName };
   } catch (error) {
     if (isPublicCommerceReadFailure(error)) {
       return { ok: false };
@@ -89,10 +101,10 @@ export default async function ShopCategoryPage({ params, searchParams }: PagePro
       <header className="od-shop__hero">
         <p className="od-shop__kicker">
           <Link href="/shop">Shop</Link>
-          {loaded.category.parentSlug ? (
+          {loaded.category.parentSlug && loaded.parentName ? (
             <>
               {" / "}
-              <Link href={`/shop/c/${loaded.category.parentSlug}`}>{loaded.category.parentSlug}</Link>
+              <Link href={`/shop/c/${loaded.category.parentSlug}`}>{loaded.parentName}</Link>
             </>
           ) : null}
         </p>

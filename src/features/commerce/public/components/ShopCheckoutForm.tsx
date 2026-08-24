@@ -127,6 +127,12 @@ export function ShopCheckoutForm() {
         </button>
       </form>
 
+      {quoteState.status === "invalid" ? (
+        <p className="od-shop__error" role="alert">
+          Please enter a valid 6-digit pincode.
+        </p>
+      ) : null}
+
       {quoteState.status === "error" ? (
         <p className="od-shop__error" role="alert">
           {quoteState.message}

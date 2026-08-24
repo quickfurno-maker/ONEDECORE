@@ -27,7 +27,7 @@ export function ShopPincodeChecker() {
         </button>
       </div>
       <p id="shop-pincode-help" className="od-shop-note">
-        Serviceability only. Ordering is not enabled yet.
+        Serviceability only. Final cash-on-delivery availability is confirmed at checkout.
       </p>
       {state.status === "invalid" ? (
         <p role="status">Enter a 6-digit Indian pincode.</p>
