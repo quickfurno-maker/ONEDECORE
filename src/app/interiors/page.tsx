@@ -10,6 +10,15 @@ export const metadata: Metadata = {
     "Plan complete home interiors, modular kitchens, and wardrobes in Pune with ONEDECORE. Start a free design consultation.",
   alternates: { canonical: absoluteUrl("interiors") },
   robots: { index: true, follow: true },
+  openGraph: {
+    title: `Home Interiors & Modular Kitchens in Pune — ${SITE_CONFIG.name}`,
+    description:
+      "Plan complete home interiors, modular kitchens, and wardrobes in Pune with ONEDECORE. Start a free design consultation.",
+    url: absoluteUrl("interiors"),
+    siteName: SITE_CONFIG.name,
+    locale: SITE_CONFIG.locale,
+    type: "website",
+  },
 };
 
 export default function InteriorsPage() {

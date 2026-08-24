@@ -7,6 +7,8 @@ import { isPublicCommerceReadFailure } from "@/features/commerce/public/public-e
 import { getPublicCommerceProduct } from "@/features/commerce/public/public-cache";
 import { buildBreadcrumbJsonLd, buildProductJsonLd } from "@/features/commerce/public/product-jsonld";
 import type { PublicCommerceProductDetail } from "@/features/commerce/public/public-types";
+import { serializeJsonLd, shopOpenGraph } from "@/features/commerce/public/shop-seo";
+import { buildCommercePublicUrl } from "@/features/commerce/public/public-url";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -22,11 +24,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const title = product.seoTitle ?? `${product.name} — ${SITE_CONFIG.name}`;
     const description =
       product.seoDescription ?? product.shortDescription ?? `View ${product.name} at ONEDECORE.`;
+    const url = absoluteUrl(`shop/product/${product.slug}`);
     return {
       title,
       description,
-      alternates: { canonical: absoluteUrl(`shop/product/${product.slug}`) },
+      alternates: { canonical: url },
       robots: { index: true, follow: true },
+      openGraph: shopOpenGraph({
+        title,
+        description,
+        url,
+        imageUrl: buildCommercePublicUrl(product.media[0]?.publicPath ?? null),
+      }),
     };
   } catch {
     return { title: `Furniture — ${SITE_CONFIG.name}`, robots: { index: false, follow: true } };
@@ -67,12 +76,12 @@ export default async function ShopProductPage({ params }: PageProps) {
         <>
           <script
             type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(buildProductJsonLd(product, variant)) }}
+            dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildProductJsonLd(product, variant)) }}
           />
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
-              __html: JSON.stringify(buildBreadcrumbJsonLd(product)),
+              __html: serializeJsonLd(buildBreadcrumbJsonLd(product)),
             }}
           />
         </>

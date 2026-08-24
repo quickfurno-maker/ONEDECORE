@@ -1,8 +1,8 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced through Phase 9D COD-first launch governance, August 24, 2026)
-**Current Phase:** Phase 9D-D2 **COMPLETE / MERGED** (PR #85 / `f40089b…`). Phase 9D-D1 **COMPLETE / CLOSED**. Phase 9D-C **COMPLETE / CLOSED**. Phase 9D-B **COMPLETE / CLOSED**. Repository **M1–M37**. Managed **M1–M37** (per D1/D2 closeout evidence). Phase 9D-E **DEFERRED / PRESERVED LOCALLY / NOT ON MAIN**. Production **OFF**.
-**Next Phase:** Phase 9D-F **COD-only certification** after ADR-0033 / DEC-0094 governance merge. Phase 10 = **COD-only** activation after 9D-F. Online payments remain separately gated later. Production remains disabled.
+**Document Status:** Locked Roadmap (truth-synced through Phase 9D-F COD storefront certification, August 24, 2026)
+**Current Phase:** Phase 9D-F **LOCAL/REPOSITORY CERTIFICATION PASS**. Phase 9D-D2 **COMPLETE / MERGED** (PR #85 / `f40089b…`). Phase 9D-D1 **COMPLETE / CLOSED**. Phase 9D-C **COMPLETE / CLOSED**. Phase 9D-B **COMPLETE / CLOSED**. Repository **M1–M37**. Managed **M1–M37** (per D1/D2 closeout evidence). Phase 9D-E **DEFERRED / PRESERVED LOCALLY / NOT ON MAIN**. Production **OFF**.
+**Next Phase:** Phase 10 = **COD-only** activation after 9D-F merge (not started). Online payments remain separately gated later. Production remains disabled.
 **Previous Phase:** Phase 9C — Campaign Execution, Attribution & Conversion Feedback (**COMPLETE / MANAGED APPLY CERTIFIED** — DEC-0088; managed **M1–M34** at 9C closeout; production execution/spend **OFF**)
 
 ---
@@ -189,8 +189,8 @@ Phase 9D ──► Ready-Made Furniture E-commerce
     │         • 9D-D1 — COMPLETE / CLOSED (PR #84; managed M37 certified)
     │         • 9D-D2 — COMPLETE / MERGED (PR #85 / f40089b…; COD cart/checkout/tracking)
     │         • 9D-E — DEFERRED / PRESERVED LOCALLY / NOT ON MAIN (ADR-0033 / DEC-0094)
-    │         • 9D-F — NEXT (COD-only certification after COD-first governance merge)
-    │         • Phase 10 — COD-only production activation after 9D-F; online payments separately gated
+    │         • 9D-F — LOCAL/REPOSITORY CERTIFICATION PASS (COD-only; Phase 10 next after merge)
+    │         • Phase 10 — COD-only production activation after 9D-F merge; online payments separately gated
     │         • Online payment activation is NOT implied by Phase 10 COD activation
     ▼
 Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
@@ -318,7 +318,7 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Roadmap lock:** [Phase 9D lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md), [ADR-0028](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md), DEC-0079, OD9D-1–OD9D-12.
 - **Architecture freeze:** [ADR-0030](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md), [9D-A audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md), DEC-0083.
 - **Placement:** after 9C, before Phase 10. Architecture lock is unchanged.
-- **Status:** **9D-A COMPLETE**. **9D-B COMPLETE / CLOSED**. **9D-C COMPLETE / CLOSED** (PR #82 + PR #83 / protected main `bf6d5cca8daa77870229a15a8ff119b27f7362f9` / desktop+mobile QA PASS). **9D-D1 COMPLETE / CLOSED** (PR #84). **9D-D2 COMPLETE / MERGED** (PR #85 / `f40089b9eb82c9e023365a9dca2cafecde0d54a2`). Repository **M1–M37**. Managed **M1–M37** (D1/D2 closeout evidence). **9D-E DEFERRED / PRESERVED LOCALLY / NOT ON MAIN** (ADR-0033 / DEC-0094). **9D-F NEXT** = COD-only certification. Phase 10 = **COD-only** activation after 9D-F; online payments separately gated. Production **OFF**. Closeout: [M35 managed apply](audits/phase-9d-b-m35-managed-apply-closeout.md). D1: [COD order engine](audits/phase-9d-d1-cod-order-engine-implementation.md). D2: [cart/checkout/tracking](audits/phase-9d-d2-cart-checkout-tracking-implementation.md). Governance: [COD-first amendment](audits/phase-9d-cod-first-launch-governance-amendment.md).
+- **Status:** **9D-A COMPLETE**. **9D-B COMPLETE / CLOSED**. **9D-C COMPLETE / CLOSED** (PR #82 + PR #83 / protected main `bf6d5cca8daa77870229a15a8ff119b27f7362f9` / desktop+mobile QA PASS). **9D-D1 COMPLETE / CLOSED** (PR #84). **9D-D2 COMPLETE / MERGED** (PR #85 / `f40089b9eb82c9e023365a9dca2cafecde0d54a2`). Repository **M1–M37**. Managed **M1–M37** (D1/D2 closeout evidence). **9D-E DEFERRED / PRESERVED LOCALLY / NOT ON MAIN** (ADR-0033 / DEC-0094). **9D-F LOCAL/REPOSITORY CERTIFICATION PASS** — [COD certification audit](audits/phase-9d-f-cod-storefront-certification.md). Phase 10 = **COD-only** activation after 9D-F merge (not started); online payments separately gated. Production **OFF**. Closeout: [M35 managed apply](audits/phase-9d-b-m35-managed-apply-closeout.md). D1: [COD order engine](audits/phase-9d-d1-cod-order-engine-implementation.md). D2: [cart/checkout/tracking](audits/phase-9d-d2-cart-checkout-tracking-implementation.md). Governance: [COD-first amendment](audits/phase-9d-cod-first-launch-governance-amendment.md).
 
 ### Phase 10
 - **Objective:** Security hardening, full E2E, performance budgets, Hostinger VPS deployment.
@@ -367,6 +367,7 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - [ADR-0032: Commerce admin control and 9D-C storefront preparation](ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md)
 - [ADR-0033: Phase 9D COD-first launch and online payment deferral](ADR/ADR-0033-phase-9d-cod-first-launch-and-online-payment-deferral.md)
 - [COD-first governance amendment](audits/phase-9d-cod-first-launch-governance-amendment.md)
+- [Phase 9D-F COD storefront certification](audits/phase-9d-f-cod-storefront-certification.md)
 - [Phase 9D-D2 cart/checkout/tracking](audits/phase-9d-d2-cart-checkout-tracking-implementation.md)
 - [Unified homepage design](design/phase-9d-c-unified-homepage.md)
 - [Phase 9D-A entry audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)

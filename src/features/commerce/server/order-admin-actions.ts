@@ -12,6 +12,17 @@ export type OrderMutationState =
   | { status: "error"; message: string }
   | { status: "ok" };
 
+const STAFF_ORDER_ERROR_COPY: Record<string, string> = {
+  COMMERCE_ORDER_TRANSITION_INVALID: "That status change is not allowed.",
+  COMMERCE_UNAUTHORIZED: "Not authorized.",
+  IDEMPOTENCY_KEY_REUSED: "This action was already submitted.",
+  COMMERCE_INVENTORY_UNAVAILABLE: "Inventory is no longer available for this change.",
+};
+
+function staffSafeOrderError(code: string): string {
+  return STAFF_ORDER_ERROR_COPY[code] ?? "The order could not be updated. Please try again.";
+}
+
 const CANCEL_REASONS = new Set(["customer_request", "out_of_stock", "fraud_review", "other"]);
 
 function bounded(value: FormDataEntryValue | null, max: number): string {
@@ -52,7 +63,7 @@ export async function transitionCommerceOrderAction(
     return { status: "ok" };
   } catch (error) {
     const normalized = normalizeCommerceOrderError(error);
-    return { status: "error", message: normalized.code };
+    return { status: "error", message: staffSafeOrderError(normalized.code) };
   }
 }
 
@@ -80,6 +91,6 @@ export async function cancelCommerceOrderAction(
     return { status: "ok" };
   } catch (error) {
     const normalized = normalizeCommerceOrderError(error);
-    return { status: "error", message: normalized.code };
+    return { status: "error", message: staffSafeOrderError(normalized.code) };
   }
 }

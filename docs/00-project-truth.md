@@ -1,13 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced through Phase 9D COD-first launch governance, August 24, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced through Phase 9D-F COD storefront certification, August 24, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 9D-D2 **COMPLETE / MERGED** (PR #85 / `f40089b…`). Phase 9D-D1 **COMPLETE / CLOSED**. Phase 9D-C **COMPLETE / CLOSED**. Phase 9D-B **COMPLETE / CLOSED**. Repository **M1–M37**. Managed **M1–M37** (D1/D2 closeout evidence). Phase 9D-E **DEFERRED / PRESERVED LOCALLY / NOT ON MAIN**. Production **OFF**.
-**Next Phase:** Phase 9D-F **COD-only certification** after ADR-0033 / DEC-0094 governance merge. Phase 10 may later activate **COD only**. Online payments remain separately gated. Production remains disabled.
+**Current Phase:** Phase 9D-F **LOCAL/REPOSITORY CERTIFICATION PASS** (`phase-9d-f-cod-certification`). Phase 9D-D2 **COMPLETE / MERGED** (PR #85). Phase 9D-D1 **COMPLETE / CLOSED**. Phase 9D-C **COMPLETE / CLOSED**. Phase 9D-B **COMPLETE / CLOSED**. Repository **M1–M37**. Managed **M1–M37** (D1/D2 closeout evidence). Phase 9D-E **DEFERRED / PRESERVED LOCALLY / NOT ON MAIN**. Production **OFF**.
+**Next Phase:** Phase 10 **COD-only activation** after 9D-F merge (not started). Online payments remain separately gated. Production remains disabled.
 **Previous Phase:** Phase 9C — Campaign execution, feedback & metrics (**COMPLETE** / DEC-0088)
 
 ---
@@ -328,5 +328,5 @@ Phase 9D product locks remain **OD9D-1–OD9D-12** (ADR-0028 / DEC-0079). Archit
 
 ## Phase 9D COD-First Launch (Governance)
 
-Owner amendment **ADR-0033 / DEC-0094**: furniture-shop MVP launch is **COD-only**. Phase 9D-E online payment is **DEFERRED** (preserved locally on `phase-9d-e-online-payments` @ `b2ea05c…`; not on `main`; M38 not managed). **Next:** Phase 9D-F COD-only certification after this governance merge. Phase 10 may activate **COD only**; online payment requires later separate 9D-E certification + explicit activation. See [COD-first amendment](audits/phase-9d-cod-first-launch-governance-amendment.md).
+Owner amendment **ADR-0033 / DEC-0094**: furniture-shop MVP launch is **COD-only**. Phase 9D-E online payment is **DEFERRED** (preserved locally on `phase-9d-e-online-payments` @ `b2ea05c…`; not on `main`; M38 not managed). **9D-F LOCAL/REPOSITORY CERTIFICATION PASS** — see [9D-F certification](audits/phase-9d-f-cod-storefront-certification.md). Phase 10 may activate **COD only** after 9D-F merge; online payment requires later separate 9D-E certification + explicit activation. Production remains **OFF**.
 <!-- PHASE_9D_D2_AND_COD_FIRST_END -->

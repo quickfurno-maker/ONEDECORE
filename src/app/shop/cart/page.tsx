@@ -5,7 +5,7 @@ import { ShopCartView } from "@/features/commerce/public/components/ShopCartView
 
 export const metadata: Metadata = {
   title: `Cart — ${SITE_CONFIG.name}`,
-  robots: { index: false, follow: true },
+  robots: { index: false, follow: false },
 };
 
 export default function ShopCartPage() {
