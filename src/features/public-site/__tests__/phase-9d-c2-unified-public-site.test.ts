@@ -30,29 +30,38 @@ describe("Phase 9D-C2 root discovery", () => {
       "journeys",
       "trust",
       "interiors-preview",
-      "furniture-categories",
       "signature-bridge",
       "kitchen-feature",
+      "furniture-categories",
       "featured-furniture",
-      "real-homes",
       "why",
+      "real-homes",
+      "testimonials",
       "dual-process",
       "pincode",
-      "testimonials",
       "final-cta",
       "footer",
     ]);
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
+    const css = read("src/features/public-site/discovery/discovery.css");
     assert.match(page, /data-od-discovery-order=\{DISCOVERY_SECTION_ORDER\.join/);
-    assert.match(page, /How would you like to begin\?/);
+    assert.match(page, /Start with the way you need us\./);
     assert.match(page, /href="\/interiors"/);
     assert.match(page, /href="\/shop"/);
     assert.match(page, /\/interiors#modular-kitchen/);
     assert.match(page, /ShopPincodeChecker/);
     assert.match(page, /getPublicCommerceCategories|categories/);
-    assert.match(page, /Our furniture collection is being prepared/);
+    assert.match(page, /The ONEDECORE furniture collection is being prepared/);
+    assert.match(page, /Interiors consultation is available now while we prepare the furniture/);
+    assert.doesNotMatch(page, /Our furniture collection is being prepared/);
+    assert.match(page, /commerce\.ok/);
+    assert.doesNotMatch(page, /role="alert"/);
     assert.doesNotMatch(page, /Add to Cart|Buy Now|Checkout/);
     assert.doesNotMatch(page, /submitLead|createLead|HomeLeadCapture/);
+    assert.match(css, /width:\s*min\(80rem,\s*calc\(100% - clamp\(2rem, 8vw, 6rem\)\)\)/);
+    assert.doesNotMatch(css, /clamp\([^)]+\)\s*\*/);
+    assert.doesNotMatch(css, /calc\([^;]*\*/);
+    assert.doesNotMatch(css, /calc\([^;]*\//);
   });
 
   test("root page consumes public category and featured queries", () => {
