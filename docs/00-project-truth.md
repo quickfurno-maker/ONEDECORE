@@ -1,13 +1,13 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced through Phase 9D-C COMPLETE / CLOSED and 9D-D1 repository implementation, August 23, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced through Phase 9D COD-first launch governance, August 24, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 9D-D1 **REPOSITORY_IMPLEMENTED / MANAGED_APPLY_PENDING** — COD order engine + secure guest commerce data plane. Phase 9D-C **COMPLETE / CLOSED**. Phase 9D-B **COMPLETE / CLOSED**. Managed **M1–M36**. Repository **M1–M37**. Production **OFF**.
-**Next Phase:** Phase 9D-D1 managed M37 certification, then 9D-D2 cart/checkout/tracking UI. Production remains disabled.
+**Current Phase:** Phase 9D-D2 **COMPLETE / MERGED** (PR #85 / `f40089b…`). Phase 9D-D1 **COMPLETE / CLOSED**. Phase 9D-C **COMPLETE / CLOSED**. Phase 9D-B **COMPLETE / CLOSED**. Repository **M1–M37**. Managed **M1–M37** (D1/D2 closeout evidence). Phase 9D-E **DEFERRED / PRESERVED LOCALLY / NOT ON MAIN**. Production **OFF**.
+**Next Phase:** Phase 9D-F **COD-only certification** after ADR-0033 / DEC-0094 governance merge. Phase 10 may later activate **COD only**. Online payments remain separately gated. Production remains disabled.
 **Previous Phase:** Phase 9C — Campaign execution, feedback & metrics (**COMPLETE** / DEC-0088)
 
 ---
@@ -112,8 +112,8 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Campaign metrics & conversion feedback foundation (migration 34) | Managed-applied 2026-08-20 immediately after M33 (Phase 9C-C M34); DEC-0088 |
 | Commerce catalogue & inventory foundation (migration 35) | Managed-applied and certified 2026-08-23 (9D-B closeout); 11 commerce tables; all RLS + FORCE RLS |
 | Commerce public storefront read foundation (`20260823140000`) | M36 managed-applied and certified 2026-08-23; git blob `81a096f4c31c6003fdcf6e4595c84dfe0e806911`; PR #82 merged `34741dac155aad67c1ae9f93bd41a2d7316c9b5a` |
-| Commerce order COD checkout foundation (`20260824140000`) | Conceptual M37; repository-only; **MANAGED_APPLY_PENDING**; no managed write in D1 |
-| Migration alignment | Repository: **M1–M37**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M36**; latest managed `20260823140000` / `commerce_public_storefront_read_foundation` |
+| Commerce order COD checkout foundation (`20260824140000`) | Conceptual M37; **COMPLETE / CLOSED** with PR #84 + managed M37 certification (D1/D2 closeout evidence) |
+| Migration alignment | Repository: **M1–M37**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M37** (D1/D2 closeout evidence); **M38 absent** from `main` |
 
 CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed database (`lpurlfmpvriyvpkujvyl`) through **M27**. Phase 7B is **COMPLETE** (PR #55 merged). Phase 8A is **COMPLETE** (PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; managed **M1–M28**). Phase 8B is **COMPLETE** (OD8B-1–OD8B-8 / ADR-0025 / DEC-0073–DEC-0074; PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`; managed **M1–M29**). Phase 8C is **COMPLETE** (OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; architecture PR #60 merged `5b4a7f300e63b438884a2b440a69a569d91b9e5d`; implementation PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; managed **M1–M30**). Phase 9A architecture is frozen (OD9A-1–OD9A-6 / ADR-0027 / DEC-0077; architecture PR #62 true merge `caff9d0864e1546dff38646df4355dafa851a473`). Phase 9A repository implementation is **REPOSITORY_COMPLETE** (DEC-0078). Phase 9A managed apply is **CERTIFIED** (DEC-0080; M31 applied 2026-08-18; managed **M1–M31**; pending **NONE**; M31 immutable). PR #63 **MERGED** `26e6346ef6722b7c6ff5908c12f208854b513ad6`. Phase 9D-A is **ARCHITECTURE_FROZEN**. Phase 9D-B is **COMPLETE / CLOSED**. Phase 9D-C1 is **MERGED** and M36 is **MANAGED APPLIED / CERTIFIED**. Phase 9D-C2 is **REPOSITORY IMPLEMENTED** on this branch. Phase 9D-C is **IMPLEMENTATION SUBSTANTIALLY COMPLETE / FINAL QA-CLOSEOUT PENDING**. **Production deployment pending** (Phase 10); **public intake remains inactive**.
 
@@ -238,6 +238,8 @@ WhatsApp production outbound, public lead activation, production deployment, **M
 - [Phase 9D-A entry audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)
 - [ADR-0031: Phase 9C campaign execution architecture freeze](ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversion-feedback.md)
 - [ADR-0032: Commerce admin control and 9D-C storefront preparation](ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md)
+- [ADR-0033: Phase 9D COD-first launch and online payment deferral](ADR/ADR-0033-phase-9d-cod-first-launch-and-online-payment-deferral.md)
+- [COD-first governance amendment](audits/phase-9d-cod-first-launch-governance-amendment.md)
 - [ADR-0032 unified homepage design](design/phase-9d-c-unified-homepage.md)
 - [ADR-0032 three-layer public site](design/phase-9d-c-three-layer-public-site.md)
 - [Phase 9D-C preparation](audits/phase-9d-c-commerce-admin-storefront-preparation.md)
@@ -310,11 +312,21 @@ Phase 9D product locks remain **OD9D-1–OD9D-12** (ADR-0028 / DEC-0079). Archit
 
 9D-B is blocked until Phase 9C is complete and this freeze is merged. Commerce migration number is **unreserved**.
 
-**Current status (2026-08-23):** 9D-B is **COMPLETE / CLOSED**. 9D-C is **COMPLETE / CLOSED**. M35 and M36 are managed-certified. Protected main `bf6d5cca8daa77870229a15a8ff119b27f7362f9`. D1 repository adds M37 only; managed apply pending. See [C2 audit](audits/phase-9d-c2-unified-home-interiors-implementation.md) and [D1 audit](audits/phase-9d-d1-cod-order-engine-implementation.md).
+**Current status (2026-08-24):** 9D-B is **COMPLETE / CLOSED**. 9D-C is **COMPLETE / CLOSED**. 9D-D1 is **COMPLETE / CLOSED**. 9D-D2 is **COMPLETE / MERGED** (PR #85 / `f40089b9eb82c9e023365a9dca2cafecde0d54a2`). Repository and managed **M1–M37**. **M38 absent**. Online payment deferred (ADR-0033). See [C2 audit](audits/phase-9d-c2-unified-home-interiors-implementation.md), [D1 audit](audits/phase-9d-d1-cod-order-engine-implementation.md), [D2 audit](audits/phase-9d-d2-cart-checkout-tracking-implementation.md).
 <!-- PHASE_9D_A_ARCHITECTURE_FREEZE_END -->
 
 <!-- PHASE_9D_D1_IMPLEMENTATION_START -->
 ## Phase 9D-D1 — COD Order Engine & Secure Guest Commerce Data Plane
 
-Repository implementation is **REPOSITORY_IMPLEMENTED / MANAGED_APPLY_PENDING**. Conceptual M37 `20260824140000_commerce_order_cod_checkout_foundation`. Guest quote/COD/track RPCs are **service_role-only**. No cart/checkout/track UI. No payment tables or providers. Managed apply is **not** authorized in this gate. Production remains **OFF**. See [D1 audit](audits/phase-9d-d1-cod-order-engine-implementation.md).
+**COMPLETE / CLOSED** — PR #84 merged; managed **M1–M37** certified (D1/D2 closeout evidence). Conceptual M37 `20260824140000_commerce_order_cod_checkout_foundation`. Guest quote/COD/track RPCs are **service_role-only**. No payment tables or providers on `main`. Production remains **OFF**. See [D1 audit](audits/phase-9d-d1-cod-order-engine-implementation.md).
 <!-- PHASE_9D_D1_IMPLEMENTATION_END -->
+
+<!-- PHASE_9D_D2_AND_COD_FIRST_START -->
+## Phase 9D-D2 — Cart, COD Checkout, Tracking (Merged)
+
+**COMPLETE / MERGED** — PR #85 merge commit `f40089b9eb82c9e023365a9dca2cafecde0d54a2`. Guest COD cart/checkout/tracking and admin orders UI are on `main`. Final manual QA cleared; local merge gate PASS. Production **OFF**. No M38. See [D2 audit](audits/phase-9d-d2-cart-checkout-tracking-implementation.md).
+
+## Phase 9D COD-First Launch (Governance)
+
+Owner amendment **ADR-0033 / DEC-0094**: furniture-shop MVP launch is **COD-only**. Phase 9D-E online payment is **DEFERRED** (preserved locally on `phase-9d-e-online-payments` @ `b2ea05c…`; not on `main`; M38 not managed). **Next:** Phase 9D-F COD-only certification after this governance merge. Phase 10 may activate **COD only**; online payment requires later separate 9D-E certification + explicit activation. See [COD-first amendment](audits/phase-9d-cod-first-launch-governance-amendment.md).
+<!-- PHASE_9D_D2_AND_COD_FIRST_END -->
