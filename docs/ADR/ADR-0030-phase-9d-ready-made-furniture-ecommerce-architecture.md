@@ -378,6 +378,8 @@ Exceptions: payment_failed | cancelled
 | **9D-F** | 9D-E | SEO/E2E/concurrency/webhook/a11y/mobile QA | Production secrets in Git |
 | **10** | 9D-F | Owner production activation | — |
 
+> **Launch sequencing amended by [ADR-0033](ADR-0033-phase-9d-cod-first-launch-and-online-payment-deferral.md) / DEC-0094:** COD-first path is `9D-D → 9D-F (COD certification) → 10 (COD-only activation)`. Phase 9D-E remains the online-payment design gate but is **deferred** and may resume later without erasing this table’s architecture rules. Phase 10 under the COD-first path **must not** activate online payments.
+
 ---
 
 ## 17. Consequences

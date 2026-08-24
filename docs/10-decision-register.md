@@ -1,6 +1,6 @@
 # 10 — MASTER DECISION REGISTER
 
-**Document Status:** Locked Decision Register (truth-synced through Phase 9D-C balanced mixed homepage lock, August 20, 2026)
+**Document Status:** Locked Decision Register (truth-synced through Phase 9D COD-first launch deferral, August 24, 2026)
 **Scope:** Architectural & Business Scope Decisions
 
 ---
@@ -102,6 +102,7 @@
 | **DEC-0091** | PHASE_9D_C_UNIFIED_HOMEPAGE_DESIGN_LOCKED: docs-only amendment to ADR-0032 §9.1 (no new competing ecommerce ADR); locks one-brand homepage ~70% interiors / ~30% furniture; nav Interiors / Modular Kitchen / Portfolio / Shop Furniture / About + Get Free Consultation; no fake cart in 9D-C; interior-first hero; two-journey Plan/Shop; trust strip; interior services without commerce CTAs; modular kitchen feature preserved; furniture categories and featured products from M35 admin fields; portfolio independent of commerce; pincode checker uses exact `commerce_pincodes.serviceable`; locked 15-section order; compact mobile length; performance/SEO rules; **no homepage runtime, no `/shop`, no M36, no managed write**; 9D-C still **BLOCKED** until M35 cert + 9D-B closeout | LOCKED | Freezes homepage design so 9D-C can implement after the formal entry gate without reopening architecture | No | Phase 9D | DEC-0090; ADR-0032 |
 | **DEC-0092** | PHASE_9D_C_PUBLIC_SITE_THREE_LAYER_JOURNEY_LOCKED: docs-only ADR-0032 §9.2 owner refinement; one brand; mixed `/` (~60–65% Interiors/Kitchen / ~35–40% Furniture) sits above dedicated `/interiors` (Interiors + Modular Kitchen conversion) and dedicated `/shop`; no second domain/brand/splash; MVP Kitchens nav is `/interiors#modular-kitchen` (no default `/modular-kitchen`); new root `/` section order; funnel separation retained; admin-driven categories/featured retained; no-fake-cart retained; **no runtime, no `/interiors` code, no `/shop` code, no M36, no managed write**; 9D-C still **BLOCKED** until M35 cert + 9D-B closeout | LOCKED | Records the owner three-layer public journey without starting 9D-C or reopening ADR-0030 | No | Phase 9D | DEC-0091 (ratio, no-separate-interiors-homepage, Kitchen header target, root section order only); ADR-0032 §9.2 |
 | **DEC-0093** | PHASE_9D_C_BALANCED_MIXED_HOMEPAGE_LOCKED: docs-only ADR-0032 §9.3; DEC-0092 three-layer routes remain; only root `/` composition refined to perceived ~50/50 Interiors+Kitchens / Furniture; two journeys 50/50; 16-section root order including Design it / Furnish it bridge and dual process; interiors not described as visibly dominant on `/`; `/interiors` and `/shop` remain dedicated conversion; no fake cart; admin-driven commerce; **no runtime, no M36, no managed write**; 9D-C still **BLOCKED** until M35 cert + 9D-B closeout | LOCKED | Records the owner balanced mixed homepage without starting 9D-C or weakening funnel separation | No | Phase 9D | DEC-0092 (root ratio, two-journey weight, root section order, interiors-dominant-on-`/` wording only); ADR-0032 §9.3 |
+| **DEC-0094** | PHASE_9D_COD_FIRST_LAUNCH_ONLINE_PAYMENT_DEFERRED: docs-only ADR-0033; furniture-shop MVP launch is **COD-only**; Phase 9D-E online payment is **DEFERRED** and preserved locally on `phase-9d-e-online-payments` @ `b2ea05c243d03d3e88385189b8a7098a8ffe20c8` (non-main; M38 not on `main`/managed); Phase 9D-F is authorized next as **COD-only certification** without requiring 9D-E; Phase 10 may activate **COD-only** storefront after 9D-F and **MUST NOT** activate online payments; online payment requires later separate 9D-E certification + explicit owner activation; ADR-0030 payment architecture preserved not erased; protected main `f40089b9eb82c9e023365a9dca2cafecde0d54a2` (PR #85); repository **M1–M37**; production **OFF**; **no runtime/migration/managed write** in this gate | LOCKED | Accelerates COD MVP launch while keeping online payments as a separately gated later capability | No | Phase 9D / Phase 10 | ADR-0030 launch sequence only (`9D-E` before `9D-F` / Phase 10 online activation implication); ADR-0033 |
 ---
 
 ## Related Governance Documents
@@ -126,6 +127,8 @@
 - [Phase 9D Roadmap Lock](audits/phase-9d-ready-made-furniture-ecommerce-roadmap-lock.md)
 - [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 - [ADR-0032: Commerce admin control and 9D-C storefront preparation](ADR/ADR-0032-commerce-admin-control-and-phase-9d-c-storefront-preparation.md)
+- [ADR-0033: Phase 9D COD-first launch and online payment deferral](ADR/ADR-0033-phase-9d-cod-first-launch-and-online-payment-deferral.md)
+- [COD-first governance amendment](audits/phase-9d-cod-first-launch-governance-amendment.md)
 - [Unified homepage design](design/phase-9d-c-unified-homepage.md)
 - [Phase 9D-C preparation](audits/phase-9d-c-commerce-admin-storefront-preparation.md)
 - [Phase 9D-A entry audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)

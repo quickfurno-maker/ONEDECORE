@@ -12,6 +12,8 @@ This ADR does **not** reopen ADR-0027 / OD9A locks, Phase 9B/9C implementation, 
 
 Canonical sequence: **9A → 9B → 9C → 9D → 10**.
 
+> **Sequencing amended by [ADR-0033](ADR-0033-phase-9d-cod-first-launch-and-online-payment-deferral.md) / DEC-0094 for COD-first launch:** online payment (9D-E) is deferred; 9D-F may certify the COD storefront before Phase 10 COD-only activation. ADR-0028 owner locks OD9D-1–OD9D-12 are unchanged.
+
 ---
 
 ## Context
