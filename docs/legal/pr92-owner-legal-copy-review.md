@@ -1,8 +1,8 @@
-﻿# PR #92 â€” FINAL proposed production legal / consent copy (owner APPROVE | REVISE)
+﻿# PR #92 - FINAL proposed production legal / consent copy (owner APPROVE | REVISE)
 
 **Status:** Final proposed package for **one explicit owner decision**. **Not effective.**
 **Approval flags remain FALSE** until the owner replies APPROVE (or REVISE with edits).
-**Counsel status:** NO COUNSEL REVIEW YET â€” not lawyer-approved; not a compliance claim.
+**Counsel status:** NO COUNSEL REVIEW YET - not reviewed by counsel; not a compliance claim.
 
 **Effective-date rule:** the calendar date of **authorized production lead-intake activation** (not this commit).
 
@@ -28,8 +28,8 @@
 - Combined roles: privacy+grievance **true**; privacy+data-rights **true** (no duplicate grievance/data-rights inboxes)
 - Authorised representative: **ONEDECORE**
 - Grievance contact: **ONEDECORE, Proprietor / Grievance Contact**
-- Jurisdiction: owner-approved wording below Â· **NOT COUNSEL REVIEWED**
-- Counsel reference: **null** Â· **NO COUNSEL REVIEW YET**
+- Jurisdiction: owner-approved wording below · **NOT COUNSEL REVIEWED**
+- Counsel reference: **null** · **NO COUNSEL REVIEW YET**
 - Retention MVP: approved as written
 - Rate limits MVP: approved; SQL unchanged
 - CRM: manual assignment; no auto-rule
@@ -92,8 +92,8 @@ Service enquiry processing and phone service communication require explicit cons
 
 ### Processors
 
-1. **Supabase** (current) â€” database / auth / portfolio / lead-intake / CRM; region **ap-south-1 / Mumbai** (owner-confirmed); bespoke signed DPA **not claimed**.
-2. **Hostinger VPS** (under-review) â€” website hosting / TLS / application logs (brand from repository deployment documentation); exact legal entity, region, and DPA/terms **not invented / still open**.
+1. **Supabase** (current) — database / auth / portfolio / lead-intake / CRM; region **ap-south-1 / Mumbai** (owner-confirmed); bespoke signed DPA **not claimed**.
+2. **Hostinger VPS** (under-review) — website hosting / TLS / application logs (brand from repository deployment documentation); exact legal entity, region, and DPA/terms **not invented / still open**.
 
 Planned / not active for website lead capture: Meta WhatsApp, Groq, n8n, analytics, email/SMS TBD.
 
@@ -123,7 +123,7 @@ The website provides information about interior services, planning tools, portfo
 
 ### Indicative prices
 
-Estimator outputs and budget ranges are indicative planning guidance only â€” not quotations or guaranteed prices.
+Estimator outputs and budget ranges are indicative planning guidance only — not quotations or guaranteed prices.
 
 ### Consultation requests
 
@@ -131,13 +131,13 @@ Submitting a consultation enquiry is a **request**, not a confirmed appointment 
 
 ### Prohibited use / IP / third parties / availability / no professional advice
 
-As stated in the site Terms module: no misuse or unlawful use; site content owned/licensed to ONEDECORE; third-party services are not ONEDECOREâ€™s responsibility; site is as-available; content is general information only.
+As stated in the site Terms module: no misuse or unlawful use; site content owned/licensed to ONEDECORE; third-party services are not ONEDECORE's responsibility; site is as-available; content is general information only.
 
-### Governing law / jurisdiction (OWNER APPROVED Â· NOT COUNSEL REVIEWED)
+### Governing law / jurisdiction (OWNER APPROVED · NOT COUNSEL REVIEWED)
 
 > These Terms are governed by the laws of India. Subject to applicable law, courts having jurisdiction in Pune, Maharashtra will have jurisdiction over disputes arising from these Terms.
 
-This clause is **not** lawyer-approved.
+This clause has **not** been reviewed by counsel.
 
 ### Limitation / indemnity / disputes
 
@@ -149,19 +149,19 @@ Draft owner-facing wording exists in the Terms module. Counsel has not reviewed 
 
 These match the current concise registry copy and are proposed as `v1.0` once approved. Status remains **draft-review** in code until owner APPROVE.
 
-### Service enquiry (required) â€” proposed `service-enquiry-v1.0`
+### Service enquiry (required) — proposed `service-enquiry-v1.0`
 
 **Concise:** Process information you provide to understand and respond to your interior design enquiry.
 
-**Expanded:** When you submit an enquiry, ONEDECORE will use the personal data you provide â€” such as your name, contact details, property locality, service requirements and messages â€” solely to understand your request and respond. This consent does not cover optional marketing or separate channel permissions.
+**Expanded:** When you submit an enquiry, ONEDECORE will use the personal data you provide — such as your name, contact details, property locality, service requirements and messages — solely to understand your request and respond. This consent does not cover optional marketing or separate channel permissions.
 
-### Service communication (required for phone; email only if email supplied) â€” proposed `service-communication-v1.0`
+### Service communication (required for phone; email only if email supplied) — proposed `service-communication-v1.0`
 
 **Concise:** Contact you about consultation, estimates, site visits, proposals or active project coordination.
 
-**Expanded:** ONEDECORE may use your contact details for operational communication related to your enquiry or project â€” including scheduling, estimates, site visits, design discussions, proposals and delivery coordination. This is separate from optional marketing consent and from channel-specific WhatsApp permission.
+**Expanded:** ONEDECORE may use your contact details for operational communication related to your enquiry or project — including scheduling, estimates, site visits, design discussions, proposals and delivery coordination. This is separate from optional marketing consent and from channel-specific WhatsApp permission.
 
-### WhatsApp service (optional) â€” proposed `whatsapp-service-v1.0`
+### WhatsApp service (optional) — proposed `whatsapp-service-v1.0`
 
 **Concise:** Send and receive WhatsApp messages for service-related communication about your enquiry or project.
 
@@ -183,8 +183,8 @@ No consent checkbox is pre-checked.
 
 Reply with exactly one of:
 
-- **APPROVE** â€” accept the FINAL Privacy Notice, Terms of Use, and consent texts above as the production versions to take effect on the authorized activation date
-- **REVISE** â€” list exact edits
+- **APPROVE** — accept the FINAL Privacy Notice, Terms of Use, and consent texts above as the production versions to take effect on the authorized activation date
+- **REVISE** — list exact edits
 
 ---
 
