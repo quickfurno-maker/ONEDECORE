@@ -4,6 +4,9 @@
 
 import { BUSINESS_IDENTITY } from "./business-identity.ts";
 
+/** Proposed production version identifier — not effective until owner approval + activation. */
+export const TERMS_OF_USE_PROPOSED_PRODUCTION_VERSION = "terms-of-use-v1.0" as const;
+
 export interface LegalContentSection {
   readonly id: string;
   readonly title: string;
@@ -15,9 +18,9 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     id: "draft-status",
     title: "Draft status",
     body: [
-      "These Terms of Use are a draft for owner review. They are not yet effective.",
-      "No Indian legal-counsel review has occurred for this draft. This document does not claim legal compliance or counsel approval.",
-      "Website operator identity details below reflect owner-supplied facts where available; remaining gaps are marked pending.",
+      "These Terms of Use are proposed for owner approval. They are not yet effective.",
+      "Counsel status: NO COUNSEL REVIEW YET. This document does not claim legal compliance or counsel approval.",
+      "Website operator identity details below reflect owner-supplied facts.",
     ],
   },
   {
@@ -26,16 +29,15 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     body: [
       `You are visiting the public website of ${BUSINESS_IDENTITY.tradingName}, an interior design and renovation service operating in ${BUSINESS_IDENTITY.serviceRegion}.`,
       BUSINESS_IDENTITY.entityType === "proprietorship"
-        ? "ONEDECORE is operated as a proprietorship. The trading name is ONEDECORE; the proprietor’s exact full legal name remains pending owner input for the effective notice."
+        ? `ONEDECORE is operated as a proprietorship. Trading name: ${BUSINESS_IDENTITY.tradingName}. Proprietor / legal identity (owner-supplied): ${BUSINESS_IDENTITY.legalEntityName ?? "pending"}.`
         : "Operator legal form details remain pending owner input.",
-      BUSINESS_IDENTITY.registeredOfficeAddress
-        ? `Registered office: ${BUSINESS_IDENTITY.registeredOfficeAddress}.`
-        : "Registered office details remain pending owner input.",
-      BUSINESS_IDENTITY.businessEmail
-        ? `Business contact: ${BUSINESS_IDENTITY.businessEmail}.`
-        : "Business contact details remain pending owner input.",
-      "The website provides information about services, an indicative estimator, an in-browser planning tool and published portfolio content.",
-      "Nothing on this website creates a binding contract unless separately agreed in a signed quotation or agreement.",
+      `Registered office: ${BUSINESS_IDENTITY.registeredOfficeAddress ?? "pending owner input"}.`,
+      BUSINESS_IDENTITY.contactRoleMapping.operatingOfficeSameAsRegistered
+        ? "Operating office: same as registered office."
+        : `Operating office: ${BUSINESS_IDENTITY.operatingOfficeAddress ?? "pending owner input"}.`,
+      `Business contact: ${BUSINESS_IDENTITY.businessEmail ?? "pending owner input"}.`,
+      "The website provides information about services, an indicative estimator, an in-browser planning tool, published portfolio content, and (when enabled) a consultation enquiry form.",
+      "Nothing on this website creates a binding project contract unless separately agreed in a signed quotation or agreement.",
     ],
   },
   {
@@ -53,8 +55,14 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     body: [
       "The estimator and in-browser planner help you explore layout, services and indicative budget ranges.",
       "Planner inputs remain in your browser unless you copy or share them yourself.",
-      "No quotation, contract, booking or submitted lead is created from the current planner.",
       "Copied brief text is not transmitted to ONEDECORE automatically.",
+    ],
+  },
+  {
+    id: "consultation-requests",
+    title: "Consultation requests",
+    body: [
+      "Submitting a consultation enquiry is a request for contact, not a confirmed appointment or booking, unless a separate scheduling system is later introduced and clearly described.",
     ],
   },
   {
@@ -62,7 +70,6 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     title: "Portfolio and media",
     body: [
       "Portfolio pages display published project content from the ONEDECORE CMS.",
-      "Homepage featured project proof remains pending until authentic completed-project media receives owner approval.",
       "Do not assume every image on marketing pages represents a specific delivered client project unless explicitly labelled.",
     ],
   },
@@ -75,11 +82,11 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     ],
   },
   {
-    id: "future-submissions",
-    title: "Future user submissions",
+    id: "user-submissions",
+    title: "User submissions",
     body: [
-      "When enquiry forms and uploads are enabled, you must provide accurate information and only submit content you have the right to share.",
-      "Separate consent will apply to marketing, WhatsApp and portfolio media reuse.",
+      "When you submit an enquiry or upload content, you must provide accurate information and only submit content you have the right to share.",
+      "Separate consent applies to marketing, WhatsApp and portfolio media reuse.",
     ],
   },
   {
@@ -94,17 +101,17 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     id: "third-party",
     title: "Third-party links and services",
     body: [
-      "The website may link to third-party services in future.",
+      "The website may link to third-party services.",
       "ONEDECORE is not responsible for third-party websites, messaging platforms or payment providers.",
-      "WhatsApp, Groq, analytics and campaign tools are planned, not active on the current website.",
+      "WhatsApp, Groq, analytics and campaign tools are planned or separately gated and are not claimed as active website lead processors in this draft.",
     ],
   },
   {
     id: "availability",
     title: "Availability",
     body: [
-      "The website is provided on an as-available basis during development and pre-launch review.",
-      "Features may change, be added or be removed without notice during draft-review mode.",
+      "The website is provided on an as-available basis.",
+      "Features may change, be added or be removed; production lead intake remains disabled until separately authorized.",
     ],
   },
   {
@@ -120,34 +127,34 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     id: "governing-law",
     title: "Governing law and jurisdiction",
     body: [
-      BUSINESS_IDENTITY.jurisdictionClause
-        ? BUSINESS_IDENTITY.jurisdictionClause
-        : "Governing law and jurisdiction clause: not yet owner-approved.",
-      "Proposed owner draft (not yet approved; not lawyer-approved): \"These Terms are governed by the laws of India. Subject to applicable law, courts having jurisdiction in Pune, Maharashtra will have jurisdiction over disputes arising from these Terms.\"",
-      "This draft is pending owner decision (APPROVE THIS DRAFT | REVISE | LEAVE NOT YET APPROVED). It is not described as counsel-approved.",
+      BUSINESS_IDENTITY.jurisdictionClause ??
+        "Governing law and jurisdiction clause: not yet owner-approved.",
+      "Status: OWNER APPROVED · NOT COUNSEL REVIEWED. This clause has not been reviewed by counsel.",
     ],
   },
   {
     id: "limitation-liability",
     title: "Limitation of liability",
     body: [
-      "LEGAL_COUNSEL_REQUIRED: limitation of liability wording must be reviewed before publication.",
-      "Do not treat draft limitation language as final or enforceable.",
+      "To the fullest extent permitted by applicable law, ONEDECORE is not liable for indirect, incidental or consequential losses arising from use of the website or reliance on indicative estimates.",
+      "Nothing in these Terms excludes liability that cannot be excluded under applicable Indian law.",
+      "Counsel status: NO COUNSEL REVIEW YET — this wording is owner-facing draft language only.",
     ],
   },
   {
     id: "indemnity",
     title: "Indemnity",
     body: [
-      "LEGAL_COUNSEL_REQUIRED: indemnity wording must be reviewed before publication.",
+      "You agree to indemnify ONEDECORE against claims arising from your misuse of the website or from content you submit without rights or authority, to the extent permitted by applicable law.",
+      "Counsel status: NO COUNSEL REVIEW YET.",
     ],
   },
   {
     id: "dispute-resolution",
     title: "Dispute resolution",
     body: [
-      "Arbitration or dispute resolution clause: pending owner input.",
-      "LEGAL_COUNSEL_REQUIRED: dispute resolution and arbitration wording.",
+      "Subject to the governing-law clause above, disputes arising from these Terms will be addressed under applicable law in the courts identified in that clause unless the parties agree otherwise in writing.",
+      "No separate arbitration clause is currently published.",
     ],
   },
   {
@@ -155,16 +162,14 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     title: "Business claims",
     body: [
       "Commercial claims on the homepage derive from owner-approved claim configuration.",
-      "Public evidence for aggregate review and project counts may remain pending.",
-      "No aggregateRating, Review or Warranty schema.org structured data is published.",
-      "Free Design Consultation does not mean the current website books or submits a consultation.",
+      "No aggregateRating, Review or Warranty schema.org structured data is published as a compliance claim.",
     ],
   },
   {
     id: "changes",
     title: "Changes",
     body: [
-      "These Terms will be updated after owner and legal-counsel review.",
+      "These Terms will be updated when material changes occur.",
       "Continued use after effective publication may constitute acceptance of updated terms as stated in the effective version.",
     ],
   },
@@ -172,9 +177,8 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     id: "contact",
     title: "Contact",
     body: [
-      "Business contact email: pending owner input.",
-      "Business phone: pending owner input.",
-      "Registered office: pending owner input.",
+      `Business contact email: ${BUSINESS_IDENTITY.businessEmail ?? "pending owner input"}.`,
+      `Registered office: ${BUSINESS_IDENTITY.registeredOfficeAddress ?? "pending owner input"}.`,
     ],
   },
 ] as const;

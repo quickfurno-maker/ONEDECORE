@@ -27,25 +27,23 @@ Do **not** mark these complete until owner evidence exists.
 
 Record answers into `BUSINESS_IDENTITY` and `LEAD_INTAKE_ACTIVATION` only after owner confirmation.
 
-- [ ] `legalEntityName` = proprietor full legal name (not trading name alone)
+- [x] `legalEntityName` / proprietor identity = **ONEDECORE** (owner-supplied exactly; no personal name substituted)
 - [x] `entityType` = proprietorship
 - [x] `registeredOfficeAddress`
 - [x] `operatingOfficeSameAsRegistered=true`
 - [x] `businessEmail` = onedecore@gmail.com
-- [ ] `privacyEmail` / combined-role mapping (pending APPROVE | DO NOT APPROVE)
-- [ ] `grievanceEmail` **or** combined mapping
-- [ ] `dataRightsRequestEmail` **or** combined mapping
-- [ ] `authorisedRepresentative` / `grievanceContact` (pending representative-roles decision)
-- [ ] `jurisdictionClause` (pending APPROVE THIS DRAFT | REVISE | LEAVE NOT YET APPROVED)
+- [x] `privacyEmail` = onedecore@gmail.com; combined privacy/grievance/data-rights mapping **APPROVED**
+- [x] `authorisedRepresentative` = ONEDECORE; `grievanceContact` = ONEDECORE, Proprietor / Grievance Contact
+- [x] `jurisdictionClause` = owner-approved Pune/Maharashtra draft (**NOT COUNSEL REVIEWED**)
 - [x] `legalCounselApprovalReference` — **optional**; status **NO COUNSEL REVIEW YET** (null; not fabricated)
-- [ ] Privacy/Terms publication approval (`privacyTermsVersionApproved` remains false)
+- [ ] Privacy/Terms publication approval (`privacyTermsVersionApproved` remains false) — awaiting APPROVE | REVISE on `docs/legal/pr92-owner-legal-copy-review.md`
 - [ ] Service enquiry consent copy approval (`serviceEnquiryCopyApproved` remains false)
 - [ ] Service communication consent copy approval (`serviceCommunicationCopyApproved` remains false)
 - [x] Retention decisions: lead / consent / audit / suppression (MVP text approved 2026-08-25)
-- [ ] Lead processors registered / reviewed for production intake
+- [ ] Lead processors registered / reviewed for production intake (Supabase region recorded; DPA + Hostinger legal entity/region/terms still open)
 - [ ] Owner approval to collect production leads
 
-See proposed copy package: `docs/legal/pr92-owner-legal-copy-review.md`
+See final copy package: `docs/legal/pr92-owner-legal-copy-review.md`
 
 ### Proxy / networking
 

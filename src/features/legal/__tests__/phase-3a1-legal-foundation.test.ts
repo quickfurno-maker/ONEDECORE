@@ -55,8 +55,10 @@ describe("Phase 3A1 legal publication gate", () => {
     assert.equal(canPublishLegalPolicies(), false);
   });
 
-  test("getMissingLegalPublicationFields() has pending mandatory fields", () => {
-    assert.ok(getMissingLegalPublicationFields().length > 0);
+  test("getMissingLegalPublicationFields() core identity is complete; draft mode still blocks publish", () => {
+    assert.equal(getMissingLegalPublicationFields().length, 0);
+    assert.equal(canPublishLegalPolicies(), false);
+    assert.equal(LEGAL_PUBLICATION_MODE, "draft-review");
   });
 
   test("LEGAL_ROUTE_PATHS lists five draft legal routes", () => {
@@ -138,77 +140,63 @@ describe("Phase 3A1 draft legal content", () => {
     assert.match(text, /remain on your device/i);
   });
 
-  test("terms content mentions indicative prices and pending jurisdiction approval", () => {
+  test("terms content mentions indicative prices and owner-approved jurisdiction", () => {
     const text = flattenLegalSections(TERMS_OF_USE_CONTENT);
     assert.match(text, /indicative/i);
-    assert.match(text, /not yet owner-approved|Proposed owner draft/i);
+    assert.match(text, /courts having jurisdiction in Pune, Maharashtra/i);
+    assert.match(text, /OWNER APPROVED|NOT COUNSEL REVIEWED/i);
+    assert.doesNotMatch(text, /\blawyer-approved\b/i);
   });
 });
 
 describe("Phase 3A1 business identity gate", () => {
-  test("no fake @onedecore.com emails; confirmed owner fields allowed", () => {
-    const confirmedKeys = new Set([
-      "entityType",
-      "registeredOfficeAddress",
-      "operatingOfficeSameAsRegistered",
-      "businessEmail",
-      "registrationIdentifierRequirement",
-      "gstinApplicability",
-      "tradingName",
-      "serviceRegion",
-      "contactRoleMapping",
-    ]);
+  test("no fake @onedecore.com emails; owner-supplied identity facts recorded", () => {
+    assert.equal(BUSINESS_IDENTITY.tradingName, "ONEDECORE");
+    assert.equal(BUSINESS_IDENTITY.legalEntityName, "ONEDECORE");
+    assert.equal(BUSINESS_IDENTITY.entityType, "proprietorship");
+    assert.equal(
+      BUSINESS_IDENTITY.registeredOfficeAddress,
+      "SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207"
+    );
+    assert.equal(
+      BUSINESS_IDENTITY.contactRoleMapping.operatingOfficeSameAsRegistered,
+      true
+    );
+    assert.equal(BUSINESS_IDENTITY.businessEmail, "onedecore@gmail.com");
+    assert.equal(BUSINESS_IDENTITY.privacyEmail, "onedecore@gmail.com");
+    assert.equal(BUSINESS_IDENTITY.grievanceEmail, null);
+    assert.equal(BUSINESS_IDENTITY.dataRightsRequestEmail, null);
+    assert.equal(
+      BUSINESS_IDENTITY.contactRoleMapping.privacyAndGrievanceCombined,
+      true
+    );
+    assert.equal(
+      BUSINESS_IDENTITY.contactRoleMapping.privacyAndDataRightsCombined,
+      true
+    );
+    assert.equal(BUSINESS_IDENTITY.authorisedRepresentative, "ONEDECORE");
+    assert.equal(
+      BUSINESS_IDENTITY.grievanceContact,
+      "ONEDECORE, Proprietor / Grievance Contact"
+    );
+    assert.match(
+      BUSINESS_IDENTITY.jurisdictionClause ?? "",
+      /Pune, Maharashtra/
+    );
+    assert.equal(BUSINESS_IDENTITY.legalCounselApprovalReference, null);
+    assert.equal(BUSINESS_IDENTITY.gstinApplicability, "pending-owner-decision");
+    assert.equal(
+      BUSINESS_IDENTITY.registrationIdentifierRequirement,
+      "not-applicable"
+    );
+
     for (const [key, value] of Object.entries(BUSINESS_IDENTITY)) {
-      if (key === "tradingName" || key === "serviceRegion") continue;
-      if (key === "gstinApplicability") {
-        assert.equal(value, "pending-owner-decision");
-        continue;
-      }
-      if (key === "registrationIdentifierRequirement") {
-        // Proprietorship: CIN/LLPIN not applicable.
-        assert.equal(value, "not-applicable");
-        continue;
-      }
-      if (key === "contactRoleMapping") {
-        assert.equal(typeof value, "object");
-        assert.ok(value !== null);
-        continue;
-      }
-      if (key === "entityType") {
-        assert.equal(value, "proprietorship");
-        continue;
-      }
-      if (key === "registeredOfficeAddress") {
-        assert.equal(
-          value,
-          "SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207"
-        );
-        continue;
-      }
-      if (key === "operatingOfficeSameAsRegistered") {
-        assert.equal(value, true);
-        continue;
-      }
-      if (key === "businessEmail") {
-        assert.equal(value, "onedecore@gmail.com");
-        assert.doesNotMatch(value, /@onedecore\.com/i);
-        continue;
-      }
       if (typeof value === "string") {
         assert.doesNotMatch(
           value,
           /@onedecore\.com/i,
           `${key} must not invent @onedecore.com`
         );
-        if (!confirmedKeys.has(key)) {
-          // Remaining identity/legal fields stay null until owner fills them.
-          // (string path only reached for non-null remaining fields)
-        }
-      } else if (typeof value === "boolean") {
-        // Only operatingOfficeSameAsRegistered is confirmed boolean above.
-        assert.fail(`${key} boolean unexpectedly set`);
-      } else {
-        assert.equal(value, null, `${key} should be null pending owner input`);
       }
     }
   });

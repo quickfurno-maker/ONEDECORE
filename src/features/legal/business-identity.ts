@@ -72,33 +72,41 @@ export const DEFAULT_CONTACT_ROLE_MAPPING: LegalContactRoleMapping = {
   operatingOfficeSameAsRegistered: false,
 } as const;
 
+/**
+ * Owner-approved jurisdiction wording (2026-08-25).
+ * Status: OWNER APPROVED · NOT COUNSEL REVIEWED. Do not describe as lawyer-approved.
+ */
+export const OWNER_APPROVED_JURISDICTION_CLAUSE =
+  "These Terms are governed by the laws of India. Subject to applicable law, courts having jurisdiction in Pune, Maharashtra will have jurisdiction over disputes arising from these Terms." as const;
+
 export const BUSINESS_IDENTITY: BusinessIdentity = {
   tradingName: "ONEDECORE",
   serviceRegion: "Pune, Maharashtra, India",
   /**
-   * For proprietorship this must be the proprietor's exact full legal name —
-   * not the trading name alone. Pending owner fill.
+   * Owner-supplied proprietor / legal identity fact (2026-08-25): ONEDECORE.
+   * Recorded exactly as supplied — do not substitute a personal name.
    */
-  legalEntityName: null,
+  legalEntityName: "ONEDECORE",
   entityType: "proprietorship",
   registeredOfficeAddress:
     "SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207",
   /** Null when contactRoleMapping.operatingOfficeSameAsRegistered is true. */
   operatingOfficeAddress: null,
   businessEmail: "onedecore@gmail.com",
-  /** Pending owner contact-channel simplification decision. */
-  privacyEmail: null,
+  /** Owner-approved contact-channel simplification (combined roles via privacyEmail). */
+  privacyEmail: "onedecore@gmail.com",
+  /** Combined mapping approved — do not duplicate separate grievance inbox. */
   grievanceEmail: null,
+  /** Combined mapping approved — do not duplicate separate data-rights inbox. */
   dataRightsRequestEmail: null,
   warrantyClaimsEmail: null,
   businessPhoneE164: null,
   WhatsAppBusinessPhoneE164: null,
   GSTIN: null,
   cinOrLlpin: null,
-  authorisedRepresentative: null,
-  grievanceContact: null,
-  /** Pending owner jurisdiction draft decision — do not invent counsel approval. */
-  jurisdictionClause: null,
+  authorisedRepresentative: "ONEDECORE",
+  grievanceContact: "ONEDECORE, Proprietor / Grievance Contact",
+  jurisdictionClause: OWNER_APPROVED_JURISDICTION_CLAUSE,
   arbitrationDisputeClause: null,
   /**
    * Optional governance metadata only. No counsel review has occurred.
@@ -110,9 +118,8 @@ export const BUSINESS_IDENTITY: BusinessIdentity = {
   contactRoleMapping: {
     ...DEFAULT_CONTACT_ROLE_MAPPING,
     operatingOfficeSameAsRegistered: true,
-    /** Pending owner APPROVE | DO NOT APPROVE for combined privacy/grievance/data-rights. */
-    privacyAndGrievanceCombined: false,
-    privacyAndDataRightsCombined: false,
+    privacyAndGrievanceCombined: true,
+    privacyAndDataRightsCombined: true,
   },
 } as const;
 

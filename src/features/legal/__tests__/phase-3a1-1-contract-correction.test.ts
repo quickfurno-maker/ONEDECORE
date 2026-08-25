@@ -183,9 +183,10 @@ describe("Phase 3A1.1 activation gates", () => {
     const missing = getLeadIntakeActivationMissingFields();
     assert.ok(missing.includes("privacyTermsVersionApproved"));
     assert.ok(missing.includes("serviceEnquiryCopyApproved"));
-    // Retention decisions were owner-approved for MVP; still require legal/consent publication approvals.
+    assert.ok(missing.includes("leadProcessorsRegistered"));
+    // Retention decisions were owner-approved for MVP; identity facts are recorded.
     assert.ok(!missing.includes("leadRetentionDecided"));
-    assert.ok(missing.includes("legalEntityName"));
+    assert.ok(!missing.includes("legalEntityName"));
     // Empty-input helper remains fail-closed for unset flags.
     assert.ok(
       getMissingLeadIntakeActivationFields().includes("leadRetentionDecided")

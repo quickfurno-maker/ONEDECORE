@@ -68,11 +68,14 @@ describe("Phase 10 lead-intake activation source", () => {
   test("canonical source defaults fail-closed", () => {
     assert.equal(LEAD_INTAKE_ACTIVATION.privacyTermsVersionApproved, false);
     assert.equal(LEAD_INTAKE_ACTIVATION.serviceEnquiryCopyApproved, false);
+    assert.equal(LEAD_INTAKE_ACTIVATION.leadProcessorsRegistered, false);
     assert.equal(isLeadIntakeActivationComplete(), false);
     const missing = getLeadIntakeActivationMissingFields();
     assert.ok(missing.includes("privacyTermsVersionApproved"));
     assert.ok(missing.includes("serviceEnquiryCopyApproved"));
-    assert.ok(missing.includes("legalEntityName"));
+    assert.ok(missing.includes("leadProcessorsRegistered"));
+    // Owner-supplied identity facts are recorded; approvals still block activation.
+    assert.ok(!missing.includes("legalEntityName"));
   });
 
   test("generic business completeness alone does not activate intake", () => {
