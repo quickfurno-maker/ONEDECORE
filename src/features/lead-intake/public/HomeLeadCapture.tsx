@@ -87,6 +87,18 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
   const whatsappCopy = useMemo(() => getWhatsappServiceConsentCopy(), []);
 
   useEffect(() => {
+    if (plan.service) return;
+    const frame = window.requestAnimationFrame(() => {
+      const raw = new URLSearchParams(window.location.search).get("service");
+      if (!raw) return;
+      if (PM_PLANNER.services.some((row) => row.id === raw)) {
+        plan.setService(raw as PmServiceId);
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [plan]);
+
+  useEffect(() => {
     if (clientErrors.length > 0 || serverFields.length > 0) {
       errorRef.current?.focus();
     }

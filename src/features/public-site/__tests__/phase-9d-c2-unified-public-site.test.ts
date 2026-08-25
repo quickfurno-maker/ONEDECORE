@@ -165,11 +165,11 @@ describe("Public site simplification — interiors and portfolio", () => {
     assert.match(detail, /\/interiors#consultation/);
   });
 
-  test("PlanProvider can preselect canonical service from query string", () => {
-    const src = read("src/features/public-site/home-r4/PlanContext.tsx");
+  test("HomeLeadCapture can preselect canonical service from query string", () => {
+    const src = read("src/features/lead-intake/public/HomeLeadCapture.tsx");
     assert.match(src, /URLSearchParams/);
     assert.match(src, /get\("service"\)/);
-    assert.match(src, /PM_PLANNER\.services/);
+    assert.match(src, /plan\.setService/);
   });
 });
 
