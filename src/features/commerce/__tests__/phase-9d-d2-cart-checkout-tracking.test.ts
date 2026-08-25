@@ -42,12 +42,12 @@ function latestMigrationName(): string {
 }
 
 describe("Phase 9D-D2 repository contracts", () => {
-  test("latest migration is timeline taxonomy v2; deferred payment M38 absent", () => {
+  test("latest migration is lead-notes privilege repair; deferred payment M38 absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260825163000_lead_timeline_taxonomy_v2.sql"
+      "20260825170000_crm_lead_notes_insert_privilege_repair.sql"
     );
-    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 38);
+    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 39);
     assert.equal(
       existsSync(join(migrationDir, "20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false
