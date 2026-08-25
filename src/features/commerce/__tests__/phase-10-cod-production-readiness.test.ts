@@ -48,6 +48,32 @@ describe("Phase 10 COD production readiness", () => {
     assert.match(sitemap, /if \(shopPublic\)/);
   });
 
+  test("homepage discovery commerce fails closed before public catalogue reads", () => {
+    const page = read("src/app/page.tsx");
+    assert.match(
+      page,
+      /import\s+\{\s*isShopPublicEnabled\s*\}\s+from\s+"@\/features\/commerce\/server\/shop-public-gate"/
+    );
+    assert.match(page, /getPublicCommerceCategories/);
+    assert.match(page, /getPublicCommerceProducts/);
+    assert.doesNotMatch(page, /ONEDECORE_SHOP_PUBLIC_ENABLED/);
+
+    const loaderStart = page.indexOf("async function loadDiscoveryCommerce");
+    assert.ok(loaderStart >= 0, "loadDiscoveryCommerce must exist");
+    const loader = page.slice(loaderStart);
+    const gateIdx = loader.search(/if\s*\(\s*!isShopPublicEnabled\s*\(\s*\)\s*\)/);
+    const categoriesIdx = loader.indexOf("getPublicCommerceCategories");
+    const productsIdx = loader.indexOf("getPublicCommerceProducts");
+    assert.ok(gateIdx >= 0, "homepage must call isShopPublicEnabled() before commerce reads");
+    assert.ok(categoriesIdx >= 0, "homepage must retain getPublicCommerceCategories for shop-ON");
+    assert.ok(productsIdx >= 0, "homepage must retain getPublicCommerceProducts for shop-ON");
+    assert.ok(
+      gateIdx < categoriesIdx && gateIdx < productsIdx,
+      "isShopPublicEnabled() must precede public commerce category/product reads"
+    );
+    assert.match(loader, /return\s*\{\s*ok:\s*false\s*\}/);
+  });
+
   test("security headers and health probe exist without payment routes", () => {
     const nextConfig = read("next.config.ts");
     const health = read("src/app/api/health/route.ts");

@@ -5,6 +5,7 @@ import {
   getPublicCommerceCategories,
   getPublicCommerceProducts,
 } from "@/features/commerce/public/public-cache";
+import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
 import { publicSiteFontVariables } from "@/features/public-site/fonts";
 import {
   DiscoveryHomePage,
@@ -29,6 +30,10 @@ export const metadata: Metadata = {
 };
 
 async function loadDiscoveryCommerce(): Promise<DiscoveryCommerceState> {
+  if (!isShopPublicEnabled()) {
+    return { ok: false };
+  }
+
   try {
     const [categories, featured] = await Promise.all([
       getPublicCommerceCategories(),
