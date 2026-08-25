@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import {
-  PRIVACY_POLICY_CONTENT,
+  getPrivacyNoticeDisplayVersion,
+  getPrivacyNoticeEffectiveDateLabel,
+  getPrivacyPolicySections,
+  isLegalDraftMode,
+  isLegalOwnerApprovedMode,
 } from "@/features/legal";
 import { buildLegalPageMetadata } from "@/features/legal/legal-metadata";
 import {
@@ -9,10 +13,15 @@ import {
   LegalSection,
 } from "@/features/legal/components/LegalPageShell";
 
+const sections = getPrivacyPolicySections();
+
 export const metadata: Metadata = buildLegalPageMetadata({
   title: "Privacy Notice",
-  description:
-    "Draft privacy notice describing how ONEDECORE intends to handle personal data. Not yet effective.",
+  description: isLegalDraftMode()
+    ? "Draft privacy notice for owner review. Not yet effective."
+    : isLegalOwnerApprovedMode()
+      ? "Owner-approved privacy notice. Not yet effective."
+      : "How ONEDECORE handles personal data for website enquiries and related service operations.",
   path: "/privacy",
 });
 
@@ -20,10 +29,18 @@ export default function PrivacyPage() {
   return (
     <LegalPageShell
       title="Privacy Notice"
-      description="Draft for owner and Indian legal counsel review. Designed for DPDP readiness; not a compliance claim."
-      sections={PRIVACY_POLICY_CONTENT}
+      description={
+        isLegalDraftMode()
+          ? "Draft for owner review. Customer-facing published copy is prepared; this page still shows draft-review chrome until publication is authorized."
+          : isLegalOwnerApprovedMode()
+            ? "Owner-approved customer-facing copy. Not yet the effective published policy."
+            : "How ONEDECORE handles personal data for website enquiries, CRM follow-up and related service operations."
+      }
+      sections={sections}
+      documentVersion={getPrivacyNoticeDisplayVersion()}
+      effectiveDateLabel={getPrivacyNoticeEffectiveDateLabel()}
     >
-      {PRIVACY_POLICY_CONTENT.map((section) => (
+      {sections.map((section) => (
         <LegalSection key={section.id} id={section.id} title={section.title}>
           <LegalParagraphs lines={section.body} />
         </LegalSection>

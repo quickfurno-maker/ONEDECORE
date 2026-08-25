@@ -25,6 +25,12 @@ export {
 } from "./business-identity.ts";
 
 export {
+  LEAD_INTAKE_ACTIVATION,
+  getLeadIntakeActivationMissingFields,
+  isLeadIntakeActivationComplete,
+} from "./lead-intake-activation.ts";
+
+export {
   allClaimsOwnerApprovedForDisplay,
   allClaimsUseStructuredDataDenied,
   BUSINESS_TRUTH_REGISTRY,
@@ -45,8 +51,13 @@ export {
   CONSENT_SEPARATION_RULES,
   CONSENT_VERSIONS,
   CURRENT_CONSENT_VERSION_IDS,
+  LEAD_PATH_CONSENT_PURPOSES,
+  areLeadPathConsentVersionsEffective,
   getConsentVersionByPurpose,
   getCurrentConsentVersionByPurpose,
+  getEffectiveConsentVersionByPurpose,
+  isConsentVersionEffective,
+  isConsentVersionOwnerApprovedNotEffective,
   marketingConsentIsOptional,
   serviceCommunicationExcludesWhatsApp,
   type CommunicationChannelCheckInput,
@@ -84,11 +95,17 @@ export {
 export {
   canPublishLegalPolicies,
   canPublishWarrantyPolicy,
+  canRenderPublishedLegalDocument,
   getLegalRobots,
   isLegalDraftMode,
+  isLegalOwnerApprovedMode,
+  isLegalPublishedMode,
+  isRealLegalEffectiveDate,
   isWarrantyPublicationReady,
   LEGAL_DPDP_READINESS_STATEMENT,
   LEGAL_DRAFT_BANNER,
+  LEGAL_EFFECTIVE_DATE_PLACEHOLDER,
+  LEGAL_OWNER_APPROVED_BANNER,
   LEGAL_PUBLICATION_MODE,
   LEGAL_ROUTE_PATHS,
   type LegalPublicationChecklist,
@@ -121,7 +138,10 @@ export {
 
 export {
   getCurrentProcessors,
+  getMissingWebsiteLeadProcessorEvidence,
   getPlannedProcessors,
+  getWebsiteLeadProcessors,
+  areWebsiteLeadProcessorsReady,
   noSignedDpaClaimed,
   PROCESSOR_REGISTER,
   type ProcessorRegisterEntry,
@@ -129,8 +149,18 @@ export {
 } from "./processor-register.ts";
 
 export {
+  PRIVACY_NOTICE_EFFECTIVE_DATE,
+  PRIVACY_NOTICE_OWNER_APPROVAL,
+  PRIVACY_NOTICE_PROPOSED_PRODUCTION_VERSION,
   PRIVACY_NOTICE_VERSION,
   PRIVACY_POLICY_CONTENT,
+  flattenLegalContentSections,
+  getPrivacyNoticeDisplayVersion,
+  getPrivacyNoticeEffectiveDateLabel,
+  getPrivacyPolicySections,
+  getPublishedPrivacyNoticeText,
+  resolveLegalContentSections,
+  type LegalContentAudience,
   type LegalContentSection as PrivacyPolicySection,
 } from "./privacy-policy-content.ts";
 
@@ -145,6 +175,14 @@ export {
 
 export {
   TERMS_OF_USE_CONTENT,
+  TERMS_OF_USE_EFFECTIVE_DATE,
+  TERMS_OF_USE_OWNER_APPROVAL,
+  TERMS_OF_USE_PROPOSED_PRODUCTION_VERSION,
+  TERMS_OF_USE_VERSION,
+  getPublishedTermsOfUseText,
+  getTermsOfUseDisplayVersion,
+  getTermsOfUseEffectiveDateLabel,
+  getTermsOfUseSections,
   type LegalContentSection as TermsSection,
 } from "./terms-content.ts";
 

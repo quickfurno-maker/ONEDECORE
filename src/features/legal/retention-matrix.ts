@@ -6,7 +6,10 @@
 export const RETENTION_OWNER_DECISION_REQUIRED =
   "OWNER_DECISION_REQUIRED" as const;
 
-export type RetentionDecisionStatus = typeof RETENTION_OWNER_DECISION_REQUIRED;
+/** Unresolved marker or owner-approved retention wording. */
+export type RetentionDecisionStatus =
+  | typeof RETENTION_OWNER_DECISION_REQUIRED
+  | (string & {});
 
 export type RetentionCategoryId =
   | "lead"
@@ -50,14 +53,18 @@ export const RETENTION_MATRIX: readonly RetentionMatrixEntry[] = [
     label: "Lead records",
     purpose: "Enquiry intake and sales follow-up",
     proposedRetention: RETENTION_OWNER_DECISION_REQUIRED,
-    approvedRetention: RETENTION_OWNER_DECISION_REQUIRED,
+    approvedRetention:
+      "24 months after the last meaningful lead activity or closure, then delete/anonymize unless another lawful/business requirement requires retention.",
     trigger: "Lead creation; conversion or closure",
-    deletionOrAnonymisation: "Pending owner-approved schedule",
+    deletionOrAnonymisation:
+      "Delete or anonymize after the approved retention window unless another lawful/business requirement applies.",
     legalHold: RETENTION_OWNER_DECISION_REQUIRED,
     processorDeletion: "Pending processor contract terms",
     ownerApproval: null,
     legalApproval: null,
-    notes: ["No lead store exists on current homepage."],
+    notes: [
+      "Owner approved MVP retention recommendation 2026-08-25 (subject to later counsel review of public notices).",
+    ],
   },
   {
     category: "contact",
@@ -78,14 +85,19 @@ export const RETENTION_MATRIX: readonly RetentionMatrixEntry[] = [
     label: "Consent records",
     purpose: "Demonstrate lawful consent and copy version shown",
     proposedRetention: RETENTION_OWNER_DECISION_REQUIRED,
-    approvedRetention: RETENTION_OWNER_DECISION_REQUIRED,
+    approvedRetention:
+      "36 months after the related lead/customer relationship is closed, retaining only evidence reasonably needed to demonstrate the recorded consent/withdrawal history.",
     trigger: "Consent capture; withdrawal",
-    deletionOrAnonymisation: "Evidence retention after withdrawal — pending owner decision",
+    deletionOrAnonymisation:
+      "Retain minimum consent evidence for the approved window; then delete/anonymize unless another lawful requirement applies.",
     legalHold: RETENTION_OWNER_DECISION_REQUIRED,
     processorDeletion: "Pending processor contract terms",
     ownerApproval: null,
     legalApproval: null,
-    notes: ["Must retain evidence sufficient to demonstrate consent when required by law."],
+    notes: [
+      "Owner approved MVP retention recommendation 2026-08-25.",
+      "Must retain evidence sufficient to demonstrate consent when required by law.",
+    ],
   },
   {
     category: "withdrawal",
@@ -106,14 +118,16 @@ export const RETENTION_MATRIX: readonly RetentionMatrixEntry[] = [
     label: "Suppression lists",
     purpose: "Prevent re-contact after opt-out",
     proposedRetention: RETENTION_OWNER_DECISION_REQUIRED,
-    approvedRetention: RETENTION_OWNER_DECISION_REQUIRED,
+    approvedRetention:
+      "Retain the minimum suppression record for as long as the opt-out/suppression remains in force so the business does not accidentally re-contact the person. Do not retain unrelated profile/marketing content merely for suppression.",
     trigger: "Marketing or channel opt-out",
-    deletionOrAnonymisation: "Minimum necessary suppression — pending owner decision",
+    deletionOrAnonymisation:
+      "Keep only the minimum suppression identifiers while the opt-out remains in force.",
     legalHold: RETENTION_OWNER_DECISION_REQUIRED,
     processorDeletion: "Pending processor contract terms",
     ownerApproval: null,
     legalApproval: null,
-    notes: [],
+    notes: ["Owner approved MVP retention recommendation 2026-08-25."],
   },
   {
     category: "whatsapp",
@@ -274,14 +288,18 @@ export const RETENTION_MATRIX: readonly RetentionMatrixEntry[] = [
     label: "Security logs",
     purpose: "Detect, investigate and respond to security events",
     proposedRetention: RETENTION_OWNER_DECISION_REQUIRED,
-    approvedRetention: RETENTION_OWNER_DECISION_REQUIRED,
+    approvedRetention:
+      "36 months after the related lead is closed, limited to operational/security/audit evidence needed for accountability.",
     trigger: "Security event; routine rotation",
-    deletionOrAnonymisation: "Pending owner-approved schedule",
+    deletionOrAnonymisation:
+      "Delete or anonymize operational/security/audit evidence after the approved window unless another lawful requirement applies.",
     legalHold: RETENTION_OWNER_DECISION_REQUIRED,
     processorDeletion: "Supabase and hosting — verify deletion capability",
     ownerApproval: null,
     legalApproval: null,
-    notes: [],
+    notes: [
+      "Mapped to owner-approved MVP auditRetention recommendation 2026-08-25.",
+    ],
   },
   {
     category: "breach-record",

@@ -25,8 +25,12 @@ import { noSignedDpaClaimed } from "../processor-register.ts";
 import { BUSINESS_TRUTH_REGISTRY } from "../business-truth-registry.ts";
 import { DATA_INVENTORY_CURRENT_TRUTH } from "../data-inventory.ts";
 import { WARRANTY_MARKETING_CLAIM_YEARS } from "../warranty-policy.ts";
-import { PRIVACY_POLICY_CONTENT } from "../privacy-policy-content.ts";
-import { TERMS_OF_USE_CONTENT } from "../terms-content.ts";
+import {
+  getPrivacyPolicySections,
+} from "../privacy-policy-content.ts";
+import {
+  getTermsOfUseSections,
+} from "../terms-content.ts";
 import { HOME_CLAIMS } from "../../public-site/home-r4/claims.ts";
 
 const root = process.cwd();
@@ -47,16 +51,18 @@ function flattenLegalSections(
 }
 
 describe("Phase 3A1 legal publication gate", () => {
-  test("LEGAL_PUBLICATION_MODE is draft-review", () => {
-    assert.equal(LEGAL_PUBLICATION_MODE, "draft-review");
+  test("LEGAL_PUBLICATION_MODE is owner-approved (pre-publication)", () => {
+    assert.equal(LEGAL_PUBLICATION_MODE, "owner-approved");
   });
 
-  test("canPublishLegalPolicies() is false in draft-review", () => {
+  test("canPublishLegalPolicies() is false until published", () => {
     assert.equal(canPublishLegalPolicies(), false);
   });
 
-  test("getMissingLegalPublicationFields() has pending mandatory fields", () => {
-    assert.ok(getMissingLegalPublicationFields().length > 0);
+  test("getMissingLegalPublicationFields() core identity is complete; owner-approved still blocks publish", () => {
+    assert.equal(getMissingLegalPublicationFields().length, 0);
+    assert.equal(canPublishLegalPolicies(), false);
+    assert.equal(LEGAL_PUBLICATION_MODE, "owner-approved");
   });
 
   test("LEGAL_ROUTE_PATHS lists five draft legal routes", () => {
@@ -83,12 +89,12 @@ describe("Phase 3A1 consent architecture", () => {
   });
 
   test("consent versions cover six purpose codes including required set", () => {
-    assert.equal(CONSENT_VERSIONS.length, 6);
-    const codes = CONSENT_VERSIONS.map((version) => version.purposeCode);
+    const codes = new Set(CONSENT_VERSIONS.map((version) => version.purposeCode));
+    assert.ok(codes.size >= 6);
     for (const purpose of REQUIRED_CONSENT_PURPOSES) {
-      assert.ok(codes.includes(purpose), `missing purpose ${purpose}`);
+      assert.ok(codes.has(purpose), `missing purpose ${purpose}`);
     }
-    assert.ok(codes.includes("SERVICE_COMMUNICATION"));
+    assert.ok(codes.has("SERVICE_COMMUNICATION"));
   });
 });
 
@@ -98,7 +104,8 @@ describe("Phase 3A1 warranty and retention truth", () => {
   });
 
   test("allRetentionPeriodsUnresolved()", () => {
-    assert.equal(allRetentionPeriodsUnresolved(), true);
+    // MVP lead/consent/audit/suppression periods were owner-approved; others remain open.
+    assert.equal(allRetentionPeriodsUnresolved(), false);
   });
 
   test("HOME_CLAIMS.warrantyYears referenced via WARRANTY_MARKETING_CLAIM_YEARS", () => {
@@ -130,45 +137,69 @@ describe("Phase 3A1 processors and business truth", () => {
 });
 
 describe("Phase 3A1 draft legal content", () => {
-  test("privacy content states current-site processing truth", () => {
-    const text = flattenLegalSections(PRIVACY_POLICY_CONTENT);
-    assert.match(text, /WhatsApp is not live/i);
-    assert.match(text, /Groq AI processing is not live/i);
+  test("privacy content states planner local handling and WhatsApp channel separation", () => {
+    const text = flattenLegalSections(getPrivacyPolicySections("published"));
+    assert.match(text, /WhatsApp is a separate communication channel/i);
     assert.match(text, /remain on your device/i);
   });
 
-  test("terms content mentions indicative prices and LEGAL_COUNSEL_REQUIRED", () => {
-    const text = flattenLegalSections(TERMS_OF_USE_CONTENT);
+  test("terms content mentions indicative prices and owner-approved jurisdiction", () => {
+    const text = flattenLegalSections(getTermsOfUseSections("published"));
     assert.match(text, /indicative/i);
-    assert.match(text, /LEGAL_COUNSEL_REQUIRED/);
+    assert.match(text, /courts having jurisdiction in Pune, Maharashtra/i);
+    assert.doesNotMatch(text, /\blawyer-approved\b/i);
+    assert.doesNotMatch(text, /NO COUNSEL REVIEW YET/i);
   });
 });
 
 describe("Phase 3A1 business identity gate", () => {
-  test("no fake @onedecore.com emails in business-identity", () => {
+  test("no fake @onedecore.com emails; owner-supplied identity facts recorded", () => {
+    assert.equal(BUSINESS_IDENTITY.tradingName, "ONEDECORE");
+    assert.equal(BUSINESS_IDENTITY.legalEntityName, "ONEDECORE");
+    assert.equal(BUSINESS_IDENTITY.entityType, "proprietorship");
+    assert.equal(
+      BUSINESS_IDENTITY.registeredOfficeAddress,
+      "SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207"
+    );
+    assert.equal(
+      BUSINESS_IDENTITY.contactRoleMapping.operatingOfficeSameAsRegistered,
+      true
+    );
+    assert.equal(BUSINESS_IDENTITY.businessEmail, "onedecore@gmail.com");
+    assert.equal(BUSINESS_IDENTITY.privacyEmail, "onedecore@gmail.com");
+    assert.equal(BUSINESS_IDENTITY.grievanceEmail, null);
+    assert.equal(BUSINESS_IDENTITY.dataRightsRequestEmail, null);
+    assert.equal(
+      BUSINESS_IDENTITY.contactRoleMapping.privacyAndGrievanceCombined,
+      true
+    );
+    assert.equal(
+      BUSINESS_IDENTITY.contactRoleMapping.privacyAndDataRightsCombined,
+      true
+    );
+    assert.equal(BUSINESS_IDENTITY.authorisedRepresentative, "ONEDECORE");
+    assert.equal(
+      BUSINESS_IDENTITY.grievanceContact,
+      "ONEDECORE, Proprietor / Grievance Contact"
+    );
+    assert.match(
+      BUSINESS_IDENTITY.jurisdictionClause ?? "",
+      /Pune, Maharashtra/
+    );
+    assert.equal(BUSINESS_IDENTITY.legalCounselApprovalReference, null);
+    assert.equal(BUSINESS_IDENTITY.gstinApplicability, "pending-owner-decision");
+    assert.equal(
+      BUSINESS_IDENTITY.registrationIdentifierRequirement,
+      "not-applicable"
+    );
+
     for (const [key, value] of Object.entries(BUSINESS_IDENTITY)) {
-      if (key === "tradingName" || key === "serviceRegion") continue;
-      if (key === "gstinApplicability") {
-        assert.equal(value, "pending-owner-decision");
-        continue;
-      }
-      if (key === "registrationIdentifierRequirement") {
-        assert.equal(value, "pending-owner-decision");
-        continue;
-      }
-      if (key === "contactRoleMapping") {
-        assert.equal(typeof value, "object");
-        assert.ok(value !== null);
-        continue;
-      }
       if (typeof value === "string") {
         assert.doesNotMatch(
           value,
           /@onedecore\.com/i,
           `${key} must not invent @onedecore.com`
         );
-      } else {
-        assert.equal(value, null, `${key} should be null pending owner input`);
       }
     }
   });

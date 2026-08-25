@@ -1,6 +1,6 @@
 /**
- * Phase 3A1 — consent purpose registry and versioning.
- * Draft-review copies only; no database or API implementation.
+ * Consent purpose registry and versioning.
+ * Lead-path v1.0 copies are owner-approved but not effective until activation.
  */
 
 export type ConsentPurposeCode =
@@ -68,28 +68,39 @@ export interface ConsentRecordContract {
   readonly metadataVersion: string;
 }
 
+const OWNER_APPROVAL_PR92: ConsentApprovalRecord = {
+  approvedBy: "ONEDECORE owner",
+  approvedAt: "2026-08-25",
+  reference:
+    "PR #92 owner APPROVE of published-mode package at 2609bbca1ba661989fd0e8f468b0724a47adcd5d",
+};
+
+/**
+ * Aggregate registry status for non-lead draft purposes.
+ * Lead-path v1.0 entries use status "approved" with effectiveFrom null.
+ */
 export const CONSENT_REGISTRY_STATUS: ConsentVersionStatus = "draft-review";
 
 export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
   {
-    version: "service-enquiry-v0.1-draft",
+    version: "service-enquiry-v1.0",
     title: "Service enquiry processing",
     conciseCopy:
       "Process information you provide to understand and respond to your interior design enquiry.",
     expandedNotice:
-      "When you submit an enquiry, ONEDECORE will use the personal data you provide — such as your name, contact details, property locality, service requirements and messages — solely to understand your request and respond. This consent does not cover optional marketing or separate channel permissions.",
+      "When you submit an enquiry, ONEDECORE will use the personal data you provide — such as your name, contact details, property locality, service requirements and messages — to understand and respond to your request, administer the related enquiry, maintain the necessary CRM and consent records, and protect the service against misuse as described in the Privacy Notice. This consent does not cover optional marketing or separate channel permissions.",
     purposeCode: "SERVICE_ENQUIRY",
     channels: ["website-form", "email", "phone", "in-person"],
     required: true,
     defaultChecked: false,
-    status: CONSENT_REGISTRY_STATUS,
+    status: "approved",
     effectiveFrom: null,
     retiredAt: null,
-    ownerApproval: null,
+    ownerApproval: OWNER_APPROVAL_PR92,
     legalApproval: null,
   },
   {
-    version: "service-communication-v0.1-draft",
+    version: "service-communication-v1.0",
     title: "Service communication",
     conciseCopy:
       "Contact you about consultation, estimates, site visits, proposals or active project coordination.",
@@ -99,26 +110,77 @@ export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
     channels: ["email", "phone", "in-person"],
     required: true,
     defaultChecked: false,
-    status: CONSENT_REGISTRY_STATUS,
+    status: "approved",
     effectiveFrom: null,
     retiredAt: null,
+    ownerApproval: OWNER_APPROVAL_PR92,
+    legalApproval: null,
+  },
+  {
+    version: "whatsapp-service-v1.0",
+    title: "WhatsApp service communication",
+    conciseCopy:
+      "Send and receive WhatsApp messages for service-related communication about your enquiry or project.",
+    expandedNotice:
+      "WhatsApp is a separate channel requiring explicit permission. If you opt in, ONEDECORE may use WhatsApp for service-related messages such as consultation updates, site-visit coordination and project communication. Outbound WhatsApp sending is a separate activation concern from storing this consent. Marketing messages require separate optional consent.",
+    purposeCode: "WHATSAPP_SERVICE",
+    channels: ["whatsapp"],
+    required: false,
+    defaultChecked: false,
+    status: "approved",
+    effectiveFrom: null,
+    retiredAt: null,
+    ownerApproval: OWNER_APPROVAL_PR92,
+    legalApproval: null,
+  },
+  {
+    version: "service-enquiry-v0.1-draft",
+    title: "Service enquiry processing (retired draft)",
+    conciseCopy:
+      "Process information you provide to understand and respond to your interior design enquiry.",
+    expandedNotice:
+      "When you submit an enquiry, ONEDECORE will use the personal data you provide — such as your name, contact details, property locality, service requirements and messages — to understand and respond to your request, administer the related enquiry, maintain the necessary CRM and consent records, and protect the service against misuse as described in the Privacy Notice. This consent does not cover optional marketing or separate channel permissions.",
+    purposeCode: "SERVICE_ENQUIRY",
+    channels: ["website-form", "email", "phone", "in-person"],
+    required: true,
+    defaultChecked: false,
+    status: "retired",
+    effectiveFrom: null,
+    retiredAt: "2026-08-25",
+    ownerApproval: null,
+    legalApproval: null,
+  },
+  {
+    version: "service-communication-v0.1-draft",
+    title: "Service communication (retired draft)",
+    conciseCopy:
+      "Contact you about consultation, estimates, site visits, proposals or active project coordination.",
+    expandedNotice:
+      "ONEDECORE may use your contact details for operational communication related to your enquiry or project — including scheduling, estimates, site visits, design discussions, proposals and delivery coordination. This is separate from optional marketing consent and from channel-specific WhatsApp permission.",
+    purposeCode: "SERVICE_COMMUNICATION",
+    channels: ["email", "phone", "in-person"],
+    required: true,
+    defaultChecked: false,
+    status: "retired",
+    effectiveFrom: null,
+    retiredAt: "2026-08-25",
     ownerApproval: null,
     legalApproval: null,
   },
   {
     version: "whatsapp-service-v0.1-draft",
-    title: "WhatsApp service communication",
+    title: "WhatsApp service communication (retired draft)",
     conciseCopy:
       "Send and receive WhatsApp messages for service-related communication about your enquiry or project.",
     expandedNotice:
-      "WhatsApp is a separate channel requiring explicit permission. If you opt in, ONEDECORE may use WhatsApp for service-related messages such as consultation updates, site-visit coordination and project communication. WhatsApp is not live on the current website. Marketing messages require separate optional consent.",
+      "WhatsApp is a separate channel requiring explicit permission. If you opt in, ONEDECORE may use WhatsApp for service-related messages such as consultation updates, site-visit coordination and project communication. Outbound WhatsApp sending is a separate activation concern from storing this consent. Marketing messages require separate optional consent.",
     purposeCode: "WHATSAPP_SERVICE",
     channels: ["whatsapp"],
     required: false,
     defaultChecked: false,
-    status: CONSENT_REGISTRY_STATUS,
+    status: "retired",
     effectiveFrom: null,
-    retiredAt: null,
+    retiredAt: "2026-08-25",
     ownerApproval: null,
     legalApproval: null,
   },
@@ -133,7 +195,7 @@ export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
     channels: ["email", "whatsapp", "phone"],
     required: false,
     defaultChecked: false,
-    status: CONSENT_REGISTRY_STATUS,
+    status: "draft-review",
     effectiveFrom: null,
     retiredAt: null,
     ownerApproval: null,
@@ -150,7 +212,7 @@ export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
     channels: ["website-form", "whatsapp", "email"],
     required: false,
     defaultChecked: false,
-    status: CONSENT_REGISTRY_STATUS,
+    status: "draft-review",
     effectiveFrom: null,
     retiredAt: null,
     ownerApproval: null,
@@ -167,7 +229,7 @@ export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
     channels: ["portfolio-cms", "website-form", "in-person"],
     required: false,
     defaultChecked: false,
-    status: CONSENT_REGISTRY_STATUS,
+    status: "draft-review",
     effectiveFrom: null,
     retiredAt: null,
     ownerApproval: null,
@@ -186,6 +248,7 @@ export const CONSENT_SEPARATION_RULES: readonly string[] = [
   "Portfolio media reuse requires separate consent from general service enquiry consent.",
   "No bundled channel consent or vague third-party contact permissions.",
   "Future withdrawal must be as easy as granting consent.",
+  "Owner-approved consent versions remain non-effective until effectiveFrom is set at production activation.",
 ] as const;
 
 export type CommunicationChannelEligibility = "email" | "phone" | "whatsapp" | "in-person";
@@ -247,9 +310,6 @@ export function canUseCommunicationChannel(
     return channelConsentStatus === "granted";
   }
 
-  // email / phone / in-person:
-  // null channel status → allowed when service purpose is granted;
-  // granted → allowed; withdrawn / suppressed / expired → false.
   if (channelConsentStatus == null) {
     return true;
   }
@@ -267,20 +327,25 @@ export function getConsentVersionByPurpose(
   purposeCode: ConsentPurposeCode,
   versions: readonly ConsentVersion[] = CONSENT_VERSIONS
 ): ConsentVersion | undefined {
+  const active = versions.find(
+    (version) =>
+      version.purposeCode === purposeCode && version.status !== "retired"
+  );
+  if (active) return active;
   return versions.find((version) => version.purposeCode === purposeCode);
 }
 
 /**
- * Explicit current-version IDs for activation selection.
- * Exactly one version ID per purpose. Do not infer from first-array match.
- * Status may remain draft-review; this mapping does not approve or publish.
+ * Current display / candidate mapping.
+ * Lead-path IDs are owner-approved v1.0 (not yet effective).
+ * Marketing / AI / portfolio remain draft-review.
  */
 export const CURRENT_CONSENT_VERSION_IDS: Readonly<
   Record<ConsentPurposeCode, string>
 > = {
-  SERVICE_ENQUIRY: "service-enquiry-v0.1-draft",
-  SERVICE_COMMUNICATION: "service-communication-v0.1-draft",
-  WHATSAPP_SERVICE: "whatsapp-service-v0.1-draft",
+  SERVICE_ENQUIRY: "service-enquiry-v1.0",
+  SERVICE_COMMUNICATION: "service-communication-v1.0",
+  WHATSAPP_SERVICE: "whatsapp-service-v1.0",
   MARKETING: "marketing-v0.1-draft",
   AI_ASSISTANCE_DISCLOSURE: "ai-assistance-disclosure-v0.1-draft",
   PORTFOLIO_MEDIA: "portfolio-media-v0.1-draft",
@@ -290,6 +355,9 @@ export const CURRENT_CONSENT_VERSION_IDS: Readonly<
  * Resolve the explicitly mapped current consent version for a purpose.
  * Throws when the mapping is missing, points at the wrong purpose, duplicates,
  * or cannot be found in the registry.
+ *
+ * Note: "current" may be owner-approved but still not effective.
+ * Use isConsentVersionEffective / getEffectiveConsentVersionByPurpose for evidence.
  */
 export function getCurrentConsentVersionByPurpose(
   purposeCode: ConsentPurposeCode,
@@ -330,6 +398,69 @@ export function getCurrentConsentVersionByPurpose(
   }
 
   return version;
+}
+
+/** Owner-approved (or published) and effectiveFrom set to a real calendar date. */
+export function isConsentVersionEffective(version: ConsentVersion): boolean {
+  if (version.status === "retired") return false;
+  if (version.status !== "approved") return false;
+  if (version.effectiveFrom == null || version.effectiveFrom.trim() === "") {
+    return false;
+  }
+  return /^\d{4}-\d{2}-\d{2}$/.test(version.effectiveFrom.trim());
+}
+
+export function isConsentVersionOwnerApprovedNotEffective(
+  version: ConsentVersion
+): boolean {
+  return (
+    version.status === "approved" &&
+    version.ownerApproval != null &&
+    version.legalApproval == null &&
+    !isConsentVersionEffective(version)
+  );
+}
+
+/**
+ * Production consent evidence must use effective versions only.
+ * Fail-closed while owner-approved v1.0 remains pre-activation.
+ */
+export function getEffectiveConsentVersionByPurpose(
+  purposeCode: ConsentPurposeCode,
+  versions: readonly ConsentVersion[] = CONSENT_VERSIONS,
+  currentIds: Readonly<Record<ConsentPurposeCode, string>> = CURRENT_CONSENT_VERSION_IDS
+): ConsentVersion {
+  const version = getCurrentConsentVersionByPurpose(
+    purposeCode,
+    versions,
+    currentIds
+  );
+  if (!isConsentVersionEffective(version)) {
+    throw new Error(
+      `[ONEDECORE Consent] Version ${version.version} for ${purposeCode} is not effective (approved-but-not-effective or draft).`
+    );
+  }
+  return version;
+}
+
+export const LEAD_PATH_CONSENT_PURPOSES = [
+  "SERVICE_ENQUIRY",
+  "SERVICE_COMMUNICATION",
+  "WHATSAPP_SERVICE",
+] as const satisfies readonly ConsentPurposeCode[];
+
+export function areLeadPathConsentVersionsEffective(
+  versions: readonly ConsentVersion[] = CONSENT_VERSIONS,
+  currentIds: Readonly<Record<ConsentPurposeCode, string>> = CURRENT_CONSENT_VERSION_IDS
+): boolean {
+  return LEAD_PATH_CONSENT_PURPOSES.every((purpose) => {
+    try {
+      getEffectiveConsentVersionByPurpose(purpose, versions, currentIds);
+      return true;
+    } catch {
+      return false;
+    }
+  });
 }
 
 export function marketingConsentIsOptional(

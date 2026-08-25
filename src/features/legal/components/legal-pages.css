@@ -53,6 +53,13 @@
   line-height: 1.15;
 }
 
+.od-legal-meta {
+  margin: 0 0 8px;
+  color: var(--od-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
 .od-legal-lede {
   margin: 0;
   max-width: 70ch;

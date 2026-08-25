@@ -1,31 +1,94 @@
 /**
- * Phase 3A1 — terms of use draft content source.
+ * Terms of Use content — customer-facing public sections + draft-only review appendix.
  */
 
 import { BUSINESS_IDENTITY } from "./business-identity.ts";
+import {
+  LEGAL_EFFECTIVE_DATE_PLACEHOLDER,
+  LEGAL_PUBLICATION_MODE,
+  isRealLegalEffectiveDate,
+  type LegalPublicationMode,
+} from "./legal-publication.ts";
+import {
+  flattenLegalContentSections,
+  resolveLegalContentSections,
+  type LegalContentSection,
+} from "./privacy-policy-content.ts";
 
-export interface LegalContentSection {
-  readonly id: string;
-  readonly title: string;
-  readonly body: readonly string[];
+/** Owner-approved production version — not effective until activation sets the date. */
+export const TERMS_OF_USE_VERSION = "terms-of-use-v1.0" as const;
+
+/** @deprecated Alias kept for call sites that referenced the proposed id. */
+export const TERMS_OF_USE_PROPOSED_PRODUCTION_VERSION = TERMS_OF_USE_VERSION;
+
+/**
+ * Set only when production publication is authorized (YYYY-MM-DD).
+ * Do not hard-code a calendar date before activation.
+ */
+export const TERMS_OF_USE_EFFECTIVE_DATE: string | null = null;
+
+export const TERMS_OF_USE_OWNER_APPROVAL = {
+  approvedBy: "ONEDECORE owner",
+  approvedAt: "2026-08-25",
+  reference:
+    "PR #92 owner APPROVE of published-mode package at 2609bbca1ba661989fd0e8f468b0724a47adcd5d",
+  counselApproval: null,
+} as const;
+
+export type { LegalContentSection };
+
+export function getTermsOfUseDisplayVersion(
+  mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
+): string {
+  return mode === "draft-review" ? "terms-of-use-v0.1-draft" : TERMS_OF_USE_VERSION;
 }
 
+export function getTermsOfUseEffectiveDateLabel(
+  effectiveDate: string | null = TERMS_OF_USE_EFFECTIVE_DATE,
+  mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
+): string {
+  if (mode === "published") {
+    if (!isRealLegalEffectiveDate(effectiveDate)) {
+      throw new Error(
+        "[ONEDECORE Legal] Published Terms of Use require a real YYYY-MM-DD effective date."
+      );
+    }
+    return effectiveDate;
+  }
+  if (mode === "owner-approved") {
+    return "Not yet effective — will be set on authorized production activation";
+  }
+  return LEGAL_EFFECTIVE_DATE_PLACEHOLDER;
+}
+
+const registeredOffice =
+  BUSINESS_IDENTITY.registeredOfficeAddress ??
+  "SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207";
+const businessEmail =
+  BUSINESS_IDENTITY.businessEmail ?? "onedecore@gmail.com";
+
+/**
+ * Canonical Terms of Use sections.
+ * Public sections are the exact customer-facing published copy.
+ */
 export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
   {
-    id: "draft-status",
-    title: "Draft status",
+    id: "operator",
+    title: "Operator",
     body: [
-      "These Terms of Use are a draft for owner and Indian legal counsel review. They are not yet effective.",
-      "Website operator legal entity details remain pending owner input.",
+      `You are visiting the public website of ${BUSINESS_IDENTITY.tradingName}, an interior design and renovation service operating in ${BUSINESS_IDENTITY.serviceRegion}.`,
+      `ONEDECORE is operated as a proprietorship. Trading name: ${BUSINESS_IDENTITY.tradingName}. Proprietor / legal identity: ${BUSINESS_IDENTITY.legalEntityName ?? "ONEDECORE"}.`,
+      `Registered office: ${registeredOffice}.`,
+      "Operating office: same as registered office.",
+      `Business contact: ${businessEmail}.`,
     ],
   },
   {
-    id: "informational-website",
-    title: "Informational website",
+    id: "website-use",
+    title: "Website use",
     body: [
-      `You are visiting the public website of ${BUSINESS_IDENTITY.tradingName}, an interior design and renovation service operating in ${BUSINESS_IDENTITY.serviceRegion}.`,
-      "The website provides information about services, an indicative estimator, an in-browser planning tool and published portfolio content.",
-      "Nothing on this website creates a binding contract unless separately agreed in a signed quotation or agreement.",
+      "The website provides information about interior services, an indicative estimator, an in-browser planning tool, published portfolio content, and a consultation enquiry form.",
+      "Nothing on this website creates a binding project contract unless separately agreed in a signed quotation or agreement.",
     ],
   },
   {
@@ -43,16 +106,21 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     body: [
       "The estimator and in-browser planner help you explore layout, services and indicative budget ranges.",
       "Planner inputs remain in your browser unless you copy or share them yourself.",
-      "No quotation, contract, booking or submitted lead is created from the current planner.",
       "Copied brief text is not transmitted to ONEDECORE automatically.",
     ],
   },
   {
-    id: "portfolio-truth",
+    id: "consultation-requests",
+    title: "Consultation requests",
+    body: [
+      "Submitting a consultation enquiry is a request for contact, not a confirmed appointment or booking, unless a separate scheduling system is later introduced and clearly described.",
+    ],
+  },
+  {
+    id: "portfolio-media",
     title: "Portfolio and media",
     body: [
-      "Portfolio pages display published project content from the ONEDECORE CMS.",
-      "Homepage featured project proof remains pending until authentic completed-project media receives owner approval.",
+      "Portfolio pages display published project content from the ONEDECORE content systems.",
       "Do not assume every image on marketing pages represents a specific delivered client project unless explicitly labelled.",
     ],
   },
@@ -65,11 +133,11 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     ],
   },
   {
-    id: "future-submissions",
-    title: "Future user submissions",
+    id: "user-submissions",
+    title: "User submissions",
     body: [
-      "When enquiry forms and uploads are enabled, you must provide accurate information and only submit content you have the right to share.",
-      "Separate consent will apply to marketing, WhatsApp and portfolio media reuse.",
+      "When you submit an enquiry or other content, you must provide accurate information and only submit content you have the right to share.",
+      "Separate consent applies to marketing, WhatsApp and portfolio media reuse where those permissions are requested.",
     ],
   },
   {
@@ -84,17 +152,16 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     id: "third-party",
     title: "Third-party links and services",
     body: [
-      "The website may link to third-party services in future.",
-      "ONEDECORE is not responsible for third-party websites, messaging platforms or payment providers.",
-      "WhatsApp, Groq, analytics and campaign tools are planned, not active on the current website.",
+      "The website may link to or rely on third-party services to operate hosting, database, messaging or similar functions.",
+      "ONEDECORE is not responsible for third-party websites or platforms outside ONEDECORE's control.",
     ],
   },
   {
     id: "availability",
     title: "Availability",
     body: [
-      "The website is provided on an as-available basis during development and pre-launch review.",
-      "Features may change, be added or be removed without notice during draft-review mode.",
+      "The website is provided on an as-available basis.",
+      "Features may change, be added or be removed.",
     ],
   },
   {
@@ -110,58 +177,67 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     id: "governing-law",
     title: "Governing law and jurisdiction",
     body: [
-      "Governing law and jurisdiction clause: pending owner input.",
-      "LEGAL_COUNSEL_REQUIRED: governing law, jurisdiction and dispute resolution wording.",
+      BUSINESS_IDENTITY.jurisdictionClause ??
+        "These Terms are governed by the laws of India. Subject to applicable law, courts having jurisdiction in Pune, Maharashtra will have jurisdiction over disputes arising from these Terms.",
     ],
   },
   {
     id: "limitation-liability",
     title: "Limitation of liability",
     body: [
-      "LEGAL_COUNSEL_REQUIRED: limitation of liability wording must be reviewed before publication.",
-      "Do not treat draft limitation language as final or enforceable.",
+      "To the fullest extent permitted by applicable law, ONEDECORE is not liable for indirect, incidental or consequential losses arising from use of the website or reliance on indicative estimates.",
+      "Nothing in these Terms excludes liability that cannot be excluded under applicable Indian law.",
     ],
   },
   {
     id: "indemnity",
     title: "Indemnity",
     body: [
-      "LEGAL_COUNSEL_REQUIRED: indemnity wording must be reviewed before publication.",
+      "You agree to indemnify ONEDECORE against claims arising from your misuse of the website or from content you submit without rights or authority, to the extent permitted by applicable law.",
     ],
   },
   {
     id: "dispute-resolution",
     title: "Dispute resolution",
     body: [
-      "Arbitration or dispute resolution clause: pending owner input.",
-      "LEGAL_COUNSEL_REQUIRED: dispute resolution and arbitration wording.",
-    ],
-  },
-  {
-    id: "business-claims",
-    title: "Business claims",
-    body: [
-      "Commercial claims on the homepage derive from owner-approved claim configuration.",
-      "Public evidence for aggregate review and project counts may remain pending.",
-      "No aggregateRating, Review or Warranty schema.org structured data is published.",
-      "Free Design Consultation does not mean the current website books or submits a consultation.",
+      "Subject to the governing-law clause above, disputes arising from these Terms will be addressed under applicable law in the courts identified in that clause unless the parties agree otherwise in writing.",
+      "No separate arbitration clause is currently published.",
     ],
   },
   {
     id: "changes",
     title: "Changes",
     body: [
-      "These Terms will be updated after owner and legal-counsel review.",
-      "Continued use after effective publication may constitute acceptance of updated terms as stated in the effective version.",
+      "We may update these Terms from time to time. Material changes will be published with an updated effective date. Where required, we will provide additional notice or obtain consent.",
     ],
   },
   {
     id: "contact",
     title: "Contact",
     body: [
-      "Business contact email: pending owner input.",
-      "Business phone: pending owner input.",
-      "Registered office: pending owner input.",
+      `Business contact email: ${businessEmail}.`,
+      `Registered office: ${registeredOffice}.`,
+    ],
+  },
+  {
+    id: "draft-review-status",
+    title: "Draft review status (internal)",
+    audience: "draft-only",
+    body: [
+      "These Terms of Use are proposed for owner approval. They are not yet effective while publication mode remains draft-review.",
+      "Counsel status: NO COUNSEL REVIEW YET.",
+      "Jurisdiction clause status internally: OWNER APPROVED · NOT COUNSEL REVIEWED.",
     ],
   },
 ] as const;
+
+export function getTermsOfUseSections(
+  mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
+): readonly LegalContentSection[] {
+  return resolveLegalContentSections(TERMS_OF_USE_CONTENT, mode);
+}
+
+/** Exact published-mode customer-facing text (titles + body). */
+export function getPublishedTermsOfUseText(): string {
+  return flattenLegalContentSections(getTermsOfUseSections("published"));
+}

@@ -19,6 +19,7 @@ function labelOf(
 /**
  * Final plan section — summary + clipboard brief export.
  * Lead form mode is resolved on the server and passed in to avoid SSR/client drift.
+ * When leadFormMode is active/preview, the enquiry form is the primary conversion path.
  */
 export function HomePlan({
   leadFormMode,
@@ -27,6 +28,7 @@ export function HomePlan({
 }) {
   const plan = usePlan();
   const [copyState, setCopyState] = useState<"idle" | "ok" | "err">("idle");
+  const formPrimary = leadFormMode === "active" || leadFormMode === "preview";
 
   const budgetLabel = labelOf(
     PM_PLANNER.budgetComfortOptions,
@@ -78,11 +80,53 @@ export function HomePlan({
     }
   };
 
+  const briefActions = (
+    <div className={formPrimary ? "pm-close__secondary" : undefined}>
+      {!formPrimary ? (
+        <>
+          <h3 className="pm-planner__successTitle">{PM_CLOSE.briefTitle}</h3>
+          <p className="pm-planner__successBody">{PM_CLOSE.briefBody}</p>
+        </>
+      ) : (
+        <p className="pm-close__secondary-label">Other options</p>
+      )}
+      <div className="pm-close__actions">
+        <button
+          type="button"
+          className={
+            formPrimary
+              ? "dc-btn dc-btn--ghost"
+              : "dc-btn dc-btn--primary pm-btn--sheen"
+          }
+          onClick={() => void onCopy()}
+          data-conversion-action="brief-copy"
+        >
+          {formPrimary ? PM_CLOSE.copyBriefSecondaryLabel : PM_CLOSE.submitLabel}
+        </button>
+        <Link
+          href={PM_CLOSE.secondaryHref}
+          className="dc-btn dc-btn--ghost"
+          data-conversion-action="portfolio-view"
+        >
+          {PM_CLOSE.secondaryLabel}
+        </Link>
+      </div>
+      <p className="pm-lede" role="status" aria-live="polite">
+        {copyState === "ok"
+          ? PM_CLOSE.copySuccess
+          : copyState === "err"
+            ? PM_CLOSE.copyFailure
+            : null}
+      </p>
+    </div>
+  );
+
   return (
     <section
       id="consultation"
       className="pm-section pm-close"
       aria-labelledby="pm-close-title"
+      data-lead-form-mode={leadFormMode}
     >
       <span id={PM_SECTION_IDS.plan} />
       <span className="pm-close__glow" aria-hidden="true" />
@@ -92,8 +136,12 @@ export function HomePlan({
           <h2 id="pm-close-title" className="pm-h2">
             {PM_CLOSE.heading}
           </h2>
-          <p className="pm-lede">{PM_CLOSE.lede}</p>
-          <p className="pm-close__reassurance">{PM_CLOSE.reassurance}</p>
+          <p className="pm-lede">
+            {formPrimary ? PM_CLOSE.ledeActive : PM_CLOSE.lede}
+          </p>
+          <p className="pm-close__reassurance">
+            {formPrimary ? PM_CLOSE.reassuranceActive : PM_CLOSE.reassurance}
+          </p>
 
           <div className="pm-summary pm-summary--intro">
             <div className="pm-summary__head">
@@ -126,35 +174,24 @@ export function HomePlan({
 
         <div className="pm-card pm-close__panel">
           <span className="pm-card__glow" aria-hidden="true" />
-          <div className="pm-planner__success" role="region" aria-label="Interior brief actions">
-            <h3 className="pm-planner__successTitle">{PM_CLOSE.briefTitle}</h3>
-            <p className="pm-planner__successBody">{PM_CLOSE.briefBody}</p>
-            <div className="pm-close__actions">
-              <button
-                type="button"
-                className="dc-btn dc-btn--primary pm-btn--sheen"
-                onClick={() => void onCopy()}
-                data-conversion-action="brief-copy"
-              >
-                {PM_CLOSE.submitLabel}
-              </button>
-              <Link
-                href={PM_CLOSE.secondaryHref}
-                className="dc-btn dc-btn--ghost"
-                data-conversion-action="portfolio-view"
-              >
-                {PM_CLOSE.secondaryLabel}
-              </Link>
-            </div>
-            <p className="pm-lede" role="status" aria-live="polite">
-              {copyState === "ok"
-                ? PM_CLOSE.copySuccess
-                : copyState === "err"
-                  ? PM_CLOSE.copyFailure
-                  : null}
-            </p>
-            {leadFormMode !== "copy-only" ? (
-              <HomeLeadCapture mode={leadFormMode} />
+          <div
+            className="pm-planner__success"
+            role="region"
+            aria-label={
+              formPrimary ? "Consultation request" : "Interior brief actions"
+            }
+          >
+            {formPrimary ? (
+              <>
+                <h3 className="pm-planner__successTitle">
+                  {PM_CLOSE.briefTitleActive}
+                </h3>
+                <p className="pm-planner__successBody">{PM_CLOSE.briefBodyActive}</p>
+                <HomeLeadCapture mode={leadFormMode} />
+                {briefActions}
+              </>
+            ) : leadFormMode === "copy-only" ? (
+              briefActions
             ) : null}
           </div>
         </div>

@@ -27,6 +27,7 @@ import {
   getMissingWhatsAppActivationFields,
   type BusinessIdentity,
 } from "../business-identity.ts";
+import { getLeadIntakeActivationMissingFields, isLeadIntakeActivationComplete } from "../lead-intake-activation.ts";
 import {
   canPublishLegalPolicies,
   isWarrantyPublicationReady,
@@ -173,11 +174,23 @@ describe("Phase 3A1.1 activation gates", () => {
     );
   });
 
-  test("lead activation requires approved consent/retention/contact", () => {
-    const missing = getMissingLeadIntakeActivationFields();
-    assert.ok(missing.includes("privacyTermsVersionApproved"));
-    assert.ok(missing.includes("serviceEnquiryCopyApproved"));
-    assert.ok(missing.includes("leadRetentionDecided"));
+  test("counsel reference is optional for core lead-publication fields", () => {
+    const missing = getMissingCoreLegalPublicationFields();
+    assert.ok(!missing.includes("legalCounselApprovalReference"));
+  });
+
+  test("lead activation complete after processor registration recorded", () => {
+    const missing = getLeadIntakeActivationMissingFields();
+    assert.ok(!missing.includes("privacyTermsVersionApproved"));
+    assert.ok(!missing.includes("serviceEnquiryCopyApproved"));
+    assert.ok(!missing.includes("leadProcessorsRegistered"));
+    assert.ok(!missing.includes("leadRetentionDecided"));
+    assert.ok(!missing.includes("legalEntityName"));
+    assert.equal(isLeadIntakeActivationComplete(), true);
+    // Empty-input helper remains fail-closed for unset flags.
+    assert.ok(
+      getMissingLeadIntakeActivationFields().includes("leadRetentionDecided")
+    );
   });
 
   test("warranty activation separate; generic completeness does not activate all", () => {
@@ -303,7 +316,6 @@ describe("Phase 3A1.1 compliance wording", () => {
     assert.doesNotMatch(text, /ONEDECORE is not DPDP compliant/i);
     assert.doesNotMatch(text, /is DPDP compliant|fully compliant|certified/i);
     assert.match(text, /does not claim DPDP compliance at this draft stage/i);
-    assert.match(text, /Final compliance depends on applicable commencement/i);
     assert.equal(canPublishLegalPolicies(), false);
   });
 });

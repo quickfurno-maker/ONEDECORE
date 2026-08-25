@@ -72,30 +72,55 @@ export const DEFAULT_CONTACT_ROLE_MAPPING: LegalContactRoleMapping = {
   operatingOfficeSameAsRegistered: false,
 } as const;
 
+/**
+ * Owner-approved jurisdiction wording (2026-08-25).
+ * Status: OWNER APPROVED · NOT COUNSEL REVIEWED. Do not describe as lawyer-approved.
+ */
+export const OWNER_APPROVED_JURISDICTION_CLAUSE =
+  "These Terms are governed by the laws of India. Subject to applicable law, courts having jurisdiction in Pune, Maharashtra will have jurisdiction over disputes arising from these Terms." as const;
+
 export const BUSINESS_IDENTITY: BusinessIdentity = {
   tradingName: "ONEDECORE",
   serviceRegion: "Pune, Maharashtra, India",
-  legalEntityName: null,
-  entityType: null,
-  registeredOfficeAddress: null,
+  /**
+   * Owner-supplied proprietor / legal identity fact (2026-08-25): ONEDECORE.
+   * Recorded exactly as supplied — do not substitute a personal name.
+   */
+  legalEntityName: "ONEDECORE",
+  entityType: "proprietorship",
+  registeredOfficeAddress:
+    "SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207",
+  /** Null when contactRoleMapping.operatingOfficeSameAsRegistered is true. */
   operatingOfficeAddress: null,
-  businessEmail: null,
-  privacyEmail: null,
+  businessEmail: "onedecore@gmail.com",
+  /** Owner-approved contact-channel simplification (combined roles via privacyEmail). */
+  privacyEmail: "onedecore@gmail.com",
+  /** Combined mapping approved — do not duplicate separate grievance inbox. */
   grievanceEmail: null,
+  /** Combined mapping approved — do not duplicate separate data-rights inbox. */
   dataRightsRequestEmail: null,
   warrantyClaimsEmail: null,
   businessPhoneE164: null,
   WhatsAppBusinessPhoneE164: null,
   GSTIN: null,
   cinOrLlpin: null,
-  authorisedRepresentative: null,
-  grievanceContact: null,
-  jurisdictionClause: null,
+  authorisedRepresentative: "ONEDECORE",
+  grievanceContact: "ONEDECORE, Proprietor / Grievance Contact",
+  jurisdictionClause: OWNER_APPROVED_JURISDICTION_CLAUSE,
   arbitrationDisputeClause: null,
+  /**
+   * Optional governance metadata only. No counsel review has occurred.
+   * Must remain null — do not fabricate a reference. Not required for lead-intake activation.
+   */
   legalCounselApprovalReference: null,
   gstinApplicability: "pending-owner-decision",
-  registrationIdentifierRequirement: "pending-owner-decision",
-  contactRoleMapping: DEFAULT_CONTACT_ROLE_MAPPING,
+  registrationIdentifierRequirement: "not-applicable",
+  contactRoleMapping: {
+    ...DEFAULT_CONTACT_ROLE_MAPPING,
+    operatingOfficeSameAsRegistered: true,
+    privacyAndGrievanceCombined: true,
+    privacyAndDataRightsCombined: true,
+  },
 } as const;
 
 const PLACEHOLDER_PATTERN =
@@ -166,11 +191,8 @@ export function getMissingCoreLegalPublicationFields(
   pushMissing(missing, "authorisedRepresentative", identity.authorisedRepresentative);
   pushMissing(missing, "grievanceContact", identity.grievanceContact);
   pushMissing(missing, "jurisdictionClause", identity.jurisdictionClause);
-  pushMissing(
-    missing,
-    "legalCounselApprovalReference",
-    identity.legalCounselApprovalReference
-  );
+  // legalCounselApprovalReference is optional governance metadata for MVP lead intake /
+  // Privacy-Terms owner publication. Do not require a fabricated counsel reference.
 
   return missing;
 }

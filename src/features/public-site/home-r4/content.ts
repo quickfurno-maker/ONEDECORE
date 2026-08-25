@@ -910,6 +910,8 @@ export const PM_CLOSE = {
   eyebrow: "Free consultation",
   heading: "Your interior plan, ready to take forward",
   lede: "Review your selections, copy the brief and continue exploring ONEDECORE when you are ready.",
+  ledeActive:
+    "Share your plan and contact details for a free consultation request. We will review your enquiry and follow up.",
   summaryHeading: PM_PLANNER.summaryHeading,
   editLabel: PM_CTA.editDetails,
   submitLabel: PM_CTA.submit,
@@ -918,8 +920,14 @@ export const PM_CLOSE = {
   briefTitle: "Copy your interior brief",
   briefBody:
     "Nothing is submitted from this page. Copy your brief to share privately, or browse the portfolio. Secure lead intake will connect in a later release.",
+  briefTitleActive: "Request a free consultation",
+  briefBodyActive:
+    "This sends a consultation request — not a confirmed appointment. We review enquiries and follow up with next steps.",
+  copyBriefSecondaryLabel: "Copy brief",
   reassurance:
     "Planning estimate only · Nothing is submitted from this page · Edit anytime",
+  reassuranceActive:
+    "Free consultation request · Accurate consent · Edit your plan anytime",
   copySuccess: "Interior brief copied.",
   copyFailure:
     "We could not copy automatically. Select and copy the brief manually.",
