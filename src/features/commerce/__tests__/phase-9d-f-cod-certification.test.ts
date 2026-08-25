@@ -40,9 +40,12 @@ function walkTs(dir: string, acc: string[] = []): string[] {
 }
 
 describe("Phase 9D-F baseline and payment absence", () => {
-  test("latest migration is timeline taxonomy v2 and deferred payment M38 is absent", () => {
-    assert.equal(latestMigrationName(), "20260825163000_lead_timeline_taxonomy_v2.sql");
-    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 38);
+  test("latest migration is lead-notes privilege repair and deferred payment M38 is absent", () => {
+    assert.equal(
+      latestMigrationName(),
+      "20260825170000_crm_lead_notes_insert_privilege_repair.sql"
+    );
+    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 39);
     assert.equal(
       existsSync(join(root, "supabase/migrations/20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false
