@@ -1,11 +1,22 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced through Phase 10 COD production readiness, August 24, 2026)
-**Current Phase:** Phase 10 **COD PRODUCTION READINESS PASS / OWNER ACTIVATION PENDING**. Phase 9D-F **COMPLETE / MERGED** (PR #87 / `7e4391a…`). Repository **M1–M37**. Managed **M1–M37** (closeout evidence). Phase 9D-E **DEFERRED**. Shop public gate **OFF**. Production **OFF**.
-**Next Phase:** Owner deploy (gate OFF) then separate COD activation (`ONEDECORE_SHOP_PUBLIC_ENABLED=true`). Online payments separately gated. Production remains disabled until owner activation.
-**Previous Phase:** Phase 9D-F COD storefront certification (**COMPLETE** / PR #87)
+**Document Status:** Locked Roadmap (truth-synced through Phase 10 COD production readiness + public website simplification lock, August 25, 2026)
+**Current Phase:** Phase 10 **COD PRODUCTION READINESS** with **owner-approved public website simplification** in flight. Website lead intake is LIVE. Shop public gate **OFF**. Online payments **DEFERRED** (M38 untouched).
+**Next Phase:** Owner review/merge of public-site simplification PR; Shop remains fail-closed until explicit activation.
+**Previous Phase:** CRM lead-list hotfix (PR #96) + notes privilege repair (PR #95) + timeline taxonomy v2 (PR #94)
 
 ---
+
+## Owner-approved public website lock (August 25, 2026)
+
+ONEDECORE public website is intentionally simplified to three primary customer surfaces: **Home**, **Portfolio**, and conditionally **Shop**. Home is the complete interiors sales page. Portfolio is the proof-of-work page. Shop is a separate commerce surface and remains hidden until explicitly enabled. All consultation CTAs converge on one canonical lead-intake flow. Existing backend/admin/CRM/landing/SEO/legal architecture is retained. The homepage hero image and homepage imagery must be refreshed to a stronger, more premium, more cohesive interior-photography system.
+
+Additional locked notes:
+- Existing routes (`/interiors`, `/lp/[slug]`, legal, commerce shells) are retained unless separately approved for deletion/redirect.
+- Landing pages remain available for campaigns and are not primary nav.
+- Shop remains fail-closed until explicit activation (`ONEDECORE_SHOP_PUBLIC_ENABLED=true`).
+- Online payments remain deferred; deferred payment worktree/M38 remains untouched.
+- Simplification must not weaken backend architecture, CRM, RLS, consent, or lead-intake contracts.
 
 ## 1. Completed Baseline (Repository Evidence)
 

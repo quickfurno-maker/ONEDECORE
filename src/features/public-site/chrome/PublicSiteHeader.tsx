@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { OneDecoreWordmark } from "@/features/public-site/home-r4/OneDecoreWordmark";
 import { ShopCartLink } from "@/features/commerce/public/components/ShopCartLink";
 import {
+  getPublicNavDestinations,
   PUBLIC_CONSULTATION,
-  PUBLIC_NAV_DESTINATIONS,
   type PublicNavCurrent,
 } from "./public-nav";
 
@@ -20,10 +20,10 @@ function getFocusables(container: HTMLElement): HTMLElement[] {
 }
 
 function isCurrent(current: PublicNavCurrent, href: string): boolean {
+  if (current === "home" && href === "/") return true;
   if (current === "interiors" && href.startsWith("/interiors")) return href === "/interiors";
   if (current === "shop" && href === "/shop") return true;
   if (current === "portfolio" && href === "/portfolio") return true;
-  if (current === "home" && href === "/#about") return false;
   return false;
 }
 
@@ -31,11 +31,18 @@ export function PublicSiteHeader({
   current,
   showConsultation = true,
   showShopSearch = false,
+  shopEnabled = false,
 }: {
   readonly current: PublicNavCurrent;
   readonly showConsultation?: boolean;
   readonly showShopSearch?: boolean;
+  /** Fail-closed Shop nav — only true when public shop gate is ON. */
+  readonly shopEnabled?: boolean;
 }) {
+  const destinations = useMemo(
+    () => getPublicNavDestinations(shopEnabled),
+    [shopEnabled]
+  );
   const showSearch = current === "shop" || (current === "home" && showShopSearch);
   const [open, setOpen] = useState(false);
   const drawerId = useId();
@@ -105,7 +112,7 @@ export function PublicSiteHeader({
       <div className="od-site-header__bar">
         <OneDecoreWordmark size="nav" className="od-site-header__mark" />
         <nav className="od-site-header__links" aria-label="Public site">
-          {PUBLIC_NAV_DESTINATIONS.map((item) => (
+          {destinations.map((item) => (
             <Link
               key={item.id}
               href={item.href}
@@ -169,7 +176,7 @@ export function PublicSiteHeader({
           Close menu
         </button>
         <nav className="od-site-header__drawerNav" aria-label="Public site, mobile">
-          {PUBLIC_NAV_DESTINATIONS.map((item) => (
+          {destinations.map((item) => (
             <Link key={item.id} href={item.href} onClick={() => setOpen(false)}>
               {item.label}
             </Link>

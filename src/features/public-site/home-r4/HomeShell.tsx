@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
 import { PublicSiteFooter } from "@/features/public-site/chrome/PublicSiteFooter";
 import { PublicSiteHeader } from "@/features/public-site/chrome/PublicSiteHeader";
 import { HomeFooter } from "./HomeFooter";
@@ -19,6 +20,8 @@ export function HomeShell({
   readonly children: ReactNode;
   readonly unifiedNav?: boolean;
 }) {
+  const shopEnabled = isShopPublicEnabled();
+
   return (
     <div data-public-home-r4="" data-public-dark-theme="">
       <HomeScrollProgress />
@@ -26,14 +29,22 @@ export function HomeShell({
         Skip to content
       </a>
 
-      {unifiedNav ? <PublicSiteHeader current="interiors" /> : <HomeNavigation />}
+      {unifiedNav ? (
+        <PublicSiteHeader current="interiors" shopEnabled={shopEnabled} />
+      ) : (
+        <HomeNavigation />
+      )}
 
       <main id={MAIN_ID} tabIndex={-1}>
         {children}
       </main>
 
       <HomeStickyActions />
-      {unifiedNav ? <PublicSiteFooter /> : <HomeFooter />}
+      {unifiedNav ? (
+        <PublicSiteFooter shopEnabled={shopEnabled} />
+      ) : (
+        <HomeFooter />
+      )}
       <HomePlannerSheet />
       <RevealRuntime />
     </div>

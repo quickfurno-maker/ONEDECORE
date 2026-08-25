@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -16,6 +17,7 @@ import type {
   PmStep,
   PmTimelineId,
 } from "./content";
+import { PM_PLANNER } from "./content";
 import type { EstimatorPlanSelection } from "./estimator-plan-map";
 import { toEstimateSummary } from "./estimator-plan-map";
 import {
@@ -96,6 +98,15 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
   const [step, setStepState] = useState<PmStep>(1);
   const [isOpen, setIsOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (service !== null || typeof window === "undefined") return;
+    const raw = new URLSearchParams(window.location.search).get("service");
+    if (!raw) return;
+    if (PM_PLANNER.services.some((row) => row.id === raw)) {
+      setServiceState(raw as PmServiceId);
+    }
+  }, [service]);
 
   const snapshot = useMemo<PlanSnapshot>(
     () => ({

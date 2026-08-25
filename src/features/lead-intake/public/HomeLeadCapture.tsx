@@ -343,7 +343,7 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
         </p>
 
         <div className="pm-field">
-          <label htmlFor={`${formId}-service`}>Service</label>
+          <label htmlFor={`${formId}-service`}>What are you looking for?</label>
           <select
             id={`${formId}-service`}
             name="service"
