@@ -31,6 +31,7 @@ import { getLeadIntakeActivationMissingFields, isLeadIntakeActivationComplete } 
 import {
   canPublishLegalPolicies,
   isWarrantyPublicationReady,
+  LEGAL_PUBLICATION_MODE,
 } from "../legal-publication.ts";
 import {
   canUseCommunicationChannel,
@@ -316,7 +317,8 @@ describe("Phase 3A1.1 compliance wording", () => {
     assert.doesNotMatch(text, /ONEDECORE is not DPDP compliant/i);
     assert.doesNotMatch(text, /is DPDP compliant|fully compliant|certified/i);
     assert.match(text, /does not claim DPDP compliance at this draft stage/i);
-    assert.equal(canPublishLegalPolicies(), false);
+    assert.equal(canPublishLegalPolicies(), true);
+    assert.equal(LEGAL_PUBLICATION_MODE, "published");
   });
 });
 

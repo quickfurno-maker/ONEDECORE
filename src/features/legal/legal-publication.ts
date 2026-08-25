@@ -26,10 +26,10 @@ export type LegalPublicationMode =
   | "published";
 
 /**
- * Owner approved Privacy/Terms/consent customer copy (PR #92).
- * Not published / not effective until activation sets mode=published with a real date.
+ * Owner authorized production lead collection 2026-08-25 (IST).
+ * Privacy/Terms v1.0 published with effective date 2026-08-25.
  */
-export const LEGAL_PUBLICATION_MODE: LegalPublicationMode = "owner-approved";
+export const LEGAL_PUBLICATION_MODE: LegalPublicationMode = "published";
 
 export const LEGAL_DRAFT_BANNER =
   "Draft for owner and Indian legal counsel review — not yet effective." as const;

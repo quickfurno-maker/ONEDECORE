@@ -160,16 +160,16 @@ describe("Phase 4A lead intake runtime env", () => {
     );
   });
 
-  test("enabled blocked by legal gate", () => {
-    assert.throws(() =>
-      getLeadIntakeServerEnv({
-        ONEDECORE_LEAD_INTAKE_MODE: "enabled",
-        ONEDECORE_TRUST_PROXY: "true",
-        NEXT_PUBLIC_SUPABASE_URL: MANAGED,
-        SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key-not-publishable",
-        ONEDECORE_LEAD_HASH_SECRET: secret,
-      })
-    );
+  test("enabled succeeds with managed URL when legal gates satisfied", () => {
+    const env = getLeadIntakeServerEnv({
+      ONEDECORE_LEAD_INTAKE_MODE: "enabled",
+      ONEDECORE_TRUST_PROXY: "true",
+      NEXT_PUBLIC_SUPABASE_URL: MANAGED,
+      SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key-not-publishable",
+      ONEDECORE_LEAD_HASH_SECRET: secret,
+    });
+    assert.equal(env.mode, "enabled");
+    assert.equal(env.supabaseUrl, MANAGED);
   });
 
   test("publishable key rejected in service-role slot", () => {

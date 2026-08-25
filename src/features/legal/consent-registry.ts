@@ -1,6 +1,6 @@
 /**
  * Consent purpose registry and versioning.
- * Lead-path v1.0 copies are owner-approved but not effective until activation.
+ * Lead-path v1.0 copies are owner-approved and effective from 2026-08-25.
  */
 
 export type ConsentPurposeCode =
@@ -77,7 +77,7 @@ const OWNER_APPROVAL_PR92: ConsentApprovalRecord = {
 
 /**
  * Aggregate registry status for non-lead draft purposes.
- * Lead-path v1.0 entries use status "approved" with effectiveFrom null.
+ * Lead-path v1.0 entries use status "approved" with effectiveFrom 2026-08-25.
  */
 export const CONSENT_REGISTRY_STATUS: ConsentVersionStatus = "draft-review";
 
@@ -94,7 +94,7 @@ export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
     required: true,
     defaultChecked: false,
     status: "approved",
-    effectiveFrom: null,
+    effectiveFrom: "2026-08-25",
     retiredAt: null,
     ownerApproval: OWNER_APPROVAL_PR92,
     legalApproval: null,
@@ -111,7 +111,7 @@ export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
     required: true,
     defaultChecked: false,
     status: "approved",
-    effectiveFrom: null,
+    effectiveFrom: "2026-08-25",
     retiredAt: null,
     ownerApproval: OWNER_APPROVAL_PR92,
     legalApproval: null,
@@ -128,7 +128,7 @@ export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
     required: false,
     defaultChecked: false,
     status: "approved",
-    effectiveFrom: null,
+    effectiveFrom: "2026-08-25",
     retiredAt: null,
     ownerApproval: OWNER_APPROVAL_PR92,
     legalApproval: null,
@@ -248,7 +248,7 @@ export const CONSENT_SEPARATION_RULES: readonly string[] = [
   "Portfolio media reuse requires separate consent from general service enquiry consent.",
   "No bundled channel consent or vague third-party contact permissions.",
   "Future withdrawal must be as easy as granting consent.",
-  "Owner-approved consent versions remain non-effective until effectiveFrom is set at production activation.",
+  "Lead-path v1.0 consent versions are effective from owner-authorized production activation (2026-08-25).",
 ] as const;
 
 export type CommunicationChannelEligibility = "email" | "phone" | "whatsapp" | "in-person";
