@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import { usePlan } from "../../public-site/home-r4/PlanContext";
 import {
@@ -32,8 +33,16 @@ import {
   LEAD_FORM_PREVIEW_NOTICE,
   mapClientResultToUxState,
   validateLeadFormFields,
+  type LeadFormFieldErrors,
+  type LeadFormFieldKey,
   type LeadFormUxState,
 } from "./lead-form-errors.ts";
+import {
+  acceptIndianMobileInput,
+  acceptIndianMobileKeystroke,
+  INDIAN_MOBILE_HELPER,
+  INDIAN_MOBILE_INVALID_MESSAGE,
+} from "./indian-mobile.ts";
 import {
   fingerprintLeadPayload,
   getOrCreateKey,
@@ -50,14 +59,52 @@ export interface HomeLeadCaptureProps {
   readonly mode?: LeadFormMode;
 }
 
+function pulseInvalidHaptic(): void {
+  if (typeof navigator === "undefined") return;
+  if (typeof navigator.vibrate !== "function") return;
+  try {
+    navigator.vibrate([45, 30, 45]);
+  } catch {
+    // Unsupported / blocked — validation UX still works without haptics.
+  }
+}
+
+function initialNationalMobile(raw: string): string {
+  const accepted = acceptIndianMobileInput(raw);
+  if (accepted.ok) return accepted.national;
+  if (/^\d{0,10}$/.test(raw.trim())) return raw.trim();
+  return "";
+}
+
 export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
   const mode = modeProp ?? getLeadFormMode();
   const plan = usePlan();
   const formId = useId();
-  const errorRef = useRef<HTMLDivElement>(null);
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const shakeClearRef = useRef<number | null>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const mobileRef = useRef<HTMLInputElement>(null);
+  const serviceRef = useRef<HTMLSelectElement>(null);
+  const propertyRef = useRef<HTMLSelectElement>(null);
+  const timelineRef = useRef<HTMLSelectElement>(null);
+  const serviceEnquiryConsentRef = useRef<HTMLInputElement>(null);
+  const servicePhoneConsentRef = useRef<HTMLInputElement>(null);
+
+  const fieldRefs: Record<
+    LeadFormFieldKey,
+    React.RefObject<HTMLElement | null>
+  > = {
+    name: nameRef,
+    mobile: mobileRef,
+    service: serviceRef,
+    property: propertyRef,
+    timeline: timelineRef,
+    serviceEnquiryConsent: serviceEnquiryConsentRef,
+    servicePhoneConsent: servicePhoneConsentRef,
+  };
 
   const [name, setName] = useState(plan.name);
-  const [mobile, setMobile] = useState(plan.mobile);
+  const [mobile, setMobile] = useState(() => initialNationalMobile(plan.mobile));
   const [locality, setLocality] = useState(plan.locality);
   const [message, setMessage] = useState(plan.message);
   const [honeypot, setHoneypot] = useState("");
@@ -66,8 +113,10 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
   const [whatsappConsent, setWhatsappConsent] = useState(false);
   const [formStartedAt] = useState(() => new Date().toISOString());
   const [uxState, setUxState] = useState<LeadFormUxState>("idle");
-  const [clientErrors, setClientErrors] = useState<readonly string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<LeadFormFieldErrors>({});
+  const [clientSummary, setClientSummary] = useState<readonly string[]>([]);
   const [serverFields, setServerFields] = useState<readonly string[]>([]);
+  const [shakeField, setShakeField] = useState<LeadFormFieldKey | null>(null);
   const [retryAfterSeconds, setRetryAfterSeconds] = useState<number | undefined>(
     undefined
   );
@@ -96,10 +145,44 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
   }, [plan]);
 
   useEffect(() => {
-    if (clientErrors.length > 0 || serverFields.length > 0) {
-      errorRef.current?.focus();
+    return () => {
+      if (shakeClearRef.current != null) {
+        window.clearTimeout(shakeClearRef.current);
+      }
+    };
+  }, []);
+
+  const clearFieldError = (key: LeadFormFieldKey) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const focusFirstInvalid = (key: LeadFormFieldKey) => {
+    const node = fieldRefs[key].current;
+    if (!node) {
+      summaryRef.current?.focus();
+      return;
     }
-  }, [clientErrors, serverFields]);
+    node.focus();
+    node.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
+
+  const triggerInvalidFeedback = (key: LeadFormFieldKey) => {
+    pulseInvalidHaptic();
+    setShakeField(key);
+    if (shakeClearRef.current != null) {
+      window.clearTimeout(shakeClearRef.current);
+    }
+    shakeClearRef.current = window.setTimeout(() => {
+      setShakeField(null);
+      shakeClearRef.current = null;
+    }, 350);
+    window.requestAnimationFrame(() => focusFirstInvalid(key));
+  };
 
   const statusMessage = getLeadFormStatusMessage(uxState, {
     retryAfterSeconds,
@@ -114,38 +197,71 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
   const isSubmitting = uxState === "submitting";
   const isSuccess =
     uxState === "success-created" || uxState === "success-duplicate";
-  const canSubmit = mode === "active" && !isSubmitting && !isSuccess;
+  const canAttemptSubmit = !isSubmitting && !isSuccess;
+  const canNetworkSubmit = mode === "active" && canAttemptSubmit;
+
+  const applyMobileRaw = (raw: string) => {
+    const accepted = acceptIndianMobileKeystroke(raw);
+    if (!accepted.ok) {
+      const paste = acceptIndianMobileInput(raw);
+      if (paste.ok) {
+        setMobile(paste.national);
+        clearFieldError("mobile");
+        return;
+      }
+      setFieldErrors((prev) => ({
+        ...prev,
+        mobile: INDIAN_MOBILE_INVALID_MESSAGE,
+      }));
+      return;
+    }
+    setMobile(accepted.national);
+    if (
+      accepted.national.length === 0 ||
+      accepted.national.length === 10
+    ) {
+      clearFieldError("mobile");
+    }
+  };
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSubmit || submittingRef.current) return;
+    if (!canAttemptSubmit || submittingRef.current) return;
 
-    setClientErrors([]);
+    setClientSummary([]);
     setServerFields([]);
     setRetryAfterSeconds(undefined);
     setSubmissionReference(undefined);
     setUxState("validating");
 
-    const fieldErrors = validateLeadFormFields({
+    const validation = validateLeadFormFields({
       name,
       mobile,
       locality,
       message,
       serviceEnquiryConsent,
       servicePhoneConsent,
+      service: plan.service,
+      property: plan.property,
+      timeline: plan.timeline,
     });
 
-    if (fieldErrors.length > 0) {
-      setClientErrors(fieldErrors);
+    if (!validation.ok) {
+      setFieldErrors(validation.fields);
+      setClientSummary(validation.messages);
       setUxState("validation-error");
+      if (validation.firstInvalid) {
+        triggerInvalidFeedback(validation.firstInvalid);
+      }
       return;
     }
 
-    if (!plan.service || !plan.property || !plan.timeline) {
-      setClientErrors([
-        "Choose your service, property type and timeline below before submitting.",
-      ]);
-      setUxState("validation-error");
+    setFieldErrors({});
+    setClientSummary([]);
+
+    // Preview: client validation only — never call intake.
+    if (!canNetworkSubmit) {
+      setUxState("idle");
       return;
     }
 
@@ -176,6 +292,7 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
       setServerFields(draft.fields);
       setUxState("validation-error");
       submittingRef.current = false;
+      summaryRef.current?.focus();
       return;
     }
 
@@ -212,12 +329,45 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
     submittingRef.current = false;
   };
 
-  const displayErrors =
-    clientErrors.length > 0
-      ? clientErrors
-      : serverFields.map(
+  const serverSummary =
+    serverFields.length > 0
+      ? serverFields.map(
           (field) => `${fieldPathToLabel(field)} could not be accepted.`
-        );
+        )
+      : [];
+
+  const showSummary =
+    (clientSummary.length > 0 && uxState === "validation-error") ||
+    (statusMessage?.isError && uxState !== "validation-error") ||
+    (serverSummary.length > 0 && uxState === "validation-error");
+
+  const fieldClass = (key: LeadFormFieldKey) => {
+    const parts = ["pm-field"];
+    if (fieldErrors[key]) parts.push("pm-field--invalid");
+    if (shakeField === key) parts.push("pm-field--shake");
+    return parts.join(" ");
+  };
+
+  const consentClass = (key: LeadFormFieldKey) => {
+    const parts = ["pm-close__consent-item"];
+    if (fieldErrors[key]) parts.push("pm-close__consent-item--invalid");
+    if (shakeField === key) parts.push("pm-field--shake");
+    return parts.join(" ");
+  };
+
+  const describedBy = (key: LeadFormFieldKey, extra?: string) => {
+    const ids: string[] = [];
+    if (extra) ids.push(extra);
+    if (fieldErrors[key]) ids.push(`${formId}-${key}-error`);
+    return ids.length > 0 ? ids.join(" ") : undefined;
+  };
+
+  const errorText = (key: LeadFormFieldKey): ReactNode =>
+    fieldErrors[key] ? (
+      <p id={`${formId}-${key}-error`} className="pm-field__error" role="alert">
+        {fieldErrors[key]}
+      </p>
+    ) : null;
 
   return (
     <form
@@ -225,6 +375,7 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
       onSubmit={(event) => void onSubmit(event)}
       aria-busy={isSubmitting}
       noValidate
+      data-od-lead-phone-ux="national-10"
     >
       {mode === "preview" ? (
         <p className="pm-close__form-notice" role="note">
@@ -232,19 +383,28 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
         </p>
       ) : null}
 
-      {(displayErrors.length > 0 && uxState === "validation-error") ||
-      (statusMessage?.isError && uxState !== "validation-error") ? (
+      {showSummary ? (
         <div
-          ref={errorRef}
+          ref={summaryRef}
           className="pm-errors"
           role="alert"
+          aria-live="assertive"
           tabIndex={-1}
         >
-          {displayErrors.length > 0 && uxState === "validation-error" ? (
+          {clientSummary.length > 0 && uxState === "validation-error" ? (
             <>
               <p className="pm-errors__title">Please fix the following:</p>
               <ul>
-                {displayErrors.map((error) => (
+                {clientSummary.map((error) => (
+                  <li key={error}>{error}</li>
+                ))}
+              </ul>
+            </>
+          ) : serverSummary.length > 0 && uxState === "validation-error" ? (
+            <>
+              <p className="pm-errors__title">Please fix the following:</p>
+              <ul>
+                {serverSummary.map((error) => (
                   <li key={error}>{error}</li>
                 ))}
               </ul>
@@ -273,9 +433,10 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
       <fieldset className="pm-fieldset" disabled={isSubmitting || isSuccess}>
         <legend className="pm-legend">Your contact details</legend>
 
-        <div className="pm-field">
+        <div className={fieldClass("name")}>
           <label htmlFor={`${formId}-name`}>Full name</label>
           <input
+            ref={nameRef}
             id={`${formId}-name`}
             name="name"
             type="text"
@@ -284,29 +445,57 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
             minLength={LEAD_FORM_FIELD_LIMITS.nameMin}
             maxLength={LEAD_FORM_FIELD_LIMITS.nameMax}
             value={name}
-            aria-invalid={uxState === "validation-error" && !name.trim()}
-            onChange={(event) => setName(event.target.value)}
+            aria-invalid={Boolean(fieldErrors.name)}
+            aria-describedby={describedBy("name")}
+            onChange={(event) => {
+              setName(event.target.value);
+              clearFieldError("name");
+            }}
           />
+          {errorText("name")}
         </div>
 
-        <div className="pm-field">
+        <div className={fieldClass("mobile")}>
           <label htmlFor={`${formId}-mobile`}>Mobile number</label>
           <input
+            ref={mobileRef}
             id={`${formId}-mobile`}
             name="mobile"
             type="tel"
-            autoComplete="tel"
-            inputMode="tel"
+            autoComplete="tel-national"
+            inputMode="numeric"
+            pattern="[6-9][0-9]{9}"
+            maxLength={10}
             required
-            placeholder="+91…"
+            placeholder="10-digit mobile"
             value={mobile}
-            aria-invalid={uxState === "validation-error" && !mobile.trim()}
-            aria-describedby={`${formId}-mobile-hint`}
-            onChange={(event) => setMobile(event.target.value)}
+            aria-invalid={Boolean(fieldErrors.mobile)}
+            aria-describedby={describedBy("mobile", `${formId}-mobile-hint`)}
+            onChange={(event) => applyMobileRaw(event.target.value)}
+            onPaste={(event) => {
+              const text = event.clipboardData.getData("text");
+              const accepted = acceptIndianMobileInput(text);
+              if (accepted.ok) {
+                event.preventDefault();
+                setMobile(accepted.national);
+                clearFieldError("mobile");
+                return;
+              }
+              // Let onChange handle digit-only pastes; block ambiguous truncating pastes.
+              const compacted = text.replace(/[\s\-().]/g, "");
+              if (/\D/.test(compacted) || compacted.length > 10) {
+                event.preventDefault();
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  mobile: INDIAN_MOBILE_INVALID_MESSAGE,
+                }));
+              }
+            }}
           />
           <p id={`${formId}-mobile-hint`} className="pm-close__field-hint">
-            Include country code, e.g. +91 for India.
+            {INDIAN_MOBILE_HELPER}
           </p>
+          {errorText("mobile")}
         </div>
       </fieldset>
 
@@ -319,17 +508,20 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
           Required for a consultation request. Selections update your interior plan.
         </p>
 
-        <div className="pm-field">
+        <div className={fieldClass("service")}>
           <label htmlFor={`${formId}-service`}>What are you looking for?</label>
           <select
+            ref={serviceRef}
             id={`${formId}-service`}
             name="service"
             required
             value={plan.service ?? ""}
-            aria-invalid={uxState === "validation-error" && !plan.service}
+            aria-invalid={Boolean(fieldErrors.service)}
+            aria-describedby={describedBy("service")}
             onChange={(event) => {
               const value = event.target.value;
               if (value) plan.setService(value as PmServiceId);
+              clearFieldError("service");
             }}
           >
             <option value="" disabled>
@@ -341,19 +533,23 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
               </option>
             ))}
           </select>
+          {errorText("service")}
         </div>
 
-        <div className="pm-field">
+        <div className={fieldClass("property")}>
           <label htmlFor={`${formId}-property`}>Property type</label>
           <select
+            ref={propertyRef}
             id={`${formId}-property`}
             name="property"
             required
             value={plan.property ?? ""}
-            aria-invalid={uxState === "validation-error" && !plan.property}
+            aria-invalid={Boolean(fieldErrors.property)}
+            aria-describedby={describedBy("property")}
             onChange={(event) => {
               const value = event.target.value;
               if (value) plan.setProperty(value as PmPropertyId);
+              clearFieldError("property");
             }}
           >
             <option value="" disabled>
@@ -365,19 +561,23 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
               </option>
             ))}
           </select>
+          {errorText("property")}
         </div>
 
-        <div className="pm-field">
+        <div className={fieldClass("timeline")}>
           <label htmlFor={`${formId}-timeline`}>Timeline</label>
           <select
+            ref={timelineRef}
             id={`${formId}-timeline`}
             name="timeline"
             required
             value={plan.timeline ?? ""}
-            aria-invalid={uxState === "validation-error" && !plan.timeline}
+            aria-invalid={Boolean(fieldErrors.timeline)}
+            aria-describedby={describedBy("timeline")}
             onChange={(event) => {
               const value = event.target.value;
               if (value) plan.setTimeline(value as PmTimelineId);
+              clearFieldError("timeline");
             }}
           >
             <option value="" disabled>
@@ -389,6 +589,7 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
               </option>
             ))}
           </select>
+          {errorText("timeline")}
         </div>
       </fieldset>
 
@@ -431,13 +632,19 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
       >
         <legend className="pm-legend">Consent</legend>
 
-        <label className="pm-close__consent-item">
+        <label className={consentClass("serviceEnquiryConsent")}>
           <input
+            ref={serviceEnquiryConsentRef}
             type="checkbox"
             name="consentServiceEnquiry"
             checked={serviceEnquiryConsent}
             required
-            onChange={(event) => setServiceEnquiryConsent(event.target.checked)}
+            aria-invalid={Boolean(fieldErrors.serviceEnquiryConsent)}
+            aria-describedby={describedBy("serviceEnquiryConsent")}
+            onChange={(event) => {
+              setServiceEnquiryConsent(event.target.checked);
+              clearFieldError("serviceEnquiryConsent");
+            }}
           />
           <span>
             {serviceEnquiryCopy}{" "}
@@ -445,17 +652,25 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
             <Link href={LEAD_FORM_TERMS_PATH}>Terms of Use</Link> apply.
           </span>
         </label>
+        {errorText("serviceEnquiryConsent")}
 
-        <label className="pm-close__consent-item">
+        <label className={consentClass("servicePhoneConsent")}>
           <input
+            ref={servicePhoneConsentRef}
             type="checkbox"
             name="consentServicePhone"
             checked={servicePhoneConsent}
             required
-            onChange={(event) => setServicePhoneConsent(event.target.checked)}
+            aria-invalid={Boolean(fieldErrors.servicePhoneConsent)}
+            aria-describedby={describedBy("servicePhoneConsent")}
+            onChange={(event) => {
+              setServicePhoneConsent(event.target.checked);
+              clearFieldError("servicePhoneConsent");
+            }}
           />
           <span>{serviceCommunicationCopy}</span>
         </label>
+        {errorText("servicePhoneConsent")}
 
         <label className="pm-close__consent-item">
           <input
@@ -485,7 +700,7 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
         <button
           type="submit"
           className="dc-btn dc-btn--primary pm-btn--sheen"
-          disabled={!canSubmit}
+          disabled={!canAttemptSubmit}
           data-conversion-action="lead-submit"
         >
           {isSubmitting ? "Submitting…" : "Submit enquiry"}

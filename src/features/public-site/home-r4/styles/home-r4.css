@@ -1315,6 +1315,73 @@
   box-shadow: 0 0 0 4px rgba(216, 162, 74, 0.16);
 }
 
+[data-public-home-r4] .pm-field select {
+  width: 100%;
+  min-height: 48px;
+  padding: 13px 15px;
+  border-radius: var(--pm-r-sm);
+  border: 1px solid var(--pm-line-strong);
+  background: rgba(11, 9, 8, 0.45);
+  color: var(--pm-ivory);
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+[data-public-home-r4] .pm-field--invalid input,
+[data-public-home-r4] .pm-field--invalid select,
+[data-public-home-r4] .pm-field--invalid textarea,
+[data-public-home-r4] .pm-close__consent-item--invalid {
+  border-color: #e08a7a;
+}
+
+[data-public-home-r4] .pm-field--invalid input,
+[data-public-home-r4] .pm-field--invalid select,
+[data-public-home-r4] .pm-field--invalid textarea {
+  box-shadow: 0 0 0 1px rgba(224, 138, 122, 0.35);
+}
+
+[data-public-home-r4] .pm-field__error {
+  margin: 0.35rem 0 0;
+  color: #f0b4a8;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+[data-public-home-r4] .pm-close__consent-item--invalid {
+  border-radius: var(--pm-r-sm);
+  outline: 1px solid rgba(224, 138, 122, 0.55);
+  outline-offset: 2px;
+}
+
+@keyframes pm-field-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+[data-public-home-r4] .pm-field--shake {
+  animation: pm-field-shake 300ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-public-home-r4] .pm-field--shake {
+    animation: none;
+  }
+}
+
 [data-public-home-r4] .pm-req,
 [data-public-home-r4] .pm-opt {
   font-size: 0.66rem;

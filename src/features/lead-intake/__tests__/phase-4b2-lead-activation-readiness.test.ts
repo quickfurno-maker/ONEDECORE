@@ -234,7 +234,7 @@ describe("Phase 4B2 plan adapter and form fields", () => {
   });
 
   test("client validation requires consents and forbids marketing fields", () => {
-    const errors = validateLeadFormFields({
+    const result = validateLeadFormFields({
       name: "A",
       mobile: "",
       email: "x@y.z",
@@ -245,7 +245,8 @@ describe("Phase 4B2 plan adapter and form fields", () => {
       serviceEmailConsent: false,
       hasEmail: true,
     });
-    assert.ok(errors.length >= 3);
+    assert.ok(result.messages.length >= 3);
+    assert.equal(result.ok, false);
 
     const capture = readFileSync(
       join(root, "src/features/lead-intake/public/HomeLeadCapture.tsx"),
