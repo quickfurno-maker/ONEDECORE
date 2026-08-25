@@ -162,13 +162,16 @@ export function getLeadFormStatusMessage(
 export function validateLeadFormFields(input: {
   readonly name: string;
   readonly mobile: string;
-  readonly email: string;
   readonly locality: string;
   readonly message: string;
   readonly serviceEnquiryConsent: boolean;
   readonly servicePhoneConsent: boolean;
-  readonly serviceEmailConsent: boolean;
-  readonly hasEmail: boolean;
+  /** @deprecated Public form no longer collects email. Kept for API-compat tests. */
+  readonly email?: string;
+  /** @deprecated Public form no longer collects email consent. */
+  readonly serviceEmailConsent?: boolean;
+  /** @deprecated Public form no longer collects email. */
+  readonly hasEmail?: boolean;
 }): readonly string[] {
   const errors: string[] = [];
   const trimmedName = input.name.trim();
@@ -181,8 +184,9 @@ export function validateLeadFormFields(input: {
   if (!input.mobile.trim()) {
     errors.push("Enter your mobile number.");
   }
-  const trimmedEmail = input.email.trim();
-  if (trimmedEmail) {
+  const trimmedEmail = (input.email ?? "").trim();
+  const hasEmail = input.hasEmail ?? trimmedEmail.length > 0;
+  if (hasEmail || trimmedEmail) {
     if (
       trimmedEmail.length > 254 ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)

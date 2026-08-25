@@ -24,10 +24,11 @@ function read(name: string) {
 }
 
 describe("R5.4 static homepage", () => {
-  test("page.tsx has no getFeaturedProjects or force-dynamic", () => {
+  test("page.tsx loads portfolio preview and lead mode without force-dynamic", () => {
     const page = readFileSync(pagePath, "utf8");
     const interiors = readFileSync(join(root, "src/app/interiors/page.tsx"), "utf8");
-    assert.doesNotMatch(page, /getFeaturedProjects/);
+    assert.match(page, /getFeaturedProjects/);
+    assert.match(page, /getLeadFormMode/);
     assert.doesNotMatch(page, /force-dynamic/);
     assert.match(page, /DiscoveryHomePage/);
     assert.match(interiors, /getLeadFormMode/);

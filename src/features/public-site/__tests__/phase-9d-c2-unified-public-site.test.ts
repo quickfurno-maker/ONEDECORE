@@ -10,7 +10,11 @@ import {
   DISCOVERY_SECTION_ORDER,
   DISCOVERY_SERVICE_SECTIONS,
 } from "../discovery/discovery-copy.ts";
-import { getPublicNavDestinations } from "../chrome/public-nav.ts";
+import {
+  getPublicNavDestinations,
+  PUBLIC_CONSULTATION,
+  PUBLIC_CONSULTATION_BY_SERVICE,
+} from "../chrome/public-nav.ts";
 import { HOME_PUNE_AREAS } from "../home-r4/claims.ts";
 
 const root = process.cwd();
@@ -68,20 +72,61 @@ describe("Public site simplification — discovery IA", () => {
     assert.doesNotMatch(page, /Book Free Consultation/);
     assert.match(page, /href="\/portfolio"/);
     assert.match(page, /service\.href/);
-    const copy = read("src/features/public-site/discovery/discovery-copy.ts");
-    assert.match(copy, /\/interiors\?service=modular-kitchens#consultation/);
-    assert.match(copy, /\/interiors\?service=custom-wardrobes#consultation/);
-    assert.match(read("src/features/public-site/chrome/public-nav.ts"), /\/interiors#consultation/);
+    assert.doesNotMatch(page, /\/interiors#consultation/);
+    assert.doesNotMatch(page, /\/interiors\?service=/);
     assert.match(page, /ShopPincodeChecker/);
     assert.match(page, /showPincode/);
     assert.doesNotMatch(page, /furniture collection is being prepared/i);
     assert.doesNotMatch(page, /DiscoveryPuneCoverage/);
     assert.doesNotMatch(page, /od-disc-hero__portrait|od-disc-hero__inset/);
     assert.doesNotMatch(page, /heroConsultant|hero-consultant-indian-woman/);
-    assert.doesNotMatch(page, /submitLead|createLead|HomeLeadCapture/);
+    assert.doesNotMatch(page, /HomePlannerSheet|HomeBudgetEstimator|HomePlannerInline/);
+    assert.match(page, /HomeConsultationCapture/);
+    assert.match(page, /PortfolioCard/);
+    assert.match(page, /data-od-portfolio-preview/);
     assert.match(css, /od-disc-service/);
     assert.match(css, /od-disc-band--surface|od-disc-band--deep|od-disc-band--divided/);
     assert.match(css, /prefers-reduced-motion/);
+  });
+
+  test("canonical consultation lives on homepage with service preselection", () => {
+    assert.equal(PUBLIC_CONSULTATION.href, "/#consultation");
+    assert.equal(
+      PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"],
+      "/?service=complete-home-interiors#consultation"
+    );
+    assert.equal(
+      PUBLIC_CONSULTATION_BY_SERVICE["modular-kitchens"],
+      "/?service=modular-kitchens#consultation"
+    );
+    assert.equal(
+      PUBLIC_CONSULTATION_BY_SERVICE["custom-wardrobes"],
+      "/?service=custom-wardrobes#consultation"
+    );
+    const copy = read("src/features/public-site/discovery/discovery-copy.ts");
+    assert.match(copy, /\?service=complete-home-interiors#consultation/);
+    assert.match(copy, /\?service=modular-kitchens#consultation/);
+    assert.match(copy, /\?service=custom-wardrobes#consultation/);
+    assert.doesNotMatch(copy, /\/interiors/);
+    const nav = read("src/features/public-site/chrome/public-nav.ts");
+    assert.match(nav, /href: "\/#consultation"/);
+    assert.doesNotMatch(nav, /\/interiors#consultation/);
+  });
+
+  test("homepage embeds exactly one canonical lead-form path with server leadFormMode", () => {
+    const page = read("src/app/page.tsx");
+    const discovery = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
+    const wrap = read("src/features/public-site/discovery/HomeConsultationCapture.tsx");
+    assert.match(page, /getLeadFormMode/);
+    assert.match(page, /leadFormMode=\{leadFormMode\}/);
+    assert.match(discovery, /HomeConsultationCapture/);
+    assert.match(discovery, /id="consultation"/);
+    assert.match(discovery, /<HomeConsultationCapture mode=\{leadFormMode\} \/>/);
+    assert.equal((discovery.match(/<HomeConsultationCapture\b/g) ?? []).length, 1);
+    assert.match(wrap, /PlanProvider/);
+    assert.match(wrap, /HomeLeadCapture/);
+    assert.doesNotMatch(wrap, /HomePlannerSheet|HomeBudgetEstimator|HomePlannerInline/);
+    assert.doesNotMatch(discovery, /HomePlannerSheet|HomeBudgetEstimator|estimator/);
   });
 
   test("homepage hides pincode, shop search, and shop nav while shop is off", () => {
@@ -107,17 +152,19 @@ describe("Public site simplification — discovery IA", () => {
     assert.ok(HOME_PUNE_AREAS.includes("Kharadi"));
   });
 
-  test("homepage hero uses living-warmth and does not reuse it on service sections", () => {
+  test("homepage image wiring documents OWNER_ASSET_REQUIRED for major set", () => {
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     const content = read("src/features/public-site/home-r4/content.ts");
+    assert.match(page, /OWNER_ASSET_REQUIRED/);
     assert.match(page, /HOMEPAGE_HERO = PM_ASSETS\.hero/);
-    assert.match(page, /HOMEPAGE_HERO\.path/);
-    assert.match(content, /hero-living-warmth\.webp/);
     assert.match(page, /completeHomeInteriors/);
     assert.match(page, /modularKitchens/);
     assert.match(page, /customWardrobes/);
+    assert.match(content, /hero-living-warmth\.webp/);
+    assert.match(content, /service-complete-home-interiors\.webp/);
+    assert.match(content, /service-modular-kitchens\.webp/);
+    assert.match(content, /service-custom-wardrobes\.webp/);
     assert.doesNotMatch(page, /heroConsultant/);
-    assert.doesNotMatch(page, /hero-consultant-indian-woman/);
     assert.doesNotMatch(page, /SERVICE_ASSETS[\s\S]*PM_ASSETS\.hero/);
   });
 
@@ -132,11 +179,15 @@ describe("Public site simplification — discovery IA", () => {
     assert.doesNotMatch(page, /Book Free Consultation/);
   });
 
-  test("root page consumes public category and featured queries behind shop gate", () => {
+  test("root page loads commerce, portfolio preview, and lead form mode", () => {
     const page = read("src/app/page.tsx");
     assert.match(page, /getPublicCommerceCategories/);
     assert.match(page, /featuredOnly:\s*true/);
     assert.match(page, /isShopPublicEnabled/);
+    assert.match(page, /getFeaturedProjects/);
+    assert.match(page, /getLeadFormMode/);
+    assert.match(page, /Home Interiors, Modular Kitchens & Wardrobes/);
+    assert.doesNotMatch(page, /Furniture in Pune/);
   });
 
   test("category preview uses public root categories only", () => {
@@ -145,10 +196,41 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(src, /sortOrder/);
     assert.match(src, /slice\(0, 6\)/);
   });
+
+  test("real homes section uses portfolio preview with empty-safe behavior", () => {
+    const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
+    assert.match(page, /portfolioPreview\.length > 0/);
+    assert.match(page, /PortfolioCard/);
+    assert.match(page, /od-disc-homes__empty/);
+    assert.match(page, /View Portfolio/);
+  });
+});
+
+describe("Public site simplification — lead form email lock", () => {
+  test("public HomeLeadCapture has no email field or email-consent UI", () => {
+    const src = read("src/features/lead-intake/public/HomeLeadCapture.tsx");
+    assert.doesNotMatch(src, /type="email"/);
+    assert.doesNotMatch(src, /name="email"/);
+    assert.doesNotMatch(src, /consentServiceEmail/);
+    assert.doesNotMatch(src, /serviceEmailConsent/);
+    assert.doesNotMatch(src, /setEmail/);
+    assert.match(src, /consentServicePhone/);
+    assert.match(src, /consentWhatsapp/);
+    assert.match(src, /const \[whatsappConsent, setWhatsappConsent\] = useState\(false\)/);
+    assert.doesNotMatch(src, /setWhatsappConsent\(true\)/);
+  });
+
+  test("public lead request omits email and email consent when absent", () => {
+    const src = read("src/features/lead-intake/public/HomeLeadCapture.tsx");
+    assert.doesNotMatch(src, /email:\s*hasEmail/);
+    assert.doesNotMatch(src, /serviceEmail:\s*true/);
+    assert.match(src, /serviceEnquiry:\s*true/);
+    assert.match(src, /servicePhone:\s*true/);
+  });
 });
 
 describe("Public site simplification — interiors and portfolio", () => {
-  test("route and consultation/kitchen anchors exist", () => {
+  test("/interiors route is retained with its own consultation form", () => {
     assert.equal(existsSync(join(root, "src/app/interiors/page.tsx")), true);
     const route = read("src/app/interiors/page.tsx");
     const blocks = read("src/features/public-site/interiors/InteriorsServiceBlocks.tsx");
@@ -159,10 +241,11 @@ describe("Public site simplification — interiors and portfolio", () => {
     assert.match(plan, /HomeLeadCapture/);
   });
 
-  test("portfolio detail exposes canonical consultation CTA", () => {
+  test("portfolio detail CTA targets homepage consultation", () => {
     const detail = read("src/app/portfolio/[slug]/page.tsx");
     assert.match(detail, /Get Free Consultation/);
-    assert.match(detail, /\/interiors#consultation/);
+    assert.match(detail, /href="\/#consultation"/);
+    assert.doesNotMatch(detail, /\/interiors#consultation/);
   });
 
   test("HomeLeadCapture can preselect canonical service from query string", () => {
@@ -197,10 +280,11 @@ describe("Public site simplification — nav seo and shop", () => {
     assert.match(sitemap, /absoluteUrl\("shop"\)/);
   });
 
-  test("shop keeps interiors as a secondary cross-link", () => {
+  test("shop cross-links to homepage interiors journey, not primary /interiors CTA", () => {
     const shop = read("src/app/shop/page.tsx");
     assert.match(shop, /Planning a complete home\?/);
-    assert.match(shop, /href="\/interiors"/);
+    assert.match(shop, /href="\/"/);
+    assert.doesNotMatch(shop, /href="\/interiors"/);
     assert.doesNotMatch(shop, /HomeLeadCapture/);
   });
 
@@ -221,7 +305,7 @@ describe("Public site simplification — nav seo and shop", () => {
     assert.match(header, /inert = true/);
   });
 
-  test("public footer is compact with legal utility links", () => {
+  test("public footer is compact with legal utility links and no marketing email", () => {
     const footer = read("src/features/public-site/chrome/PublicSiteFooter.tsx");
     const nav = read("src/features/public-site/chrome/public-nav.ts");
     assert.match(footer, /getPublicNavDestinations\(shopEnabled\)/);
@@ -231,6 +315,33 @@ describe("Public site simplification — nav seo and shop", () => {
     assert.match(nav, /Warranty/);
     assert.doesNotMatch(footer, /\/admin/);
     assert.doesNotMatch(footer, /Landing Lab/i);
+    assert.doesNotMatch(footer, /mailto:/);
+    assert.doesNotMatch(footer, /onedecore@gmail\.com/);
+    assert.doesNotMatch(footer, /Email us/i);
+  });
+
+  test("normal public marketing UI has no mailto or sales email CTA", () => {
+    const dirs = [
+      "src/features/public-site/discovery",
+      "src/features/public-site/chrome",
+      "src/features/portfolio/public/components",
+      "src/app/shop",
+    ];
+    for (const dir of dirs) {
+      for (const file of walkFiles(join(root, dir))) {
+        if (!file.endsWith(".ts") && !file.endsWith(".tsx")) continue;
+        const src = readFileSync(file, "utf8");
+        assert.doesNotMatch(src, /mailto:/);
+        assert.doesNotMatch(src, /Email us/i);
+      }
+    }
+  });
+
+  test("legal pages may retain published privacy/grievance email as governance exception", () => {
+    const privacy = read("src/features/legal/privacy-policy-content.ts");
+    const identity = read("src/features/legal/business-identity.ts");
+    assert.match(privacy, /privacyEmail/);
+    assert.match(identity, /onedecore@gmail\.com/);
   });
 
   test("public discovery and interiors copy has no cart CTA", () => {

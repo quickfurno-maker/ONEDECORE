@@ -193,7 +193,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       </header>
 
       <p className="od-detail-cta">
-        <Link href="/interiors#consultation" className="od-btn-primary">
+        <Link href="/#consultation" className="od-btn-primary">
           Get Free Consultation
         </Link>
       </p>

@@ -74,17 +74,18 @@ describe("home-r4 production guards", () => {
     }
   });
 
-  test("homepage is static and remains indexable without Portfolio fetch", () => {
+  test("homepage remains indexable and loads portfolio preview + lead mode", () => {
     const page = read(pagePath);
     const interiors = read(join(root, "src/app/interiors/page.tsx"));
-    assert.doesNotMatch(page, /getFeaturedProjects/);
+    assert.match(page, /getFeaturedProjects/);
+    assert.match(page, /getLeadFormMode/);
     assert.doesNotMatch(page, /force-dynamic/);
     assert.match(page, /DiscoveryHomePage/);
     assert.doesNotMatch(page, /loadConceptFeatured/);
     assert.doesNotMatch(page, /design-concepts/);
     assert.doesNotMatch(page, /noindex/);
     assert.match(page, /index:\s*true/);
-    assert.match(page, /Interiors, Modular Kitchens & Furniture in Pune/);
+    assert.match(page, /Home Interiors, Modular Kitchens & Wardrobes in Pune/);
     assert.match(interiors, /InteriorsConversionPage/);
     assert.match(interiors, /getLeadFormMode/);
   });

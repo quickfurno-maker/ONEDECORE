@@ -43,7 +43,7 @@ export const DISCOVERY_SERVICE_SECTIONS = [
   {
     id: "complete-home" as const,
     title: "Complete Home Interiors",
-    href: "/interiors#consultation",
+    href: "/?service=complete-home-interiors#consultation",
     kicker: "Complete home",
     lede: "Layouts, materials and finishes planned as one home — not room-by-room purchases.",
     points: [
@@ -55,7 +55,7 @@ export const DISCOVERY_SERVICE_SECTIONS = [
   {
     id: "modular-kitchen" as const,
     title: "Modular Kitchen",
-    href: "/interiors?service=modular-kitchens#consultation",
+    href: "/?service=modular-kitchens#consultation",
     kicker: "Kitchen",
     lede: "Premium modular kitchens planned around workflow, storage and finish quality.",
     points: [
@@ -67,7 +67,7 @@ export const DISCOVERY_SERVICE_SECTIONS = [
   {
     id: "wardrobes" as const,
     title: "Custom Wardrobes",
-    href: "/interiors?service=custom-wardrobes#consultation",
+    href: "/?service=custom-wardrobes#consultation",
     kicker: "Wardrobes",
     lede: "Made-to-fit wardrobes and storage planned around your room and routine.",
     points: [

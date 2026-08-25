@@ -5,6 +5,9 @@ import { ShopPincodeChecker } from "@/features/commerce/public/components/ShopPi
 import { ShopProductCard } from "@/features/commerce/public/components/ShopProductCard";
 import type { PublicCommerceCategory } from "@/features/commerce/public/public-types";
 import type { PublicCommerceProductCard } from "@/features/commerce/public/public-types";
+import type { LeadFormMode } from "@/features/lead-intake/public/lead-form-mode";
+import { PortfolioCard } from "@/features/portfolio/public/components/PortfolioCard";
+import type { PublicPortfolioCard } from "@/features/portfolio/public/types";
 import { PublicSiteFooter } from "@/features/public-site/chrome/PublicSiteFooter";
 import { PublicSiteHeader } from "@/features/public-site/chrome/PublicSiteHeader";
 import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
@@ -12,6 +15,7 @@ import { PM_ASSETS } from "@/features/public-site/home-r4/content";
 import { HOME_CLAIM_COPY, HOME_CLAIMS, HOME_PUNE_AREAS } from "@/features/public-site/home-r4/claims";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 import { RevealRuntime } from "@/features/public-site/motion/RevealRuntime";
+import { HomeConsultationCapture } from "./HomeConsultationCapture";
 import {
   DISCOVERY_FURNITURE_PROCESS_STEPS,
   DISCOVERY_PROCESS_STEPS,
@@ -30,7 +34,15 @@ export type DiscoveryCommerceState =
     }
   | { readonly ok: false };
 
-/** Strongest aspirational living-space image — not reused on service sections. */
+/**
+ * Homepage image wiring (existing marketing assets).
+ * OWNER_ASSET_REQUIRED: replace these four major files with a new cohesive premium set
+ * before claiming a full homepage image refresh:
+ * - hero-living-warmth.webp
+ * - service-complete-home-interiors.webp
+ * - service-modular-kitchens.webp
+ * - service-custom-wardrobes.webp
+ */
 const HOMEPAGE_HERO = PM_ASSETS.hero;
 
 const SERVICE_ASSETS = {
@@ -50,8 +62,12 @@ const HERO_LOCALITY_CHIP_KEYS = [
 
 export function DiscoveryHomePage({
   commerce,
+  portfolioPreview,
+  leadFormMode,
 }: {
   readonly commerce: DiscoveryCommerceState;
+  readonly portfolioPreview: readonly PublicPortfolioCard[];
+  readonly leadFormMode: LeadFormMode;
 }) {
   const roots = commerce.ok
     ? commerce.categories
@@ -64,6 +80,7 @@ export function DiscoveryHomePage({
   const shopLive = commerce.ok;
   const showPincode = shopLive && (roots.length > 0 || featured.length > 0);
   const showLiveFurniture = shopLive && (roots.length > 0 || featured.length > 0);
+  const showLeadForm = leadFormMode === "active" || leadFormMode === "preview";
 
   return (
     <div className="od-discovery" data-public-dark-theme="" data-od-discovery="">
@@ -247,26 +264,31 @@ export function DiscoveryHomePage({
           data-od-disc-section="real-homes"
           aria-labelledby="od-disc-homes-title"
         >
-          <div className="od-disc-shell od-disc-homes">
-            <Reveal>
+          <div className="od-disc-shell">
+            <Reveal as="header" className="od-disc-band__head">
               <p className="od-disc-kicker">Portfolio</p>
               <h2 id="od-disc-homes-title">Real homes. Finished ONEDECORE work.</h2>
               <p className="od-disc-lede">
                 See how layouts, materials and details come together across complete homes.
               </p>
+            </Reveal>
+            {portfolioPreview.length > 0 ? (
+              <div className="od-disc-homes__grid" data-od-portfolio-preview="">
+                {portfolioPreview.map((card, index) => (
+                  <PortfolioCard key={card.slug} card={card} eagerImage={index < 3} />
+                ))}
+              </div>
+            ) : (
+              <Reveal>
+                <p className="od-disc-lede od-disc-homes__empty">
+                  Published project photography will appear here as the portfolio is curated.
+                </p>
+              </Reveal>
+            )}
+            <Reveal order={1} className="od-disc-homes__actions">
               <Link href="/portfolio" className="od-disc-btn od-disc-btn--ghost">
                 View Portfolio
               </Link>
-            </Reveal>
-            <Reveal order={1} className="od-disc-homes__proof">
-              <h3>Client experience</h3>
-              <p>
-                Homeowners across Pune work with ONEDECORE for coordinated interior design,
-                manufacturing and installation.
-              </p>
-              <p className="od-disc-review-note">
-                Average client rating {HOME_CLAIMS.rating}/5 across interior project feedback.
-              </p>
             </Reveal>
           </div>
         </section>
@@ -328,11 +350,12 @@ export function DiscoveryHomePage({
         ) : null}
 
         <section
+          id="consultation"
           className="od-disc-band od-disc-consult"
           data-od-disc-section="consultation"
           aria-labelledby="od-disc-consult-title"
         >
-          <div className="od-disc-shell">
+          <div className="od-disc-shell od-disc-consult__layout">
             <Reveal>
               <p className="od-disc-kicker">Consultation</p>
               <h2 id="od-disc-consult-title">Ready to plan your home with ONEDECORE?</h2>
@@ -340,15 +363,19 @@ export function DiscoveryHomePage({
                 Start with a free consultation. Tell us what you need — complete interiors, a
                 kitchen, or custom wardrobes — and we will take it from there.
               </p>
-              <div className="od-disc-hero__ctas">
-                <Link href={PUBLIC_CONSULTATION.href} className="od-disc-btn od-disc-btn--primary">
-                  {PUBLIC_CONSULTATION.label}
-                </Link>
-                <Link href="/portfolio" className="od-disc-btn od-disc-btn--ghost">
-                  View Portfolio
-                </Link>
-              </div>
+              {!showLeadForm ? (
+                <div className="od-disc-hero__ctas">
+                  <Link href="/portfolio" className="od-disc-btn od-disc-btn--ghost">
+                    View Portfolio
+                  </Link>
+                </div>
+              ) : null}
             </Reveal>
+            {showLeadForm ? (
+              <Reveal order={1}>
+                <HomeConsultationCapture mode={leadFormMode} />
+              </Reveal>
+            ) : null}
           </div>
         </section>
       </main>

@@ -22,10 +22,18 @@ export const PUBLIC_NAV_DESTINATIONS = [
   PUBLIC_NAV_SHOP,
 ] as const;
 
+/** Canonical public consultation target — homepage owns the lead form. */
 export const PUBLIC_CONSULTATION = {
   label: "Get Free Consultation",
   shortLabel: "Free Consultation",
-  href: "/interiors#consultation",
+  href: "/#consultation",
+} as const;
+
+/** Homepage consultation deep-links with safe service preselection. */
+export const PUBLIC_CONSULTATION_BY_SERVICE = {
+  "complete-home-interiors": "/?service=complete-home-interiors#consultation",
+  "modular-kitchens": "/?service=modular-kitchens#consultation",
+  "custom-wardrobes": "/?service=custom-wardrobes#consultation",
 } as const;
 
 export const PUBLIC_FOOTER_LEGAL = [

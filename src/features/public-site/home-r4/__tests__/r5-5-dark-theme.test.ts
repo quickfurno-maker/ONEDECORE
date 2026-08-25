@@ -82,9 +82,10 @@ describe("R5.5 homepage light-band removal", () => {
     assert.match(faq, /--od-bg-raised|--pm-ivory/);
   });
 
-  test("homepage remains static without featured fetch", () => {
+  test("homepage loads featured portfolio preview without force-dynamic", () => {
     const source = read(page);
-    assert.doesNotMatch(source, /getFeaturedProjects|force-dynamic/);
+    assert.match(source, /getFeaturedProjects/);
+    assert.doesNotMatch(source, /force-dynamic/);
   });
 });
 

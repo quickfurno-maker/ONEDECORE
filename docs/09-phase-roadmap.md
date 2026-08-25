@@ -13,10 +13,13 @@ ONEDECORE public website is intentionally simplified to three primary customer s
 
 Additional locked notes:
 - Existing routes (`/interiors`, `/lp/[slug]`, legal, commerce shells) are retained unless separately approved for deletion/redirect.
+- Canonical consultation destination for the normal public journey is homepage `/#consultation` (with optional `?service=` preselection). `/interiors` remains for SEO/backlinks/compatibility and is not the primary CTA target.
+- Public customer forms do not collect email; phone is the primary contact channel. Legal/grievance contact email may remain only on published legal notices.
 - Landing pages remain available for campaigns and are not primary nav.
 - Shop remains fail-closed until explicit activation (`ONEDECORE_SHOP_PUBLIC_ENABLED=true`).
 - Online payments remain deferred; deferred payment worktree/M38 remains untouched.
 - Simplification must not weaken backend architecture, CRM, RLS, consent, or lead-intake contracts.
+- Homepage major marketing images remain **OWNER_ASSET_REQUIRED** until owner supplies a new cohesive premium set (hero + complete home + kitchen + wardrobes).
 
 ## 1. Completed Baseline (Repository Evidence)
 

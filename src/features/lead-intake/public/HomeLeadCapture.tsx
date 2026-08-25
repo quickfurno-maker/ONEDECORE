@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -59,13 +58,11 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
 
   const [name, setName] = useState(plan.name);
   const [mobile, setMobile] = useState(plan.mobile);
-  const [email, setEmail] = useState("");
   const [locality, setLocality] = useState(plan.locality);
   const [message, setMessage] = useState(plan.message);
   const [honeypot, setHoneypot] = useState("");
   const [serviceEnquiryConsent, setServiceEnquiryConsent] = useState(false);
   const [servicePhoneConsent, setServicePhoneConsent] = useState(false);
-  const [serviceEmailConsent, setServiceEmailConsent] = useState(false);
   const [whatsappConsent, setWhatsappConsent] = useState(false);
   const [formStartedAt] = useState(() => new Date().toISOString());
   const [uxState, setUxState] = useState<LeadFormUxState>("idle");
@@ -104,15 +101,6 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
     }
   }, [clientErrors, serverFields]);
 
-  const hasEmail = email.trim().length > 0;
-
-  const onEmailChange = useCallback((value: string) => {
-    setEmail(value);
-    if (!value.trim()) {
-      setServiceEmailConsent(false);
-    }
-  }, []);
-
   const statusMessage = getLeadFormStatusMessage(uxState, {
     retryAfterSeconds,
     validationFields: serverFields,
@@ -141,13 +129,10 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
     const fieldErrors = validateLeadFormFields({
       name,
       mobile,
-      email,
       locality,
       message,
       serviceEnquiryConsent,
       servicePhoneConsent,
-      serviceEmailConsent,
-      hasEmail,
     });
 
     if (fieldErrors.length > 0) {
@@ -172,15 +157,11 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
       plan,
       name,
       mobile,
-      email: hasEmail ? email : undefined,
       locality,
       message,
       consent: {
         serviceEnquiry: true,
         servicePhone: true,
-        ...(hasEmail && serviceEmailConsent
-          ? { serviceEmail: true as const }
-          : {}),
         ...(whatsappConsent ? { whatsappService: true } : {}),
       },
       attribution,
@@ -326,22 +307,6 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
           <p id={`${formId}-mobile-hint`} className="pm-close__field-hint">
             Include country code, e.g. +91 for India.
           </p>
-        </div>
-
-        <div className="pm-field">
-          <label htmlFor={`${formId}-email`}>
-            Email <span className="pm-opt">optional</span>
-          </label>
-          <input
-            id={`${formId}-email`}
-            name="email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            maxLength={LEAD_FORM_FIELD_LIMITS.emailMax}
-            value={email}
-            onChange={(event) => onEmailChange(event.target.value)}
-          />
         </div>
       </fieldset>
 
@@ -491,19 +456,6 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
           />
           <span>{serviceCommunicationCopy}</span>
         </label>
-
-        {hasEmail ? (
-          <label className="pm-close__consent-item">
-            <input
-              type="checkbox"
-              name="consentServiceEmail"
-              checked={serviceEmailConsent}
-              required
-              onChange={(event) => setServiceEmailConsent(event.target.checked)}
-            />
-            <span>{serviceCommunicationCopy}</span>
-          </label>
-        ) : null}
 
         <label className="pm-close__consent-item">
           <input
