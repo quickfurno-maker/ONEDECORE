@@ -11,6 +11,12 @@ import {
   type FormEvent,
 } from "react";
 import { usePlan } from "../../public-site/home-r4/PlanContext";
+import {
+  PM_PLANNER,
+  type PmPropertyId,
+  type PmServiceId,
+  type PmTimelineId,
+} from "../../public-site/home-r4/content";
 import { collectLeadFormAttribution } from "./lead-form-attribution.ts";
 import {
   getServiceCommunicationConsentCopy,
@@ -140,7 +146,7 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
 
     if (!plan.service || !plan.property || !plan.timeline) {
       setClientErrors([
-        "Complete your interior plan (service, property and timeline) before submitting.",
+        "Choose your service, property type and timeline below before submitting.",
       ]);
       setUxState("validation-error");
       return;
@@ -325,6 +331,92 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
             onChange={(event) => onEmailChange(event.target.value)}
           />
         </div>
+      </fieldset>
+
+      <fieldset
+        className="pm-fieldset pm-close__plan-fields"
+        disabled={isSubmitting || isSuccess}
+      >
+        <legend className="pm-legend">Your interior need</legend>
+        <p className="pm-close__field-hint">
+          Required for a consultation request. Selections update your interior plan.
+        </p>
+
+        <div className="pm-field">
+          <label htmlFor={`${formId}-service`}>Service</label>
+          <select
+            id={`${formId}-service`}
+            name="service"
+            required
+            value={plan.service ?? ""}
+            aria-invalid={uxState === "validation-error" && !plan.service}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value) plan.setService(value as PmServiceId);
+            }}
+          >
+            <option value="" disabled>
+              Select a service
+            </option>
+            {PM_PLANNER.services.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="pm-field">
+          <label htmlFor={`${formId}-property`}>Property type</label>
+          <select
+            id={`${formId}-property`}
+            name="property"
+            required
+            value={plan.property ?? ""}
+            aria-invalid={uxState === "validation-error" && !plan.property}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value) plan.setProperty(value as PmPropertyId);
+            }}
+          >
+            <option value="" disabled>
+              Select property type
+            </option>
+            {PM_PLANNER.properties.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="pm-field">
+          <label htmlFor={`${formId}-timeline`}>Timeline</label>
+          <select
+            id={`${formId}-timeline`}
+            name="timeline"
+            required
+            value={plan.timeline ?? ""}
+            aria-invalid={uxState === "validation-error" && !plan.timeline}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value) plan.setTimeline(value as PmTimelineId);
+            }}
+          >
+            <option value="" disabled>
+              Select a timeline
+            </option>
+            {PM_PLANNER.timelines.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </fieldset>
+
+      <fieldset className="pm-fieldset" disabled={isSubmitting || isSuccess}>
+        <legend className="pm-legend">Optional details</legend>
 
         <div className="pm-field">
           <label htmlFor={`${formId}-locality`}>

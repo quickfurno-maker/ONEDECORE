@@ -11,17 +11,54 @@ Dual gates:
 
 Client `active` cannot bypass a disabled server.
 
+Canonical activation decision source (fail-closed):
+
+- `src/features/legal/lead-intake-activation.ts` → `LEAD_INTAKE_ACTIVATION`
+- Identity facts: `src/features/legal/business-identity.ts` → `BUSINESS_IDENTITY`
+- Server wiring: `getLeadIntakeServerEnv(..., LEAD_INTAKE_ACTIVATION)`
+
+Generic business completeness alone never enables production intake.
+
 ## Unresolved activation blockers
 
 Do **not** mark these complete until owner evidence exists.
 
-### Owner / legal
+### Owner / legal (blocks form activation)
 
+Record answers into `BUSINESS_IDENTITY` and `LEAD_INTAKE_ACTIVATION` only after owner confirmation.
+
+- [ ] `legalEntityName`
+- [ ] `entityType`
+- [ ] `registeredOfficeAddress`
+- [ ] `operatingOfficeAddress` **or** `contactRoleMapping.operatingOfficeSameAsRegistered=true`
+- [ ] `businessEmail`
+- [ ] `privacyEmail`
+- [ ] `grievanceEmail` **or** `privacyAndGrievanceCombined=true`
+- [ ] `dataRightsRequestEmail` **or** `privacyAndDataRightsCombined=true`
+- [ ] `authorisedRepresentative`
+- [ ] `grievanceContact`
+- [ ] `jurisdictionClause` (owner-supplied wording; do not invent)
+- [ ] `legalCounselApprovalReference` (only if counsel review actually occurred; otherwise keep blocked)
+- [ ] Privacy/Terms publication approval + effective version/date (`privacyTermsVersionApproved` + legal publication mode)
+- [ ] Service enquiry consent copy approval (`serviceEnquiryCopyApproved`)
+- [ ] Service communication consent copy approval (`serviceCommunicationCopyApproved`)
+- [ ] Retention decisions: lead / consent / audit / suppression
+- [ ] Lead processors registered / reviewed for production intake
 - [ ] Owner approval to collect production leads
-- [ ] Legal approval of consent copy versions (currently `draft-review`)
-- [ ] Legal publication mode advanced beyond draft-review where required
-- [ ] Lead intake activation gate fields complete (`getMissingLeadIntakeActivationFields` empty)
-- [ ] Privacy notice / terms versions approved for live collection
+
+### Rate limits — OWNER CONFIRMATION REQUIRED
+
+Current `submit_lead_intake` thresholds (migration-owned; do not change casually):
+
+| Scope | Threshold | Window | Retry-After |
+|-------|-----------|--------|-------------|
+| Network | 5 | 15 minutes | 900s |
+| Network | 20 | 24 hours | 3600s |
+| Phone (CREATED) | 3 | 24 hours | 3600s |
+
+Marker in SQL: `OWNER_REVIEW_REQUIRED_BEFORE_PRODUCTION`.
+
+Production enablement remains blocked until the owner confirms these values (or records an approved change).
 
 ### Proxy / networking
 
@@ -29,16 +66,27 @@ Do **not** mark these complete until owner evidence exists.
 - [ ] `ONEDECORE_TRUST_PROXY=true` only after proxy overwrite is verified
 - [ ] Managed Supabase HTTPS URL confirmed for `enabled` mode
 
-### Secrets
+### Secrets (never print values)
 
 - [ ] Production `SUPABASE_SERVICE_ROLE_KEY` in host secret store only
 - [ ] Production `ONEDECORE_LEAD_HASH_SECRET` (≥32 chars) in host secret store only
 - [ ] HMAC rotation runbook reviewed (`docs/runbooks/lead-intake-hmac-secret-rotation.md`)
 
+Safe presence checks (no value echo):
+
+```bash
+# length / presence only
+test -n "$SUPABASE_SERVICE_ROLE_KEY" && test "${#SUPABASE_SERVICE_ROLE_KEY}" -ge 20 && echo service_role_present_ok
+test -n "$ONEDECORE_LEAD_HASH_SECRET" && test "${#ONEDECORE_LEAD_HASH_SECRET}" -ge 32 && echo hash_secret_present_ok
+# reject publishable key in service-role slot
+test "$SUPABASE_SERVICE_ROLE_KEY" != "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" && echo service_role_not_publishable_ok
+```
+
 ### CRM / human receiving
 
 - [ ] Human receiving path defined (who sees new leads)
-- [ ] CRM / admin UI not required for first activation, but ownership of follow-up is assigned
+- [ ] Authorized broad-read owner/admin can see unassigned `status=new` leads
+- [ ] No automatic assignment invented for launch
 - [ ] No WhatsApp API / automation claimed as live unless separately authorised
 
 ### Monitoring
@@ -46,11 +94,71 @@ Do **not** mark these complete until owner evidence exists.
 - [ ] Alerting for elevated 429 / 503 / 500 on `/api/public/lead-intake`
 - [ ] Safe logging verified (no PII / secrets)
 
+### Commerce safety (unchanged)
+
+- [ ] `ONEDECORE_SHOP_PUBLIC_ENABLED=false`
+- [ ] No M38 / online-payment worktree changes
+
 ### Rollback
 
 - [ ] Immediate disable path: set server mode to `disabled` and form mode to `copy-only`
-- [ ] Confirm homepage returns to copy-only UX without redeploying schema
+- [ ] Confirm homepage/interiors returns to copy-only UX without redeploying schema
 - [ ] Confirm no marketing capture paths were enabled
+
+## Production env (set before build)
+
+`NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE` is **build-time**. Set it **before** `npm run build`.
+
+```text
+NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE=active
+ONEDECORE_LEAD_INTAKE_MODE=enabled
+ONEDECORE_TRUST_PROXY=true
+ONEDECORE_SHOP_PUBLIC_ENABLED=false
+NEXT_PUBLIC_SUPABASE_URL=<managed ONEDECORE project URL>
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<public key>
+SUPABASE_SERVICE_ROLE_KEY=<server secret, never printed>
+ONEDECORE_LEAD_HASH_SECRET=<server secret >=32 chars, never printed>
+```
+
+Do **not** enable `ONEDECORE_LEAD_INTAKE_MODE=enabled` until `LEAD_INTAKE_ACTIVATION` + identity + rate-limit confirmation are complete.
+
+## Post-merge deployment sequence (DO NOT run from Cursor during PR)
+
+1. Confirm current deployed head
+2. Confirm clean worktree
+3. Confirm shop OFF
+4. Back up `.env.production.local` on the VPS with mode 600
+5. Set/verify lead activation variables without echoing secrets
+6. Fetch exact approved main merge commit
+7. ff-only update
+8. `npm ci`
+9. Production build
+10. Restart PM2 with `--update-env`
+11. `pm2 save`
+12. Health check
+13. Public form rendering check
+14. API disabled/validation semantics check without creating a lead
+15. Controlled browser E2E with owner participation
+16. CRM verification
+17. Logs/security verification
+
+## Controlled real production E2E (after merge/deploy only)
+
+Owner enters one real test enquiry in the live browser UI.
+
+Before submission: read-only counts for `leads`, `lead_intake_requests`, `consent_events`, `lead_events`.
+
+After submission verify read-only:
+
+- one intended intake result
+- lead.status = `new`
+- source/attribution preserved
+- consent events only for granted channels
+- no marketing consent invented
+- submission reference returned
+- no raw fingerprints exposed to client
+
+Then owner verifies `/admin/crm/leads` visibility (table + pipeline + detail). Optional controlled CRM ops: manual assign / note / follow-up. No outbound WhatsApp/email/SMS.
 
 ## Safe local-only exercise
 
@@ -68,5 +176,6 @@ For local verification only:
 - Production deployment of enabled intake
 - Setting `ONEDECORE_LEAD_INTAKE_MODE=enabled` while legal gates are incomplete
 - Fabricating owner/legal approval
-- Publicly enabling the homepage form
+- Publicly enabling the homepage form while Privacy/Terms remain draft/not-effective
 - WhatsApp API messaging, Groq, n8n, campaigns, or analytics wiring
+- Changing shop gate or touching M38 / online payments

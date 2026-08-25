@@ -1,6 +1,8 @@
 import "server-only";
 
 import { getMissingLeadIntakeActivationFields } from "../features/legal/business-identity.ts";
+import { LEAD_INTAKE_ACTIVATION } from "../features/legal/lead-intake-activation.ts";
+import type { LeadIntakeActivationInput } from "../features/legal/business-identity.ts";
 
 export type LeadIntakeMode = "disabled" | "local-test" | "enabled";
 
@@ -89,7 +91,8 @@ export function isManagedOneDecoreSupabaseUrl(urlStr: string): boolean {
  * Never logs secret values. Defaults to disabled.
  */
 export function getLeadIntakeServerEnv(
-  env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env
+  env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
+  activation: LeadIntakeActivationInput = LEAD_INTAKE_ACTIVATION
 ): LeadIntakeServerEnv {
   const rawMode = (env.ONEDECORE_LEAD_INTAKE_MODE ?? "disabled").trim();
   if (!MODE_VALUES.has(rawMode as LeadIntakeMode)) {
@@ -113,7 +116,7 @@ export function getLeadIntakeServerEnv(
   }
 
   if (mode === "enabled") {
-    const missing = getMissingLeadIntakeActivationFields();
+    const missing = getMissingLeadIntakeActivationFields(activation);
     if (missing.length > 0) {
       throw safeUrlError(
         "enabled mode blocked until lead activation gate is complete."

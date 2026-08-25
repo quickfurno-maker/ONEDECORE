@@ -25,6 +25,12 @@ export {
 } from "./business-identity.ts";
 
 export {
+  LEAD_INTAKE_ACTIVATION,
+  getLeadIntakeActivationMissingFields,
+  isLeadIntakeActivationComplete,
+} from "./lead-intake-activation.ts";
+
+export {
   allClaimsOwnerApprovedForDisplay,
   allClaimsUseStructuredDataDenied,
   BUSINESS_TRUTH_REGISTRY,
