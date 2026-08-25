@@ -30,10 +30,13 @@ function isCurrent(current: PublicNavCurrent, href: string): boolean {
 export function PublicSiteHeader({
   current,
   showConsultation = true,
+  showShopSearch = false,
 }: {
   readonly current: PublicNavCurrent;
   readonly showConsultation?: boolean;
+  readonly showShopSearch?: boolean;
 }) {
+  const showSearch = current === "shop" || (current === "home" && showShopSearch);
   const [open, setOpen] = useState(false);
   const drawerId = useId();
   const toggleRef = useRef<HTMLButtonElement | null>(null);
@@ -114,7 +117,7 @@ export function PublicSiteHeader({
           ))}
         </nav>
         <div className="od-site-header__actions">
-          {current === "shop" || current === "home" ? (
+          {showSearch ? (
             <Link href="/shop/search" className="od-site-header__util">
               Search
             </Link>
@@ -171,7 +174,7 @@ export function PublicSiteHeader({
               {item.label}
             </Link>
           ))}
-          {current === "shop" || current === "home" ? (
+          {showSearch ? (
             <Link href="/shop/search" onClick={() => setOpen(false)}>
               Search furniture
             </Link>

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { OneDecoreWordmark } from "@/features/public-site/home-r4/OneDecoreWordmark";
 import { SITE_CONFIG } from "@/config/site";
-import { PUBLIC_FOOTER_LEGAL, PUBLIC_NAV_DESTINATIONS } from "./public-nav";
+import { PUBLIC_CONSULTATION, PUBLIC_FOOTER_LEGAL, PUBLIC_NAV_DESTINATIONS } from "./public-nav";
 
 export function PublicSiteFooter({
   note,
@@ -17,8 +17,8 @@ export function PublicSiteFooter({
           <p>
             Premium interiors, modular kitchens and furniture for homes across Pune.
           </p>
-          <Link href="/interiors#consultation" className="od-site-footer__cta">
-            Book Free Consultation
+          <Link href={PUBLIC_CONSULTATION.href} className="od-site-footer__cta">
+            {PUBLIC_CONSULTATION.label}
           </Link>
         </div>
         <nav className="od-site-footer__nav" aria-label="Footer">
