@@ -135,8 +135,17 @@ export {
 } from "./processor-register.ts";
 
 export {
+  PRIVACY_NOTICE_EFFECTIVE_DATE,
+  PRIVACY_NOTICE_PROPOSED_PRODUCTION_VERSION,
   PRIVACY_NOTICE_VERSION,
   PRIVACY_POLICY_CONTENT,
+  flattenLegalContentSections,
+  getPrivacyNoticeDisplayVersion,
+  getPrivacyNoticeEffectiveDateLabel,
+  getPrivacyPolicySections,
+  getPublishedPrivacyNoticeText,
+  resolveLegalContentSections,
+  type LegalContentAudience,
   type LegalContentSection as PrivacyPolicySection,
 } from "./privacy-policy-content.ts";
 
@@ -151,6 +160,13 @@ export {
 
 export {
   TERMS_OF_USE_CONTENT,
+  TERMS_OF_USE_EFFECTIVE_DATE,
+  TERMS_OF_USE_PROPOSED_PRODUCTION_VERSION,
+  TERMS_OF_USE_VERSION,
+  getPublishedTermsOfUseText,
+  getTermsOfUseDisplayVersion,
+  getTermsOfUseEffectiveDateLabel,
+  getTermsOfUseSections,
   type LegalContentSection as TermsSection,
 } from "./terms-content.ts";
 

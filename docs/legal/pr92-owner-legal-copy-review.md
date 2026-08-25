@@ -1,198 +1,351 @@
-﻿# PR #92 - FINAL proposed production legal / consent copy (owner APPROVE | REVISE)
+﻿# PR #92 - Owner legal copy revision (public vs internal)
 
-**Status:** Final proposed package for **one explicit owner decision**. **Not effective.**
-**Approval flags remain FALSE** until the owner replies APPROVE (or REVISE with edits).
-**Counsel status:** NO COUNSEL REVIEW YET - not reviewed by counsel; not a compliance claim.
+## Internal review status (NOT customer-facing)
 
-**Effective-date rule:** the calendar date of **authorized production lead-intake activation** (not this commit).
+- Owner decision on prior package: **REVISE**
+- Starting head: `6f5ff99e51397b89a6d65331efe59b807a7ba62c`
+- `LEGAL_PUBLICATION_MODE` = **draft-review** (unchanged; fail-closed)
+- Counsel status: **NO COUNSEL REVIEW YET** (`legalCounselApprovalReference` = null)
+- Approval flags (still FALSE):
+  - `privacyTermsVersionApproved = false`
+  - `serviceEnquiryCopyApproved = false`
+  - `serviceCommunicationCopyApproved = false`
+  - `leadProcessorsRegistered = false`
+- Lead intake: not activated
+- Shop gate: unchanged / fail-closed
+- M38 / online payments: untouched
 
-| Instrument | Draft / code version | Proposed production version |
+### Remaining internal processor blockers (gate stays FALSE)
+
+1. Supabase DPA / sub-processor terms confirmation (region ap-south-1 / Mumbai is recorded; bespoke signed DPA is not claimed)
+2. Hostinger legal entity name, hosting region, and DPA/terms confirmation (brand recorded from repo deployment docs only)
+
+### Public vs internal separation
+
+- Public Privacy/Terms sections = customer-facing copy rendered when mode is `published`
+- Draft-only appendix + LegalPageShell draft banner / Publication blockers panel = draft-review only
+- This review document retains governance notes; published pages do not
+
+### Version / effective date
+
+| Instrument | Published version | Effective date |
 |---|---|---|
-| Privacy Notice | `privacy-notice-v0.1-draft` | `privacy-notice-v1.0` |
-| Terms of Use | draft content module | `terms-of-use-v1.0` |
-| Service enquiry consent | `service-enquiry-v0.1-draft` | `service-enquiry-v1.0` |
-| Service communication consent | `service-communication-v0.1-draft` | `service-communication-v1.0` |
-| WhatsApp optional consent | `whatsapp-service-v0.1-draft` | `whatsapp-service-v1.0` |
+| Privacy Notice | `privacy-notice-v1.0` | Calendar date of authorized production activation (not hard-coded) |
+| Terms of Use | `terms-of-use-v1.0` | same rule |
+| Service enquiry consent | proposed `service-enquiry-v1.0` | same rule |
+| Service communication consent | proposed `service-communication-v1.0` | same rule |
+| WhatsApp consent | proposed `whatsapp-service-v1.0` | same rule |
+
+Owner decision required: **APPROVE** or **REVISE** the exact published texts below.
 
 ---
 
-## Owner facts recorded in code (this commit)
+# EXACT PUBLISHED PRIVACY NOTICE
 
-- Trading name: **ONEDECORE**
-- Proprietor / legal identity (`legalEntityName` / `proprietorFullLegalName`): **ONEDECORE** (owner-supplied exactly; no personal name substituted)
-- Entity type: **proprietorship**
-- Registered office: **SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207**
-- Operating office: **same as registered**
-- Business email: **onedecore@gmail.com**
-- Privacy email: **onedecore@gmail.com**
-- Combined roles: privacy+grievance **true**; privacy+data-rights **true** (no duplicate grievance/data-rights inboxes)
-- Authorised representative: **ONEDECORE**
-- Grievance contact: **ONEDECORE, Proprietor / Grievance Contact**
-- Jurisdiction: owner-approved wording below · **NOT COUNSEL REVIEWED**
-- Counsel reference: **null** · **NO COUNSEL REVIEW YET**
-- Retention MVP: approved as written
-- Rate limits MVP: approved; SQL unchanged
-- CRM: manual assignment; no auto-rule
-- Supabase region: **ap-south-1 / Mumbai** (owner-confirmed)
-- Hosting register: **Hostinger VPS** brand from repo deployment docs; legal entity / region / DPA still under-review
-- Flags still false: `privacyTermsVersionApproved`, `serviceEnquiryCopyApproved`, `serviceCommunicationCopyApproved`, `leadProcessorsRegistered`
+Version: privacy-notice-v1.0
+Effective date: To be set to the calendar date of authorized production activation
+
+## Who we are
+
+Trading name: ONEDECORE.
+
+Entity type: proprietorship.
+
+Proprietor / legal identity: ONEDECORE.
+
+Service region: Pune, Maharashtra, India.
+
+Registered office: SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207.
+
+Operating office: same as registered office.
+
+Business email: onedecore@gmail.com.
+
+Privacy contact email: onedecore@gmail.com.
+
+Grievance and data-rights requests: onedecore@gmail.com.
+
+Authorised representative: ONEDECORE.
+
+Grievance contact: ONEDECORE, Proprietor / Grievance Contact.
+
+## Scope
+
+This Privacy Notice describes how ONEDECORE handles personal data for the public website, consultation enquiry form, CRM follow-up, and related service operations.
+
+## Personal data we process
+
+When you submit a consultation enquiry, we may process: name; mobile number; email address (if provided); locality (if provided); service, property and timeline selections; optional message; consent choices; first-party attribution such as landing path or UTM fields supported by the product; and technical request metadata needed for security, rate limiting and abuse prevention.
+
+WhatsApp contact details are processed for WhatsApp only if you opt in to that channel when offered.
+
+We do not collect payment-card data through the website consultation form.
+
+We do not intentionally request sensitive personal data.
+
+## Purposes
+
+We use personal data to respond to interior design and renovation consultation enquiries; administer related CRM records; store consent evidence; coordinate service follow-up; protect the service against misuse; and provide indicative planning guidance through the in-browser estimator.
+
+Marketing communications are optional and are not collected by the current website consultation form.
+
+WhatsApp service messages require separate optional consent and are not authorised by enquiry or phone/email service-communication consent alone.
+
+## How we collect data
+
+In-browser planner and estimator inputs remain on your device unless you copy or submit them yourself.
+
+When you submit the consultation enquiry form, the personal data described in this notice is sent to ONEDECORE systems for the purposes above.
+
+Portfolio media is managed through ONEDECORE's admin systems under separate publication controls.
+
+We do not buy personal data lists.
+
+## Service communications
+
+Operational contact about your enquiry, estimate, consultation, site visit, proposal or project requires service-communication consent on the form.
+
+Email service communication is requested only when you provide an email address.
+
+Service communication is separate from optional marketing.
+
+## Marketing communications
+
+Marketing is optional and is not required to receive service.
+
+Accepting this Privacy Notice or the Terms of Use is not marketing consent.
+
+Marketing checkboxes are not pre-ticked.
+
+## WhatsApp
+
+WhatsApp is a separate communication channel.
+
+If the form offers optional WhatsApp consent and you opt in, ONEDECORE may use WhatsApp for service-related messages about your enquiry or project.
+
+WhatsApp consent does not authorise marketing messages.
+
+## Portfolio and client media
+
+Published portfolio items follow ONEDECORE's publication controls.
+
+Separate consent is required before reusing client images, names, locality, testimonials or project descriptions for advertising or social media.
+
+## Service providers
+
+ONEDECORE uses service providers to operate the website and CRM, including Supabase for managed database/authentication services and Hostinger-hosted infrastructure for the website. These providers may process limited personal or technical data necessary to provide their services. Details may be updated as our service-provider arrangements change.
+
+Supabase project region: Mumbai, India (ap-south-1).
+
+## Locations
+
+Primary database services for this project are hosted in Mumbai, India (ap-south-1).
+
+Some service providers may process technical or support data from other locations as needed to operate their services.
+
+## Retention
+
+Lead records: retained for 24 months after the last meaningful lead activity or closure, then deleted or anonymised unless another lawful or business requirement requires retention.
+
+Consent evidence: retained for 36 months after the related lead or customer relationship is closed, limited to evidence reasonably needed to demonstrate the recorded consent or withdrawal history.
+
+Operational and security audit evidence linked to leads: retained for 36 months after the related lead is closed, limited to accountability needs.
+
+Suppression records: the minimum suppression record is retained while an opt-out remains in force so we do not accidentally re-contact you; unrelated profile or marketing content is not retained merely for suppression.
+
+## Security
+
+ONEDECORE uses reasonable technical and organisational safeguards appropriate to the service, including HTTPS/TLS for data in transit, access controls, and server-side handling of privileged credentials. No system can be guaranteed absolutely secure.
+
+## Security and personal-data incidents
+
+If a personal-data or security incident occurs, ONEDECORE will investigate, contain and remediate it and will make notifications required by applicable law.
+
+## Children
+
+Services are intended for adult homeowners or authorised adults acting on their behalf.
+
+ONEDECORE does not deliberately market to children.
+
+## Your rights
+
+You may request access, correction, updating or erasure of personal data where applicable, withdraw consent where processing depends on consent, and raise a grievance about personal-data handling.
+
+Contact onedecore@gmail.com to submit a request. We may take proportionate steps to verify your identity.
+
+See the Data Rights page for a request template. Requests are not sent automatically from the website.
+
+## Withdrawal of consent
+
+Where processing depends on consent, you may withdraw that consent.
+
+Withdrawal does not affect processing already carried out before withdrawal.
+
+A minimum suppression record may be retained to honour an opt-out.
+
+## Grievance
+
+Grievance contact: ONEDECORE, Proprietor / Grievance Contact.
+
+Grievance email: onedecore@gmail.com.
+
+We will acknowledge and address grievances in accordance with applicable law.
+
+## Further remedies
+
+If you remain dissatisfied, you may pursue remedies available under applicable law.
+
+## Changes to this notice
+
+We may update this Privacy Notice from time to time. Material changes will be published with an updated version and effective date. Where required, we will provide additional notice or obtain consent.
+
+## Contact
+
+Privacy contact email: onedecore@gmail.com.
+
+Business contact email: onedecore@gmail.com.
+
+Registered office: SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207.
 
 ---
 
-## FINAL Privacy Notice (proposed `privacy-notice-v1.0`)
+# EXACT PUBLISHED TERMS OF USE
 
-### Draft / effectiveness
+Version: terms-of-use-v1.0
+Effective date: To be set to the calendar date of authorized production activation
 
-This Privacy Notice is proposed for owner approval. It is **not yet effective**.
+## Operator
 
-ONEDECORE does **not** claim DPDP compliance at this draft stage, and does not claim DPDP compliance merely by publishing this notice. Final compliance depends on applicable commencement, approved operational processes, processor contracts, implemented safeguards, and any later qualified legal review the owner obtains.
+You are visiting the public website of ONEDECORE, an interior design and renovation service operating in Pune, Maharashtra, India.
 
-Counsel status: **NO COUNSEL REVIEW YET.** This notice has not been reviewed by counsel.
+ONEDECORE is operated as a proprietorship. Trading name: ONEDECORE. Proprietor / legal identity: ONEDECORE.
 
-### Who we are
+Registered office: SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207.
 
-- Trading name: ONEDECORE
-- Entity type: proprietorship
-- Proprietor / legal identity: ONEDECORE
-- Service region: Pune, Maharashtra, India
-- Registered office: SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207
-- Operating office: same as registered office
-- Business email: onedecore@gmail.com
-- Privacy contact email: onedecore@gmail.com
-- Grievance / data-rights emails: same privacy mailbox (owner-approved combined-role mapping)
-- Authorised representative: ONEDECORE
-- Grievance contact: ONEDECORE, Proprietor / Grievance Contact
+Operating office: same as registered office.
 
-### Scope
+Business contact: onedecore@gmail.com.
 
-This notice describes how ONEDECORE handles personal data for the public website, consultation enquiry form (when enabled), CRM follow-up, and related service operations.
+## Website use
 
-### Personal data we may process from website enquiries
+The website provides information about interior services, an indicative estimator, an in-browser planning tool, published portfolio content, and a consultation enquiry form.
 
-Name; mobile number; email (if provided); locality (if provided); service, property and timeline selections; optional message; consent choices; first-party attribution such as landing path / UTM fields already supported by the product; technical request metadata needed for security, rate limiting and abuse prevention. WhatsApp number only if you opt in when offered. No payment-card data via the website lead form. No sensitive personal data intentionally requested.
+Nothing on this website creates a binding project contract unless separately agreed in a signed quotation or agreement.
 
-### Purposes
+## Indicative prices only
 
-Respond to interior design / renovation consultation enquiries; coordinate follow-up; keep CRM records for sales operations; store consent evidence; protect the service against abuse; provide indicative planning guidance via the in-browser estimator. Marketing is not collected by the current website form. WhatsApp requires separate optional consent and separate channel activation.
+All prices, budget ranges and estimator outputs are indicative planning guidance only.
 
-### How we collect data
+They are not quotations, offers or guaranteed final prices.
 
-In-browser planner and estimator inputs remain on your device unless you copy or submit them yourself. When production lead intake is authorized and enabled, the consultation enquiry form may submit the personal data above. Until that authorization, public lead collection remains disabled. We do not buy personal data lists.
+Final price depends on measurements, materials, scope, finishes, site conditions, approvals and a signed quotation.
 
-### Legal bases / consent
+## Estimator and planner
 
-Service enquiry processing and phone service communication require explicit consent on the form. Email channel consent appears only when an email is supplied. WhatsApp channel consent is optional and separate. Marketing consent is not collected by the current website form. No consent checkbox is pre-checked.
+The estimator and in-browser planner help you explore layout, services and indicative budget ranges.
 
-### Retention (owner-approved MVP; not counsel-approved)
+Planner inputs remain in your browser unless you copy or share them yourself.
 
-- Lead records: 24 months after last meaningful lead activity or closure, then delete/anonymize unless another lawful/business requirement requires retention.
-- Consent evidence: 36 months after related lead/customer relationship closure, retaining only evidence reasonably needed to demonstrate consent/withdrawal history.
-- Audit/security evidence linked to leads: 36 months after related lead closure, limited to accountability needs.
-- Suppression: retain minimum suppression record while opt-out remains in force; do not retain unrelated profile/marketing content merely for suppression.
+Copied brief text is not transmitted to ONEDECORE automatically.
 
-### Processors
+## Consultation requests
 
-1. **Supabase** (current) — database / auth / portfolio / lead-intake / CRM; region **ap-south-1 / Mumbai** (owner-confirmed); bespoke signed DPA **not claimed**.
-2. **Hostinger VPS** (under-review) — website hosting / TLS / application logs (brand from repository deployment documentation); exact legal entity, region, and DPA/terms **not invented / still open**.
+Submitting a consultation enquiry is a request for contact, not a confirmed appointment or booking, unless a separate scheduling system is later introduced and clearly described.
 
-Planned / not active for website lead capture: Meta WhatsApp, Groq, n8n, analytics, email/SMS TBD.
+## Portfolio and media
 
-### Your rights / grievance
+Portfolio pages display published project content from the ONEDECORE content systems.
 
-Contact **onedecore@gmail.com** to request access, correction, or other applicable rights, or to raise a grievance. Grievance contact: **ONEDECORE, Proprietor / Grievance Contact**. Verification measures will be proportionate.
+Do not assume every image on marketing pages represents a specific delivered client project unless explicitly labelled.
 
-### Changes
+## Intellectual property
 
-Material changes will be communicated before or when they take effect. Version identifiers will be recorded for consent purposes.
+Website content, branding, layouts, copy and design assets are owned by or licensed to ONEDECORE unless stated otherwise.
+
+You may not copy, scrape, republish or commercially exploit site content without written permission.
+
+## User submissions
+
+When you submit an enquiry or other content, you must provide accurate information and only submit content you have the right to share.
+
+Separate consent applies to marketing, WhatsApp and portfolio media reuse where those permissions are requested.
+
+## Prohibited use
+
+You must not misuse the website, attempt unauthorised access, introduce malware, scrape data at scale or interfere with site operation.
+
+You must not use the site for unlawful, deceptive or harmful purposes.
+
+## Third-party links and services
+
+The website may link to or rely on third-party services to operate hosting, database, messaging or similar functions.
+
+ONEDECORE is not responsible for third-party websites or platforms outside ONEDECORE's control.
+
+## Availability
+
+The website is provided on an as-available basis.
+
+Features may change, be added or be removed.
+
+## No professional advice
+
+Website content is general information about interior services.
+
+It does not constitute structural, legal, financial or engineering advice.
+
+Site-specific assessments require inspection and professional evaluation.
+
+## Governing law and jurisdiction
+
+These Terms are governed by the laws of India. Subject to applicable law, courts having jurisdiction in Pune, Maharashtra will have jurisdiction over disputes arising from these Terms.
+
+## Limitation of liability
+
+To the fullest extent permitted by applicable law, ONEDECORE is not liable for indirect, incidental or consequential losses arising from use of the website or reliance on indicative estimates.
+
+Nothing in these Terms excludes liability that cannot be excluded under applicable Indian law.
+
+## Indemnity
+
+You agree to indemnify ONEDECORE against claims arising from your misuse of the website or from content you submit without rights or authority, to the extent permitted by applicable law.
+
+## Dispute resolution
+
+Subject to the governing-law clause above, disputes arising from these Terms will be addressed under applicable law in the courts identified in that clause unless the parties agree otherwise in writing.
+
+No separate arbitration clause is currently published.
+
+## Changes
+
+We may update these Terms from time to time. Material changes will be published with an updated effective date. Where required, we will provide additional notice or obtain consent.
+
+## Contact
+
+Business contact email: onedecore@gmail.com.
+
+Registered office: SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207.
 
 ---
 
-## FINAL Terms of Use (proposed `terms-of-use-v1.0`)
+# EXACT CONSENT COPY (proposed production)
 
-### Draft / effectiveness
-
-These Terms are proposed for owner approval and are **not yet effective**. Counsel status: **NO COUNSEL REVIEW YET.**
-
-### Operator
-
-ONEDECORE is the trading name of a proprietorship. Proprietor / legal identity (owner-supplied): **ONEDECORE**. Registered office: SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207. Operating office: same as registered. Business email: onedecore@gmail.com.
-
-### Website use
-
-The website provides information about interior services, planning tools, portfolio content, and (when enabled) a consultation enquiry form. Nothing on the website creates a binding project contract unless separately agreed in a signed quotation or agreement.
-
-### Indicative prices
-
-Estimator outputs and budget ranges are indicative planning guidance only — not quotations or guaranteed prices.
-
-### Consultation requests
-
-Submitting a consultation enquiry is a **request**, not a confirmed appointment or booking, unless a separate scheduling system is later introduced and clearly described.
-
-### Prohibited use / IP / third parties / availability / no professional advice
-
-As stated in the site Terms module: no misuse or unlawful use; site content owned/licensed to ONEDECORE; third-party services are not ONEDECORE's responsibility; site is as-available; content is general information only.
-
-### Governing law / jurisdiction (OWNER APPROVED · NOT COUNSEL REVIEWED)
-
-> These Terms are governed by the laws of India. Subject to applicable law, courts having jurisdiction in Pune, Maharashtra will have jurisdiction over disputes arising from these Terms.
-
-This clause has **not** been reviewed by counsel.
-
-### Limitation / indemnity / disputes
-
-Draft owner-facing wording exists in the Terms module. Counsel has not reviewed it. No separate arbitration clause is currently published.
-
----
-
-## FINAL consent copy (proposed production versions)
-
-These match the current concise registry copy and are proposed as `v1.0` once approved. Status remains **draft-review** in code until owner APPROVE.
-
-### Service enquiry (required) — proposed `service-enquiry-v1.0`
+## Service enquiry (required) - proposed `service-enquiry-v1.0`
 
 **Concise:** Process information you provide to understand and respond to your interior design enquiry.
 
-**Expanded:** When you submit an enquiry, ONEDECORE will use the personal data you provide — such as your name, contact details, property locality, service requirements and messages — solely to understand your request and respond. This consent does not cover optional marketing or separate channel permissions.
+**Expanded:** When you submit an enquiry, ONEDECORE will use the personal data you provide — such as your name, contact details, property locality, service requirements and messages — to understand and respond to your request, administer the related enquiry, maintain the necessary CRM and consent records, and protect the service against misuse as described in the Privacy Notice. This consent does not cover optional marketing or separate channel permissions.
 
-### Service communication (required for phone; email only if email supplied) — proposed `service-communication-v1.0`
+## Service communication (required for phone; email only if email supplied) - proposed `service-communication-v1.0`
 
 **Concise:** Contact you about consultation, estimates, site visits, proposals or active project coordination.
 
 **Expanded:** ONEDECORE may use your contact details for operational communication related to your enquiry or project — including scheduling, estimates, site visits, design discussions, proposals and delivery coordination. This is separate from optional marketing consent and from channel-specific WhatsApp permission.
 
-### WhatsApp service (optional) — proposed `whatsapp-service-v1.0`
+## WhatsApp service (optional) - proposed `whatsapp-service-v1.0`
 
 **Concise:** Send and receive WhatsApp messages for service-related communication about your enquiry or project.
 
 **Expanded:** WhatsApp is a separate channel requiring explicit permission. If you opt in, ONEDECORE may use WhatsApp for service-related messages such as consultation updates, site-visit coordination and project communication. Outbound WhatsApp sending is a separate activation concern from storing this consent. Marketing messages require separate optional consent.
 
 No consent checkbox is pre-checked.
-
----
-
-## Remaining blockers before activation (not this commit)
-
-1. Owner **APPROVE | REVISE** on this full Privacy / Terms / consent package
-2. Then flip `privacyTermsVersionApproved`, `serviceEnquiryCopyApproved`, `serviceCommunicationCopyApproved` in a later authorized commit
-3. Complete processor register enough for `leadProcessorsRegistered=true` (Supabase DPA/sub-processor confirmation; Hostinger legal entity / region / terms)
-4. Proxy/trust, secrets, and explicit owner authorize-to-collect decision
-5. Do **not** enable production lead intake, merge for activation, or deploy activation in this step
-
-## Owner decision required now
-
-Reply with exactly one of:
-
-- **APPROVE** — accept the FINAL Privacy Notice, Terms of Use, and consent texts above as the production versions to take effect on the authorized activation date
-- **REVISE** — list exact edits
-
----
-
-## Non-goals of this commit
-
-- Does not activate production lead intake
-- Does not merge or deploy
-- Does not change shop gate (`ONEDECORE_SHOP_PUBLIC_ENABLED` remains fail-closed)
-- Does not invent a personal proprietor name or counsel approval
-- Does not invent Hostinger legal entity/region/DPA
-- Does not touch M38 or online payments

@@ -77,7 +77,7 @@ export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
     conciseCopy:
       "Process information you provide to understand and respond to your interior design enquiry.",
     expandedNotice:
-      "When you submit an enquiry, ONEDECORE will use the personal data you provide — such as your name, contact details, property locality, service requirements and messages — solely to understand your request and respond. This consent does not cover optional marketing or separate channel permissions.",
+      "When you submit an enquiry, ONEDECORE will use the personal data you provide — such as your name, contact details, property locality, service requirements and messages — to understand and respond to your request, administer the related enquiry, maintain the necessary CRM and consent records, and protect the service against misuse as described in the Privacy Notice. This consent does not cover optional marketing or separate channel permissions.",
     purposeCode: "SERVICE_ENQUIRY",
     channels: ["website-form", "email", "phone", "in-person"],
     required: true,
@@ -111,7 +111,7 @@ export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
     conciseCopy:
       "Send and receive WhatsApp messages for service-related communication about your enquiry or project.",
     expandedNotice:
-      "WhatsApp is a separate channel requiring explicit permission. If you opt in, ONEDECORE may use WhatsApp for service-related messages such as consultation updates, site-visit coordination and project communication. WhatsApp is not live on the current website. Marketing messages require separate optional consent.",
+      "WhatsApp is a separate channel requiring explicit permission. If you opt in, ONEDECORE may use WhatsApp for service-related messages such as consultation updates, site-visit coordination and project communication. Outbound WhatsApp sending is a separate activation concern from storing this consent. Marketing messages require separate optional consent.",
     purposeCode: "WHATSAPP_SERVICE",
     channels: ["whatsapp"],
     required: false,

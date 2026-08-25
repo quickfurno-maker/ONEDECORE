@@ -1,108 +1,135 @@
 /**
- * Phase 3A1 — privacy policy draft content source.
+ * Privacy Notice content — customer-facing public sections + draft-only review appendix.
  */
 
-import { LEGAL_DPDP_READINESS_STATEMENT } from "./legal-publication.ts";
-import { BUSINESS_IDENTITY, getMissingLegalPublicationFields } from "./business-identity.ts";
+import { BUSINESS_IDENTITY } from "./business-identity.ts";
+import {
+  LEGAL_PUBLICATION_MODE,
+  type LegalPublicationMode,
+} from "./legal-publication.ts";
 
-/** Canonical privacy notice version for consent evidence (draft-review). */
+/** Current in-repo draft version identifier (not effective). */
 export const PRIVACY_NOTICE_VERSION = "privacy-notice-v0.1-draft" as const;
 
-/** Proposed production version identifier — not effective until owner approval + activation. */
+/** Proposed production version after owner APPROVE + activation. */
 export const PRIVACY_NOTICE_PROPOSED_PRODUCTION_VERSION =
   "privacy-notice-v1.0" as const;
+
+/**
+ * Set only when production publication is authorized.
+ * Do not hard-code a calendar date before activation.
+ */
+export const PRIVACY_NOTICE_EFFECTIVE_DATE: string | null = null;
+
+export type LegalContentAudience = "public" | "draft-only";
 
 export interface LegalContentSection {
   readonly id: string;
   readonly title: string;
   readonly body: readonly string[];
+  /** Defaults to public. Draft-only sections never render in published mode. */
+  readonly audience?: LegalContentAudience;
 }
 
+export function getPrivacyNoticeDisplayVersion(
+  mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
+): string {
+  return mode === "published"
+    ? PRIVACY_NOTICE_PROPOSED_PRODUCTION_VERSION
+    : PRIVACY_NOTICE_VERSION;
+}
+
+export function getPrivacyNoticeEffectiveDateLabel(
+  effectiveDate: string | null = PRIVACY_NOTICE_EFFECTIVE_DATE
+): string {
+  return (
+    effectiveDate ??
+    "To be set to the calendar date of authorized production activation"
+  );
+}
+
+export function resolveLegalContentSections(
+  sections: readonly LegalContentSection[],
+  mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
+): readonly LegalContentSection[] {
+  if (mode === "published") {
+    return sections.filter((section) => section.audience !== "draft-only");
+  }
+  return sections;
+}
+
+export function flattenLegalContentSections(
+  sections: readonly LegalContentSection[]
+): string {
+  return sections
+    .flatMap((section) => [section.title, ...section.body])
+    .join("\n");
+}
+
+const privacyEmail =
+  BUSINESS_IDENTITY.privacyEmail ?? "onedecore@gmail.com";
+const businessEmail =
+  BUSINESS_IDENTITY.businessEmail ?? "onedecore@gmail.com";
+const registeredOffice =
+  BUSINESS_IDENTITY.registeredOfficeAddress ??
+  "SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207";
+
+/**
+ * Canonical Privacy Notice sections.
+ * Public sections are the exact customer-facing published copy.
+ * Draft-only sections appear only while LEGAL_PUBLICATION_MODE is draft-review.
+ */
 export const PRIVACY_POLICY_CONTENT: readonly LegalContentSection[] = [
   {
-    id: "draft-status",
-    title: "Draft status",
-    body: [
-      "This Privacy Notice is proposed for owner approval. It is not yet effective.",
-      "ONEDECORE does not claim DPDP compliance at this draft stage.",
-      "ONEDECORE does not claim DPDP compliance merely by publishing this notice.",
-      "Final compliance depends on applicable commencement, approved operational processes, processor contracts, implemented safeguards and any later qualified legal review the owner obtains.",
-      "Counsel status: NO COUNSEL REVIEW YET. This notice has not been reviewed by counsel.",
-      LEGAL_DPDP_READINESS_STATEMENT,
-    ],
-  },
-  {
     id: "who-we-are",
-    title: "Who ONEDECORE is",
+    title: "Who we are",
     body: [
       `Trading name: ${BUSINESS_IDENTITY.tradingName}.`,
-      `Entity type: ${BUSINESS_IDENTITY.entityType ?? "pending owner input"}.`,
-      `Proprietor / legal identity: ${BUSINESS_IDENTITY.legalEntityName ?? "pending owner input"}.`,
+      `Entity type: proprietorship.`,
+      `Proprietor / legal identity: ${BUSINESS_IDENTITY.legalEntityName ?? "ONEDECORE"}.`,
       `Service region: ${BUSINESS_IDENTITY.serviceRegion}.`,
-      `Registered office: ${BUSINESS_IDENTITY.registeredOfficeAddress ?? "pending owner input"}.`,
-      BUSINESS_IDENTITY.contactRoleMapping.operatingOfficeSameAsRegistered
-        ? "Operating office: same as registered office."
-        : `Operating office: ${BUSINESS_IDENTITY.operatingOfficeAddress ?? "pending owner input"}.`,
-      `Business email: ${BUSINESS_IDENTITY.businessEmail ?? "pending owner input"}.`,
-      `Privacy contact email: ${BUSINESS_IDENTITY.privacyEmail ?? "pending owner input"}.`,
-      BUSINESS_IDENTITY.contactRoleMapping.privacyAndGrievanceCombined
-        ? "Grievance contact email: same as privacy contact email (owner-approved combined-role mapping)."
-        : `Grievance contact email: ${BUSINESS_IDENTITY.grievanceEmail ?? "pending owner input"}.`,
-      BUSINESS_IDENTITY.contactRoleMapping.privacyAndDataRightsCombined
-        ? "Data-rights request email: same as privacy contact email (owner-approved combined-role mapping)."
-        : `Data-rights request email: ${BUSINESS_IDENTITY.dataRightsRequestEmail ?? "pending owner input"}.`,
-      `Authorised representative: ${BUSINESS_IDENTITY.authorisedRepresentative ?? "pending owner input"}.`,
-      `Grievance contact: ${BUSINESS_IDENTITY.grievanceContact ?? "pending owner input"}.`,
+      `Registered office: ${registeredOffice}.`,
+      "Operating office: same as registered office.",
+      `Business email: ${businessEmail}.`,
+      `Privacy contact email: ${privacyEmail}.`,
+      `Grievance and data-rights requests: ${privacyEmail}.`,
+      `Authorised representative: ${BUSINESS_IDENTITY.authorisedRepresentative ?? "ONEDECORE"}.`,
+      `Grievance contact: ${BUSINESS_IDENTITY.grievanceContact ?? "ONEDECORE, Proprietor / Grievance Contact"}.`,
     ],
   },
   {
     id: "scope",
     title: "Scope",
     body: [
-      "This notice describes how ONEDECORE handles personal data for the public website, consultation enquiry form (when enabled), CRM follow-up, and related service operations.",
-      "Separate consent copies apply to marketing, WhatsApp and portfolio media reuse.",
+      "This Privacy Notice describes how ONEDECORE handles personal data for the public website, consultation enquiry form, CRM follow-up, and related service operations.",
     ],
   },
   {
     id: "personal-data",
-    title: "Personal data we may process from website enquiries",
+    title: "Personal data we process",
     body: [
-      "Name.",
-      "Mobile / phone number.",
-      "Email address (if provided).",
-      "Locality (if provided).",
-      "Service, property and timeline selections.",
-      "Optional message.",
-      "Consent choices and evidence.",
-      "First-party attribution such as landing path / UTM fields already supported by the product.",
-      "Technical request metadata needed for security, rate limiting and abuse prevention.",
-      "WhatsApp number only if you opt in to that channel when offered.",
-      "No payment-card data is collected by the website lead form.",
-      "No sensitive personal data is intentionally requested.",
+      "When you submit a consultation enquiry, we may process: name; mobile number; email address (if provided); locality (if provided); service, property and timeline selections; optional message; consent choices; first-party attribution such as landing path or UTM fields supported by the product; and technical request metadata needed for security, rate limiting and abuse prevention.",
+      "WhatsApp contact details are processed for WhatsApp only if you opt in to that channel when offered.",
+      "We do not collect payment-card data through the website consultation form.",
+      "We do not intentionally request sensitive personal data.",
     ],
   },
   {
     id: "purposes",
     title: "Purposes",
     body: [
-      "Respond to interior design and renovation consultation enquiries.",
-      "Coordinate follow-up and keep CRM records for sales operations.",
-      "Provide indicative planning guidance through the in-browser estimator.",
-      "Store consent evidence and honour withdrawals / suppression.",
-      "Protect the service against abuse (rate limiting and security logs).",
-      "Send optional marketing only with separate consent (not collected by the current website form).",
-      "Operate WhatsApp service communication only with separate channel consent (outbound WhatsApp remains a separate activation).",
-      "Publish portfolio content with separate media consent.",
+      "We use personal data to respond to interior design and renovation consultation enquiries; administer related CRM records; store consent evidence; coordinate service follow-up; protect the service against misuse; and provide indicative planning guidance through the in-browser estimator.",
+      "Marketing communications are optional and are not collected by the current website consultation form.",
+      "WhatsApp service messages require separate optional consent and are not authorised by enquiry or phone/email service-communication consent alone.",
     ],
   },
   {
     id: "collection-sources",
     title: "How we collect data",
     body: [
-      "Current: in-browser planner and estimator inputs remain on your device unless you copy or submit them yourself.",
-      "When production lead intake is authorized and enabled: the consultation enquiry form may submit the personal data described above to ONEDECORE systems.",
-      "Until that authorization, public lead collection remains disabled.",
-      "Portfolio media via admin CMS with publication controls.",
+      "In-browser planner and estimator inputs remain on your device unless you copy or submit them yourself.",
+      "When you submit the consultation enquiry form, the personal data described in this notice is sent to ONEDECORE systems for the purposes above.",
+      "Portfolio media is managed through ONEDECORE's admin systems under separate publication controls.",
       "We do not buy personal data lists.",
     ],
   },
@@ -110,94 +137,75 @@ export const PRIVACY_POLICY_CONTENT: readonly LegalContentSection[] = [
     id: "service-communications",
     title: "Service communications",
     body: [
-      "Operational contact about your enquiry, estimate, consultation, site visit, proposal or project requires service communication consent on the form.",
+      "Operational contact about your enquiry, estimate, consultation, site visit, proposal or project requires service-communication consent on the form.",
+      "Email service communication is requested only when you provide an email address.",
       "Service communication is separate from optional marketing.",
-      "Email channel consent appears only when an email address is supplied.",
     ],
   },
   {
     id: "marketing",
     title: "Marketing communications",
     body: [
-      "Marketing is optional, not required for service, and will not be pre-ticked.",
-      "Accepting this Privacy Notice or Terms of Use is not marketing consent.",
-      "The current website consultation form does not collect marketing consent.",
+      "Marketing is optional and is not required to receive service.",
+      "Accepting this Privacy Notice or the Terms of Use is not marketing consent.",
+      "Marketing checkboxes are not pre-ticked.",
     ],
   },
   {
     id: "whatsapp",
     title: "WhatsApp",
     body: [
-      "WhatsApp is not live as an activated production outbound channel on the current website.",
-      "If the form offers optional WhatsApp consent, that consent is stored separately and does not by itself activate WhatsApp sending.",
-      "Future WhatsApp use will require separate, explicit channel consent and a separate activation decision.",
-    ],
-  },
-  {
-    id: "ai-assistance",
-    title: "AI-assisted consultation",
-    body: [
-      "Groq AI processing is not live on the current website.",
-      "When enabled, some messages may be drafted or initially handled by an AI consultation assistant.",
-      "A human team member can review, override or take over at any time.",
-      "AI assistance disclosure is transparency, not blanket automated-processing consent.",
+      "WhatsApp is a separate communication channel.",
+      "If the form offers optional WhatsApp consent and you opt in, ONEDECORE may use WhatsApp for service-related messages about your enquiry or project.",
+      "WhatsApp consent does not authorise marketing messages.",
     ],
   },
   {
     id: "portfolio-media",
     title: "Portfolio and client media",
     body: [
-      "Published Portfolio items follow existing CMS publication rules.",
+      "Published portfolio items follow ONEDECORE's publication controls.",
       "Separate consent is required before reusing client images, names, locality, testimonials or project descriptions for advertising or social media.",
     ],
   },
   {
     id: "processors",
-    title: "Processors",
+    title: "Service providers",
     body: [
-      "Current processor: Supabase — managed database, authentication, Portfolio storage, and website lead-intake / CRM persistence. Project region: ap-south-1 / Mumbai (owner-confirmed). A bespoke signed DPA is not claimed here.",
-      "Hosting: Hostinger VPS (as documented in repository deployment records) for website hosting, TLS termination and application logs. Exact legal entity, hosting region and DPA/terms remain under review.",
-      "Planned not active for website lead capture: Meta WhatsApp Business Platform, Groq, n8n, monitoring, email/SMS and analytics.",
-      "No signed data-processing agreements are claimed at this stage beyond what the owner separately verifies with each provider.",
+      "ONEDECORE uses service providers to operate the website and CRM, including Supabase for managed database/authentication services and Hostinger-hosted infrastructure for the website. These providers may process limited personal or technical data necessary to provide their services. Details may be updated as our service-provider arrangements change.",
+      "Supabase project region: Mumbai, India (ap-south-1).",
     ],
   },
   {
     id: "transfers",
-    title: "Transfers and locations",
+    title: "Locations",
     body: [
-      "Supabase primary region for this project is ap-south-1 / Mumbai.",
-      "India-only processing for all sub-processors is not claimed.",
-      "Hosting region and other transfer details remain pending completion of the processor register review.",
+      "Primary database services for this project are hosted in Mumbai, India (ap-south-1).",
+      "Some service providers may process technical or support data from other locations as needed to operate their services.",
     ],
   },
   {
     id: "retention",
     title: "Retention",
     body: [
-      "Lead records: 24 months after the last meaningful lead activity or closure, then delete/anonymize unless another lawful/business requirement requires retention.",
-      "Consent evidence: 36 months after the related lead/customer relationship is closed, retaining only evidence reasonably needed to demonstrate the recorded consent/withdrawal history.",
-      "Operational/security/audit evidence linked to leads: 36 months after the related lead is closed, limited to accountability needs.",
-      "Suppression: retain the minimum suppression record while the opt-out remains in force; do not retain unrelated profile/marketing content merely for suppression.",
-      "These retention periods are owner-approved for MVP operations and are not described as counsel-approved.",
+      "Lead records: retained for 24 months after the last meaningful lead activity or closure, then deleted or anonymised unless another lawful or business requirement requires retention.",
+      "Consent evidence: retained for 36 months after the related lead or customer relationship is closed, limited to evidence reasonably needed to demonstrate the recorded consent or withdrawal history.",
+      "Operational and security audit evidence linked to leads: retained for 36 months after the related lead is closed, limited to accountability needs.",
+      "Suppression records: the minimum suppression record is retained while an opt-out remains in force so we do not accidentally re-contact you; unrelated profile or marketing content is not retained merely for suppression.",
     ],
   },
   {
     id: "security",
     title: "Security",
     body: [
-      "ONEDECORE applies privacy-by-design and data-minimisation principles in architecture.",
-      "Reasonable safeguards are planned; absolute security is not claimed.",
-      "Encryption in transit is expected for production hosting; storage encryption verification is pending.",
-      "Server-only secrets and least-privilege access are design requirements.",
+      "ONEDECORE uses reasonable technical and organisational safeguards appropriate to the service, including HTTPS/TLS for data in transit, access controls, and server-side handling of privileged credentials. No system can be guaranteed absolutely secure.",
     ],
   },
   {
     id: "breach",
-    title: "Breach response",
+    title: "Security and personal-data incidents",
     body: [
-      "A breach readiness playbook is documented for detect → contain → preserve → assess → notify → remediate → review.",
-      "Operational breach compliance is not claimed complete.",
-      "Affected-person and Board notifications will follow applicable law once procedures are approved.",
+      "If a personal-data or security incident occurs, ONEDECORE will investigate, contain and remediate it and will make notifications required by applicable law.",
     ],
   },
   {
@@ -205,77 +213,79 @@ export const PRIVACY_POLICY_CONTENT: readonly LegalContentSection[] = [
     title: "Children",
     body: [
       "Services are intended for adult homeowners or authorised adults acting on their behalf.",
-      "No deliberate marketing to children.",
-      "No age inference by AI; no proof-of-age documents collected by default.",
+      "ONEDECORE does not deliberately market to children.",
     ],
   },
   {
     id: "rights",
     title: "Your rights",
     body: [
-      "You may request access, correction, completion, updating or erasure of your personal data when processing begins.",
-      "You may withdraw consent and opt out of marketing or WhatsApp where applicable.",
-      "You may raise a grievance regarding personal-data handling.",
-      "Nomination rights apply where required under applicable law.",
-      `Contact ${BUSINESS_IDENTITY.privacyEmail ?? "the privacy contact"} to submit a request. Verification measures will be proportionate.`,
-      "See the Data Rights page for a local request template. Nothing is sent automatically from the website.",
+      "You may request access, correction, updating or erasure of personal data where applicable, withdraw consent where processing depends on consent, and raise a grievance about personal-data handling.",
+      `Contact ${privacyEmail} to submit a request. We may take proportionate steps to verify your identity.`,
+      "See the Data Rights page for a request template. Requests are not sent automatically from the website.",
     ],
   },
   {
     id: "withdrawal",
     title: "Withdrawal of consent",
     body: [
-      "Withdrawing consent must be as easy as giving it.",
-      "Withdrawal does not affect processing already performed lawfully before withdrawal.",
-      "Suppression records may be retained to honour your opt-out.",
+      "Where processing depends on consent, you may withdraw that consent.",
+      "Withdrawal does not affect processing already carried out before withdrawal.",
+      "A minimum suppression record may be retained to honour an opt-out.",
     ],
   },
   {
     id: "grievance",
     title: "Grievance",
     body: [
-      `Grievance contact: ${BUSINESS_IDENTITY.grievanceContact ?? "pending owner input"}.`,
-      BUSINESS_IDENTITY.contactRoleMapping.privacyAndGrievanceCombined
-        ? `Grievance email: ${BUSINESS_IDENTITY.privacyEmail ?? "pending owner input"} (combined with privacy contact).`
-        : `Grievance email: ${BUSINESS_IDENTITY.grievanceEmail ?? "pending owner input"}.`,
+      `Grievance contact: ${BUSINESS_IDENTITY.grievanceContact ?? "ONEDECORE, Proprietor / Grievance Contact"}.`,
+      `Grievance email: ${privacyEmail}.`,
       "We will acknowledge and address grievances in accordance with applicable law.",
     ],
   },
   {
     id: "complaint-escalation",
-    title: "Complaint escalation",
+    title: "Further remedies",
     body: [
-      "If you are not satisfied with our response, you may escalate under applicable Indian data-protection law once enforcement mechanisms are available to you.",
+      "If you remain dissatisfied, you may pursue remedies available under applicable law.",
     ],
   },
   {
     id: "changes",
     title: "Changes to this notice",
     body: [
-      "This notice will be updated when material changes occur.",
-      "Material changes will be communicated before or when they take effect.",
-      "Copy version identifiers will be recorded for consent purposes.",
+      "We may update this Privacy Notice from time to time. Material changes will be published with an updated version and effective date. Where required, we will provide additional notice or obtain consent.",
     ],
   },
   {
     id: "contact",
     title: "Contact",
     body: [
-      `Privacy contact email: ${BUSINESS_IDENTITY.privacyEmail ?? "pending owner input"}.`,
-      `Business contact email: ${BUSINESS_IDENTITY.businessEmail ?? "pending owner input"}.`,
-      `Registered office: ${BUSINESS_IDENTITY.registeredOfficeAddress ?? "pending owner input"}.`,
+      `Privacy contact email: ${privacyEmail}.`,
+      `Business contact email: ${businessEmail}.`,
+      `Registered office: ${registeredOffice}.`,
     ],
   },
   {
-    id: "publication-blockers",
-    title: "Publication blockers",
+    id: "draft-review-status",
+    title: "Draft review status (internal)",
+    audience: "draft-only",
     body: [
-      getMissingLegalPublicationFields().length > 0
-        ? `Missing mandatory identity and contact fields: ${getMissingLegalPublicationFields().join(", ")}.`
-        : "Core business-identity publication fields for Privacy/Terms contacts are recorded.",
-      "Owner approval of this Privacy Notice / Terms / consent copy versions remains pending (approval flags remain false).",
-      "Processor register remains incomplete for leadProcessorsRegistered (Supabase DPA review and Hostinger legal entity/region/terms still open).",
-      "Counsel status: NO COUNSEL REVIEW YET — counsel approval is optional metadata and is not claimed.",
+      "This Privacy Notice is proposed for owner approval. It is not yet effective while publication mode remains draft-review.",
+      "Counsel status: NO COUNSEL REVIEW YET. This notice has not been reviewed by counsel.",
+      "ONEDECORE does not claim DPDP compliance at this draft stage.",
+      "Internal processor-register and activation gates remain separate from this customer-facing copy.",
     ],
   },
 ] as const;
+
+export function getPrivacyPolicySections(
+  mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
+): readonly LegalContentSection[] {
+  return resolveLegalContentSections(PRIVACY_POLICY_CONTENT, mode);
+}
+
+/** Exact published-mode customer-facing text (titles + body). */
+export function getPublishedPrivacyNoticeText(): string {
+  return flattenLegalContentSections(getPrivacyPolicySections("published"));
+}

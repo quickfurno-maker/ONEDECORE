@@ -1,5 +1,5 @@
 /**
- * Legal page UI — server components for draft-review policy surfaces.
+ * Legal page UI — draft-review chrome vs clean published surfaces.
  */
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -7,8 +7,10 @@ import { PublicDarkShell } from "@/features/public-site/theme/PublicDarkShell";
 import {
   LEGAL_DRAFT_BANNER,
   LEGAL_DPDP_READINESS_STATEMENT,
+  LEGAL_PUBLICATION_MODE,
   LEGAL_ROUTE_PATHS,
   getMissingLegalPublicationFields,
+  isLegalDraftMode,
 } from "@/features/legal";
 import "./legal-pages.css";
 
@@ -22,6 +24,8 @@ interface LegalPageShellProps {
   readonly description: string;
   readonly sections: readonly LegalSectionLike[];
   readonly children: ReactNode;
+  readonly documentVersion?: string;
+  readonly effectiveDateLabel?: string;
 }
 
 export function LegalDraftBanner() {
@@ -41,15 +45,24 @@ export function LegalOwnerReviewPanel() {
       <h2 id="legal-owner-blockers">Publication blockers</h2>
       <p>
         These owner and counsel inputs remain unresolved. Draft routes are
-        reviewable but are not effective policy.
+        reviewable but are not effective policy. This panel is draft-review only
+        and is not shown in published mode.
       </p>
-      <ul>
-        {missing.map((field) => (
-          <li key={field}>
-            <code>{field}</code>
-          </li>
-        ))}
-      </ul>
+      {missing.length === 0 ? (
+        <p>
+          Core identity publication fields are recorded. Remaining activation
+          gates (copy approvals, processor register, authorize-to-collect) are
+          tracked in the lead-intake activation runbook.
+        </p>
+      ) : (
+        <ul>
+          {missing.map((field) => (
+            <li key={field}>
+              <code>{field}</code>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -90,25 +103,60 @@ function LegalDraftFooterNote() {
   );
 }
 
+function LegalPublishedFooterNote() {
+  return (
+    <>
+      <Link href="/privacy">Privacy</Link>
+      {" · "}
+      <Link href="/terms">Terms</Link>
+      {" · "}
+      <Link href="/data-rights">Data rights</Link>
+      {" · "}
+      <Link href="/communication-consent">Consent</Link>
+    </>
+  );
+}
+
 export function LegalPageShell({
   title,
   description,
   sections,
   children,
+  documentVersion,
+  effectiveDateLabel,
 }: LegalPageShellProps) {
+  const draft = isLegalDraftMode();
+
   return (
-    <PublicDarkShell navCurrent="none" footerNote={<LegalDraftFooterNote />}>
-      <article className="od-legal-page">
-        <LegalDraftBanner />
+    <PublicDarkShell
+      navCurrent="none"
+      footerNote={draft ? <LegalDraftFooterNote /> : <LegalPublishedFooterNote />}
+    >
+      <article
+        className="od-legal-page"
+        data-legal-publication-mode={LEGAL_PUBLICATION_MODE}
+      >
+        {draft ? <LegalDraftBanner /> : null}
         <header className="od-legal-header">
-          <p className="od-legal-kicker">ONEDECORE · Draft review</p>
+          <p className="od-legal-kicker">
+            {draft ? "ONEDECORE · Draft review" : "ONEDECORE"}
+          </p>
           <h1>{title}</h1>
+          {documentVersion ? (
+            <p className="od-legal-meta">Version: {documentVersion}</p>
+          ) : null}
+          {effectiveDateLabel ? (
+            <p className="od-legal-meta">Effective date: {effectiveDateLabel}</p>
+          ) : null}
           <p className="od-legal-lede">{description}</p>
         </header>
         <LegalTableOfContents sections={sections} />
         <div className="od-legal-body">{children}</div>
-        <LegalOwnerReviewPanel />
-        <nav className="od-legal-sibling-nav" aria-label="Other draft legal pages">
+        {draft ? <LegalOwnerReviewPanel /> : null}
+        <nav
+          className="od-legal-sibling-nav"
+          aria-label={draft ? "Other draft legal pages" : "Other legal pages"}
+        >
           <ul>
             {LEGAL_ROUTE_PATHS.map((path) => (
               <li key={path}>

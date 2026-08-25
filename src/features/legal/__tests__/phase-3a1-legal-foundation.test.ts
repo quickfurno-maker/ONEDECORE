@@ -25,8 +25,12 @@ import { noSignedDpaClaimed } from "../processor-register.ts";
 import { BUSINESS_TRUTH_REGISTRY } from "../business-truth-registry.ts";
 import { DATA_INVENTORY_CURRENT_TRUTH } from "../data-inventory.ts";
 import { WARRANTY_MARKETING_CLAIM_YEARS } from "../warranty-policy.ts";
-import { PRIVACY_POLICY_CONTENT } from "../privacy-policy-content.ts";
-import { TERMS_OF_USE_CONTENT } from "../terms-content.ts";
+import {
+  getPrivacyPolicySections,
+} from "../privacy-policy-content.ts";
+import {
+  getTermsOfUseSections,
+} from "../terms-content.ts";
 import { HOME_CLAIMS } from "../../public-site/home-r4/claims.ts";
 
 const root = process.cwd();
@@ -133,19 +137,18 @@ describe("Phase 3A1 processors and business truth", () => {
 });
 
 describe("Phase 3A1 draft legal content", () => {
-  test("privacy content states current-site processing truth", () => {
-    const text = flattenLegalSections(PRIVACY_POLICY_CONTENT);
-    assert.match(text, /WhatsApp is not live/i);
-    assert.match(text, /Groq AI processing is not live/i);
+  test("privacy content states planner local handling and WhatsApp channel separation", () => {
+    const text = flattenLegalSections(getPrivacyPolicySections("published"));
+    assert.match(text, /WhatsApp is a separate communication channel/i);
     assert.match(text, /remain on your device/i);
   });
 
   test("terms content mentions indicative prices and owner-approved jurisdiction", () => {
-    const text = flattenLegalSections(TERMS_OF_USE_CONTENT);
+    const text = flattenLegalSections(getTermsOfUseSections("published"));
     assert.match(text, /indicative/i);
     assert.match(text, /courts having jurisdiction in Pune, Maharashtra/i);
-    assert.match(text, /OWNER APPROVED|NOT COUNSEL REVIEWED/i);
     assert.doesNotMatch(text, /\blawyer-approved\b/i);
+    assert.doesNotMatch(text, /NO COUNSEL REVIEW YET/i);
   });
 });
 

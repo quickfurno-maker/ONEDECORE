@@ -316,7 +316,6 @@ describe("Phase 3A1.1 compliance wording", () => {
     assert.doesNotMatch(text, /ONEDECORE is not DPDP compliant/i);
     assert.doesNotMatch(text, /is DPDP compliant|fully compliant|certified/i);
     assert.match(text, /does not claim DPDP compliance at this draft stage/i);
-    assert.match(text, /Final compliance depends on applicable commencement/i);
     assert.equal(canPublishLegalPolicies(), false);
   });
 });

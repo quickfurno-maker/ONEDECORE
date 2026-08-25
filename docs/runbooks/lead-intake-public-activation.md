@@ -36,8 +36,8 @@ Record answers into `BUSINESS_IDENTITY` and `LEAD_INTAKE_ACTIVATION` only after 
 - [x] `authorisedRepresentative` = ONEDECORE; `grievanceContact` = ONEDECORE, Proprietor / Grievance Contact
 - [x] `jurisdictionClause` = owner-approved Pune/Maharashtra draft (**NOT COUNSEL REVIEWED**)
 - [x] `legalCounselApprovalReference` — **optional**; status **NO COUNSEL REVIEW YET** (null; not fabricated)
-- [ ] Privacy/Terms publication approval (`privacyTermsVersionApproved` remains false) — awaiting APPROVE | REVISE on `docs/legal/pr92-owner-legal-copy-review.md`
-- [ ] Service enquiry consent copy approval (`serviceEnquiryCopyApproved` remains false)
+- [ ] Privacy/Terms publication approval (`privacyTermsVersionApproved` remains false) — awaiting APPROVE | REVISE on revised published copy in `docs/legal/pr92-owner-legal-copy-review.md`
+- [ ] Service enquiry consent copy approval (`serviceEnquiryCopyApproved` remains false) — revised enquiry expanded text (CRM/consent/abuse; no “solely”)
 - [ ] Service communication consent copy approval (`serviceCommunicationCopyApproved` remains false)
 - [x] Retention decisions: lead / consent / audit / suppression (MVP text approved 2026-08-25)
 - [ ] Lead processors registered / reviewed for production intake (Supabase region recorded; DPA + Hostinger legal entity/region/terms still open)
