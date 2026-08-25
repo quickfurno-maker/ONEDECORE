@@ -32,12 +32,15 @@ import {
   getPublishedTermsOfUseText,
   getTermsOfUseDisplayVersion,
   getTermsOfUseEffectiveDateLabel,
+  getWebsiteLeadProcessors,
   isConsentVersionEffective,
   isConsentVersionOwnerApprovedNotEffective,
+  isLeadIntakeActivationComplete,
   isLegalDraftMode,
   isLegalOwnerApprovedMode,
   isLegalPublishedMode,
   marketingConsentIsOptional,
+  PROCESSOR_REGISTER,
 } from "../index.ts";
 
 const secret = "x".repeat(32);
@@ -53,16 +56,65 @@ describe("PR #92 owner-approved activation readiness", () => {
     assert.equal(TERMS_OF_USE_EFFECTIVE_DATE, null);
   });
 
-  test("owner approval flags true; processor gate remains false", () => {
+  test("owner approval flags true; processor gate complete with verified evidence", () => {
     assert.equal(LEAD_INTAKE_ACTIVATION.privacyTermsVersionApproved, true);
     assert.equal(LEAD_INTAKE_ACTIVATION.serviceEnquiryCopyApproved, true);
     assert.equal(LEAD_INTAKE_ACTIVATION.serviceCommunicationCopyApproved, true);
-    assert.equal(LEAD_INTAKE_ACTIVATION.leadProcessorsRegistered, false);
+    assert.equal(LEAD_INTAKE_ACTIVATION.leadProcessorsRegistered, true);
     assert.ok(
-      getLeadIntakeActivationMissingFields().includes("leadProcessorsRegistered")
+      !getLeadIntakeActivationMissingFields().includes("leadProcessorsRegistered")
     );
-    assert.equal(areWebsiteLeadProcessorsReady(), false);
-    assert.ok(getMissingWebsiteLeadProcessorEvidence().length > 0);
+    assert.equal(areWebsiteLeadProcessorsReady(), true);
+    assert.equal(getMissingWebsiteLeadProcessorEvidence().length, 0);
+  });
+
+  test("Supabase register complete with verified facts; no fabricated acceptance timestamp", () => {
+    const supabase = PROCESSOR_REGISTER.find((e) => e.provider === "Supabase");
+    assert.ok(supabase);
+    assert.equal(supabase.status, "current");
+    assert.match(supabase.notes.join(" "), /lpurlfmpvriyvpkujvyl/);
+    assert.match(supabase.notes.join(" "), /ap-south-1/);
+    assert.match(supabase.notes.join(" "), /2026-08-25/);
+    assert.doesNotMatch(supabase.notes.join(" "), /OWNER_PROVIDER_EVIDENCE_REQUIRED/i);
+    assert.match(
+      supabase.contractDpa,
+      /Historical account-acceptance timestamp not independently available/i
+    );
+    assert.doesNotMatch(supabase.contractDpa, /2026-07-24.*accept/i);
+  });
+
+  test("Hostinger register complete with verified facts; promoted to current", () => {
+    const hostinger = PROCESSOR_REGISTER.find((e) => e.provider === "Hostinger VPS");
+    assert.ok(hostinger);
+    assert.equal(hostinger.status, "current");
+    assert.ok(hostinger.locationsKnown);
+    assert.match(hostinger.locationsKnown!, /Mumbai, India/i);
+    assert.match(hostinger.locationsKnown!, /91\.108\.105\.192/);
+    assert.match(hostinger.contractDpa, /HOSTINGER PTE LTD/i);
+    assert.doesNotMatch(hostinger.contractDpa, /OWNER_PROVIDER_EVIDENCE_REQUIRED/i);
+    assert.match(
+      hostinger.contractDpa,
+      /Historical account-acceptance timestamp not independently available/i
+    );
+    assert.match(hostinger.notes.join(" "), /H_49416957/);
+    assert.match(hostinger.notes.join(" "), /srv1927220\.hstgr\.cloud/);
+  });
+
+  test("planned processors do not block MVP website-lead gate", () => {
+    const leadProcessors = getWebsiteLeadProcessors();
+    assert.equal(leadProcessors.length, 2);
+    assert.deepEqual(
+      leadProcessors.map((e) => e.provider),
+      ["Supabase", "Hostinger VPS"]
+    );
+    assert.ok(leadProcessors.every((e) => e.status === "current"));
+  });
+
+  test("activation completeness true; publication/consent still pre-effective", () => {
+    assert.equal(getLeadIntakeActivationMissingFields().length, 0);
+    assert.equal(isLeadIntakeActivationComplete(), true);
+    assert.equal(areLeadPathConsentVersionsEffective(), false);
+    assert.equal(isLegalPublishedMode(), false);
   });
 
   test("counsel approval remains null / not claimed", () => {

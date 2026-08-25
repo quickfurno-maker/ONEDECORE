@@ -31,22 +31,22 @@ Generic business completeness alone never enables production intake.
 - [x] Privacy/Terms versions: `privacy-notice-v1.0`, `terms-of-use-v1.0` (owner-approved, **not effective**; dates null)
 - [x] `LEGAL_PUBLICATION_MODE = owner-approved` (not `published`)
 - [x] Counsel reference null — **NO COUNSEL REVIEW YET**
-- [ ] `leadProcessorsRegistered = false` until provider evidence below is complete
+- [x] `leadProcessorsRegistered = true` (verified Supabase + Hostinger evidence, owner attestation 2026-08-25)
 - [ ] Owner authorize-to-collect / launch-day sequence
 
-### OWNER_PROVIDER_EVIDENCE_REQUIRED (blocks processor flag)
+### Processor evidence recorded (2026-08-25)
 
-**Current website-lead processors:** Supabase (current) + Hostinger VPS (under-review). Planned Meta/Groq/n8n/analytics/email-SMS are out of scope for this gate.
+**Current website-lead processors:** Supabase + Hostinger VPS (both `current`). Planned Meta/Groq/n8n/analytics/email-SMS are out of scope for this gate.
 
 1. **Supabase (project OneDecore / `lpurlfmpvriyvpkujvyl` / ap-south-1 Mumbai)**
-   - Confirm account acceptance of current Supabase Terms + published DPA (`https://supabase.com/legal/dpa`) — record acceptance/version date (bespoke countersigned DPA is **not** claimed)
-   - Confirm review of current official sub-processor list/schedule
+   - Owner reviewed current Supabase Terms + published DPA (`https://supabase.com/legal/dpa`) and Schedule 3 sub-processors
+   - Historical account-acceptance timestamp not independently available; current owner review confirmed 2026-08-25
+   - Bespoke countersigned DPA is **not** claimed
 2. **Hostinger VPS**
-   - Contracting / legal entity name from the ONEDECORE Hostinger account, invoice, or contract
-   - VPS / server region or location from Hostinger account or server panel
-   - Applicable Hostinger privacy / data-processing terms or DPA for this account
-
-Do **not** invent any of the above. Do **not** set `leadProcessorsRegistered=true` until these are recorded in `processor-register.ts`.
+   - Contracting entity: **HOSTINGER PTE LTD** (India Group No. 1 per official Hostinger list)
+   - VPS location: Mumbai, India (`srv1927220.hstgr.cloud`, IPv4 91.108.105.192, geofeed 91.108.104.0/21)
+   - Owner reviewed current Hostinger Terms, Hosting Agreement, and published DPA
+   - Historical account-acceptance timestamp not independently available; current owner review confirmed 2026-08-25
 
 ## Unresolved activation blockers
 
@@ -54,7 +54,7 @@ Do **not** invent any of the above. Do **not** set `leadProcessorsRegistered=tru
 
 - [x] Identity / contact / jurisdiction / retention / rate limits / CRM manual assignment (recorded)
 - [x] Privacy/Terms + lead-path consent owner approvals (recorded; not effective)
-- [ ] Processor diligence (above)
+- [x] Processor diligence (recorded 2026-08-25)
 - [ ] Launch-day: set published mode + real effective dates + effectiveFrom on v1.0 consents
 - [ ] Owner approval to collect production leads / execute launch sequence
 

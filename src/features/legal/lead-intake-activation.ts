@@ -17,7 +17,8 @@ import {
  * against reviewed head 2609bbca1ba661989fd0e8f468b0724a47adcd5d (PR #92).
  * This is OWNER approval only — not counsel approval.
  *
- * leadProcessorsRegistered remains false until processor due-diligence is complete.
+ * leadProcessorsRegistered set true 2026-08-25 after verified Supabase + Hostinger
+ * processor evidence and owner attestation (PR #92).
  */
 export const LEAD_INTAKE_ACTIVATION: LeadIntakeActivationInput = {
   privacyTermsVersionApproved: true,
@@ -28,8 +29,8 @@ export const LEAD_INTAKE_ACTIVATION: LeadIntakeActivationInput = {
   consentRetentionDecided: true,
   auditRetentionDecided: true,
   suppressionRetentionDecided: true,
-  /** Remains false — Hostinger entity/region/terms evidence still required. */
-  leadProcessorsRegistered: false,
+  /** Verified Supabase + Hostinger processor register complete 2026-08-25. */
+  leadProcessorsRegistered: true,
 };
 
 export function getLeadIntakeActivationMissingFields(

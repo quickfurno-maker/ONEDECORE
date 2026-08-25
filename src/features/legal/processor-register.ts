@@ -40,40 +40,44 @@ export const PROCESSOR_REGISTER: readonly ProcessorRegisterEntry[] = [
     transferAssessment:
       "Primary project region is India (Mumbai). Provider terms may permit support/sub-processor processing outside the primary region — owner must review current Supabase DPA/sub-processor schedule before activation.",
     contractDpa:
-      "Provider publishes a Data Processing Addendum at https://supabase.com/legal/dpa (and customer-resources DPA pages). Bespoke countersigned DPA is NOT claimed. Owner must confirm current Terms/DPA acceptance on the OneDecore Supabase account before leadProcessorsRegistered=true.",
+      "Provider publishes a Data Processing Addendum at https://supabase.com/legal/dpa (Schedule 3 sub-processors). Bespoke countersigned DPA is NOT claimed. Owner review confirmed 2026-08-25: current applicable Supabase Terms/DPA accepted for continued use; current sub-processor schedule reviewed at operational level. Historical account-acceptance timestamp not independently available.",
     securityReview: "PARTIAL — server-only keys; encryption in transit assumed; storage encryption verification pending",
     deletionCapability: "Verify operational deletion for leads, contacts, consent evidence, Portfolio media and auth records",
     incidentContact: null,
     approval: null,
     notes: [
       "Verified current processor for existing DB/auth/Portfolio and the lead-intake RPC path.",
-      "Region ap-south-1 / Mumbai and project ref lpurlfmpvriyvpkujvyl are documented from owner confirmation and repository managed closeouts.",
-      "Public provider DPA URL recorded for diligence; do not invent a bespoke signed agreement.",
-      "OWNER_PROVIDER_EVIDENCE_REQUIRED: confirm account-level Terms/DPA acceptance date/version and review current sub-processor list.",
+      "Project OneDecore ref lpurlfmpvriyvpkujvyl, region ap-south-1 / Mumbai, status ACTIVE_HEALTHY, created 2026-07-24T17:14:53Z.",
+      "Verified billing: Supabase Pte. Ltd. invoice VSWLVE-00005 dated 2026-08-22 for quickfurno-maker's Org including project ref lpurlfmpvriyvpkujvyl.",
+      "Owner attestation 2026-08-25: approves Supabase as current website-lead processor; reviewed current DPA and Schedule 3 sub-processors; no bespoke signed DPA claimed.",
+      "Historical Terms/DPA acceptance timestamp not independently available; current owner review confirmed 2026-08-25.",
     ],
   },
   {
     provider: "Hostinger VPS",
-    status: "under-review",
+    status: "current",
     purpose: "Website hosting and TLS termination for the public Next.js application",
     dataCategories: [
       "HTTP request metadata (including lead-intake API requests when enabled)",
       "Static asset delivery",
       "Application process logs on the VPS (as configured)",
     ],
-    locationsKnown: null,
-    transferAssessment: "OWNER_PROVIDER_EVIDENCE_REQUIRED — VPS region/location from Hostinger account/server panel",
+    locationsKnown:
+      "Mumbai, India — VPS srv1927220.hstgr.cloud (IPv4 91.108.105.192 within Hostinger geofeed 91.108.104.0/21 → IN/Mumbai)",
+    transferAssessment:
+      "Primary VPS location Mumbai, India per provisioned IP and Hostinger published geofeed. Provider terms may permit support/sub-processor processing outside the primary region — owner reviewed current Hostinger privacy/DPA terms 2026-08-25.",
     contractDpa:
-      "OWNER_PROVIDER_EVIDENCE_REQUIRED — Hostinger privacy/data-processing terms or DPA applicable to this account; bespoke signed agreement not claimed",
+      "India contracting entity HOSTINGER PTE LTD per Hostinger official List of countries (India Group No. 1). Provider publishes a Data Processing Addendum at https://www.hostinger.com/legal/data-processing-addendum covering relevant Hostinger affiliates per published text. Bespoke countersigned DPA is NOT claimed. Owner review confirmed 2026-08-25: current applicable Hostinger Terms, Hosting Agreement, and privacy/DPA terms accepted for continued use. Historical account-acceptance timestamp not independently available.",
     securityReview: "PLANNED — verify with deployment configuration",
     deletionCapability: "Log retention per hosting provider policy — pending owner decision",
     incidentContact: null,
     approval: null,
     notes: [
-      "Provider brand recorded from existing repository deployment documentation (Hostinger VPS).",
-      "OWNER_PROVIDER_EVIDENCE_REQUIRED: contracting/legal entity on the ONEDECORE Hostinger account/invoice; VPS region; applicable privacy/DPA terms.",
-      "Do not invent Hostinger legal entity, region, or DPA signing status.",
-      "Still under-review for leadProcessorsRegistered completeness.",
+      "Verified account/order H_49416957 (KVM 2, payment email 2026-08-24, account quickfurno@gmail.com) provides production ONEDECORE VPS.",
+      "Verified provisioning: srv1927220.hstgr.cloud, IPv4 91.108.105.192, IPv6 2a02:4780:12:3403::1, Ubuntu 24.04 LTS.",
+      "Contracting entity HOSTINGER PTE LTD per official India Group No. 1 rule; marketing emails may show Hostinger International Ltd. branding — not used as contracting entity.",
+      "Owner attestation 2026-08-25: approves Hostinger as current website-lead processor; no bespoke signed DPA claimed.",
+      "Historical Terms/DPA acceptance timestamp not independently available; current owner review confirmed 2026-08-25.",
     ],
   },
   {

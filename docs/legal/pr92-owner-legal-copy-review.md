@@ -11,7 +11,7 @@
   - `privacyTermsVersionApproved = true`
   - `serviceEnquiryCopyApproved = true`
   - `serviceCommunicationCopyApproved = true`
-  - `leadProcessorsRegistered = false`
+  - `leadProcessorsRegistered = true` (verified Supabase + Hostinger evidence, owner attestation 2026-08-25)
 - Lead intake: not activated
 - Shop gate: fail-closed / unchanged
 - M38 / online payments: untouched
@@ -34,13 +34,10 @@
 - `getEffectiveConsentVersionByPurpose` throws while pre-activation
 - `enabled` intake requires: activation flags + processor diligence + effective consents + published dates
 
-## OWNER_PROVIDER_EVIDENCE_REQUIRED
+## Processor evidence recorded (2026-08-25)
 
-Current website-lead processors only:
+**Supabase:** project `lpurlfmpvriyvpkujvyl`, ap-south-1/Mumbai; invoice VSWLVE-00005; owner reviewed current DPA + Schedule 3 sub-processors; no bespoke signed DPA; historical acceptance timestamp not independently available.
 
-1. Supabase — confirm account Terms/DPA acceptance date/version for published DPA at `https://supabase.com/legal/dpa`; review current sub-processor list (project `lpurlfmpvriyvpkujvyl`, ap-south-1 / Mumbai already recorded)
-2. Hostinger VPS — legal/contracting entity from account/invoice; VPS region/location from account/panel; applicable privacy/DPA terms
-
-Do not invent. Do not flip `leadProcessorsRegistered` until recorded.
+**Hostinger VPS:** order H_49416957, srv1927220.hstgr.cloud, Mumbai India; contracting entity HOSTINGER PTE LTD; owner reviewed current Terms/DPA; no bespoke signed DPA; historical acceptance timestamp not independently available.
 
 Exact customer-facing published Privacy/Terms/consent texts remain those approved at head `2609bbca…` (see prior revision report / content modules).

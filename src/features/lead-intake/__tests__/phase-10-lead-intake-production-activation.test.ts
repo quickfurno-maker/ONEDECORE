@@ -65,14 +65,14 @@ function completeActivation(
 }
 
 describe("Phase 10 lead-intake activation source", () => {
-  test("canonical source defaults fail-closed", () => {
+  test("canonical source defaults: activation complete; intake still fail-closed", () => {
     assert.equal(LEAD_INTAKE_ACTIVATION.privacyTermsVersionApproved, true);
     assert.equal(LEAD_INTAKE_ACTIVATION.serviceEnquiryCopyApproved, true);
     assert.equal(LEAD_INTAKE_ACTIVATION.serviceCommunicationCopyApproved, true);
-    assert.equal(LEAD_INTAKE_ACTIVATION.leadProcessorsRegistered, false);
-    assert.equal(isLeadIntakeActivationComplete(), false);
+    assert.equal(LEAD_INTAKE_ACTIVATION.leadProcessorsRegistered, true);
+    assert.equal(isLeadIntakeActivationComplete(), true);
     const missing = getLeadIntakeActivationMissingFields();
-    assert.ok(missing.includes("leadProcessorsRegistered"));
+    assert.ok(!missing.includes("leadProcessorsRegistered"));
     assert.ok(!missing.includes("privacyTermsVersionApproved"));
     assert.ok(!missing.includes("legalEntityName"));
   });
