@@ -1162,13 +1162,13 @@ alter function private.create_manual_lead_impl(
 
 revoke all on function private.create_manual_lead_impl(
   text, text, text, text, text, text, uuid, text, text, text[], text, text, uuid, boolean, text
-) from public, anon, authenticated;
+) from public, anon;
 
 grant execute on function private.create_manual_lead_impl(
   text, text, text, text, text, text, uuid, text, text, text[], text, text, uuid, boolean, text
-) to service_role;
+) to authenticated;
 
 alter function private.crm_import_validate_row(public.lead_import_rows, uuid) owner to postgres;
 
-revoke all on function private.crm_import_validate_row(public.lead_import_rows, uuid) from public, anon, authenticated;
+revoke all on function private.crm_import_validate_row(public.lead_import_rows, uuid) from public, anon;
 

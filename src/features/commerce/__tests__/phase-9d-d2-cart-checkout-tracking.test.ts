@@ -42,12 +42,16 @@ function latestMigrationName(): string {
 }
 
 describe("Phase 9D-D2 repository contracts", () => {
-  test("latest migration remains M37 only", () => {
+  test("latest migration is timeline taxonomy v2; deferred payment M38 absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260824140000_commerce_order_cod_checkout_foundation.sql"
+      "20260825163000_lead_timeline_taxonomy_v2.sql"
     );
     assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 38);
+    assert.equal(
+      existsSync(join(migrationDir, "20260825140000_commerce_online_payment_adapter_foundation.sql")),
+      false
+    );
   });
 
   test("transactional shop routes exist with noindex metadata", () => {

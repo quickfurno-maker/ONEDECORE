@@ -93,7 +93,7 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(m23Blob, FROZEN_HASHES.M23_GIT_BLOB);
   });
 
-  test("repository has M1–M37 COD order foundation and fail-closed against later files", () => {
+  test("repository has M1–M37 COD order foundation plus timeline v2; payment M38 fail-closed", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
@@ -171,7 +171,16 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(phase9d_d1[0], "20260824140000_commerce_order_cod_checkout_foundation.sql");
 
     const later = files.filter((f) => f > "20260824140000_commerce_order_cod_checkout_foundation.sql");
-    assert.equal(later.length, 0, "No migrations after 9D-D1 COD order foundation");
+    assert.deepEqual(
+      later,
+      ["20260825163000_lead_timeline_taxonomy_v2.sql"],
+      "Only timeline taxonomy v2 may follow 9D-D1 COD order foundation"
+    );
+    assert.equal(
+      files.includes("20260825140000_commerce_online_payment_adapter_foundation.sql"),
+      false,
+      "Deferred online-payment M38 must remain absent"
+    );
   });
 });
 
