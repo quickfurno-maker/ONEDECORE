@@ -103,7 +103,7 @@ function parseManualLeadFormInput(
       : ("apartment-2bhk" as LeadPropertyCode),
     timelineCode: isAllowed(timelineCode, LEAD_TIMELINE_CODES)
       ? timelineCode
-      : ("within-3-months" as LeadTimelineCode),
+      : ("within-1-month" as LeadTimelineCode),
     primarySourceId: String(formData.get("primarySourceId") ?? ""),
     locality: parseNullableString(formData.get("locality")),
     budgetComfortCode:

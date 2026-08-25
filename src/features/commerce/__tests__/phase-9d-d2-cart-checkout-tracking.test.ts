@@ -47,7 +47,7 @@ describe("Phase 9D-D2 repository contracts", () => {
       latestMigrationName(),
       "20260824140000_commerce_order_cod_checkout_foundation.sql"
     );
-    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 37);
+    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 38);
   });
 
   test("transactional shop routes exist with noindex metadata", () => {

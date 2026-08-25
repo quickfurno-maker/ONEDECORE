@@ -205,7 +205,7 @@ export function ManualLeadForm({
               name="timelineCode"
               required
               className={fieldClassName}
-              defaultValue="within-3-months"
+              defaultValue="within-1-month"
             >
               {LEAD_TIMELINE_CODES.map((code) => (
                 <option key={code} value={code}>

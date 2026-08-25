@@ -33,7 +33,7 @@ function base(overrides: Partial<PlanSnapshot> = {}): PlanSnapshot {
 const READY = base({
   service: "modular-kitchens",
   property: "apartment-3bhk",
-  timeline: "within-3-months",
+  timeline: "within-1-month",
   locality: "Baner",
   rooms: ["kitchen"],
 });

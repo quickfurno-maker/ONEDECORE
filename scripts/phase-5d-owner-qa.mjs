@@ -154,7 +154,7 @@ function sampleRows(sourceId, runId) {
       email: `phase5d-import-${runId}@example.test`,
       service_code: "complete-home-interiors",
       property_code: "apartment-2bhk",
-      timeline_code: "within-3-months",
+      timeline_code: "within-1-month",
       primary_source_id: sourceId,
       locality: "koregaon park",
       budget_comfort_code: "6-12l",

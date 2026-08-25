@@ -168,7 +168,7 @@ async function createManualLead(apiUrl, anonKey, token, params) {
     p_email: params.email ?? null,
     p_service_code: params.serviceCode,
     p_property_code: params.propertyCode,
-    p_timeline_code: params.timelineCode ?? "within-3-months",
+    p_timeline_code: params.timelineCode ?? "within-1-month",
     p_primary_source_id: params.primarySourceId,
     p_locality: params.locality ?? null,
     p_budget_comfort_code: params.budgetComfortCode ?? null,
@@ -476,7 +476,7 @@ async function main() {
       serviceCode: "complete-home-interiors",
       propertyCode: "apartment-2bhk",
       locality: "Owner QA Whitefield",
-      timelineCode: "ready-now",
+      timelineCode: "immediate",
       primarySourceId,
       duplicateOverride: true,
       duplicateOverrideReason:

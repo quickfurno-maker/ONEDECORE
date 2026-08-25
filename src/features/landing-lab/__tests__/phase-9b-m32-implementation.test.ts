@@ -34,7 +34,7 @@ function intakeBody(overrides: Record<string, unknown> = {}) {
     requirements: {
       service: "complete-home-interiors",
       property: "apartment-2bhk",
-      timeline: "within-3-months",
+      timeline: "within-1-month",
       rooms: ["living"],
     },
     consent: {
@@ -161,7 +161,7 @@ describe("Phase 9B M32 exposures and activation", () => {
       requirements: {
         service: "complete-home-interiors",
         property: "apartment-2bhk",
-        timeline: "within-3-months",
+        timeline: "within-1-month",
         rooms: [],
       },
     }));

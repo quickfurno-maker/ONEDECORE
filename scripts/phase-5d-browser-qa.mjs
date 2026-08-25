@@ -98,7 +98,7 @@ async function writeFixtures() {
   const xlsxPhone = `+91950007${runSuffix}`;
   const csv = [
     "\uFEFFName,Phone,Email,Service,Property,Timeline,Locality",
-    `Browser QA Lead,${csvPhone},browser-qa-${runSuffix}@example.test,complete-home-interiors,apartment-2bhk,within-3-months,koregaon park`,
+    `Browser QA Lead,${csvPhone},browser-qa-${runSuffix}@example.test,complete-home-interiors,apartment-2bhk,within-1-month,koregaon park`,
   ].join("\n");
   fs.writeFileSync(path.join(fixturesDir, "phase-5d-browser.csv"), csv, "utf8");
 
@@ -120,7 +120,7 @@ async function writeFixtures() {
     `browser-qa-xlsx-${runSuffix}@example.test`,
     "complete-home-interiors",
     "apartment-2bhk",
-    "within-3-months",
+    "within-1-month",
     "koregaon park",
   ]);
   await workbook.xlsx.writeFile(path.join(fixturesDir, "phase-5d-browser.xlsx"));

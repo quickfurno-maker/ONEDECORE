@@ -288,7 +288,7 @@ insert into public.leads (
   'public_intake',
   'complete-home-interiors',
   'apartment-3bhk',
-  'ready-now',
+  'immediate',
   'v1',
   '/planner',
   '8a333333-3333-3333-3333-333333333333'

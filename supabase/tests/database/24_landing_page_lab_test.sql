@@ -577,7 +577,7 @@ insert into public.leads (
   'local_test',
   'complete-home-interiors',
   'apartment-3bhk',
-  'ready-now',
+  'immediate',
   'v1',
   '/lp/gurgaon-interiors',
   'Gurgaon',

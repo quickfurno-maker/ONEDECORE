@@ -360,7 +360,7 @@ select throws_ok(
 select lives_ok(
   $$select public.replace_lead_import_rows(
     current_setting('test.phase5d_mgr_batch')::uuid,
-    '[{"row_number":1,"submitted_name":"5D Import Row","phone":"+919500050001","email":null,"service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-3-months","locality":"Koramangala","budget_comfort_code":"6-12l","room_codes":["living"],"message":null,"source_detail":null}]'::jsonb
+    '[{"row_number":1,"submitted_name":"5D Import Row","phone":"+919500050001","email":null,"service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-1-month","locality":"Koramangala","budget_comfort_code":"6-12l","room_codes":["living"],"message":null,"source_detail":null}]'::jsonb
   )$$,
   'replace staged rows succeeds'
 );
@@ -417,7 +417,7 @@ select set_config(
 
 select public.replace_lead_import_rows(
   current_setting('test.phase5d_invalid_batch')::uuid,
-  '[{"row_number":1,"submitted_name":"X","phone":null,"email":null,"service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-3-months"}]'::jsonb
+  '[{"row_number":1,"submitted_name":"X","phone":null,"email":null,"service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-1-month"}]'::jsonb
 );
 
 select public.validate_lead_import_batch(current_setting('test.phase5d_invalid_batch')::uuid);
@@ -467,7 +467,7 @@ select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222
 
 select public.replace_lead_import_rows(
   current_setting('test.phase5d_validated_batch')::uuid,
-  '[{"row_number":1,"submitted_name":"5D Assigned Row","phone":"+919500050002","email":null,"service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-3-months","locality":"Koramangala","budget_comfort_code":"6-12l","room_codes":["living"]}]'::jsonb
+  '[{"row_number":1,"submitted_name":"5D Assigned Row","phone":"+919500050002","email":null,"service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-1-month","locality":"Koramangala","budget_comfort_code":"6-12l","room_codes":["living"]}]'::jsonb
 );
 
 select public.validate_lead_import_batch(current_setting('test.phase5d_validated_batch')::uuid);
@@ -510,7 +510,7 @@ select set_config(
 
 select public.replace_lead_import_rows(
   current_setting('test.phase5d_nomatch_batch')::uuid,
-  '[{"row_number":1,"submitted_name":"5D No Rule","phone":"+919500050003","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-3-months"}]'::jsonb
+  '[{"row_number":1,"submitted_name":"5D No Rule","phone":"+919500050003","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-1-month"}]'::jsonb
 );
 
 select public.validate_lead_import_batch(current_setting('test.phase5d_nomatch_batch')::uuid);
@@ -547,7 +547,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5d_phone_call_source')::uuid,
     'Indiranagar',
     null, '{}'::text[], null, null,
@@ -580,7 +580,7 @@ select set_config(
 
 select public.replace_lead_import_rows(
   current_setting('test.phase5d_dup_batch')::uuid,
-  '[{"row_number":1,"submitted_name":"5D Active Dup","phone":"+919500050010","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-3-months","locality":"Indiranagar"}]'::jsonb
+  '[{"row_number":1,"submitted_name":"5D Active Dup","phone":"+919500050010","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-1-month","locality":"Indiranagar"}]'::jsonb
 );
 
 select public.validate_lead_import_batch(current_setting('test.phase5d_dup_batch')::uuid);
@@ -607,7 +607,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5d_phone_call_source')::uuid,
     'Whitefield'
   )),
@@ -638,7 +638,7 @@ select set_config(
 
 select public.replace_lead_import_rows(
   current_setting('test.phase5d_recent_batch')::uuid,
-  '[{"row_number":1,"submitted_name":"5D Recent Dup","phone":"+919500050011","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-3-months","locality":"Whitefield"}]'::jsonb
+  '[{"row_number":1,"submitted_name":"5D Recent Dup","phone":"+919500050011","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-1-month","locality":"Whitefield"}]'::jsonb
 );
 
 select public.validate_lead_import_batch(current_setting('test.phase5d_recent_batch')::uuid);
@@ -719,7 +719,7 @@ select set_config(
 
 select public.replace_lead_import_rows(
   current_setting('test.phase5d_sa_self_batch')::uuid,
-  '[{"row_number":1,"submitted_name":"5D SA Self","phone":"+919500050040","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-3-months","locality":"Koramangala","budget_comfort_code":"6-12l"}]'::jsonb
+  '[{"row_number":1,"submitted_name":"5D SA Self","phone":"+919500050040","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-1-month","locality":"Koramangala","budget_comfort_code":"6-12l"}]'::jsonb
 );
 
 select public.validate_lead_import_batch(current_setting('test.phase5d_sa_self_batch')::uuid);
@@ -783,7 +783,7 @@ select set_config(
 
 select public.replace_lead_import_rows(
   current_setting('test.phase5d_reject_batch')::uuid,
-  '[{"row_number":1,"submitted_name":"5D Reject Row","phone":"+919500050020","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-3-months","locality":"Koramangala","budget_comfort_code":"6-12l"}]'::jsonb
+  '[{"row_number":1,"submitted_name":"5D Reject Row","phone":"+919500050020","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-1-month","locality":"Koramangala","budget_comfort_code":"6-12l"}]'::jsonb
 );
 
 select public.validate_lead_import_batch(current_setting('test.phase5d_reject_batch')::uuid);
@@ -847,7 +847,7 @@ select set_config(
 
 select public.replace_lead_import_rows(
   current_setting('test.phase5d_direct_batch')::uuid,
-  '[{"row_number":1,"submitted_name":"5D Direct Import","phone":"+919500050030","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-3-months","locality":"Koramangala","budget_comfort_code":"6-12l"}]'::jsonb
+  '[{"row_number":1,"submitted_name":"5D Direct Import","phone":"+919500050030","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-1-month","locality":"Koramangala","budget_comfort_code":"6-12l"}]'::jsonb
 );
 
 select public.validate_lead_import_batch(current_setting('test.phase5d_direct_batch')::uuid);
@@ -1163,7 +1163,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5d_phone_call_source')::uuid,
     'Jayanagar'
   )),
@@ -1204,7 +1204,7 @@ select set_config(
 
 select public.replace_lead_import_rows(
   current_setting('test.phase5d_reusable_batch')::uuid,
-  '[{"row_number":1,"submitted_name":"5D Reusable Row","phone":"+919500050050","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-3-months","locality":"Jayanagar"}]'::jsonb
+  '[{"row_number":1,"submitted_name":"5D Reusable Row","phone":"+919500050050","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-1-month","locality":"Jayanagar"}]'::jsonb
 );
 
 select public.validate_lead_import_batch(current_setting('test.phase5d_reusable_batch')::uuid);
@@ -1291,7 +1291,7 @@ select set_config(
 
 select public.replace_lead_import_rows(
   current_setting('test.phase5d_edit_batch')::uuid,
-  '[{"row_number":1,"submitted_name":"5D Edit Row","phone":"+919500050060","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-3-months"}]'::jsonb
+  '[{"row_number":1,"submitted_name":"5D Edit Row","phone":"+919500050060","service_code":"complete-home-interiors","property_code":"apartment-2bhk","timeline_code":"within-1-month"}]'::jsonb
 );
 
 select public.validate_lead_import_batch(current_setting('test.phase5d_edit_batch')::uuid);

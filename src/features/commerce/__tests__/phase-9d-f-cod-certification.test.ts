@@ -42,7 +42,7 @@ function walkTs(dir: string, acc: string[] = []): string[] {
 describe("Phase 9D-F baseline and payment absence", () => {
   test("latest migration remains M37 and M38 is absent", () => {
     assert.equal(latestMigrationName(), "20260824140000_commerce_order_cod_checkout_foundation.sql");
-    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 37);
+    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 38);
     assert.equal(
       existsSync(join(root, "supabase/migrations/20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false

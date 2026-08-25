@@ -200,7 +200,7 @@ insert into public.leads (
   id, contact_id, status, assigned_to, submitted_name, service_code, property_code, timeline_code, primary_source_id, entry_method
 )
 select
-  '7a666666-6666-6666-6666-666666666666', '7a555555-5555-5555-5555-555555555555', 'assigned', '7a111111-1111-1111-1111-111111111111', 'Anil Gupta', 'complete-home-interiors', 'apartment-2bhk', 'ready-now', id, 'manual'
+  '7a666666-6666-6666-6666-666666666666', '7a555555-5555-5555-5555-555555555555', 'assigned', '7a111111-1111-1111-1111-111111111111', 'Anil Gupta', 'complete-home-interiors', 'apartment-2bhk', 'immediate', id, 'manual'
 from public.lead_sources where code = 'manual_entry';
 
 -- Set auth context as Sales Executive 1
