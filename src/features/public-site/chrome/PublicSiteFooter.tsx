@@ -11,37 +11,44 @@ export function PublicSiteFooter({
 }) {
   return (
     <footer className="od-site-footer">
-      <div className="od-site-footer__grid">
-        <div>
+      <div className="od-site-footer__top">
+        <div className="od-site-footer__brand">
           <OneDecoreWordmark size="footer" />
-          <p className="od-site-footer__tagline">{SITE_CONFIG.tagline}</p>
-          <p>Complete interiors, modular kitchens, and furniture for homes in Pune.</p>
+          <p>
+            Premium interiors, modular kitchens and furniture for homes across Pune.
+          </p>
+          <Link href="/interiors#consultation" className="od-site-footer__cta">
+            Book Free Consultation
+          </Link>
         </div>
-        <div>
-          <p className="od-site-footer__heading">Explore</p>
-          <ul>
-            {PUBLIC_NAV_DESTINATIONS.map((item) => (
-              <li key={item.id}>
-                <Link href={item.href}>{item.label}</Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <p className="od-site-footer__heading">Legal</p>
-          <ul>
-            {PUBLIC_FOOTER_LEGAL.map((item) => (
-              <li key={item.href}>
-                <Link href={item.href}>{item.label}</Link>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <nav className="od-site-footer__nav" aria-label="Footer">
+          <div>
+            <p className="od-site-footer__heading">Explore</p>
+            <ul>
+              {PUBLIC_NAV_DESTINATIONS.map((item) => (
+                <li key={item.id}>
+                  <Link href={item.href}>{item.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="od-site-footer__heading">Legal</p>
+            <ul>
+              {PUBLIC_FOOTER_LEGAL.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href}>{item.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </nav>
       </div>
-      <p className="od-site-footer__base">
-        © {new Date().getFullYear()} {SITE_CONFIG.name}. Public furniture shop stays gated until
-        owner activation.
-      </p>
+      <div className="od-site-footer__base">
+        <p>
+          © {new Date().getFullYear()} {SITE_CONFIG.name} · Pune, India
+        </p>
+      </div>
       {note ? <p className="od-site-footer__note">{note}</p> : null}
     </footer>
   );
