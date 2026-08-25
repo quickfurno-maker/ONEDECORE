@@ -15,8 +15,9 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     id: "draft-status",
     title: "Draft status",
     body: [
-      "These Terms of Use are a draft for owner and Indian legal counsel review. They are not yet effective.",
-      "Website operator legal entity details remain pending owner input.",
+      "These Terms of Use are a draft for owner review. They are not yet effective.",
+      "No Indian legal-counsel review has occurred for this draft. This document does not claim legal compliance or counsel approval.",
+      "Website operator identity details below reflect owner-supplied facts where available; remaining gaps are marked pending.",
     ],
   },
   {
@@ -24,6 +25,15 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     title: "Informational website",
     body: [
       `You are visiting the public website of ${BUSINESS_IDENTITY.tradingName}, an interior design and renovation service operating in ${BUSINESS_IDENTITY.serviceRegion}.`,
+      BUSINESS_IDENTITY.entityType === "proprietorship"
+        ? "ONEDECORE is operated as a proprietorship. The trading name is ONEDECORE; the proprietor’s exact full legal name remains pending owner input for the effective notice."
+        : "Operator legal form details remain pending owner input.",
+      BUSINESS_IDENTITY.registeredOfficeAddress
+        ? `Registered office: ${BUSINESS_IDENTITY.registeredOfficeAddress}.`
+        : "Registered office details remain pending owner input.",
+      BUSINESS_IDENTITY.businessEmail
+        ? `Business contact: ${BUSINESS_IDENTITY.businessEmail}.`
+        : "Business contact details remain pending owner input.",
       "The website provides information about services, an indicative estimator, an in-browser planning tool and published portfolio content.",
       "Nothing on this website creates a binding contract unless separately agreed in a signed quotation or agreement.",
     ],
@@ -110,8 +120,11 @@ export const TERMS_OF_USE_CONTENT: readonly LegalContentSection[] = [
     id: "governing-law",
     title: "Governing law and jurisdiction",
     body: [
-      "Governing law and jurisdiction clause: pending owner input.",
-      "LEGAL_COUNSEL_REQUIRED: governing law, jurisdiction and dispute resolution wording.",
+      BUSINESS_IDENTITY.jurisdictionClause
+        ? BUSINESS_IDENTITY.jurisdictionClause
+        : "Governing law and jurisdiction clause: not yet owner-approved.",
+      "Proposed owner draft (not yet approved; not lawyer-approved): \"These Terms are governed by the laws of India. Subject to applicable law, courts having jurisdiction in Pune, Maharashtra will have jurisdiction over disputes arising from these Terms.\"",
+      "This draft is pending owner decision (APPROVE THIS DRAFT | REVISE | LEAVE NOT YET APPROVED). It is not described as counsel-approved.",
     ],
   },
   {

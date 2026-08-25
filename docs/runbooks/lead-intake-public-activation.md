@@ -27,38 +27,25 @@ Do **not** mark these complete until owner evidence exists.
 
 Record answers into `BUSINESS_IDENTITY` and `LEAD_INTAKE_ACTIVATION` only after owner confirmation.
 
-- [ ] `legalEntityName`
-- [ ] `entityType`
-- [ ] `registeredOfficeAddress`
-- [ ] `operatingOfficeAddress` **or** `contactRoleMapping.operatingOfficeSameAsRegistered=true`
-- [ ] `businessEmail`
-- [ ] `privacyEmail`
-- [ ] `grievanceEmail` **or** `privacyAndGrievanceCombined=true`
-- [ ] `dataRightsRequestEmail` **or** `privacyAndDataRightsCombined=true`
-- [ ] `authorisedRepresentative`
-- [ ] `grievanceContact`
-- [ ] `jurisdictionClause` (owner-supplied wording; do not invent)
-- [ ] `legalCounselApprovalReference` (only if counsel review actually occurred; otherwise keep blocked)
-- [ ] Privacy/Terms publication approval + effective version/date (`privacyTermsVersionApproved` + legal publication mode)
-- [ ] Service enquiry consent copy approval (`serviceEnquiryCopyApproved`)
-- [ ] Service communication consent copy approval (`serviceCommunicationCopyApproved`)
-- [ ] Retention decisions: lead / consent / audit / suppression
+- [ ] `legalEntityName` = proprietor full legal name (not trading name alone)
+- [x] `entityType` = proprietorship
+- [x] `registeredOfficeAddress`
+- [x] `operatingOfficeSameAsRegistered=true`
+- [x] `businessEmail` = onedecore@gmail.com
+- [ ] `privacyEmail` / combined-role mapping (pending APPROVE | DO NOT APPROVE)
+- [ ] `grievanceEmail` **or** combined mapping
+- [ ] `dataRightsRequestEmail` **or** combined mapping
+- [ ] `authorisedRepresentative` / `grievanceContact` (pending representative-roles decision)
+- [ ] `jurisdictionClause` (pending APPROVE THIS DRAFT | REVISE | LEAVE NOT YET APPROVED)
+- [x] `legalCounselApprovalReference` — **optional**; status **NO COUNSEL REVIEW YET** (null; not fabricated)
+- [ ] Privacy/Terms publication approval (`privacyTermsVersionApproved` remains false)
+- [ ] Service enquiry consent copy approval (`serviceEnquiryCopyApproved` remains false)
+- [ ] Service communication consent copy approval (`serviceCommunicationCopyApproved` remains false)
+- [x] Retention decisions: lead / consent / audit / suppression (MVP text approved 2026-08-25)
 - [ ] Lead processors registered / reviewed for production intake
 - [ ] Owner approval to collect production leads
 
-### Rate limits — OWNER CONFIRMATION REQUIRED
-
-Current `submit_lead_intake` thresholds (migration-owned; do not change casually):
-
-| Scope | Threshold | Window | Retry-After |
-|-------|-----------|--------|-------------|
-| Network | 5 | 15 minutes | 900s |
-| Network | 20 | 24 hours | 3600s |
-| Phone (CREATED) | 3 | 24 hours | 3600s |
-
-Marker in SQL: `OWNER_REVIEW_REQUIRED_BEFORE_PRODUCTION`.
-
-Production enablement remains blocked until the owner confirms these values (or records an approved change).
+See proposed copy package: `docs/legal/pr92-owner-legal-copy-review.md`
 
 ### Proxy / networking
 
@@ -75,19 +62,28 @@ Production enablement remains blocked until the owner confirms these values (or 
 Safe presence checks (no value echo):
 
 ```bash
-# length / presence only
 test -n "$SUPABASE_SERVICE_ROLE_KEY" && test "${#SUPABASE_SERVICE_ROLE_KEY}" -ge 20 && echo service_role_present_ok
 test -n "$ONEDECORE_LEAD_HASH_SECRET" && test "${#ONEDECORE_LEAD_HASH_SECRET}" -ge 32 && echo hash_secret_present_ok
-# reject publishable key in service-role slot
 test "$SUPABASE_SERVICE_ROLE_KEY" != "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" && echo service_role_not_publishable_ok
 ```
 
+### Rate limits — OWNER CONFIRMED FOR MVP
+
+Current `submit_lead_intake` thresholds (unchanged):
+
+| Scope | Threshold | Window | Retry-After |
+|-------|-----------|--------|-------------|
+| Network | 5 | 15 minutes | 900s |
+| Network | 20 | 24 hours | 3600s |
+| Phone (CREATED) | 3 | 24 hours | 3600s |
+
+Owner decision (2026-08-25): **APPROVE CURRENT LIMITS FOR MVP**. Do not change SQL thresholds without a new owner decision.
+
 ### CRM / human receiving
 
-- [ ] Human receiving path defined (who sees new leads)
-- [ ] Authorized broad-read owner/admin can see unassigned `status=new` leads
-- [ ] No automatic assignment invented for launch
-- [ ] No WhatsApp API / automation claimed as live unless separately authorised
+- [x] Assignment model for MVP: **MANUAL ASSIGNMENT**
+- [x] Automatic assignment rule: **NONE FOR MVP**
+- [ ] Named primary owner/admin who monitors unassigned `status=new` website leads
 
 ### Monitoring
 

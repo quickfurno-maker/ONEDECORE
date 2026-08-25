@@ -30,9 +30,28 @@ export const PRIVACY_POLICY_CONTENT: readonly LegalContentSection[] = [
     title: "Who ONEDECORE is",
     body: [
       `Trading name: ${BUSINESS_IDENTITY.tradingName}.`,
+      `Entity type: ${BUSINESS_IDENTITY.entityType ?? "pending owner input"}.`,
       `Service region: ${BUSINESS_IDENTITY.serviceRegion}.`,
-      "Legal entity name, registered office and operating office: pending owner input.",
-      "Authorised representative: pending owner input.",
+      BUSINESS_IDENTITY.legalEntityName
+        ? `Proprietor / legal identity: ${BUSINESS_IDENTITY.legalEntityName}.`
+        : "Proprietor / legal identity: pending owner input (trading name alone is not sufficient for a proprietorship).",
+      BUSINESS_IDENTITY.registeredOfficeAddress
+        ? `Registered office: ${BUSINESS_IDENTITY.registeredOfficeAddress}.`
+        : "Registered office: pending owner input.",
+      BUSINESS_IDENTITY.contactRoleMapping.operatingOfficeSameAsRegistered
+        ? "Operating office: same as registered office (owner-confirmed)."
+        : BUSINESS_IDENTITY.operatingOfficeAddress
+          ? `Operating office: ${BUSINESS_IDENTITY.operatingOfficeAddress}.`
+          : "Operating office: pending owner input.",
+      BUSINESS_IDENTITY.businessEmail
+        ? `Business email: ${BUSINESS_IDENTITY.businessEmail}.`
+        : "Business email: pending owner input.",
+      BUSINESS_IDENTITY.privacyEmail
+        ? `Privacy email: ${BUSINESS_IDENTITY.privacyEmail}.`
+        : "Privacy / grievance / data-rights contact emails: pending owner contact-channel decision.",
+      BUSINESS_IDENTITY.authorisedRepresentative
+        ? `Authorised representative: ${BUSINESS_IDENTITY.authorisedRepresentative}.`
+        : "Authorised representative: pending owner input.",
     ],
   },
   {

@@ -20,10 +20,12 @@ export const LEAD_INTAKE_ACTIVATION: LeadIntakeActivationInput = {
   privacyTermsVersionApproved: false,
   serviceEnquiryCopyApproved: false,
   serviceCommunicationCopyApproved: false,
-  leadRetentionDecided: false,
-  consentRetentionDecided: false,
-  auditRetentionDecided: false,
-  suppressionRetentionDecided: false,
+  /** Owner approved MVP retention recommendations 2026-08-25 (see retention-matrix). */
+  leadRetentionDecided: true,
+  consentRetentionDecided: true,
+  auditRetentionDecided: true,
+  suppressionRetentionDecided: true,
+  /** Remains false until processor register is complete enough for lead data. */
   leadProcessorsRegistered: false,
 };
 

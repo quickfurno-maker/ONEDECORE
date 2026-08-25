@@ -163,9 +163,9 @@ export function canPublishLegalPolicies(
     return false;
   }
 
-  if (identity.legalCounselApprovalReference == null) {
-    return false;
-  }
+  // Counsel reference is optional metadata. Owner-approved effective Privacy/Terms
+  // content is gated by publication mode + identity completeness, not a fabricated
+  // counsel reference. No ADR hard-locks counsel as a lead-intake dependency.
 
   if (mode === "owner-approved") {
     return false;

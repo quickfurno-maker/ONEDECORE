@@ -98,7 +98,8 @@ describe("Phase 3A1 warranty and retention truth", () => {
   });
 
   test("allRetentionPeriodsUnresolved()", () => {
-    assert.equal(allRetentionPeriodsUnresolved(), true);
+    // MVP lead/consent/audit/suppression periods were owner-approved; others remain open.
+    assert.equal(allRetentionPeriodsUnresolved(), false);
   });
 
   test("HOME_CLAIMS.warrantyYears referenced via WARRANTY_MARKETING_CLAIM_YEARS", () => {
@@ -137,15 +138,26 @@ describe("Phase 3A1 draft legal content", () => {
     assert.match(text, /remain on your device/i);
   });
 
-  test("terms content mentions indicative prices and LEGAL_COUNSEL_REQUIRED", () => {
+  test("terms content mentions indicative prices and pending jurisdiction approval", () => {
     const text = flattenLegalSections(TERMS_OF_USE_CONTENT);
     assert.match(text, /indicative/i);
-    assert.match(text, /LEGAL_COUNSEL_REQUIRED/);
+    assert.match(text, /not yet owner-approved|Proposed owner draft/i);
   });
 });
 
 describe("Phase 3A1 business identity gate", () => {
-  test("no fake @onedecore.com emails in business-identity", () => {
+  test("no fake @onedecore.com emails; confirmed owner fields allowed", () => {
+    const confirmedKeys = new Set([
+      "entityType",
+      "registeredOfficeAddress",
+      "operatingOfficeSameAsRegistered",
+      "businessEmail",
+      "registrationIdentifierRequirement",
+      "gstinApplicability",
+      "tradingName",
+      "serviceRegion",
+      "contactRoleMapping",
+    ]);
     for (const [key, value] of Object.entries(BUSINESS_IDENTITY)) {
       if (key === "tradingName" || key === "serviceRegion") continue;
       if (key === "gstinApplicability") {
@@ -153,12 +165,33 @@ describe("Phase 3A1 business identity gate", () => {
         continue;
       }
       if (key === "registrationIdentifierRequirement") {
-        assert.equal(value, "pending-owner-decision");
+        // Proprietorship: CIN/LLPIN not applicable.
+        assert.equal(value, "not-applicable");
         continue;
       }
       if (key === "contactRoleMapping") {
         assert.equal(typeof value, "object");
         assert.ok(value !== null);
+        continue;
+      }
+      if (key === "entityType") {
+        assert.equal(value, "proprietorship");
+        continue;
+      }
+      if (key === "registeredOfficeAddress") {
+        assert.equal(
+          value,
+          "SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207"
+        );
+        continue;
+      }
+      if (key === "operatingOfficeSameAsRegistered") {
+        assert.equal(value, true);
+        continue;
+      }
+      if (key === "businessEmail") {
+        assert.equal(value, "onedecore@gmail.com");
+        assert.doesNotMatch(value, /@onedecore\.com/i);
         continue;
       }
       if (typeof value === "string") {
@@ -167,6 +200,13 @@ describe("Phase 3A1 business identity gate", () => {
           /@onedecore\.com/i,
           `${key} must not invent @onedecore.com`
         );
+        if (!confirmedKeys.has(key)) {
+          // Remaining identity/legal fields stay null until owner fills them.
+          // (string path only reached for non-null remaining fields)
+        }
+      } else if (typeof value === "boolean") {
+        // Only operatingOfficeSameAsRegistered is confirmed boolean above.
+        assert.fail(`${key} boolean unexpectedly set`);
       } else {
         assert.equal(value, null, `${key} should be null pending owner input`);
       }

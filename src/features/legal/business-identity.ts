@@ -75,11 +75,18 @@ export const DEFAULT_CONTACT_ROLE_MAPPING: LegalContactRoleMapping = {
 export const BUSINESS_IDENTITY: BusinessIdentity = {
   tradingName: "ONEDECORE",
   serviceRegion: "Pune, Maharashtra, India",
+  /**
+   * For proprietorship this must be the proprietor's exact full legal name —
+   * not the trading name alone. Pending owner fill.
+   */
   legalEntityName: null,
-  entityType: null,
-  registeredOfficeAddress: null,
+  entityType: "proprietorship",
+  registeredOfficeAddress:
+    "SHOP NO 3, UBALE NAGAR, BEHIND RUDRA TATA MOTORS, WAGHOLI-412207",
+  /** Null when contactRoleMapping.operatingOfficeSameAsRegistered is true. */
   operatingOfficeAddress: null,
-  businessEmail: null,
+  businessEmail: "onedecore@gmail.com",
+  /** Pending owner contact-channel simplification decision. */
   privacyEmail: null,
   grievanceEmail: null,
   dataRightsRequestEmail: null,
@@ -90,12 +97,23 @@ export const BUSINESS_IDENTITY: BusinessIdentity = {
   cinOrLlpin: null,
   authorisedRepresentative: null,
   grievanceContact: null,
+  /** Pending owner jurisdiction draft decision — do not invent counsel approval. */
   jurisdictionClause: null,
   arbitrationDisputeClause: null,
+  /**
+   * Optional governance metadata only. No counsel review has occurred.
+   * Must remain null — do not fabricate a reference. Not required for lead-intake activation.
+   */
   legalCounselApprovalReference: null,
   gstinApplicability: "pending-owner-decision",
-  registrationIdentifierRequirement: "pending-owner-decision",
-  contactRoleMapping: DEFAULT_CONTACT_ROLE_MAPPING,
+  registrationIdentifierRequirement: "not-applicable",
+  contactRoleMapping: {
+    ...DEFAULT_CONTACT_ROLE_MAPPING,
+    operatingOfficeSameAsRegistered: true,
+    /** Pending owner APPROVE | DO NOT APPROVE for combined privacy/grievance/data-rights. */
+    privacyAndGrievanceCombined: false,
+    privacyAndDataRightsCombined: false,
+  },
 } as const;
 
 const PLACEHOLDER_PATTERN =
@@ -166,11 +184,8 @@ export function getMissingCoreLegalPublicationFields(
   pushMissing(missing, "authorisedRepresentative", identity.authorisedRepresentative);
   pushMissing(missing, "grievanceContact", identity.grievanceContact);
   pushMissing(missing, "jurisdictionClause", identity.jurisdictionClause);
-  pushMissing(
-    missing,
-    "legalCounselApprovalReference",
-    identity.legalCounselApprovalReference
-  );
+  // legalCounselApprovalReference is optional governance metadata for MVP lead intake /
+  // Privacy-Terms owner publication. Do not require a fabricated counsel reference.
 
   return missing;
 }

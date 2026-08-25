@@ -27,6 +27,7 @@ import {
   getMissingWhatsAppActivationFields,
   type BusinessIdentity,
 } from "../business-identity.ts";
+import { getLeadIntakeActivationMissingFields } from "../lead-intake-activation.ts";
 import {
   canPublishLegalPolicies,
   isWarrantyPublicationReady,
@@ -173,11 +174,22 @@ describe("Phase 3A1.1 activation gates", () => {
     );
   });
 
+  test("counsel reference is optional for core lead-publication fields", () => {
+    const missing = getMissingCoreLegalPublicationFields();
+    assert.ok(!missing.includes("legalCounselApprovalReference"));
+  });
+
   test("lead activation requires approved consent/retention/contact", () => {
-    const missing = getMissingLeadIntakeActivationFields();
+    const missing = getLeadIntakeActivationMissingFields();
     assert.ok(missing.includes("privacyTermsVersionApproved"));
     assert.ok(missing.includes("serviceEnquiryCopyApproved"));
-    assert.ok(missing.includes("leadRetentionDecided"));
+    // Retention decisions were owner-approved for MVP; still require legal/consent publication approvals.
+    assert.ok(!missing.includes("leadRetentionDecided"));
+    assert.ok(missing.includes("legalEntityName"));
+    // Empty-input helper remains fail-closed for unset flags.
+    assert.ok(
+      getMissingLeadIntakeActivationFields().includes("leadRetentionDecided")
+    );
   });
 
   test("warranty activation separate; generic completeness does not activate all", () => {
