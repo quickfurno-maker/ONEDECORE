@@ -25,13 +25,24 @@ export type LegalPublicationMode =
   | "owner-approved"
   | "published";
 
-export const LEGAL_PUBLICATION_MODE: LegalPublicationMode = "draft-review";
+/**
+ * Owner approved Privacy/Terms/consent customer copy (PR #92).
+ * Not published / not effective until activation sets mode=published with a real date.
+ */
+export const LEGAL_PUBLICATION_MODE: LegalPublicationMode = "owner-approved";
 
 export const LEGAL_DRAFT_BANNER =
   "Draft for owner and Indian legal counsel review — not yet effective." as const;
 
+export const LEGAL_OWNER_APPROVED_BANNER =
+  "Owner-approved legal copy — not yet effective. Effective date is set only on authorized production activation." as const;
+
 export const LEGAL_DPDP_READINESS_STATEMENT =
   "Designed for DPDP readiness; owner, operational and Indian legal-counsel review remain pending." as const;
+
+/** Forbidden on published customer pages. */
+export const LEGAL_EFFECTIVE_DATE_PLACEHOLDER =
+  "To be set to the calendar date of authorized production activation" as const;
 
 export const LEGAL_ROUTE_PATHS = [
   "/privacy",
@@ -120,6 +131,44 @@ export function isLegalDraftMode(
   mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
 ): boolean {
   return mode === "draft-review";
+}
+
+export function isLegalOwnerApprovedMode(
+  mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
+): boolean {
+  return mode === "owner-approved";
+}
+
+export function isLegalPublishedMode(
+  mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
+): boolean {
+  return mode === "published";
+}
+
+/** True calendar date YYYY-MM-DD — rejects placeholders and empty values. */
+export function isRealLegalEffectiveDate(
+  value: string | null | undefined
+): value is string {
+  if (value == null) return false;
+  const trimmed = value.trim();
+  if (trimmed === "") return false;
+  if (/placeholder|to be set|authorized production activation/i.test(trimmed)) {
+    return false;
+  }
+  return /^\d{4}-\d{2}-\d{2}$/.test(trimmed);
+}
+
+/**
+ * Published customer pages require a real effective date.
+ * Owner-approved / draft-review must not claim published effectiveness.
+ */
+export function canRenderPublishedLegalDocument(input: {
+  readonly mode?: LegalPublicationMode;
+  readonly effectiveDate: string | null | undefined;
+}): boolean {
+  const mode = input.mode ?? LEGAL_PUBLICATION_MODE;
+  if (mode !== "published") return false;
+  return isRealLegalEffectiveDate(input.effectiveDate);
 }
 
 export function getLegalRobots(

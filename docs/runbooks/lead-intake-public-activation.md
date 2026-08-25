@@ -15,35 +15,50 @@ Canonical activation decision source (fail-closed):
 
 - `src/features/legal/lead-intake-activation.ts` → `LEAD_INTAKE_ACTIVATION`
 - Identity facts: `src/features/legal/business-identity.ts` → `BUSINESS_IDENTITY`
+- Consent registry: owner-approved v1.0 with `effectiveFrom=null` until launch day
+- Publication mode: `LEGAL_PUBLICATION_MODE = owner-approved` until launch day
 - Server wiring: `getLeadIntakeServerEnv(..., LEAD_INTAKE_ACTIVATION)`
 
 Generic business completeness alone never enables production intake.
 
+## Current recorded decisions (PR #92)
+
+- [x] Owner APPROVE of published-mode Privacy/Terms/consent package at head `2609bbca…` (2026-08-25)
+- [x] `privacyTermsVersionApproved = true` (OWNER approval only; not counsel)
+- [x] `serviceEnquiryCopyApproved = true`
+- [x] `serviceCommunicationCopyApproved = true`
+- [x] Consent candidates: `service-enquiry-v1.0`, `service-communication-v1.0`, `whatsapp-service-v1.0` (approved, **not effective**)
+- [x] Privacy/Terms versions: `privacy-notice-v1.0`, `terms-of-use-v1.0` (owner-approved, **not effective**; dates null)
+- [x] `LEGAL_PUBLICATION_MODE = owner-approved` (not `published`)
+- [x] Counsel reference null — **NO COUNSEL REVIEW YET**
+- [ ] `leadProcessorsRegistered = false` until provider evidence below is complete
+- [ ] Owner authorize-to-collect / launch-day sequence
+
+### OWNER_PROVIDER_EVIDENCE_REQUIRED (blocks processor flag)
+
+**Current website-lead processors:** Supabase (current) + Hostinger VPS (under-review). Planned Meta/Groq/n8n/analytics/email-SMS are out of scope for this gate.
+
+1. **Supabase (project OneDecore / `lpurlfmpvriyvpkujvyl` / ap-south-1 Mumbai)**
+   - Confirm account acceptance of current Supabase Terms + published DPA (`https://supabase.com/legal/dpa`) — record acceptance/version date (bespoke countersigned DPA is **not** claimed)
+   - Confirm review of current official sub-processor list/schedule
+2. **Hostinger VPS**
+   - Contracting / legal entity name from the ONEDECORE Hostinger account, invoice, or contract
+   - VPS / server region or location from Hostinger account or server panel
+   - Applicable Hostinger privacy / data-processing terms or DPA for this account
+
+Do **not** invent any of the above. Do **not** set `leadProcessorsRegistered=true` until these are recorded in `processor-register.ts`.
+
 ## Unresolved activation blockers
 
-Do **not** mark these complete until owner evidence exists.
+### Owner / legal
 
-### Owner / legal (blocks form activation)
+- [x] Identity / contact / jurisdiction / retention / rate limits / CRM manual assignment (recorded)
+- [x] Privacy/Terms + lead-path consent owner approvals (recorded; not effective)
+- [ ] Processor diligence (above)
+- [ ] Launch-day: set published mode + real effective dates + effectiveFrom on v1.0 consents
+- [ ] Owner approval to collect production leads / execute launch sequence
 
-Record answers into `BUSINESS_IDENTITY` and `LEAD_INTAKE_ACTIVATION` only after owner confirmation.
-
-- [x] `legalEntityName` / proprietor identity = **ONEDECORE** (owner-supplied exactly; no personal name substituted)
-- [x] `entityType` = proprietorship
-- [x] `registeredOfficeAddress`
-- [x] `operatingOfficeSameAsRegistered=true`
-- [x] `businessEmail` = onedecore@gmail.com
-- [x] `privacyEmail` = onedecore@gmail.com; combined privacy/grievance/data-rights mapping **APPROVED**
-- [x] `authorisedRepresentative` = ONEDECORE; `grievanceContact` = ONEDECORE, Proprietor / Grievance Contact
-- [x] `jurisdictionClause` = owner-approved Pune/Maharashtra draft (**NOT COUNSEL REVIEWED**)
-- [x] `legalCounselApprovalReference` — **optional**; status **NO COUNSEL REVIEW YET** (null; not fabricated)
-- [ ] Privacy/Terms publication approval (`privacyTermsVersionApproved` remains false) — awaiting APPROVE | REVISE on revised published copy in `docs/legal/pr92-owner-legal-copy-review.md`
-- [ ] Service enquiry consent copy approval (`serviceEnquiryCopyApproved` remains false) — revised enquiry expanded text (CRM/consent/abuse; no “solely”)
-- [ ] Service communication consent copy approval (`serviceCommunicationCopyApproved` remains false)
-- [x] Retention decisions: lead / consent / audit / suppression (MVP text approved 2026-08-25)
-- [ ] Lead processors registered / reviewed for production intake (Supabase region recorded; DPA + Hostinger legal entity/region/terms still open)
-- [ ] Owner approval to collect production leads
-
-See final copy package: `docs/legal/pr92-owner-legal-copy-review.md`
+See: `docs/legal/pr92-owner-legal-copy-review.md`
 
 ### Proxy / networking
 
@@ -67,15 +82,13 @@ test "$SUPABASE_SERVICE_ROLE_KEY" != "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" && 
 
 ### Rate limits — OWNER CONFIRMED FOR MVP
 
-Current `submit_lead_intake` thresholds (unchanged):
-
 | Scope | Threshold | Window | Retry-After |
 |-------|-----------|--------|-------------|
 | Network | 5 | 15 minutes | 900s |
 | Network | 20 | 24 hours | 3600s |
 | Phone (CREATED) | 3 | 24 hours | 3600s |
 
-Owner decision (2026-08-25): **APPROVE CURRENT LIMITS FOR MVP**. Do not change SQL thresholds without a new owner decision.
+Do not change SQL thresholds without a new owner decision.
 
 ### CRM / human receiving
 
@@ -97,11 +110,23 @@ Owner decision (2026-08-25): **APPROVE CURRENT LIMITS FOR MVP**. Do not change S
 
 - [ ] Immediate disable path: set server mode to `disabled` and form mode to `copy-only`
 - [ ] Confirm homepage/interiors returns to copy-only UX without redeploying schema
-- [ ] Confirm no marketing capture paths were enabled
 
-## Production env (set before build)
+## Launch-day atomic invariant (DO NOT run from this PR)
 
-`NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE` is **build-time**. Set it **before** `npm run build`.
+In one controlled code/config activation commit + production build:
+
+```text
+LEGAL_PUBLICATION_MODE = published
+PRIVACY_NOTICE_EFFECTIVE_DATE = <ACTUAL YYYY-MM-DD activation date>
+TERMS_OF_USE_EFFECTIVE_DATE = <same date>
+service-enquiry-v1.0 / service-communication-v1.0 / whatsapp-service-v1.0 → effectiveFrom = <same date>
+privacyTermsVersionApproved = true
+serviceEnquiryCopyApproved = true
+serviceCommunicationCopyApproved = true
+leadProcessorsRegistered = true   # only after evidence recorded
+```
+
+Production environment **before** build:
 
 ```text
 NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE=active
@@ -114,7 +139,11 @@ SUPABASE_SERVICE_ROLE_KEY=<server secret, never printed>
 ONEDECORE_LEAD_HASH_SECRET=<server secret >=32 chars, never printed>
 ```
 
-Do **not** enable `ONEDECORE_LEAD_INTAKE_MODE=enabled` until `LEAD_INTAKE_ACTIVATION` + identity + rate-limit confirmation are complete.
+`enabled` mode additionally requires:
+
+- website lead processor diligence complete
+- lead-path consent versions effective
+- Privacy/Terms published with real effective dates
 
 ## Post-merge deployment sequence (DO NOT run from Cursor during PR)
 
@@ -131,9 +160,9 @@ Do **not** enable `ONEDECORE_LEAD_INTAKE_MODE=enabled` until `LEAD_INTAKE_ACTIVA
 11. `pm2 save`
 12. Health check
 13. Public form rendering check
-14. API disabled/validation semantics check without creating a lead
+14. API disabled/validation semantics check without creating a lead (pre-enable) / controlled checks post-enable
 15. Controlled browser E2E with owner participation
-16. CRM verification
+16. CRM verification (unassigned `new` website leads visible; manual assign only)
 17. Logs/security verification
 
 ## Controlled real production E2E (after merge/deploy only)
@@ -152,24 +181,14 @@ After submission verify read-only:
 - submission reference returned
 - no raw fingerprints exposed to client
 
-Then owner verifies `/admin/crm/leads` visibility (table + pipeline + detail). Optional controlled CRM ops: manual assign / note / follow-up. No outbound WhatsApp/email/SMS.
-
-## Safe local-only exercise
-
-For local verification only:
-
-1. `NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE=active`
-2. `ONEDECORE_LEAD_INTAKE_MODE=local-test`
-3. Loopback `NEXT_PUBLIC_SUPABASE_URL` (`http://127.0.0.1:<port>` root path)
-4. Local service-role key and hash secret
-5. Clean all local synthetic rows after testing
-6. Return both flags to `copy-only` + `disabled` before ending the session
+Then owner verifies `/admin/crm/leads` visibility. Optional controlled CRM ops: manual assign / note / follow-up. No outbound WhatsApp/email/SMS.
 
 ## Forbidden without new authority
 
 - Production deployment of enabled intake
-- Setting `ONEDECORE_LEAD_INTAKE_MODE=enabled` while legal gates are incomplete
-- Fabricating owner/legal approval
-- Publicly enabling the homepage form while Privacy/Terms remain draft/not-effective
+- Setting `ONEDECORE_LEAD_INTAKE_MODE=enabled` while legal/processor/publication gates are incomplete
+- Fabricating owner/legal/processor approval
+- Setting `LEGAL_PUBLICATION_MODE=published` without a real effective date
+- Publicly enabling the homepage form while Privacy/Terms remain non-effective
 - WhatsApp API messaging, Groq, n8n, campaigns, or analytics wiring
 - Changing shop gate or touching M38 / online payments

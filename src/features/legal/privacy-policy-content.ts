@@ -4,22 +4,31 @@
 
 import { BUSINESS_IDENTITY } from "./business-identity.ts";
 import {
+  LEGAL_EFFECTIVE_DATE_PLACEHOLDER,
   LEGAL_PUBLICATION_MODE,
+  isRealLegalEffectiveDate,
   type LegalPublicationMode,
 } from "./legal-publication.ts";
 
-/** Current in-repo draft version identifier (not effective). */
-export const PRIVACY_NOTICE_VERSION = "privacy-notice-v0.1-draft" as const;
+/** Owner-approved production version — not effective until activation sets the date. */
+export const PRIVACY_NOTICE_VERSION = "privacy-notice-v1.0" as const;
 
-/** Proposed production version after owner APPROVE + activation. */
-export const PRIVACY_NOTICE_PROPOSED_PRODUCTION_VERSION =
-  "privacy-notice-v1.0" as const;
+/** @deprecated Alias kept for call sites that referenced the proposed id. */
+export const PRIVACY_NOTICE_PROPOSED_PRODUCTION_VERSION = PRIVACY_NOTICE_VERSION;
 
 /**
- * Set only when production publication is authorized.
+ * Set only when production publication is authorized (YYYY-MM-DD).
  * Do not hard-code a calendar date before activation.
  */
 export const PRIVACY_NOTICE_EFFECTIVE_DATE: string | null = null;
+
+export const PRIVACY_NOTICE_OWNER_APPROVAL = {
+  approvedBy: "ONEDECORE owner",
+  approvedAt: "2026-08-25",
+  reference:
+    "PR #92 owner APPROVE of published-mode package at 2609bbca1ba661989fd0e8f468b0724a47adcd5d",
+  counselApproval: null,
+} as const;
 
 export type LegalContentAudience = "public" | "draft-only";
 
@@ -27,32 +36,41 @@ export interface LegalContentSection {
   readonly id: string;
   readonly title: string;
   readonly body: readonly string[];
-  /** Defaults to public. Draft-only sections never render in published mode. */
+  /** Defaults to public. Draft-only sections never render in owner-approved or published mode. */
   readonly audience?: LegalContentAudience;
 }
 
 export function getPrivacyNoticeDisplayVersion(
   mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
 ): string {
-  return mode === "published"
-    ? PRIVACY_NOTICE_PROPOSED_PRODUCTION_VERSION
+  return mode === "draft-review"
+    ? "privacy-notice-v0.1-draft"
     : PRIVACY_NOTICE_VERSION;
 }
 
 export function getPrivacyNoticeEffectiveDateLabel(
-  effectiveDate: string | null = PRIVACY_NOTICE_EFFECTIVE_DATE
+  effectiveDate: string | null = PRIVACY_NOTICE_EFFECTIVE_DATE,
+  mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
 ): string {
-  return (
-    effectiveDate ??
-    "To be set to the calendar date of authorized production activation"
-  );
+  if (mode === "published") {
+    if (!isRealLegalEffectiveDate(effectiveDate)) {
+      throw new Error(
+        "[ONEDECORE Legal] Published Privacy Notice requires a real YYYY-MM-DD effective date."
+      );
+    }
+    return effectiveDate;
+  }
+  if (mode === "owner-approved") {
+    return "Not yet effective — will be set on authorized production activation";
+  }
+  return LEGAL_EFFECTIVE_DATE_PLACEHOLDER;
 }
 
 export function resolveLegalContentSections(
   sections: readonly LegalContentSection[],
   mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
 ): readonly LegalContentSection[] {
-  if (mode === "published") {
+  if (mode === "published" || mode === "owner-approved") {
     return sections.filter((section) => section.audience !== "draft-only");
   }
   return sections;

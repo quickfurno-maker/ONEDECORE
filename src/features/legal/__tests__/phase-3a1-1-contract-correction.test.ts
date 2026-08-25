@@ -179,12 +179,11 @@ describe("Phase 3A1.1 activation gates", () => {
     assert.ok(!missing.includes("legalCounselApprovalReference"));
   });
 
-  test("lead activation requires approved consent/retention/contact", () => {
+  test("lead activation requires processor registration after owner copy approvals", () => {
     const missing = getLeadIntakeActivationMissingFields();
-    assert.ok(missing.includes("privacyTermsVersionApproved"));
-    assert.ok(missing.includes("serviceEnquiryCopyApproved"));
+    assert.ok(!missing.includes("privacyTermsVersionApproved"));
+    assert.ok(!missing.includes("serviceEnquiryCopyApproved"));
     assert.ok(missing.includes("leadProcessorsRegistered"));
-    // Retention decisions were owner-approved for MVP; identity facts are recorded.
     assert.ok(!missing.includes("leadRetentionDecided"));
     assert.ok(!missing.includes("legalEntityName"));
     // Empty-input helper remains fail-closed for unset flags.

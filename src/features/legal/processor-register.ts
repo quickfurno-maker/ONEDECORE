@@ -35,18 +35,21 @@ export const PROCESSOR_REGISTER: readonly ProcessorRegisterEntry[] = [
       "Consent evidence and lead events",
       "Application and security logs (as configured)",
     ],
-    locationsKnown: "ap-south-1 / Mumbai (owner-confirmed 2026-08-25; matches managed project closeout records)",
+    locationsKnown:
+      "ap-south-1 / Mumbai — managed project OneDecore ref lpurlfmpvriyvpkujvyl (owner-confirmed + managed closeout records)",
     transferAssessment:
-      "Primary region is India (Mumbai). Do not claim India-only processing for all sub-processors without separate review.",
-    contractDpa: "Not claimed signed — verify Supabase DPA and sub-processor terms before leadProcessorsRegistered=true",
+      "Primary project region is India (Mumbai). Provider terms may permit support/sub-processor processing outside the primary region — owner must review current Supabase DPA/sub-processor schedule before activation.",
+    contractDpa:
+      "Provider publishes a Data Processing Addendum at https://supabase.com/legal/dpa (and customer-resources DPA pages). Bespoke countersigned DPA is NOT claimed. Owner must confirm current Terms/DPA acceptance on the OneDecore Supabase account before leadProcessorsRegistered=true.",
     securityReview: "PARTIAL — server-only keys; encryption in transit assumed; storage encryption verification pending",
     deletionCapability: "Verify operational deletion for leads, contacts, consent evidence, Portfolio media and auth records",
     incidentContact: null,
     approval: null,
     notes: [
       "Verified current processor for existing DB/auth/Portfolio and the lead-intake RPC path.",
-      "Region ap-south-1 / Mumbai recorded from owner confirmation; do not invent a bespoke signed DPA.",
-      "Owner must still confirm DPA/sub-processor review before leadProcessorsRegistered=true.",
+      "Region ap-south-1 / Mumbai and project ref lpurlfmpvriyvpkujvyl are documented from owner confirmation and repository managed closeouts.",
+      "Public provider DPA URL recorded for diligence; do not invent a bespoke signed agreement.",
+      "OWNER_PROVIDER_EVIDENCE_REQUIRED: confirm account-level Terms/DPA acceptance date/version and review current sub-processor list.",
     ],
   },
   {
@@ -59,14 +62,17 @@ export const PROCESSOR_REGISTER: readonly ProcessorRegisterEntry[] = [
       "Application process logs on the VPS (as configured)",
     ],
     locationsKnown: null,
-    transferAssessment: "OWNER_DECISION_REQUIRED — hosting region / legal entity pending owner confirmation",
-    contractDpa: "Not claimed signed",
+    transferAssessment: "OWNER_PROVIDER_EVIDENCE_REQUIRED — VPS region/location from Hostinger account/server panel",
+    contractDpa:
+      "OWNER_PROVIDER_EVIDENCE_REQUIRED — Hostinger privacy/data-processing terms or DPA applicable to this account; bespoke signed agreement not claimed",
     securityReview: "PLANNED — verify with deployment configuration",
     deletionCapability: "Log retention per hosting provider policy — pending owner decision",
     incidentContact: null,
     approval: null,
     notes: [
-      "Provider brand recorded from existing repository deployment documentation (Hostinger VPS). Legal entity name, region, and DPA/terms are not invented here.",
+      "Provider brand recorded from existing repository deployment documentation (Hostinger VPS).",
+      "OWNER_PROVIDER_EVIDENCE_REQUIRED: contracting/legal entity on the ONEDECORE Hostinger account/invoice; VPS region; applicable privacy/DPA terms.",
+      "Do not invent Hostinger legal entity, region, or DPA signing status.",
       "Still under-review for leadProcessorsRegistered completeness.",
     ],
   },
@@ -196,9 +202,58 @@ export function getPlannedProcessors(
 export function noSignedDpaClaimed(
   entries: readonly ProcessorRegisterEntry[] = PROCESSOR_REGISTER
 ): boolean {
-  return entries.every(
+  return entries.every((entry) => {
+    const text = entry.contractDpa.toLowerCase();
+    if (text.includes("bespoke countersigned dpa is not claimed")) return true;
+    if (text.includes("bespoke signed agreement not claimed")) return true;
+    if (text.startsWith("not claimed")) return true;
+    if (text.startsWith("not signed")) return true;
+    if (text.includes("owner_provider_evidence_required")) return true;
+    return false;
+  });
+}
+
+/** Current website-lead processors that must be diligence-complete before the flag. */
+export function getWebsiteLeadProcessors(
+  entries: readonly ProcessorRegisterEntry[] = PROCESSOR_REGISTER
+): readonly ProcessorRegisterEntry[] {
+  return entries.filter(
     (entry) =>
-      entry.contractDpa.startsWith("Not claimed") ||
-      entry.contractDpa.startsWith("Not signed")
+      entry.status === "current" ||
+      (entry.status === "under-review" &&
+        (entry.provider === "Hostinger VPS" ||
+          entry.provider.toLowerCase().includes("host")))
   );
+}
+
+export function getMissingWebsiteLeadProcessorEvidence(
+  entries: readonly ProcessorRegisterEntry[] = PROCESSOR_REGISTER
+): readonly string[] {
+  const missing: string[] = [];
+  for (const entry of getWebsiteLeadProcessors(entries)) {
+    if (entry.provider === "Supabase") {
+      if (/OWNER_PROVIDER_EVIDENCE_REQUIRED/i.test(entry.notes.join(" "))) {
+        missing.push(
+          "Supabase: owner confirmation of account Terms/DPA acceptance date/version and current sub-processor list review"
+        );
+      }
+    }
+    if (entry.provider === "Hostinger VPS") {
+      if (entry.locationsKnown == null) {
+        missing.push("Hostinger: VPS region/location from account or server panel");
+      }
+      if (/OWNER_PROVIDER_EVIDENCE_REQUIRED/i.test(entry.contractDpa)) {
+        missing.push(
+          "Hostinger: contracting/legal entity and applicable privacy/DPA terms for this account"
+        );
+      }
+    }
+  }
+  return missing;
+}
+
+export function areWebsiteLeadProcessorsReady(
+  entries: readonly ProcessorRegisterEntry[] = PROCESSOR_REGISTER
+): boolean {
+  return getMissingWebsiteLeadProcessorEvidence(entries).length === 0;
 }

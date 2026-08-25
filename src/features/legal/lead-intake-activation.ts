@@ -13,19 +13,22 @@ import {
 } from "./business-identity.ts";
 
 /**
- * Production activation input consumed by getLeadIntakeServerEnv.
- * All approval/decision flags remain false until owner evidence is recorded.
+ * Owner approval of Privacy/Terms/consent customer copy recorded 2026-08-25
+ * against reviewed head 2609bbca1ba661989fd0e8f468b0724a47adcd5d (PR #92).
+ * This is OWNER approval only — not counsel approval.
+ *
+ * leadProcessorsRegistered remains false until processor due-diligence is complete.
  */
 export const LEAD_INTAKE_ACTIVATION: LeadIntakeActivationInput = {
-  privacyTermsVersionApproved: false,
-  serviceEnquiryCopyApproved: false,
-  serviceCommunicationCopyApproved: false,
+  privacyTermsVersionApproved: true,
+  serviceEnquiryCopyApproved: true,
+  serviceCommunicationCopyApproved: true,
   /** Owner approved MVP retention recommendations 2026-08-25 (see retention-matrix). */
   leadRetentionDecided: true,
   consentRetentionDecided: true,
   auditRetentionDecided: true,
   suppressionRetentionDecided: true,
-  /** Remains false until processor register is complete enough for lead data. */
+  /** Remains false — Hostinger entity/region/terms evidence still required. */
   leadProcessorsRegistered: false,
 };
 

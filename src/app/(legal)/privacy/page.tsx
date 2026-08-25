@@ -4,6 +4,7 @@ import {
   getPrivacyNoticeEffectiveDateLabel,
   getPrivacyPolicySections,
   isLegalDraftMode,
+  isLegalOwnerApprovedMode,
 } from "@/features/legal";
 import { buildLegalPageMetadata } from "@/features/legal/legal-metadata";
 import {
@@ -18,7 +19,9 @@ export const metadata: Metadata = buildLegalPageMetadata({
   title: "Privacy Notice",
   description: isLegalDraftMode()
     ? "Draft privacy notice for owner review. Not yet effective."
-    : "How ONEDECORE handles personal data for website enquiries and related service operations.",
+    : isLegalOwnerApprovedMode()
+      ? "Owner-approved privacy notice. Not yet effective."
+      : "How ONEDECORE handles personal data for website enquiries and related service operations.",
   path: "/privacy",
 });
 
@@ -29,7 +32,9 @@ export default function PrivacyPage() {
       description={
         isLegalDraftMode()
           ? "Draft for owner review. Customer-facing published copy is prepared; this page still shows draft-review chrome until publication is authorized."
-          : "How ONEDECORE handles personal data for website enquiries, CRM follow-up and related service operations."
+          : isLegalOwnerApprovedMode()
+            ? "Owner-approved customer-facing copy. Not yet the effective published policy."
+            : "How ONEDECORE handles personal data for website enquiries, CRM follow-up and related service operations."
       }
       sections={sections}
       documentVersion={getPrivacyNoticeDisplayVersion()}

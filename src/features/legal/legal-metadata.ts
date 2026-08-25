@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import {
   LEGAL_DRAFT_BANNER,
+  LEGAL_OWNER_APPROVED_BANNER,
   LEGAL_PUBLICATION_MODE,
   getLegalRobots,
   isLegalDraftMode,
+  isLegalOwnerApprovedMode,
 } from "@/features/legal";
 
 export function buildLegalPageMetadata(input: {
@@ -12,13 +14,21 @@ export function buildLegalPageMetadata(input: {
   readonly path: string;
 }): Metadata {
   const robots = getLegalRobots();
-  const draftPrefix = isLegalDraftMode() ? "Draft — " : "";
+  const titlePrefix = isLegalDraftMode()
+    ? "Draft — "
+    : isLegalOwnerApprovedMode()
+      ? "Owner-approved — "
+      : "";
+
+  const description = isLegalDraftMode()
+    ? `${LEGAL_DRAFT_BANNER} ${input.description}`
+    : isLegalOwnerApprovedMode()
+      ? `${LEGAL_OWNER_APPROVED_BANNER} ${input.description}`
+      : input.description;
 
   return {
-    title: `${draftPrefix}${input.title} | ONEDECORE`,
-    description: isLegalDraftMode()
-      ? `${LEGAL_DRAFT_BANNER} ${input.description}`
-      : input.description,
+    title: `${titlePrefix}${input.title} | ONEDECORE`,
+    description,
     robots: {
       index: robots.index,
       follow: robots.follow,
@@ -30,17 +40,15 @@ export function buildLegalPageMetadata(input: {
     alternates: {
       canonical: undefined,
     },
-    openGraph: isLegalDraftMode()
-      ? {
-          title: `Draft — ${input.title}`,
-          description: LEGAL_DRAFT_BANNER,
-          type: "website",
-        }
-      : {
-          title: input.title,
-          description: input.description,
-          type: "website",
-        },
+    openGraph: {
+      title: `${titlePrefix}${input.title}`.trim(),
+      description: isLegalDraftMode()
+        ? LEGAL_DRAFT_BANNER
+        : isLegalOwnerApprovedMode()
+          ? LEGAL_OWNER_APPROVED_BANNER
+          : input.description,
+      type: "website",
+    },
     other: {
       "od-legal-publication-mode": LEGAL_PUBLICATION_MODE,
     },

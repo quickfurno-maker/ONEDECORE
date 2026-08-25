@@ -51,18 +51,18 @@ function flattenLegalSections(
 }
 
 describe("Phase 3A1 legal publication gate", () => {
-  test("LEGAL_PUBLICATION_MODE is draft-review", () => {
-    assert.equal(LEGAL_PUBLICATION_MODE, "draft-review");
+  test("LEGAL_PUBLICATION_MODE is owner-approved (pre-publication)", () => {
+    assert.equal(LEGAL_PUBLICATION_MODE, "owner-approved");
   });
 
-  test("canPublishLegalPolicies() is false in draft-review", () => {
+  test("canPublishLegalPolicies() is false until published", () => {
     assert.equal(canPublishLegalPolicies(), false);
   });
 
-  test("getMissingLegalPublicationFields() core identity is complete; draft mode still blocks publish", () => {
+  test("getMissingLegalPublicationFields() core identity is complete; owner-approved still blocks publish", () => {
     assert.equal(getMissingLegalPublicationFields().length, 0);
     assert.equal(canPublishLegalPolicies(), false);
-    assert.equal(LEGAL_PUBLICATION_MODE, "draft-review");
+    assert.equal(LEGAL_PUBLICATION_MODE, "owner-approved");
   });
 
   test("LEGAL_ROUTE_PATHS lists five draft legal routes", () => {
@@ -89,12 +89,12 @@ describe("Phase 3A1 consent architecture", () => {
   });
 
   test("consent versions cover six purpose codes including required set", () => {
-    assert.equal(CONSENT_VERSIONS.length, 6);
-    const codes = CONSENT_VERSIONS.map((version) => version.purposeCode);
+    const codes = new Set(CONSENT_VERSIONS.map((version) => version.purposeCode));
+    assert.ok(codes.size >= 6);
     for (const purpose of REQUIRED_CONSENT_PURPOSES) {
-      assert.ok(codes.includes(purpose), `missing purpose ${purpose}`);
+      assert.ok(codes.has(purpose), `missing purpose ${purpose}`);
     }
-    assert.ok(codes.includes("SERVICE_COMMUNICATION"));
+    assert.ok(codes.has("SERVICE_COMMUNICATION"));
   });
 });
 

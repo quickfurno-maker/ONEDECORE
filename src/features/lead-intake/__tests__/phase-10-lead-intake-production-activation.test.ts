@@ -66,15 +66,14 @@ function completeActivation(
 
 describe("Phase 10 lead-intake activation source", () => {
   test("canonical source defaults fail-closed", () => {
-    assert.equal(LEAD_INTAKE_ACTIVATION.privacyTermsVersionApproved, false);
-    assert.equal(LEAD_INTAKE_ACTIVATION.serviceEnquiryCopyApproved, false);
+    assert.equal(LEAD_INTAKE_ACTIVATION.privacyTermsVersionApproved, true);
+    assert.equal(LEAD_INTAKE_ACTIVATION.serviceEnquiryCopyApproved, true);
+    assert.equal(LEAD_INTAKE_ACTIVATION.serviceCommunicationCopyApproved, true);
     assert.equal(LEAD_INTAKE_ACTIVATION.leadProcessorsRegistered, false);
     assert.equal(isLeadIntakeActivationComplete(), false);
     const missing = getLeadIntakeActivationMissingFields();
-    assert.ok(missing.includes("privacyTermsVersionApproved"));
-    assert.ok(missing.includes("serviceEnquiryCopyApproved"));
     assert.ok(missing.includes("leadProcessorsRegistered"));
-    // Owner-supplied identity facts are recorded; approvals still block activation.
+    assert.ok(!missing.includes("privacyTermsVersionApproved"));
     assert.ok(!missing.includes("legalEntityName"));
   });
 
@@ -99,22 +98,22 @@ describe("Phase 10 lead-intake activation source", () => {
     );
   });
 
-  test("explicit complete activation source can satisfy enabled gate", () => {
+  test("explicit complete activation flags alone cannot enable while publication/consent/processors incomplete", () => {
     const activation = completeActivation();
     assert.deepEqual(getMissingLeadIntakeActivationFields(activation), []);
     assert.equal(isLeadIntakeActivationComplete(activation), true);
-    const env = getLeadIntakeServerEnv(
-      {
-        ONEDECORE_LEAD_INTAKE_MODE: "enabled",
-        ONEDECORE_TRUST_PROXY: "true",
-        NEXT_PUBLIC_SUPABASE_URL: "https://lpurlfmpvriyvpkujvyl.supabase.co",
-        SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key-not-publishable",
-        ONEDECORE_LEAD_HASH_SECRET: secret,
-      },
-      activation
+    assert.throws(() =>
+      getLeadIntakeServerEnv(
+        {
+          ONEDECORE_LEAD_INTAKE_MODE: "enabled",
+          ONEDECORE_TRUST_PROXY: "true",
+          NEXT_PUBLIC_SUPABASE_URL: "https://lpurlfmpvriyvpkujvyl.supabase.co",
+          SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key-not-publishable",
+          ONEDECORE_LEAD_HASH_SECRET: secret,
+        },
+        activation
+      )
     );
-    assert.equal(env.mode, "enabled");
-    assert.equal(env.trustProxy, true);
   });
 
   test("server-env consumes LEAD_INTAKE_ACTIVATION module", () => {
@@ -123,13 +122,14 @@ describe("Phase 10 lead-intake activation source", () => {
     assert.match(src, /getMissingLeadIntakeActivationFields\(activation\)/);
   });
 
-  test("legal publication remains draft until owner approval", () => {
-    assert.equal(LEGAL_PUBLICATION_MODE, "draft-review");
+  test("legal publication remains owner-approved until activation publishes", () => {
+    assert.equal(LEGAL_PUBLICATION_MODE, "owner-approved");
     const privacy = readFileSync(
       join(root, "src/features/legal/privacy-policy-content.ts"),
       "utf8"
     );
-    assert.match(privacy, /not yet effective|Draft/i);
+    assert.match(privacy, /privacy-notice-v1\.0/);
+    assert.match(privacy, /PRIVACY_NOTICE_EFFECTIVE_DATE:\s*string\s*\|\s*null\s*=\s*null/);
   });
 });
 

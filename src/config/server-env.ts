@@ -1,7 +1,19 @@
 import "server-only";
 
 import { getMissingLeadIntakeActivationFields } from "../features/legal/business-identity.ts";
+import { areLeadPathConsentVersionsEffective } from "../features/legal/consent-registry.ts";
 import { LEAD_INTAKE_ACTIVATION } from "../features/legal/lead-intake-activation.ts";
+import {
+  LEGAL_PUBLICATION_MODE,
+  canRenderPublishedLegalDocument,
+} from "../features/legal/legal-publication.ts";
+import {
+  PRIVACY_NOTICE_EFFECTIVE_DATE,
+} from "../features/legal/privacy-policy-content.ts";
+import {
+  TERMS_OF_USE_EFFECTIVE_DATE,
+} from "../features/legal/terms-content.ts";
+import { areWebsiteLeadProcessorsReady } from "../features/legal/processor-register.ts";
 import type { LeadIntakeActivationInput } from "../features/legal/business-identity.ts";
 
 export type LeadIntakeMode = "disabled" | "local-test" | "enabled";
@@ -120,6 +132,31 @@ export function getLeadIntakeServerEnv(
     if (missing.length > 0) {
       throw safeUrlError(
         "enabled mode blocked until lead activation gate is complete."
+      );
+    }
+    if (!areWebsiteLeadProcessorsReady()) {
+      throw safeUrlError(
+        "enabled mode blocked until website lead processor diligence is complete."
+      );
+    }
+    if (!areLeadPathConsentVersionsEffective()) {
+      throw safeUrlError(
+        "enabled mode blocked until lead-path consent versions are effective."
+      );
+    }
+    if (
+      LEGAL_PUBLICATION_MODE !== "published" ||
+      !canRenderPublishedLegalDocument({
+        mode: LEGAL_PUBLICATION_MODE,
+        effectiveDate: PRIVACY_NOTICE_EFFECTIVE_DATE,
+      }) ||
+      !canRenderPublishedLegalDocument({
+        mode: LEGAL_PUBLICATION_MODE,
+        effectiveDate: TERMS_OF_USE_EFFECTIVE_DATE,
+      })
+    ) {
+      throw safeUrlError(
+        "enabled mode blocked until Privacy/Terms are published with real effective dates."
       );
     }
     if (!trustProxy) {

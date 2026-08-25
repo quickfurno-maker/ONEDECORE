@@ -1,5 +1,5 @@
 /**
- * Legal page UI — draft-review chrome vs clean published surfaces.
+ * Legal page UI — draft-review / owner-approved chrome vs clean published surfaces.
  */
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -7,10 +7,13 @@ import { PublicDarkShell } from "@/features/public-site/theme/PublicDarkShell";
 import {
   LEGAL_DRAFT_BANNER,
   LEGAL_DPDP_READINESS_STATEMENT,
+  LEGAL_OWNER_APPROVED_BANNER,
   LEGAL_PUBLICATION_MODE,
   LEGAL_ROUTE_PATHS,
   getMissingLegalPublicationFields,
   isLegalDraftMode,
+  isLegalOwnerApprovedMode,
+  isLegalPublishedMode,
 } from "@/features/legal";
 import "./legal-pages.css";
 
@@ -37,6 +40,18 @@ export function LegalDraftBanner() {
   );
 }
 
+export function LegalOwnerApprovedBanner() {
+  return (
+    <aside className="od-legal-banner" role="status">
+      <p className="od-legal-banner__title">{LEGAL_OWNER_APPROVED_BANNER}</p>
+      <p className="od-legal-banner__lede">
+        Counsel status remains not reviewed. This notice is not yet the effective
+        published policy.
+      </p>
+    </aside>
+  );
+}
+
 export function LegalOwnerReviewPanel() {
   const missing = getMissingLegalPublicationFields();
 
@@ -46,13 +61,12 @@ export function LegalOwnerReviewPanel() {
       <p>
         These owner and counsel inputs remain unresolved. Draft routes are
         reviewable but are not effective policy. This panel is draft-review only
-        and is not shown in published mode.
+        and is not shown in owner-approved or published mode.
       </p>
       {missing.length === 0 ? (
         <p>
           Core identity publication fields are recorded. Remaining activation
-          gates (copy approvals, processor register, authorize-to-collect) are
-          tracked in the lead-intake activation runbook.
+          gates are tracked in the lead-intake activation runbook.
         </p>
       ) : (
         <ul>
@@ -103,6 +117,21 @@ function LegalDraftFooterNote() {
   );
 }
 
+function LegalOwnerApprovedFooterNote() {
+  return (
+    <>
+      Owner-approved — not yet effective.{" "}
+      <Link href="/privacy">Privacy</Link>
+      {" · "}
+      <Link href="/terms">Terms</Link>
+      {" · "}
+      <Link href="/data-rights">Data rights</Link>
+      {" · "}
+      <Link href="/communication-consent">Consent</Link>
+    </>
+  );
+}
+
 function LegalPublishedFooterNote() {
   return (
     <>
@@ -126,21 +155,31 @@ export function LegalPageShell({
   effectiveDateLabel,
 }: LegalPageShellProps) {
   const draft = isLegalDraftMode();
+  const ownerApproved = isLegalOwnerApprovedMode();
+  const published = isLegalPublishedMode();
+
+  const footerNote = published
+    ? <LegalPublishedFooterNote />
+    : ownerApproved
+      ? <LegalOwnerApprovedFooterNote />
+      : <LegalDraftFooterNote />;
+
+  const kicker = published
+    ? "ONEDECORE"
+    : ownerApproved
+      ? "ONEDECORE · Owner approved (not effective)"
+      : "ONEDECORE · Draft review";
 
   return (
-    <PublicDarkShell
-      navCurrent="none"
-      footerNote={draft ? <LegalDraftFooterNote /> : <LegalPublishedFooterNote />}
-    >
+    <PublicDarkShell navCurrent="none" footerNote={footerNote}>
       <article
         className="od-legal-page"
         data-legal-publication-mode={LEGAL_PUBLICATION_MODE}
       >
         {draft ? <LegalDraftBanner /> : null}
+        {ownerApproved ? <LegalOwnerApprovedBanner /> : null}
         <header className="od-legal-header">
-          <p className="od-legal-kicker">
-            {draft ? "ONEDECORE · Draft review" : "ONEDECORE"}
-          </p>
+          <p className="od-legal-kicker">{kicker}</p>
           <h1>{title}</h1>
           {documentVersion ? (
             <p className="od-legal-meta">Version: {documentVersion}</p>
@@ -155,7 +194,9 @@ export function LegalPageShell({
         {draft ? <LegalOwnerReviewPanel /> : null}
         <nav
           className="od-legal-sibling-nav"
-          aria-label={draft ? "Other draft legal pages" : "Other legal pages"}
+          aria-label={
+            published ? "Other legal pages" : "Other legal review pages"
+          }
         >
           <ul>
             {LEGAL_ROUTE_PATHS.map((path) => (

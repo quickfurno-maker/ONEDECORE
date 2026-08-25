@@ -4,7 +4,9 @@
 
 import { BUSINESS_IDENTITY } from "./business-identity.ts";
 import {
+  LEGAL_EFFECTIVE_DATE_PLACEHOLDER,
   LEGAL_PUBLICATION_MODE,
+  isRealLegalEffectiveDate,
   type LegalPublicationMode,
 } from "./legal-publication.ts";
 import {
@@ -13,35 +15,50 @@ import {
   type LegalContentSection,
 } from "./privacy-policy-content.ts";
 
-/** Proposed production version after owner APPROVE + activation. */
-export const TERMS_OF_USE_PROPOSED_PRODUCTION_VERSION = "terms-of-use-v1.0" as const;
+/** Owner-approved production version — not effective until activation sets the date. */
+export const TERMS_OF_USE_VERSION = "terms-of-use-v1.0" as const;
 
-/** Current in-repo draft version identifier (not effective). */
-export const TERMS_OF_USE_VERSION = "terms-of-use-v0.1-draft" as const;
+/** @deprecated Alias kept for call sites that referenced the proposed id. */
+export const TERMS_OF_USE_PROPOSED_PRODUCTION_VERSION = TERMS_OF_USE_VERSION;
 
 /**
- * Set only when production publication is authorized.
+ * Set only when production publication is authorized (YYYY-MM-DD).
  * Do not hard-code a calendar date before activation.
  */
 export const TERMS_OF_USE_EFFECTIVE_DATE: string | null = null;
+
+export const TERMS_OF_USE_OWNER_APPROVAL = {
+  approvedBy: "ONEDECORE owner",
+  approvedAt: "2026-08-25",
+  reference:
+    "PR #92 owner APPROVE of published-mode package at 2609bbca1ba661989fd0e8f468b0724a47adcd5d",
+  counselApproval: null,
+} as const;
 
 export type { LegalContentSection };
 
 export function getTermsOfUseDisplayVersion(
   mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
 ): string {
-  return mode === "published"
-    ? TERMS_OF_USE_PROPOSED_PRODUCTION_VERSION
-    : TERMS_OF_USE_VERSION;
+  return mode === "draft-review" ? "terms-of-use-v0.1-draft" : TERMS_OF_USE_VERSION;
 }
 
 export function getTermsOfUseEffectiveDateLabel(
-  effectiveDate: string | null = TERMS_OF_USE_EFFECTIVE_DATE
+  effectiveDate: string | null = TERMS_OF_USE_EFFECTIVE_DATE,
+  mode: LegalPublicationMode = LEGAL_PUBLICATION_MODE
 ): string {
-  return (
-    effectiveDate ??
-    "To be set to the calendar date of authorized production activation"
-  );
+  if (mode === "published") {
+    if (!isRealLegalEffectiveDate(effectiveDate)) {
+      throw new Error(
+        "[ONEDECORE Legal] Published Terms of Use require a real YYYY-MM-DD effective date."
+      );
+    }
+    return effectiveDate;
+  }
+  if (mode === "owner-approved") {
+    return "Not yet effective — will be set on authorized production activation";
+  }
+  return LEGAL_EFFECTIVE_DATE_PLACEHOLDER;
 }
 
 const registeredOffice =

@@ -120,7 +120,13 @@ describe("Phase 4B2 current consent version contract", () => {
       const version = getCurrentConsentVersionByPurpose(purpose);
       assert.equal(version.purposeCode, purpose);
       assert.equal(version.version, CURRENT_CONSENT_VERSION_IDS[purpose]);
-      assert.equal(version.status, "draft-review");
+      assert.ok(
+        version.status === "draft-review" || version.status === "approved",
+        `${purpose} status must be draft-review or approved`
+      );
+      if (version.status === "approved") {
+        assert.equal(version.effectiveFrom, null);
+      }
     }
   });
 
