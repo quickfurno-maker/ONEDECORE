@@ -993,8 +993,14 @@ describe("Phase 4A homepage and server-only guards", () => {
     assert.match(interiors, /getLeadFormMode/);
     assert.match(interiors, /leadFormMode/);
     const discovery = readFileSync(join(root, "src/app/page.tsx"), "utf8");
-    assert.doesNotMatch(discovery, /getLeadFormMode/);
-    assert.doesNotMatch(discovery, /HomeLeadCapture/);
+    assert.match(discovery, /getLeadFormMode/);
+    assert.match(discovery, /leadFormMode/);
+    const discoveryPage = readFileSync(
+      join(root, "src/features/public-site/discovery/DiscoveryHomePage.tsx"),
+      "utf8"
+    );
+    assert.match(discoveryPage, /HomeConsultationCapture/);
+    assert.doesNotMatch(discoveryPage, /HomePlannerSheet/);
 
     const capture = readFileSync(
       join(root, "src/features/lead-intake/public/HomeLeadCapture.tsx"),

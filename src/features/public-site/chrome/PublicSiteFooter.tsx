@@ -2,39 +2,45 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { OneDecoreWordmark } from "@/features/public-site/home-r4/OneDecoreWordmark";
 import { SITE_CONFIG } from "@/config/site";
-import { PUBLIC_CONSULTATION, PUBLIC_FOOTER_LEGAL, PUBLIC_NAV_DESTINATIONS } from "./public-nav";
+import {
+  getPublicNavDestinations,
+  PUBLIC_CONSULTATION,
+  PUBLIC_FOOTER_LEGAL,
+} from "./public-nav";
 
 export function PublicSiteFooter({
   note,
+  shopEnabled = false,
 }: {
   readonly note?: ReactNode;
+  readonly shopEnabled?: boolean;
 }) {
+  const destinations = getPublicNavDestinations(shopEnabled);
+
   return (
     <footer className="od-site-footer">
       <div className="od-site-footer__top">
         <div className="od-site-footer__brand">
           <OneDecoreWordmark size="footer" />
-          <p>
-            Premium interiors, modular kitchens and furniture for homes across Pune.
-          </p>
+          <p>Premium interiors for homes across Pune — design to installation.</p>
           <Link href={PUBLIC_CONSULTATION.href} className="od-site-footer__cta">
             {PUBLIC_CONSULTATION.label}
           </Link>
         </div>
         <nav className="od-site-footer__nav" aria-label="Footer">
-          <div>
+          <div className="od-site-footer__col od-site-footer__col--explore">
             <p className="od-site-footer__heading">Explore</p>
-            <ul>
-              {PUBLIC_NAV_DESTINATIONS.map((item) => (
+            <ul className="od-site-footer__links od-site-footer__links--inline">
+              {destinations.map((item) => (
                 <li key={item.id}>
                   <Link href={item.href}>{item.label}</Link>
                 </li>
               ))}
             </ul>
           </div>
-          <div>
+          <div className="od-site-footer__col od-site-footer__col--legal">
             <p className="od-site-footer__heading">Legal</p>
-            <ul>
+            <ul className="od-site-footer__links od-site-footer__links--legal">
               {PUBLIC_FOOTER_LEGAL.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href}>{item.label}</Link>

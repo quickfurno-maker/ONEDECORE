@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
 import { publicSiteFontVariables } from "@/features/public-site/fonts";
 import { PublicSiteFooter } from "@/features/public-site/chrome/PublicSiteFooter";
 import { PublicSiteHeader } from "@/features/public-site/chrome/PublicSiteHeader";
@@ -24,6 +25,8 @@ export function PublicDarkShell({
   navCurrent = "portfolio",
   footerNote,
 }: PublicDarkShellProps) {
+  const shopEnabled = isShopPublicEnabled();
+
   return (
     <div
       className={`${publicSiteFontVariables} od-portfolio-shell`}
@@ -39,6 +42,8 @@ export function PublicDarkShell({
         <PublicSiteHeader
           current={navCurrent}
           showConsultation={navCurrent !== "shop"}
+          shopEnabled={shopEnabled}
+          showShopSearch={shopEnabled && navCurrent === "shop"}
         />
       ) : null}
 
@@ -46,7 +51,7 @@ export function PublicDarkShell({
         {children}
       </div>
 
-      {showChrome ? <PublicSiteFooter note={footerNote} /> : null}
+      {showChrome ? <PublicSiteFooter note={footerNote} shopEnabled={shopEnabled} /> : null}
     </div>
   );
 }

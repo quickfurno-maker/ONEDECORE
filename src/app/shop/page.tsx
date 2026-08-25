@@ -161,11 +161,11 @@ export default async function ShopPage() {
       <section className="od-shop__section" aria-labelledby="shop-interiors">
         <h2 id="shop-interiors">Planning a complete home?</h2>
         <p>
-          Interiors and modular kitchens live on a dedicated conversion path. Furniture browsing
-          does not create a CRM lead.
+          Interiors and modular kitchens are planned on the homepage consultation path. Furniture
+          browsing does not create a CRM lead.
         </p>
         <p>
-          <Link href="/interiors">Explore interiors</Link>
+          <Link href="/">Explore interiors</Link>
           {" · "}
           See finished homes in our <Link href="/portfolio">portfolio</Link>.
         </p>
