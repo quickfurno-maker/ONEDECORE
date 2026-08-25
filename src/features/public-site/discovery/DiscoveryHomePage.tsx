@@ -30,11 +30,14 @@ export type DiscoveryCommerceState =
     }
   | { readonly ok: false };
 
+/** Homepage hero uses completeHomeInteriors; tile uses a different approved interior. */
+const HOMEPAGE_HERO = PM_ASSETS.completeHomeInteriors;
+
 const INTERIOR_VISUALS = [
   {
     title: "Full Home Interiors",
     href: DISCOVERY_INTERIOR_PREVIEWS[0].href,
-    asset: PM_ASSETS.completeHomeInteriors,
+    asset: PM_ASSETS.hero,
     size: "large" as const,
   },
   {
@@ -96,13 +99,13 @@ export function DiscoveryHomePage({
             aria-hidden="true"
             style={
               {
-                "--od-hero-focal": PM_ASSETS.hero.focalPoint,
-                "--od-hero-focal-mobile": PM_ASSETS.hero.mobileFocalPoint,
+                "--od-hero-focal": HOMEPAGE_HERO.focalPoint,
+                "--od-hero-focal-mobile": HOMEPAGE_HERO.mobileFocalPoint,
               } as CSSProperties
             }
           >
             <Image
-              src={PM_ASSETS.hero.path}
+              src={HOMEPAGE_HERO.path}
               alt=""
               fill
               priority

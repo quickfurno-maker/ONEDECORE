@@ -54,7 +54,7 @@ export const PM_TRACKED_SECTIONS = [
 
 /** R5.3 conversion CTA system. */
 export const PM_CTA = {
-  open: "Start Free Design Consultation",
+  open: "Get Free Consultation",
   openShort: "Free Consultation",
   continuePlan: "Continue My Plan",
   estimate: "Get Price Estimate",

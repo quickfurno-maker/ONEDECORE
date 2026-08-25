@@ -121,12 +121,28 @@ describe("Phase 9D-C2 root discovery", () => {
   test("homepage hero is a single architectural image without a model collage", () => {
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     const content = read("src/features/public-site/home-r4/content.ts");
-    assert.match(page, /PM_ASSETS\.hero\.path/);
-    assert.match(content, /hero-living-warmth\.webp/);
+    assert.match(page, /HOMEPAGE_HERO = PM_ASSETS\.completeHomeInteriors/);
+    assert.match(page, /HOMEPAGE_HERO\.path/);
+    assert.match(content, /service-complete-home-interiors\.webp/);
+    assert.match(page, /asset: PM_ASSETS\.hero/);
+    assert.doesNotMatch(page, /PM_ASSETS\.hero\.path/);
     assert.doesNotMatch(page, /heroConsultant/);
     assert.doesNotMatch(page, /hero-consultant-indian-woman/);
     assert.doesNotMatch(page, /od-disc-hero__portrait/);
     assert.doesNotMatch(page, /od-disc-hero__inset/);
+  });
+
+  test("consultation CTA uses canonical Get Free Consultation labels", () => {
+    const nav = read("src/features/public-site/chrome/public-nav.ts");
+    const content = read("src/features/public-site/home-r4/content.ts");
+    const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
+    assert.match(nav, /label: "Get Free Consultation"/);
+    assert.match(nav, /shortLabel: "Free Consultation"/);
+    assert.doesNotMatch(nav, /shortLabel: "Consult"/);
+    assert.match(content, /open: "Get Free Consultation"/);
+    assert.doesNotMatch(content, /Start Free Design Consultation/);
+    assert.match(page, /PUBLIC_CONSULTATION\.label/);
+    assert.doesNotMatch(page, /Book Free Consultation/);
   });
 
   test("root page consumes public category and featured queries", () => {
