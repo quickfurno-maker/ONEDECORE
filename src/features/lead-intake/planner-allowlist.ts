@@ -20,11 +20,10 @@ export const LEAD_PROPERTY_CODES = [
 ] as const;
 
 export const LEAD_TIMELINE_CODES = [
-  "ready-now",
-  "within-3-months",
-  "3-6-months",
-  "more-than-6-months",
-  "exploring",
+  "immediate",
+  "within-1-month",
+  "within-2-months",
+  "after-2-months",
 ] as const;
 
 export const LEAD_ROOM_CODES = [

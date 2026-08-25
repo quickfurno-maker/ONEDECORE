@@ -7,13 +7,15 @@ import type { PublicCommerceCategory } from "@/features/commerce/public/public-t
 import type { PublicCommerceProductCard } from "@/features/commerce/public/public-types";
 import { PublicSiteFooter } from "@/features/public-site/chrome/PublicSiteFooter";
 import { PublicSiteHeader } from "@/features/public-site/chrome/PublicSiteHeader";
+import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
 import { PM_ASSETS } from "@/features/public-site/home-r4/content";
 import { HOME_CLAIM_COPY, HOME_CLAIMS, HOME_PUNE_AREAS } from "@/features/public-site/home-r4/claims";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 import { RevealRuntime } from "@/features/public-site/motion/RevealRuntime";
-import { DiscoveryPuneCoverage } from "./DiscoveryPuneCoverage";
 import {
+  DISCOVERY_FURNITURE_PROCESS_STEPS,
   DISCOVERY_INTERIOR_PREVIEWS,
+  DISCOVERY_PROCESS_STEPS,
   DISCOVERY_SECTION_ORDER,
   DISCOVERY_TRUST_LABELS,
 } from "./discovery-copy";
@@ -28,11 +30,14 @@ export type DiscoveryCommerceState =
     }
   | { readonly ok: false };
 
+/** Homepage hero uses completeHomeInteriors; tile uses a different approved interior. */
+const HOMEPAGE_HERO = PM_ASSETS.completeHomeInteriors;
+
 const INTERIOR_VISUALS = [
   {
     title: "Full Home Interiors",
     href: DISCOVERY_INTERIOR_PREVIEWS[0].href,
-    asset: PM_ASSETS.completeHomeInteriors,
+    asset: PM_ASSETS.hero,
     size: "large" as const,
   },
   {
@@ -57,7 +62,6 @@ const HERO_LOCALITY_CHIP_KEYS = [
   "Hinjewadi",
   "Koregaon Park",
 ] as const satisfies ReadonlyArray<(typeof HOME_PUNE_AREAS)[number]>;
-const HERO_LOCALITY_CHIPS = HERO_LOCALITY_CHIP_KEYS;
 
 export function DiscoveryHomePage({
   commerce,
@@ -72,8 +76,9 @@ export function DiscoveryHomePage({
         .slice(0, 6)
     : [];
   const featured = commerce.ok ? commerce.featured.slice(0, 8) : [];
-  const showPincode = commerce.ok && (roots.length > 0 || featured.length > 0);
   const shopLive = commerce.ok;
+  const showPincode = shopLive && (roots.length > 0 || featured.length > 0);
+  const showLiveFurniture = shopLive && (roots.length > 0 || featured.length > 0);
 
   return (
     <div className="od-discovery" data-public-dark-theme="" data-od-discovery="">
@@ -81,24 +86,34 @@ export function DiscoveryHomePage({
       <a className="od-skip" href="#od-discovery-main">
         Skip to content
       </a>
-      <PublicSiteHeader current="home" />
+      <PublicSiteHeader current="home" showShopSearch={shopLive} />
       <RevealRuntime />
       <main id="od-discovery-main">
-        {/* Hero */}
-        <section className="od-disc-hero" aria-labelledby="od-disc-hero-title">
+        <section
+          className="od-disc-hero"
+          data-od-disc-section="hero"
+          aria-labelledby="od-disc-hero-title"
+        >
           <div
-            className="od-disc-hero__glow"
+            className="od-disc-hero__media"
             aria-hidden="true"
             style={
               {
-                "--od-hero-focal": PM_ASSETS.hero.focalPoint,
-                "--od-hero-focal-mobile": PM_ASSETS.hero.mobileFocalPoint,
+                "--od-hero-focal": HOMEPAGE_HERO.focalPoint,
+                "--od-hero-focal-mobile": HOMEPAGE_HERO.mobileFocalPoint,
               } as CSSProperties
             }
           >
-            <Image src={PM_ASSETS.hero.path} alt="" fill priority sizes="100vw" className="od-disc-hero__bg" />
+            <Image
+              src={HOMEPAGE_HERO.path}
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="od-disc-hero__bg"
+            />
           </div>
-          <div className="od-disc-shell od-disc-hero__grid">
+          <div className="od-disc-shell">
             <div className="od-disc-hero__copy">
               <Reveal order={0}>
                 <p className="od-disc-kicker">Premium interiors for Pune homes</p>
@@ -111,8 +126,8 @@ export function DiscoveryHomePage({
                 </p>
               </Reveal>
               <Reveal order={2} className="od-disc-hero__ctas">
-                <Link href="/interiors#consultation" className="od-disc-btn od-disc-btn--primary">
-                  Book Free Consultation
+                <Link href={PUBLIC_CONSULTATION.href} className="od-disc-btn od-disc-btn--primary">
+                  {PUBLIC_CONSULTATION.label}
                 </Link>
                 {shopLive ? (
                   <Link href="/shop" className="od-disc-btn od-disc-btn--ghost">
@@ -124,32 +139,6 @@ export function DiscoveryHomePage({
                   </Link>
                 )}
               </Reveal>
-            </div>
-            <Reveal order={2} className="od-disc-hero__visual" as="div">
-              <div className="od-disc-hero__portrait">
-                <Image
-                  src={PM_ASSETS.heroConsultant.path}
-                  alt={PM_ASSETS.heroConsultant.alt}
-                  fill
-                  priority
-                  sizes="(max-width: 900px) 92vw, 34vw"
-                  style={{ objectPosition: PM_ASSETS.heroConsultant.focalPoint }}
-                />
-              </div>
-              <div className="od-disc-hero__inset" aria-hidden="true">
-                <Image
-                  src={PM_ASSETS.completeHomeInteriors.path}
-                  alt=""
-                  fill
-                  sizes="(max-width: 900px) 40vw, 18vw"
-                  style={{ objectPosition: PM_ASSETS.completeHomeInteriors.focalPoint }}
-                />
-              </div>
-              <p className="od-disc-hero__cue">
-                Consultation · Design · Manufacture · Install
-              </p>
-            </Reveal>
-            <div className="od-disc-hero__meta">
               <Reveal order={3}>
                 <ul className="od-disc-proof" aria-label="ONEDECORE at a glance">
                   <li>
@@ -167,147 +156,37 @@ export function DiscoveryHomePage({
               </Reveal>
               <Reveal order={4}>
                 <div className="od-disc-hero__chips" aria-label="Sample Pune localities">
-                  {HERO_LOCALITY_CHIPS.map((area) => (
+                  {HERO_LOCALITY_CHIP_KEYS.map((area) => (
                     <span key={area}>{area}</span>
                   ))}
                 </div>
               </Reveal>
             </div>
           </div>
-          <p className="od-disc-hero__scroll" aria-hidden="true">
-            Explore
-          </p>
         </section>
 
-        {/* Pune service */}
         <section
           className="od-disc-band od-disc-band--surface od-disc-band--divided"
-          aria-labelledby="od-disc-pune-title"
+          data-od-disc-section="interiors"
+          aria-labelledby="od-disc-int-title"
         >
           <div className="od-disc-shell">
             <Reveal as="header" className="od-disc-band__head">
-              <h2 id="od-disc-pune-title">Designed for Pune homes.</h2>
-              <p className="od-disc-lede">
-                From Kharadi and Viman Nagar to Baner, Wakad and beyond, ONEDECORE plans complete
-                interiors across Pune.
-              </p>
-            </Reveal>
-            <div className="od-disc-marquee" aria-label="Pune service areas">
-              <div className="od-disc-marquee__track">
-                <ul>
-                  {HOME_PUNE_AREAS.map((area) => (
-                    <li key={area}>{area}</li>
-                  ))}
-                </ul>
-                <ul aria-hidden="true">
-                  {HOME_PUNE_AREAS.map((area) => (
-                    <li key={`dup-${area}`}>{area}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            <Reveal order={1}>
-              <DiscoveryPuneCoverage />
-            </Reveal>
-          </div>
-        </section>
-
-        {/* Journeys */}
-        <section className="od-disc-band od-disc-band--deep" aria-labelledby="od-disc-journeys-title">
-          <div className="od-disc-shell">
-            <Reveal as="header" className="od-disc-band__head">
-              <h2 id="od-disc-journeys-title">Start with the way you need us.</h2>
-            </Reveal>
-            <div className="od-disc-paths">
-              <Reveal order={0} as="div" className="od-disc-path-wrap od-disc-path-wrap--dominant">
-                <Link href="/interiors" className="od-disc-path od-disc-path--wide">
-                  <span className="od-disc-path__media" aria-hidden="true">
-                    <Image
-                      src={PM_ASSETS.completeHomeInteriors.path}
-                      alt=""
-                      fill
-                      sizes="(max-width: 900px) 100vw, 62vw"
-                      style={{ objectPosition: PM_ASSETS.completeHomeInteriors.focalPoint }}
-                    />
-                  </span>
-                  <span className="od-disc-path__body">
-                    <span className="od-disc-path__title">Plan Your Home</span>
-                    <span className="od-disc-path__copy">
-                      Full-home interiors, modular kitchens, wardrobes and renovation — one
-                      continuous plan for Pune living.
-                    </span>
-                    <span className="od-disc-path__cta">Explore interiors</span>
-                  </span>
-                </Link>
-              </Reveal>
-              <Reveal order={1} as="div" className="od-disc-path-wrap">
-                {shopLive ? (
-                  <Link href="/shop" className="od-disc-path">
-                    <span className="od-disc-path__media" aria-hidden="true">
-                      <Image
-                        src={PM_ASSETS.customWardrobes.path}
-                        alt=""
-                        fill
-                        sizes="(max-width: 900px) 100vw, 38vw"
-                        style={{ objectPosition: PM_ASSETS.customWardrobes.focalPoint }}
-                      />
-                    </span>
-                    <span className="od-disc-path__body">
-                      <span className="od-disc-path__title">Furnish Your Home</span>
-                      <span className="od-disc-path__copy">
-                        Ready-made furniture shaped to sit with the same design language.
-                      </span>
-                      <span className="od-disc-path__cta">Shop furniture</span>
-                    </span>
-                  </Link>
-                ) : (
-                  <a href="#furniture-teaser" className="od-disc-path od-disc-path--teaser">
-                    <span className="od-disc-path__media" aria-hidden="true">
-                      <Image
-                        src={PM_ASSETS.customWardrobes.path}
-                        alt=""
-                        fill
-                        sizes="(max-width: 900px) 100vw, 38vw"
-                        style={{ objectPosition: PM_ASSETS.customWardrobes.focalPoint }}
-                      />
-                    </span>
-                    <span className="od-disc-path__body">
-                      <span className="od-disc-path__title">Furniture Collection</span>
-                      <span className="od-disc-path__copy">
-                        The furniture line is being prepared to match ONEDECORE interiors.
-                      </span>
-                      <span className="od-disc-path__cta">See what’s coming</span>
-                    </span>
-                  </a>
-                )}
-              </Reveal>
-            </div>
-          </div>
-        </section>
-
-        {/* Trust */}
-        <section className="od-disc-trust od-disc-band--divided" aria-label="ONEDECORE capabilities">
-          <div className="od-disc-shell">
-            <ul>
-              {DISCOVERY_TRUST_LABELS.map((label) => (
-                <li key={label}>{label}</li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        {/* Interiors showcase */}
-        <section className="od-disc-band od-disc-band--surface" aria-labelledby="od-disc-int-title">
-          <div className="od-disc-shell">
-            <Reveal as="header" className="od-disc-band__head">
+              <p className="od-disc-kicker">Interiors</p>
               <h2 id="od-disc-int-title">Complete interiors for the way Pune lives.</h2>
               <p className="od-disc-lede">
                 Interiors, kitchens and storage planned together — not as separate purchases.
+                From Kharadi and Viman Nagar to Baner, Wakad and beyond.
               </p>
             </Reveal>
             <div className="od-disc-gallery">
               {INTERIOR_VISUALS.map((item, index) => (
-                <Reveal key={item.title} order={index} as="div" className={`od-disc-tile-wrap od-disc-tile-wrap--${item.size}`}>
+                <Reveal
+                  key={item.title}
+                  order={index}
+                  as="div"
+                  className={`od-disc-tile-wrap od-disc-tile-wrap--${item.size}`}
+                >
                   <Link href={item.href} className={`od-disc-tile od-disc-tile--${item.size}`}>
                     <span className="od-disc-tile__media" aria-hidden="true">
                       <Image
@@ -331,108 +210,75 @@ export function DiscoveryHomePage({
               <Link href="/interiors" className="od-disc-text-link">
                 Explore Interiors
               </Link>
-            </p>
-          </div>
-        </section>
-
-        {/* Kitchen */}
-        <section className="od-disc-band od-disc-band--deep od-disc-kitchen" aria-labelledby="od-disc-kit-title">
-          <div className="od-disc-shell od-disc-kitchen__grid">
-            <Reveal as="figure" className="od-disc-kitchen__figure">
-              <Image
-                src={PM_ASSETS.modularKitchens.path}
-                alt={PM_ASSETS.modularKitchens.alt}
-                width={PM_ASSETS.modularKitchens.width}
-                height={PM_ASSETS.modularKitchens.height}
-                sizes="(max-width: 900px) 100vw, 52vw"
-              />
-            </Reveal>
-            <Reveal order={1} className="od-disc-kitchen__copy">
-              <p className="od-disc-kicker">Modular kitchens</p>
-              <h2 id="od-disc-kit-title">Designed in Pune. Finished with factory precision.</h2>
-              <p className="od-disc-lede">
-                Storage, finishes and install kept inside the same interior plan — not a separate
-                kitchen package.
-              </p>
-              <Link href="/interiors#modular-kitchen" className="od-disc-btn od-disc-btn--ghost">
+              <span aria-hidden="true"> · </span>
+              <Link href="/interiors#modular-kitchen" className="od-disc-text-link">
                 Explore Kitchens
               </Link>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* Bridge */}
-        <section className="od-disc-bridge" aria-labelledby="od-disc-bridge-title">
-          <div className="od-disc-bridge__media" aria-hidden="true">
-            <Image
-              src={PM_ASSETS.materialTexture.path}
-              alt=""
-              fill
-              sizes="100vw"
-              style={{ objectPosition: PM_ASSETS.materialTexture.focalPoint }}
-            />
-          </div>
-          <Reveal className="od-disc-shell od-disc-bridge__copy">
-            <h2 id="od-disc-bridge-title">Design it. Furnish it. Keep it one complete look.</h2>
-            <p>
-              ONEDECORE brings planning, manufacturing and furnishing together so the home feels
-              intentional from the first drawing to the final piece.
             </p>
-          </Reveal>
+          </div>
         </section>
 
-        {/* Why / craft */}
-        <section id="about" className="od-disc-band od-disc-band--surface od-disc-craft" aria-labelledby="od-disc-why-title">
+        <section
+          id="about"
+          className="od-disc-band od-disc-band--deep od-disc-band--divided"
+          data-od-disc-section="why"
+          aria-labelledby="od-disc-why-title"
+        >
           <div className="od-disc-shell">
             <Reveal as="header" className="od-disc-band__head">
-              <h2 id="od-disc-why-title">Why ONEDECORE</h2>
-              <p className="od-disc-lede">One team. One standard. One complete home.</p>
+              <p className="od-disc-kicker">Why ONEDECORE</p>
+              <h2 id="od-disc-why-title">One team. One standard. One complete home.</h2>
+              <p className="od-disc-lede">
+                Trust, craft and a single process — from first conversation to installed home.
+              </p>
             </Reveal>
-            <div className="od-disc-materials" aria-hidden="true">
-              <Reveal order={0} as="figure">
-                <Image
-                  src={PM_ASSETS.materialStone.path}
-                  alt=""
-                  width={PM_ASSETS.materialStone.width}
-                  height={PM_ASSETS.materialStone.height}
-                  sizes="(max-width: 900px) 33vw, 20vw"
-                />
+            <ul className="od-disc-trust">
+              {DISCOVERY_TRUST_LABELS.map((label) => (
+                <li key={label}>{label}</li>
+              ))}
+            </ul>
+            <div className="od-disc-why-grid">
+              <Reveal order={0} className="od-disc-process">
+                <h3>How we work</h3>
+                <ol>
+                  {DISCOVERY_PROCESS_STEPS.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ol>
+                {shopLive ? (
+                  <>
+                    <h3>Furniture</h3>
+                    <ol>
+                      {DISCOVERY_FURNITURE_PROCESS_STEPS.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ol>
+                  </>
+                ) : null}
               </Reveal>
-              <Reveal order={1} as="figure">
-                <Image
-                  src={PM_ASSETS.materialTimber.path}
-                  alt=""
-                  width={PM_ASSETS.materialTimber.width}
-                  height={PM_ASSETS.materialTimber.height}
-                  sizes="(max-width: 900px) 33vw, 20vw"
-                />
-              </Reveal>
-              <Reveal order={2} as="figure">
-                <Image
-                  src={PM_ASSETS.materialTexture.path}
-                  alt=""
-                  width={PM_ASSETS.materialTexture.width}
-                  height={PM_ASSETS.materialTexture.height}
-                  sizes="(max-width: 900px) 33vw, 20vw"
-                />
+              <Reveal order={1}>
+                <ul className="od-disc-why">
+                  <li>In-house manufacturing for custom work</li>
+                  <li>Quality control through design, make and install</li>
+                  <li>Interiors, kitchens and furniture under one brand</li>
+                  <li>
+                    {HOME_CLAIMS.warrantyYears}-year warranty on approved scopes · {HOME_CLAIMS.rating}
+                    /5 average client rating
+                  </li>
+                </ul>
               </Reveal>
             </div>
-            <ul className="od-disc-why">
-              <li>In-house manufacturing for custom work</li>
-              <li>Quality control through design, make and install</li>
-              <li>Interiors, kitchens and furniture under one brand</li>
-              <li>
-                {HOME_CLAIMS.warrantyYears}-year warranty on approved scopes · {HOME_CLAIMS.rating}/5
-                average client rating
-              </li>
-            </ul>
           </div>
         </section>
 
-        {/* Portfolio */}
-        <section className="od-disc-band od-disc-band--deep od-disc-homes" aria-labelledby="od-disc-homes-title">
-          <div className="od-disc-shell od-disc-homes__grid">
+        <section
+          className="od-disc-band od-disc-band--surface od-disc-band--divided"
+          data-od-disc-section="real-homes"
+          aria-labelledby="od-disc-homes-title"
+        >
+          <div className="od-disc-shell od-disc-homes">
             <Reveal>
+              <p className="od-disc-kicker">Portfolio</p>
               <h2 id="od-disc-homes-title">Real homes. The complete ONEDECORE look.</h2>
               <p className="od-disc-lede">
                 Explore finished ONEDECORE interiors and see how layouts, materials and details come
@@ -443,7 +289,7 @@ export function DiscoveryHomePage({
               </Link>
             </Reveal>
             <Reveal order={1} className="od-disc-homes__proof">
-              <h3 id="od-disc-rev-title">Client experience</h3>
+              <h3>Client experience</h3>
               <p>
                 Homeowners across Pune work with ONEDECORE for coordinated interior design,
                 manufacturing and installation.
@@ -455,58 +301,21 @@ export function DiscoveryHomePage({
           </div>
         </section>
 
-        {/* Consultation gateway */}
-        <section
-          className="od-disc-band od-disc-band--surface od-disc-consult"
-          aria-labelledby="od-disc-consult-title"
-        >
-          <div className="od-disc-shell">
-            <Reveal as="header" className="od-disc-band__head">
-              <h2 id="od-disc-consult-title">Ready to plan your Pune home?</h2>
-              <p className="od-disc-lede">
-                Tell us what you’re planning, your locality and timeline. Start with a free design
-                consultation.
-              </p>
-            </Reveal>
-            <ol className="od-disc-consult__steps">
-              <Reveal order={0} as="li">
-                <span className="od-disc-consult__num">01</span>
-                <span>Choose your interior need</span>
-              </Reveal>
-              <Reveal order={1} as="li">
-                <span className="od-disc-consult__num">02</span>
-                <span>Add your Pune locality &amp; timeline</span>
-              </Reveal>
-              <Reveal order={2} as="li">
-                <span className="od-disc-consult__num">03</span>
-                <span>Start your design consultation</span>
-              </Reveal>
-            </ol>
-            <Reveal order={3} className="od-disc-hero__ctas">
-              <Link href="/interiors#consultation" className="od-disc-btn od-disc-btn--primary">
-                Book Free Consultation
-              </Link>
-              <Link href="/interiors" className="od-disc-btn od-disc-btn--ghost">
-                Start your home plan
-              </Link>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* Furniture */}
         <section
           id="furniture-teaser"
-          className="od-disc-band od-disc-band--deep"
+          className="od-disc-band od-disc-band--deep od-disc-band--divided"
+          data-od-disc-section="furniture"
           aria-labelledby="od-disc-furn-title"
         >
           <div className="od-disc-shell">
             <Reveal as="header" className="od-disc-band__head">
+              <p className="od-disc-kicker">Furniture</p>
               <h2 id="od-disc-furn-title">
                 {shopLive ? "Furniture made for complete homes." : "Furniture Collection"}
               </h2>
             </Reveal>
 
-            {!shopLive || (roots.length === 0 && featured.length === 0) ? (
+            {!showLiveFurniture ? (
               <Reveal className="od-disc-teaser">
                 <div className="od-disc-teaser__media" aria-hidden="true">
                   <Image
@@ -523,14 +332,6 @@ export function DiscoveryHomePage({
                     Interiors consultation is available now while we prepare the furniture
                     collection.
                   </p>
-                  <div className="od-disc-hero__ctas">
-                    <Link href="/interiors#consultation" className="od-disc-btn od-disc-btn--primary">
-                      Book Free Consultation
-                    </Link>
-                    <Link href="/portfolio" className="od-disc-text-link">
-                      View Portfolio
-                    </Link>
-                  </div>
                 </div>
               </Reveal>
             ) : (
@@ -558,58 +359,33 @@ export function DiscoveryHomePage({
                     </p>
                   </>
                 ) : null}
+                {showPincode ? (
+                  <div className="od-disc-pin">
+                    <h3 className="od-disc-subhead">Furniture pincode check</h3>
+                    <ShopPincodeChecker />
+                  </div>
+                ) : null}
               </>
             )}
           </div>
         </section>
 
-        {/* Process */}
-        <section className="od-disc-band od-disc-process-band od-disc-band--divided" aria-labelledby="od-disc-process-title">
-          <div className="od-disc-shell">
-            <h2 id="od-disc-process-title">Two ways we work with you</h2>
-            <div className="od-disc-process">
-              <div>
-                <h3>Interiors</h3>
-                <ol>
-                  <li>Consult</li>
-                  <li>Design</li>
-                  <li>Manufacture</li>
-                  <li>Install</li>
-                </ol>
-              </div>
-              <div>
-                <h3>Furniture</h3>
-                <ol>
-                  <li>Browse</li>
-                  <li>Explore Details</li>
-                  <li>Check Serviceability</li>
-                </ol>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {showPincode ? (
-          <section className="od-disc-band od-disc-pin" aria-labelledby="od-disc-pin-title">
-            <div className="od-disc-shell">
-              <h2 id="od-disc-pin-title">Furniture pincode check</h2>
-              <ShopPincodeChecker />
-            </div>
-          </section>
-        ) : null}
-
-        {/* Final CTA */}
-        <section className="od-disc-final" aria-labelledby="od-disc-final-title">
+        <section
+          className="od-disc-band od-disc-consult"
+          data-od-disc-section="consultation"
+          aria-labelledby="od-disc-consult-title"
+        >
           <div className="od-disc-shell">
             <Reveal>
-              <h2 id="od-disc-final-title">Your Pune home deserves one complete vision.</h2>
+              <p className="od-disc-kicker">Consultation</p>
+              <h2 id="od-disc-consult-title">Your Pune home deserves one complete vision.</h2>
               <p className="od-disc-lede">
                 Interiors, kitchens, custom storage and furniture — planned with one coordinated
-                design language.
+                design language. Start with a free consultation.
               </p>
               <div className="od-disc-hero__ctas">
-                <Link href="/interiors#consultation" className="od-disc-btn od-disc-btn--primary">
-                  Book Free Consultation
+                <Link href={PUBLIC_CONSULTATION.href} className="od-disc-btn od-disc-btn--primary">
+                  {PUBLIC_CONSULTATION.label}
                 </Link>
                 {shopLive ? (
                   <Link href="/shop" className="od-disc-btn od-disc-btn--ghost">

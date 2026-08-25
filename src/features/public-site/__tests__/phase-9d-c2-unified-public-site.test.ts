@@ -5,7 +5,10 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
-import { DISCOVERY_SECTION_ORDER } from "../discovery/discovery-copy.ts";
+import {
+  DISCOVERY_MAJOR_SECTIONS,
+  DISCOVERY_SECTION_ORDER,
+} from "../discovery/discovery-copy.ts";
 import { HOME_PUNE_AREAS } from "../home-r4/claims.ts";
 
 const root = process.cwd();
@@ -28,31 +31,43 @@ describe("Phase 9D-C2 root discovery", () => {
     assert.deepEqual([...DISCOVERY_SECTION_ORDER], [
       "header",
       "hero",
-      "pune-service",
-      "journeys",
-      "trust",
-      "interiors-preview",
-      "kitchen-feature",
-      "signature-bridge",
+      "interiors",
       "why",
       "real-homes",
+      "furniture",
       "consultation",
-      "furniture-categories",
-      "featured-furniture",
-      "dual-process",
-      "pincode",
-      "final-cta",
       "footer",
     ]);
+    assert.deepEqual([...DISCOVERY_MAJOR_SECTIONS], [
+      "hero",
+      "interiors",
+      "why",
+      "real-homes",
+      "furniture",
+      "consultation",
+    ]);
+    assert.equal(DISCOVERY_MAJOR_SECTIONS.length, 6);
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     const css = read("src/features/public-site/discovery/discovery.css");
+    const copy = read("src/features/public-site/discovery/discovery-copy.ts");
     assert.match(page, /data-od-discovery-order=\{DISCOVERY_SECTION_ORDER\.join/);
-    assert.match(page, /Start with the way you need us\./);
+    assert.match(page, /data-od-disc-section="hero"/);
+    assert.match(page, /data-od-disc-section="interiors"/);
+    assert.match(page, /data-od-disc-section="why"/);
+    assert.match(page, /data-od-disc-section="real-homes"/);
+    assert.match(page, /data-od-disc-section="furniture"/);
+    assert.match(page, /data-od-disc-section="consultation"/);
+    assert.match(copy, /DISCOVERY_MAJOR_SECTIONS/);
+    assert.match(page, /PUBLIC_CONSULTATION\.label/);
+    assert.match(page, /PUBLIC_CONSULTATION\.href/);
+    assert.doesNotMatch(page, /Book Free Consultation/);
     assert.match(page, /href="\/interiors"/);
     assert.match(page, /href="\/shop"/);
     assert.match(page, /\/interiors#modular-kitchen/);
-    assert.match(page, /\/interiors#consultation/);
+    assert.match(read("src/features/public-site/chrome/public-nav.ts"), /\/interiors#consultation/);
+    assert.match(copy, /\/interiors#consultation/);
     assert.match(page, /ShopPincodeChecker/);
+    assert.match(page, /showPincode/);
     assert.match(page, /getPublicCommerceCategories|categories/);
     assert.match(page, /The ONEDECORE furniture collection is being prepared/);
     assert.match(page, /Interiors consultation is available now while we prepare the furniture/);
@@ -68,8 +83,15 @@ describe("Phase 9D-C2 root discovery", () => {
     assert.doesNotMatch(page, /home-foundation\.css/);
     assert.match(page, /commerce\.ok/);
     assert.match(page, /RevealRuntime/);
-    assert.match(page, /DiscoveryPuneCoverage/);
-    assert.match(page, /HOME_PUNE_AREAS|DiscoveryPuneCoverage/);
+    assert.match(page, /HOME_PUNE_AREAS/);
+    assert.doesNotMatch(page, /DiscoveryPuneCoverage/);
+    assert.doesNotMatch(page, /placeholder="e\.g\. Kharadi/);
+    assert.doesNotMatch(page, /Check your Pune locality/);
+    assert.doesNotMatch(page, /Start with the way you need us\./);
+    assert.doesNotMatch(page, /od-disc-hero__portrait|od-disc-hero__inset/);
+    assert.doesNotMatch(page, /heroConsultant|hero-consultant-indian-woman/);
+    assert.doesNotMatch(page, /Ready to plan your Pune home\?/);
+    assert.equal((page.match(/data-od-disc-section=/g) ?? []).length, 6);
     assert.doesNotMatch(page, /role="alert"/);
     assert.doesNotMatch(page, /Add to Cart|Buy Now|Checkout/);
     assert.doesNotMatch(page, /submitLead|createLead|HomeLeadCapture/);
@@ -80,29 +102,47 @@ describe("Phase 9D-C2 root discovery", () => {
     assert.doesNotMatch(css, /clamp\([^)]+\)\s*\*/);
     assert.doesNotMatch(css, /calc\([^;]*\*/);
     assert.doesNotMatch(css, /calc\([^;]*\//);
+    assert.doesNotMatch(css, /od-disc-hero__portrait|od-disc-hero__inset/);
   });
 
-  test("Pune coverage uses HOME_PUNE_AREAS and stays interiors-only", () => {
-    const coverage = read("src/features/public-site/discovery/DiscoveryPuneCoverage.tsx");
-    assert.match(coverage, /HOME_PUNE_AREAS/);
-    assert.match(coverage, /aria-live="polite"/);
-    assert.match(coverage, /\/interiors#consultation/);
-    assert.doesNotMatch(coverage, /ShopPincodeChecker|getPublicCommerce|pincode/i);
+  test("homepage hides pincode and shop search while shop is off", () => {
+    const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
+    const header = read("src/features/public-site/chrome/PublicSiteHeader.tsx");
+    assert.match(page, /showShopSearch=\{shopLive\}/);
+    assert.match(page, /showPincode = shopLive/);
+    assert.match(header, /showShopSearch/);
+    assert.match(header, /current === "home" && showShopSearch/);
+    assert.doesNotMatch(page, /current === "shop" \|\| current === "home"/);
+    assert.ok(!existsSync(join(root, "src/features/public-site/discovery/DiscoveryPuneCoverage.tsx")));
     assert.ok(HOME_PUNE_AREAS.includes("Kharadi"));
     assert.ok(HOME_PUNE_AREAS.includes("Baner"));
   });
 
-  test("hero consultant alt stays representational", () => {
+  test("homepage hero is a single architectural image without a model collage", () => {
+    const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     const content = read("src/features/public-site/home-r4/content.ts");
-    assert.match(content, /heroConsultant:/);
-    assert.match(
-      content,
-      /Indian interior design consultant in a warm, premium living-room setting/
-    );
-    assert.doesNotMatch(
-      content,
-      /ONEDECORE design consultant in a warm, premium living-room setting/
-    );
+    assert.match(page, /HOMEPAGE_HERO = PM_ASSETS\.completeHomeInteriors/);
+    assert.match(page, /HOMEPAGE_HERO\.path/);
+    assert.match(content, /service-complete-home-interiors\.webp/);
+    assert.match(page, /asset: PM_ASSETS\.hero/);
+    assert.doesNotMatch(page, /PM_ASSETS\.hero\.path/);
+    assert.doesNotMatch(page, /heroConsultant/);
+    assert.doesNotMatch(page, /hero-consultant-indian-woman/);
+    assert.doesNotMatch(page, /od-disc-hero__portrait/);
+    assert.doesNotMatch(page, /od-disc-hero__inset/);
+  });
+
+  test("consultation CTA uses canonical Get Free Consultation labels", () => {
+    const nav = read("src/features/public-site/chrome/public-nav.ts");
+    const content = read("src/features/public-site/home-r4/content.ts");
+    const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
+    assert.match(nav, /label: "Get Free Consultation"/);
+    assert.match(nav, /shortLabel: "Free Consultation"/);
+    assert.doesNotMatch(nav, /shortLabel: "Consult"/);
+    assert.match(content, /open: "Get Free Consultation"/);
+    assert.doesNotMatch(content, /Start Free Design Consultation/);
+    assert.match(page, /PUBLIC_CONSULTATION\.label/);
+    assert.doesNotMatch(page, /Book Free Consultation/);
   });
 
   test("root page consumes public category and featured queries", () => {
@@ -208,9 +248,13 @@ describe("Phase 9D-C2 nav seo and shop", () => {
 
   test("public footer stays customer-facing and compact", () => {
     const footer = read("src/features/public-site/chrome/PublicSiteFooter.tsx");
+    const nav = read("src/features/public-site/chrome/public-nav.ts");
     const css = read("src/features/public-site/chrome/public-site-chrome.css");
     assert.doesNotMatch(footer, /Public furniture shop stays gated until owner activation/);
-    assert.match(footer, /\/interiors#consultation/);
+    assert.match(footer, /PUBLIC_CONSULTATION\.href/);
+    assert.match(footer, /PUBLIC_CONSULTATION\.label/);
+    assert.match(nav, /label: "Get Free Consultation"/);
+    assert.match(nav, /href: "\/interiors#consultation"/);
     assert.match(footer, /od-site-footer__nav/);
     assert.match(css, /od-site-footer__nav/);
     assert.match(css, /grid-template-columns:\s*1fr 1fr/);

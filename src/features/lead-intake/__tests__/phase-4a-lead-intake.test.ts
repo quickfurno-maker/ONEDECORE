@@ -65,7 +65,7 @@ function basePayload(overrides: Record<string, unknown> = {}) {
     requirements: {
       service: "complete-home-interiors",
       property: "apartment-2bhk",
-      timeline: "within-3-months",
+      timeline: "within-1-month",
       rooms: ["living", "kitchen"],
       budgetComfort: "6-12l",
       locality: "Koregaon Park",
@@ -102,7 +102,7 @@ function validatedFixture(
     email: "synthetic@example.test",
     service: "complete-home-interiors",
     property: "apartment-2bhk",
-    timeline: "within-3-months",
+    timeline: "within-1-month",
     rooms: ["living", "kitchen"],
     budgetComfort: "6-12l",
     estimateSnapshot: null,
@@ -776,6 +776,33 @@ describe("Phase 4A.1 canonical sources", () => {
     for (const id of LEAD_SERVICE_CODES) {
       assert.match(migration, new RegExp(`'${id}'`));
     }
+    const timelineMigration = readFileSync(
+      join(
+        root,
+        "supabase/migrations/20260825163000_lead_timeline_taxonomy_v2.sql"
+      ),
+      "utf8"
+    );
+    assert.match(timelineMigration, /chk_leads_timeline_code/);
+    assert.match(timelineMigration, /create or replace function public\.submit_lead_intake/);
+    for (const id of LEAD_TIMELINE_CODES) {
+      assert.match(timelineMigration, new RegExp(`'${id}'`));
+    }
+    for (const legacy of [
+      "ready-now",
+      "within-3-months",
+      "3-6-months",
+      "more-than-6-months",
+      "exploring",
+    ]) {
+      assert.doesNotMatch(timelineMigration, new RegExp(`'${legacy}'`));
+    }
+    assert.deepEqual([...LEAD_TIMELINE_CODES], [
+      "immediate",
+      "within-1-month",
+      "within-2-months",
+      "after-2-months",
+    ]);
   });
 
   test("migration documents marketing deferral and lock order", () => {

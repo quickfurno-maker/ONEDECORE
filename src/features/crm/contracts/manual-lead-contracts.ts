@@ -259,11 +259,10 @@ export const MANUAL_LEAD_CATALOG_LABELS = {
     "single-room": "Single Room",
   },
   timeline: {
-    "ready-now": "Ready now",
-    "within-3-months": "Within 3 months",
-    "3-6-months": "3–6 months",
-    "more-than-6-months": "More than 6 months",
-    exploring: "Exploring options",
+    immediate: "Immediate",
+    "within-1-month": "Within 1 month",
+    "within-2-months": "Within 2 months",
+    "after-2-months": "After 2 months",
   },
   budget: {
     "under-3l": "Under ₹3L",

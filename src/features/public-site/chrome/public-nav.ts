@@ -8,7 +8,7 @@ export const PUBLIC_NAV_DESTINATIONS = [
 
 export const PUBLIC_CONSULTATION = {
   label: "Get Free Consultation",
-  shortLabel: "Consult",
+  shortLabel: "Free Consultation",
   href: "/interiors#consultation",
 } as const;
 

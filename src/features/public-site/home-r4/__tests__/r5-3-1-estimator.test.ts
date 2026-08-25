@@ -105,7 +105,7 @@ describe("R5.3.1 complete-home mapping", () => {
   test("existing timeline/locality/notes preserved → step 4", () => {
     const { prospective, step } = applySelection(
       empty({
-        timeline: "within-3-months",
+        timeline: "within-1-month",
         locality: "Baner",
         message: "Prefer warm oak",
       }),
@@ -113,7 +113,7 @@ describe("R5.3.1 complete-home mapping", () => {
       "2bhk",
       "premium"
     );
-    assert.equal(prospective.timeline, "within-3-months");
+    assert.equal(prospective.timeline, "within-1-month");
     assert.equal(prospective.locality, "Baner");
     assert.equal(prospective.message, "Prefer warm oak");
     assert.equal(step, 4);

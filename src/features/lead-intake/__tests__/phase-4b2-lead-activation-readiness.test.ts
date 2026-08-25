@@ -45,7 +45,7 @@ function samplePlan(overrides: Partial<PlanSnapshot> = {}): PlanSnapshot {
   return {
     service: "complete-home-interiors",
     property: "apartment-2bhk",
-    timeline: "within-3-months",
+    timeline: "within-1-month",
     rooms: ["living", "kitchen"],
     budgetComfort: "6-12l",
     estimateSummary: null,
@@ -69,7 +69,7 @@ function sampleBody(
     requirements: {
       service: "complete-home-interiors",
       property: "apartment-2bhk",
-      timeline: "within-3-months",
+      timeline: "within-1-month",
       rooms: ["living"],
     },
     consent: {

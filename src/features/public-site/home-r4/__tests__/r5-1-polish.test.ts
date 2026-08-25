@@ -76,7 +76,7 @@ describe("R5.1 atomic plan prospective steps", () => {
       ...empty(),
       service: "complete-home-interiors" as const,
       property: "apartment-3bhk" as const,
-      timeline: "within-3-months" as const,
+      timeline: "within-1-month" as const,
       rooms: ensureRoom(["living"], "dining"),
     };
     assert.equal(getNextIncompleteStep(prospective), 4);

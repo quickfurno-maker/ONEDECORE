@@ -54,7 +54,7 @@ describe("Phase 5C2B contracts", () => {
         email: null,
         serviceCode: "complete-home-interiors",
         propertyCode: "apartment-2bhk",
-        timelineCode: "within-3-months",
+        timelineCode: "within-1-month",
         primarySourceId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         locality: null,
         budgetComfortCode: null,

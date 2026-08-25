@@ -54,7 +54,7 @@ export const PM_TRACKED_SECTIONS = [
 
 /** R5.3 conversion CTA system. */
 export const PM_CTA = {
-  open: "Start Free Design Consultation",
+  open: "Get Free Consultation",
   openShort: "Free Consultation",
   continuePlan: "Continue My Plan",
   estimate: "Get Price Estimate",
@@ -262,11 +262,10 @@ export const PM_PLANNER = {
     { id: "single-room", label: "Single room or area" },
   ],
   timelines: [
-    { id: "ready-now", label: "Ready now" },
-    { id: "within-3-months", label: "Within 3 months" },
-    { id: "3-6-months", label: "3–6 months" },
-    { id: "more-than-6-months", label: "More than 6 months" },
-    { id: "exploring", label: "Just exploring" },
+    { id: "immediate", label: "Immediate" },
+    { id: "within-1-month", label: "Within 1 month" },
+    { id: "within-2-months", label: "Within 2 months" },
+    { id: "after-2-months", label: "After 2 months" },
   ],
   rooms: [
     { id: "living", label: "Living" },

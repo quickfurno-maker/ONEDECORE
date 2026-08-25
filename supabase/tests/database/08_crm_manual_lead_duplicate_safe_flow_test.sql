@@ -205,7 +205,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -232,7 +232,7 @@ select throws_ok(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     null, null, '{}'::text[], null, null,
     'c4444444-4444-4444-4444-444444444444'::uuid
@@ -256,7 +256,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     null, null, '{}'::text[], null, null,
     null
@@ -278,7 +278,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     null, null, '{}'::text[], null, null,
     'c2222222-2222-2222-2222-222222222222'::uuid
@@ -300,7 +300,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     null, null, '{}'::text[], null, null,
     'c4444444-4444-4444-4444-444444444444'::uuid
@@ -335,7 +335,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -355,7 +355,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     null, null, '{}'::text[], null, null,
     'c3333333-3333-3333-3333-333333333333'::uuid
@@ -380,7 +380,7 @@ select throws_ok(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     null, null, '{}'::text[], null, null,
     'c5555555-5555-5555-5555-555555555555'::uuid
@@ -397,7 +397,7 @@ select throws_ok(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     '00000000-0000-4000-8000-000000000099'::uuid
   )$$,
   '22023',
@@ -463,7 +463,7 @@ select set_config(
     null,
     'modular-kitchens',
     'apartment-3bhk',
-    '3-6-months',
+    'within-2-months',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -483,7 +483,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -496,8 +496,7 @@ select set_config(
     '+919500000009',
     '5c2b-enriched@example.test',
     'modular-kitchens',
-    'apartment-1bhk',
-    'exploring',
+    'apartment-1bhk', 'after-2-months',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -521,7 +520,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -535,7 +534,7 @@ select set_config(
     '5c2b-split-conflict@example.test',
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -561,7 +560,7 @@ select throws_ok(
     '5c2b-split-conflict@example.test',
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )$$,
   'P0001',
@@ -577,7 +576,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -596,8 +595,7 @@ select set_config(
     '+919500000012',
     null,
     'modular-kitchens',
-    'apartment-1bhk',
-    'exploring',
+    'apartment-1bhk', 'after-2-months',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -621,7 +619,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     'Koramangala'
   )),
@@ -666,7 +664,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     'Indiranagar',
     null, '{}'::text[], null, null,
@@ -698,7 +696,7 @@ select throws_ok(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     'Indiranagar'
   )$$,
@@ -714,7 +712,7 @@ select throws_ok(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     'Indiranagar',
     null, '{}'::text[], null, null,
@@ -739,7 +737,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     'Whitefield'
   )),
@@ -769,7 +767,7 @@ select throws_ok(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     'Whitefield'
   )$$,
@@ -787,7 +785,7 @@ select throws_ok(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     'Whitefield',
     null, '{}'::text[], null, null,
@@ -809,7 +807,7 @@ select throws_ok(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     'Whitefield',
     null, '{}'::text[], null, null,
@@ -830,7 +828,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'ready-now',
+    'immediate',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     'Whitefield',
     null, '{}'::text[], null, null,
@@ -857,7 +855,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     'HSR Layout'
   )),
@@ -881,7 +879,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     'HSR Layout',
     null, '{}'::text[], null, null,
@@ -910,7 +908,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -946,7 +944,7 @@ select set_config(
     null,
     'modular-kitchens',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -976,7 +974,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-3bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -1006,7 +1004,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     'Jayanagar'
   )),
@@ -1031,7 +1029,7 @@ select results_eq(
 
 select results_eq(
   $$select timeline_code::text from public.leads where id = current_setting('test.phase5c2b_recent_override_lead')::uuid$$,
-  array['ready-now'::text],
+  array['immediate'::text],
   'duplicate similarity ignores timeline differences on override create'
 );
 
@@ -1049,7 +1047,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid,
     null, null, '{}'::text[], null, null,
     'c3333333-3333-3333-3333-333333333333'::uuid
@@ -1112,7 +1110,7 @@ select throws_ok(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )$$,
   '42501',
@@ -1129,7 +1127,7 @@ select throws_ok(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )$$,
   '42501',
@@ -1151,7 +1149,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -1175,7 +1173,7 @@ select set_config(
     null,
     'complete-home-interiors',
     'apartment-2bhk',
-    'within-3-months',
+    'within-1-month',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
@@ -1188,8 +1186,7 @@ select set_config(
     '+919500000022',
     null,
     'modular-kitchens',
-    'apartment-1bhk',
-    'exploring',
+    'apartment-1bhk', 'after-2-months',
     current_setting('test.phase5c2b_phone_call_source')::uuid
   )),
   true
