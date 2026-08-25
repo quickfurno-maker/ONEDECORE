@@ -58,6 +58,14 @@ describe("Phase 9D-C2 root discovery", () => {
     assert.match(page, /Interiors consultation is available now while we prepare the furniture/);
     assert.doesNotMatch(page, /Our furniture collection is being prepared/);
     assert.doesNotMatch(page, /Showcased homes are not claimed as product placements/);
+    assert.doesNotMatch(page, /not furniture product reviews/);
+    assert.doesNotMatch(page, /from approved interior project feedback/);
+    assert.match(
+      page,
+      /Homeowners across Pune work with ONEDECORE for coordinated interior design/
+    );
+    assert.match(page, /across interior project feedback/);
+    assert.doesNotMatch(page, /home-foundation\.css/);
     assert.match(page, /commerce\.ok/);
     assert.match(page, /RevealRuntime/);
     assert.match(page, /DiscoveryPuneCoverage/);
@@ -82,6 +90,19 @@ describe("Phase 9D-C2 root discovery", () => {
     assert.doesNotMatch(coverage, /ShopPincodeChecker|getPublicCommerce|pincode/i);
     assert.ok(HOME_PUNE_AREAS.includes("Kharadi"));
     assert.ok(HOME_PUNE_AREAS.includes("Baner"));
+  });
+
+  test("hero consultant alt stays representational", () => {
+    const content = read("src/features/public-site/home-r4/content.ts");
+    assert.match(content, /heroConsultant:/);
+    assert.match(
+      content,
+      /Indian interior design consultant in a warm, premium living-room setting/
+    );
+    assert.doesNotMatch(
+      content,
+      /ONEDECORE design consultant in a warm, premium living-room setting/
+    );
   });
 
   test("root page consumes public category and featured queries", () => {

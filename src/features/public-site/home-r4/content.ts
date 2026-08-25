@@ -180,7 +180,7 @@ export const PM_ASSETS = {
     path: "/assets/onedecore/home/hero-consultant-indian-woman.webp",
     width: 1200,
     height: 1600,
-    alt: "ONEDECORE design consultant in a warm, premium living-room setting",
+    alt: "Indian interior design consultant in a warm, premium living-room setting",
     focalPoint: "48% 28%",
     mobileFocalPoint: "50% 22%",
     bytes: 80388,

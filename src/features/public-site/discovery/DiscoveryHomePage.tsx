@@ -19,7 +19,6 @@ import {
 } from "./discovery-copy";
 import "./discovery.css";
 import "@/features/commerce/public/shop.css";
-import "@/features/public-site/home-r4/styles/home-foundation.css";
 
 export type DiscoveryCommerceState =
   | {
@@ -446,11 +445,11 @@ export function DiscoveryHomePage({
             <Reveal order={1} className="od-disc-homes__proof">
               <h3 id="od-disc-rev-title">Client experience</h3>
               <p>
-                Homeowners work with ONEDECORE on interiors across Pune. These are interior and
-                project experiences — not furniture product reviews.
+                Homeowners across Pune work with ONEDECORE for coordinated interior design,
+                manufacturing and installation.
               </p>
               <p className="od-disc-review-note">
-                Average client rating {HOME_CLAIMS.rating}/5 from approved interior project feedback.
+                Average client rating {HOME_CLAIMS.rating}/5 across interior project feedback.
               </p>
             </Reveal>
           </div>
