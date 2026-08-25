@@ -10,17 +10,14 @@ import {
   type LegalPublicationMode,
 } from "./legal-publication.ts";
 
-/** Owner-approved production version — not effective until activation sets the date. */
+/** Owner-approved production version — effective 2026-08-25. */
 export const PRIVACY_NOTICE_VERSION = "privacy-notice-v1.0" as const;
 
 /** @deprecated Alias kept for call sites that referenced the proposed id. */
 export const PRIVACY_NOTICE_PROPOSED_PRODUCTION_VERSION = PRIVACY_NOTICE_VERSION;
 
-/**
- * Set only when production publication is authorized (YYYY-MM-DD).
- * Do not hard-code a calendar date before activation.
- */
-export const PRIVACY_NOTICE_EFFECTIVE_DATE: string | null = null;
+/** Owner-authorized production activation date (YYYY-MM-DD). */
+export const PRIVACY_NOTICE_EFFECTIVE_DATE: string | null = "2026-08-25";
 
 export const PRIVACY_NOTICE_OWNER_APPROVAL = {
   approvedBy: "ONEDECORE owner",

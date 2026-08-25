@@ -51,18 +51,18 @@ function flattenLegalSections(
 }
 
 describe("Phase 3A1 legal publication gate", () => {
-  test("LEGAL_PUBLICATION_MODE is owner-approved (pre-publication)", () => {
-    assert.equal(LEGAL_PUBLICATION_MODE, "owner-approved");
+  test("LEGAL_PUBLICATION_MODE is published (production activation)", () => {
+    assert.equal(LEGAL_PUBLICATION_MODE, "published");
   });
 
-  test("canPublishLegalPolicies() is false until published", () => {
-    assert.equal(canPublishLegalPolicies(), false);
+  test("canPublishLegalPolicies() is true when published with complete identity", () => {
+    assert.equal(canPublishLegalPolicies(), true);
   });
 
-  test("getMissingLegalPublicationFields() core identity is complete; owner-approved still blocks publish", () => {
+  test("getMissingLegalPublicationFields() core identity is complete; published mode allows publish", () => {
     assert.equal(getMissingLegalPublicationFields().length, 0);
-    assert.equal(canPublishLegalPolicies(), false);
-    assert.equal(LEGAL_PUBLICATION_MODE, "owner-approved");
+    assert.equal(canPublishLegalPolicies(), true);
+    assert.equal(LEGAL_PUBLICATION_MODE, "published");
   });
 
   test("LEGAL_ROUTE_PATHS lists five draft legal routes", () => {

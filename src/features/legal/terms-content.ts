@@ -15,17 +15,14 @@ import {
   type LegalContentSection,
 } from "./privacy-policy-content.ts";
 
-/** Owner-approved production version — not effective until activation sets the date. */
+/** Owner-approved production version — effective 2026-08-25. */
 export const TERMS_OF_USE_VERSION = "terms-of-use-v1.0" as const;
 
 /** @deprecated Alias kept for call sites that referenced the proposed id. */
 export const TERMS_OF_USE_PROPOSED_PRODUCTION_VERSION = TERMS_OF_USE_VERSION;
 
-/**
- * Set only when production publication is authorized (YYYY-MM-DD).
- * Do not hard-code a calendar date before activation.
- */
-export const TERMS_OF_USE_EFFECTIVE_DATE: string | null = null;
+/** Owner-authorized production activation date (YYYY-MM-DD). */
+export const TERMS_OF_USE_EFFECTIVE_DATE: string | null = "2026-08-25";
 
 export const TERMS_OF_USE_OWNER_APPROVAL = {
   approvedBy: "ONEDECORE owner",

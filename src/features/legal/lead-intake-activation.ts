@@ -19,6 +19,9 @@ import {
  *
  * leadProcessorsRegistered set true 2026-08-25 after verified Supabase + Hostinger
  * processor evidence and owner attestation (PR #92).
+ *
+ * Owner authorized production lead collection 2026-08-25 (IST) — legal/consent
+ * effective dates activated in the production-launch PR (publication mode published).
  */
 export const LEAD_INTAKE_ACTIVATION: LeadIntakeActivationInput = {
   privacyTermsVersionApproved: true,

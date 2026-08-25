@@ -125,7 +125,7 @@ describe("Phase 4B2 current consent version contract", () => {
         `${purpose} status must be draft-review or approved`
       );
       if (version.status === "approved") {
-        assert.equal(version.effectiveFrom, null);
+        assert.equal(version.effectiveFrom, "2026-08-25");
       }
     }
   });

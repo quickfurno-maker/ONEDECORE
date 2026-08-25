@@ -2,7 +2,9 @@
 
 ## Status
 
-Public lead collection remains **disabled by default**.
+Legal/consent activation state is **published and effective from 2026-08-25** in the production-launch code slice (owner authorized production lead collection 2026-08-25 IST).
+
+Public lead collection remains **disabled by default at runtime** until VPS deployment sets environment variables.
 
 Dual gates:
 
@@ -15,24 +17,30 @@ Canonical activation decision source (fail-closed):
 
 - `src/features/legal/lead-intake-activation.ts` → `LEAD_INTAKE_ACTIVATION`
 - Identity facts: `src/features/legal/business-identity.ts` → `BUSINESS_IDENTITY`
-- Consent registry: owner-approved v1.0 with `effectiveFrom=null` until launch day
-- Publication mode: `LEGAL_PUBLICATION_MODE = owner-approved` until launch day
+- Consent registry: lead-path v1.0 effective from **2026-08-25**
+- Publication mode: `LEGAL_PUBLICATION_MODE = published`
+- Privacy/Terms effective date: **2026-08-25**
 - Server wiring: `getLeadIntakeServerEnv(..., LEAD_INTAKE_ACTIVATION)`
 
 Generic business completeness alone never enables production intake.
 
-## Current recorded decisions (PR #92)
+## Recorded decisions
+
+### PR #92 (merged)
 
 - [x] Owner APPROVE of published-mode Privacy/Terms/consent package at head `2609bbca…` (2026-08-25)
-- [x] `privacyTermsVersionApproved = true` (OWNER approval only; not counsel)
-- [x] `serviceEnquiryCopyApproved = true`
-- [x] `serviceCommunicationCopyApproved = true`
-- [x] Consent candidates: `service-enquiry-v1.0`, `service-communication-v1.0`, `whatsapp-service-v1.0` (approved, **not effective**)
-- [x] Privacy/Terms versions: `privacy-notice-v1.0`, `terms-of-use-v1.0` (owner-approved, **not effective**; dates null)
-- [x] `LEGAL_PUBLICATION_MODE = owner-approved` (not `published`)
+- [x] Processor diligence (Supabase + Hostinger, 2026-08-25)
+- [x] `leadProcessorsRegistered = true`
+
+### Production launch PR (legal/consent effective in code)
+
+- [x] Owner authorized production lead collection **2026-08-25 IST**
+- [x] `LEGAL_PUBLICATION_MODE = published`
+- [x] `privacy-notice-v1.0` / `terms-of-use-v1.0` effective **2026-08-25**
+- [x] `service-enquiry-v1.0`, `service-communication-v1.0`, `whatsapp-service-v1.0` → `effectiveFrom = 2026-08-25`
 - [x] Counsel reference null — **NO COUNSEL REVIEW YET**
-- [x] `leadProcessorsRegistered = true` (verified Supabase + Hostinger evidence, owner attestation 2026-08-25)
-- [ ] Owner authorize-to-collect / launch-day sequence
+- [ ] VPS deployment with production env (see below)
+- [ ] Controlled post-deploy E2E certification
 
 ### Processor evidence recorded (2026-08-25)
 
@@ -48,15 +56,17 @@ Generic business completeness alone never enables production intake.
    - Owner reviewed current Hostinger Terms, Hosting Agreement, and published DPA
    - Historical account-acceptance timestamp not independently available; current owner review confirmed 2026-08-25
 
-## Unresolved activation blockers
+## Post-merge deployment prerequisites (VPS — not performed from Cursor)
+
+Code gates are satisfied after merge. Production intake still requires live verification:
 
 ### Owner / legal
 
-- [x] Identity / contact / jurisdiction / retention / rate limits / CRM manual assignment (recorded)
-- [x] Privacy/Terms + lead-path consent owner approvals (recorded; not effective)
-- [x] Processor diligence (recorded 2026-08-25)
-- [ ] Launch-day: set published mode + real effective dates + effectiveFrom on v1.0 consents
-- [ ] Owner approval to collect production leads / execute launch sequence
+- [x] Identity / contact / jurisdiction / retention / rate limits / CRM manual assignment
+- [x] Privacy/Terms published with effective date 2026-08-25
+- [x] Lead-path consent v1.0 effective from 2026-08-25
+- [x] Processor diligence complete
+- [x] Owner authorized production lead collection 2026-08-25
 
 See: `docs/legal/pr92-owner-legal-copy-review.md`
 
@@ -111,32 +121,29 @@ Do not change SQL thresholds without a new owner decision.
 - [ ] Immediate disable path: set server mode to `disabled` and form mode to `copy-only`
 - [ ] Confirm homepage/interiors returns to copy-only UX without redeploying schema
 
-## Launch-day atomic invariant (DO NOT run from this PR)
+## Launch-day atomic invariant (code merged; env set on VPS at deploy)
 
-In one controlled code/config activation commit + production build:
+Canonical code state after production-launch PR merge:
 
 ```text
 LEGAL_PUBLICATION_MODE = published
-PRIVACY_NOTICE_EFFECTIVE_DATE = <ACTUAL YYYY-MM-DD activation date>
-TERMS_OF_USE_EFFECTIVE_DATE = <same date>
-service-enquiry-v1.0 / service-communication-v1.0 / whatsapp-service-v1.0 → effectiveFrom = <same date>
-privacyTermsVersionApproved = true
-serviceEnquiryCopyApproved = true
-serviceCommunicationCopyApproved = true
-leadProcessorsRegistered = true   # only after evidence recorded
+PRIVACY_NOTICE_EFFECTIVE_DATE = 2026-08-25
+TERMS_OF_USE_EFFECTIVE_DATE = 2026-08-25
+service-enquiry-v1.0 / service-communication-v1.0 / whatsapp-service-v1.0 → effectiveFrom = 2026-08-25
+leadProcessorsRegistered = true
 ```
 
-Production environment **before** build:
+Production environment **on VPS before** build (no secret values in git):
 
 ```text
 NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE=active
 ONEDECORE_LEAD_INTAKE_MODE=enabled
 ONEDECORE_TRUST_PROXY=true
 ONEDECORE_SHOP_PUBLIC_ENABLED=false
-NEXT_PUBLIC_SUPABASE_URL=<managed ONEDECORE project URL>
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<public key>
-SUPABASE_SERVICE_ROLE_KEY=<server secret, never printed>
-ONEDECORE_LEAD_HASH_SECRET=<server secret >=32 chars, never printed>
+NEXT_PUBLIC_SUPABASE_URL=https://lpurlfmpvriyvpkujvyl.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<existing public key>
+SUPABASE_SERVICE_ROLE_KEY=<server secret only>
+ONEDECORE_LEAD_HASH_SECRET=<server secret >=32 chars>
 ```
 
 `enabled` mode additionally requires:

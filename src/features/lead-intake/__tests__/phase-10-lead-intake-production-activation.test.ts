@@ -86,34 +86,33 @@ describe("Phase 10 lead-intake activation source", () => {
     assert.ok(identityOnly.length > 0);
   });
 
-  test("enabled remains blocked by default canonical source", () => {
-    assert.throws(() =>
-      getLeadIntakeServerEnv({
-        ONEDECORE_LEAD_INTAKE_MODE: "enabled",
-        ONEDECORE_TRUST_PROXY: "true",
-        NEXT_PUBLIC_SUPABASE_URL: MANAGED,
-        SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key-not-publishable",
-        ONEDECORE_LEAD_HASH_SECRET: secret,
-      })
-    );
+  test("enabled succeeds when canonical legal/consent gates and managed URL are satisfied", () => {
+    const env = getLeadIntakeServerEnv({
+      ONEDECORE_LEAD_INTAKE_MODE: "enabled",
+      ONEDECORE_TRUST_PROXY: "true",
+      NEXT_PUBLIC_SUPABASE_URL: "https://lpurlfmpvriyvpkujvyl.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key-not-publishable",
+      ONEDECORE_LEAD_HASH_SECRET: secret,
+    });
+    assert.equal(env.mode, "enabled");
+    assert.equal(env.trustProxy, true);
   });
 
-  test("explicit complete activation flags alone cannot enable while publication/consent/processors incomplete", () => {
+  test("explicit complete activation flags enable with published legal/consent state", () => {
     const activation = completeActivation();
     assert.deepEqual(getMissingLeadIntakeActivationFields(activation), []);
     assert.equal(isLeadIntakeActivationComplete(activation), true);
-    assert.throws(() =>
-      getLeadIntakeServerEnv(
-        {
-          ONEDECORE_LEAD_INTAKE_MODE: "enabled",
-          ONEDECORE_TRUST_PROXY: "true",
-          NEXT_PUBLIC_SUPABASE_URL: "https://lpurlfmpvriyvpkujvyl.supabase.co",
-          SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key-not-publishable",
-          ONEDECORE_LEAD_HASH_SECRET: secret,
-        },
-        activation
-      )
+    const env = getLeadIntakeServerEnv(
+      {
+        ONEDECORE_LEAD_INTAKE_MODE: "enabled",
+        ONEDECORE_TRUST_PROXY: "true",
+        NEXT_PUBLIC_SUPABASE_URL: "https://lpurlfmpvriyvpkujvyl.supabase.co",
+        SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key-not-publishable",
+        ONEDECORE_LEAD_HASH_SECRET: secret,
+      },
+      activation
     );
+    assert.equal(env.mode, "enabled");
   });
 
   test("server-env consumes LEAD_INTAKE_ACTIVATION module", () => {
@@ -122,14 +121,14 @@ describe("Phase 10 lead-intake activation source", () => {
     assert.match(src, /getMissingLeadIntakeActivationFields\(activation\)/);
   });
 
-  test("legal publication remains owner-approved until activation publishes", () => {
-    assert.equal(LEGAL_PUBLICATION_MODE, "owner-approved");
+  test("legal publication is published with real effective date", () => {
+    assert.equal(LEGAL_PUBLICATION_MODE, "published");
     const privacy = readFileSync(
       join(root, "src/features/legal/privacy-policy-content.ts"),
       "utf8"
     );
     assert.match(privacy, /privacy-notice-v1\.0/);
-    assert.match(privacy, /PRIVACY_NOTICE_EFFECTIVE_DATE:\s*string\s*\|\s*null\s*=\s*null/);
+    assert.match(privacy, /PRIVACY_NOTICE_EFFECTIVE_DATE:\s*string\s*\|\s*null\s*=\s*"2026-08-25"/);
   });
 });
 

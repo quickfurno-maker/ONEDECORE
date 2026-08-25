@@ -250,7 +250,7 @@ describe("Phase 3A1.2 publication gates", () => {
       /canPublishLegalPolicies[\s\S]*isWarrantyReady/
     );
     assert.match(pubSource, /canPublishWarrantyPolicy/);
-    assert.equal(canPublishLegalPolicies(), false);
+    assert.equal(canPublishLegalPolicies(), true);
     assert.equal(isWarrantyPublicationReady(), false);
     assert.equal(canPublishWarrantyPolicy("published"), false);
 
