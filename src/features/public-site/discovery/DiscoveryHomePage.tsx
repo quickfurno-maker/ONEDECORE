@@ -34,15 +34,7 @@ export type DiscoveryCommerceState =
     }
   | { readonly ok: false };
 
-/**
- * Homepage image wiring (existing marketing assets).
- * OWNER_ASSET_REQUIRED: replace these four major files with a new cohesive premium set
- * before claiming a full homepage image refresh:
- * - hero-living-warmth.webp
- * - service-complete-home-interiors.webp
- * - service-modular-kitchens.webp
- * - service-custom-wardrobes.webp
- */
+/** Owner-supplied cohesive homepage set (hero + three service images). No hero reuse on services. */
 const HOMEPAGE_HERO = PM_ASSETS.hero;
 
 const SERVICE_ASSETS = {

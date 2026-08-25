@@ -152,10 +152,10 @@ describe("Public site simplification — discovery IA", () => {
     assert.ok(HOME_PUNE_AREAS.includes("Kharadi"));
   });
 
-  test("homepage image wiring documents OWNER_ASSET_REQUIRED for major set", () => {
+  test("homepage uses owner-supplied cohesive major image set without hero reuse", () => {
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     const content = read("src/features/public-site/home-r4/content.ts");
-    assert.match(page, /OWNER_ASSET_REQUIRED/);
+    assert.doesNotMatch(page, /OWNER_ASSET_REQUIRED/);
     assert.match(page, /HOMEPAGE_HERO = PM_ASSETS\.hero/);
     assert.match(page, /completeHomeInteriors/);
     assert.match(page, /modularKitchens/);
@@ -164,8 +164,26 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(content, /service-complete-home-interiors\.webp/);
     assert.match(content, /service-modular-kitchens\.webp/);
     assert.match(content, /service-custom-wardrobes\.webp/);
+    assert.match(content, /bytes: 115242/);
+    assert.match(content, /bytes: 183650/);
+    assert.match(content, /bytes: 115712/);
+    assert.match(content, /bytes: 323002/);
     assert.doesNotMatch(page, /heroConsultant/);
     assert.doesNotMatch(page, /SERVICE_ASSETS[\s\S]*PM_ASSETS\.hero/);
+    assert.ok(
+      existsSync(join(root, "public/assets/onedecore/home/hero-living-warmth.webp"))
+    );
+    assert.ok(
+      existsSync(
+        join(root, "public/assets/onedecore/home/service-complete-home-interiors.webp")
+      )
+    );
+    assert.ok(
+      existsSync(join(root, "public/assets/onedecore/home/service-modular-kitchens.webp"))
+    );
+    assert.ok(
+      existsSync(join(root, "public/assets/onedecore/home/service-custom-wardrobes.webp"))
+    );
   });
 
   test("consultation CTA uses canonical Get Free Consultation labels", () => {

@@ -284,7 +284,9 @@
 
 .od-disc-service__media {
   position: relative;
-  min-height: clamp(14rem, 42vw, 22rem);
+  /* Portrait service assets (4:5) — keep crop generous on mobile and desktop. */
+  aspect-ratio: 4 / 5;
+  min-height: clamp(16rem, 52vw, 26rem);
   border-radius: 0.9rem;
   overflow: hidden;
   border: 1px solid var(--od-line);
@@ -297,6 +299,12 @@
 @media (min-width: 900px) {
   .od-disc-service {
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    align-items: center;
+  }
+
+  .od-disc-service__media {
+    min-height: 0;
+    max-height: 34rem;
   }
 
   .od-disc-service--flip .od-disc-service__copy {

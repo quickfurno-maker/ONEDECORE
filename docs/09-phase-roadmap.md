@@ -19,7 +19,7 @@ Additional locked notes:
 - Shop remains fail-closed until explicit activation (`ONEDECORE_SHOP_PUBLIC_ENABLED=true`).
 - Online payments remain deferred; deferred payment worktree/M38 remains untouched.
 - Simplification must not weaken backend architecture, CRM, RLS, consent, or lead-intake contracts.
-- Homepage major marketing images remain **OWNER_ASSET_REQUIRED** until owner supplies a new cohesive premium set (hero + complete home + kitchen + wardrobes).
+- Homepage major marketing images (hero + complete home + kitchen + wardrobes) use the owner-supplied cohesive WebP set under `public/assets/onedecore/home/`.
 
 ## 1. Completed Baseline (Repository Evidence)
 
