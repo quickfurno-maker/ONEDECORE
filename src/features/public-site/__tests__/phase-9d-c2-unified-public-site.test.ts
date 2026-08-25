@@ -6,6 +6,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
 import { DISCOVERY_SECTION_ORDER } from "../discovery/discovery-copy.ts";
+import { HOME_PUNE_AREAS } from "../home-r4/claims.ts";
 
 const root = process.cwd();
 
@@ -23,20 +24,21 @@ function walkFiles(dir: string, acc: string[] = []): string[] {
 }
 
 describe("Phase 9D-C2 root discovery", () => {
-  test("locks the 16-section order", () => {
+  test("locks the discovery section order", () => {
     assert.deepEqual([...DISCOVERY_SECTION_ORDER], [
       "header",
       "hero",
+      "pune-service",
       "journeys",
       "trust",
       "interiors-preview",
-      "signature-bridge",
       "kitchen-feature",
-      "furniture-categories",
-      "featured-furniture",
+      "signature-bridge",
       "why",
       "real-homes",
-      "testimonials",
+      "consultation",
+      "furniture-categories",
+      "featured-furniture",
       "dual-process",
       "pincode",
       "final-cta",
@@ -49,19 +51,58 @@ describe("Phase 9D-C2 root discovery", () => {
     assert.match(page, /href="\/interiors"/);
     assert.match(page, /href="\/shop"/);
     assert.match(page, /\/interiors#modular-kitchen/);
+    assert.match(page, /\/interiors#consultation/);
     assert.match(page, /ShopPincodeChecker/);
     assert.match(page, /getPublicCommerceCategories|categories/);
     assert.match(page, /The ONEDECORE furniture collection is being prepared/);
     assert.match(page, /Interiors consultation is available now while we prepare the furniture/);
     assert.doesNotMatch(page, /Our furniture collection is being prepared/);
+    assert.doesNotMatch(page, /Showcased homes are not claimed as product placements/);
+    assert.doesNotMatch(page, /not furniture product reviews/);
+    assert.doesNotMatch(page, /from approved interior project feedback/);
+    assert.match(
+      page,
+      /Homeowners across Pune work with ONEDECORE for coordinated interior design/
+    );
+    assert.match(page, /across interior project feedback/);
+    assert.doesNotMatch(page, /home-foundation\.css/);
     assert.match(page, /commerce\.ok/);
+    assert.match(page, /RevealRuntime/);
+    assert.match(page, /DiscoveryPuneCoverage/);
+    assert.match(page, /HOME_PUNE_AREAS|DiscoveryPuneCoverage/);
     assert.doesNotMatch(page, /role="alert"/);
     assert.doesNotMatch(page, /Add to Cart|Buy Now|Checkout/);
     assert.doesNotMatch(page, /submitLead|createLead|HomeLeadCapture/);
+    assert.doesNotMatch(page, /framer-motion|from ["']gsap|aos\/|lottie|swiper/i);
     assert.match(css, /width:\s*min\(80rem,\s*calc\(100% - clamp\(2rem, 8vw, 6rem\)\)\)/);
+    assert.match(css, /od-disc-band--surface|od-disc-band--deep|od-disc-band--divided/);
+    assert.match(css, /prefers-reduced-motion/);
     assert.doesNotMatch(css, /clamp\([^)]+\)\s*\*/);
     assert.doesNotMatch(css, /calc\([^;]*\*/);
     assert.doesNotMatch(css, /calc\([^;]*\//);
+  });
+
+  test("Pune coverage uses HOME_PUNE_AREAS and stays interiors-only", () => {
+    const coverage = read("src/features/public-site/discovery/DiscoveryPuneCoverage.tsx");
+    assert.match(coverage, /HOME_PUNE_AREAS/);
+    assert.match(coverage, /aria-live="polite"/);
+    assert.match(coverage, /\/interiors#consultation/);
+    assert.doesNotMatch(coverage, /ShopPincodeChecker|getPublicCommerce|pincode/i);
+    assert.ok(HOME_PUNE_AREAS.includes("Kharadi"));
+    assert.ok(HOME_PUNE_AREAS.includes("Baner"));
+  });
+
+  test("hero consultant alt stays representational", () => {
+    const content = read("src/features/public-site/home-r4/content.ts");
+    assert.match(content, /heroConsultant:/);
+    assert.match(
+      content,
+      /Indian interior design consultant in a warm, premium living-room setting/
+    );
+    assert.doesNotMatch(
+      content,
+      /ONEDECORE design consultant in a warm, premium living-room setting/
+    );
   });
 
   test("root page consumes public category and featured queries", () => {
@@ -69,6 +110,7 @@ describe("Phase 9D-C2 root discovery", () => {
     assert.match(page, /getPublicCommerceCategories/);
     assert.match(page, /featuredOnly:\s*true/);
     assert.match(page, /isPublicCommerceReadFailure/);
+    assert.match(page, /isShopPublicEnabled/);
     assert.match(page, /Interiors, Modular Kitchens & Furniture in Pune/);
     assert.doesNotMatch(page, /Complete Home Interiors in Pune/);
     assert.doesNotMatch(page, /sofa-luxe|fake-bed|₹9,999 sale/);
@@ -162,6 +204,16 @@ describe("Phase 9D-C2 nav seo and shop", () => {
     assert.match(header, /querySelector<HTMLElement>\("main"\)/);
     assert.match(header, /\.od-site-footer/);
     assert.match(header, /\.pm-sticky/);
+  });
+
+  test("public footer stays customer-facing and compact", () => {
+    const footer = read("src/features/public-site/chrome/PublicSiteFooter.tsx");
+    const css = read("src/features/public-site/chrome/public-site-chrome.css");
+    assert.doesNotMatch(footer, /Public furniture shop stays gated until owner activation/);
+    assert.match(footer, /\/interiors#consultation/);
+    assert.match(footer, /od-site-footer__nav/);
+    assert.match(css, /od-site-footer__nav/);
+    assert.match(css, /grid-template-columns:\s*1fr 1fr/);
   });
 
   test("public discovery and interiors copy has no cart CTA", () => {

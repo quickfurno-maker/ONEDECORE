@@ -782,26 +782,54 @@ body:has([data-public-home-r4]) {
 [data-public-dark-theme] .od-wordmark__meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
+  margin-top: 0.28rem;
 }
 
 [data-public-dark-theme] .od-wordmark__rule {
-  width: 28px;
+  width: 1.6rem;
   height: 1px;
   background: var(--od-gold);
+  align-self: center;
+  flex: 0 0 auto;
 }
 
 [data-public-dark-theme] .od-wordmark__tag {
   font-family: var(--dc-font-ui), sans-serif;
   font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  white-space: nowrap;
   color: var(--od-text-subtle);
 }
 
 [data-public-dark-theme] .od-wordmark[data-size="nav"] .od-wordmark__one,
 [data-public-dark-theme] .od-wordmark[data-size="nav"] .od-wordmark__decore {
   font-size: 1.05rem;
+}
+
+[data-public-dark-theme] .od-wordmark[data-size="nav"] .od-wordmark__meta {
+  gap: 0.48rem;
+  margin-top: 0.22rem;
+}
+
+[data-public-dark-theme] .od-wordmark[data-size="nav"] .od-wordmark__rule {
+  width: 1.55rem;
+}
+
+[data-public-dark-theme] .od-wordmark[data-size="nav"] .od-wordmark__tag {
+  font-size: 0.56rem;
+  letter-spacing: 0.11em;
+}
+
+[data-public-dark-theme] .od-wordmark[data-size="drawer"] .od-wordmark__tag {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+}
+
+[data-public-dark-theme] .od-wordmark[data-size="footer"] .od-wordmark__meta {
+  display: none;
 }
 
 /* Autofill stays dark in public forms */
