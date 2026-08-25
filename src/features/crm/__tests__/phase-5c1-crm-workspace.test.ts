@@ -237,6 +237,22 @@ describe("Phase 5C1 lead list query parsing", () => {
     assert.match(src, /\.ilike\("submitted_name"/);
     assert.doesNotMatch(src, /\.or\(buildLeadTextSearchOrFilter/);
   });
+
+  test("async constrainLeadListRequest wraps PostgREST builder to avoid thenable assimilation", () => {
+    const src = readFileSync(
+      join(root, "src/features/crm/server/crm-lead-queries.ts"),
+      "utf8"
+    );
+    assert.match(src, /type LeadListConstraintResult\s*=\s*\{\s*request:\s*LeadListFilterBuilder/);
+    assert.match(src, /return \{\s*request:\s*next\s*\}/);
+    assert.doesNotMatch(src, /return next\s*;/);
+    assert.match(src, /constrained\.request/);
+    assert.match(src, /constrained\.request[\s\S]*\.range\(from,\s*to\)/);
+    assert.match(
+      src,
+      /to\s*=\s*from\s*\+\s*query\.pageSize/
+    );
+  });
 });
 
 describe("Phase 5C1 lead list DTO safety", () => {

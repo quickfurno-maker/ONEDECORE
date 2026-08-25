@@ -198,11 +198,20 @@ type LeadListFilterBuilder = {
   is: (column: string, value: null) => LeadListFilterBuilder;
 };
 
+/**
+ * PostgREST builders are PromiseLike. Returning one directly from an async
+ * function assimilates/executes it before the caller can chain `.range()`.
+ * Always wrap the builder in a plain object.
+ */
+type LeadListConstraintResult = {
+  request: LeadListFilterBuilder;
+};
+
 async function constrainLeadListRequest(
   request: LeadListFilterBuilder,
   context: CrmAccessContext,
   query: LeadListQuery
-) {
+): Promise<LeadListConstraintResult | null> {
   let next = request;
   if (query.q) {
     const leadIds = await fetchLeadIdsForTextSearch(query.q);
@@ -240,7 +249,7 @@ async function constrainLeadListRequest(
     next = next.in("id", [...leadIds]);
   }
 
-  return next;
+  return { request: next };
 }
 
 export async function countLeadListForQuery(
@@ -256,7 +265,7 @@ export async function countLeadListForQuery(
   if (!constrained) {
     return 0;
   }
-  const { count, error } = await (constrained as unknown as Promise<{
+  const { count, error } = await (constrained.request as unknown as Promise<{
     count: number | null;
     error: { message: string } | null;
   }>);
@@ -300,7 +309,7 @@ export async function queryLeadListPage(
   const from = (query.page - 1) * query.pageSize;
   const to = from + query.pageSize;
   const { data, error } = await (
-    constrained as unknown as {
+    constrained.request as unknown as {
       range: (
         from: number,
         to: number
