@@ -28,9 +28,9 @@ export function PublicSiteFooter({
           </Link>
         </div>
         <nav className="od-site-footer__nav" aria-label="Footer">
-          <div>
+          <div className="od-site-footer__col od-site-footer__col--explore">
             <p className="od-site-footer__heading">Explore</p>
-            <ul>
+            <ul className="od-site-footer__links od-site-footer__links--inline">
               {destinations.map((item) => (
                 <li key={item.id}>
                   <Link href={item.href}>{item.label}</Link>
@@ -38,9 +38,9 @@ export function PublicSiteFooter({
               ))}
             </ul>
           </div>
-          <div>
+          <div className="od-site-footer__col od-site-footer__col--legal">
             <p className="od-site-footer__heading">Legal</p>
-            <ul>
+            <ul className="od-site-footer__links od-site-footer__links--legal">
               {PUBLIC_FOOTER_LEGAL.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href}>{item.label}</Link>

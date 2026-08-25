@@ -325,9 +325,14 @@ describe("Public site simplification — nav seo and shop", () => {
 
   test("public footer is compact with legal utility links and no marketing email", () => {
     const footer = read("src/features/public-site/chrome/PublicSiteFooter.tsx");
+    const css = read("src/features/public-site/chrome/public-site-chrome.css");
     const nav = read("src/features/public-site/chrome/public-nav.ts");
     assert.match(footer, /getPublicNavDestinations\(shopEnabled\)/);
     assert.match(footer, /PUBLIC_CONSULTATION\.href/);
+    assert.match(footer, /od-site-footer__links--inline/);
+    assert.match(footer, /od-site-footer__links--legal/);
+    assert.match(footer, /od-site-footer__col--explore/);
+    assert.match(footer, /od-site-footer__col--legal/);
     assert.match(nav, /Data Rights/);
     assert.match(nav, /Communication Consent/);
     assert.match(nav, /Warranty/);
@@ -336,6 +341,11 @@ describe("Public site simplification — nav seo and shop", () => {
     assert.doesNotMatch(footer, /mailto:/);
     assert.doesNotMatch(footer, /onedecore@gmail\.com/);
     assert.doesNotMatch(footer, /Email us/i);
+    assert.match(css, /od-site-footer__links--legal/);
+    assert.match(css, /grid-template-columns:\s*1fr 1fr/);
+    assert.match(css, /min-height:\s*44px/);
+    assert.match(css, /@media \(min-width: 560px\) and \(max-width: 959px\)/);
+    assert.match(css, /@media \(max-width: 559px\)/);
   });
 
   test("normal public marketing UI has no mailto or sales email CTA", () => {
