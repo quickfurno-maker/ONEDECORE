@@ -1,7 +1,7 @@
 -- CRM 2A-2 — Business SLA foundation pgTAP
 
 begin;
-select plan(74);
+select plan(79);
 
 -- =============================================================================
 -- Schema / permission / seed
@@ -46,6 +46,42 @@ select has_function(
   'ensure_first_contact_sla_clock',
   array['uuid'],
   'ensure_first_contact_sla_clock exists'
+);
+
+-- New-clock path: FOR SHARE on policy before due compute / insert (serialize vs update FOR UPDATE).
+-- Existing-clock early return must precede the policy lock.
+select results_eq(
+  $$
+  with def as (
+    select pg_get_functiondef(
+      'private.ensure_first_contact_sla_clock(uuid)'::regprocedure
+    ) as src
+  )
+  select
+    position('for share' in lower(src)) > 0
+    and position('return v_row' in lower(src))
+      < position('for share' in lower(src))
+    and position('for share' in lower(src))
+      < position('compute_business_sla_due_at' in lower(src))
+    and position('for share' in lower(src))
+      < position('insert into public.crm_sla_clocks' in lower(src))
+  from def
+  $$,
+  array[true],
+  'ensure locks policy FOR SHARE before due compute/insert; after existing-clock return'
+);
+
+select results_eq(
+  $$
+  with def as (
+    select pg_get_functiondef(
+      'private.update_crm_sla_policy_impl(text,integer,text,boolean,jsonb,boolean,boolean)'::regprocedure
+    ) as src
+  )
+  select position('for update' in lower(src)) > 0 from def
+  $$,
+  array[true],
+  'update_crm_sla_policy_impl locks policy FOR UPDATE'
 );
 
 select has_function(
@@ -207,6 +243,34 @@ select results_eq(
   'inside window adds business minutes'
 );
 
+-- Sub-minute precision: 10:00:30 + 60 => 11:00:30 (no whole-minute rounding)
+select results_eq(
+  $$
+  select timezone('Asia/Kolkata', private.compute_business_sla_due_at(
+    timezone('Asia/Kolkata', timestamp '2026-03-10 10:00:30'),
+    60,
+    'Asia/Kolkata',
+    current_setting('test.hours')::jsonb
+  ))::text
+  $$,
+  array['2026-03-10 11:00:30'],
+  'inside window preserves receipt seconds (10:00:30 + 60 => 11:00:30)'
+);
+
+-- Near close: 17:59:30 + 1 business minute => next open + 30s
+select results_eq(
+  $$
+  select timezone('Asia/Kolkata', private.compute_business_sla_due_at(
+    timezone('Asia/Kolkata', timestamp '2026-03-10 17:59:30'),
+    1,
+    'Asia/Kolkata',
+    current_setting('test.hours')::jsonb
+  ))::text
+  $$,
+  array['2026-03-11 09:00:30'],
+  'near close carries remaining sub-minute into next opening'
+);
+
 -- Before open: 08:00 => start 09:00 + 60 => 10:00
 select results_eq(
   $$
@@ -310,6 +374,20 @@ select results_eq(
   $$select private.compute_business_sla_due_at(now(), 60, 'Asia/Kolkata', null) is null$$,
   array[true],
   'invalid/missing config => NULL fail-closed'
+);
+
+-- Sparse-but-valid: Mon-only 09:00–09:01, target 60 — old fixed 400-day guard would fail
+select results_eq(
+  $$
+  select timezone('Asia/Kolkata', private.compute_business_sla_due_at(
+    timezone('Asia/Kolkata', timestamp '2026-03-09 09:00:00'),
+    60,
+    'Asia/Kolkata',
+    '{"monday":{"start":"09:00","end":"09:01"}}'::jsonb
+  ))::text
+  $$,
+  array['2027-04-26 09:01:00'],
+  'sparse weekly 1-minute window + target 60 computes without CRM_SLA_COMPUTE_GUARD'
 );
 
 -- =============================================================================

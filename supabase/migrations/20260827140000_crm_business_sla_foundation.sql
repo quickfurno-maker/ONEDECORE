@@ -261,17 +261,20 @@ stable
 set search_path = ''
 as $$
 declare
-  v_local timestamp;
+  v_cursor timestamp;
   v_local_date date;
-  v_cursor_min integer;
   v_day_key text;
   v_day jsonb;
+  v_open timestamp;
+  v_close timestamp;
+  v_remaining interval;
+  v_avail interval;
+  v_guard integer := 0;
+  v_max_days integer;
+  v_weekly_minutes numeric := 0;
+  v_key text;
   v_open_min integer;
   v_close_min integer;
-  v_remaining integer;
-  v_avail integer;
-  v_guard integer := 0;
-  v_due_local timestamp;
 begin
   if p_start is null
     or p_target_business_minutes is null
@@ -282,20 +285,29 @@ begin
     return null;
   end if;
 
-  v_remaining := p_target_business_minutes;
-  v_local := timezone(p_timezone, p_start);
-  v_local_date := v_local::date;
-  v_cursor_min := (extract(hour from v_local)::integer * 60)
-    + extract(minute from v_local)::integer;
+  -- Weekly business capacity (minutes) drives a domain-compatible iteration bound.
+  for v_key in select jsonb_object_keys(p_config)
+  loop
+    v_open_min := private.crm_sla_hhmm_to_minutes(p_config -> v_key ->> 'start');
+    v_close_min := private.crm_sla_hhmm_to_minutes(p_config -> v_key ->> 'end');
+    v_weekly_minutes := v_weekly_minutes + (v_close_min - v_open_min);
+  end loop;
 
-  -- Second-level: if any seconds/fraction past minute, treat as after that minute start
-  if extract(second from v_local) > 0 then
-    v_cursor_min := v_cursor_min + 1;
+  if v_weekly_minutes <= 0 then
+    return null;
   end if;
+
+  -- ceil(target / weekly) weeks of calendar days + 14-day mid-week / DST buffer
+  v_max_days := (ceil(p_target_business_minutes::numeric / v_weekly_minutes) * 7)::integer + 14;
+
+  -- Preserve exact receipt offset (seconds/fractions); do not round to whole minutes.
+  v_remaining := make_interval(mins => p_target_business_minutes);
+  v_cursor := timezone(p_timezone, p_start);
+  v_local_date := v_cursor::date;
 
   loop
     v_guard := v_guard + 1;
-    if v_guard > 400 then
+    if v_guard > v_max_days then
       raise exception 'CRM_SLA_COMPUTE_GUARD' using errcode = 'P0001';
     end if;
 
@@ -304,35 +316,37 @@ begin
 
     if v_day is null then
       v_local_date := v_local_date + 1;
-      v_cursor_min := 0;
+      v_cursor := v_local_date::timestamp;
       continue;
     end if;
 
-    v_open_min := private.crm_sla_hhmm_to_minutes(v_day ->> 'start');
-    v_close_min := private.crm_sla_hhmm_to_minutes(v_day ->> 'end');
+    v_open := v_local_date::timestamp
+      + make_interval(mins => private.crm_sla_hhmm_to_minutes(v_day ->> 'start'));
+    v_close := v_local_date::timestamp
+      + make_interval(mins => private.crm_sla_hhmm_to_minutes(v_day ->> 'end'));
 
     -- [open, close): at/after close => next day
-    if v_cursor_min >= v_close_min then
+    if v_cursor >= v_close then
       v_local_date := v_local_date + 1;
-      v_cursor_min := 0;
+      v_cursor := v_local_date::timestamp;
       continue;
     end if;
 
-    -- before open => jump to open
-    if v_cursor_min < v_open_min then
-      v_cursor_min := v_open_min;
+    -- before open => jump to open (exact open counts immediately)
+    if v_cursor < v_open then
+      v_cursor := v_open;
     end if;
 
-    v_avail := v_close_min - v_cursor_min;
+    v_avail := v_close - v_cursor;
 
     if v_remaining <= v_avail then
-      v_due_local := (v_local_date::timestamp + make_interval(mins => v_cursor_min + v_remaining));
-      return timezone(p_timezone, v_due_local);
+      -- May land exactly on close when the final interval ends at the boundary.
+      return timezone(p_timezone, v_cursor + v_remaining);
     end if;
 
     v_remaining := v_remaining - v_avail;
     v_local_date := v_local_date + 1;
-    v_cursor_min := 0;
+    v_cursor := v_local_date::timestamp;
   end loop;
 
   -- Unreachable when config validates (≥1 weekday); satisfies fail-closed contract.
@@ -341,7 +355,7 @@ end;
 $$;
 
 comment on function private.compute_business_sla_due_at(timestamptz, integer, text, jsonb) is
-  'Add business minutes to UTC receipt using IANA timezone + weekday [start,end) windows. Returns NULL when inactive/invalid (fail closed).';
+  'Add exact business-minute intervals to a UTC receipt using IANA timezone + weekday [start,end) windows. Preserves sub-minute receipt offset. Iteration bound derived from weekly capacity. Returns NULL when inactive/invalid (fail closed).';
 
 revoke all on function private.compute_business_sla_due_at(timestamptz, integer, text, jsonb)
   from public, anon, authenticated;
@@ -452,7 +466,7 @@ begin
     raise exception 'Lead % not found', p_lead_id using errcode = 'P0002';
   end if;
 
-  -- Existing row: return as-is (Option A + NULL-due snapshot lock)
+  -- Existing row: return as-is (Option A + NULL-due snapshot lock). No policy lock.
   select * into v_row
   from public.crm_sla_clocks c
   where c.lead_id = p_lead_id;
@@ -461,9 +475,12 @@ begin
     return v_row;
   end if;
 
+  -- New clock: FOR SHARE conflicts with update_crm_sla_policy_impl FOR UPDATE so the
+  -- due snapshot serializes cleanly against concurrent policy mutation.
   select * into v_policy
   from public.crm_sla_policies p
-  where p.policy_code = 'first_contact';
+  where p.policy_code = 'first_contact'
+  for share;
 
   if found
     and v_policy.is_active
@@ -510,7 +527,7 @@ end;
 $$;
 
 comment on function private.ensure_first_contact_sla_clock(uuid) is
-  'Idempotent first-contact SLA clock ensure. Computes due only on first insert under evaluable in-scope policy; never rescopes existing rows.';
+  'Idempotent first-contact SLA clock ensure. New-clock path locks policy FOR SHARE through due compute + insert; never rescopes existing rows.';
 
 revoke all on function private.ensure_first_contact_sla_clock(uuid) from public, anon, authenticated;
 alter function private.ensure_first_contact_sla_clock(uuid) owner to postgres;
