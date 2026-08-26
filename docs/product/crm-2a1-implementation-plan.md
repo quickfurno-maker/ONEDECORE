@@ -28,7 +28,7 @@
 | Indexes | `uq_lead_follow_ups_one_primary_open`; `idx_lead_follow_ups_owner_primary_open_due`; events lead/follow_up created indexes; retained prior follow-up indexes |
 | Local validation | `npx supabase db reset` OK; full pgTAP **PASS** (31/31 files); `db lint --local --level warning` OK (pre-existing unrelated warnings only) |
 | Types | `database.generated.ts` **not** regenerated (no app/UI consumers in this slice) |
-| Companion test | `01_identity_rbac_test.sql` public table inventory **101 → 103** (required for new catalogue + events tables) |
+| Companion test | `01_identity_rbac_test.sql` public table inventory **101 → 103**; app inventory pins updated to migration count **40** / latest `20260826120000_…` (payment M38 still fail-closed) |
 | Managed Supabase | **Not touched** |
 | Deferred payment M38 | **Untouched** |
 
@@ -518,6 +518,10 @@ If trigger complexity surprises during implementation, defer **enforcement** onl
 | `supabase/migrations/20260826120000_crm_activity_control_plane_foundation.sql` | **Created** |
 | `supabase/tests/database/31_crm_activity_control_plane_foundation_test.sql` | **Created** |
 | `supabase/tests/database/01_identity_rbac_test.sql` | **Updated** public table count 101 → 103 (inventory companion) |
+| `src/features/whatsapp/__tests__/phase-6b-integrated-matrix.test.ts` | **Updated** migration inventory pin (40; CRM 2A-1 latest; M38 still absent) |
+| `src/features/commerce/__tests__/phase-9d-d2-cart-checkout-tracking.test.ts` | **Updated** latest-migration / count pin |
+| `src/features/commerce/__tests__/phase-9d-f-cod-certification.test.ts` | **Updated** latest-migration / count pin |
+| `src/features/commerce/__tests__/phase-10-cod-production-readiness.test.ts` | **Updated** migration count pin |
 | `src/types/database.generated.ts` | **Skipped** — not required for this DB-only PR |
 | `docs/product/crm-2a1-implementation-plan.md` | **Updated** with implementation evidence |
 
