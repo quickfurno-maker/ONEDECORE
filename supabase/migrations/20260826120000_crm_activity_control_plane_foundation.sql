@@ -582,6 +582,20 @@ begin
     raise exception 'Permission denied to manage follow-ups' using errcode = '42501';
   end if;
 
+  -- Serialize against assign_lead_impl (lead FOR UPDATE) and parallel creates
+  -- before authorization / owner / auto-primary decisions.
+  select l.assigned_to, l.status
+  into v_assigned_to, v_status
+  from public.leads l
+  where l.id = p_lead_id
+  for update;
+
+  if not found then
+    raise exception 'Lead % not found', p_lead_id using errcode = 'P0002';
+  end if;
+
+  -- Re-evaluate mutate authorization after the lead lock so assignment-scoped
+  -- access cannot become stale vs a concurrent reassignment.
   if not (select private.crm_can_mutate_lead(p_lead_id)) then
     raise exception 'Lead not visible for follow-up creation' using errcode = '42501';
   end if;
@@ -598,16 +612,7 @@ begin
     end if;
   end if;
 
-  select l.assigned_to, l.status
-  into v_assigned_to, v_status
-  from public.leads l
-  where l.id = p_lead_id;
-
-  if not found then
-    raise exception 'Lead % not found', p_lead_id using errcode = 'P0002';
-  end if;
-
-  -- Auto-primary ONLY when all owner-locked gates hold; else secondary.
+  -- Auto-primary ONLY when all owner-locked gates hold under the lead lock.
   v_is_primary :=
     v_assigned_to is not null
     and v_status not in ('closed_won', 'closed_lost', 'on_hold')

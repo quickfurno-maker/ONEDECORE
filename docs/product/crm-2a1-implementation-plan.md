@@ -22,7 +22,7 @@
 | Baseline | `origin/main` @ `c21a22b11b5672e5e24fda0ad981d896991076f8` (verified; no unexpected drift) |
 | Migration | `supabase/migrations/20260826120000_crm_activity_control_plane_foundation.sql` |
 | pgTAP | `supabase/tests/database/31_crm_activity_control_plane_foundation_test.sql` (69 assertions) |
-| Compatibility | Strategy A — `private.create/complete/cancel_lead_follow_up_impl` updated; no primary-clearing trigger |
+| Compatibility | Strategy A — `private.create/complete/cancel_lead_follow_up_impl` updated; create locks lead `FOR UPDATE` before mutate auth / auto-primary; no primary-clearing trigger |
 | Auth helper | `private.crm_user_can_operate_lead(uuid, uuid, text)` — target-user; not wired to `assign_lead` |
 | Quotation | `quotation_id` FK → `quotations(id)` + `private.trg_lead_follow_ups_quotation_same_lead` |
 | Indexes | `uq_lead_follow_ups_one_primary_open`; `idx_lead_follow_ups_owner_primary_open_due`; events lead/follow_up created indexes; retained prior follow-up indexes |
@@ -356,15 +356,16 @@ Caller identity is **irrelevant** to the boolean result. A manager invoking the 
 1. Keep public signature unchanged.
 2. Prefer **explicit column list** including new structured fields (defaults remain for safety).
 3. Defaults: `activity_type = 'call'`, `title = 'Follow-up'`, `priority = 'normal'`, `source = 'manual'`.
-4. **Auto-primary only when all of the following are true:**
+4. **Atomic create lock order (required):** after `crm.follow_ups.manage`, `SELECT … FROM leads FOR UPDATE`, then `crm_can_mutate_lead`, then owner resolution, then auto-primary under that lock (shared serialization boundary with `assign_lead_impl`). Partial unique index remains the integrity backstop.
+5. **Auto-primary only when all of the following are true:**
    - lead is **assigned** (`assigned_to IS NOT NULL`)
    - lead is **active / non-terminal** (not `closed_won`, not `closed_lost`)
    - lead is **not** `on_hold`
    - **no open primary** exists for the lead
    - activity **`owner_id` equals `leads.assigned_to`**
-5. Otherwise: `is_primary_next_action = false` (secondary).
-6. This does **not** introduce the global “exactly one primary for every active assigned lead” invariant — later CRM 2A workflow slices own that.
-7. **Prospective events (required):**
+6. Otherwise: `is_primary_next_action = false` (secondary).
+7. This does **not** introduce the global “exactly one primary for every active assigned lead” invariant — later CRM 2A workflow slices own that.
+8. **Prospective events (required):**
    - always emit `created` (`actor_id = auth.uid()`)
    - emit `primary_designated` **if and only if** auto-primary occurs
 
@@ -694,3 +695,4 @@ Do **not** implement in 2A-1: `crm_sla_policies`, `crm_sla_clocks`, first-contac
 | 2026-08-26 | Initial CRM 2A-1 implementation plan from repo audit @ `c21a22b` |
 | 2026-08-26 | Owner locks: prospective RPC events; gated create auto-primary; managed `20260825163000`/`20260825170000` applied |
 | 2026-08-26 | Implemented: migration + pgTAP + table-count companion; local reset/pgTAP/lint green; managed apply not done |
+| 2026-08-26 | Pre-merge: create_lead_follow_up_impl locks lead FOR UPDATE before mutate auth / auto-primary (serialize vs assign + parallel creates) |

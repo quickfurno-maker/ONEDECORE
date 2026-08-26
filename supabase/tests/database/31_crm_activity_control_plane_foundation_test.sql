@@ -1,7 +1,7 @@
 -- CRM 2A-1 — Activity control-plane foundation pgTAP
 
 begin;
-select plan(69);
+select plan(70);
 
 -- =============================================================================
 -- Schema
@@ -80,6 +80,27 @@ select has_function(
   'crm_user_can_operate_lead',
   array['uuid', 'uuid', 'text'],
   'crm_user_can_operate_lead exists'
+);
+
+-- Lead-row FOR UPDATE must precede crm_can_mutate_lead and auto-primary gates
+-- (serialize vs assign_lead_impl + parallel creates). Partial unique remains backstop.
+select results_eq(
+  $$
+  with def as (
+    select pg_get_functiondef(
+      'private.create_lead_follow_up_impl(uuid,timestamptz,uuid)'::regprocedure
+    ) as src
+  )
+  select
+    position('for update' in lower(src)) > 0
+    and position('for update' in lower(src))
+      < position('crm_can_mutate_lead' in lower(src))
+    and position('crm_can_mutate_lead' in lower(src))
+      < position('v_is_primary :=' in lower(src))
+  from def
+  $$,
+  array[true],
+  'create locks lead FOR UPDATE before mutate auth and auto-primary decision'
 );
 
 select results_eq(
