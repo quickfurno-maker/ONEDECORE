@@ -93,11 +93,11 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(m23Blob, FROZEN_HASHES.M23_GIT_BLOB);
   });
 
-  test("repository has M1–M37 COD, timeline v2, notes repair; payment M38 fail-closed", () => {
+  test("repository has M1–M37 COD, timeline v2, notes repair, CRM 2A-1; payment M38 fail-closed", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 39, "Migration count must be exactly 39");
+    assert.equal(files.length, 40, "Migration count must be exactly 40");
 
     const phase6c = files.filter((f) => f.startsWith("20260809"));
     assert.equal(phase6c.length, 1);
@@ -176,8 +176,9 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
       [
         "20260825163000_lead_timeline_taxonomy_v2.sql",
         "20260825170000_crm_lead_notes_insert_privilege_repair.sql",
+        "20260826120000_crm_activity_control_plane_foundation.sql",
       ],
-      "Only timeline v2 and notes privilege repair may follow 9D-D1 COD order foundation"
+      "Only timeline v2, notes privilege repair, and CRM 2A-1 may follow 9D-D1 COD order foundation"
     );
     assert.equal(
       files.includes("20260825140000_commerce_online_payment_adapter_foundation.sql"),
