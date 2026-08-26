@@ -120,7 +120,7 @@ Follow-up KPIs: open, overdue, dueSoon, completed, cancelled. Overview links ove
 - **Reassign:** blocked if open follow-ups owned by someone other than new assignee
 - **Assign:** no auto first-contact task today
 
-**2A replaces blanket block/transfer-all** with primary-only transfer rules (§9.2).
+**2A replaces blanket block/transfer-all** with authorization-aware primary/secondary rules (§9.2).
 
 ### 2.8 On Hold today
 
@@ -148,7 +148,7 @@ Reason + `on_hold_since` + `on_hold_previous_status`; no review date. UI: reason
 2. **Multiple activities allowed:** secondary/non-primary open activities may coexist (consultation + prep, site visit + reminder, etc.).
 3. **Atomic completion:** complete + next primary action (or controlled terminal/on-hold) in one transaction; pipeline transitions reuse existing impl.
 4. **Audit everything:** lifecycle changes in `lead_follow_up_events`; summary in `lead_activities`.
-5. **Business-window SLA:** no false overnight breaches; fail closed if business hours not configured.
+5. **Business-window SLA:** no false overnight breaches; **policy not active/configured** until owner sets business hours — fail closed, no silent wall-clock or invented schedule.
 6. **Reps live in My Day;** managers monitor Overview + team My Day + Reports.
 7. **No duplicate mutable truth on `leads`:** query primary activity via indexes/joins/lateral/view.
 
@@ -167,7 +167,7 @@ Reason + `on_hold_since` + `on_hold_previous_status`; no review date. UI: reason
 ### 4.2 Sales Executive — inbound lead
 
 1. Lead created → **SLA clock starts at lead receipt** (stored UTC; evaluated Asia/Kolkata business window).
-2. If immediately assigned → **First Contact** primary activity created atomically; due = receipt + 60 business minutes (initial policy).
+2. If immediately assigned → **First Contact** primary activity created atomically when SLA policy is active; due = receipt + 60 business minutes (only after owner-configured business hours).
 3. If unassigned → appears in manager **Unassigned** + **SLA Breaches** attention; on assign, First Contact created with deadline derived from **original receipt clock**, not assignment time.
 4. Executive completes first contact → structured outcome → mandatory next **primary** action.
 
@@ -186,13 +186,14 @@ Reason + `on_hold_since` + `on_hold_previous_status`; no review date. UI: reason
 1. **Overview** — Unassigned, SLA Breaches, no-primary-next-action, overdue roll-up.
 2. **My Day (Team)** — filter by rep; same bucket semantics.
 3. **Reports** — SLA compliance, no-next-action, completion rates.
-4. **Reassign** — primary next action follows new assignee; secondary activities keep explicit owners unless intentionally changed.
+4. **Reassign** — primary next action follows new assignee; secondary activities retain owner **only when that owner retains lead authorization**; otherwise transfer/cancel with audit (§9.2).
 
 ### 4.5 Super Admin — SLA & business hours
 
 1. **Settings → CRM SLA** (`/admin/crm/settings/sla`) — requires `crm.sla.manage`.
 2. Configure: first-contact target (60 business minutes initial), timezone (`Asia/Kolkata`), business days/hours.
-3. If business hours disabled/unconfigured → SLA evaluation **fail closed** (no silent wall-clock fallback).
+3. **Exact opening/closing schedule is a deployment configuration input** — must be explicitly owner-approved before SLA evaluation goes live. The spec does **not** lock Mon–Sat or any default hours.
+4. Until business hours are saved and policy is active → SLA evaluation reports **policy not active/configured**; **fail closed** (no silent wall-clock fallback, no migration-invented schedule).
 
 ---
 
@@ -295,9 +296,9 @@ Free-text `outcome` column retained for backward compatibility.
 | `policy_code` | text UNIQUE | `'first_contact'` |
 | `target_business_minutes` | integer NOT NULL | Initial: **60** |
 | `timezone` | text NOT NULL | Initial: **`Asia/Kolkata`** |
-| `business_hours_enabled` | boolean NOT NULL | Must be true for SLA evaluation |
-| `business_hours_config` | jsonb NOT NULL | Days + start/end local times (configurable policy) |
-| `is_active` | boolean | |
+| `business_hours_enabled` | boolean NOT NULL | Must be **true** and config valid for SLA evaluation |
+| `business_hours_config` | jsonb NULL | Days + start/end local times; **NULL/empty until owner configures** |
+| `is_active` | boolean NOT NULL | Policy active only when hours configured and explicitly enabled |
 | `updated_by` / `updated_at` | | Audit |
 
 **Table:** `crm_sla_clocks` (per-lead SLA tracking — canonical, not denormalized next-action cache)
@@ -307,12 +308,12 @@ Free-text `outcome` column retained for backward compatibility.
 | `lead_id` | uuid PK FK → leads | |
 | `policy_code` | text | `'first_contact'` |
 | `clock_started_at` | timestamptz NOT NULL | **Lead creation/receipt** |
-| `sla_due_at` | timestamptz NULL | Computed when policy active; business-window-aware |
+| `sla_due_at` | timestamptz NULL | Computed only when policy **active**; business-window-aware |
 | `first_contact_at` | timestamptz NULL | Set on qualifying completed activity |
 | `breached_at` | timestamptz NULL | Set once when breach detected (idempotent) |
 | `created_at` / `updated_at` | | |
 
-If `business_hours_enabled = false` or config invalid → SLA operations **fail closed**; no silent wall-clock invention.
+If `business_hours_enabled = false`, `business_hours_config` invalid/empty, or `is_active = false` → SLA operations **fail closed** with **policy not active/configured** state; no silent wall-clock invention; migration must **not** seed arbitrary operating hours.
 
 **Rejected for 2A:** mutable `next_action_due_at`, `next_action_activity_type` on `public.leads`.
 
@@ -410,7 +411,7 @@ Lead-attention (not task-bucket):
 | `private.auto_create_first_contact_primary` | Idempotent; uses receipt clock |
 | `fetch_my_day_task_bucket` / `fetch_my_day_lead_attention` | Queue RPCs |
 | `transition_lead_status` | Extended: on_hold atomic primary swap |
-| `assign_lead` | Extended: primary transfer on reassign; First Contact on assign |
+| `assign_lead` | Extended: authorization-aware primary/secondary transfer on reassign; First Contact on assign |
 
 Deprecated wrappers: `create_lead_follow_up`, `complete_lead_follow_up` (one release).
 
@@ -456,8 +457,8 @@ Single transaction:
 
 | Scenario | Behavior |
 | :--- | :--- |
-| Created + immediately assigned | Atomically create First Contact **primary**; `sla_due_at = business_add(clock_started_at, 60 min)` |
-| Created unassigned | No primary yet; SLA clock running; manager **Unassigned** + SLA attention |
+| Created + immediately assigned | Atomically create First Contact **primary**; `sla_due_at = business_add(clock_started_at, 60 min)` **only when SLA policy is active** |
+| Created unassigned | No primary yet; SLA clock running; `sla_due_at` NULL until policy active; manager **Unassigned** + SLA attention when applicable |
 | Later assigned | Create First Contact primary; **deadline from original receipt clock**, not assignment timestamp |
 
 **First Contact activity defaults**
@@ -477,17 +478,30 @@ Skip if primary First Contact already exists OR `first_contact_at` set.
 - When `true`: apply same business-SLA rules using **original row receipt timestamp** from import metadata (not `now()`).
 - Document default in import wizard and spec.
 
-### 9.2 Reassignment behaviour
+### 9.2 Reassignment behaviour (authorization-aware)
 
-| Activity kind | On reassign |
-| :--- | :--- |
-| Open **primary** next action | **Transfer `owner_id` to new assignee** atomically; audit `ownership_transferred` + `lead_activities` summary |
-| Open **secondary** activities | **Retain existing owner** unless payload includes explicit transfer list |
-| All transfers | Audited in `lead_follow_up_events` |
+On lead reassignment, the `assign_lead` RPC (or equivalent) must finish with **zero open activities whose owner cannot legally operate on that lead**.
 
-**Unassign:** fail closed unless primary next action explicitly resolved (complete/cancel/transfer) under controlled manager operation. Never leave inaccessible/orphaned primary owned by departing assignee.
+**A. Primary next action** — always transfer `owner_id` to the new lead assignee atomically. Audit `ownership_transferred` in `lead_follow_up_events` + summary in `lead_activities`.
 
-**Remove** today's blanket reassign block for primary; keep safety checks for orphaned primary.
+**B. Secondary open activities** — may retain current owner **only if** that owner will still have authorization to view/mutate the lead after reassignment (e.g. manager with `leads.read_all` who delegated the task).
+
+**C. Secondary owner would lose access** (typical case: assignment-scoped sales executive after lead moves to another rep) — do **not** silently leave the activity with the previous owner. The RPC must either:
+- transfer to the new lead owner,
+- transfer to another authorized owner (manager operation), or
+- cancel/resolve with audit and structured reason.
+
+**D. Automated/default reassignment rule (deterministic):**
+- Assignment-scoped sales-owned secondary activities → **transfer to new lead owner**.
+- Broad-scope manager/admin-delegated activities (`leads.read_all` owner) → **may remain** with explicit owner if they retain lead visibility.
+
+**E. Audit** — every ownership transfer or cancellation during reassignment recorded in `lead_follow_up_events` (`ownership_transferred`, `cancelled`, etc.).
+
+**F. Post-condition** — after commit, no open activity exists where `owner_id` lacks `crm_can_view_lead_by_id` / mutate authorization for that lead.
+
+**Unassign:** fail closed unless primary next action explicitly resolved (complete/cancel/transfer) under controlled manager operation. Same authorization post-condition applies.
+
+**Remove** today's blanket reassign block for primary; replace with authorization-safe transfer rules above.
 
 ### 9.3 On Hold (primary semantics)
 
@@ -516,8 +530,9 @@ Secondary activities may be added in same transaction but do not replace primary
 
 Read-time evaluation for 2A (no notification centre):
 
-- `business_hours_enabled = true` and valid config required
-- Breach when `first_contact_at IS NULL` AND `now() > sla_due_at` AND lead non-terminal
+- Policy must be **active** (`is_active = true`, valid `business_hours_config`, `business_hours_enabled = true`)
+- If policy not active → report **policy not active/configured**; do not compute breaches
+- When active: breach when `first_contact_at IS NULL` AND `now() > sla_due_at` AND lead non-terminal
 - Optional one-time `follow_up.sla_breached` summary in `lead_activities` (idempotent)
 
 ---
@@ -580,25 +595,34 @@ UI rule: a primary activity appears in **exactly one** task bucket. Lead-attenti
 
 ## 11. SLA configuration model
 
-### Initial policy (locked)
+### Locked product parameters
 
 | Setting | Value |
 | :--- | :--- |
 | Policy code | `first_contact` |
 | Target | **60 business minutes** |
-| Timezone | **Asia/Kolkata** |
+| Timezone | **Asia/Kolkata** (IANA; used for day boundaries and business-window math) |
 | Storage | UTC timestamptz |
 | Clock start | **Lead creation/receipt** |
-| Business hours | Configurable JSON policy (days, local start/end) |
-| Unconfigured/disabled | **Fail closed** — no SLA due computed, no silent wall-clock fallback |
+| Unconfigured / inactive | **Fail closed** — **policy not active/configured**; no SLA due computed; no silent wall-clock fallback |
+
+### Deployment configuration (requires explicit owner lock)
+
+| Setting | Status |
+| :--- | :--- |
+| Exact business days | **Not locked in spec** — owner input at deployment |
+| Exact opening/closing times | **Not locked in spec** — owner input at deployment |
+| Migration default schedule | **Forbidden** — do not seed Mon–Sat or any arbitrary hours |
+
+The schema supports `business_hours_config` (JSON). The **CRM 2A-1 implementation plan** must treat the exact schedule as a deployment/configuration step before SLA evaluation and breach reporting go live in production.
 
 ### Admin UI (`/admin/crm/settings/sla`)
 
-- Target business minutes
+- Target business minutes (default 60)
 - Timezone selector (default Asia/Kolkata)
 - Business days + hours editor
-- Enable/disable business-hours evaluation
-- Save requires valid config when enabled
+- Enable policy (requires valid hours before `is_active = true`)
+- Save rejects incomplete config when enabling
 
 ### Future (post-2A)
 
@@ -660,7 +684,7 @@ All "today" / "overdue" boundaries: convert `due_at` (UTC) vs `[start_of_day, en
 | `assignmentDelayAvgMinutes` | Avg time from receipt to first assignment (visibility metric) |
 | `noPrimaryNextActionCount` | Active assigned leads missing open primary |
 | `taskCompletionRate` | completed / (completed + overdue primary) in range |
-| `slaBreachCount` | Current breached leads (snapshot) |
+| `slaBreachCount` | Current breached leads where policy **active** (snapshot); null/N/A when policy not configured |
 
 Managers see SLA state; they do not edit policy without `crm.sla.manage`.
 
@@ -673,10 +697,11 @@ Managers see SLA state; they do not edit policy without `crm.sla.manage`.
 | Complete primary without next resolution | `NEXT_ACTION_REQUIRED` |
 | Second primary designation | Partial unique index violation → transaction rollback |
 | Multiple open activities, one primary | Allowed |
-| Reassign | Primary transfers; secondaries retain owner |
+| Reassign | Primary transfers to new assignee; secondaries retain owner **only if authorization retained**; otherwise transfer/cancel with audit; **zero inaccessible open activities** post-commit |
 | Unassign with unresolved primary | Fail closed |
-| Business hours not configured | SLA fail closed; admin prompted |
-| Lead received outside business hours | SLA clock starts at receipt; due computed in next business window (no overnight false breach) |
+| Business hours not configured | SLA **policy not active/configured**; admin prompted; no breach counts |
+| Policy inactive at lead receipt | Clock starts; `sla_due_at` NULL until policy activated and backfilled/computed |
+| Lead received outside business hours | When policy active: due computed in next business window (no overnight false breach) |
 | Bulk import default | No First Contact tasks unless opt-in |
 | On hold | Old primary resolved; review becomes primary |
 | Complete → Closed Won | Existing quotation acceptance rules only |
@@ -684,6 +709,7 @@ Managers see SLA state; they do not edit policy without `crm.sla.manage`.
 | Migration: multiple open rows | Designate one primary; preserve all rows |
 | Migration: ambiguous primary candidates | Deterministic ordering; log report |
 | Orphaned primary after role change | Manager transfer operation required |
+| Secondary activity owner loses lead access after reassign | Auto-transfer to new assignee (sales-scoped) or cancel with audit; never leave orphaned |
 
 ---
 
@@ -700,8 +726,8 @@ Managers see SLA state; they do not edit policy without `crm.sla.manage`.
 5. Performance indexes (§12.1)
 6. Extend `lead_activities` check constraint
 7. Add `crm.sla.manage` permission + super_admin grant
-8. Seed outcomes, default SLA policy (**60 business minutes**, Asia/Kolkata — disabled until business hours configured OR seed with valid default Mon–Sat hours)
-9. Business-window helper functions
+8. Seed outcomes; insert SLA policy row (**60 business minutes**, Asia/Kolkata, **`is_active = false`**, **`business_hours_config = NULL`**) — **no arbitrary business-hours seed**
+9. Business-window helper functions (fail closed when config missing)
 10. RPC impls (§8)
 11. Update `assign_lead`, manual create, import (opt-in flag)
 12. pgTAP tests
@@ -720,10 +746,14 @@ Managers see SLA state; they do not edit policy without `crm.sla.manage`.
 | Second primary blocked | Partial unique violation |
 | Primary backfill | Deterministic; all rows preserved |
 | Business SLA due | Outside-hours receipt → due in next window |
-| SLA fail closed | Disabled config → no due computed |
-| Receipt clock on assign | Assign later → due from creation not assign |
+| SLA fail closed | Inactive policy → `sla_due_at` NULL; policy not active state |
+| Policy activation | After owner configures hours → due computed; breaches evaluable |
+| Receipt clock on assign | Assign later → due from creation not assign (when policy active) |
 | Complete → transition | Uses existing impl; no duplicate rules |
-| Reassign primary transfer | Owner updated; secondary unchanged |
+| Reassign primary transfer | Primary owner = new assignee |
+| Reassign secondary (sales-scoped) | Transfers to new assignee when previous owner loses access |
+| Reassign secondary (manager-scoped) | May retain owner when `leads.read_all` visibility retained |
+| Reassign post-condition | No open activity with owner lacking lead authorization |
 | On hold primary swap | Old primary resolved; review primary open |
 | Import opt-in false | No First Contact tasks |
 | Import opt-in true | Tasks use receipt timestamp |
@@ -737,7 +767,8 @@ Contract validation, My Day bucket exclusivity, lead-attention vs task-bucket se
 
 - [ ] Task buckets mutually exclusive
 - [ ] Lead-attention sections don't duplicate tasks
-- [ ] Business-hours SLA: evening receipt not instantly breached
+- [ ] Business-hours SLA: policy inactive until owner configures hours (no false breaches)
+- [ ] Reassign: no orphaned secondary owned by rep who lost lead access
 - [ ] Unassigned lead SLA visible to manager
 - [ ] Bulk import default safe
 - [ ] Pipeline preview still on Leads
@@ -749,7 +780,7 @@ Contract validation, My Day bucket exclusivity, lead-attention vs task-bucket se
 | Slice | Deliverable |
 | :--- | :--- |
 | **2A-1** | DB migration + events table + primary index + pgTAP |
-| **2A-2** | Business-SLA helpers + `crm_sla_clocks` + policy seed |
+| **2A-2** | Business-SLA helpers + `crm_sla_clocks` + inactive policy scaffold (no default hours) |
 | **2A-3** | Activity RPCs + complete-with-next (transition reuse) |
 | **2A-4** | Activity service + contracts |
 | **2A-5** | Lead detail activity UX + primary badge |
@@ -770,29 +801,39 @@ Contract validation, My Day bucket exclusivity, lead-attention vs task-bucket se
 5. Structured activities with type, title, priority, due; optional duration, reminder, quotation.
 6. **`lead_follow_up_events`** audits reschedule, ownership, priority, primary changes, complete, cancel, outcome.
 7. Complete requires outcome; atomic next primary or controlled on_hold/closed via **existing transition impl**.
-8. First-contact SLA: **60 business minutes**, **Asia/Kolkata**, clock from **receipt**; fail closed without business hours.
+8. First-contact SLA: **60 business minutes**, **Asia/Kolkata**, clock from **receipt**; **policy not active/configured** until owner sets business hours; fail closed — **no migration default schedule**.
 9. Bulk import: no mass First Contact unless explicit opt-in.
 10. On Hold: review activity becomes primary; previous primary resolved atomically.
-11. Reassign: primary follows assignee; secondaries keep explicit owner; audited.
+11. Reassign: primary follows assignee; secondaries retain owner **only when authorization retained**; otherwise transfer/cancel with audit; **no inaccessible/orphaned open activities** after reassign.
 12. **`crm.sla.manage`** super_admin only; managers read breaches.
 13. **No** mutable `next_action_*` on `leads`.
 14. Pipeline preview on Leads retained; no Calendar/dedicated Pipeline route.
 15. pgTAP green; forward-only migration auditable.
+16. Reassignment RPC post-condition: pgTAP proves **zero open activities** whose owner cannot operate on the lead.
 
 ---
 
 ## 19. Owner decisions (locked)
 
-All items resolved 2026-08-26. **No open owner decisions remain for these topics.**
+**Product architecture decisions** — locked 2026-08-26. **Deployment configuration inputs** — listed separately; not implied as locked defaults.
+
+### Product architecture (locked)
 
 | # | Topic | Locked decision |
 | :--- | :--- | :--- |
-| **1** | **First-contact SLA** | Business-window-aware; initial target **60 business minutes**; timezone **Asia/Kolkata**; UTC storage; business days/hours **configurable**; **fail closed** if not configured; clock starts at **lead creation/receipt** (assignment delay visible) |
+| **1** | **First-contact SLA (architecture)** | Business-window-aware; initial target **60 business minutes**; timezone **Asia/Kolkata**; UTC storage; clock starts at **lead creation/receipt**; **fail closed / policy not active** until owner-configured business hours; **no migration-invented schedule** |
 | **2** | **One open task vs primary** | **Reject** one-total-open-task rule. **Allow multiple open activities.** Require **at most one open primary next action** per lead (partial unique index). "No Next Action" = no open primary. |
-| **3** | **Reassignment** | **Primary** transfers with lead ownership atomically. **Secondary** activities retain explicit owner unless intentionally reassigned. All transfers audited. Unassign fails closed unless primary explicitly resolved. |
+| **3** | **Reassignment** | **Primary** always transfers to new lead owner atomically. **Secondary** retains owner **only if that owner retains lead authorization after reassignment**; otherwise transfer/cancel with audit. Reassign RPC finishes with **zero inaccessible open activities**. Unassign fails closed unless primary explicitly resolved. |
 | **4** | **SLA permission** | **`crm.sla.manage`** approved; super_admin only in 2A. Managers read SLA via reporting scope. |
-| **5** | **Denormalized `next_action_*` on leads** | **Rejected for 2A.** Canonical on `lead_follow_ups`; indexed queries / lateral / view. Derived projection only if scale requires later. |
+| **5** | **Denormalized `next_action_*` on leads** | **Rejected for 2A.** Canonical on `lead_follow_ups`; indexed queries / lateral / view. |
 | **6** | **Today queue timezone** | **Asia/Kolkata** approved. UTC storage; local boundaries for Today/Overdue/SLA. |
+
+### Deployment configuration (explicit owner lock required — not product-architecture locks)
+
+| Item | Requirement |
+| :--- | :--- |
+| **Exact business opening/closing times** | Owner must configure via SLA settings before policy goes active. Spec does **not** lock Mon–Sat or any default hours. CRM 2A-1 implementation plan must document this as a deployment gate. |
+| **Policy activation** | Super admin enables policy only after valid `business_hours_config` is saved. Until then: clocks may run, but `sla_due_at` and breach metrics remain **policy not active/configured**. |
 
 ### Additional locked spec corrections (2026-08-26)
 
@@ -808,6 +849,8 @@ All items resolved 2026-08-26. **No open owner decisions remain for these topics
 | **H** | Performance via indexes + query review before denormalization |
 | **I** | Migration: preserve all rows; deterministic primary backfill; fail closed on unsafe contradictions |
 | **J** | Scope deferrals unchanged (Calendar, Pipeline route, cadences, AI, commerce, etc.) |
+| **K** | **Pre-PR 2026-08-26:** No migration seed of arbitrary business hours; exact schedule = deployment config |
+| **L** | **Pre-PR 2026-08-26:** Reassignment authorization rules for secondary activities (§9.2 A–F) |
 
 ---
 
@@ -815,13 +858,15 @@ All items resolved 2026-08-26. **No open owner decisions remain for these topics
 
 | Tension | Resolution |
 | :--- | :--- |
-| Multiple open activities vs assignment hardening that blocks on any open follow-up | 2A updates assign/unassign rules to key off **primary** ownership only |
-| SLA clock at receipt vs task created on assign | Clock always at receipt; task created on assign (or immediately if assigned at creation); due computed from receipt |
-| Fail-closed SLA vs usable out-of-box | Migration seeds **valid default business hours** (e.g. Mon–Sat 10:00–19:00 IST) so SLA is evaluable after deploy; admin may adjust |
+| Multiple open activities vs assignment hardening that blocks on any open follow-up | 2A updates assign/unassign rules to key off **primary** ownership and authorization post-conditions |
+| SLA clock at receipt vs task created on assign | Clock always at receipt; task created on assign (or immediately if assigned at creation); `sla_due_at` computed only when policy **active** |
+| Fail-closed SLA vs usable out-of-box | Migration inserts **inactive** policy scaffold only — **no arbitrary Mon–Sat seed**. Super admin must configure and activate hours at deployment. Until then: **policy not active/configured** (not silent wall-clock SLA). |
+| Exact business hours not owner-approved in spec | **Deployment configuration item** — CRM 2A-1 plan must include explicit owner lock step before production SLA goes live |
 | `first_contact_at` storage | Lives on **`crm_sla_clocks`**, not mutable cache on `leads` |
 | Secondary activity completion without primary successor | Allowed — only **primary** completion triggers next-action requirement |
+| Secondary retains owner vs assignment-scoped RLS after reassign | **§9.2 authorization rules:** sales-scoped secondaries transfer to new assignee; manager-delegated may retain owner; reassign RPC proves zero inaccessible open activities |
 
-**No unresolved contradictions** between owner decisions and this spec after corrections above.
+**No unresolved contradictions** between owner decisions and this spec after pre-PR corrections (§19 K–L).
 
 ---
 
@@ -831,3 +876,4 @@ All items resolved 2026-08-26. **No open owner decisions remain for these topics
 | :--- | :--- |
 | 2026-08-26 | Initial 2A design from baseline audit @ `6f07e08` |
 | 2026-08-26 | Owner review corrections: business-window SLA, primary-next-action semantics, events table, reassignment rules, reject leads denormalization, My Day bucket model, locked §19 |
+| 2026-08-26 | Pre-PR corrections: business hours = deployment config (no migration default); reassignment authorization rules for secondary activities (§9.2, §19 K–L) |

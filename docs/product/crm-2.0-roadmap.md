@@ -11,14 +11,21 @@
 
 | # | Topic | Decision | Status |
 | :--- | :--- | :--- | :--- |
-| 1 | First-contact SLA | Business-window-aware; **60 business minutes** initial target; **Asia/Kolkata**; UTC storage; clock starts at **lead creation/receipt**; fail closed if business hours not configured | **LOCKED** |
+| 1 | First-contact SLA (architecture) | Business-window-aware; **60 business minutes** initial target; **Asia/Kolkata**; UTC storage; clock starts at **lead creation/receipt**; **fail closed** until business hours are owner-configured and policy is active | **LOCKED** |
 | 2 | Open tasks vs next action | **Multiple open activities allowed**; exactly **one primary next action** per active assigned lead; partial unique on open primary | **LOCKED** |
-| 3 | Reassignment | **Primary next action** transfers with lead ownership; secondary activities keep explicit owner; all transfers audited; unassign fails closed unless primary resolved | **LOCKED** |
+| 3 | Reassignment | **Primary** always transfers to new lead owner; **secondary** retains owner **only if that owner retains lead authorization**; otherwise transfer/cancel with audit; reassign RPC finishes with zero inaccessible open activities | **LOCKED** |
 | 4 | SLA management permission | Add **`crm.sla.manage`** — super_admin only in 2A; managers read breaches via reporting | **LOCKED** |
 | 5 | Denormalized `next_action_*` on leads | **Rejected for 2A** — canonical data on `lead_follow_ups`; indexed queries / lateral / view | **LOCKED** |
 | 6 | Workspace timezone | **Asia/Kolkata** for Today/Overdue/SLA day boundaries; timestamptz stored UTC | **LOCKED** |
 
-Full rationale and implementation detail: [CRM 2A spec §19](./crm-2a-follow-up-control-plane-design.md#19-owner-decisions-locked).
+### Deployment configuration (not product-architecture locks)
+
+| Item | Status | Notes |
+| :--- | :--- | :--- |
+| Exact business opening/closing times | **Requires explicit owner lock at deployment** | Schema supports configurable policy; migration must **not** invent arbitrary schedules (e.g. Mon–Sat example). Until configured, SLA reports **policy not active/configured**. |
+| Implementation plan CRM 2A-1 | **Pending** | Must treat operating hours as deployment input before SLA evaluation goes live. |
+
+Full rationale and implementation detail: [CRM 2A spec §19](./crm-2a-follow-up-control-plane-design.md#19-owner-decisions-locked) and [§20](./crm-2a-follow-up-control-plane-design.md#20-known-tensions--resolution-notes).
 
 ---
 
@@ -131,8 +138,8 @@ Evidence reviewed at baseline `6f07e08`. See the [2A design doc](./crm-2a-follow
 - **Primary next action** semantics — multiple open activities allowed; one open primary per lead
 - Title, priority, duration, reminder, structured outcome, completion note, optional quotation link
 - Append-only **`lead_follow_up_events`** for full activity lifecycle audit
-- Business-window-aware **first-contact SLA** (60 business minutes initial target; Asia/Kolkata)
-- SLA clock from **lead creation/receipt**; assignment delay visible
+- Business-window-aware **first-contact SLA** (60 business minutes initial target; Asia/Kolkata; **policy not active** until owner-configured business hours)
+- SLA clock from **lead creation/receipt**; assignment delay visible; no silent overnight breaches
 - First-contact auto-creation with safe bulk-import policy
 - Atomic **complete-with-next** reusing existing pipeline transition RPCs
 - On Hold: reason + review activity as new primary next action
@@ -237,3 +244,4 @@ First-response SLA compliance, velocity, conversion, forecast, target achievemen
 | :--- | :--- |
 | 2026-08-26 | Initial CRM 2.0 roadmap from expert audit; 2A scoped separately |
 | 2026-08-26 | Owner review: roadmap approved; decision log added; primary-next-action & business-window SLA corrections |
+| 2026-08-26 | Pre-PR corrections: business hours = deployment config (no migration default schedule); reassignment authorization rules for secondary activities |
