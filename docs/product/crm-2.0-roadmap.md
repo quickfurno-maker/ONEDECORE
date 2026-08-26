@@ -11,18 +11,19 @@
 
 | # | Topic | Decision | Status |
 | :--- | :--- | :--- | :--- |
-| 1 | First-contact SLA (architecture) | Business-window-aware; **60 business minutes** initial target; **Asia/Kolkata**; UTC storage; clock starts at **lead creation/receipt**; **fail closed** until business hours are owner-configured and policy is active | **LOCKED** |
-| 2 | Open tasks vs next action | **Multiple open activities allowed**; exactly **one primary next action** per active assigned lead; partial unique on open primary | **LOCKED** |
-| 3 | Reassignment | **Primary** always transfers to new lead owner; **secondary** retains owner **only if that owner retains lead authorization**; otherwise transfer/cancel with audit; reassign RPC finishes with zero inaccessible open activities | **LOCKED** |
-| 4 | SLA management permission | Add **`crm.sla.manage`** — super_admin only in 2A; managers read breaches via reporting | **LOCKED** |
-| 5 | Denormalized `next_action_*` on leads | **Rejected for 2A** — canonical data on `lead_follow_ups`; indexed queries / lateral / view | **LOCKED** |
-| 6 | Workspace timezone | **Asia/Kolkata** for Today/Overdue/SLA day boundaries; timestamptz stored UTC | **LOCKED** |
+| 1 | First-contact SLA (architecture) | **60 business minutes**; **Asia/Kolkata**; UTC; clock from **receipt**; satisfaction = **`first_contact_attempt_at`** (qualifying **attempt**, not connection); **non-retroactive `effective_from`**; fail closed until hours configured | **LOCKED** |
+| 2 | Open tasks vs next action | **Multiple open activities allowed**; exactly **one primary next action** per active assigned lead | **LOCKED** |
+| 3 | Reassignment | **Primary** transfers to new lead owner; **secondary** retains owner **only if `crm_user_can_operate_lead(target)`**; otherwise transfer/cancel with audit; zero inaccessible open activities | **LOCKED** |
+| 4 | SLA management permission | Add **`crm.sla.manage`** — super_admin only in 2A | **LOCKED** |
+| 5 | Denormalized `next_action_*` on leads | **Rejected for 2A** | **LOCKED** |
+| 6 | My Day time semantics | **Asia/Kolkata** day boundaries; **Overdue = `due_at < now()`**; Due Today = remaining local day after now | **LOCKED** |
+| 7 | Closed-Won authority | Exclusive to **`accepted_quotation_close_won_impl`**; complete-activity must **not** manufacture Closed-Won | **LOCKED** |
 
 ### Deployment configuration (not product-architecture locks)
 
 | Item | Status | Notes |
 | :--- | :--- | :--- |
-| Exact business opening/closing times | **Requires explicit owner lock at deployment** | Schema supports configurable policy; migration must **not** invent arbitrary schedules (e.g. Mon–Sat example). Until configured, SLA reports **policy not active/configured**. |
+| Exact business opening/closing times | **Requires explicit owner lock at deployment** | Migration must **not** invent arbitrary schedules. Until configured, SLA reports **policy not active/configured**. Activation is **non-retroactive**. |
 | Implementation plan CRM 2A-1 | **Pending** | Must treat operating hours as deployment input before SLA evaluation goes live. |
 
 Full rationale and implementation detail: [CRM 2A spec §19](./crm-2a-follow-up-control-plane-design.md#19-owner-decisions-locked) and [§20](./crm-2a-follow-up-control-plane-design.md#20-known-tensions--resolution-notes).
@@ -245,3 +246,4 @@ First-response SLA compliance, velocity, conversion, forecast, target achievemen
 | 2026-08-26 | Initial CRM 2.0 roadmap from expert audit; 2A scoped separately |
 | 2026-08-26 | Owner review: roadmap approved; decision log added; primary-next-action & business-window SLA corrections |
 | 2026-08-26 | Pre-PR corrections: business hours = deployment config (no migration default schedule); reassignment authorization rules for secondary activities |
+| 2026-08-26 | Final pre-merge: overdue=`now()`; Closed-Won commercial-only; owner-aware reassignment helper; SLA attempt + non-retroactive activation |
