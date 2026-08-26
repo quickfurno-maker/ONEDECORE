@@ -54,8 +54,8 @@ select results_eq(
 -- 5. Verify seeded system permissions count and is_system flag
 select results_eq(
   'select count(*)::integer from public.permissions where is_system = true',
-  array[82],
-  'Should have exactly 82 seeded system permissions (6 foundation + 2 portfolio + 4 lead intake + 9 Phase 5B CRM + 2 Phase 5C2B manual lead + 3 Phase 5D bulk import + 3 Phase 5E targets/reporting + 3 Phase 6B inbox + 12 Phase 6D staff attendance leave + 3 Phase 7A commercial quotations + 2 Phase 7B finalization send + 3 Phase 8A projects + 6 Phase 8B project design + 5 Phase 8C project execution + 5 Phase 9A campaigns/consent + 5 Phase 9B landing lab + 3 Phase 9C-B execution + 6 Phase 9D-B commerce) with is_system = true'
+  array[83],
+  'Should have exactly 83 seeded system permissions (6 foundation + 2 portfolio + 4 lead intake + 9 Phase 5B CRM + 2 Phase 5C2B manual lead + 3 Phase 5D bulk import + 3 Phase 5E targets/reporting + 3 Phase 6B inbox + 12 Phase 6D staff attendance leave + 3 Phase 7A commercial quotations + 2 Phase 7B finalization send + 3 Phase 8A projects + 6 Phase 8B project design + 5 Phase 8C project execution + 5 Phase 9A campaigns/consent + 5 Phase 9B landing lab + 3 Phase 9C-B execution + 6 Phase 9D-B commerce + 1 CRM 2A-2 sla.manage) with is_system = true'
 );
 
 -- 6. Verify user_roles starts empty
@@ -104,8 +104,8 @@ select results_eq(
 -- 10. Verify authorized application tables count
 select results_eq(
   'select count(*)::integer from information_schema.tables where table_schema = ''public'' and table_type = ''BASE TABLE''',
-  array[103],
-  'Public schema must contain exactly the 103 authorized application tables (… + Phase 9D-D1 COD orders + CRM 2A-1 lead_activity_outcome_codes + lead_follow_up_events)'
+  array[105],
+  'Public schema must contain exactly the 105 authorized application tables (… + Phase 9D-D1 COD orders + CRM 2A-1 lead_activity_outcome_codes + lead_follow_up_events + CRM 2A-2 crm_sla_policies + crm_sla_clocks)'
 );
 
 -- 11. Phase 2C3 — rls_auto_enable existence and security properties
