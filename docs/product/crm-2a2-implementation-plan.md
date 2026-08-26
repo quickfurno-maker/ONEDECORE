@@ -35,7 +35,7 @@
 | Branch | `crm-2a2-business-sla-foundation` |
 | Base SHA | `881ee56468604473e1d8e001864c1844b05a6064` |
 | Migration | `supabase/migrations/20260827140000_crm_business_sla_foundation.sql` |
-| pgTAP | `supabase/tests/database/32_crm_business_sla_foundation_test.sql` (79 assertions) |
+| pgTAP | `supabase/tests/database/32_crm_business_sla_foundation_test.sql` (80 assertions) |
 | Permission | `crm.sla.manage` → **super_admin only** |
 | Tables | `public.crm_sla_policies`, `public.crm_sla_clocks` |
 | Seed | `first_contact` / 60 / `Asia/Kolkata` / inactive / hours NULL / boundaries NULL |
@@ -45,7 +45,7 @@
 | Attempt helper | **Not implemented** (deferred 2A-3) |
 | Inventory pins | permissions **83**; tables **105**; migrations **41**; latest `20260827140000_…`; M38 still absent |
 | Local validation | `db reset` OK; full pgTAP **PASS**; `db lint` OK; pin unit tests green; `npm run check` green |
-| Pre-merge correction | Sub-minute precision; FOR SHARE vs FOR UPDATE serialization; domain-derived iteration guard; sparse-config regression |
+| Pre-merge correction | Sub-minute precision; FOR SHARE vs FOR UPDATE; domain-derived guard; activation `v_now := clock_timestamp()` **after** FOR UPDATE |
 | Managed apply | **NOT done** |
 | Production deploy | **NOT done** |
 
@@ -775,3 +775,4 @@ Do **not** implement in 2A-2: My Day UI/RPCs, SLA settings UI, `/admin/crm/setti
 | 2026-08-26 | Initial CRM 2A-2 implementation plan from audit @ `881ee56` / managed tip `20260826120000` |
 | 2026-08-26 | Implementation evidence + owner locks recorded; migration `20260827140000` + pgTAP 32 shipped locally |
 | 2026-08-26 | Pre-merge correction: sub-minute compute, ensure FOR SHARE, domain-derived iteration guard |
+| 2026-08-26 | Final pre-merge: activation `clock_timestamp()` after policy FOR UPDATE |

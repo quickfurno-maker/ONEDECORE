@@ -1,7 +1,7 @@
 -- CRM 2A-2 — Business SLA foundation pgTAP
 
 begin;
-select plan(79);
+select plan(80);
 
 -- =============================================================================
 -- Schema / permission / seed
@@ -82,6 +82,30 @@ select results_eq(
   $$,
   array[true],
   'update_crm_sla_policy_impl locks policy FOR UPDATE'
+);
+
+-- Operation timestamp must be one clock_timestamp() AFTER FOR UPDATE (not now() before lock).
+select results_eq(
+  $$
+  with def as (
+    select pg_get_functiondef(
+      'private.update_crm_sla_policy_impl(text,integer,text,boolean,jsonb,boolean,boolean)'::regprocedure
+    ) as src
+  )
+  select
+    position('for update' in lower(src)) > 0
+    and position('v_now := clock_timestamp()' in lower(src)) > 0
+    and position('for update' in lower(src))
+      < position('v_now := clock_timestamp()' in lower(src))
+    and position('v_now := clock_timestamp()' in lower(src))
+      < position('activated_at = case' in lower(src))
+    and position('v_now := clock_timestamp()' in lower(src))
+      < position('effective_from = case' in lower(src))
+    and position(':= now()' in lower(src)) = 0
+  from def
+  $$,
+  array[true],
+  'update captures one clock_timestamp() after FOR UPDATE for activated_at/effective_from'
 );
 
 select has_function(

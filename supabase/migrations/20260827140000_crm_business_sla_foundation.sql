@@ -552,7 +552,7 @@ set search_path = ''
 as $$
 declare
   v_actor uuid;
-  v_now timestamptz := now();
+  v_now timestamptz;
   v_row public.crm_sla_policies%rowtype;
   v_was_activated boolean;
   v_new_target integer;
@@ -578,6 +578,10 @@ begin
   if not found then
     raise exception 'SLA policy % not found', p_policy_code using errcode = 'P0002';
   end if;
+
+  -- Capture once after FOR UPDATE so first activation timestamps match the
+  -- serialization point vs concurrent ensure FOR SHARE (not transaction start).
+  v_now := clock_timestamp();
 
   v_was_activated := v_row.activated_at is not null;
 
