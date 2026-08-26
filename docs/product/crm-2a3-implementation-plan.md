@@ -634,7 +634,7 @@ Cover areas from authorization §29: schema/RPC existence; create/reschedule/tra
 - [x] pgTAP 33_… green + full suite regression (`plan(103)`, Result: PASS)
 - [x] Inventory pins if needed (41→42)
 - [x] Plan evidence section updated (`provider_timestamp` correction)
-- [ ] PR opened — **no merge/apply/deploy/SLA activation** until authorized
+- [x] PR opened — **no merge/apply/deploy/SLA activation** until authorized (PR #101)
 
 ---
 
