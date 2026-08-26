@@ -646,7 +646,7 @@ Cover areas from authorization §29: schema/RPC existence; create/reschedule/tra
 | Worktree | `C:\Users\KESHAV SHARMA\Desktop\OneDecore-crm-2a3-activity-rpc-workflows` |
 | Base SHA | `a4a5f676a1ce54dbee076841469e8ecac2692caf` |
 | Migration | `supabase/migrations/20260828140000_crm_activity_rpc_workflows.sql` |
-| pgTAP | `supabase/tests/database/33_crm_activity_rpc_workflows_test.sql` (`plan(103)`, full suite PASS) |
+| pgTAP | `supabase/tests/database/33_crm_activity_rpc_workflows_test.sql` (`plan(129)`, full suite PASS) |
 | Public RPCs | `create_lead_activity`, `reschedule_lead_activity`, `transfer_activity_ownership`, `designate_primary_next_action`, `complete_lead_activity` |
 | Private helpers | `*_impl` pairs; `clear_open_primary_for_lead`; `validate_crm_whatsapp_send_evidence`; `mark_first_contact_attempt_if_qualifying` |
 | Lock order | lead `FOR UPDATE` → re-auth → activity `FOR UPDATE` → (ensure+clock `FOR UPDATE` when marking) → `clock_timestamp()` → mutate |
@@ -656,7 +656,7 @@ Cover areas from authorization §29: schema/RPC existence; create/reschedule/tra
 | Closed Lost | complete → clear open primaries → `transition_lead_status_impl(..., 'closed_lost', ...)` |
 | Closed Won | resolution `CLOSED_WON` → `CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE`; exclusive `accepted_quotation_close_won_impl` |
 | Legacy | `create/complete/cancel_lead_follow_up` unchanged; legacy complete does not mark SLA |
-| Deviations | None material; owner WhatsApp timestamp correction applied (`provider_timestamp` not `created_at`) |
+| Deviations | Pre-merge corrections: title 1..120 / duration 1..1440; designate target-owner auth; On Hold cancels prior primary; clock lock before `v_now`; auto NEXT_PRIMARY/ON_HOLD owners require `crm_user_can_operate_lead` |
 
 ---
 
@@ -704,3 +704,4 @@ No data backfill expected.
 | :--- | :--- |
 | 2026-08-26 | Initial CRM 2A-3 implementation plan from audit @ `a4a5f67` / managed tip `20260827140000` |
 | 2026-08-26 | Owner correction: WhatsApp attempt uses `provider_timestamp` not `created_at`; implementation evidence added |
+| 2026-08-26 | Pre-merge corrections: domain bounds, designate owner auth, On Hold cancel-resolve, post-clock `v_now`, auto-owner operate check |

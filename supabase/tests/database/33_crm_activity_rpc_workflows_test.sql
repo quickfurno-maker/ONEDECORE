@@ -2,7 +2,7 @@
 -- Call + governed-WhatsApp attempt marking, structured outcome enforcement, legacy compat)
 
 begin;
-select plan(103);
+select plan(129);
 
 -- =============================================================================
 -- Section 1: Schema / RPC surface, privileges, lock-order architecture (27)
@@ -273,6 +273,30 @@ select results_eq(
   $$,
   array[true],
   'complete_lead_activity_impl locks lead FOR UPDATE before crm_can_mutate_lead'
+);
+
+-- Qualifying Call/WhatsApp clock lock must precede v_now := clock_timestamp().
+select results_eq(
+  $$
+  with def as (
+    select pg_get_functiondef(p.oid) as src
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'private' and p.proname = 'complete_lead_activity_impl'
+    limit 1
+  )
+  select
+    position('from public.crm_sla_clocks' in lower(src)) > 0
+    and position('for update' in lower(substr(
+      src,
+      position('from public.crm_sla_clocks' in lower(src))
+    ))) > 0
+    and position('from public.crm_sla_clocks' in lower(src))
+      < position('v_now := clock_timestamp()' in lower(src))
+  from def
+  $$,
+  array[true],
+  'complete locks crm_sla_clocks FOR UPDATE before capturing v_now'
 );
 
 -- =============================================================================
@@ -1280,6 +1304,15 @@ select results_eq(
   'call with connected outcome marks first_contact_attempt_at'
 );
 
+select results_eq(
+  $$select c.first_contact_attempt_at = f.completed_at
+      from public.crm_sla_clocks c
+      join public.lead_follow_ups f on f.id = current_setting('test.act_call1')::uuid
+     where c.lead_id = current_setting('test.lead_call')::uuid$$,
+  array[true],
+  'first qualifying Call attempt timestamp equals completed_at (post-lock v_now)'
+);
+
 select set_config('test.attempt_call', (
   select first_contact_attempt_at::text
   from public.crm_sla_clocks where lead_id = current_setting('test.lead_call')::uuid
@@ -2197,6 +2230,475 @@ select results_eq(
   $$select has_table_privilege('authenticated', 'public.crm_sla_clocks', 'DELETE')$$,
   array[false],
   'authenticated cannot DELETE crm_sla_clocks'
+);
+
+-- =============================================================================
+-- Section 14: Pre-merge correctness corrections (title/duration, designate,
+--             On Hold cancel-resolve, busy/callback/voicemail)
+-- =============================================================================
+
+-- Fresh active lead — lead_x may already be terminal from earlier CLOSED_LOST coverage.
+reset role;
+select * from public.submit_lead_intake(
+  p_idempotency_key => 'cbbbbbb0-bbbb-bbbb-bbbb-bbbbbbbbbb00'::uuid,
+  p_request_hash => repeat('f', 64),
+  p_network_fingerprint_hash => repeat('0', 64),
+  p_phone_fingerprint_hash => repeat('1', 64),
+  p_planner_version => 'home-r4-v1',
+  p_submitted_name => '2A3 Lead Corr',
+  p_phone_e164 => '+919511118888',
+  p_submitted_email => null,
+  p_service_code => 'complete-home-interiors',
+  p_property_code => 'apartment-2bhk',
+  p_timeline_code => 'within-1-month',
+  p_room_codes => array['living']::text[],
+  p_budget_comfort_code => '6-12l',
+  p_estimate_snapshot => null,
+  p_locality => null, p_message => null, p_landing_path => '/',
+  p_attribution => '{}'::jsonb, p_source => 'local-test',
+  p_consent_service_enquiry => true, p_consent_service_phone => true,
+  p_consent_service_email => false, p_consent_whatsapp => false,
+  p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+  p_copy_service_communication => 'service-communication-v0.1-draft',
+  p_copy_whatsapp => null,
+  p_notice_version => 'privacy-notice-v0.1-draft'
+);
+select set_config('test.lead_corr', (
+  select id::text from public.leads where submitted_name = '2A3 Lead Corr' limit 1
+), true);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'c2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select public.assign_lead(current_setting('test.lead_corr')::uuid, 'c3333333-3333-3333-3333-333333333333'::uuid, null);
+select set_config('request.jwt.claim.sub', 'c3333333-3333-3333-3333-333333333333', true);
+
+-- Seed an open primary so secondary NONE paths / designate demotion have a baseline.
+select set_config('test.act_corr_primary', (
+  select id::text from public.create_lead_activity(
+    current_setting('test.lead_corr')::uuid,
+    'call', 'Corr primary', now() + interval '2 days',
+    'normal', 'c3333333-3333-3333-3333-333333333333'::uuid,
+    true, null, null, null
+  )
+), true);
+
+-- A/B: create title/duration must mirror 2A-1 table CHECKs (1..120 / 1..1440)
+select set_config('test.long_title_121', repeat('T', 121), true);
+select throws_ok(
+  $$select public.create_lead_activity(
+    current_setting('test.lead_corr')::uuid,
+    'call',
+    current_setting('test.long_title_121'),
+    now() + interval '2 days',
+    'normal', null, false, null, null, null
+  )$$,
+  null,
+  'ACTIVITY_TITLE_INVALID',
+  'create title length 121 rejects ACTIVITY_TITLE_INVALID'
+);
+
+select results_eq(
+  $$select count(*)::integer from public.lead_follow_ups
+    where lead_id = current_setting('test.lead_corr')::uuid
+      and title = current_setting('test.long_title_121')$$,
+  array[0],
+  'invalid title 121 does not insert a row'
+);
+
+select throws_ok(
+  $$select public.create_lead_activity(
+    current_setting('test.lead_corr')::uuid,
+    'call', 'Duration overflow', now() + interval '2 days',
+    'normal', null, false, 1441, null, null
+  )$$,
+  null,
+  'ACTIVITY_DURATION_INVALID',
+  'create duration 1441 rejects ACTIVITY_DURATION_INVALID'
+);
+
+select results_eq(
+  $$select count(*)::integer from public.lead_follow_ups
+    where lead_id = current_setting('test.lead_corr')::uuid
+      and title = 'Duration overflow'$$,
+  array[0],
+  'invalid duration 1441 does not insert a row'
+);
+
+-- C/D: NEXT_PRIMARY invalid title/duration rolls back entire completion
+select set_config('test.act_np_bounds', (
+  select id::text from public.create_lead_activity(
+    current_setting('test.lead_corr')::uuid,
+    'call', 'NP bounds source', now() + interval '2 days',
+    'normal', 'c3333333-3333-3333-3333-333333333333'::uuid,
+    false, null, null, null
+  )
+), true);
+
+select set_config('test.long_next_title_121', repeat('N', 121), true);
+select throws_ok(
+  $$select public.complete_lead_activity(
+    current_setting('test.act_np_bounds')::uuid,
+    'connected', null, 'NEXT_PRIMARY',
+    'call', current_setting('test.long_next_title_121'),
+    now() + interval '3 days', 'normal',
+    null, null, null, null, null, null, null, null
+  )$$,
+  null,
+  'NEXT_PRIMARY_INVALID',
+  'NEXT_PRIMARY title length 121 rejects NEXT_PRIMARY_INVALID'
+);
+
+select results_eq(
+  $$select status from public.lead_follow_ups
+    where id = current_setting('test.act_np_bounds')::uuid$$,
+  array['open'::text],
+  'invalid NEXT_PRIMARY title rolls back — source activity remains OPEN'
+);
+
+select throws_ok(
+  $$select public.complete_lead_activity(
+    current_setting('test.act_np_bounds')::uuid,
+    'connected', null, 'NEXT_PRIMARY',
+    'call', 'Next ok title', now() + interval '3 days', 'normal',
+    1441, null, null, null, null, null, null, null
+  )$$,
+  null,
+  'NEXT_PRIMARY_INVALID',
+  'NEXT_PRIMARY duration 1441 rejects NEXT_PRIMARY_INVALID'
+);
+
+select results_eq(
+  $$select status from public.lead_follow_ups
+    where id = current_setting('test.act_np_bounds')::uuid$$,
+  array['open'::text],
+  'invalid NEXT_PRIMARY duration rolls back — source activity remains OPEN'
+);
+
+-- Designate: sales exec cannot designate another owner's activity
+select set_config('request.jwt.claim.sub', 'c2222222-2222-2222-2222-222222222222', true);
+select set_config('test.act_mgr_owned', (
+  select id::text from public.create_lead_activity(
+    current_setting('test.lead_corr')::uuid,
+    'call', 'Manager-owned secondary', now() + interval '8 days',
+    'normal', 'c2222222-2222-2222-2222-222222222222'::uuid,
+    false, null, null, null
+  )
+), true);
+select set_config('test.prior_primary_before_desig', (
+  select id::text from public.lead_follow_ups
+  where lead_id = current_setting('test.lead_corr')::uuid
+    and status = 'open' and is_primary_next_action
+  order by created_at desc limit 1
+), true);
+
+select set_config('request.jwt.claim.sub', 'c3333333-3333-3333-3333-333333333333', true);
+select throws_ok(
+  $$select public.designate_primary_next_action(
+    current_setting('test.act_mgr_owned')::uuid
+  )$$,
+  '42501',
+  null,
+  'sales executive cannot designate cross-owner activity'
+);
+
+select results_eq(
+  $$select is_primary_next_action from public.lead_follow_ups
+    where id = current_setting('test.act_mgr_owned')::uuid$$,
+  array[false],
+  'rejected designate leaves manager-owned activity secondary'
+);
+
+select results_eq(
+  $$select is_primary_next_action from public.lead_follow_ups
+    where id = current_setting('test.prior_primary_before_desig')::uuid$$,
+  array[true],
+  'rejected designate leaves prior primary unchanged'
+);
+
+-- Manager designates assignee-owned secondary successfully
+select set_config('request.jwt.claim.sub', 'c2222222-2222-2222-2222-222222222222', true);
+select set_config('test.act_assignee_sec', (
+  select id::text from public.create_lead_activity(
+    current_setting('test.lead_corr')::uuid,
+    'call', 'Assignee secondary for designate', now() + interval '9 days',
+    'normal', 'c3333333-3333-3333-3333-333333333333'::uuid,
+    false, null, null, null
+  )
+), true);
+select ok(
+  (
+    select (public.designate_primary_next_action(
+      current_setting('test.act_assignee_sec')::uuid
+    )).is_primary_next_action
+  ),
+  'manager may designate activity owned by authorized assignee'
+);
+
+-- Designate activity whose owner fails crm_user_can_operate_lead (forged owner)
+reset role;
+insert into public.lead_follow_ups (
+  lead_id, owner_id, due_at, status, created_by,
+  activity_type, title, priority, is_primary_next_action, source, updated_at
+) values (
+  current_setting('test.lead_corr')::uuid,
+  'c4444444-4444-4444-4444-444444444444'::uuid,
+  now() + interval '10 days',
+  'open',
+  'c2222222-2222-2222-2222-222222222222'::uuid,
+  'call', 'Unauthorized-owner secondary', 'normal', false, 'manual', now()
+);
+select set_config('test.act_unauth_owner', (
+  select id::text from public.lead_follow_ups
+  where lead_id = current_setting('test.lead_corr')::uuid
+    and title = 'Unauthorized-owner secondary'
+  limit 1
+), true);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'c2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select throws_ok(
+  $$select public.designate_primary_next_action(
+    current_setting('test.act_unauth_owner')::uuid
+  )$$,
+  '42501',
+  null,
+  'designate rejects when target owner fails crm_user_can_operate_lead'
+);
+
+select results_eq(
+  $$select is_primary_next_action from public.lead_follow_ups
+    where id = current_setting('test.act_unauth_owner')::uuid$$,
+  array[false],
+  'unauthorized-owner designate does not switch primary'
+);
+
+-- On Hold: secondary complete must CANCEL prior primary (not demote-only).
+-- Reuse active lead_corr (still assigned; act_assignee_sec is current primary).
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'c3333333-3333-3333-3333-333333333333', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+
+select set_config('test.act_hold_a', (
+  select id::text from public.lead_follow_ups
+  where lead_id = current_setting('test.lead_corr')::uuid
+    and status = 'open' and is_primary_next_action
+  order by created_at desc limit 1
+), true);
+select set_config('test.act_hold_b', (
+  select id::text from public.create_lead_activity(
+    current_setting('test.lead_corr')::uuid,
+    'call', 'Hold secondary B', now() + interval '3 days',
+    'normal', 'c3333333-3333-3333-3333-333333333333'::uuid,
+    false, null, null, null
+  )
+), true);
+
+select public.complete_lead_activity(
+  current_setting('test.act_hold_b')::uuid,
+  'busy', null, 'ON_HOLD',
+  null, null, null, null, null, null, null,
+  'Budget hold via secondary', now() + interval '14 days',
+  null, null, null
+);
+
+select results_eq(
+  $$select status from public.lead_follow_ups
+    where id = current_setting('test.act_hold_b')::uuid$$,
+  array['completed'::text],
+  'On Hold secondary B is completed'
+);
+
+select results_eq(
+  $$select status, is_primary_next_action
+      from public.lead_follow_ups
+     where id = current_setting('test.act_hold_a')::uuid$$,
+  $$values ('cancelled'::text, false)$$,
+  'On Hold cancels prior primary A (not open secondary demotion)'
+);
+
+select results_eq(
+  $$select count(*)::integer from public.lead_follow_up_events
+    where follow_up_id = current_setting('test.act_hold_a')::uuid
+      and event_type = 'cancelled'$$,
+  array[1],
+  'cancelled prior primary emits cancelled event'
+);
+
+select results_eq(
+  $$select count(*)::integer from public.lead_follow_up_events
+    where follow_up_id = current_setting('test.act_hold_a')::uuid
+      and event_type = 'primary_cleared'$$,
+  array[1],
+  'cancelled prior primary emits primary_cleared event'
+);
+
+select results_eq(
+  $$select count(*)::integer from public.lead_activities
+    where reference_id = current_setting('test.act_hold_a')::uuid
+      and activity_type = 'follow_up.cancelled'$$,
+  array[1],
+  'cancelled prior primary writes follow_up.cancelled summary'
+);
+
+select results_eq(
+  $$select count(*)::integer from public.lead_follow_ups
+     where lead_id = current_setting('test.lead_corr')::uuid
+       and status = 'open' and is_primary_next_action
+       and source = 'on_hold_review'$$,
+  array[1],
+  'On Hold review primary is the sole open primary'
+);
+
+select results_eq(
+  $$select status::text from public.leads
+     where id = current_setting('test.lead_corr')::uuid$$,
+  array['on_hold'::text],
+  'secondary→On Hold transitions lead to on_hold'
+);
+
+-- busy / callback_requested / voicemail first-contact attempt marking
+reset role;
+select set_config('request.jwt.claim.sub', '', true);
+select * from public.submit_lead_intake(
+  p_idempotency_key => 'cbbbbbbd-bbbb-bbbb-bbbb-bbbbbbbbbbdd'::uuid,
+  p_request_hash => repeat('d4', 32),
+  p_network_fingerprint_hash => repeat('e5', 32),
+  p_phone_fingerprint_hash => repeat('f6', 32),
+  p_planner_version => 'home-r4-v1',
+  p_submitted_name => '2A3 Lead Busy',
+  p_phone_e164 => '+919511119002',
+  p_submitted_email => null,
+  p_service_code => 'complete-home-interiors',
+  p_property_code => 'apartment-2bhk',
+  p_timeline_code => 'within-1-month',
+  p_room_codes => array['living']::text[],
+  p_budget_comfort_code => '6-12l',
+  p_estimate_snapshot => null,
+  p_locality => null, p_message => null, p_landing_path => '/',
+  p_attribution => '{}'::jsonb, p_source => 'local-test',
+  p_consent_service_enquiry => true, p_consent_service_phone => true,
+  p_consent_service_email => false, p_consent_whatsapp => false,
+  p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+  p_copy_service_communication => 'service-communication-v0.1-draft',
+  p_copy_whatsapp => null,
+  p_notice_version => 'privacy-notice-v0.1-draft'
+);
+select * from public.submit_lead_intake(
+  p_idempotency_key => 'cbbbbbbe-bbbb-bbbb-bbbb-bbbbbbbbbbee'::uuid,
+  p_request_hash => repeat('aa', 32),
+  p_network_fingerprint_hash => repeat('bb', 32),
+  p_phone_fingerprint_hash => repeat('cc', 32),
+  p_planner_version => 'home-r4-v1',
+  p_submitted_name => '2A3 Lead Callback',
+  p_phone_e164 => '+919511119003',
+  p_submitted_email => null,
+  p_service_code => 'complete-home-interiors',
+  p_property_code => 'apartment-2bhk',
+  p_timeline_code => 'within-1-month',
+  p_room_codes => array['living']::text[],
+  p_budget_comfort_code => '6-12l',
+  p_estimate_snapshot => null,
+  p_locality => null, p_message => null, p_landing_path => '/',
+  p_attribution => '{}'::jsonb, p_source => 'local-test',
+  p_consent_service_enquiry => true, p_consent_service_phone => true,
+  p_consent_service_email => false, p_consent_whatsapp => false,
+  p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+  p_copy_service_communication => 'service-communication-v0.1-draft',
+  p_copy_whatsapp => null,
+  p_notice_version => 'privacy-notice-v0.1-draft'
+);
+select * from public.submit_lead_intake(
+  p_idempotency_key => 'cbbbbbbf-bbbb-bbbb-bbbb-bbbbbbbbbbff'::uuid,
+  p_request_hash => repeat('dd', 32),
+  p_network_fingerprint_hash => repeat('ee', 32),
+  p_phone_fingerprint_hash => repeat('ff', 32),
+  p_planner_version => 'home-r4-v1',
+  p_submitted_name => '2A3 Lead Voicemail',
+  p_phone_e164 => '+919511119004',
+  p_submitted_email => null,
+  p_service_code => 'complete-home-interiors',
+  p_property_code => 'apartment-2bhk',
+  p_timeline_code => 'within-1-month',
+  p_room_codes => array['living']::text[],
+  p_budget_comfort_code => '6-12l',
+  p_estimate_snapshot => null,
+  p_locality => null, p_message => null, p_landing_path => '/',
+  p_attribution => '{}'::jsonb, p_source => 'local-test',
+  p_consent_service_enquiry => true, p_consent_service_phone => true,
+  p_consent_service_email => false, p_consent_whatsapp => false,
+  p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+  p_copy_service_communication => 'service-communication-v0.1-draft',
+  p_copy_whatsapp => null,
+  p_notice_version => 'privacy-notice-v0.1-draft'
+);
+select set_config('test.lead_busy', (select id::text from public.leads where submitted_name = '2A3 Lead Busy' limit 1), true);
+select set_config('test.lead_cb', (select id::text from public.leads where submitted_name = '2A3 Lead Callback' limit 1), true);
+select set_config('test.lead_vm', (select id::text from public.leads where submitted_name = '2A3 Lead Voicemail' limit 1), true);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'c2222222-2222-2222-2222-222222222222', true);
+select public.assign_lead(current_setting('test.lead_busy')::uuid, 'c3333333-3333-3333-3333-333333333333'::uuid, null);
+select public.assign_lead(current_setting('test.lead_cb')::uuid, 'c3333333-3333-3333-3333-333333333333'::uuid, null);
+select public.assign_lead(current_setting('test.lead_vm')::uuid, 'c3333333-3333-3333-3333-333333333333'::uuid, null);
+select set_config('request.jwt.claim.sub', 'c3333333-3333-3333-3333-333333333333', true);
+
+select set_config('test.act_busy', (
+  select id::text from public.create_lead_activity(
+    current_setting('test.lead_busy')::uuid, 'call', 'Busy call',
+    now() + interval '1 day', 'normal',
+    'c3333333-3333-3333-3333-333333333333'::uuid, false, null, null, null
+  )
+), true);
+select public.complete_lead_activity(
+  current_setting('test.act_busy')::uuid, 'busy', null, 'NEXT_PRIMARY',
+  'call', 'After busy', now() + interval '2 days', 'normal',
+  null, null, null, null, null, null, null, null
+);
+select results_eq(
+  $$select first_contact_attempt_at is not null
+      from public.crm_sla_clocks where lead_id = current_setting('test.lead_busy')::uuid$$,
+  array[true],
+  'busy outcome marks first_contact_attempt_at'
+);
+
+select set_config('test.act_cb', (
+  select id::text from public.create_lead_activity(
+    current_setting('test.lead_cb')::uuid, 'call', 'Callback call',
+    now() + interval '1 day', 'normal',
+    'c3333333-3333-3333-3333-333333333333'::uuid, false, null, null, null
+  )
+), true);
+select public.complete_lead_activity(
+  current_setting('test.act_cb')::uuid, 'callback_requested', null, 'NEXT_PRIMARY',
+  'call', 'After callback', now() + interval '2 days', 'normal',
+  null, null, null, null, null, null, null, null
+);
+select results_eq(
+  $$select first_contact_attempt_at is not null
+      from public.crm_sla_clocks where lead_id = current_setting('test.lead_cb')::uuid$$,
+  array[true],
+  'callback_requested outcome marks first_contact_attempt_at'
+);
+
+select set_config('test.act_vm', (
+  select id::text from public.create_lead_activity(
+    current_setting('test.lead_vm')::uuid, 'call', 'Voicemail call',
+    now() + interval '1 day', 'normal',
+    'c3333333-3333-3333-3333-333333333333'::uuid, false, null, null, null
+  )
+), true);
+select public.complete_lead_activity(
+  current_setting('test.act_vm')::uuid, 'voicemail', null, 'NEXT_PRIMARY',
+  'call', 'After voicemail', now() + interval '2 days', 'normal',
+  null, null, null, null, null, null, null, null
+);
+select results_eq(
+  $$select first_contact_attempt_at is not null
+      from public.crm_sla_clocks where lead_id = current_setting('test.lead_vm')::uuid$$,
+  array[true],
+  'voicemail outcome marks first_contact_attempt_at'
 );
 
 select * from finish();

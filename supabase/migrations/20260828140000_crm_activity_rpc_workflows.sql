@@ -54,6 +54,86 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
+-- A2. Helper: CANCEL (resolve) other open primaries when entering On Hold.
+--     Demote-only is insufficient: prior primary must leave open status.
+-- -----------------------------------------------------------------------------
+
+create or replace function private.cancel_open_primary_for_on_hold(
+  p_lead_id uuid,
+  p_actor uuid,
+  p_except_id uuid default null,
+  p_now timestamptz default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_row public.lead_follow_ups%rowtype;
+  v_now timestamptz;
+  v_was_primary boolean;
+begin
+  v_now := coalesce(p_now, clock_timestamp());
+
+  for v_row in
+    select *
+    from public.lead_follow_ups
+    where lead_id = p_lead_id
+      and is_primary_next_action = true
+      and status = 'open'
+      and (p_except_id is null or id <> p_except_id)
+    for update
+  loop
+    v_was_primary := true;
+
+    update public.lead_follow_ups
+    set status = 'cancelled',
+        cancelled_by = p_actor,
+        cancelled_at = v_now,
+        is_primary_next_action = false,
+        updated_at = v_now
+    where id = v_row.id
+    returning * into v_row;
+
+    insert into public.lead_follow_up_events (
+      follow_up_id, lead_id, actor_id, event_type,
+      previous_values, new_values, reason_code, reason_note
+    )
+    values (
+      v_row.id, p_lead_id, p_actor, 'cancelled',
+      jsonb_build_object('status', 'open'),
+      jsonb_build_object('status', 'cancelled'),
+      'on_hold_review', null
+    );
+
+    if v_was_primary then
+      insert into public.lead_follow_up_events (
+        follow_up_id, lead_id, actor_id, event_type,
+        previous_values, new_values, reason_code, reason_note
+      )
+      values (
+        v_row.id, p_lead_id, p_actor, 'primary_cleared',
+        jsonb_build_object('isPrimaryNextAction', true),
+        jsonb_build_object('isPrimaryNextAction', false, 'reason', 'cancelled'),
+        'on_hold_review', null
+      );
+    end if;
+
+    insert into public.lead_activities (lead_id, activity_type, reference_id, actor_id, summary, metadata)
+    values (
+      p_lead_id,
+      'follow_up.cancelled',
+      v_row.id,
+      p_actor,
+      'Follow-up cancelled',
+      jsonb_build_object('reason', 'on_hold_review')
+    );
+  end loop;
+end;
+$$;
+
+-- -----------------------------------------------------------------------------
 -- B. Helper: validate WhatsApp governed-send evidence chain.
 --    Returns provider_timestamp of the bound outbound message on success.
 --    p_receipt_at is the lower bound (SLA clock_started_at from the caller).
@@ -283,7 +363,8 @@ begin
   end if;
 
   v_title := nullif(trim(coalesce(p_title, '')), '');
-  if v_title is null or length(v_title) < 1 or length(v_title) > 200 then
+  -- Mirror chk_lead_follow_ups_title: length(trim(title)) between 1 and 120.
+  if v_title is null or length(v_title) < 1 or length(v_title) > 120 then
     raise exception 'ACTIVITY_TITLE_INVALID' using errcode = '22023';
   end if;
 
@@ -295,7 +376,9 @@ begin
     raise exception 'ACTIVITY_DUE_REQUIRED' using errcode = '22023';
   end if;
 
-  if p_duration_minutes is not null and p_duration_minutes <= 0 then
+  -- Mirror chk_lead_follow_ups_duration_minutes: null or between 1 and 1440.
+  if p_duration_minutes is not null
+     and (p_duration_minutes < 1 or p_duration_minutes > 1440) then
     raise exception 'ACTIVITY_DURATION_INVALID' using errcode = '22023';
   end if;
 
@@ -769,8 +852,26 @@ begin
     raise exception 'ON_HOLD_PRIMARY_RESERVED' using errcode = '22023';
   end if;
 
+  -- Already-primary: stable no-op (no duplicate events; skip owner re-check).
   if v_row.is_primary_next_action then
     return v_row;
+  end if;
+
+  -- Target activity owner must be eligible and authorized for this lead.
+  if not (select private.crm_is_eligible_follow_up_owner(v_row.owner_id)) then
+    raise exception 'ACTIVITY_OWNER_NOT_AUTHORIZED' using errcode = '42501';
+  end if;
+
+  if not (select private.crm_user_can_operate_lead(
+    v_row.owner_id, v_row.lead_id, 'crm.follow_ups.manage'
+  )) then
+    raise exception 'ACTIVITY_OWNER_NOT_AUTHORIZED' using errcode = '42501';
+  end if;
+
+  -- Cross-owner designation requires broad-scope actor (same rule as create/transfer).
+  if v_row.owner_id is distinct from v_actor
+     and not (select private.crm_has_broad_lead_read()) then
+    raise exception 'ACTIVITY_OWNER_NOT_AUTHORIZED' using errcode = '42501';
   end if;
 
   perform private.clear_open_primary_for_lead(v_row.lead_id, v_actor, 'primary_replaced', v_row.id);
@@ -857,6 +958,7 @@ declare
   v_next_title text;
   v_next_row public.lead_follow_ups%rowtype;
   v_next_type text;
+  v_needs_clock_work boolean := false;
 begin
   v_actor := auth.uid();
   if v_actor is null then
@@ -904,8 +1006,6 @@ begin
   if not found then
     raise exception 'ACTIVITY_NOT_FOUND' using errcode = 'P0002';
   end if;
-
-  v_now := clock_timestamp();
 
   if not (select private.crm_can_mutate_lead(v_row.lead_id)) then
     raise exception 'ACTIVITY_OWNER_NOT_AUTHORIZED' using errcode = '42501';
@@ -977,7 +1077,7 @@ begin
     end if;
   end if;
 
-  -- WhatsApp evidence: ensure clock, read clock_started_at, pass as receipt bound.
+  -- WhatsApp whatsapp_sent gates (evidence validated after clock lock below).
   if p_outcome_code = 'whatsapp_sent' then
     if v_row.activity_type <> 'whatsapp' then
       raise exception 'ACTIVITY_OUTCOME_NOT_ALLOWED_FOR_TYPE' using errcode = '22023';
@@ -985,18 +1085,39 @@ begin
     if p_whatsapp_send_intent_id is null then
       raise exception 'WHATSAPP_SEND_EVIDENCE_REQUIRED' using errcode = 'P0001';
     end if;
+  end if;
 
+  -- Determine whether first-contact clock work is required before capturing v_now.
+  if v_row.activity_type = 'call'
+     and v_outcome.closes_contact_attempt is true then
+    v_needs_clock_work := true;
+  elsif v_row.activity_type = 'whatsapp'
+        and p_outcome_code = 'whatsapp_sent' then
+    v_needs_clock_work := true;
+  end if;
+
+  if v_needs_clock_work then
     perform private.ensure_first_contact_sla_clock(v_row.lead_id);
 
     select clock_started_at
     into v_clock_started_at
     from public.crm_sla_clocks
-    where lead_id = v_row.lead_id;
+    where lead_id = v_row.lead_id
+    for update;
 
+    if not found then
+      raise exception 'ACTIVITY_NOT_FOUND' using errcode = 'P0002';
+    end if;
+  end if;
+
+  if p_outcome_code = 'whatsapp_sent' then
     v_attempt_at := private.validate_crm_whatsapp_send_evidence(
       p_whatsapp_send_intent_id, v_row.lead_id, v_clock_started_at
     );
   end if;
+
+  -- Capture ONE operation timestamp AFTER all locks relevant to this completion.
+  v_now := clock_timestamp();
 
   -- Complete the activity row (clear primary flag if it was primary).
   update public.lead_follow_ups
@@ -1050,7 +1171,7 @@ begin
     );
   end if;
 
-  -- First-contact attempt marking (Call outcome uses v_now; WhatsApp uses provider_timestamp).
+  -- First-contact attempt marking (Call uses v_now; WhatsApp uses provider_timestamp).
   if v_row.activity_type = 'call'
      and v_outcome.closes_contact_attempt is true then
     perform private.mark_first_contact_attempt_if_qualifying(
@@ -1100,7 +1221,8 @@ begin
     end if;
 
     v_next_title := nullif(trim(coalesce(p_next_title, '')), '');
-    if v_next_title is null or length(v_next_title) < 1 or length(v_next_title) > 200 then
+    -- Mirror chk_lead_follow_ups_title (1..120).
+    if v_next_title is null or length(v_next_title) < 1 or length(v_next_title) > 120 then
       raise exception 'NEXT_PRIMARY_INVALID' using errcode = '22023';
     end if;
 
@@ -1117,7 +1239,9 @@ begin
       raise exception 'ACTIVITY_REMINDER_INVALID' using errcode = '22023';
     end if;
 
-    if p_next_duration_minutes is not null and p_next_duration_minutes <= 0 then
+    -- Mirror chk_lead_follow_ups_duration_minutes (null or 1..1440).
+    if p_next_duration_minutes is not null
+       and (p_next_duration_minutes < 1 or p_next_duration_minutes > 1440) then
       raise exception 'NEXT_PRIMARY_INVALID' using errcode = '22023';
     end if;
 
@@ -1130,6 +1254,11 @@ begin
 
     v_next_owner := v_lead.assigned_to;
     if not (select private.crm_is_eligible_follow_up_owner(v_next_owner)) then
+      raise exception 'ACTIVITY_OWNER_NOT_AUTHORIZED' using errcode = '42501';
+    end if;
+    if not (select private.crm_user_can_operate_lead(
+      v_next_owner, v_row.lead_id, 'crm.follow_ups.manage'
+    )) then
       raise exception 'ACTIVITY_OWNER_NOT_AUTHORIZED' using errcode = '42501';
     end if;
 
@@ -1214,8 +1343,19 @@ begin
     end if;
 
     v_next_owner := v_lead.assigned_to;
+    if not (select private.crm_is_eligible_follow_up_owner(v_next_owner)) then
+      raise exception 'ACTIVITY_OWNER_NOT_AUTHORIZED' using errcode = '42501';
+    end if;
+    if not (select private.crm_user_can_operate_lead(
+      v_next_owner, v_row.lead_id, 'crm.follow_ups.manage'
+    )) then
+      raise exception 'ACTIVITY_OWNER_NOT_AUTHORIZED' using errcode = '42501';
+    end if;
 
-    perform private.clear_open_primary_for_lead(v_row.lead_id, v_actor, 'on_hold_review', v_row.id);
+    -- Resolve (cancel) any remaining open primary — demote-only is insufficient for On Hold.
+    perform private.cancel_open_primary_for_on_hold(
+      v_row.lead_id, v_actor, v_row.id, v_now
+    );
 
     insert into public.lead_follow_ups (
       lead_id, owner_id, due_at, status, created_by,
@@ -1343,6 +1483,7 @@ $$;
 -- =============================================================================
 
 alter function private.clear_open_primary_for_lead(uuid, uuid, text, uuid) owner to postgres;
+alter function private.cancel_open_primary_for_on_hold(uuid, uuid, uuid, timestamptz) owner to postgres;
 alter function private.validate_crm_whatsapp_send_evidence(uuid, uuid, timestamptz) owner to postgres;
 alter function private.mark_first_contact_attempt_if_qualifying(uuid, timestamptz, text, text, text, uuid) owner to postgres;
 alter function private.create_lead_activity_impl(uuid, text, text, timestamptz, text, uuid, boolean, integer, timestamptz, uuid) owner to postgres;
@@ -1399,6 +1540,7 @@ grant execute on function private.complete_lead_activity_impl(
 -- Internal helpers (validate/mark/clear): callable only from DEFINER impls under
 -- the same postgres owner. No authenticated execute — DEFINER owner privilege suffices.
 revoke all on function private.clear_open_primary_for_lead(uuid, uuid, text, uuid) from public, anon, authenticated;
+revoke all on function private.cancel_open_primary_for_on_hold(uuid, uuid, uuid, timestamptz) from public, anon, authenticated;
 revoke all on function private.validate_crm_whatsapp_send_evidence(uuid, uuid, timestamptz) from public, anon, authenticated;
 revoke all on function private.mark_first_contact_attempt_if_qualifying(uuid, timestamptz, text, text, text, uuid) from public, anon, authenticated;
 
