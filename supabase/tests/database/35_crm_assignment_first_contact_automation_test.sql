@@ -733,14 +733,15 @@ select * from public.submit_lead_intake(
   p_notice_version => 'privacy-notice-v0.1-draft'
 );
 
+reset role;
+set local role postgres;
+
 select set_config(
   'test.lead_terminal',
   (select id::text from public.leads where submitted_name = '2A7 Terminal Lead' limit 1),
   true
 );
 
-reset role;
-set local role postgres;
 select set_config('onedecore.crm_transition', '1', true);
 update public.leads
 set status = 'closed_lost',

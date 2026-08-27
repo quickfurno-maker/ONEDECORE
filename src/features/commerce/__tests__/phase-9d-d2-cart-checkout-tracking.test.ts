@@ -42,12 +42,12 @@ function latestMigrationName(): string {
 }
 
 describe("Phase 9D-D2 repository contracts", () => {
-  test("latest migration is CRM 2A-6 My Day read model; deferred payment M38 absent", () => {
+  test("latest migration is CRM 2A-7 assignment first-contact automation; deferred payment M38 absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260829120000_crm_my_day_read_model.sql"
+      "20260829140000_crm_assignment_first_contact_automation.sql"
     );
-    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 43);
+    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 44);
     assert.equal(
       existsSync(join(migrationDir, "20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false
