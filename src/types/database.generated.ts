@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       attendance_corrections: {
@@ -353,48 +378,6 @@ export type Database = {
           },
         ]
       }
-      campaign_execution_events: {
-        Row: {
-          actor_id: string | null
-          actor_kind: string
-          campaign_run_id: string
-          campaign_run_operation_id: string | null
-          campaign_run_target_id: string | null
-          event_type: string
-          id: string
-          metadata: Json
-          occurred_at: string
-          outcome_code: string
-          provider_object_id: string | null
-        }
-        Insert: {
-          actor_id?: string | null
-          actor_kind?: string
-          campaign_run_id: string
-          campaign_run_operation_id?: string | null
-          campaign_run_target_id?: string | null
-          event_type: string
-          id?: string
-          metadata?: Json
-          occurred_at?: string
-          outcome_code: string
-          provider_object_id?: string | null
-        }
-        Update: {
-          actor_id?: string | null
-          actor_kind?: string
-          campaign_run_id?: string
-          campaign_run_operation_id?: string | null
-          campaign_run_target_id?: string | null
-          event_type?: string
-          id?: string
-          metadata?: Json
-          occurred_at?: string
-          outcome_code?: string
-          provider_object_id?: string | null
-        }
-        Relationships: []
-      }
       campaign_conversion_feedback_events: {
         Row: {
           attribution_state: string
@@ -442,9 +425,120 @@ export type Database = {
         }
         Update: {
           attribution_state?: string
-          [key: string]: unknown
+          campaign_run_id?: string | null
+          campaign_run_target_id?: string | null
+          conversion_occurred_at?: string
+          conversion_type?: string
+          created_at?: string
+          currency?: string | null
+          event_reference?: string
+          id?: string
+          lead_id?: string | null
+          metadata?: Json
+          provider_channel?: string | null
+          provider_error_code?: string | null
+          provider_submission_id?: string | null
+          provider_submission_state?: string
+          source_entity_id?: string
+          source_entity_type?: string
+          source_event_key?: string
+          updated_at?: string
+          value_minor?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "campaign_conversion_feedback_events_campaign_run_id_fkey"
+            columns: ["campaign_run_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_conversion_feedback_events_campaign_run_target_id_fkey"
+            columns: ["campaign_run_target_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_run_targets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_conversion_feedback_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_execution_events: {
+        Row: {
+          actor_id: string | null
+          actor_kind: string
+          campaign_run_id: string
+          campaign_run_operation_id: string | null
+          campaign_run_target_id: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          occurred_at: string
+          outcome_code: string
+          provider_object_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_kind?: string
+          campaign_run_id: string
+          campaign_run_operation_id?: string | null
+          campaign_run_target_id?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          outcome_code: string
+          provider_object_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_kind?: string
+          campaign_run_id?: string
+          campaign_run_operation_id?: string | null
+          campaign_run_target_id?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          outcome_code?: string
+          provider_object_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_execution_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_execution_events_campaign_run_id_fkey"
+            columns: ["campaign_run_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_execution_events_campaign_run_operation_id_fkey"
+            columns: ["campaign_run_operation_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_run_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_execution_events_campaign_run_target_id_fkey"
+            columns: ["campaign_run_target_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_run_targets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       campaign_metric_snapshots: {
         Row: {
@@ -487,9 +581,39 @@ export type Database = {
         }
         Update: {
           campaign_run_id?: string
-          [key: string]: unknown
+          campaign_run_target_id?: string
+          clicks?: number
+          created_at?: string
+          currency?: string
+          fetched_at?: string
+          id?: string
+          impressions?: number
+          metadata?: Json
+          provider_account_ref?: string | null
+          provider_channel?: string
+          provider_conversions?: number
+          provider_revision?: string | null
+          spend_minor?: number
+          updated_at?: string
+          window_end?: string
+          window_start?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "campaign_metric_snapshots_campaign_run_id_fkey"
+            columns: ["campaign_run_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_metric_snapshots_campaign_run_target_id_fkey"
+            columns: ["campaign_run_target_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_run_targets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       campaign_run_operations: {
         Row: {
@@ -525,7 +649,7 @@ export type Database = {
           max_attempts?: number
           next_attempt_at?: string
           operation_key: string
-          operation_state?: string
+          operation_state: string
           operation_type: string
           request_hash: string
           updated_at?: string
@@ -555,6 +679,13 @@ export type Database = {
             columns: ["campaign_run_id"]
             isOneToOne: false
             referencedRelation: "campaign_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_run_operations_campaign_run_target_id_fkey"
+            columns: ["campaign_run_target_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_run_targets"
             referencedColumns: ["id"]
           },
         ]
@@ -663,7 +794,7 @@ export type Database = {
           requested_by: string
           run_reference: string
           scheduled_for?: string
-          status?: string
+          status: string
           targeting_mode: string
           updated_at?: string
         }
@@ -696,10 +827,31 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "campaign_runs_activated_by_fkey"
+            columns: ["activated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "campaign_runs_campaign_version_id_fkey"
             columns: ["campaign_version_id"]
             isOneToOne: false
             referencedRelation: "campaign_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_runs_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_runs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -947,6 +1099,314 @@ export type Database = {
             columns: ["variant_id"]
             isOneToOne: true
             referencedRelation: "commerce_product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_order_delivery: {
+        Row: {
+          address_line_1: string
+          address_line_2: string | null
+          assembly_install_note: string | null
+          city: string
+          created_at: string
+          email: string | null
+          eta_max_days: number
+          eta_min_days: number
+          locality: string
+          mobile_e164: string
+          order_id: string
+          pincode: string
+          recipient_name: string
+          serviceable_snapshot: boolean
+          shipping_charge_paise: number
+          state: string
+        }
+        Insert: {
+          address_line_1: string
+          address_line_2?: string | null
+          assembly_install_note?: string | null
+          city: string
+          created_at?: string
+          email?: string | null
+          eta_max_days: number
+          eta_min_days: number
+          locality: string
+          mobile_e164: string
+          order_id: string
+          pincode: string
+          recipient_name: string
+          serviceable_snapshot: boolean
+          shipping_charge_paise: number
+          state: string
+        }
+        Update: {
+          address_line_1?: string
+          address_line_2?: string | null
+          assembly_install_note?: string | null
+          city?: string
+          created_at?: string
+          email?: string | null
+          eta_max_days?: number
+          eta_min_days?: number
+          locality?: string
+          mobile_e164?: string
+          order_id?: string
+          pincode?: string
+          recipient_name?: string
+          serviceable_snapshot?: boolean
+          shipping_charge_paise?: number
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_order_delivery_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "commerce_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_order_events: {
+        Row: {
+          actor_kind: string
+          actor_profile_id: string | null
+          created_at: string
+          event_code: string
+          from_status: string | null
+          id: string
+          metadata: Json
+          order_id: string
+          to_status: string | null
+        }
+        Insert: {
+          actor_kind: string
+          actor_profile_id?: string | null
+          created_at?: string
+          event_code: string
+          from_status?: string | null
+          id?: string
+          metadata?: Json
+          order_id: string
+          to_status?: string | null
+        }
+        Update: {
+          actor_kind?: string
+          actor_profile_id?: string | null
+          created_at?: string
+          event_code?: string
+          from_status?: string | null
+          id?: string
+          metadata?: Json
+          order_id?: string
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_order_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_order_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_order_items: {
+        Row: {
+          availability_mode: string
+          compare_at_unit_price_paise: number | null
+          created_at: string
+          discount_paise: number
+          hsn_sac_code: string | null
+          id: string
+          line_number: number
+          line_total_paise: number
+          option_values: Json
+          order_id: string
+          primary_image_public_path: string | null
+          product_id: string
+          product_name: string
+          product_reference: string
+          product_slug: string
+          quantity: number
+          selling_unit_price_paise: number
+          sku: string
+          tax_paise: number
+          tax_rate_basis_points: number
+          tax_rate_code: string
+          taxable_paise: number
+          variant_display_name: string | null
+          variant_id: string
+        }
+        Insert: {
+          availability_mode: string
+          compare_at_unit_price_paise?: number | null
+          created_at?: string
+          discount_paise?: number
+          hsn_sac_code?: string | null
+          id?: string
+          line_number: number
+          line_total_paise: number
+          option_values?: Json
+          order_id: string
+          primary_image_public_path?: string | null
+          product_id: string
+          product_name: string
+          product_reference: string
+          product_slug: string
+          quantity: number
+          selling_unit_price_paise: number
+          sku: string
+          tax_paise: number
+          tax_rate_basis_points: number
+          tax_rate_code: string
+          taxable_paise: number
+          variant_display_name?: string | null
+          variant_id: string
+        }
+        Update: {
+          availability_mode?: string
+          compare_at_unit_price_paise?: number | null
+          created_at?: string
+          discount_paise?: number
+          hsn_sac_code?: string | null
+          id?: string
+          line_number?: number
+          line_total_paise?: number
+          option_values?: Json
+          order_id?: string
+          primary_image_public_path?: string | null
+          product_id?: string
+          product_name?: string
+          product_reference?: string
+          product_slug?: string
+          quantity?: number
+          selling_unit_price_paise?: number
+          sku?: string
+          tax_paise?: number
+          tax_rate_basis_points?: number
+          tax_rate_code?: string
+          taxable_paise?: number
+          variant_display_name?: string | null
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_order_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_orders: {
+        Row: {
+          cancellation_reason_code: string | null
+          cancelled_at: string | null
+          confirmed_at: string | null
+          contact_id: string | null
+          created_at: string
+          currency: string
+          customer_email: string | null
+          customer_mobile_e164: string
+          customer_name: string
+          delivered_at: string | null
+          discount_paise: number
+          fulfilment_tracking_reference: string | null
+          id: string
+          inventory_hold_expires_at: string | null
+          order_reference: string
+          payment_method: string
+          processing_at: string | null
+          shipped_at: string | null
+          shipping_paise: number
+          status: string
+          subtotal_paise: number
+          tax_paise: number
+          total_paise: number
+          updated_at: string
+        }
+        Insert: {
+          cancellation_reason_code?: string | null
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          customer_mobile_e164: string
+          customer_name: string
+          delivered_at?: string | null
+          discount_paise?: number
+          fulfilment_tracking_reference?: string | null
+          id?: string
+          inventory_hold_expires_at?: string | null
+          order_reference: string
+          payment_method: string
+          processing_at?: string | null
+          shipped_at?: string | null
+          shipping_paise: number
+          status: string
+          subtotal_paise: number
+          tax_paise: number
+          total_paise: number
+          updated_at?: string
+        }
+        Update: {
+          cancellation_reason_code?: string | null
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          customer_mobile_e164?: string
+          customer_name?: string
+          delivered_at?: string | null
+          discount_paise?: number
+          fulfilment_tracking_reference?: string | null
+          id?: string
+          inventory_hold_expires_at?: string | null
+          order_reference?: string
+          payment_method?: string
+          processing_at?: string | null
+          shipped_at?: string | null
+          shipping_paise?: number
+          status?: string
+          subtotal_paise?: number
+          tax_paise?: number
+          total_paise?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_orders_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -1371,314 +1831,6 @@ export type Database = {
           },
         ]
       }
-      commerce_order_delivery: {
-        Row: {
-          address_line_1: string
-          address_line_2: string | null
-          assembly_install_note: string | null
-          city: string
-          created_at: string
-          email: string | null
-          eta_max_days: number
-          eta_min_days: number
-          locality: string
-          mobile_e164: string
-          order_id: string
-          pincode: string
-          recipient_name: string
-          serviceable_snapshot: boolean
-          shipping_charge_paise: number
-          state: string
-        }
-        Insert: {
-          address_line_1: string
-          address_line_2?: string | null
-          assembly_install_note?: string | null
-          city: string
-          created_at?: string
-          email?: string | null
-          eta_max_days: number
-          eta_min_days: number
-          locality: string
-          mobile_e164: string
-          order_id: string
-          pincode: string
-          recipient_name: string
-          serviceable_snapshot?: boolean
-          shipping_charge_paise: number
-          state: string
-        }
-        Update: {
-          address_line_1?: string
-          address_line_2?: string | null
-          assembly_install_note?: string | null
-          city?: string
-          created_at?: string
-          email?: string | null
-          eta_max_days?: number
-          eta_min_days?: number
-          locality?: string
-          mobile_e164?: string
-          order_id?: string
-          pincode?: string
-          recipient_name?: string
-          serviceable_snapshot?: boolean
-          shipping_charge_paise?: number
-          state?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "commerce_order_delivery_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: true
-            referencedRelation: "commerce_orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      commerce_order_events: {
-        Row: {
-          actor_kind: string
-          actor_profile_id: string | null
-          created_at: string
-          event_code: string
-          from_status: string | null
-          id: string
-          metadata: Json
-          order_id: string
-          to_status: string | null
-        }
-        Insert: {
-          actor_kind: string
-          actor_profile_id?: string | null
-          created_at?: string
-          event_code: string
-          from_status?: string | null
-          id?: string
-          metadata?: Json
-          order_id: string
-          to_status?: string | null
-        }
-        Update: {
-          actor_kind?: string
-          actor_profile_id?: string | null
-          created_at?: string
-          event_code?: string
-          from_status?: string | null
-          id?: string
-          metadata?: Json
-          order_id?: string
-          to_status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "commerce_order_events_actor_profile_id_fkey"
-            columns: ["actor_profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "commerce_order_events_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "commerce_orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      commerce_order_items: {
-        Row: {
-          availability_mode: string
-          compare_at_unit_price_paise: number | null
-          created_at: string
-          discount_paise: number
-          hsn_sac_code: string | null
-          id: string
-          line_number: number
-          line_total_paise: number
-          option_values: Json
-          order_id: string
-          primary_image_public_path: string | null
-          product_id: string
-          product_name: string
-          product_reference: string
-          product_slug: string
-          quantity: number
-          selling_unit_price_paise: number
-          sku: string
-          tax_paise: number
-          tax_rate_basis_points: number
-          tax_rate_code: string
-          taxable_paise: number
-          variant_display_name: string | null
-          variant_id: string
-        }
-        Insert: {
-          availability_mode: string
-          compare_at_unit_price_paise?: number | null
-          created_at?: string
-          discount_paise?: number
-          hsn_sac_code?: string | null
-          id?: string
-          line_number: number
-          line_total_paise: number
-          option_values?: Json
-          order_id: string
-          primary_image_public_path?: string | null
-          product_id: string
-          product_name: string
-          product_reference: string
-          product_slug: string
-          quantity: number
-          selling_unit_price_paise: number
-          sku: string
-          tax_paise: number
-          tax_rate_basis_points: number
-          tax_rate_code: string
-          taxable_paise: number
-          variant_display_name?: string | null
-          variant_id: string
-        }
-        Update: {
-          availability_mode?: string
-          compare_at_unit_price_paise?: number | null
-          created_at?: string
-          discount_paise?: number
-          hsn_sac_code?: string | null
-          id?: string
-          line_number?: number
-          line_total_paise?: number
-          option_values?: Json
-          order_id?: string
-          primary_image_public_path?: string | null
-          product_id?: string
-          product_name?: string
-          product_reference?: string
-          product_slug?: string
-          quantity?: number
-          selling_unit_price_paise?: number
-          sku?: string
-          tax_paise?: number
-          tax_rate_basis_points?: number
-          tax_rate_code?: string
-          taxable_paise?: number
-          variant_display_name?: string | null
-          variant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "commerce_order_items_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "commerce_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "commerce_order_items_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "commerce_products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "commerce_order_items_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "commerce_product_variants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      commerce_orders: {
-        Row: {
-          cancellation_reason_code: string | null
-          cancelled_at: string | null
-          confirmed_at: string | null
-          contact_id: string | null
-          created_at: string
-          currency: string
-          customer_email: string | null
-          customer_mobile_e164: string
-          customer_name: string
-          delivered_at: string | null
-          discount_paise: number
-          fulfilment_tracking_reference: string | null
-          id: string
-          inventory_hold_expires_at: string | null
-          order_reference: string
-          payment_method: string
-          processing_at: string | null
-          shipped_at: string | null
-          shipping_paise: number
-          status: string
-          subtotal_paise: number
-          tax_paise: number
-          total_paise: number
-          updated_at: string
-        }
-        Insert: {
-          cancellation_reason_code?: string | null
-          cancelled_at?: string | null
-          confirmed_at?: string | null
-          contact_id?: string | null
-          created_at?: string
-          currency?: string
-          customer_email?: string | null
-          customer_mobile_e164: string
-          customer_name: string
-          delivered_at?: string | null
-          discount_paise?: number
-          fulfilment_tracking_reference?: string | null
-          id?: string
-          inventory_hold_expires_at?: string | null
-          order_reference: string
-          payment_method: string
-          processing_at?: string | null
-          shipped_at?: string | null
-          shipping_paise: number
-          status: string
-          subtotal_paise: number
-          tax_paise: number
-          total_paise: number
-          updated_at?: string
-        }
-        Update: {
-          cancellation_reason_code?: string | null
-          cancelled_at?: string | null
-          confirmed_at?: string | null
-          contact_id?: string | null
-          created_at?: string
-          currency?: string
-          customer_email?: string | null
-          customer_mobile_e164?: string
-          customer_name?: string
-          delivered_at?: string | null
-          discount_paise?: number
-          fulfilment_tracking_reference?: string | null
-          id?: string
-          inventory_hold_expires_at?: string | null
-          order_reference?: string
-          payment_method?: string
-          processing_at?: string | null
-          shipped_at?: string | null
-          shipping_paise?: number
-          status?: string
-          subtotal_paise?: number
-          tax_paise?: number
-          total_paise?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "commerce_orders_contact_id_fkey"
-            columns: ["contact_id"]
-            isOneToOne: false
-            referencedRelation: "contacts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       commerce_tax_rates: {
         Row: {
           code: string
@@ -1920,6 +2072,104 @@ export type Database = {
           },
         ]
       }
+      crm_sla_clocks: {
+        Row: {
+          breached_at: string | null
+          clock_started_at: string
+          created_at: string
+          first_contact_attempt_at: string | null
+          lead_id: string
+          policy_code: string
+          sla_due_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          breached_at?: string | null
+          clock_started_at: string
+          created_at?: string
+          first_contact_attempt_at?: string | null
+          lead_id: string
+          policy_code: string
+          sla_due_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          breached_at?: string | null
+          clock_started_at?: string
+          created_at?: string
+          first_contact_attempt_at?: string | null
+          lead_id?: string
+          policy_code?: string
+          sla_due_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_sla_clocks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_sla_clocks_policy_code_fkey"
+            columns: ["policy_code"]
+            isOneToOne: false
+            referencedRelation: "crm_sla_policies"
+            referencedColumns: ["policy_code"]
+          },
+        ]
+      }
+      crm_sla_policies: {
+        Row: {
+          activated_at: string | null
+          business_hours_config: Json | null
+          business_hours_enabled: boolean
+          created_at: string
+          effective_from: string | null
+          is_active: boolean
+          policy_code: string
+          target_business_minutes: number
+          timezone: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          business_hours_config?: Json | null
+          business_hours_enabled?: boolean
+          created_at?: string
+          effective_from?: string | null
+          is_active?: boolean
+          policy_code: string
+          target_business_minutes: number
+          timezone: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          business_hours_config?: Json | null
+          business_hours_enabled?: boolean
+          created_at?: string
+          effective_from?: string | null
+          is_active?: boolean
+          policy_code?: string
+          target_business_minutes?: number
+          timezone?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_sla_policies_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       holidays: {
         Row: {
           created_at: string
@@ -2048,6 +2298,367 @@ export type Database = {
           },
         ]
       }
+      landing_experiment_variants: {
+        Row: {
+          allocation_percent: number
+          created_at: string
+          experiment_id: string
+          id: string
+          label: string
+          landing_page_version_id: string
+          variant_key: string
+        }
+        Insert: {
+          allocation_percent: number
+          created_at?: string
+          experiment_id: string
+          id?: string
+          label: string
+          landing_page_version_id: string
+          variant_key: string
+        }
+        Update: {
+          allocation_percent?: number
+          created_at?: string
+          experiment_id?: string
+          id?: string
+          label?: string
+          landing_page_version_id?: string
+          variant_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_experiment_variants_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "landing_experiments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_experiment_variants_landing_page_version_id_fkey"
+            columns: ["landing_page_version_id"]
+            isOneToOne: false
+            referencedRelation: "landing_page_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_experiments: {
+        Row: {
+          concluded_at: string | null
+          concluded_by: string | null
+          created_at: string
+          created_by: string
+          experiment_reference: string
+          id: string
+          publication_id: string
+          started_at: string | null
+          started_by: string | null
+          status: string
+          updated_at: string
+          winner_variant_key: string | null
+        }
+        Insert: {
+          concluded_at?: string | null
+          concluded_by?: string | null
+          created_at?: string
+          created_by: string
+          experiment_reference: string
+          id?: string
+          publication_id: string
+          started_at?: string | null
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+          winner_variant_key?: string | null
+        }
+        Update: {
+          concluded_at?: string | null
+          concluded_by?: string | null
+          created_at?: string
+          created_by?: string
+          experiment_reference?: string
+          id?: string
+          publication_id?: string
+          started_at?: string | null
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+          winner_variant_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_experiments_concluded_by_fkey"
+            columns: ["concluded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_experiments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_experiments_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "landing_publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_experiments_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_exposures: {
+        Row: {
+          assignment_epoch: string
+          created_at: string
+          experiment_id: string | null
+          experiment_id_key: string | null
+          first_exposed_at: string
+          id: string
+          publication_id: string
+          variant_key: string | null
+          variant_key_norm: string | null
+          visitor_key_hash: string
+        }
+        Insert: {
+          assignment_epoch: string
+          created_at?: string
+          experiment_id?: string | null
+          experiment_id_key?: string | null
+          first_exposed_at?: string
+          id?: string
+          publication_id: string
+          variant_key?: string | null
+          variant_key_norm?: string | null
+          visitor_key_hash: string
+        }
+        Update: {
+          assignment_epoch?: string
+          created_at?: string
+          experiment_id?: string | null
+          experiment_id_key?: string | null
+          first_exposed_at?: string
+          id?: string
+          publication_id?: string
+          variant_key?: string | null
+          variant_key_norm?: string | null
+          visitor_key_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_exposures_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "landing_experiments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_exposures_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "landing_publications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_page_versions: {
+        Row: {
+          blocks: Json
+          content_hash: string | null
+          created_at: string
+          created_by: string
+          frozen_at: string | null
+          id: string
+          label: string
+          landing_page_id: string
+          lock_version: number
+          updated_at: string
+          updated_by: string | null
+          version_number: number
+        }
+        Insert: {
+          blocks: Json
+          content_hash?: string | null
+          created_at?: string
+          created_by: string
+          frozen_at?: string | null
+          id?: string
+          label: string
+          landing_page_id: string
+          lock_version?: number
+          updated_at?: string
+          updated_by?: string | null
+          version_number: number
+        }
+        Update: {
+          blocks?: Json
+          content_hash?: string | null
+          created_at?: string
+          created_by?: string
+          frozen_at?: string | null
+          id?: string
+          label?: string
+          landing_page_id?: string
+          lock_version?: number
+          updated_at?: string
+          updated_by?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_page_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_page_versions_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_page_versions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_pages: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          page_reference: string
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          page_reference: string
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          page_reference?: string
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_pages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_publications: {
+        Row: {
+          archived_at: string | null
+          campaign_reference: string | null
+          campaign_version_number: number | null
+          created_at: string
+          created_by: string
+          id: string
+          landing_page_id: string
+          landing_page_version_id: string
+          lock_version: number
+          paused_at: string | null
+          publication_reference: string
+          published_at: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          campaign_reference?: string | null
+          campaign_version_number?: number | null
+          created_at?: string
+          created_by: string
+          id?: string
+          landing_page_id: string
+          landing_page_version_id: string
+          lock_version?: number
+          paused_at?: string | null
+          publication_reference: string
+          published_at?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          campaign_reference?: string | null
+          campaign_version_number?: number | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          landing_page_id?: string
+          landing_page_version_id?: string
+          lock_version?: number
+          paused_at?: string | null
+          publication_reference?: string
+          published_at?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_publications_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_publications_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_publications_landing_page_version_id_fkey"
+            columns: ["landing_page_version_id"]
+            isOneToOne: false
+            referencedRelation: "landing_page_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_publications_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_activities: {
         Row: {
           activity_type: string
@@ -2098,6 +2709,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lead_activity_outcome_codes: {
+        Row: {
+          activity_types: string[]
+          closes_contact_attempt: boolean
+          code: string
+          created_at: string
+          display_name: string
+          display_order: number
+          is_active: boolean
+        }
+        Insert: {
+          activity_types?: string[]
+          closes_contact_attempt?: boolean
+          code: string
+          created_at?: string
+          display_name: string
+          display_order?: number
+          is_active?: boolean
+        }
+        Update: {
+          activity_types?: string[]
+          closes_contact_attempt?: boolean
+          code?: string
+          created_at?: string
+          display_name?: string
+          display_order?: number
+          is_active?: boolean
+        }
+        Relationships: []
       }
       lead_assignment_history: {
         Row: {
@@ -2316,48 +2957,142 @@ export type Database = {
           },
         ]
       }
+      lead_follow_up_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          event_type: string
+          follow_up_id: string
+          id: string
+          lead_id: string
+          new_values: Json
+          previous_values: Json
+          reason_code: string | null
+          reason_note: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          event_type: string
+          follow_up_id: string
+          id?: string
+          lead_id: string
+          new_values?: Json
+          previous_values?: Json
+          reason_code?: string | null
+          reason_note?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          event_type?: string
+          follow_up_id?: string
+          id?: string
+          lead_id?: string
+          new_values?: Json
+          previous_values?: Json
+          reason_code?: string | null
+          reason_note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_follow_up_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_follow_up_events_follow_up_id_fkey"
+            columns: ["follow_up_id"]
+            isOneToOne: false
+            referencedRelation: "lead_follow_ups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_follow_up_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_follow_ups: {
         Row: {
+          activity_type: string
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
           completed_by: string | null
+          completion_note: string | null
           created_at: string
           created_by: string
           due_at: string
+          duration_minutes: number | null
           id: string
+          is_primary_next_action: boolean
           lead_id: string
           outcome: string | null
+          outcome_code: string | null
           owner_id: string
+          priority: string
+          quotation_id: string | null
+          reminder_at: string | null
+          source: string
           status: string
+          title: string
+          updated_at: string
         }
         Insert: {
+          activity_type?: string
           cancelled_at?: string | null
           cancelled_by?: string | null
           completed_at?: string | null
           completed_by?: string | null
+          completion_note?: string | null
           created_at?: string
           created_by: string
           due_at: string
+          duration_minutes?: number | null
           id?: string
+          is_primary_next_action?: boolean
           lead_id: string
           outcome?: string | null
+          outcome_code?: string | null
           owner_id: string
+          priority?: string
+          quotation_id?: string | null
+          reminder_at?: string | null
+          source?: string
           status?: string
+          title?: string
+          updated_at?: string
         }
         Update: {
+          activity_type?: string
           cancelled_at?: string | null
           cancelled_by?: string | null
           completed_at?: string | null
           completed_by?: string | null
+          completion_note?: string | null
           created_at?: string
           created_by?: string
           due_at?: string
+          duration_minutes?: number | null
           id?: string
+          is_primary_next_action?: boolean
           lead_id?: string
           outcome?: string | null
+          outcome_code?: string | null
           owner_id?: string
+          priority?: string
+          quotation_id?: string | null
+          reminder_at?: string | null
+          source?: string
           status?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -2389,10 +3124,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "lead_follow_ups_outcome_code_fkey"
+            columns: ["outcome_code"]
+            isOneToOne: false
+            referencedRelation: "lead_activity_outcome_codes"
+            referencedColumns: ["code"]
+          },
+          {
             foreignKeyName: "lead_follow_ups_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_follow_ups_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
             referencedColumns: ["id"]
           },
         ]
@@ -2915,245 +3664,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      landing_experiment_variants: {
-        Row: {
-          allocation_percent: number
-          created_at: string
-          experiment_id: string
-          id: string
-          label: string
-          landing_page_version_id: string
-          variant_key: string
-        }
-        Insert: {
-          allocation_percent: number
-          created_at?: string
-          experiment_id: string
-          id?: string
-          label: string
-          landing_page_version_id: string
-          variant_key: string
-        }
-        Update: {
-          allocation_percent?: number
-          created_at?: string
-          experiment_id?: string
-          id?: string
-          label?: string
-          landing_page_version_id?: string
-          variant_key?: string
-        }
-        Relationships: []
-      }
-      landing_experiments: {
-        Row: {
-          concluded_at: string | null
-          concluded_by: string | null
-          created_at: string
-          created_by: string
-          experiment_reference: string
-          id: string
-          publication_id: string
-          started_at: string | null
-          started_by: string | null
-          status: string
-          updated_at: string
-          winner_variant_key: string | null
-        }
-        Insert: {
-          concluded_at?: string | null
-          concluded_by?: string | null
-          created_at?: string
-          created_by: string
-          experiment_reference: string
-          id?: string
-          publication_id: string
-          started_at?: string | null
-          started_by?: string | null
-          status?: string
-          updated_at?: string
-          winner_variant_key?: string | null
-        }
-        Update: {
-          concluded_at?: string | null
-          concluded_by?: string | null
-          created_at?: string
-          created_by?: string
-          experiment_reference?: string
-          id?: string
-          publication_id?: string
-          started_at?: string | null
-          started_by?: string | null
-          status?: string
-          updated_at?: string
-          winner_variant_key?: string | null
-        }
-        Relationships: []
-      }
-      landing_exposures: {
-        Row: {
-          assignment_epoch: string
-          created_at: string
-          experiment_id: string | null
-          experiment_id_key: string
-          first_exposed_at: string
-          id: string
-          publication_id: string
-          variant_key: string | null
-          variant_key_norm: string
-          visitor_key_hash: string
-        }
-        Insert: {
-          assignment_epoch: string
-          created_at?: string
-          experiment_id?: string | null
-          first_exposed_at?: string
-          id?: string
-          publication_id: string
-          variant_key?: string | null
-          visitor_key_hash: string
-        }
-        Update: {
-          assignment_epoch?: string
-          created_at?: string
-          experiment_id?: string | null
-          first_exposed_at?: string
-          id?: string
-          publication_id?: string
-          variant_key?: string | null
-          visitor_key_hash?: string
-        }
-        Relationships: []
-      }
-      landing_page_versions: {
-        Row: {
-          blocks: Json
-          content_hash: string | null
-          created_at: string
-          created_by: string
-          frozen_at: string | null
-          id: string
-          label: string
-          landing_page_id: string
-          lock_version: number
-          updated_at: string
-          updated_by: string | null
-          version_number: number
-        }
-        Insert: {
-          blocks: Json
-          content_hash?: string | null
-          created_at?: string
-          created_by: string
-          frozen_at?: string | null
-          id?: string
-          label: string
-          landing_page_id: string
-          lock_version?: number
-          updated_at?: string
-          updated_by?: string | null
-          version_number: number
-        }
-        Update: {
-          blocks?: Json
-          content_hash?: string | null
-          created_at?: string
-          created_by?: string
-          frozen_at?: string | null
-          id?: string
-          label?: string
-          landing_page_id?: string
-          lock_version?: number
-          updated_at?: string
-          updated_by?: string | null
-          version_number?: number
-        }
-        Relationships: []
-      }
-      landing_pages: {
-        Row: {
-          created_at: string
-          created_by: string
-          id: string
-          page_reference: string
-          slug: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          id?: string
-          page_reference: string
-          slug: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          id?: string
-          page_reference?: string
-          slug?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      landing_publications: {
-        Row: {
-          archived_at: string | null
-          campaign_reference: string | null
-          campaign_version_number: number | null
-          created_at: string
-          created_by: string
-          id: string
-          landing_page_id: string
-          landing_page_version_id: string
-          lock_version: number
-          paused_at: string | null
-          publication_reference: string
-          published_at: string | null
-          status: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          archived_at?: string | null
-          campaign_reference?: string | null
-          campaign_version_number?: number | null
-          created_at?: string
-          created_by: string
-          id?: string
-          landing_page_id: string
-          landing_page_version_id: string
-          lock_version?: number
-          paused_at?: string | null
-          publication_reference: string
-          published_at?: string | null
-          status?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          archived_at?: string | null
-          campaign_reference?: string | null
-          campaign_version_number?: number | null
-          created_at?: string
-          created_by?: string
-          id?: string
-          landing_page_id?: string
-          landing_page_version_id?: string
-          lock_version?: number
-          paused_at?: string | null
-          publication_reference?: string
-          published_at?: string | null
-          status?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: []
       }
       leads: {
         Row: {
@@ -6008,6 +6518,16 @@ export type Database = {
         }
         Returns: Json
       }
+      bind_campaign_run_operation: {
+        Args: {
+          p_operation_id: string
+          p_provider_ad_group_id?: string | null
+          p_provider_ad_set_id?: string | null
+          p_provider_campaign_id: string
+          p_provider_status?: string | null
+        }
+        Returns: Json
+      }
       bind_whatsapp_send_intent_dispatch: {
         Args: {
           p_dispatch_attempt_id: string
@@ -6057,21 +6577,44 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: boolean
       }
+      cancel_campaign_run: {
+        Args: { p_campaign_run_id: string; p_idempotency_key: string }
+        Returns: Json
+      }
+      cancel_commerce_order: {
+        Args: {
+          p_idempotency_key: string
+          p_order_id: string
+          p_reason_code: string
+        }
+        Returns: Json
+      }
       cancel_lead_follow_up: {
         Args: { p_follow_up_id: string; p_outcome?: string }
         Returns: {
+          activity_type: string
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
           completed_by: string | null
+          completion_note: string | null
           created_at: string
           created_by: string
           due_at: string
+          duration_minutes: number | null
           id: string
+          is_primary_next_action: boolean
           lead_id: string
           outcome: string | null
+          outcome_code: string | null
           owner_id: string
+          priority: string
+          quotation_id: string | null
+          reminder_at: string | null
+          source: string
           status: string
+          title: string
+          updated_at: string
         }
         SetofOptions: {
           from: "*"
@@ -6124,20 +6667,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      bind_campaign_run_operation: {
-        Args: {
-          p_operation_id: string
-          p_provider_ad_group_id?: string | null
-          p_provider_ad_set_id?: string | null
-          p_provider_campaign_id: string
-          p_provider_status?: string | null
-        }
-        Returns: Json
-      }
-      cancel_campaign_run: {
-        Args: { p_campaign_run_id: string; p_idempotency_key: string }
-        Returns: Json
-      }
       cancel_leave_request: {
         Args: { p_reason: string; p_request_id: string }
         Returns: Json
@@ -6187,6 +6716,10 @@ export type Database = {
         }
         Returns: Json
       }
+      check_public_commerce_pincode: {
+        Args: { p_pincode: string }
+        Returns: Json
+      }
       claim_campaign_run_operation: {
         Args: { p_claim_ttl_seconds?: number; p_worker_id: string }
         Returns: Json
@@ -6217,21 +6750,83 @@ export type Database = {
         }
         Returns: Json
       }
-      complete_lead_follow_up: {
-        Args: { p_follow_up_id: string; p_outcome?: string }
+      complete_lead_activity: {
+        Args: {
+          p_activity_id: string
+          p_closed_lost_reason?: string
+          p_closure_reason_code?: string
+          p_completion_note?: string
+          p_next_activity_type?: string
+          p_next_due_at?: string
+          p_next_duration_minutes?: number
+          p_next_priority?: string
+          p_next_quotation_id?: string
+          p_next_reminder_at?: string
+          p_next_title?: string
+          p_on_hold_reason?: string
+          p_on_hold_review_at?: string
+          p_outcome_code: string
+          p_resolution?: string
+          p_whatsapp_send_intent_id?: string
+        }
         Returns: {
+          activity_type: string
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
           completed_by: string | null
+          completion_note: string | null
           created_at: string
           created_by: string
           due_at: string
+          duration_minutes: number | null
           id: string
+          is_primary_next_action: boolean
           lead_id: string
           outcome: string | null
+          outcome_code: string | null
           owner_id: string
+          priority: string
+          quotation_id: string | null
+          reminder_at: string | null
+          source: string
           status: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_follow_ups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      complete_lead_follow_up: {
+        Args: { p_follow_up_id: string; p_outcome?: string }
+        Returns: {
+          activity_type: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          completion_note: string | null
+          created_at: string
+          created_by: string
+          due_at: string
+          duration_minutes: number | null
+          id: string
+          is_primary_next_action: boolean
+          lead_id: string
+          outcome: string | null
+          outcome_code: string | null
+          owner_id: string
+          priority: string
+          quotation_id: string | null
+          reminder_at: string | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
         }
         SetofOptions: {
           from: "*"
@@ -6310,6 +6905,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      consume_commerce_public_rate_limit: {
+        Args: {
+          p_network_fingerprint_hash: string
+          p_operation: string
+          p_phone_fingerprint_hash?: string
+        }
+        Returns: Json
+      }
       correct_attendance_day: {
         Args: {
           p_attendance_date: string
@@ -6339,55 +6942,13 @@ export type Database = {
         Args: { p_campaign_version_id: string; p_idempotency_key: string }
         Returns: Json
       }
-      cancel_commerce_order: {
-        Args: { p_idempotency_key: string; p_order_id: string; p_reason_code: string }
-        Returns: Json
-      }
-      consume_commerce_public_rate_limit: {
-        Args: {
-          p_network_fingerprint_hash: string
-          p_operation: string
-          p_phone_fingerprint_hash?: string
-        }
-        Returns: Json
-      }
-      create_public_commerce_cod_order: {
-        Args: {
-          p_customer: Json
-          p_delivery: Json
-          p_idempotency_key: string
-          p_lines: Json
-        }
-        Returns: Json
-      }
-      get_public_commerce_order_tracking_snapshot: {
-        Args: { p_order_reference: string }
-        Returns: Json
-      }
-      quote_public_commerce_cart: {
-        Args: { p_lines: Json; p_payment_method?: string; p_pincode: string }
-        Returns: Json
-      }
-      transition_commerce_order_fulfilment: {
-        Args: {
-          p_fulfilment_tracking_reference: string
-          p_idempotency_key: string
-          p_order_id: string
-          p_to_status: string
-        }
-        Returns: Json
-      }
-      verify_public_commerce_order_tracking_identity: {
-        Args: { p_mobile_e164: string; p_order_reference: string }
-        Returns: Json
-      }
       create_commerce_product: {
         Args: {
           p_category_id: string
           p_full_description: string
           p_idempotency_key: string
           p_name: string
-          p_short_description: string | null
+          p_short_description: string
           p_slug: string
         }
         Returns: Json
@@ -6416,13 +6977,50 @@ export type Database = {
         }
         Returns: Json
       }
-      create_next_landing_page_version: {
+      create_lead_activity: {
         Args: {
-          p_idempotency_key: string
-          p_landing_page_id: string
-          p_source_version_id: string
+          p_activity_type: string
+          p_due_at: string
+          p_duration_minutes?: number
+          p_is_primary?: boolean
+          p_lead_id: string
+          p_owner_id?: string
+          p_priority?: string
+          p_quotation_id?: string
+          p_reminder_at?: string
+          p_title: string
         }
-        Returns: Json
+        Returns: {
+          activity_type: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          completion_note: string | null
+          created_at: string
+          created_by: string
+          due_at: string
+          duration_minutes: number | null
+          id: string
+          is_primary_next_action: boolean
+          lead_id: string
+          outcome: string | null
+          outcome_code: string | null
+          owner_id: string
+          priority: string
+          quotation_id: string | null
+          reminder_at: string | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_follow_ups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       create_lead_assignment_rule: {
         Args: {
@@ -6457,18 +7055,29 @@ export type Database = {
       create_lead_follow_up: {
         Args: { p_due_at: string; p_lead_id: string; p_owner_id?: string }
         Returns: {
+          activity_type: string
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
           completed_by: string | null
+          completion_note: string | null
           created_at: string
           created_by: string
           due_at: string
+          duration_minutes: number | null
           id: string
+          is_primary_next_action: boolean
           lead_id: string
           outcome: string | null
+          outcome_code: string | null
           owner_id: string
+          priority: string
+          quotation_id: string | null
+          reminder_at: string | null
+          source: string
           status: string
+          title: string
+          updated_at: string
         }
         SetofOptions: {
           from: "*"
@@ -6626,12 +7235,29 @@ export type Database = {
         Args: { p_campaign_id: string; p_idempotency_key: string }
         Returns: Json
       }
+      create_next_landing_page_version: {
+        Args: {
+          p_idempotency_key: string
+          p_landing_page_id: string
+          p_source_version_id: string
+        }
+        Returns: Json
+      }
       create_project_execution_snag: {
         Args: {
           p_description: string
           p_idempotency_key: string
           p_project_id: string
           p_title: string
+        }
+        Returns: Json
+      }
+      create_public_commerce_cod_order: {
+        Args: {
+          p_customer: Json
+          p_delivery: Json
+          p_idempotency_key: string
+          p_lines: Json
         }
         Returns: Json
       }
@@ -6755,17 +7381,50 @@ export type Database = {
         }
         Returns: Json
       }
-      finalize_commerce_product_media: {
-        Args: {
-          p_idempotency_key: string
-          p_media_id: string
-          p_original_path: string
-          p_public_path: string
+      designate_primary_next_action: {
+        Args: { p_activity_id: string }
+        Returns: {
+          activity_type: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          completion_note: string | null
+          created_at: string
+          created_by: string
+          due_at: string
+          duration_minutes: number | null
+          id: string
+          is_primary_next_action: boolean
+          lead_id: string
+          outcome: string | null
+          outcome_code: string | null
+          owner_id: string
+          priority: string
+          quotation_id: string | null
+          reminder_at: string | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
         }
+        SetofOptions: {
+          from: "*"
+          to: "lead_follow_ups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      enqueue_campaign_conversion_feedback: {
+        Args: { p_event_id: string }
         Returns: Json
       }
-      freeze_landing_page_version: {
-        Args: { p_idempotency_key: string; p_version_id: string }
+      enqueue_campaign_metrics_sync: {
+        Args: { p_campaign_run_id: string; p_window_start?: string }
+        Returns: Json
+      }
+      enqueue_pending_attributable_campaign_conversion_feedback: {
+        Args: never
         Returns: Json
       }
       fail_campaign_run_operation: {
@@ -6776,172 +7435,13 @@ export type Database = {
         }
         Returns: Json
       }
-      get_campaign_metrics_board: {
-        Args: { p_campaign_id: string }
-        Returns: Json
-      }
-      publish_commerce_product: {
-        Args: {
-          p_expected_lock_version: number
-          p_id: string
-          p_idempotency_key: string
-        }
-        Returns: Json
-      }
-      replace_commerce_product_specifications: {
-        Args: { p_idempotency_key: string; p_product_id: string; p_specs: Json }
-        Returns: Json
-      }
-      replace_commerce_related_products: {
+      finalize_commerce_product_media: {
         Args: {
           p_idempotency_key: string
-          p_product_id: string
-          p_related_ids: string[]
+          p_media_id: string
+          p_original_path: string
+          p_public_path: string
         }
-        Returns: Json
-      }
-      set_commerce_category_status: {
-        Args: { p_id: string; p_idempotency_key: string; p_status: string }
-        Returns: Json
-      }
-      set_commerce_variant_status: {
-        Args: { p_id: string; p_idempotency_key: string; p_status: string }
-        Returns: Json
-      }
-      update_commerce_product: {
-        Args: {
-          p_category_id: string
-          p_cod_allowed_override: boolean | null
-          p_expected_lock_version: number
-          p_featured: boolean
-          p_free_shipping_eligible_override: boolean | null
-          p_full_description: string
-          p_hsn_sac_code: string | null
-          p_id: string
-          p_idempotency_key: string
-          p_name: string
-          p_seo_description: string | null
-          p_seo_title: string | null
-          p_shipping_charge_paise_override: number | null
-          p_short_description: string | null
-          p_slug: string
-          p_tax_rate_id: string | null
-        }
-        Returns: Json
-      }
-      update_commerce_shipping_settings: {
-        Args: {
-          p_assembly_install_note: string | null
-          p_cod_enabled_global: boolean
-          p_default_shipping_charge_paise: number
-          p_free_shipping_threshold_paise: number | null
-          p_idempotency_key: string
-        }
-        Returns: Json
-      }
-      update_commerce_tax_settings: {
-        Args: {
-          p_idempotency_key: string
-          p_tax_required_for_publish: boolean
-        }
-        Returns: Json
-      }
-      upsert_commerce_category: {
-        Args: {
-          p_cod_allowed_override: boolean | null
-          p_free_shipping_eligible_override: boolean | null
-          p_id: string | null
-          p_idempotency_key: string
-          p_name: string
-          p_parent_id: string | null
-          p_seo_description: string | null
-          p_seo_title: string | null
-          p_shipping_charge_paise_override: number | null
-          p_short_description: string | null
-          p_slug: string
-          p_sort_order: number
-        }
-        Returns: Json
-      }
-      upsert_commerce_pincode: {
-        Args: {
-          p_eta_max_days: number
-          p_eta_min_days: number
-          p_idempotency_key: string
-          p_pincode: string
-          p_serviceable: boolean
-          p_zone_code: string | null
-        }
-        Returns: Json
-      }
-      upsert_commerce_product_variant: {
-        Args: {
-          p_availability_mode: string
-          p_compare_at_price_paise: number | null
-          p_display_name: string | null
-          p_id: string | null
-          p_idempotency_key: string
-          p_option_values: Json
-          p_product_id: string
-          p_selling_price_paise: number
-          p_sku: string
-          p_sort_order: number
-        }
-        Returns: Json
-      }
-      upsert_commerce_tax_rate: {
-        Args: {
-          p_code: string
-          p_description: string | null
-          p_id: string | null
-          p_idempotency_key: string
-          p_is_active: boolean
-          p_name: string
-          p_rate_basis_points: number
-        }
-        Returns: Json
-      }
-      verify_campaign_execution_context_binding: {
-        Args: {
-          p_campaign_reference: string
-          p_campaign_version_number: number
-          p_landing_publication_reference: string
-          p_provider_channel: string
-          p_run_reference: string
-          p_run_target_reference: string
-        }
-        Returns: Json
-      }
-      upsert_campaign_metric_snapshot: {
-        Args: {
-          p_campaign_run_target_id: string
-          p_clicks: number
-          p_currency: string
-          p_impressions: number
-          p_provider_account_ref?: string
-          p_provider_conversions: number
-          p_provider_revision?: string
-          p_spend_minor: number
-          p_window_end: string
-          p_window_start: string
-        }
-        Returns: Json
-      }
-      mark_campaign_conversion_feedback_state: {
-        Args: {
-          p_event_id: string
-          p_provider_error_code?: string
-          p_provider_submission_id?: string
-          p_provider_submission_state: string
-        }
-        Returns: Json
-      }
-      enqueue_campaign_metrics_sync: {
-        Args: { p_campaign_run_id: string }
-        Returns: Json
-      }
-      enqueue_campaign_conversion_feedback: {
-        Args: { p_event_id: string }
         Returns: Json
       }
       finalize_project_design_deliverable_version: {
@@ -6957,6 +7457,14 @@ export type Database = {
         }
         Returns: Json
       }
+      freeze_landing_page_version: {
+        Args: { p_idempotency_key: string; p_version_id: string }
+        Returns: Json
+      }
+      get_campaign_metrics_board: {
+        Args: { p_campaign_id: string }
+        Returns: Json
+      }
       get_campaign_run_operation_for_reconcile: {
         Args: { p_operation_id: string }
         Returns: Json
@@ -6965,6 +7473,7 @@ export type Database = {
         Args: { p_contact_id: string }
         Returns: Json
       }
+      get_live_landing_publication: { Args: { p_slug: string }; Returns: Json }
       get_project_design_high_level_status: {
         Args: { p_project_id: string }
         Returns: Json
@@ -6973,12 +7482,16 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: Json
       }
+      get_public_commerce_order_tracking_snapshot: {
+        Args: { p_order_reference: string }
+        Returns: Json
+      }
+      get_public_commerce_product: { Args: { p_slug: string }; Returns: Json }
       get_quotation_by_capability: {
         Args: { p_capability_token: string }
         Returns: Json
       }
       get_quotation_draft: { Args: { p_quotation_id: string }; Returns: Json }
-      get_live_landing_publication: { Args: { p_slug: string }; Returns: Json }
       has_active_role: { Args: { p_role_code: string }; Returns: boolean }
       hold_project_design: {
         Args: {
@@ -7070,6 +7583,8 @@ export type Database = {
         Args: never
         Returns: Json
       }
+      list_public_commerce_categories: { Args: never; Returns: Json }
+      list_public_commerce_sitemap: { Args: never; Returns: Json }
       lock_sales_target: {
         Args: {
           p_expected_revision: number
@@ -7099,6 +7614,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mark_campaign_conversion_feedback_state: {
+        Args: {
+          p_event_id: string
+          p_provider_error_code?: string
+          p_provider_submission_id?: string
+          p_provider_submission_state: string
+        }
+        Returns: Json
+      }
       mark_campaign_run_operation_needs_reconcile: {
         Args: { p_error_code?: string; p_operation_id: string }
         Returns: Json
@@ -7116,6 +7640,10 @@ export type Database = {
         Args: { p_idempotency_key: string; p_quotation_version_id: string }
         Returns: Json
       }
+      pause_campaign_run: {
+        Args: { p_campaign_run_id: string; p_idempotency_key: string }
+        Returns: Json
+      }
       prepare_staff_invite_saga: {
         Args: {
           p_attendance_eligible: boolean
@@ -7130,10 +7658,6 @@ export type Database = {
           p_reporting_manager_id: string
           p_role_code: string
         }
-        Returns: Json
-      }
-      pause_campaign_run: {
-        Args: { p_campaign_run_id: string; p_idempotency_key: string }
         Returns: Json
       }
       preview_campaign_audience: {
@@ -7164,6 +7688,18 @@ export type Database = {
         }
         Returns: Json
       }
+      publish_commerce_product: {
+        Args: {
+          p_expected_lock_version: number
+          p_id: string
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
+      quote_public_commerce_cart: {
+        Args: { p_lines: Json; p_payment_method?: string; p_pincode: string }
+        Returns: Json
+      }
       reconcile_staff_invite: {
         Args: { p_client_request_id: string }
         Returns: Json
@@ -7176,6 +7712,16 @@ export type Database = {
           send_intent_id: string
         }[]
       }
+      record_landing_exposure: {
+        Args: {
+          p_assignment_epoch: string
+          p_experiment_id: string | null
+          p_publication_id: string
+          p_variant_key: string | null
+          p_visitor_key_hash: string
+        }
+        Returns: Json
+      }
       record_marketing_consent_event: {
         Args: {
           p_channel: string
@@ -7186,16 +7732,6 @@ export type Database = {
           p_instruction_source: string
           p_note: string
           p_notice_version: string
-        }
-        Returns: Json
-      }
-      record_landing_exposure: {
-        Args: {
-          p_assignment_epoch: string
-          p_experiment_id: string | null
-          p_publication_id: string
-          p_variant_key: string | null
-          p_visitor_key_hash: string
         }
         Returns: Json
       }
@@ -7343,6 +7879,18 @@ export type Database = {
         Args: { p_idempotency_key: string; p_project_id: string }
         Returns: Json
       }
+      replace_commerce_product_specifications: {
+        Args: { p_idempotency_key: string; p_product_id: string; p_specs: Json }
+        Returns: Json
+      }
+      replace_commerce_related_products: {
+        Args: {
+          p_idempotency_key: string
+          p_product_id: string
+          p_related_ids: string[]
+        }
+        Returns: Json
+      }
       replace_lead_import_mapping: {
         Args: {
           p_batch_id: string
@@ -7470,6 +8018,45 @@ export type Database = {
         }
         Returns: Json
       }
+      reschedule_lead_activity: {
+        Args: {
+          p_activity_id: string
+          p_clear_reminder?: boolean
+          p_due_at: string
+          p_reminder_at?: string
+        }
+        Returns: {
+          activity_type: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          completion_note: string | null
+          created_at: string
+          created_by: string
+          due_at: string
+          duration_minutes: number | null
+          id: string
+          is_primary_next_action: boolean
+          lead_id: string
+          outcome: string | null
+          outcome_code: string | null
+          owner_id: string
+          priority: string
+          quotation_id: string | null
+          reminder_at: string | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_follow_ups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       resend_staff_invite: {
         Args: { p_reason: string; p_staff_id: string }
         Returns: Json
@@ -7492,6 +8079,16 @@ export type Database = {
         Args: { p_version_id: string }
         Returns: Json
       }
+      resolve_campaign_run_create_reconcile_found: {
+        Args: {
+          p_operation_id: string
+          p_provider_ad_group_id?: string
+          p_provider_ad_set_id?: string
+          p_provider_campaign_id: string
+          p_provider_status?: string
+        }
+        Returns: Json
+      }
       resolve_project_execution_snag: {
         Args: {
           p_file_sha256?: string
@@ -7503,16 +8100,6 @@ export type Database = {
           p_source_reference: string
           p_source_type: string
           p_storage_object_path?: string
-        }
-        Returns: Json
-      }
-      resolve_campaign_run_create_reconcile_found: {
-        Args: {
-          p_operation_id: string
-          p_provider_ad_group_id?: string | null
-          p_provider_ad_set_id?: string | null
-          p_provider_campaign_id: string
-          p_provider_status?: string | null
         }
         Returns: Json
       }
@@ -7613,6 +8200,28 @@ export type Database = {
         }
         Returns: Json
       }
+      search_public_commerce_products: {
+        Args: {
+          p_availability_mode: string
+          p_category_slug: string
+          p_featured_only: boolean
+          p_limit: number
+          p_max_price_paise: number
+          p_min_price_paise: number
+          p_offset: number
+          p_query: string
+          p_sort: string
+        }
+        Returns: Json
+      }
+      set_commerce_category_status: {
+        Args: { p_id: string; p_idempotency_key: string; p_status: string }
+        Returns: Json
+      }
+      set_commerce_variant_status: {
+        Args: { p_id: string; p_idempotency_key: string; p_status: string }
+        Returns: Json
+      }
       set_current_attendance_policy: {
         Args: { p_policy_id: string }
         Returns: Json
@@ -7690,10 +8299,6 @@ export type Database = {
         Args: { p_manager_id: string; p_reason: string; p_staff_id: string }
         Returns: Json
       }
-      start_landing_experiment: {
-        Args: { p_experiment_id: string; p_idempotency_key: string }
-        Returns: Json
-      }
       start_kriti_run: {
         Args: {
           p_context_digest: string
@@ -7707,6 +8312,10 @@ export type Database = {
           p_task_type: string
         }
         Returns: string
+      }
+      start_landing_experiment: {
+        Args: { p_experiment_id: string; p_idempotency_key: string }
+        Returns: Json
       }
       start_project_execution_snag: {
         Args: { p_idempotency_key: string; p_snag_id: string }
@@ -7793,6 +8402,49 @@ export type Database = {
           submission_reference: string
         }[]
       }
+      transfer_activity_ownership: {
+        Args: { p_activity_id: string; p_new_owner_id: string }
+        Returns: {
+          activity_type: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          completion_note: string | null
+          created_at: string
+          created_by: string
+          due_at: string
+          duration_minutes: number | null
+          id: string
+          is_primary_next_action: boolean
+          lead_id: string
+          outcome: string | null
+          outcome_code: string | null
+          owner_id: string
+          priority: string
+          quotation_id: string | null
+          reminder_at: string | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_follow_ups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      transition_commerce_order_fulfilment: {
+        Args: {
+          p_fulfilment_tracking_reference: string
+          p_idempotency_key: string
+          p_order_id: string
+          p_to_status: string
+        }
+        Returns: Json
+      }
       transition_landing_publication: {
         Args: {
           p_expected_lock_version: number
@@ -7870,6 +8522,71 @@ export type Database = {
           p_target_state: string
         }
         Returns: Json
+      }
+      update_commerce_product: {
+        Args: {
+          p_category_id: string
+          p_cod_allowed_override: boolean
+          p_expected_lock_version: number
+          p_featured: boolean
+          p_free_shipping_eligible_override: boolean
+          p_full_description: string
+          p_hsn_sac_code: string
+          p_id: string
+          p_idempotency_key: string
+          p_name: string
+          p_seo_description: string
+          p_seo_title: string
+          p_shipping_charge_paise_override: number
+          p_short_description: string
+          p_slug: string
+          p_tax_rate_id: string
+        }
+        Returns: Json
+      }
+      update_commerce_shipping_settings: {
+        Args: {
+          p_assembly_install_note: string
+          p_cod_enabled_global: boolean
+          p_default_shipping_charge_paise: number
+          p_free_shipping_threshold_paise: number
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
+      update_commerce_tax_settings: {
+        Args: { p_idempotency_key: string; p_tax_required_for_publish: boolean }
+        Returns: Json
+      }
+      update_crm_sla_policy: {
+        Args: {
+          p_business_hours_config?: Json
+          p_business_hours_enabled?: boolean
+          p_clear_business_hours_config?: boolean
+          p_is_active?: boolean
+          p_policy_code: string
+          p_target_business_minutes?: number
+          p_timezone?: string
+        }
+        Returns: {
+          activated_at: string | null
+          business_hours_config: Json | null
+          business_hours_enabled: boolean
+          created_at: string
+          effective_from: string | null
+          is_active: boolean
+          policy_code: string
+          target_business_minutes: number
+          timezone: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crm_sla_policies"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       update_lead_assignment_rule: {
         Args: {
@@ -7961,6 +8678,76 @@ export type Database = {
         }
         Returns: Json
       }
+      upsert_campaign_metric_snapshot: {
+        Args: {
+          p_campaign_run_target_id: string
+          p_clicks: number
+          p_currency: string
+          p_impressions: number
+          p_provider_account_ref?: string
+          p_provider_conversions: number
+          p_provider_revision?: string
+          p_spend_minor: number
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: Json
+      }
+      upsert_commerce_category: {
+        Args: {
+          p_cod_allowed_override: boolean
+          p_free_shipping_eligible_override: boolean
+          p_id: string
+          p_idempotency_key: string
+          p_name: string
+          p_parent_id: string
+          p_seo_description: string
+          p_seo_title: string
+          p_shipping_charge_paise_override: number
+          p_short_description: string
+          p_slug: string
+          p_sort_order: number
+        }
+        Returns: Json
+      }
+      upsert_commerce_pincode: {
+        Args: {
+          p_eta_max_days: number
+          p_eta_min_days: number
+          p_idempotency_key: string
+          p_pincode: string
+          p_serviceable: boolean
+          p_zone_code: string
+        }
+        Returns: Json
+      }
+      upsert_commerce_product_variant: {
+        Args: {
+          p_availability_mode: string
+          p_compare_at_price_paise: number
+          p_display_name: string
+          p_id: string
+          p_idempotency_key: string
+          p_option_values: Json
+          p_product_id: string
+          p_selling_price_paise: number
+          p_sku: string
+          p_sort_order: number
+        }
+        Returns: Json
+      }
+      upsert_commerce_tax_rate: {
+        Args: {
+          p_code: string
+          p_description: string
+          p_id: string
+          p_idempotency_key: string
+          p_is_active: boolean
+          p_name: string
+          p_rate_basis_points: number
+        }
+        Returns: Json
+      }
       validate_lead_import_batch: {
         Args: { p_batch_id: string }
         Returns: {
@@ -8005,9 +8792,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      whatsapp_inbox_check_conversation_access: {
-        Args: { p_capability: string; p_conversation_id: string }
-        Returns: boolean
+      verify_campaign_execution_context_binding: {
+        Args: {
+          p_campaign_reference: string
+          p_campaign_version_number: number
+          p_landing_publication_reference: string
+          p_provider_channel: string
+          p_run_reference: string
+          p_run_target_reference: string
+        }
+        Returns: Json
       }
       verify_live_landing_publication_context: {
         Args: {
@@ -8018,6 +8812,14 @@ export type Database = {
           p_variant_key: string | null
         }
         Returns: Json
+      }
+      verify_public_commerce_order_tracking_identity: {
+        Args: { p_mobile_e164: string; p_order_reference: string }
+        Returns: Json
+      }
+      whatsapp_inbox_check_conversation_access: {
+        Args: { p_capability: string; p_conversation_id: string }
+        Returns: boolean
       }
     }
     Enums: {
@@ -8147,6 +8949,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

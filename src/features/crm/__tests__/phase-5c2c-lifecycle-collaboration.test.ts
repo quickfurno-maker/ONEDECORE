@@ -215,7 +215,7 @@ describe("Phase 5C2C architecture", () => {
   test("errors normalize lifecycle postgres tokens", () => {
     assert.equal(
       crmErrorFromPostgresMessage("CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE").code,
-      "INVALID_TRANSITION"
+      "CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE"
     );
     assert.equal(
       crmErrorFromPostgresMessage("Only open follow-ups can be completed").code,

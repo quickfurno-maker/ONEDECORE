@@ -105,6 +105,18 @@ export interface CrmLeadDetailFollowUp {
   readonly outcome: string | null;
   readonly completedAt: string | null;
   readonly cancelledAt: string | null;
+  readonly activityType: string;
+  readonly title: string;
+  readonly priority: string;
+  readonly isPrimaryNextAction: boolean;
+  readonly durationMinutes: number | null;
+  readonly reminderAt: string | null;
+  readonly outcomeCode: string | null;
+  readonly completionNote: string | null;
+  readonly quotationId: string | null;
+  readonly source: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }
 
 export interface CrmLeadDetailConsentSummaryItem {
