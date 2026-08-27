@@ -175,3 +175,58 @@ describe("Phase 5C2A UI boundaries", () => {
     assert.match(testSql, /phase5c2a/);
   });
 });
+
+describe("CRM 2A-7 assignment automation contracts", () => {
+  test("2A-7 migration exists with assignment first-contact automation", () => {
+    const migration = readFileSync(
+      join(
+        root,
+        "supabase/migrations/20260829140000_crm_assignment_first_contact_automation.sql"
+      ),
+      "utf8"
+    );
+    assert.match(migration, /ensure_sla_first_contact_primary/);
+    assert.match(migration, /sync_open_activities_on_assignment/);
+    assert.match(migration, /follow_up\.auto_created/);
+    assert.match(migration, /source = 'sla_auto'/);
+    assert.match(migration, /First Contact/);
+  });
+
+  test("pgTAP test 35 exists for 2A-7", () => {
+    const testSql = readFileSync(
+      join(
+        root,
+        "supabase/tests/database/35_crm_assignment_first_contact_automation_test.sql"
+      ),
+      "utf8"
+    );
+    assert.match(testSql, /2A7/);
+    assert.match(testSql, /follow_up\.auto_created/);
+  });
+
+  test("assignment service still calls same assign_lead RPC without UI changes", () => {
+    const adapterSrc = readFileSync(
+      join(root, "src/features/crm/server/crm-transition-adapters.ts"),
+      "utf8"
+    );
+    const serviceSrc = readFileSync(
+      join(root, "src/features/crm/server/crm-assignment-service.ts"),
+      "utf8"
+    );
+    assert.match(adapterSrc, /assign_lead/);
+    assert.match(adapterSrc, /p_enforce_expected_state/);
+    assert.match(serviceSrc, /callAssignLead/);
+    assert.doesNotMatch(serviceSrc, /First Contact/i);
+    assert.doesNotMatch(serviceSrc, /createLeadActivity/i);
+  });
+
+  test("assignment dialog unchanged — no First Contact UI", () => {
+    const dialogSrc = readFileSync(
+      join(root, "src/features/crm/components/leads/LeadAssignmentDialog.tsx"),
+      "utf8"
+    );
+    assert.doesNotMatch(dialogSrc, /First Contact/i);
+    assert.doesNotMatch(dialogSrc, /sla_auto/i);
+    assert.match(dialogSrc, /assignLeadAction/);
+  });
+});

@@ -1,5 +1,5 @@
 /**
- * Phase 6B — integrated local matrix (repository schema M1–M21).
+ * Phase 6B â€” integrated local matrix (repository schema M1â€“M21).
  * Complements pgTAP 13/14/15 with orchestration-level dispatch tests.
  */
 
@@ -51,7 +51,7 @@ function mockAdmin(rpcImpl: (name: string, args: Record<string, unknown>) => Pro
   };
 }
 
-describe("Phase 6B integrated — frozen migration ledger", () => {
+describe("Phase 6B integrated â€” frozen migration ledger", () => {
   test("M19/M20/M21/M22 frozen hashes match protected baseline freeze", () => {
     assert.equal(
       sha256File(
@@ -93,11 +93,11 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(m23Blob, FROZEN_HASHES.M23_GIT_BLOB);
   });
 
-  test("repository has M1–M37 COD, timeline v2, notes repair, CRM 2A-1/2A-2/2A-3/2A-6; payment M38 fail-closed", () => {
+  test("repository has M1â€“M37 COD, timeline v2, notes repair, CRM 2A-1/2A-2/2A-3/2A-6/2A-7; payment M38 fail-closed", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 43, "Migration count must be exactly 43");
+    assert.equal(files.length, 44, "Migration count must be exactly 44");
 
     const phase6c = files.filter((f) => f.startsWith("20260809"));
     assert.equal(phase6c.length, 1);
@@ -180,8 +180,9 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
         "20260827140000_crm_business_sla_foundation.sql",
         "20260828140000_crm_activity_rpc_workflows.sql",
         "20260829120000_crm_my_day_read_model.sql",
+        "20260829140000_crm_assignment_first_contact_automation.sql",
       ],
-      "Only timeline v2, notes privilege repair, CRM 2A-1..2A-3, and CRM 2A-6 My Day may follow 9D-D1 COD order foundation"
+      "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, and CRM 2A-7 may follow 9D-D1 COD order foundation"
     );
     assert.equal(
       files.includes("20260825140000_commerce_online_payment_adapter_foundation.sql"),
@@ -191,7 +192,7 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
   });
 });
 
-describe("Phase 6B integrated — consent/purpose", () => {
+describe("Phase 6B integrated â€” consent/purpose", () => {
   test("MARKETING purpose is rejected on service path", () => {
     assert.throws(() => rejectMarketingPurpose("MARKETING"), /MARKETING/);
     assert.doesNotThrow(() =>
@@ -200,7 +201,7 @@ describe("Phase 6B integrated — consent/purpose", () => {
   });
 });
 
-describe("Phase 6B integrated — outbound modes", () => {
+describe("Phase 6B integrated â€” outbound modes", () => {
   test("defaults to disabled; local-test forbidden in production NODE_ENV", () => {
     assert.equal(getWhatsappOutboundMode({}), "disabled");
     assert.equal(
@@ -213,7 +214,7 @@ describe("Phase 6B integrated — outbound modes", () => {
   });
 });
 
-describe("Phase 6B integrated — dispatch orchestration", () => {
+describe("Phase 6B integrated â€” dispatch orchestration", () => {
   const envBackup = { ...process.env };
 
   before(() => {
@@ -448,7 +449,7 @@ describe("Phase 6B integrated — dispatch orchestration", () => {
   });
 });
 
-describe("Phase 6B integrated — security contracts", () => {
+describe("Phase 6B integrated â€” security contracts", () => {
   test("Meta adapter source references graph API version only in enabled adapter module", () => {
     const meta = readFileSync(
       join(root, "src/features/whatsapp/server/whatsapp-meta-provider-adapter.ts"),
