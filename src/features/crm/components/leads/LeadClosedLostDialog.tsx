@@ -52,14 +52,14 @@ export function LeadClosedLostDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="w-full max-w-lg rounded-lg border border-red-900/60 bg-neutral-900 p-5 shadow-xl"
+        className="w-full max-w-lg rounded-lg border border-[var(--crm-danger)]/30 bg-[var(--crm-surface)] p-5 shadow-xl"
         onClick={(event) => event.stopPropagation()}
         data-testid="lead-closed-lost-dialog"
       >
         <h3 id={titleId} className="text-lg font-semibold text-red-200">
           Mark lead as closed lost
         </h3>
-        <p className="mt-2 text-sm text-neutral-400">
+        <p className="mt-2 text-sm text-[var(--crm-muted)]">
           This is a terminal action. The lead cannot be reopened in this phase.
         </p>
 
@@ -68,14 +68,14 @@ export function LeadClosedLostDialog({
           <input type="hidden" name="newStatus" value="closed_lost" />
 
           <div>
-            <label htmlFor="closure-reason" className="text-sm text-neutral-300">
+            <label htmlFor="closure-reason" className="text-sm text-[var(--crm-text-secondary)]">
               Closure reason
             </label>
             <select
               id="closure-reason"
               name="closureReasonCode"
               required
-              className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
+              className="mt-1 w-full rounded-md border border-[var(--crm-border-strong)] bg-[var(--crm-surface-subtle)] px-3 py-2 text-sm text-[var(--crm-text)]"
               data-testid="lead-closed-lost-reason"
             >
               <option value="">Select a reason</option>
@@ -88,7 +88,7 @@ export function LeadClosedLostDialog({
           </div>
 
           <div>
-            <label htmlFor="closure-note" className="text-sm text-neutral-300">
+            <label htmlFor="closure-note" className="text-sm text-[var(--crm-text-secondary)]">
               Closure note
             </label>
             <textarea
@@ -98,7 +98,7 @@ export function LeadClosedLostDialog({
               minLength={3}
               maxLength={1000}
               rows={4}
-              className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
+              className="mt-1 w-full rounded-md border border-[var(--crm-border-strong)] bg-[var(--crm-surface-subtle)] px-3 py-2 text-sm text-[var(--crm-text)]"
               data-testid="lead-closed-lost-note"
             />
           </div>
@@ -113,14 +113,14 @@ export function LeadClosedLostDialog({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200"
+              className="inline-flex min-h-11 items-center rounded-md border border-[var(--crm-border-strong)] px-4 py-2 text-sm text-[var(--crm-text)]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex min-h-11 items-center rounded-md bg-red-700 px-4 py-2 text-sm font-medium text-neutral-100 disabled:opacity-60"
+              className="inline-flex min-h-11 items-center rounded-md bg-red-700 px-4 py-2 text-sm font-medium text-[var(--crm-text)] disabled:opacity-60"
               data-testid="lead-closed-lost-submit"
             >
               {pending ? "Saving…" : "Confirm closed lost"}

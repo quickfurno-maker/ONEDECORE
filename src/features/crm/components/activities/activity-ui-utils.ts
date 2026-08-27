@@ -93,11 +93,11 @@ export function activityDueStateLabel(state: ActivityDueState): string {
 export function activityDueStateClassName(state: ActivityDueState): string {
   switch (state) {
     case "overdue":
-      return "text-red-300 bg-red-950/40 border-red-900/50";
+      return "text-[var(--crm-danger)] bg-[var(--crm-danger-soft)] border-[var(--crm-danger)]/25";
     case "today":
-      return "text-amber-200 bg-amber-950/30 border-amber-800/50";
+      return "text-[var(--crm-warning)] bg-[var(--crm-warning-soft)] border-[var(--crm-warning)]/25";
     default:
-      return "text-neutral-300 bg-neutral-900/60 border-neutral-700/60";
+      return "text-[var(--crm-text-secondary)] bg-[var(--crm-surface-subtle)] border-[var(--crm-border)]";
   }
 }
 
@@ -187,9 +187,9 @@ export function getDefaultCompletionResolution(
 
 export function inputClassName(hasError = false): string {
   return [
-    "mt-1 w-full rounded-md border bg-neutral-950 px-3 py-2 text-sm text-neutral-100",
-    hasError ? "border-red-700" : "border-neutral-700",
-  ].join(" ");
+    "crm-input mt-1 w-full text-base sm:text-sm",
+    hasError ? "border-[var(--crm-danger)]" : "",
+  ].filter(Boolean).join(" ");
 }
 
 export function fieldErrorId(field: string): string {

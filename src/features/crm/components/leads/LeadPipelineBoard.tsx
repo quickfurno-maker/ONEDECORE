@@ -59,7 +59,7 @@ export function LeadPipelineBoard({ stages }: LeadPipelineBoardProps) {
             {stage.total > preview.length ? (
               <Link
                 href={`/admin/crm/leads?status=${encodeURIComponent(stage.status)}`}
-                className="mt-3 inline-flex min-h-8 items-center text-xs font-medium text-[var(--od-gold)]"
+                className="mt-3 inline-flex min-h-8 items-center text-xs font-medium text-[var(--crm-primary)]"
               >
                 View all {stage.total}
               </Link>

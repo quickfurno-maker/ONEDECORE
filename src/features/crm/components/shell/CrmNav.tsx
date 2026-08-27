@@ -52,30 +52,38 @@ export function CrmNav({
   ];
 
   return (
-    <nav aria-label="CRM workspace" className="flex flex-wrap gap-1 rounded-[10px] border border-[var(--od-border)] bg-[var(--od-surface)] p-1">
-      {items.map((item) => {
-        const isActive =
-          item.href === "/admin/crm"
-            ? activePath === "/admin/crm"
-            : activePath.startsWith(item.href);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={isActive ? "page" : undefined}
-            className={`relative inline-flex min-h-10 items-center rounded-[8px] px-3 text-[13px] font-medium transition ${
-              isActive
-                ? "bg-[var(--od-gold)]/12 text-[var(--od-text)]"
-                : "text-[var(--od-text-2)] hover:bg-[var(--od-hover)]"
-            }`}
-          >
-            {isActive ? (
-              <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-[var(--od-gold)]" />
-            ) : null}
-            {item.label}
-          </Link>
-        );
-      })}
+    <nav
+      aria-label="CRM workspace"
+      className="crm-scrollbar-x -mx-1 border-b border-[var(--crm-border)]"
+    >
+      <div className="flex min-w-max items-stretch gap-0.5 px-1">
+        {items.map((item) => {
+          const isActive =
+            item.href === "/admin/crm"
+              ? activePath === "/admin/crm"
+              : activePath.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              className={`relative inline-flex min-h-11 shrink-0 items-center px-3 text-[13px] font-medium transition-colors duration-150 ${
+                isActive
+                  ? "text-[var(--crm-primary)]"
+                  : "text-[var(--crm-muted)] hover:bg-[var(--crm-primary-soft)] hover:text-[var(--crm-text)]"
+              }`}
+            >
+              {isActive ? (
+                <span
+                  aria-hidden
+                  className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-[var(--crm-primary)]"
+                />
+              ) : null}
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

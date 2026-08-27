@@ -15,7 +15,7 @@ export function ManualLeadDuplicateNotice({ preview }: ManualLeadDuplicateNotice
       return (
         <div
           role="status"
-          className="rounded-md border border-emerald-800/60 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100"
+          className="rounded-md border border-[var(--crm-success)]/25 bg-[var(--crm-success-soft)] px-4 py-3 text-sm text-[var(--crm-success)]"
         >
           No similar active or recent enquiry was found. You can create this lead.
         </div>
@@ -24,7 +24,7 @@ export function ManualLeadDuplicateNotice({ preview }: ManualLeadDuplicateNotice
       return (
         <div
           role="status"
-          className="rounded-md border border-sky-800/60 bg-sky-950/40 px-4 py-3 text-sm text-sky-100"
+          className="rounded-md border border-[var(--crm-info)]/25 bg-[var(--crm-info-soft)] px-4 py-3 text-sm text-[var(--crm-info)]"
         >
           Existing client contact will be reused. No prior contact details are shown here.
         </div>
@@ -33,7 +33,7 @@ export function ManualLeadDuplicateNotice({ preview }: ManualLeadDuplicateNotice
       return (
         <div
           role="alert"
-          className="rounded-md border border-rose-800/70 bg-rose-950/40 px-4 py-3 text-sm text-rose-100"
+          className="rounded-md border border-[var(--crm-danger)]/25 bg-[var(--crm-danger-soft)] px-4 py-3 text-sm text-[var(--crm-danger)]"
         >
           <p>
             A similar active enquiry already exists. Creating another active lead is not
@@ -43,7 +43,7 @@ export function ManualLeadDuplicateNotice({ preview }: ManualLeadDuplicateNotice
             <p className="mt-2">
               <Link
                 href={`/admin/crm/leads/${preview.existingLeadId}`}
-                className="font-medium underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                className="font-medium underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--crm-primary)]"
               >
                 Open existing lead
               </Link>
@@ -55,7 +55,7 @@ export function ManualLeadDuplicateNotice({ preview }: ManualLeadDuplicateNotice
       return (
         <div
           role="alert"
-          className="rounded-md border border-amber-800/70 bg-amber-950/40 px-4 py-3 text-sm text-amber-100"
+          className="rounded-md border border-[var(--crm-warning)]/25 bg-[var(--crm-warning-soft)] px-4 py-3 text-sm text-[var(--crm-warning)]"
         >
           A similar enquiry was closed within the last 30 days. Sales executives must contact
           a sales manager. Authorized managers may override with a documented reason.
@@ -65,7 +65,7 @@ export function ManualLeadDuplicateNotice({ preview }: ManualLeadDuplicateNotice
       return (
         <div
           role="alert"
-          className="rounded-md border border-rose-800/70 bg-rose-950/40 px-4 py-3 text-sm text-rose-100"
+          className="rounded-md border border-[var(--crm-danger)]/25 bg-[var(--crm-danger-soft)] px-4 py-3 text-sm text-[var(--crm-danger)]"
         >
           The phone number and email map to different existing client records. Ask a manager
           or administrator to review before proceeding.

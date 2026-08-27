@@ -50,7 +50,7 @@ describe("Phase 5C2B contracts", () => {
     const errors = validateManualLeadFormInput(
       {
         submittedName: "Test Client",
-        phone: "+919876543210",
+        phone: "9876543210",
         email: null,
         serviceCode: "complete-home-interiors",
         propertyCode: "apartment-2bhk",

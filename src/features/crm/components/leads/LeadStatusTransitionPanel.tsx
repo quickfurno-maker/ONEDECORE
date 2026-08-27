@@ -58,20 +58,20 @@ export function LeadStatusTransitionPanel({
 
   return (
     <section
-      className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-5"
+      className="crm-surface p-3.5 sm:p-5"
       data-testid="lead-status-transition-panel"
     >
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
+      <h2 className="text-[15px] font-semibold text-[var(--crm-text)] sm:text-sm">
         Lifecycle
       </h2>
 
       {state.message && !state.success ? (
-        <p className="mt-3 text-sm text-red-300" role="alert">
+        <p className="mt-3 text-sm text-[var(--crm-danger)]" role="alert">
           {state.message}
         </p>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2 sm:mt-4">
         {canResume && resumeTargetStatus ? (
           <form action={formAction}>
             <input type="hidden" name="leadId" value={leadId} />
@@ -79,7 +79,7 @@ export function LeadStatusTransitionPanel({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-3 py-2 text-sm font-medium text-neutral-100 disabled:opacity-60"
+              className="crm-btn crm-btn-secondary min-h-11 disabled:opacity-60"
               data-testid="lead-resume-button"
             >
               Resume to {formatCrmCodeLabel(resumeTargetStatus)}
@@ -94,7 +94,7 @@ export function LeadStatusTransitionPanel({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-3 py-2 text-sm font-medium text-neutral-100 disabled:opacity-60"
+              className="crm-btn crm-btn-secondary min-h-11 disabled:opacity-60"
               data-testid={`lead-status-transition-${status}`}
             >
               Move to {formatCrmCodeLabel(status)}
@@ -106,7 +106,7 @@ export function LeadStatusTransitionPanel({
           <button
             type="button"
             onClick={() => setOnHoldOpen(true)}
-            className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-3 py-2 text-sm font-medium text-neutral-100"
+            className="crm-btn crm-btn-secondary min-h-11"
             data-testid="lead-on-hold-button"
           >
             Place on hold
@@ -117,7 +117,7 @@ export function LeadStatusTransitionPanel({
           <button
             type="button"
             onClick={() => setClosedLostOpen(true)}
-            className="inline-flex min-h-11 items-center rounded-md border border-red-900/60 px-3 py-2 text-sm font-medium text-red-200"
+            className="crm-btn crm-btn-danger-outline min-h-11"
             data-testid="lead-closed-lost-button"
           >
             Mark closed lost

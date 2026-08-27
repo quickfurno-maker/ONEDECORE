@@ -11,19 +11,21 @@ export function NoNextActionBanner({
 }: NoNextActionBannerProps) {
   return (
     <section
-      className="rounded-xl border border-red-900/70 bg-red-950/20 p-5"
+      className="crm-surface relative overflow-hidden p-4 sm:p-5"
       data-testid="crm-no-next-action-banner"
       role="status"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-red-300">
-            Risk
-          </p>
-          <h2 className="mt-1 text-lg font-semibold text-red-100">
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-1 bg-[var(--crm-danger)]"
+      />
+      <div className="flex flex-col gap-4 pl-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[12px] font-medium text-[var(--crm-danger)]">Needs action</p>
+          <h2 className="mt-1 text-base font-semibold text-[var(--crm-text)] sm:text-lg">
             No next action
           </h2>
-          <p className="mt-1 text-sm text-red-200/80">
+          <p className="mt-1 text-sm text-[var(--crm-text-secondary)]">
             This lead has no primary next action scheduled. Every open lead needs
             a clear next step.
           </p>
@@ -32,7 +34,7 @@ export function NoNextActionBanner({
           <button
             type="button"
             onClick={onCreateClick}
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md bg-[var(--od-gold)] px-5 py-2 text-sm font-semibold text-neutral-950"
+            className="crm-btn crm-btn-primary shrink-0"
             data-testid="crm-create-next-action-cta"
           >
             Create next action

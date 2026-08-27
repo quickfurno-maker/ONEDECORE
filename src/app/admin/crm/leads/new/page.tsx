@@ -33,7 +33,7 @@ export default async function CrmNewLeadPage() {
         actions={
           <Link
             href="/admin/crm/leads"
-            className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+            className="crm-btn crm-btn-secondary min-h-11"
           >
             Back to leads
           </Link>

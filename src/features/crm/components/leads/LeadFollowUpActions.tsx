@@ -57,7 +57,7 @@ export function LeadFollowUpActions({
         <button
           type="submit"
           disabled={completePending || cancelPending}
-          className="inline-flex min-h-9 items-center rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-100 disabled:opacity-60"
+          className="inline-flex min-h-9 items-center rounded-md border border-[var(--crm-border-strong)] px-3 py-1 text-xs font-medium text-[var(--crm-text)] disabled:opacity-60"
           data-testid="lead-follow-up-complete"
         >
           {completePending ? "Completing…" : "Complete"}
@@ -70,7 +70,7 @@ export function LeadFollowUpActions({
         <button
           type="submit"
           disabled={completePending || cancelPending}
-          className="inline-flex min-h-9 items-center rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 disabled:opacity-60"
+          className="inline-flex min-h-9 items-center rounded-md border border-[var(--crm-border-strong)] px-3 py-1 text-xs font-medium text-[var(--crm-text-secondary)] disabled:opacity-60"
           data-testid="lead-follow-up-cancel"
         >
           {cancelPending ? "Cancelling…" : "Cancel"}

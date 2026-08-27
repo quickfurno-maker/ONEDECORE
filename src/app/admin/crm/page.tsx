@@ -39,23 +39,19 @@ export default async function CrmOverviewPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-[30px] font-semibold text-[var(--od-text)]">CRM</h1>
-          <p className="mt-1 text-sm text-[var(--od-muted)]">Sales workspace</p>
+          <h1 className="text-[24px] font-semibold tracking-tight text-[var(--crm-text)] sm:text-[30px]">
+            CRM
+          </h1>
+          <p className="mt-1 text-sm text-[var(--crm-muted)]">Sales workspace</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {context.canCreateLeads ? (
-            <Link
-              href="/admin/crm/leads/new"
-              className="inline-flex min-h-10 items-center rounded-[8px] bg-[var(--od-gold)] px-4 text-sm font-semibold text-[#1a1408]"
-            >
+            <Link href="/admin/crm/leads/new" className="crm-btn crm-btn-primary">
               + New Lead
             </Link>
           ) : null}
           {context.canBulkImportLeads ? (
-            <Link
-              href="/admin/crm/imports/new"
-              className="inline-flex min-h-10 items-center rounded-[8px] border border-[var(--od-border-strong)] px-4 text-sm text-[var(--od-text-2)]"
-            >
+            <Link href="/admin/crm/imports/new" className="crm-btn crm-btn-secondary">
               Import
             </Link>
           ) : null}

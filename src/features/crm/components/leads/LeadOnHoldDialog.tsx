@@ -45,14 +45,14 @@ export function LeadOnHoldDialog({ open, leadId, onClose }: LeadOnHoldDialogProp
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="w-full max-w-lg rounded-lg border border-neutral-700 bg-neutral-900 p-5 shadow-xl"
+        className="w-full max-w-lg rounded-lg border border-[var(--crm-border-strong)] bg-[var(--crm-surface)] p-5 shadow-xl"
         onClick={(event) => event.stopPropagation()}
         data-testid="lead-on-hold-dialog"
       >
-        <h3 id={titleId} className="text-lg font-semibold text-neutral-100">
+        <h3 id={titleId} className="text-lg font-semibold text-[var(--crm-text)]">
           Place lead on hold
         </h3>
-        <p className="mt-2 text-sm text-neutral-400">
+        <p className="mt-2 text-sm text-[var(--crm-muted)]">
           Provide a short reason. The current stage will be saved for resume.
         </p>
 
@@ -61,7 +61,7 @@ export function LeadOnHoldDialog({ open, leadId, onClose }: LeadOnHoldDialogProp
           <input type="hidden" name="newStatus" value="on_hold" />
 
           <div>
-            <label htmlFor="on-hold-reason" className="text-sm text-neutral-300">
+            <label htmlFor="on-hold-reason" className="text-sm text-[var(--crm-text-secondary)]">
               Reason
             </label>
             <textarea
@@ -71,7 +71,7 @@ export function LeadOnHoldDialog({ open, leadId, onClose }: LeadOnHoldDialogProp
               minLength={3}
               maxLength={500}
               rows={4}
-              className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
+              className="mt-1 w-full rounded-md border border-[var(--crm-border-strong)] bg-[var(--crm-surface-subtle)] px-3 py-2 text-sm text-[var(--crm-text)]"
               data-testid="lead-on-hold-reason"
             />
           </div>
@@ -86,14 +86,14 @@ export function LeadOnHoldDialog({ open, leadId, onClose }: LeadOnHoldDialogProp
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200"
+              className="inline-flex min-h-11 items-center rounded-md border border-[var(--crm-border-strong)] px-4 py-2 text-sm text-[var(--crm-text)]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex min-h-11 items-center rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-neutral-950 disabled:opacity-60"
+              className="inline-flex min-h-11 items-center rounded-md bg-[var(--crm-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
               data-testid="lead-on-hold-submit"
             >
               {pending ? "Saving…" : "Confirm on hold"}

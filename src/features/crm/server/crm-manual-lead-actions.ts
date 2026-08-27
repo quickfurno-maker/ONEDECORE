@@ -16,6 +16,7 @@ import {
   LEAD_TIMELINE_CODES,
 } from "@/features/lead-intake/planner-allowlist";
 import type { ManualLeadFormInput, ManualLeadDuplicatePreview } from "../contracts/manual-lead-contracts.ts";
+import { canonicalizeOptionalPhone } from "../lib/phone-e164.ts";
 import { requireCrmCreateAccess } from "./crm-auth.ts";
 import { CrmError, crmErrorFromPostgresMessage } from "./crm-errors.ts";
 import {
@@ -43,6 +44,12 @@ function parseNullableString(value: FormDataEntryValue | null): string | null {
   }
   const trimmed = String(value).trim();
   return trimmed.length === 0 ? null : trimmed;
+}
+
+function parseOptionalPhone(
+  value: FormDataEntryValue | null
+): { readonly phone: string | null; readonly error: string | null } {
+  return canonicalizeOptionalPhone(parseNullableString(value));
 }
 
 function parseAssigneeId(
@@ -74,7 +81,9 @@ function parseManualLeadFormInput(
   formData: FormData,
   actorUserId: string,
   assigneeMode: "executive_self" | "manager" | "admin"
-): ManualLeadFormInput {
+):
+  | { readonly ok: true; readonly input: ManualLeadFormInput }
+  | { readonly ok: false; readonly fieldErrors: Readonly<Record<string, string>> } {
   const serviceCode = String(formData.get("serviceCode") ?? "");
   const propertyCode = String(formData.get("propertyCode") ?? "");
   const timelineCode = String(formData.get("timelineCode") ?? "");
@@ -91,33 +100,44 @@ function parseManualLeadFormInput(
     assigneeId = actorUserId;
   }
 
+  const phoneParsed = parseOptionalPhone(formData.get("phone"));
+  if (phoneParsed.error) {
+    return {
+      ok: false,
+      fieldErrors: { phone: phoneParsed.error },
+    };
+  }
+
   return {
-    submittedName: String(formData.get("submittedName") ?? ""),
-    phone: parseNullableString(formData.get("phone")),
-    email: parseNullableString(formData.get("email")),
-    serviceCode: isAllowed(serviceCode, LEAD_SERVICE_CODES)
-      ? serviceCode
-      : ("complete-home-interiors" as LeadServiceCode),
-    propertyCode: isAllowed(propertyCode, LEAD_PROPERTY_CODES)
-      ? propertyCode
-      : ("apartment-2bhk" as LeadPropertyCode),
-    timelineCode: isAllowed(timelineCode, LEAD_TIMELINE_CODES)
-      ? timelineCode
-      : ("within-1-month" as LeadTimelineCode),
-    primarySourceId: String(formData.get("primarySourceId") ?? ""),
-    locality: parseNullableString(formData.get("locality")),
-    budgetComfortCode:
-      budgetRaw && isAllowed(budgetRaw, LEAD_BUDGET_COMFORT_CODES)
-        ? budgetRaw
-        : null,
-    roomCodes: roomCodes as LeadRoomCode[],
-    message: parseNullableString(formData.get("message")),
-    sourceDetail: parseNullableString(formData.get("sourceDetail")),
-    assigneeId,
-    duplicateOverride: formData.get("duplicateOverride") === "true",
-    duplicateOverrideReason: parseNullableString(
-      formData.get("duplicateOverrideReason")
-    ),
+    ok: true,
+    input: {
+      submittedName: String(formData.get("submittedName") ?? ""),
+      phone: phoneParsed.phone,
+      email: parseNullableString(formData.get("email")),
+      serviceCode: isAllowed(serviceCode, LEAD_SERVICE_CODES)
+        ? serviceCode
+        : ("complete-home-interiors" as LeadServiceCode),
+      propertyCode: isAllowed(propertyCode, LEAD_PROPERTY_CODES)
+        ? propertyCode
+        : ("apartment-2bhk" as LeadPropertyCode),
+      timelineCode: isAllowed(timelineCode, LEAD_TIMELINE_CODES)
+        ? timelineCode
+        : ("within-1-month" as LeadTimelineCode),
+      primarySourceId: String(formData.get("primarySourceId") ?? ""),
+      locality: parseNullableString(formData.get("locality")),
+      budgetComfortCode:
+        budgetRaw && isAllowed(budgetRaw, LEAD_BUDGET_COMFORT_CODES)
+          ? budgetRaw
+          : null,
+      roomCodes: roomCodes as LeadRoomCode[],
+      message: parseNullableString(formData.get("message")),
+      sourceDetail: parseNullableString(formData.get("sourceDetail")),
+      assigneeId,
+      duplicateOverride: formData.get("duplicateOverride") === "true",
+      duplicateOverrideReason: parseNullableString(
+        formData.get("duplicateOverrideReason")
+      ),
+    },
   };
 }
 
@@ -129,10 +149,19 @@ export async function previewManualLeadDuplicateAction(
 
   const serviceCode = String(formData.get("serviceCode") ?? "");
   const propertyCode = String(formData.get("propertyCode") ?? "");
+  const phoneParsed = parseOptionalPhone(formData.get("phone"));
+  if (phoneParsed.error) {
+    return {
+      success: false,
+      message: phoneParsed.error,
+      code: "INVALID_MANUAL_LEAD",
+      fieldErrors: { phone: phoneParsed.error },
+    };
+  }
 
   try {
     const preview = await previewManualLeadDuplicateForCurrentUser({
-      phone: parseNullableString(formData.get("phone")),
+      phone: phoneParsed.phone,
       email: parseNullableString(formData.get("email")),
       serviceCode: isAllowed(serviceCode, LEAD_SERVICE_CODES)
         ? serviceCode
@@ -176,12 +205,21 @@ export async function createManualLeadAction(
   const policy = resolveManualCreateAssigneePolicy(context);
 
   try {
-    const input = parseManualLeadFormInput(
+    const parsed = parseManualLeadFormInput(
       formData,
       context.userId,
       policy.mode
     );
-    const lead = await createManualLeadForCurrentUser(input);
+    if (!parsed.ok) {
+      const phoneError = parsed.fieldErrors.phone;
+      return {
+        success: false,
+        message: phoneError ?? "Validation failed",
+        code: "INVALID_MANUAL_LEAD",
+        fieldErrors: parsed.fieldErrors,
+      };
+    }
+    const lead = await createManualLeadForCurrentUser(parsed.input);
 
     revalidatePath("/admin/crm/leads");
     redirect(`/admin/crm/leads/${lead.id}`);

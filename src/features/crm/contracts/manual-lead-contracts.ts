@@ -14,11 +14,10 @@ import {
   type LeadServiceCode,
   type LeadTimelineCode,
 } from "../../lead-intake/planner-allowlist.ts";
+import { canonicalizeOptionalPhone } from "../lib/phone-e164.ts";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const E164_PATTERN = /^\+[1-9]\d{1,14}$/;
 
 export const MANUAL_LEAD_DUPLICATE_OUTCOMES = [
   "CLEAR",
@@ -97,7 +96,8 @@ export function validateManualLeadDuplicatePreviewInput(
   input: ManualLeadDuplicatePreviewInput
 ): readonly ManualLeadValidationError[] {
   const errors: ManualLeadValidationError[] = [];
-  const phone = normalizeOptionalText(input.phone);
+  const phoneCanonical = canonicalizeOptionalPhone(input.phone);
+  const phone = phoneCanonical.phone;
   const email = normalizeOptionalText(input.email);
 
   if (!phone && !email) {
@@ -107,10 +107,10 @@ export function validateManualLeadDuplicatePreviewInput(
     });
   }
 
-  if (phone && !E164_PATTERN.test(phone)) {
+  if (phoneCanonical.error) {
     errors.push({
       field: "phone",
-      message: "Phone must be in E.164 format (for example +919876543210).",
+      message: phoneCanonical.error,
     });
   }
 

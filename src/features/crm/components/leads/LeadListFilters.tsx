@@ -25,7 +25,7 @@ function Chip({ label, href }: { label: string; href: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex min-h-8 items-center rounded-full border border-[var(--od-border-strong)] px-3 text-xs text-[var(--od-text-2)] hover:text-[var(--od-text)]"
+      className="inline-flex min-h-8 items-center rounded-full border border-[var(--crm-border)] bg-[var(--crm-surface)] px-2.5 text-[11px] text-[var(--crm-text-secondary)] hover:border-[var(--crm-border-strong)] hover:text-[var(--crm-text)]"
     >
       {label} ×
     </Link>
@@ -40,8 +40,7 @@ export function LeadListFilters({
   view,
 }: LeadListFiltersProps) {
   const formId = useId();
-  const selectClass =
-    "min-h-10 rounded-[8px] border border-[var(--od-border)] bg-[var(--od-elevated)] px-3 text-sm text-[var(--od-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]";
+  const selectClass = "crm-select min-h-11 w-full sm:w-auto";
   const filterQuery = view === "pipeline" ? { ...query, status: null } : query;
   const sourceLabel = sources.find((source) => source.id === query.sourceId)?.displayName;
   const assigneeLabel = assignees.find((row) => row.userId === query.assigneeId)?.displayName;
@@ -54,7 +53,7 @@ export function LeadListFilters({
       <form
         action="/admin/crm/leads"
         method="get"
-        className="flex flex-wrap items-center gap-2"
+        className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
       >
         <input type="hidden" name="view" value={view} />
         <input
@@ -65,93 +64,94 @@ export function LeadListFilters({
           aria-label="Search leads"
           defaultValue={query.q ?? ""}
           maxLength={100}
-          className="min-h-10 min-w-[200px] flex-1 rounded-[8px] border border-[var(--od-border)] bg-[var(--od-elevated)] px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
+          className="crm-input min-h-11 w-full flex-1 sm:min-w-[220px]"
         />
-        {view === "pipeline" ? null : (
-          <select
-            id={`${formId}-status`}
-            name="status"
-            defaultValue={query.status ?? ""}
-            aria-label="Filter by status"
-            className={selectClass}
-          >
-            <option value="">Status</option>
-            {LEAD_STAGE_CODES.map((status) => (
-              <option key={status} value={status}>
-                {formatCrmCodeLabel(status.replaceAll("_", "-"))}
-              </option>
-            ))}
-          </select>
-        )}
-        <select
-          id={`${formId}-source`}
-          name="sourceId"
-          defaultValue={query.sourceId ?? ""}
-          aria-label="Filter by source"
-          className={selectClass}
-        >
-          <option value="">Source</option>
-          {sources.map((source) => (
-            <option key={source.id} value={source.id}>
-              {source.displayName}
-            </option>
-          ))}
-        </select>
-        {showBroadFilters ? (
-          <>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          {view === "pipeline" ? null : (
             <select
-              id={`${formId}-assignment`}
-              name="assignment"
-              defaultValue={query.assignment ?? ""}
-              aria-label="Filter by assignment"
+              id={`${formId}-status`}
+              name="status"
+              defaultValue={query.status ?? ""}
+              aria-label="Filter by status"
               className={selectClass}
             >
-              <option value="">Assignment</option>
-              <option value="assigned">Assigned</option>
-              <option value="unassigned">Unassigned</option>
-            </select>
-            <select
-              id={`${formId}-assignee`}
-              name="assigneeId"
-              defaultValue={query.assigneeId ?? ""}
-              aria-label="Filter by assignee"
-              className={selectClass}
-            >
-              <option value="">Assignee</option>
-              {assignees.map((assignee) => (
-                <option key={assignee.userId} value={assignee.userId}>
-                  {assignee.displayName}
+              <option value="">Status</option>
+              {LEAD_STAGE_CODES.map((status) => (
+                <option key={status} value={status}>
+                  {formatCrmCodeLabel(status.replaceAll("_", "-"))}
                 </option>
               ))}
             </select>
-          </>
-        ) : null}
-        <select
-          id={`${formId}-follow-up`}
-          name="followUpDue"
-          defaultValue={query.followUpDue ?? ""}
-          aria-label="Filter by follow-up due"
-          className={selectClass}
-        >
-          <option value="">Follow-up</option>
-          <option value="overdue">Overdue</option>
-          <option value="today">Due today</option>
-          <option value="upcoming">Upcoming</option>
-        </select>
-        <button
-          type="submit"
-          className="min-h-10 rounded-[8px] bg-[var(--od-gold)] px-4 text-sm font-semibold text-[#1a1408]"
-        >
-          Apply
-        </button>
-        <Link
-          href={view === "pipeline" ? "/admin/crm/leads?view=pipeline" : "/admin/crm/leads"}
-          className="inline-flex min-h-10 items-center rounded-[8px] border border-[var(--od-border)] px-3 text-sm text-[var(--od-text-2)]"
-        >
-          Clear
-        </Link>
+          )}
+          <select
+            id={`${formId}-source`}
+            name="sourceId"
+            defaultValue={query.sourceId ?? ""}
+            aria-label="Filter by source"
+            className={selectClass}
+          >
+            <option value="">Source</option>
+            {sources.map((source) => (
+              <option key={source.id} value={source.id}>
+                {source.displayName}
+              </option>
+            ))}
+          </select>
+          {showBroadFilters ? (
+            <>
+              <select
+                id={`${formId}-assignment`}
+                name="assignment"
+                defaultValue={query.assignment ?? ""}
+                aria-label="Filter by assignment"
+                className={selectClass}
+              >
+                <option value="">Assignment</option>
+                <option value="assigned">Assigned</option>
+                <option value="unassigned">Unassigned</option>
+              </select>
+              <select
+                id={`${formId}-assignee`}
+                name="assigneeId"
+                defaultValue={query.assigneeId ?? ""}
+                aria-label="Filter by assignee"
+                className={selectClass}
+              >
+                <option value="">Assignee</option>
+                {assignees.map((assignee) => (
+                  <option key={assignee.userId} value={assignee.userId}>
+                    {assignee.displayName}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
+          <select
+            id={`${formId}-follow-up`}
+            name="followUpDue"
+            defaultValue={query.followUpDue ?? ""}
+            aria-label="Filter by follow-up due"
+            className={selectClass}
+          >
+            <option value="">Follow-up</option>
+            <option value="overdue">Overdue</option>
+            <option value="today">Due today</option>
+            <option value="upcoming">Upcoming</option>
+          </select>
+        </div>
+        <div className="flex gap-2">
+          <button type="submit" className="crm-btn crm-btn-primary min-h-11 flex-1 sm:flex-none">
+            Apply
+          </button>
+          <Link
+            href={view === "pipeline" ? "/admin/crm/leads?view=pipeline" : "/admin/crm/leads"}
+            className="crm-btn crm-btn-ghost min-h-11 flex-1 sm:flex-none"
+          >
+            Clear
+          </Link>
+        </div>
       </form>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {filterQuery.q ? (
           <Chip label={`Search: ${filterQuery.q}`} href={buildLeadListHref(filterQuery, view, "q")} />
         ) : null}
