@@ -20,33 +20,61 @@ interface MyDayWorkspaceProps {
   readonly selectedOwnerId: string | null;
 }
 
-function SummaryChip({
+function PrimaryMetric({
   label,
   count,
-  accent,
+  tone,
 }: {
   readonly label: string;
   readonly count: number;
-  readonly accent?: "risk" | "default" | "muted";
+  readonly tone: "danger" | "info" | "warning";
 }) {
-  const accentClass =
-    accent === "risk"
-      ? "border-red-900/40 bg-red-950/20 text-red-200"
-      : accent === "muted"
-        ? "border-[var(--od-border)] bg-[var(--od-surface)] text-[var(--od-muted)]"
-        : "border-[var(--od-border)] bg-[var(--od-surface)] text-[var(--od-text)]";
+  const toneClass =
+    tone === "danger"
+      ? count > 0
+        ? "text-[var(--crm-danger)]"
+        : "text-[var(--crm-text)]"
+      : tone === "warning"
+        ? "text-[var(--crm-warning)]"
+        : "text-[var(--crm-primary)]";
+  const barClass =
+    tone === "danger"
+      ? count > 0
+        ? "bg-[var(--crm-danger)]"
+        : "bg-[var(--crm-border-strong)]"
+      : tone === "warning"
+        ? "bg-[var(--crm-warning)]"
+        : "bg-[var(--crm-info)]";
 
   return (
-    <div
-      className={`rounded-[10px] border px-3 py-2 text-center ${accentClass}`}
-    >
-      <p className="text-[11px] font-medium uppercase tracking-wide">{label}</p>
-      <p className="mt-1 text-xl font-semibold tabular-nums">{count}</p>
+    <div className="crm-surface relative overflow-hidden rounded-[14px] px-3.5 py-3 sm:rounded-[var(--crm-radius)] sm:px-4 sm:py-3.5">
+      <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${barClass}`} />
+      <p className="text-[12px] font-medium text-[var(--crm-muted)]">{label}</p>
+      <p className={`mt-0.5 text-[24px] font-semibold tabular-nums tracking-tight sm:text-[28px] ${toneClass}`}>
+        {count}
+      </p>
     </div>
   );
 }
 
-function TaskCard({
+function SecondaryMetric({
+  label,
+  count,
+}: {
+  readonly label: string;
+  readonly count: number;
+}) {
+  return (
+    <div className="rounded-[12px] border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-3 py-2 sm:rounded-[8px]">
+      <p className="text-[11px] text-[var(--crm-muted)]">{label}</p>
+      <p className="mt-0.5 text-[15px] font-semibold tabular-nums text-[var(--crm-text)] sm:text-base">
+        {count}
+      </p>
+    </div>
+  );
+}
+
+function TaskRow({
   task,
   showOwner,
 }: {
@@ -54,114 +82,111 @@ function TaskCard({
   readonly showOwner: boolean;
 }) {
   return (
-    <article className="rounded-[12px] border border-[var(--od-border)] bg-[var(--od-surface)] p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-[var(--od-text)]">{task.title}</p>
-          <p className="mt-1 text-xs text-[var(--od-muted)]">
-            {task.leadDisplayLabel} · {formatCrmCodeLabel(task.activityType)}
+    <Link
+      href={`/admin/crm/leads/${task.leadId}`}
+      className="crm-row group flex min-h-12 items-center gap-2.5 border-b border-[var(--crm-border)] px-3 py-2.5 last:border-b-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--crm-primary)] sm:min-h-14 sm:gap-3 sm:px-4 sm:py-3"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className="truncate text-sm font-semibold text-[var(--crm-text)]">
+            {task.leadDisplayLabel}
           </p>
+          <LeadStatusBadge status={task.leadStatus} />
         </div>
-        <LeadStatusBadge status={task.leadStatus} />
-      </div>
-      <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-[var(--od-muted)]">
-        <div>
-          <dt className="font-medium">Due</dt>
-          <dd className="mt-0.5 text-[var(--od-text-2)]">
-            {formatMyDayTimestamp(task.dueAt)}
-          </dd>
-        </div>
-        <div>
-          <dt className="font-medium">Priority</dt>
-          <dd className="mt-0.5 capitalize text-[var(--od-text-2)]">{task.priority}</dd>
-        </div>
-        {showOwner ? (
-          <div className="col-span-2">
-            <dt className="font-medium">Owner</dt>
-            <dd className="mt-0.5 text-[var(--od-text-2)]">{task.ownerLabel}</dd>
-          </div>
-        ) : null}
-      </dl>
-      <Link
-        href={`/admin/crm/leads/${task.leadId}`}
-        className="mt-4 inline-flex min-h-10 items-center rounded-[8px] border border-[var(--od-border-strong)] px-3 text-sm font-medium text-[var(--od-text)] hover:bg-[var(--od-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
-      >
-        Open lead
-      </Link>
-    </article>
-  );
-}
-
-function AttentionCard({ row }: { readonly row: MyDayAttentionRow }) {
-  return (
-    <article className="rounded-[12px] border border-[var(--od-border)] bg-[var(--od-surface)] p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-[var(--od-text)]">
-            {row.leadDisplayLabel}
-          </p>
-          <p className="mt-1 text-xs text-[var(--od-muted)]">
-            Received {formatMyDayTimestamp(row.receivedAt)}
-          </p>
-        </div>
-        <LeadStatusBadge status={row.leadStatus} />
-      </div>
-      {row.assigneeLabel ? (
-        <p className="mt-2 text-xs text-[var(--od-muted)]">
-          Assignee: <span className="text-[var(--od-text-2)]">{row.assigneeLabel}</span>
-        </p>
-      ) : null}
-      {row.slaDueAt ? (
-        <p className="mt-1 text-xs text-[var(--od-muted)]">
-          SLA due:{" "}
-          <span className="text-[var(--od-text-2)]">
-            {formatMyDayTimestamp(row.slaDueAt)}
+        <p className="mt-0.5 truncate text-[13px] text-[var(--crm-text-secondary)]">
+          {task.title}
+          <span className="text-[var(--crm-muted)]">
+            {" "}
+            · {formatCrmCodeLabel(task.activityType)}
           </span>
         </p>
-      ) : null}
-      <Link
-        href={`/admin/crm/leads/${row.leadId}`}
-        className="mt-4 inline-flex min-h-10 items-center rounded-[8px] border border-[var(--od-border-strong)] px-3 text-sm font-medium text-[var(--od-text)] hover:bg-[var(--od-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
+        <p className="mt-1 flex flex-wrap gap-x-3 text-[12px] text-[var(--crm-muted)] sm:hidden">
+          <span>{formatMyDayTimestamp(task.dueAt)}</span>
+          {showOwner ? <span>{task.ownerLabel}</span> : null}
+        </p>
+      </div>
+      <div className="hidden shrink-0 items-center gap-6 text-[12px] text-[var(--crm-muted)] sm:flex">
+        <span className="w-36 text-right text-[var(--crm-text-secondary)]">
+          {formatMyDayTimestamp(task.dueAt)}
+        </span>
+        {showOwner ? (
+          <span className="w-28 truncate text-right">{task.ownerLabel}</span>
+        ) : null}
+      </div>
+      <span
+        aria-hidden
+        className="shrink-0 text-[var(--crm-muted)] transition group-hover:text-[var(--crm-primary)]"
       >
-        Open lead
-      </Link>
-    </article>
+        ›
+      </span>
+    </Link>
   );
 }
 
-function SectionBlock({
+function AttentionRow({
+  row,
+  reason,
+}: {
+  readonly row: MyDayAttentionRow;
+  readonly reason: string;
+}) {
+  return (
+    <Link
+      href={`/admin/crm/leads/${row.leadId}`}
+      className="crm-row group flex min-h-12 items-center gap-2.5 border-b border-[var(--crm-border)] px-3 py-2.5 last:border-b-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--crm-primary)] sm:min-h-14 sm:gap-3 sm:px-4 sm:py-3"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className="truncate text-sm font-semibold text-[var(--crm-text)]">
+            {row.leadDisplayLabel}
+          </p>
+          <LeadStatusBadge status={row.leadStatus} />
+        </div>
+        <p className="mt-0.5 text-[13px] text-[var(--crm-text-secondary)]">{reason}</p>
+        <p className="mt-1 flex flex-wrap gap-x-3 text-[12px] text-[var(--crm-muted)]">
+          <span>Received {formatMyDayTimestamp(row.receivedAt)}</span>
+          {row.assigneeLabel ? <span>{row.assigneeLabel}</span> : null}
+          {row.slaDueAt ? (
+            <span>SLA {formatMyDayTimestamp(row.slaDueAt)}</span>
+          ) : null}
+        </p>
+      </div>
+      <span
+        aria-hidden
+        className="shrink-0 text-[var(--crm-muted)] transition group-hover:text-[var(--crm-primary)]"
+      >
+        ›
+      </span>
+    </Link>
+  );
+}
+
+function TaskSection({
   title,
-  description,
   emptyMessage,
   accent,
   children,
 }: {
   readonly title: string;
-  readonly description?: string;
   readonly emptyMessage: string;
   readonly accent?: "risk" | "default" | "muted";
   readonly children: ReactNode | null;
 }) {
   const titleClass =
     accent === "risk"
-      ? "text-red-300"
+      ? "text-[var(--crm-danger)]"
       : accent === "muted"
-        ? "text-[var(--od-muted)]"
-        : "text-[var(--od-text)]";
+        ? "text-[var(--crm-muted)]"
+        : "text-[var(--crm-text)]";
 
   return (
-    <section className="space-y-3">
-      <div>
-        <h2 className={`text-lg font-semibold ${titleClass}`}>{title}</h2>
-        {description ? (
-          <p className="mt-1 text-sm text-[var(--od-muted)]">{description}</p>
-        ) : null}
+    <section className="space-y-2">
+      <h2 className={`text-base font-semibold ${titleClass}`}>{title}</h2>
+      <div className="crm-surface overflow-hidden">
+        {children ?? (
+          <p className="px-4 py-3 text-sm text-[var(--crm-muted)]">{emptyMessage}</p>
+        )}
       </div>
-      {children ?? (
-        <p className="rounded-[12px] border border-dashed border-[var(--od-border)] px-4 py-6 text-sm text-[var(--od-muted)]">
-          {emptyMessage}
-        </p>
-      )}
     </section>
   );
 }
@@ -175,12 +200,52 @@ export function MyDayWorkspace({
   const showOwner = snapshot.isTeamScope || canFilterOwner;
   const dateLabel = formatMyDayLocalDateLabel(snapshot.localDate);
 
+  const attentionBlocks: Array<{
+    key: string;
+    reason: string;
+    rows: readonly MyDayAttentionRow[];
+  }> = [
+    {
+      key: "no-next",
+      reason: "No Next Action",
+      rows: snapshot.attention.noNextAction,
+    },
+    {
+      key: "uncontacted",
+      reason: "New Uncontacted",
+      rows: snapshot.attention.newUncontacted,
+    },
+  ];
+
+  if (snapshot.canViewManagerSections) {
+    attentionBlocks.push(
+      {
+        key: "unassigned",
+        reason: "Unassigned",
+        rows: snapshot.attention.unassigned,
+      },
+      {
+        key: "sla",
+        reason: "SLA Breaches",
+        rows: snapshot.attention.slaBreaches,
+      }
+    );
+  }
+
+  const attentionRows = attentionBlocks.flatMap((block) =>
+    block.rows.map((row) => ({
+      key: `${block.key}-${row.leadId}`,
+      reason: block.reason,
+      row,
+    }))
+  );
+
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm text-[var(--od-muted)]">{dateLabel}</p>
-          <p className="mt-1 text-xs text-[var(--od-muted)]">
+          <p className="text-sm font-medium text-[var(--crm-text-secondary)]">{dateLabel}</p>
+          <p className="mt-0.5 text-[11px] text-[var(--crm-muted)]">
             Times shown in Asia/Kolkata
           </p>
         </div>
@@ -189,12 +254,12 @@ export function MyDayWorkspace({
             method="get"
             className="flex min-w-[220px] flex-col gap-2 sm:flex-row sm:items-end"
           >
-            <label className="flex-1 text-xs text-[var(--od-muted)]">
+            <label className="flex-1 text-xs text-[var(--crm-muted)]">
               View
               <select
                 name="owner"
                 defaultValue={selectedOwnerId ?? "team"}
-                className="mt-1 min-h-10 w-full rounded-[8px] border border-[var(--od-border)] bg-[var(--od-surface)] px-3 text-sm text-[var(--od-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
+                className="crm-select mt-1 w-full"
               >
                 <option value="team">Team</option>
                 {assignees.map((entry) => (
@@ -206,7 +271,7 @@ export function MyDayWorkspace({
             </label>
             <button
               type="submit"
-              className="inline-flex min-h-10 items-center justify-center rounded-[8px] bg-[var(--od-gold)] px-4 text-sm font-semibold text-[#1a1408] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
+              className="crm-btn crm-btn-primary min-h-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--crm-primary)]"
             >
               Apply
             </button>
@@ -214,124 +279,85 @@ export function MyDayWorkspace({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-        <SummaryChip label="Overdue" count={snapshot.summary.overdue} accent="risk" />
-        <SummaryChip label="Due today" count={snapshot.summary.dueToday} />
-        <SummaryChip label="Upcoming" count={snapshot.summary.upcoming} accent="muted" />
-        <SummaryChip label="No next action" count={snapshot.summary.noNextAction} />
-        <SummaryChip label="Uncontacted" count={snapshot.summary.newUncontacted} />
+      <div
+        className={`grid grid-cols-2 gap-2.5 ${
+          snapshot.canViewManagerSections
+            ? "md:grid-cols-2 lg:grid-cols-3"
+            : "md:grid-cols-2"
+        }`}
+      >
+        <PrimaryMetric label="Overdue" count={snapshot.summary.overdue} tone="danger" />
+        <PrimaryMetric label="Due Today" count={snapshot.summary.dueToday} tone="info" />
         {snapshot.canViewManagerSections ? (
-          <>
-            <SummaryChip label="Unassigned" count={snapshot.summary.unassigned} />
-            <SummaryChip label="SLA breaches" count={snapshot.summary.slaBreaches} accent="risk" />
-          </>
+          <PrimaryMetric
+            label="Unassigned"
+            count={snapshot.summary.unassigned}
+            tone="warning"
+          />
         ) : null}
       </div>
 
-      <SectionBlock
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-2 lg:grid-cols-4">
+        <SecondaryMetric label="Upcoming" count={snapshot.summary.upcoming} />
+        <SecondaryMetric label="No Next Action" count={snapshot.summary.noNextAction} />
+        <SecondaryMetric label="New Uncontacted" count={snapshot.summary.newUncontacted} />
+        {snapshot.canViewManagerSections ? (
+          <SecondaryMetric label="SLA Breaches" count={snapshot.summary.slaBreaches} />
+        ) : null}
+      </div>
+
+      <section className="space-y-2">
+        <h2 className="text-base font-semibold text-[var(--crm-text)]">Needs attention</h2>
+        <div className="crm-surface overflow-hidden">
+          {attentionRows.length > 0 ? (
+            attentionRows.map((item) => (
+              <AttentionRow key={item.key} row={item.row} reason={item.reason} />
+            ))
+          ) : (
+            <p className="px-4 py-3 text-sm text-[var(--crm-muted)]">
+              No attention items right now.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <TaskSection
         title="Overdue"
-        description="Primary next actions past due."
         emptyMessage="Nothing overdue."
         accent="risk"
       >
         {snapshot.tasks.overdue.length > 0 ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div>
             {snapshot.tasks.overdue.map((task) => (
-              <TaskCard key={task.activityId} task={task} showOwner={showOwner} />
+              <TaskRow key={task.activityId} task={task} showOwner={showOwner} />
             ))}
           </div>
         ) : null}
-      </SectionBlock>
+      </TaskSection>
 
-      <SectionBlock
-        title="Due Today"
-        description="Your working queue for today."
-        emptyMessage="You're clear for today."
-      >
+      <TaskSection title="Due Today" emptyMessage="You're clear for today.">
         {snapshot.tasks.dueToday.length > 0 ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div>
             {snapshot.tasks.dueToday.map((task) => (
-              <TaskCard key={task.activityId} task={task} showOwner={showOwner} />
+              <TaskRow key={task.activityId} task={task} showOwner={showOwner} />
             ))}
           </div>
         ) : null}
-      </SectionBlock>
+      </TaskSection>
 
-      <SectionBlock
+      <TaskSection
         title="Upcoming"
-        description="Scheduled after today."
         emptyMessage="No upcoming primary actions."
         accent="muted"
       >
         {snapshot.tasks.upcoming.length > 0 ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div>
             {snapshot.tasks.upcoming.map((task) => (
-              <TaskCard key={task.activityId} task={task} showOwner={showOwner} />
+              <TaskRow key={task.activityId} task={task} showOwner={showOwner} />
             ))}
           </div>
         ) : null}
-      </SectionBlock>
-
-      <SectionBlock
-        title="No Next Action"
-        description="Assigned leads missing an open primary activity."
-        emptyMessage="No leads are missing a next action."
-      >
-        {snapshot.attention.noNextAction.length > 0 ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {snapshot.attention.noNextAction.map((row) => (
-              <AttentionCard key={row.leadId} row={row} />
-            ))}
-          </div>
-        ) : null}
-      </SectionBlock>
-
-      <SectionBlock
-        title="New Uncontacted"
-        description="Assigned leads with no first contact attempt recorded."
-        emptyMessage="No new uncontacted leads."
-      >
-        {snapshot.attention.newUncontacted.length > 0 ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {snapshot.attention.newUncontacted.map((row) => (
-              <AttentionCard key={row.leadId} row={row} />
-            ))}
-          </div>
-        ) : null}
-      </SectionBlock>
-
-      {snapshot.canViewManagerSections ? (
-        <>
-          <SectionBlock
-            title="Unassigned"
-            description="Active leads waiting for an owner."
-            emptyMessage="No unassigned leads in scope."
-          >
-            {snapshot.attention.unassigned.length > 0 ? (
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {snapshot.attention.unassigned.map((row) => (
-                  <AttentionCard key={row.leadId} row={row} />
-                ))}
-              </div>
-            ) : null}
-          </SectionBlock>
-
-          <SectionBlock
-            title="SLA Breaches"
-            description="First-contact SLA past due with no attempt recorded."
-            emptyMessage="No SLA breaches."
-            accent="risk"
-          >
-            {snapshot.attention.slaBreaches.length > 0 ? (
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {snapshot.attention.slaBreaches.map((row) => (
-                  <AttentionCard key={row.leadId} row={row} />
-                ))}
-              </div>
-            ) : null}
-          </SectionBlock>
-        </>
-      ) : null}
+      </TaskSection>
     </div>
   );
 }

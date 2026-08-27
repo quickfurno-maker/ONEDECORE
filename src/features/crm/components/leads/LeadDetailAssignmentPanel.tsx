@@ -71,9 +71,9 @@ export function LeadDetailAssignmentPanel({
     canAssignLeads && canOfferUnassign(leadStatus, assignment.currentAssigneeId);
 
   return (
-    <section className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-5">
+    <section className="crm-surface p-3.5 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
+        <h2 className="text-[15px] font-semibold text-[var(--crm-text)] sm:text-sm">
           Assignment
         </h2>
         {canAssignLeads ? (
@@ -82,7 +82,7 @@ export function LeadDetailAssignmentPanel({
               <button
                 type="button"
                 onClick={() => setDialogMode("assign")}
-                className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-3 py-2 text-sm font-medium text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                className="crm-btn crm-btn-secondary min-h-11"
               >
                 Assign
               </button>
@@ -91,7 +91,7 @@ export function LeadDetailAssignmentPanel({
               <button
                 type="button"
                 onClick={() => setDialogMode("reassign")}
-                className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-3 py-2 text-sm font-medium text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                className="crm-btn crm-btn-secondary min-h-11"
               >
                 Reassign
               </button>
@@ -100,7 +100,7 @@ export function LeadDetailAssignmentPanel({
               <button
                 type="button"
                 onClick={() => setDialogMode("unassign")}
-                className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-3 py-2 text-sm font-medium text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                className="crm-btn crm-btn-secondary min-h-11"
               >
                 Unassign
               </button>
@@ -109,33 +109,33 @@ export function LeadDetailAssignmentPanel({
         ) : null}
       </div>
 
-      <p className="mt-3 text-sm text-neutral-100">
+      <p className="mt-3 text-sm text-[var(--crm-text)]">
         Current assignee: {assignment.currentAssigneeLabel}
       </p>
 
       {assignment.history.length === 0 ? (
-        <p className="mt-4 text-sm text-neutral-500">No assignment history recorded.</p>
+        <p className="mt-4 text-sm text-[var(--crm-muted)]">No assignment history recorded.</p>
       ) : (
         <ol className="mt-4 space-y-3">
           {assignment.history.map((entry) => (
             <li
               key={entry.id}
-              className="rounded-md border border-neutral-800 bg-neutral-950/50 px-3 py-2 text-sm"
+              className="rounded-md border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-3 py-2 text-sm"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-medium text-neutral-200">
+                <span className="font-medium text-[var(--crm-text)]">
                   {entry.previousAssigneeLabel ?? "Unassigned"} →{" "}
                   {entry.newAssigneeLabel ?? "Unassigned"}
                 </span>
-                <span className="text-xs text-neutral-500">
+                <span className="text-xs text-[var(--crm-muted)]">
                   {formatTimestamp(entry.occurredAt)}
                 </span>
               </div>
-              <p className="mt-1 text-neutral-400">
+              <p className="mt-1 text-[var(--crm-muted)]">
                 {formatCrmCodeLabel(entry.assignmentMethod)} · {entry.actorLabel}
               </p>
               {entry.reason ? (
-                <p className="mt-1 break-words text-neutral-300">{entry.reason}</p>
+                <p className="mt-1 break-words text-[var(--crm-text-secondary)]">{entry.reason}</p>
               ) : null}
             </li>
           ))}

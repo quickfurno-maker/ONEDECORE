@@ -49,13 +49,13 @@ export function LeadDetailQuotationPanel({
   };
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 shadow-sm">
+    <div className="crm-surface p-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
+          <h3 className="text-sm font-semibold text-[var(--crm-text)]">
             Commercial Quotation (Phase 7A)
           </h3>
-          <p className="mt-1 text-xs text-neutral-300">
+          <p className="mt-1 text-xs text-[var(--crm-text-secondary)]">
             {hasActiveDraft
               ? `Active Draft Version ${version?.versionNumber}: "${version?.title}"`
               : hasArchivedRoot
@@ -69,12 +69,12 @@ export function LeadDetailQuotationPanel({
             canEditQuotation ? (
               <Link
                 href={`/admin/quotations/${existingDraft?.quotationId}/draft`}
-                className="inline-flex min-h-10 items-center rounded-lg bg-amber-500 px-4 py-2 text-xs font-semibold text-neutral-950 hover:bg-amber-400 shadow"
+                className="inline-flex min-h-10 items-center rounded-lg bg-[var(--crm-primary)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--crm-primary-hover)] shadow"
               >
                 Open Quotation Draft
               </Link>
             ) : (
-              <span className="text-xs text-neutral-500 italic">
+              <span className="text-xs text-[var(--crm-muted)] italic">
                 Viewing active draft requires quotation edit permission (quotations.edit).
               </span>
             )
@@ -99,7 +99,7 @@ export function LeadDetailQuotationPanel({
               </button>
             )
           ) : (
-            <span className="text-xs text-neutral-500 italic">
+            <span className="text-xs text-[var(--crm-muted)] italic">
               (Quotation creation permission required)
             </span>
           )}
@@ -113,21 +113,21 @@ export function LeadDetailQuotationPanel({
       )}
 
       {hasActiveDraft && version && (
-        <div className="mt-4 grid grid-cols-2 gap-4 rounded-lg bg-neutral-950 p-3.5 text-xs border border-neutral-800/80 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-4 rounded-lg bg-[var(--crm-surface-subtle)] p-3.5 text-xs border border-[var(--crm-border)]/80 sm:grid-cols-4">
           <div>
-            <span className="text-neutral-500 block">Quotation No.</span>
-            <span className="font-mono font-medium text-neutral-200">{existingDraft?.quotationNumber}</span>
+            <span className="text-[var(--crm-muted)] block">Quotation No.</span>
+            <span className="font-mono font-medium text-[var(--crm-text)]">{existingDraft?.quotationNumber}</span>
           </div>
           <div>
-            <span className="text-neutral-500 block">Lock Version</span>
-            <span className="font-mono text-neutral-300">v{version.lockVersion}</span>
+            <span className="text-[var(--crm-muted)] block">Lock Version</span>
+            <span className="font-mono text-[var(--crm-text-secondary)]">v{version.lockVersion}</span>
           </div>
           <div>
-            <span className="text-neutral-500 block">Subtotal</span>
-            <span className="font-mono text-neutral-300">{formatInrFromPaise(version.subtotalPaise)}</span>
+            <span className="text-[var(--crm-muted)] block">Subtotal</span>
+            <span className="font-mono text-[var(--crm-text-secondary)]">{formatInrFromPaise(version.subtotalPaise)}</span>
           </div>
           <div>
-            <span className="text-neutral-500 block">Grand Total</span>
+            <span className="text-[var(--crm-muted)] block">Grand Total</span>
             <span className="font-mono font-semibold text-emerald-400">
               {version.grandTotalPaise != null ? formatInrFromPaise(version.grandTotalPaise) : "(Unconfigured Tax)"}
             </span>

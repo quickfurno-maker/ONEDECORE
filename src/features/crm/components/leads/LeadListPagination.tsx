@@ -40,7 +40,7 @@ export function LeadListPagination({
         {pagination.hasPreviousPage ? (
           <Link
             href={buildPageHref(query, pagination.page - 1)}
-            className="inline-flex min-h-11 items-center rounded-[8px] border border-[var(--od-border-strong)] px-4 py-2 text-sm font-medium text-[var(--od-text-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
+            className="crm-btn crm-btn-secondary min-h-11"
           >
             Previous
           </Link>
@@ -48,7 +48,7 @@ export function LeadListPagination({
         {pagination.hasNextPage ? (
           <Link
             href={buildPageHref(query, pagination.page + 1)}
-            className="inline-flex min-h-11 items-center rounded-[8px] border border-[var(--od-border-strong)] px-4 py-2 text-sm font-medium text-[var(--od-text-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
+            className="crm-btn crm-btn-secondary min-h-11"
           >
             Next
           </Link>

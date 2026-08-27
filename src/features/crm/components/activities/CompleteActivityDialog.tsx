@@ -25,6 +25,7 @@ import {
   defaultFutureDatetimeLocalValue,
 } from "../../lib/local-datetime-to-iso.ts";
 import { completeLeadActivityAction } from "../../server/crm-activity-actions.ts";
+import { CrmDateTimeField } from "../ui/CrmDateTimeField.tsx";
 import { CrmActivityDialogShell } from "./CrmActivityDialogShell.tsx";
 import {
   CRM_ACTIVITY_DEFAULT_DURATIONS,
@@ -199,7 +200,7 @@ function CompleteActivityForm({
       <input type="hidden" name="resolution" value={resolution} />
 
       <div>
-        <label htmlFor={`${titleId}-outcome`} className="text-sm text-neutral-300">
+        <label htmlFor={`${titleId}-outcome`} className="text-sm text-[var(--crm-text-secondary)]">
           Outcome
         </label>
         <select
@@ -226,7 +227,7 @@ function CompleteActivityForm({
       </div>
 
       <div>
-        <label htmlFor={`${titleId}-note`} className="text-sm text-neutral-300">
+        <label htmlFor={`${titleId}-note`} className="text-sm text-[var(--crm-text-secondary)]">
           Completion note (optional)
         </label>
         <textarea
@@ -243,12 +244,12 @@ function CompleteActivityForm({
         <div>
           <label
             htmlFor={`${titleId}-whatsapp-intent`}
-            className="text-sm text-neutral-300"
+            className="text-sm text-[var(--crm-text-secondary)]"
           >
             Governed WhatsApp send
           </label>
           {whatsappSendIntents.length === 0 ? (
-            <p className="mt-1 text-sm text-amber-200" role="alert">
+            <p className="mt-1 text-sm text-[var(--crm-warning)]" role="alert">
               No governed outbound sends found for this lead. Send from WhatsApp
               inbox first, then complete with whatsapp_sent.
             </p>
@@ -278,14 +279,14 @@ function CompleteActivityForm({
 
       {showResolutionChooser ? (
         <fieldset>
-          <legend className="text-sm font-medium text-neutral-300">
+          <legend className="text-sm font-medium text-[var(--crm-text-secondary)]">
             What happens next?
           </legend>
           <div className="mt-2 space-y-2">
             {resolutionOptions.map((option) => (
               <label
                 key={option}
-                className="flex items-center gap-2 text-sm text-neutral-200"
+                className="flex items-center gap-2 text-sm text-[var(--crm-text)]"
               >
                 <input
                   type="radio"
@@ -303,7 +304,7 @@ function CompleteActivityForm({
           </p>
         </fieldset>
       ) : (
-        <p className="text-sm text-neutral-400" data-testid="crm-complete-resolution-locked">
+        <p className="text-sm text-[var(--crm-muted)]" data-testid="crm-complete-resolution-locked">
           {resolution === "NONE"
             ? "Complete only — no status change or next primary from this completion."
             : CRM_ACTIVITY_RESOLUTION_LABELS[resolution]}
@@ -311,11 +312,11 @@ function CompleteActivityForm({
       )}
 
       {showNextPrimaryFields ? (
-        <div className="space-y-3 rounded-md border border-neutral-800 bg-neutral-950/50 p-3">
-          <p className="text-sm font-medium text-neutral-200">Next primary action</p>
+        <div className="space-y-3 rounded-md border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] p-3">
+          <p className="text-sm font-medium text-[var(--crm-text)]">Next primary action</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-sm text-neutral-400">Type</label>
+              <label className="text-sm text-[var(--crm-muted)]">Type</label>
               <select
                 name="nextActivityType"
                 value={nextType}
@@ -336,7 +337,7 @@ function CompleteActivityForm({
               </select>
             </div>
             <div>
-              <label className="text-sm text-neutral-400">Priority</label>
+              <label className="text-sm text-[var(--crm-muted)]">Priority</label>
               <select
                 name="nextPriority"
                 defaultValue="normal"
@@ -352,7 +353,7 @@ function CompleteActivityForm({
             </div>
           </div>
           <div>
-            <label className="text-sm text-neutral-400">Title</label>
+            <label className="text-sm text-[var(--crm-muted)]">Title</label>
             <input
               name="nextTitle"
               required
@@ -364,18 +365,18 @@ function CompleteActivityForm({
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-sm text-neutral-400">Due</label>
-              <input
+              <CrmDateTimeField
+                id="crm-complete-next-due"
                 name="nextDueAtLocal"
-                type="datetime-local"
+                label="Due"
                 required
                 defaultValue={defaultFutureDatetimeLocalValue()}
-                className={inputClassName(Boolean(fieldErrors.nextDueAt))}
+                hasError={Boolean(fieldErrors.nextDueAt)}
                 data-testid="crm-complete-next-due"
               />
             </div>
             <div>
-              <label className="text-sm text-neutral-400">Duration (min)</label>
+              <label className="text-sm text-[var(--crm-muted)]">Duration (min)</label>
               <input
                 name="nextDurationMinutes"
                 type="number"
@@ -389,17 +390,17 @@ function CompleteActivityForm({
             </div>
           </div>
           <div>
-            <label className="text-sm text-neutral-400">Reminder (optional)</label>
-            <input
+            <CrmDateTimeField
+              id="crm-complete-next-reminder"
               name="nextReminderAtLocal"
-              type="datetime-local"
-              className={inputClassName()}
+              label="Reminder (optional)"
+              clearable
               data-testid="crm-complete-next-reminder"
             />
           </div>
           {quotationId ? (
             <div>
-              <label className="text-sm text-neutral-400">Quotation (optional)</label>
+              <label className="text-sm text-[var(--crm-muted)]">Quotation (optional)</label>
               <select
                 name="nextQuotationId"
                 defaultValue=""
@@ -415,13 +416,13 @@ function CompleteActivityForm({
       ) : null}
 
       {showOnHoldFields ? (
-        <div className="space-y-3 rounded-md border border-neutral-800 bg-neutral-950/50 p-3">
-          <p className="text-sm text-neutral-400">
+        <div className="space-y-3 rounded-md border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] p-3">
+          <p className="text-sm text-[var(--crm-muted)]">
             Customer follow-up pauses while held. The review time becomes the
             primary next action.
           </p>
           <div>
-            <label className="text-sm text-neutral-300">Reason</label>
+            <label className="text-sm text-[var(--crm-text-secondary)]">Reason</label>
             <textarea
               name="onHoldReason"
               required
@@ -431,13 +432,13 @@ function CompleteActivityForm({
             />
           </div>
           <div>
-            <label className="text-sm text-neutral-300">Review on</label>
-            <input
+            <CrmDateTimeField
+              id="crm-complete-on-hold-review"
               name="onHoldReviewAtLocal"
-              type="datetime-local"
+              label="Review on"
               required
               defaultValue={defaultFutureDatetimeLocalValue(72)}
-              className={inputClassName(Boolean(fieldErrors.onHoldReviewAt))}
+              hasError={Boolean(fieldErrors.onHoldReviewAt)}
               data-testid="crm-complete-on-hold-review"
             />
           </div>
@@ -445,9 +446,9 @@ function CompleteActivityForm({
       ) : null}
 
       {showClosedLostFields ? (
-        <div className="space-y-3 rounded-md border border-red-900/40 bg-red-950/10 p-3">
+        <div className="space-y-3 rounded-md border border-[var(--crm-danger)]/25 bg-[var(--crm-danger-soft)] p-3">
           <div>
-            <label className="text-sm text-neutral-300">Closure reason</label>
+            <label className="text-sm text-[var(--crm-text-secondary)]">Closure reason</label>
             <select
               name="closureReasonCode"
               required
@@ -463,7 +464,7 @@ function CompleteActivityForm({
             </select>
           </div>
           <div>
-            <label className="text-sm text-neutral-300">Closed lost note</label>
+            <label className="text-sm text-[var(--crm-text-secondary)]">Closed lost note</label>
             <textarea
               name="closedLostReason"
               required
@@ -476,12 +477,12 @@ function CompleteActivityForm({
       ) : null}
 
       {clientError ? (
-        <p className="text-sm text-red-300" role="alert">
+        <p className="text-sm text-[var(--crm-danger)]" role="alert">
           {clientError}
         </p>
       ) : null}
       {state.message && !state.success ? (
-        <p className="text-sm text-red-300" role="alert">
+        <p className="text-sm text-[var(--crm-danger)]" role="alert">
           {state.message}
           {state.code === "NEXT_ACTION_REQUIRED"
             ? " Choose a next primary action or resolution."
@@ -493,7 +494,7 @@ function CompleteActivityForm({
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200"
+          className="crm-btn crm-btn-secondary min-h-11"
         >
           Cancel
         </button>
@@ -502,7 +503,7 @@ function CompleteActivityForm({
           disabled={
             pending || (showWhatsappEvidence && whatsappSendIntents.length === 0)
           }
-          className="inline-flex min-h-11 items-center rounded-md bg-[var(--od-gold)] px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-60"
+          className="crm-btn crm-btn-primary disabled:opacity-60"
           data-testid="crm-complete-submit"
         >
           {pending ? "Completing…" : "Complete activity"}

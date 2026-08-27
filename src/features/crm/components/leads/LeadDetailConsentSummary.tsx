@@ -19,31 +19,31 @@ export function LeadDetailConsentSummary({
   items,
 }: LeadDetailConsentSummaryProps) {
   return (
-    <section className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-5">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
+    <section className="crm-surface p-3.5 sm:p-5">
+      <h2 className="text-[15px] font-semibold text-[var(--crm-text)] sm:text-sm">
         Consent summary
       </h2>
       {items.length === 0 ? (
-        <p className="mt-4 text-sm text-neutral-500">No consent records available.</p>
+        <p className="mt-4 text-sm text-[var(--crm-muted)]">No consent records available.</p>
       ) : (
         <ul className="mt-4 space-y-3">
           {items.map((item) => (
             <li
               key={item.id}
-              className="rounded-md border border-neutral-800 bg-neutral-950/50 px-3 py-2 text-sm"
+              className="rounded-md border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-3 py-2 text-sm"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-medium text-neutral-200">
+                <span className="font-medium text-[var(--crm-text)]">
                   {formatCrmCodeLabel(item.purposeCode)}
                 </span>
-                <span className="text-xs text-neutral-500">
+                <span className="text-xs text-[var(--crm-muted)]">
                   {formatTimestamp(item.occurredAt)}
                 </span>
               </div>
-              <p className="mt-1 text-neutral-400">
+              <p className="mt-1 text-[var(--crm-muted)]">
                 {formatCrmCodeLabel(item.channel)} · {formatCrmCodeLabel(item.eventType)}
               </p>
-              <p className="mt-1 text-xs text-neutral-500">
+              <p className="mt-1 text-xs text-[var(--crm-muted)]">
                 Notice {item.noticeVersion} · Copy {item.copyVersion}
               </p>
             </li>
@@ -72,37 +72,37 @@ export function LeadDetailStatusSummary({
   }
 
   return (
-    <section className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-5">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
+    <section className="crm-surface p-3.5 sm:p-5">
+      <h2 className="text-[15px] font-semibold text-[var(--crm-text)] sm:text-sm">
         Status summary
       </h2>
       <dl className="mt-4 grid gap-4 sm:grid-cols-2">
         {summary.onHoldReason ? (
           <div>
-            <dt className="text-xs text-neutral-500">On-hold reason</dt>
-            <dd className="mt-1 text-sm text-neutral-100">{summary.onHoldReason}</dd>
+            <dt className="text-xs text-[var(--crm-muted)]">On-hold reason</dt>
+            <dd className="mt-1 text-sm text-[var(--crm-text)]">{summary.onHoldReason}</dd>
           </div>
         ) : null}
         {summary.onHoldSince ? (
           <div>
-            <dt className="text-xs text-neutral-500">On-hold since</dt>
-            <dd className="mt-1 text-sm text-neutral-100">
+            <dt className="text-xs text-[var(--crm-muted)]">On-hold since</dt>
+            <dd className="mt-1 text-sm text-[var(--crm-text)]">
               {formatTimestamp(summary.onHoldSince)}
             </dd>
           </div>
         ) : null}
         {summary.closedLostReasonLabel ? (
           <div>
-            <dt className="text-xs text-neutral-500">Closed-lost reason</dt>
-            <dd className="mt-1 text-sm text-neutral-100">
+            <dt className="text-xs text-[var(--crm-muted)]">Closed-lost reason</dt>
+            <dd className="mt-1 text-sm text-[var(--crm-text)]">
               {summary.closedLostReasonLabel}
             </dd>
           </div>
         ) : null}
         {summary.closedLostNote ? (
           <div className="sm:col-span-2">
-            <dt className="text-xs text-neutral-500">Closed-lost note</dt>
-            <dd className="mt-1 whitespace-pre-wrap text-sm text-neutral-100">
+            <dt className="text-xs text-[var(--crm-muted)]">Closed-lost note</dt>
+            <dd className="mt-1 whitespace-pre-wrap text-sm text-[var(--crm-text)]">
               {summary.closedLostNote}
             </dd>
           </div>

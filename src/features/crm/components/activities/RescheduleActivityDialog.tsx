@@ -10,8 +10,8 @@ import {
   isoToDatetimeLocalValue,
 } from "../../lib/local-datetime-to-iso.ts";
 import { rescheduleLeadActivityAction } from "../../server/crm-activity-actions.ts";
+import { CrmDateTimeField } from "../ui/CrmDateTimeField.tsx";
 import { CrmActivityDialogShell } from "./CrmActivityDialogShell.tsx";
-import { inputClassName } from "./activity-ui-utils.ts";
 
 type ReminderMode = "unchanged" | "set" | "clear";
 
@@ -84,27 +84,24 @@ export function RescheduleActivityDialog({
         <input type="hidden" name="activityId" value={activity.id} />
 
         <div>
-          <label htmlFor={`${titleId}-due`} className="text-sm text-neutral-300">
-            New due date and time
-          </label>
-          <input
+          <CrmDateTimeField
             id={`${titleId}-due`}
             name="dueAtLocal"
-            type="datetime-local"
+            label="New due date and time"
             required
             defaultValue={isoToDatetimeLocalValue(activity.dueAt)}
-            className={inputClassName(Boolean(fieldErrors.dueAt))}
+            hasError={Boolean(fieldErrors.dueAt)}
             data-testid="crm-reschedule-due"
           />
           {fieldErrors.dueAt ? (
-            <p className="mt-1 text-xs text-red-300" role="alert">
+            <p className="mt-1 text-xs text-[var(--crm-danger)]" role="alert">
               {fieldErrors.dueAt}
             </p>
           ) : null}
         </div>
 
         <fieldset>
-          <legend className="text-sm font-medium text-neutral-300">Reminder</legend>
+          <legend className="text-sm font-medium text-[var(--crm-text-secondary)]">Reminder</legend>
           <div className="mt-2 space-y-2">
             {(
               [
@@ -115,7 +112,7 @@ export function RescheduleActivityDialog({
             ).map(([mode, label]) => (
               <label
                 key={mode}
-                className="flex items-center gap-2 text-sm text-neutral-200"
+                className="flex items-center gap-2 text-sm text-[var(--crm-text)]"
               >
                 <input
                   type="radio"
@@ -132,35 +129,30 @@ export function RescheduleActivityDialog({
 
         {reminderMode === "set" ? (
           <div>
-            <label
-              htmlFor={`${titleId}-reminder`}
-              className="text-sm text-neutral-300"
-            >
-              Reminder date and time
-            </label>
-            <input
+            <CrmDateTimeField
               id={`${titleId}-reminder`}
               name="reminderAtLocal"
-              type="datetime-local"
+              label="Reminder date and time"
               required
+              clearable
               defaultValue={
                 activity.reminderAt
                   ? isoToDatetimeLocalValue(activity.reminderAt)
                   : defaultFutureDatetimeLocalValue(12)
               }
-              className={inputClassName(Boolean(fieldErrors.reminderAt))}
+              hasError={Boolean(fieldErrors.reminderAt)}
               data-testid="crm-reschedule-reminder-at"
             />
           </div>
         ) : null}
 
         {clientError ? (
-          <p className="text-sm text-red-300" role="alert">
+          <p className="text-sm text-[var(--crm-danger)]" role="alert">
             {clientError}
           </p>
         ) : null}
         {state.message && !state.success ? (
-          <p className="text-sm text-red-300" role="alert">
+          <p className="text-sm text-[var(--crm-danger)]" role="alert">
             {state.message}
           </p>
         ) : null}
@@ -169,14 +161,14 @@ export function RescheduleActivityDialog({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200"
+            className="crm-btn crm-btn-secondary min-h-11"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex min-h-11 items-center rounded-md bg-[var(--od-gold)] px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-60"
+            className="crm-btn crm-btn-primary disabled:opacity-60"
             data-testid="crm-reschedule-submit"
           >
             {pending ? "Saving…" : "Save reschedule"}

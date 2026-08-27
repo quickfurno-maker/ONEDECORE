@@ -79,35 +79,33 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
 
   const quotationId = existingDraft?.quotationId ?? null;
   const quotationLabel = existingDraft?.version?.title ?? existingDraft?.quotationNumber ?? null;
+  const createdLabel = new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+  }).format(new Date(lead.overview.createdAt));
+  const updatedLabel = new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(lead.overview.updatedAt));
 
   return (
-    <div className="space-y-6">
-      <CrmPageHeader
-        title={lead.overview.submittedName}
-        description={`${lead.source.primarySourceLabel} · Created ${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date(lead.overview.createdAt))}`}
-        actions={
-          <Link
-            href="/admin/crm/leads"
-            className="inline-flex min-h-11 items-center rounded-[8px] border border-[var(--od-border-strong)] px-4 py-2 text-sm font-medium text-[var(--od-text-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
-          >
-            Back to leads
-          </Link>
-        }
-      />
-
-      <div className="flex flex-wrap items-center gap-3">
-        <LeadStatusBadge status={leadStatus} />
-        <span className="text-sm text-[var(--od-muted)]">
-          Updated{" "}
-          {new Intl.DateTimeFormat("en-IN", {
-            dateStyle: "medium",
-            timeStyle: "short",
-          }).format(new Date(lead.overview.updatedAt))}
-        </span>
+    <div className="space-y-5">
+      <div className="space-y-3">
+        <Link
+          href="/admin/crm/leads"
+          className="crm-btn crm-btn-ghost min-h-10 px-2 text-[13px]"
+        >
+          ← Back to leads
+        </Link>
+        <CrmPageHeader
+          title={lead.overview.submittedName}
+          description={`${lead.source.primarySourceLabel} · Created ${createdLabel}`}
+          actions={<LeadStatusBadge status={leadStatus} />}
+        />
+        <p className="text-xs text-[var(--crm-muted)]">Updated {updatedLabel}</p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="space-y-6">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.9fr)_minmax(18rem,1fr)]">
+        <div className="flex flex-col gap-4 sm:gap-5">
           <LeadStatusTransitionPanel
             leadId={lead.id}
             currentStatus={leadStatus}
@@ -115,6 +113,19 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
             canTransitionLeads={context?.canTransitionLeads ?? false}
             closureReasons={closureReasons}
           />
+          <div className="xl:hidden">
+            <LeadDetailContact contact={lead.contact} />
+          </div>
+          <div className="xl:hidden">
+            <LeadDetailAssignmentPanel
+              assignment={lead.assignment}
+              leadId={lead.id}
+              leadStatus={leadStatus}
+              leadUpdatedAt={lead.overview.updatedAt}
+              canAssignLeads={context?.canAssignLeads ?? false}
+              assigneeDirectory={assigneeDirectory}
+            />
+          </div>
           <LeadActivityWorkspace
             leadId={lead.id}
             leadStatus={leadStatus}
@@ -131,13 +142,13 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
             quotationLabel={quotationLabel}
           />
           <LeadDetailOverview overview={lead.overview} />
-          <LeadDetailTimeline timeline={lead.timeline} />
           <LeadDetailNotes
             notes={lead.notes}
             leadId={lead.id}
             canManageLeadNotes={context?.canManageLeadNotes ?? false}
             showComposer={!isTerminal}
           />
+          <LeadDetailTimeline timeline={lead.timeline} />
           <LeadDetailQuotationPanel
             leadId={lead.id}
             submittedName={lead.overview.submittedName}
@@ -145,8 +156,20 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
             canCreateQuotation={quotationPermissions.canCreateQuotations}
             canEditQuotation={quotationPermissions.canEditQuotations}
           />
+          <div className="space-y-4 xl:hidden sm:space-y-5">
+            <LeadDetailSourcePanel source={lead.source} />
+            <LeadDetailStatusSummary summary={lead.statusSummary} />
+            <LeadDetailConsentSummary items={lead.consentSummary} />
+            <MarketingConsentPanel
+              leadId={lead.id}
+              contactId={lead.contact.id}
+              canManage={campaignPermissions.canManageMarketingConsent}
+              state={marketingConsentState}
+            />
+          </div>
         </div>
-        <aside className="space-y-6 xl:sticky xl:top-20 xl:self-start">
+
+        <aside className="hidden space-y-5 xl:sticky xl:top-20 xl:block xl:self-start">
           <LeadDetailContact contact={lead.contact} />
           <LeadDetailAssignmentPanel
             assignment={lead.assignment}

@@ -75,32 +75,37 @@ export default async function CrmLeadsPage({ searchParams }: CrmLeadsPageProps) 
   const pipelineEmpty = pipelineStages.every((stage) => stage.total === 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <CrmPageHeader
         title="Leads"
         description="Track, qualify and move opportunities forward."
         actions={
           context.canCreateLeads ? (
-            <Link
-              href="/admin/crm/leads/new"
-              className="inline-flex min-h-11 items-center rounded-[8px] bg-[var(--od-gold)] px-4 py-2 text-sm font-semibold text-[#1a1408] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
-            >
+            <Link href="/admin/crm/leads/new" className="crm-btn crm-btn-primary w-full sm:w-auto">
               + New Lead
             </Link>
           ) : null
         }
       />
 
-      <div className="flex justify-end gap-1">
+      <div className="inline-flex rounded-[10px] border border-[var(--crm-border)] bg-[var(--crm-surface)] p-0.5">
         <Link
           href={tableHref}
-          className={`inline-flex min-h-9 items-center rounded-[8px] px-3 text-sm ${view === "table" ? "bg-[var(--od-gold)]/15 text-[var(--od-text)]" : "text-[var(--od-muted)]"}`}
+          className={`inline-flex min-h-10 items-center rounded-[8px] px-3 text-sm font-medium transition-colors ${
+            view === "table"
+              ? "bg-[var(--crm-primary-soft)] text-[var(--crm-primary)]"
+              : "text-[var(--crm-muted)] hover:text-[var(--crm-text)]"
+          }`}
         >
           Table
         </Link>
         <Link
           href={pipelineHref}
-          className={`inline-flex min-h-9 items-center rounded-[8px] px-3 text-sm ${view === "pipeline" ? "bg-[var(--od-gold)]/15 text-[var(--od-text)]" : "text-[var(--od-muted)]"}`}
+          className={`inline-flex min-h-10 items-center rounded-[8px] px-3 text-sm font-medium transition-colors ${
+            view === "pipeline"
+              ? "bg-[var(--crm-primary-soft)] text-[var(--crm-primary)]"
+              : "text-[var(--crm-muted)] hover:text-[var(--crm-text)]"
+          }`}
         >
           Pipeline
         </Link>
@@ -120,7 +125,7 @@ export default async function CrmLeadsPage({ searchParams }: CrmLeadsPageProps) 
         ) : (
           <>
             <LeadPipelineBoard stages={pipelineStages} />
-            <p className="text-xs text-[var(--od-muted)]">
+            <p className="text-xs text-[var(--crm-muted)]">
               Stage totals are RLS-scoped counts. Cards are a preview of {PIPELINE_STAGE_PREVIEW_SIZE} per stage. Drag-and-drop is not enabled.
             </p>
           </>

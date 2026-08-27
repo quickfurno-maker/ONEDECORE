@@ -14,6 +14,7 @@ import {
   validateManualLeadFormInput,
 } from "../contracts/manual-lead-contracts.ts";
 import type { CrmLeadListRow } from "../contracts/lead-dtos.ts";
+import { canonicalizeOptionalPhone } from "../lib/phone-e164.ts";
 import { getCrmAccessContext } from "./crm-auth.ts";
 import { CrmError } from "./crm-errors.ts";
 import { fetchCrmAssigneeDirectory } from "./crm-lead-queries.ts";
@@ -21,6 +22,15 @@ import {
   callCheckManualLeadDuplicate,
   callCreateManualLead,
 } from "./crm-transition-adapters.ts";
+
+function withCanonicalPhone<T extends { readonly phone: string | null }>(
+  input: T
+): T {
+  return {
+    ...input,
+    phone: canonicalizeOptionalPhone(input.phone).phone,
+  };
+}
 
 export function resolveManualCreateAssigneePolicy(
   context: CrmAccessContext
@@ -66,13 +76,14 @@ export async function previewManualLeadDuplicateForCurrentUser(
     });
   }
 
+  const canonical = withCanonicalPhone(input);
   const supabase = await createClient();
   return callCheckManualLeadDuplicate(supabase, {
-    phone: input.phone,
-    email: input.email,
-    serviceCode: input.serviceCode,
-    propertyCode: input.propertyCode,
-    locality: input.locality,
+    phone: canonical.phone,
+    email: canonical.email,
+    serviceCode: canonical.serviceCode,
+    propertyCode: canonical.propertyCode,
+    locality: canonical.locality,
   });
 }
 
@@ -119,7 +130,7 @@ export async function createManualLeadForCurrentUser(
   }
 
   const supabase = await createClient();
-  return callCreateManualLead(supabase, input);
+  return callCreateManualLead(supabase, withCanonicalPhone(input));
 }
 
 export async function fetchManualCreateAssigneeDirectory(

@@ -2,17 +2,17 @@ import type { LeadStageCode } from "../../contracts/lead-stages.ts";
 import { formatCrmCodeLabel } from "../../contracts/crm-labels.ts";
 
 const STATUS_STYLES: Readonly<Record<LeadStageCode, string>> = {
-  new: "bg-sky-950/70 text-sky-200 border-sky-900/60",
-  assigned: "bg-indigo-950/70 text-indigo-200 border-indigo-900/60",
-  contacted: "bg-cyan-950/70 text-cyan-200 border-cyan-900/60",
-  qualified: "bg-emerald-950/70 text-emerald-200 border-emerald-900/60",
+  new: "bg-[var(--crm-info-soft)] text-[var(--crm-info)] border-[var(--crm-info)]/20",
+  assigned: "bg-[#eef2ff] text-[#4338ca] border-[#c7d2fe]",
+  contacted: "bg-[var(--crm-primary-soft)] text-[var(--crm-primary)] border-[var(--crm-primary)]/15",
+  qualified: "bg-[var(--crm-success-soft)] text-[var(--crm-success)] border-[var(--crm-success)]/20",
   consultation_scheduled:
-    "bg-teal-950/70 text-teal-200 border-teal-900/60",
-  proposal_sent: "bg-violet-950/70 text-violet-200 border-violet-900/60",
-  negotiation: "bg-amber-950/70 text-amber-200 border-amber-900/60",
-  closed_won: "bg-green-950/70 text-green-200 border-green-900/60",
-  closed_lost: "bg-rose-950/70 text-rose-200 border-rose-900/60",
-  on_hold: "bg-neutral-800 text-neutral-200 border-neutral-700",
+    "bg-[#ecfeff] text-[#0e7490] border-[#a5f3fc]",
+  proposal_sent: "bg-[#f5f3ff] text-[#6d28d9] border-[#ddd6fe]",
+  negotiation: "bg-[var(--crm-warning-soft)] text-[var(--crm-warning)] border-[var(--crm-warning)]/25",
+  closed_won: "bg-[var(--crm-success-soft)] text-[var(--crm-success)] border-[var(--crm-success)]/25",
+  closed_lost: "bg-[var(--crm-danger-soft)] text-[var(--crm-danger)] border-[var(--crm-danger)]/20",
+  on_hold: "bg-[var(--crm-surface-subtle)] text-[var(--crm-muted)] border-[var(--crm-border-strong)]",
 };
 
 interface LeadStatusBadgeProps {
@@ -22,7 +22,7 @@ interface LeadStatusBadgeProps {
 export function LeadStatusBadge({ status }: LeadStatusBadgeProps) {
   return (
     <span
-      className={`inline-flex items-center rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${STATUS_STYLES[status]}`}
+      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium tracking-wide ${STATUS_STYLES[status]}`}
     >
       {formatCrmCodeLabel(status)}
     </span>

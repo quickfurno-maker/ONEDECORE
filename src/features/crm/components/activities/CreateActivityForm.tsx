@@ -19,6 +19,7 @@ import {
   defaultFutureDatetimeLocalValue,
 } from "../../lib/local-datetime-to-iso.ts";
 import { createLeadActivityAction } from "../../server/crm-activity-actions.ts";
+import { CrmDateTimeField } from "../ui/CrmDateTimeField.tsx";
 import {
   CRM_ACTIVITY_DEFAULT_DURATIONS,
   CRM_ACTIVITY_SUGGESTED_TITLES,
@@ -98,16 +99,19 @@ export function CreateActivityForm({
     <form
       ref={resolvedRef}
       action={submitForm}
-      className="space-y-3 rounded-md border border-neutral-800 bg-neutral-950/40 p-4"
+      className="space-y-3.5 rounded-[14px] border border-[var(--crm-border)] bg-[var(--crm-surface)] p-3.5 sm:p-4"
       data-testid="crm-create-activity-form"
       id={formId}
     >
       <input type="hidden" name="leadId" value={leadId} />
       <input type="hidden" name="activityType" value={activityType} />
+      <h3 className="text-[15px] font-semibold text-[var(--crm-text)]">
+        Create activity
+      </h3>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label htmlFor={`${formId}-type`} className="text-sm text-neutral-300">
+          <label htmlFor={`${formId}-type`} className="text-sm text-[var(--crm-text-secondary)]">
             Activity type
           </label>
           <select
@@ -128,7 +132,7 @@ export function CreateActivityForm({
           {fieldErrors.activityType ? (
             <p
               id={fieldErrorId("activityType")}
-              className="mt-1 text-xs text-red-300"
+              className="mt-1 text-xs text-[var(--crm-danger)]"
               role="alert"
             >
               {fieldErrors.activityType}
@@ -139,7 +143,7 @@ export function CreateActivityForm({
         <div>
           <label
             htmlFor={`${formId}-priority`}
-            className="text-sm text-neutral-300"
+            className="text-sm text-[var(--crm-text-secondary)]"
           >
             Priority
           </label>
@@ -160,7 +164,7 @@ export function CreateActivityForm({
       </div>
 
       <div>
-        <label htmlFor={`${formId}-title`} className="text-sm text-neutral-300">
+        <label htmlFor={`${formId}-title`} className="text-sm text-[var(--crm-text-secondary)]">
           Title
         </label>
         <input
@@ -178,7 +182,7 @@ export function CreateActivityForm({
           data-testid="crm-create-activity-title"
         />
         {fieldErrors.title ? (
-          <p className="mt-1 text-xs text-red-300" role="alert">
+          <p className="mt-1 text-xs text-[var(--crm-danger)]" role="alert">
             {fieldErrors.title}
           </p>
         ) : null}
@@ -186,18 +190,14 @@ export function CreateActivityForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label htmlFor={`${formId}-due`} className="text-sm text-neutral-300">
-            Due date and time
-          </label>
-          <input
+          <CrmDateTimeField
             id={`${formId}-due`}
             name="dueAtLocal"
-            type="datetime-local"
+            label="Due date and time"
             required
             defaultValue={defaultFutureDatetimeLocalValue()}
-            className={inputClassName(Boolean(fieldErrors.dueAt))}
-            aria-invalid={Boolean(fieldErrors.dueAt)}
-            aria-describedby={
+            hasError={Boolean(fieldErrors.dueAt)}
+            describedBy={
               fieldErrors.dueAt ? fieldErrorId("dueAt") : undefined
             }
             data-testid="crm-create-activity-due"
@@ -205,7 +205,7 @@ export function CreateActivityForm({
           {fieldErrors.dueAt ? (
             <p
               id={fieldErrorId("dueAt")}
-              className="mt-1 text-xs text-red-300"
+              className="mt-1 text-xs text-[var(--crm-danger)]"
               role="alert"
             >
               {fieldErrors.dueAt}
@@ -216,7 +216,7 @@ export function CreateActivityForm({
         <div>
           <label
             htmlFor={`${formId}-duration`}
-            className="text-sm text-neutral-300"
+            className="text-sm text-[var(--crm-text-secondary)]"
           >
             Duration (minutes)
           </label>
@@ -235,24 +235,19 @@ export function CreateActivityForm({
       </div>
 
       <div>
-        <label
-          htmlFor={`${formId}-reminder`}
-          className="text-sm text-neutral-300"
-        >
-          Reminder (optional)
-        </label>
-        <input
+        <CrmDateTimeField
           id={`${formId}-reminder`}
           name="reminderAtLocal"
-          type="datetime-local"
-          className={inputClassName(Boolean(fieldErrors.reminderAt))}
+          label="Reminder (optional)"
+          clearable
+          hasError={Boolean(fieldErrors.reminderAt)}
           data-testid="crm-create-activity-reminder"
         />
       </div>
 
       {canChooseOwner ? (
         <div>
-          <label htmlFor={`${formId}-owner`} className="text-sm text-neutral-300">
+          <label htmlFor={`${formId}-owner`} className="text-sm text-[var(--crm-text-secondary)]">
             Owner
           </label>
           <select
@@ -276,7 +271,7 @@ export function CreateActivityForm({
         <div>
           <label
             htmlFor={`${formId}-quotation`}
-            className="text-sm text-neutral-300"
+            className="text-sm text-[var(--crm-text-secondary)]"
           >
             Link quotation (optional)
           </label>
@@ -293,30 +288,30 @@ export function CreateActivityForm({
         </div>
       ) : null}
 
-      <label className="flex items-center gap-2 text-sm text-neutral-300">
+      <label className="flex items-center gap-2 text-sm text-[var(--crm-text-secondary)]">
         <input
           type="checkbox"
           name="isPrimary"
           value="true"
           defaultChecked={defaultPrimary}
-          className="h-4 w-4 rounded border-neutral-600"
+          className="h-4 w-4 rounded border-[var(--crm-border-strong)]"
           data-testid="crm-create-activity-primary"
         />
         Make primary next action
       </label>
 
       {clientError ? (
-        <p className="text-sm text-red-300" role="alert">
+        <p className="text-sm text-[var(--crm-danger)]" role="alert">
           {clientError}
         </p>
       ) : null}
       {state.message && !state.success ? (
-        <p className="text-sm text-red-300" role="alert">
+        <p className="text-sm text-[var(--crm-danger)]" role="alert">
           {state.message}
         </p>
       ) : null}
       {state.success ? (
-        <p className="text-sm text-emerald-300" role="status">
+        <p className="text-sm text-[var(--crm-success)]" role="status">
           {state.message}
         </p>
       ) : null}
@@ -324,7 +319,7 @@ export function CreateActivityForm({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-neutral-950 disabled:opacity-60 sm:w-auto"
+        className="crm-btn crm-btn-primary min-h-11 w-full sm:w-auto"
         data-testid="crm-create-activity-submit"
       >
         {pending ? "Creating…" : "Create activity"}

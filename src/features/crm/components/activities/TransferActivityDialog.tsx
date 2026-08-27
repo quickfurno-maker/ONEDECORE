@@ -54,7 +54,7 @@ export function TransferActivityDialog({
         <input type="hidden" name="activityId" value={activityId} />
 
         <div>
-          <label htmlFor={`${titleId}-owner`} className="text-sm text-neutral-300">
+          <label htmlFor={`${titleId}-owner`} className="text-sm text-[var(--crm-text-secondary)]">
             New owner
           </label>
           <select
@@ -88,14 +88,14 @@ export function TransferActivityDialog({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200"
+            className="inline-flex min-h-11 items-center rounded-md border border-[var(--crm-border-strong)] px-4 py-2 text-sm text-[var(--crm-text)]"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex min-h-11 items-center rounded-md bg-[var(--od-gold)] px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-60"
+            className="crm-btn crm-btn-primary disabled:opacity-60"
             data-testid="crm-transfer-submit"
           >
             {pending ? "Transferring…" : "Transfer owner"}

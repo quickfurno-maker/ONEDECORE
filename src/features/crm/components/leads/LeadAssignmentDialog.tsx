@@ -155,21 +155,21 @@ export function LeadAssignmentDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="relative z-10 w-full max-w-lg rounded-lg border border-neutral-700 bg-neutral-900 p-5 shadow-xl"
+        className="relative z-10 w-full max-w-lg rounded-lg border border-[var(--crm-border-strong)] bg-[var(--crm-surface)] p-5 shadow-xl"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 id={titleId} className="text-lg font-semibold text-neutral-50">
+            <h2 id={titleId} className="text-lg font-semibold text-[var(--crm-text)]">
               {dialogTitle(mode)}
             </h2>
-            <p id={descriptionId} className="mt-1 text-sm text-neutral-400">
+            <p id={descriptionId} className="mt-1 text-sm text-[var(--crm-muted)]">
               {dialogDescription(mode)}
             </p>
           </div>
           <button
             ref={closeButtonRef}
             type="button"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-neutral-700 px-3 text-sm text-neutral-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-[var(--crm-border-strong)] px-3 text-sm text-[var(--crm-text-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--crm-primary)]"
             onClick={onClose}
             disabled={pending}
           >
@@ -177,12 +177,12 @@ export function LeadAssignmentDialog({
           </button>
         </div>
 
-        <p className="mt-4 text-sm text-neutral-200">
+        <p className="mt-4 text-sm text-[var(--crm-text)]">
           Current assignee: <span className="font-medium">{currentAssigneeLabel}</span>
         </p>
 
         {mode === "unassign" && !canUnassign ? (
-          <p className="mt-4 rounded-md border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-sm text-amber-100">
+          <p className="mt-4 rounded-md border border-[var(--crm-warning)]/25 bg-[var(--crm-warning-soft)] px-3 py-2 text-sm text-[var(--crm-warning)]">
             Only leads in the assigned stage can be safely unassigned.
           </p>
         ) : null}
@@ -199,11 +199,11 @@ export function LeadAssignmentDialog({
 
           {showAssigneeSelect ? (
             <div>
-              <label htmlFor={`${titleId}-assignee`} className="block text-sm font-medium text-neutral-300">
+              <label htmlFor={`${titleId}-assignee`} className="block text-sm font-medium text-[var(--crm-text-secondary)]">
                 Target assignee
               </label>
               {assigneeDirectory.length === 0 ? (
-                <p className="mt-2 text-sm text-neutral-500">
+                <p className="mt-2 text-sm text-[var(--crm-muted)]">
                   No eligible sales executives are available.
                 </p>
               ) : (
@@ -213,7 +213,7 @@ export function LeadAssignmentDialog({
                   required
                   disabled={pending}
                   defaultValue=""
-                  className="mt-2 min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                  className="mt-2 min-h-11 w-full rounded-md border border-[var(--crm-border-strong)] bg-[var(--crm-surface-subtle)] px-3 py-2 text-sm text-[var(--crm-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--crm-primary)]"
                 >
                   <option value="" disabled>
                     Select an assignee
@@ -231,7 +231,7 @@ export function LeadAssignmentDialog({
           )}
 
           <div>
-            <label htmlFor={`${titleId}-reason`} className="block text-sm font-medium text-neutral-300">
+            <label htmlFor={`${titleId}-reason`} className="block text-sm font-medium text-[var(--crm-text-secondary)]">
               {reasonLabel(mode)}
             </label>
             <textarea
@@ -241,10 +241,10 @@ export function LeadAssignmentDialog({
               maxLength={500}
               required={reasonRequired(mode)}
               disabled={pending}
-              className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+              className="mt-2 w-full rounded-md border border-[var(--crm-border-strong)] bg-[var(--crm-surface-subtle)] px-3 py-2 text-sm text-[var(--crm-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--crm-primary)]"
               aria-describedby={`${titleId}-reason-help`}
             />
-            <p id={`${titleId}-reason-help`} className="mt-1 text-xs text-neutral-500">
+            <p id={`${titleId}-reason-help`} className="mt-1 text-xs text-[var(--crm-muted)]">
               {mode === "assign"
                 ? "Optional note up to 500 characters."
                 : "Provide 10 to 500 characters explaining this change."}
@@ -264,7 +264,7 @@ export function LeadAssignmentDialog({
           ) : null}
 
           {pending ? (
-            <p role="status" className="text-sm text-neutral-400">
+            <p role="status" className="text-sm text-[var(--crm-muted)]">
               Saving assignment…
             </p>
           ) : null}
@@ -277,7 +277,7 @@ export function LeadAssignmentDialog({
                 (mode === "unassign" && !canUnassign) ||
                 (showAssigneeSelect && assigneeDirectory.length === 0)
               }
-              className="inline-flex min-h-11 items-center rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-11 items-center rounded-md bg-[var(--crm-primary)] px-4 py-2 text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--crm-primary)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {mode === "unassign" ? "Confirm unassignment" : "Save assignment"}
             </button>
@@ -285,7 +285,7 @@ export function LeadAssignmentDialog({
               type="button"
               onClick={onClose}
               disabled={pending}
-              className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+              className="inline-flex min-h-11 items-center rounded-md border border-[var(--crm-border-strong)] px-4 py-2 text-sm font-medium text-[var(--crm-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--crm-primary)]"
             >
               Cancel
             </button>

@@ -28,9 +28,9 @@ export function CrmActivityDialogShell({
   }
 
   const borderClass =
-    tone === "danger" ? "border-red-900/60" : "border-neutral-700";
+    tone === "danger" ? "border-[var(--crm-danger)]/30" : "border-[var(--crm-border-strong)]";
   const titleClass =
-    tone === "danger" ? "text-red-200" : "text-neutral-100";
+    tone === "danger" ? "text-red-200" : "text-[var(--crm-text)]";
 
   return (
     <div
@@ -42,16 +42,16 @@ export function CrmActivityDialogShell({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-xl border ${borderClass} bg-neutral-900 shadow-xl sm:rounded-lg`}
+        className={`flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-xl border ${borderClass} bg-[var(--crm-surface)] shadow-xl sm:rounded-lg`}
         onClick={(event) => event.stopPropagation()}
         data-testid={testId}
       >
-        <div className="border-b border-neutral-800 px-5 py-4">
+        <div className="border-b border-[var(--crm-border)] px-5 py-4">
           <h3 id={titleId} className={`text-lg font-semibold ${titleClass}`}>
             {title}
           </h3>
           {description ? (
-            <p className="mt-1 text-sm text-neutral-400">{description}</p>
+            <p className="mt-1 text-sm text-[var(--crm-muted)]">{description}</p>
           ) : null}
         </div>
         <div className="overflow-y-auto px-5 py-4">{children}</div>

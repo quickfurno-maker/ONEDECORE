@@ -103,14 +103,14 @@ export function LeadActivityWorkspace({
         />
       ) : null}
 
-      <section className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
+      <section className="crm-surface p-5">
+        <h2 className="text-sm font-semibold text-[var(--crm-text)]">
           Activities
         </h2>
 
         {canManageLeadFollowUps && showComposer ? (
           <div className="mt-4">
-            <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
+            <h3 className="mb-2 text-[12px] font-medium text-[var(--crm-muted)]">
               Create activity
             </h3>
             <CreateActivityForm
@@ -127,7 +127,7 @@ export function LeadActivityWorkspace({
 
         {secondaryActivities.length > 0 ? (
           <div className="mt-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            <h3 className="text-[12px] font-semibold text-[var(--crm-muted)]">
               Other open activities
             </h3>
             <ul className="mt-3 space-y-3">
@@ -148,7 +148,7 @@ export function LeadActivityWorkspace({
         ) : null}
 
         {openActivities.length === 0 && historyActivities.length === 0 ? (
-          <p className="mt-4 text-sm text-neutral-500">No activities yet.</p>
+          <p className="mt-4 text-sm text-[var(--crm-muted)]">No activities yet.</p>
         ) : null}
 
         <ActivityHistoryList activities={historyActivities} />

@@ -31,8 +31,8 @@ export function LeadDetailFollowUps({
   assigneeDirectory,
 }: LeadDetailFollowUpsProps) {
   return (
-    <section className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-5">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
+    <section className="crm-surface p-5">
+      <h2 className="text-sm font-semibold text-[var(--crm-text)]">
         Follow-ups
       </h2>
 
@@ -45,34 +45,34 @@ export function LeadDetailFollowUps({
       ) : null}
 
       {followUps.length === 0 ? (
-        <p className="mt-4 text-sm text-neutral-500">No follow-ups scheduled.</p>
+        <p className="mt-4 text-sm text-[var(--crm-muted)]">No follow-ups scheduled.</p>
       ) : (
         <ul className="mt-4 space-y-3">
           {followUps.map((followUp) => (
             <li
               key={followUp.id}
-              className="rounded-md border border-neutral-800 bg-neutral-950/50 px-3 py-2 text-sm"
+              className="rounded-md border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-3 py-2 text-sm"
               data-testid={`lead-follow-up-item-${followUp.id}`}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-medium text-neutral-200">
+                <span className="font-medium text-[var(--crm-text)]">
                   {followUp.ownerLabel}
                 </span>
-                <span className="text-xs text-neutral-500">
+                <span className="text-xs text-[var(--crm-muted)]">
                   Due {formatTimestamp(followUp.dueAt)}
                 </span>
               </div>
-              <p className="mt-1 text-neutral-400">
+              <p className="mt-1 text-[var(--crm-muted)]">
                 {formatCrmCodeLabel(followUp.status)}
                 {followUp.outcome ? ` · ${followUp.outcome}` : ""}
               </p>
               {followUp.completedAt ? (
-                <p className="mt-1 text-xs text-neutral-500">
+                <p className="mt-1 text-xs text-[var(--crm-muted)]">
                   Completed {formatTimestamp(followUp.completedAt)}
                 </p>
               ) : null}
               {followUp.cancelledAt ? (
-                <p className="mt-1 text-xs text-neutral-500">
+                <p className="mt-1 text-xs text-[var(--crm-muted)]">
                   Cancelled {formatTimestamp(followUp.cancelledAt)}
                 </p>
               ) : null}

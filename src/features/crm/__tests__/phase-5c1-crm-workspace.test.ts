@@ -525,13 +525,13 @@ describe("CRM 2A-6 My Day workspace", () => {
     );
   });
 
-  test("CrmNav unchanged — no My Day nav entry in 2A-6", () => {
+  test("My Day is discoverable in CRM navigation after 2A closeout", () => {
     const navSrc = readFileSync(
       join(root, "src/features/crm/components/shell/CrmNav.tsx"),
       "utf8"
     );
-    assert.doesNotMatch(navSrc, /my-day/);
-    assert.doesNotMatch(navSrc, /My Day/);
+    assert.match(navSrc, /\/admin\/crm\/my-day/);
+    assert.match(navSrc, /My Day/);
   });
 
   test("my-day DTO exposes only approved public keys", () => {

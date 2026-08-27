@@ -48,13 +48,13 @@ export function OpenActivityRow({
 
   return (
     <li
-      className="rounded-md border border-neutral-800 bg-neutral-950/50 px-3 py-3 text-sm"
+      className="rounded-md border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-3 py-3 text-sm"
       data-testid={`crm-open-activity-${activity.id}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="font-medium text-neutral-100">{activity.title}</p>
-          <p className="mt-1 text-xs text-neutral-500">
+          <p className="font-medium text-[var(--crm-text)]">{activity.title}</p>
+          <p className="mt-1 text-xs text-[var(--crm-muted)]">
             {formatActivityTypeLabel(activity.activityType)} · {activity.ownerLabel}
           </p>
         </div>
@@ -65,7 +65,7 @@ export function OpenActivityRow({
         </span>
       </div>
 
-      <p className="mt-2 text-xs text-neutral-400">
+      <p className="mt-2 text-xs text-[var(--crm-muted)]">
         Due {formatActivityTimestamp(activity.dueAt)}
         {activity.reminderAt
           ? ` · Reminder ${formatActivityTimestamp(activity.reminderAt)}`
@@ -77,7 +77,7 @@ export function OpenActivityRow({
           <button
             type="button"
             onClick={onComplete}
-            className="inline-flex min-h-9 items-center rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-100"
+            className="inline-flex min-h-10 items-center rounded-md border border-[var(--crm-border-strong)] px-3 py-1 text-xs font-medium text-[var(--crm-text)]"
             data-testid={`crm-activity-complete-${activity.id}`}
           >
             Complete
@@ -85,7 +85,7 @@ export function OpenActivityRow({
           <button
             type="button"
             onClick={onReschedule}
-            className="inline-flex min-h-9 items-center rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-200"
+            className="inline-flex min-h-10 items-center rounded-md border border-[var(--crm-border-strong)] px-3 py-1 text-xs font-medium text-[var(--crm-text)]"
             data-testid={`crm-activity-reschedule-${activity.id}`}
           >
             Reschedule
@@ -96,7 +96,7 @@ export function OpenActivityRow({
               <button
                 type="submit"
                 disabled={pending}
-                className="inline-flex min-h-9 items-center rounded-md border border-[var(--od-gold)]/40 px-3 py-1 text-xs font-medium text-[var(--od-gold)] disabled:opacity-60"
+                className="inline-flex min-h-10 items-center rounded-md border border-[var(--crm-primary)]/30 bg-[var(--crm-primary-soft)] px-3 py-1 text-xs font-medium text-[var(--crm-primary)] disabled:opacity-60"
                 data-testid={`crm-activity-make-primary-${activity.id}`}
               >
                 {pending ? "Updating…" : "Make Primary"}
@@ -107,7 +107,7 @@ export function OpenActivityRow({
             <button
               type="button"
               onClick={onTransfer}
-              className="inline-flex min-h-9 items-center rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300"
+              className="inline-flex min-h-9 items-center rounded-md border border-[var(--crm-border-strong)] px-3 py-1 text-xs font-medium text-[var(--crm-text-secondary)]"
               data-testid={`crm-activity-transfer-${activity.id}`}
             >
               Transfer Owner
@@ -139,18 +139,18 @@ export function ActivityHistoryList({ activities }: ActivityHistoryListProps) {
 
   return (
     <div className="mt-6" data-testid="crm-activity-history">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+      <h3 className="text-[12px] font-semibold text-[var(--crm-muted)]">
         Completed & cancelled
       </h3>
       <ul className="mt-3 space-y-2">
         {activities.map((activity) => (
           <li
             key={activity.id}
-            className="rounded-md border border-neutral-800/80 bg-neutral-950/30 px-3 py-2 text-xs text-neutral-400"
+            className="rounded-md border border-[var(--crm-border)]/80 bg-[var(--crm-surface-subtle)]/30 px-3 py-2 text-xs text-[var(--crm-muted)]"
             data-testid={`crm-history-activity-${activity.id}`}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium text-neutral-300">{activity.title}</span>
+              <span className="font-medium text-[var(--crm-text-secondary)]">{activity.title}</span>
               <span>{formatCrmCodeLabel(activity.status)}</span>
             </div>
             <p className="mt-1">
@@ -162,17 +162,17 @@ export function ActivityHistoryList({ activities }: ActivityHistoryListProps) {
                   : ""}
             </p>
             {activity.completedAt ? (
-              <p className="mt-1 text-neutral-500">
+              <p className="mt-1 text-[var(--crm-muted)]">
                 Completed {formatActivityTimestamp(activity.completedAt)}
               </p>
             ) : null}
             {activity.cancelledAt ? (
-              <p className="mt-1 text-neutral-500">
+              <p className="mt-1 text-[var(--crm-muted)]">
                 Cancelled {formatActivityTimestamp(activity.cancelledAt)}
               </p>
             ) : null}
             {activity.completionNote ? (
-              <p className="mt-1 text-neutral-500">{activity.completionNote}</p>
+              <p className="mt-1 text-[var(--crm-muted)]">{activity.completionNote}</p>
             ) : null}
           </li>
         ))}
