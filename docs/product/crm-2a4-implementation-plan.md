@@ -881,4 +881,44 @@ Activity composer UI, cards redesign, My Day, Calendar, Pipeline, Overview/Repor
 ## 41. Release-train position
 
 `2A-1` DB foundation → `2A-2` SLA foundation → `2A-3` activity RPCs → **`2A-4` app service + contracts (this plan)** → `2A-5` lead-detail activity UX → …
-)
+
+---
+
+## 42. Pre-merge input-contract corrections (2026-08-27, PR #102)
+
+Independent review found three fail-open FormData defects on head `1066d29`. Corrected on the same branch before merge authorization.
+
+### Parser architecture
+
+- Added strict `parseCreateLeadActivityForm`, `parseRescheduleLeadActivityForm`, `parseCompleteLeadActivityForm` returning `ActivityFormParseResult<T>`.
+- Internal `FieldParseResult<T>` helpers distinguish absent (defaults allowed), valid value, and explicit malformed (field error).
+- Server actions call form parsers first; on `success: false` return `VALIDATION_FAILED` (or `CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE`) with deterministic `fieldErrors` and **do not** invoke service/RPC.
+- Legacy `normalize*` + `validate*` remain for typed/service callers as a second boundary.
+
+### Locked semantics enforced
+
+| Field class | Absent/empty | Explicit malformed |
+| :--- | :--- | :--- |
+| `activityType` | validation error (required) | validation error |
+| `priority` / `nextPriority` | default `normal` | validation error |
+| `isPrimary` / `clearReminder` | default `false` | validation error |
+| `duration*` | `null` | validation error |
+| optional UUIDs | `null` | validation error (never coerce to null) |
+| timestamps | `null` | validation error (never coerce to null) |
+| absolute timestamps | — | must end with `Z` or `±HH:MM`; timezone-less rejected |
+
+### Cross-resolution complete payloads
+
+Form parser rejects non-empty fields incompatible with selected `resolution` with `VALIDATION_FAILED` on `resolution`. Unknown resolution → `VALIDATION_FAILED` on `resolution` (not `NEXT_ACTION_REQUIRED`). `CLOSED_WON` → dedicated business code.
+
+### Regression evidence (local)
+
+| Suite | Count | Result |
+| :--- | ---: | :--- |
+| `crm-activity-contracts.test.ts` | 38 | PASS |
+| `crm-activity-actions.test.ts` | 11 | PASS |
+| `crm-activity-service.test.ts` | 9 | PASS |
+| `npm run test:app` | full | PASS |
+| `npm run check` | lint + tsc + build | PASS |
+
+No SQL migration. No `database.generated.ts` churn. No managed Supabase mutation.

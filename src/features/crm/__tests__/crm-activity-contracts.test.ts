@@ -9,7 +9,6 @@ import {
   CRM_ACTIVITY_RESOLUTIONS,
   CRM_ACTIVITY_TYPES,
   normalizeCreateLeadActivityInput,
-  normalizeRescheduleLeadActivityInput,
   normalizeTransferActivityOwnershipInput,
   normalizeDesignatePrimaryNextActionInput,
   normalizeCompleteLeadActivityInput,
@@ -21,8 +20,10 @@ import {
   parseIsoTimestamp,
   parseNullableUuid,
   parseRequiredUuid,
+  parseCreateLeadActivityForm,
+  parseRescheduleLeadActivityForm,
+  parseCompleteLeadActivityForm,
   validateCreateLeadActivityInput,
-  validateRescheduleLeadActivityInput,
   validateTransferActivityOwnershipInput,
   validateDesignatePrimaryNextActionInput,
   validateCompleteLeadActivityInput,
@@ -98,12 +99,21 @@ describe("CRM 2A-4 form parsers", () => {
     assert.equal(parseIsoTimestamp(FUTURE), FUTURE);
     assert.equal(parseIsoTimestamp("not-a-date"), null);
     assert.equal(parseIsoTimestamp("01/02/2026"), null);
+    assert.equal(parseIsoTimestamp("2026-08-27T10:00"), null);
+    assert.equal(parseIsoTimestamp("2026-08-27T10:00:00"), null);
+    assert.equal(parseIsoTimestamp("2026-08-27"), null);
+    assert.equal(parseIsoTimestamp("2026-08-27T10:00:00Z"), "2026-08-27T10:00:00.000Z");
+    assert.equal(
+      parseIsoTimestamp("2026-08-27T10:00:00+05:30"),
+      "2026-08-27T04:30:00.000Z"
+    );
+    assert.equal(parseIsoTimestamp("2026-08-27T10:00:00+99:99"), null);
   });
 });
 
 describe("CRM 2A-4 create validation", () => {
   test("accepts valid create input", () => {
-    const input = normalizeCreateLeadActivityInput({
+    const parsed = parseCreateLeadActivityForm({
       leadId: LEAD_ID,
       activityType: "call",
       title: "  Call back  ",
@@ -115,8 +125,106 @@ describe("CRM 2A-4 create validation", () => {
       reminderAt: PAST,
       quotationId: null,
     });
-    assert.equal(input.title, "Call back");
-    assert.equal(validateCreateLeadActivityInput(input).length, 0);
+    assert.equal(parsed.success, true);
+    if (parsed.success) {
+      assert.equal(parsed.input.title, "Call back");
+    }
+  });
+
+  test("omitted priority defaults to normal and omitted isPrimary defaults false", () => {
+    const parsed = parseCreateLeadActivityForm({
+      leadId: LEAD_ID,
+      activityType: "call",
+      title: "Call",
+      dueAt: FUTURE,
+    });
+    assert.equal(parsed.success, true);
+    if (parsed.success) {
+      assert.equal(parsed.input.priority, "normal");
+      assert.equal(parsed.input.isPrimary, false);
+      assert.equal(parsed.input.ownerId, null);
+      assert.equal(parsed.input.durationMinutes, null);
+      assert.equal(parsed.input.reminderAt, null);
+      assert.equal(parsed.input.quotationId, null);
+    }
+  });
+
+  test("rejects malformed explicit create fields instead of coercing", () => {
+    const base = {
+      leadId: LEAD_ID,
+      title: "Call",
+      dueAt: FUTURE,
+    };
+
+    const activityType = parseCreateLeadActivityForm({
+      ...base,
+      activityType: "CALL",
+    });
+    assert.equal(activityType.success, false);
+    if (!activityType.success) {
+      assert.equal(activityType.code, "VALIDATION_FAILED");
+      assert.ok(activityType.fieldErrors.activityType);
+    }
+
+    const priority = parseCreateLeadActivityForm({
+      ...base,
+      activityType: "call",
+      priority: "medium",
+    });
+    assert.equal(priority.success, false);
+    if (!priority.success) {
+      assert.ok(priority.fieldErrors.priority);
+    }
+
+    const isPrimary = parseCreateLeadActivityForm({
+      ...base,
+      activityType: "call",
+      isPrimary: "yes",
+    });
+    assert.equal(isPrimary.success, false);
+    if (!isPrimary.success) {
+      assert.ok(isPrimary.fieldErrors.isPrimary);
+    }
+
+    const duration = parseCreateLeadActivityForm({
+      ...base,
+      activityType: "call",
+      durationMinutes: "abc",
+    });
+    assert.equal(duration.success, false);
+    if (!duration.success) {
+      assert.ok(duration.fieldErrors.durationMinutes);
+    }
+
+    const ownerId = parseCreateLeadActivityForm({
+      ...base,
+      activityType: "call",
+      ownerId: "bad",
+    });
+    assert.equal(ownerId.success, false);
+    if (!ownerId.success) {
+      assert.ok(ownerId.fieldErrors.ownerId);
+    }
+
+    const quotationId = parseCreateLeadActivityForm({
+      ...base,
+      activityType: "call",
+      quotationId: "bad",
+    });
+    assert.equal(quotationId.success, false);
+    if (!quotationId.success) {
+      assert.ok(quotationId.fieldErrors.quotationId);
+    }
+
+    const reminderAt = parseCreateLeadActivityForm({
+      ...base,
+      activityType: "call",
+      reminderAt: "bad",
+    });
+    assert.equal(reminderAt.success, false);
+    if (!reminderAt.success) {
+      assert.ok(reminderAt.fieldErrors.reminderAt);
+    }
   });
 
   test("rejects invalid title / duration / reminder / type", () => {
@@ -179,42 +287,72 @@ describe("CRM 2A-4 create validation", () => {
 
 describe("CRM 2A-4 reschedule validation", () => {
   test("requires future due and distinct reminder modes", () => {
-    assert.ok(
-      validateRescheduleLeadActivityInput(
-        normalizeRescheduleLeadActivityInput({
-          activityId: ACTIVITY_ID,
-          dueAt: PAST,
-          clearReminder: false,
-        })
-      ).some((e) => e.field === "dueAt")
-    );
+    const pastDue = parseRescheduleLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      dueAt: PAST,
+      clearReminder: false,
+    });
+    assert.equal(pastDue.success, false);
+    if (!pastDue.success) {
+      assert.ok(pastDue.fieldErrors.dueAt);
+    }
 
-    const unchanged = normalizeRescheduleLeadActivityInput({
+    const unchanged = parseRescheduleLeadActivityForm({
       activityId: ACTIVITY_ID,
       dueAt: FUTURE,
       clearReminder: false,
     });
-    assert.equal(unchanged.clearReminder, false);
-    assert.equal(unchanged.reminderAt, null);
-    assert.equal(validateRescheduleLeadActivityInput(unchanged).length, 0);
+    assert.equal(unchanged.success, true);
+    if (unchanged.success) {
+      assert.equal(unchanged.input.clearReminder, false);
+      assert.equal(unchanged.input.reminderAt, null);
+    }
 
-    const cleared = normalizeRescheduleLeadActivityInput({
+    const cleared = parseRescheduleLeadActivityForm({
       activityId: ACTIVITY_ID,
       dueAt: FUTURE,
       clearReminder: true,
       reminderAt: PAST,
     });
-    assert.equal(cleared.clearReminder, true);
-    assert.equal(cleared.reminderAt, null);
+    assert.equal(cleared.success, true);
+    if (cleared.success) {
+      assert.equal(cleared.input.clearReminder, true);
+      assert.equal(cleared.input.reminderAt, null);
+    }
 
-    const set = normalizeRescheduleLeadActivityInput({
+    const set = parseRescheduleLeadActivityForm({
       activityId: ACTIVITY_ID,
       dueAt: FUTURE,
       reminderAt: PAST,
       clearReminder: false,
     });
-    assert.equal(set.reminderAt, PAST);
-    assert.equal(validateRescheduleLeadActivityInput(set).length, 0);
+    assert.equal(set.success, true);
+    if (set.success) {
+      assert.equal(set.input.reminderAt, PAST);
+    }
+  });
+
+  test("rejects malformed explicit reschedule fields", () => {
+    const clearReminder = parseRescheduleLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      dueAt: FUTURE,
+      clearReminder: "yes",
+    });
+    assert.equal(clearReminder.success, false);
+    if (!clearReminder.success) {
+      assert.ok(clearReminder.fieldErrors.clearReminder);
+    }
+
+    const reminderAt = parseRescheduleLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      dueAt: FUTURE,
+      reminderAt: "bad",
+      clearReminder: false,
+    });
+    assert.equal(reminderAt.success, false);
+    if (!reminderAt.success) {
+      assert.ok(reminderAt.fieldErrors.reminderAt);
+    }
   });
 });
 
@@ -245,27 +383,166 @@ describe("CRM 2A-4 transfer / designate validation", () => {
 
 describe("CRM 2A-4 complete discriminated union", () => {
   test("NONE accepts minimal payload", () => {
-    const input = normalizeCompleteLeadActivityInput({
+    const parsed = parseCompleteLeadActivityForm({
       activityId: ACTIVITY_ID,
       outcomeCode: "connected",
       resolution: "NONE",
     });
-    assert.equal(input.resolution, "NONE");
-    assert.equal(validateCompleteLeadActivityInput(input).length, 0);
+    assert.equal(parsed.success, true);
+    if (parsed.success) {
+      assert.equal(parsed.input.resolution, "NONE");
+    }
   });
 
-  test("CLOSED_WON cannot normalize", () => {
-    assert.throws(() =>
-      normalizeCompleteLeadActivityInput({
-        activityId: ACTIVITY_ID,
-        outcomeCode: "connected",
-        resolution: "CLOSED_WON",
-      })
-    );
+  test("CLOSED_WON returns dedicated business code", () => {
+    const parsed = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "CLOSED_WON",
+    });
+    assert.equal(parsed.success, false);
+    if (!parsed.success) {
+      assert.equal(parsed.code, "CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE");
+    }
+  });
+
+  test("unknown resolution is VALIDATION_FAILED on resolution", () => {
+    const parsed = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "garbage",
+    });
+    assert.equal(parsed.success, false);
+    if (!parsed.success) {
+      assert.equal(parsed.code, "VALIDATION_FAILED");
+      assert.ok(parsed.fieldErrors.resolution);
+    }
+  });
+
+  test("rejects cross-resolution payload fields", () => {
+    const noneWithNext = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "NONE",
+      nextTitle: "Follow up",
+    });
+    assert.equal(noneWithNext.success, false);
+    if (!noneWithNext.success) {
+      assert.ok(noneWithNext.fieldErrors.resolution);
+    }
+
+    const nextWithOnHold = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "NEXT_PRIMARY",
+      nextActivityType: "call",
+      nextTitle: "Next",
+      nextDueAt: FUTURE,
+      onHoldReason: "Waiting",
+    });
+    assert.equal(nextWithOnHold.success, false);
+    if (!nextWithOnHold.success) {
+      assert.ok(nextWithOnHold.fieldErrors.resolution);
+    }
+
+    const onHoldWithClosedLost = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "needs_manager",
+      resolution: "ON_HOLD",
+      onHoldReason: "Budget",
+      onHoldReviewAt: FUTURE,
+      closedLostReason: "No budget",
+    });
+    assert.equal(onHoldWithClosedLost.success, false);
+    if (!onHoldWithClosedLost.success) {
+      assert.ok(onHoldWithClosedLost.fieldErrors.resolution);
+    }
+
+    const closedLostWithNext = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "not_interested",
+      resolution: "CLOSED_LOST",
+      closedLostReason: "No budget",
+      nextDueAt: FUTURE,
+    });
+    assert.equal(closedLostWithNext.success, false);
+    if (!closedLostWithNext.success) {
+      assert.ok(closedLostWithNext.fieldErrors.resolution);
+    }
+  });
+
+  test("rejects malformed explicit complete/next fields", () => {
+    const whatsapp = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "NONE",
+      whatsappSendIntentId: "bad",
+    });
+    assert.equal(whatsapp.success, false);
+    if (!whatsapp.success) {
+      assert.ok(whatsapp.fieldErrors.whatsappSendIntentId);
+    }
+
+    const nextBase = {
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "NEXT_PRIMARY" as const,
+      nextTitle: "Next",
+      nextDueAt: FUTURE,
+    };
+
+    const nextActivityType = parseCompleteLeadActivityForm({
+      ...nextBase,
+      nextActivityType: "CALL",
+    });
+    assert.equal(nextActivityType.success, false);
+    if (!nextActivityType.success) {
+      assert.ok(nextActivityType.fieldErrors.nextActivityType);
+    }
+
+    const nextPriority = parseCompleteLeadActivityForm({
+      ...nextBase,
+      nextActivityType: "call",
+      nextPriority: "medium",
+    });
+    assert.equal(nextPriority.success, false);
+    if (!nextPriority.success) {
+      assert.ok(nextPriority.fieldErrors.nextPriority);
+    }
+
+    const nextDuration = parseCompleteLeadActivityForm({
+      ...nextBase,
+      nextActivityType: "call",
+      nextDurationMinutes: "abc",
+    });
+    assert.equal(nextDuration.success, false);
+    if (!nextDuration.success) {
+      assert.ok(nextDuration.fieldErrors.nextDurationMinutes);
+    }
+
+    const nextQuotationId = parseCompleteLeadActivityForm({
+      ...nextBase,
+      nextActivityType: "call",
+      nextQuotationId: "bad",
+    });
+    assert.equal(nextQuotationId.success, false);
+    if (!nextQuotationId.success) {
+      assert.ok(nextQuotationId.fieldErrors.nextQuotationId);
+    }
+
+    const nextReminderAt = parseCompleteLeadActivityForm({
+      ...nextBase,
+      nextActivityType: "call",
+      nextReminderAt: "bad",
+    });
+    assert.equal(nextReminderAt.success, false);
+    if (!nextReminderAt.success) {
+      assert.ok(nextReminderAt.fieldErrors.nextReminderAt);
+    }
   });
 
   test("NEXT_PRIMARY requires next fields and future due", () => {
-    const bad = normalizeCompleteLeadActivityInput({
+    const bad = parseCompleteLeadActivityForm({
       activityId: ACTIVITY_ID,
       outcomeCode: "connected",
       resolution: "NEXT_PRIMARY",
@@ -273,11 +550,13 @@ describe("CRM 2A-4 complete discriminated union", () => {
       nextTitle: "",
       nextDueAt: PAST,
     });
-    const errors = validateCompleteLeadActivityInput(bad);
-    assert.ok(errors.some((e) => e.field === "nextTitle"));
-    assert.ok(errors.some((e) => e.field === "nextDueAt"));
+    assert.equal(bad.success, false);
+    if (!bad.success) {
+      assert.ok(bad.fieldErrors.nextTitle);
+      assert.ok(bad.fieldErrors.nextDueAt);
+    }
 
-    const good = normalizeCompleteLeadActivityInput({
+    const good = parseCompleteLeadActivityForm({
       activityId: ACTIVITY_ID,
       outcomeCode: "connected",
       resolution: "NEXT_PRIMARY",
@@ -287,48 +566,62 @@ describe("CRM 2A-4 complete discriminated union", () => {
       nextPriority: "normal",
       nextDurationMinutes: 45,
     });
-    assert.equal(validateCompleteLeadActivityInput(good).length, 0);
+    assert.equal(good.success, true);
   });
 
   test("ON_HOLD requires reason and future review", () => {
-    const bad = normalizeCompleteLeadActivityInput({
+    const bad = parseCompleteLeadActivityForm({
       activityId: ACTIVITY_ID,
       outcomeCode: "needs_manager",
       resolution: "ON_HOLD",
       onHoldReason: "",
       onHoldReviewAt: PAST,
     });
-    const errors = validateCompleteLeadActivityInput(bad);
-    assert.ok(errors.some((e) => e.field === "onHoldReason"));
-    assert.ok(errors.some((e) => e.field === "onHoldReviewAt"));
+    assert.equal(bad.success, false);
+    if (!bad.success) {
+      assert.ok(bad.fieldErrors.onHoldReason);
+      assert.ok(bad.fieldErrors.onHoldReviewAt);
+    }
   });
 
   test("CLOSED_LOST requires reason", () => {
-    const bad = normalizeCompleteLeadActivityInput({
+    const bad = parseCompleteLeadActivityForm({
       activityId: ACTIVITY_ID,
       outcomeCode: "not_interested",
       resolution: "CLOSED_LOST",
       closedLostReason: "  ",
     });
-    assert.ok(
-      validateCompleteLeadActivityInput(bad).some(
-        (e) => e.field === "closedLostReason"
-      )
-    );
+    assert.equal(bad.success, false);
+    if (!bad.success) {
+      assert.ok(bad.fieldErrors.closedLostReason);
+    }
   });
 
   test("completion note max 1000", () => {
-    const input = normalizeCompleteLeadActivityInput({
+    const parsed = parseCompleteLeadActivityForm({
       activityId: ACTIVITY_ID,
       outcomeCode: "connected",
       resolution: "NONE",
       completionNote: "x".repeat(1001),
     });
-    assert.ok(
-      validateCompleteLeadActivityInput(input).some(
-        (e) => e.field === "completionNote"
-      )
-    );
+    assert.equal(parsed.success, false);
+    if (!parsed.success) {
+      assert.ok(parsed.fieldErrors.completionNote);
+    }
+  });
+
+  test("legacy normalize still builds typed complete payloads for service callers", () => {
+    const input = normalizeCompleteLeadActivityInput({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "NEXT_PRIMARY",
+      nextActivityType: "call",
+      nextTitle: "Next call",
+      nextDueAt: FUTURE,
+      nextPriority: "normal",
+      nextDurationMinutes: 45,
+    });
+    assert.equal(validateCompleteLeadActivityInput(input).length, 0);
   });
 });
 

@@ -3,15 +3,12 @@
 import { revalidatePath } from "next/cache";
 import {
   activityFieldErrorsToRecord,
-  normalizeCompleteLeadActivityInput,
-  normalizeCreateLeadActivityInput,
+  parseCompleteLeadActivityForm,
+  parseCreateLeadActivityForm,
+  parseRescheduleLeadActivityForm,
   normalizeDesignatePrimaryNextActionInput,
-  normalizeRescheduleLeadActivityInput,
   normalizeTransferActivityOwnershipInput,
-  validateCompleteLeadActivityInput,
-  validateCreateLeadActivityInput,
   validateDesignatePrimaryNextActionInput,
-  validateRescheduleLeadActivityInput,
   validateTransferActivityOwnershipInput,
   type CrmActivityActionState,
 } from "../contracts/activity-contracts.ts";
@@ -104,7 +101,7 @@ export async function createLeadActivityAction(
   formData: FormData
 ): Promise<CrmActivityActionState> {
   try {
-    const input = normalizeCreateLeadActivityInput({
+    const parsed = parseCreateLeadActivityForm({
       leadId: formData.get("leadId"),
       activityType: formData.get("activityType"),
       title: formData.get("title"),
@@ -116,17 +113,16 @@ export async function createLeadActivityAction(
       reminderAt: formData.get("reminderAt"),
       quotationId: formData.get("quotationId"),
     });
-    const fieldErrors = validateCreateLeadActivityInput(input);
-    if (fieldErrors.length > 0) {
+    if (!parsed.success) {
       return {
         success: false,
-        message: fieldErrors[0]?.message ?? "Validation failed.",
-        code: "VALIDATION_FAILED",
-        fieldErrors: activityFieldErrorsToRecord(fieldErrors),
+        message: parsed.message,
+        code: parsed.code,
+        fieldErrors: parsed.fieldErrors,
       };
     }
 
-    const result = await createLeadActivityForCurrentUser(input);
+    const result = await createLeadActivityForCurrentUser(parsed.input);
     revalidateActivityPaths(result.leadId);
     return {
       success: true,
@@ -150,23 +146,22 @@ export async function rescheduleLeadActivityAction(
   formData: FormData
 ): Promise<CrmActivityActionState> {
   try {
-    const input = normalizeRescheduleLeadActivityInput({
+    const parsed = parseRescheduleLeadActivityForm({
       activityId: formData.get("activityId"),
       dueAt: formData.get("dueAt"),
       reminderAt: formData.get("reminderAt"),
       clearReminder: formData.get("clearReminder"),
     });
-    const fieldErrors = validateRescheduleLeadActivityInput(input);
-    if (fieldErrors.length > 0) {
+    if (!parsed.success) {
       return {
         success: false,
-        message: fieldErrors[0]?.message ?? "Validation failed.",
-        code: "VALIDATION_FAILED",
-        fieldErrors: activityFieldErrorsToRecord(fieldErrors),
+        message: parsed.message,
+        code: parsed.code,
+        fieldErrors: parsed.fieldErrors,
       };
     }
 
-    const result = await rescheduleLeadActivityForCurrentUser(input);
+    const result = await rescheduleLeadActivityForCurrentUser(parsed.input);
     revalidateActivityPaths(result.leadId);
     return {
       success: true,
@@ -259,7 +254,7 @@ export async function completeLeadActivityAction(
   formData: FormData
 ): Promise<CrmActivityActionState> {
   try {
-    const input = normalizeCompleteLeadActivityInput({
+    const parsed = parseCompleteLeadActivityForm({
       activityId: formData.get("activityId"),
       outcomeCode: formData.get("outcomeCode"),
       completionNote: formData.get("completionNote"),
@@ -277,23 +272,31 @@ export async function completeLeadActivityAction(
       closedLostReason: formData.get("closedLostReason"),
       closureReasonCode: formData.get("closureReasonCode"),
     });
-    const fieldErrors = validateCompleteLeadActivityInput(input);
-    if (fieldErrors.length > 0) {
+    if (!parsed.success) {
+      if (parsed.code === "CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE") {
+        const mapped = crmErrorFromPostgresMessage(parsed.code);
+        return {
+          success: false,
+          message: mapped.message,
+          code: mapped.code,
+          fieldErrors: parsed.fieldErrors,
+        };
+      }
       return {
         success: false,
-        message: fieldErrors[0]?.message ?? "Validation failed.",
-        code: "VALIDATION_FAILED",
-        fieldErrors: activityFieldErrorsToRecord(fieldErrors),
+        message: parsed.message,
+        code: parsed.code,
+        fieldErrors: parsed.fieldErrors,
       };
     }
 
-    const result = await completeLeadActivityForCurrentUser(input);
+    const result = await completeLeadActivityForCurrentUser(parsed.input);
     revalidateActivityPaths(result.leadId);
 
     let message = "Activity completed.";
-    if (input.resolution === "ON_HOLD") {
+    if (parsed.input.resolution === "ON_HOLD") {
       message = "Activity completed and lead placed on hold.";
-    } else if (input.resolution === "CLOSED_LOST") {
+    } else if (parsed.input.resolution === "CLOSED_LOST") {
       message = "Activity completed and lead closed lost.";
     }
 

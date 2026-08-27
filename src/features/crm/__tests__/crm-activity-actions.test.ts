@@ -8,11 +8,9 @@ import { join } from "node:path";
 import { describe, test } from "node:test";
 import {
   INITIAL_CRM_ACTIVITY_ACTION_STATE,
-  normalizeCompleteLeadActivityInput,
-  normalizeCreateLeadActivityInput,
-  normalizeRescheduleLeadActivityInput,
-  validateCreateLeadActivityInput,
-  validateRescheduleLeadActivityInput,
+  parseCompleteLeadActivityForm,
+  parseCreateLeadActivityForm,
+  parseRescheduleLeadActivityForm,
 } from "../contracts/activity-contracts.ts";
 import { crmErrorFromPostgresMessage } from "../server/crm-errors.ts";
 
@@ -97,15 +95,15 @@ describe("CRM 2A-4 activity actions (static architecture)", () => {
   });
 
   test("CLOSED_WON form resolution maps to dedicated safe error", () => {
-    assert.throws(
-      () =>
-        normalizeCompleteLeadActivityInput({
-          activityId: ACTIVITY_ID,
-          outcomeCode: "connected",
-          resolution: "CLOSED_WON",
-        }),
-      /CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE/
-    );
+    const parsed = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "CLOSED_WON",
+    });
+    assert.equal(parsed.success, false);
+    if (!parsed.success) {
+      assert.equal(parsed.code, "CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE");
+    }
     const mapped = crmErrorFromPostgresMessage(
       "CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE"
     );
@@ -115,33 +113,78 @@ describe("CRM 2A-4 activity actions (static architecture)", () => {
   });
 
   test("create FormData-shaped input yields deterministic fieldErrors", () => {
-    const input = normalizeCreateLeadActivityInput({
+    const parsed = parseCreateLeadActivityForm({
       leadId: "not-a-uuid",
       activityType: "call",
       title: "Call",
       dueAt: FUTURE,
     });
-    const errors = validateCreateLeadActivityInput(input);
-    assert.ok(errors.some((entry) => entry.field === "leadId"));
+    assert.equal(parsed.success, false);
+    if (!parsed.success) {
+      assert.equal(parsed.code, "VALIDATION_FAILED");
+      assert.ok(parsed.fieldErrors.leadId);
+    }
+  });
+
+  test("malformed ownerId fails validation without reaching service layer", () => {
+    const parsed = parseCreateLeadActivityForm({
+      leadId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      activityType: "call",
+      title: "Call",
+      dueAt: FUTURE,
+      ownerId: "bad",
+    });
+    assert.equal(parsed.success, false);
+    if (!parsed.success) {
+      assert.ok(parsed.fieldErrors.ownerId);
+    }
   });
 
   test("reschedule FormData-shaped input requires future due", () => {
-    const input = normalizeRescheduleLeadActivityInput({
+    const parsed = parseRescheduleLeadActivityForm({
       activityId: ACTIVITY_ID,
       dueAt: new Date(Date.now() - 60_000).toISOString(),
       clearReminder: "false",
     });
-    const errors = validateRescheduleLeadActivityInput(input);
-    assert.ok(errors.some((entry) => entry.field === "dueAt"));
+    assert.equal(parsed.success, false);
+    if (!parsed.success) {
+      assert.ok(parsed.fieldErrors.dueAt);
+    }
   });
 
-  test("action module catches CLOSED_WON normalize throw via token mapping", () => {
+  test("action module uses strict form parsers before service calls", () => {
+    const src = readFileSync(
+      join(root, "src/features/crm/server/crm-activity-actions.ts"),
+      "utf8"
+    );
+    assert.match(src, /parseCreateLeadActivityForm/);
+    assert.match(src, /parseRescheduleLeadActivityForm/);
+    assert.match(src, /parseCompleteLeadActivityForm/);
+    assert.match(src, /if \(!parsed\.success\)/);
+    assert.match(
+      src,
+      /const result = await createLeadActivityForCurrentUser\(parsed\.input\);/
+    );
+    assert.match(
+      src,
+      /const result = await rescheduleLeadActivityForCurrentUser\(parsed\.input\);/
+    );
+    assert.match(
+      src,
+      /const result = await completeLeadActivityForCurrentUser\(parsed\.input\);/
+    );
+    assert.doesNotMatch(src, /normalizeCreateLeadActivityInput/);
+    assert.doesNotMatch(src, /normalizeRescheduleLeadActivityInput/);
+    assert.doesNotMatch(src, /normalizeCompleteLeadActivityInput/);
+  });
+
+  test("action module maps CLOSED_WON parse code via crmErrorFromPostgresMessage", () => {
     const src = readFileSync(
       join(root, "src/features/crm/server/crm-activity-actions.ts"),
       "utf8"
     );
     assert.match(src, /CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE/);
-    assert.match(src, /normalizeCompleteLeadActivityInput/);
+    assert.match(src, /parseCompleteLeadActivityForm/);
   });
 });
 

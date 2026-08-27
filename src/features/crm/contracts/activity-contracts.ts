@@ -235,6 +235,9 @@ export function parseIntegerFormValue(value: unknown): number | null {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
+const ABSOLUTE_TIMESTAMP_SUFFIX = /(?:Z|[+-]\d{2}:\d{2})$/;
+
+/** Requires `Z` or explicit numeric offset — rejects timezone-less local strings. */
 export function parseIsoTimestamp(value: unknown): string | null {
   if (value == null) {
     return null;
@@ -243,8 +246,10 @@ export function parseIsoTimestamp(value: unknown): string | null {
   if (raw.length === 0) {
     return null;
   }
-  // Reject locale-style slash dates; require ISO-like absolute timestamps.
-  if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(raw)) {
+    return null;
+  }
+  if (!ABSOLUTE_TIMESTAMP_SUFFIX.test(raw)) {
     return null;
   }
   const ms = Date.parse(raw);
@@ -252,6 +257,206 @@ export function parseIsoTimestamp(value: unknown): string | null {
     return null;
   }
   return new Date(ms).toISOString();
+}
+
+type FieldParseResult<T> =
+  | { readonly kind: "absent" }
+  | { readonly kind: "value"; readonly value: T }
+  | { readonly kind: "error"; readonly message: string };
+
+export type ActivityFormParseResult<T> =
+  | { readonly success: true; readonly input: T }
+  | {
+      readonly success: false;
+      readonly message: string;
+      readonly code: "VALIDATION_FAILED" | "CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE";
+      readonly fieldErrors: Readonly<Record<string, string>>;
+    };
+
+function trimFormValue(value: unknown): string {
+  if (value == null) {
+    return "";
+  }
+  return String(value).trim();
+}
+
+function isFormValueAbsent(value: unknown): boolean {
+  const raw = trimFormValue(value);
+  return raw.length === 0 || raw === "null";
+}
+
+function isFormValuePresent(value: unknown): boolean {
+  return !isFormValueAbsent(value);
+}
+
+function pushFieldParseError(
+  errors: ActivityFieldError[],
+  field: string,
+  result: FieldParseResult<unknown>
+): void {
+  if (result.kind === "error") {
+    errors.push({ field, message: result.message });
+  }
+}
+
+function parseRequiredString(
+  value: unknown,
+  field: string,
+  message = `${field} is required.`
+): FieldParseResult<string> {
+  if (isFormValueAbsent(value)) {
+    return { kind: "error", message };
+  }
+  return { kind: "value", value: trimFormValue(value) };
+}
+
+function parseRequiredActivityType(value: unknown): FieldParseResult<CrmActivityType> {
+  const raw = parseRequiredString(
+    value,
+    "activityType",
+    "Activity type is required."
+  );
+  if (raw.kind === "error") {
+    return raw;
+  }
+  if (raw.kind !== "value") {
+    return { kind: "error", message: "Activity type is required." };
+  }
+  const parsed = parseActivityType(raw.value);
+  if (!parsed) {
+    return { kind: "error", message: "Activity type is invalid." };
+  }
+  return { kind: "value", value: parsed };
+}
+
+function parseRequiredActivityTypeField(
+  value: unknown,
+  requiredMessage: string,
+  invalidMessage = "Activity type is invalid."
+): FieldParseResult<CrmActivityType> {
+  if (isFormValueAbsent(value)) {
+    return { kind: "error", message: requiredMessage };
+  }
+  const parsed = parseActivityType(trimFormValue(value));
+  if (!parsed) {
+    return { kind: "error", message: invalidMessage };
+  }
+  return { kind: "value", value: parsed };
+}
+
+function parseOptionalPriorityWithDefault(
+  value: unknown,
+  invalidMessage = "Priority is invalid."
+): FieldParseResult<CrmActivityPriority> {
+  if (isFormValueAbsent(value)) {
+    return { kind: "value", value: "normal" };
+  }
+  const parsed = parseActivityPriority(trimFormValue(value));
+  if (!parsed) {
+    return { kind: "error", message: invalidMessage };
+  }
+  return { kind: "value", value: parsed };
+}
+
+function parseOptionalBooleanWithDefault(
+  value: unknown,
+  defaultValue: boolean,
+  invalidMessage: string
+): FieldParseResult<boolean> {
+  if (isFormValueAbsent(value)) {
+    return { kind: "value", value: defaultValue };
+  }
+  const parsed = parseBooleanFormValue(value);
+  if (parsed === null) {
+    return { kind: "error", message: invalidMessage };
+  }
+  return { kind: "value", value: parsed };
+}
+
+function parseOptionalIntegerField(
+  value: unknown
+): FieldParseResult<number | null> {
+  if (isFormValueAbsent(value)) {
+    return { kind: "value", value: null };
+  }
+  const parsed = parseIntegerFormValue(value);
+  if (parsed === null) {
+    return { kind: "error", message: "Duration must be a whole number." };
+  }
+  return { kind: "value", value: parsed };
+}
+
+function parseOptionalUuidField(
+  value: unknown,
+  invalidMessage: string
+): FieldParseResult<string | null> {
+  if (isFormValueAbsent(value)) {
+    return { kind: "value", value: null };
+  }
+  const raw = trimFormValue(value);
+  if (!isUuid(raw)) {
+    return { kind: "error", message: invalidMessage };
+  }
+  return { kind: "value", value: raw };
+}
+
+function parseRequiredAbsoluteTimestampField(
+  value: unknown
+): FieldParseResult<string> {
+  if (isFormValueAbsent(value)) {
+    return {
+      kind: "error",
+      message: "Due date and time are required.",
+    };
+  }
+  const parsed = parseIsoTimestamp(trimFormValue(value));
+  if (!parsed) {
+    return {
+      kind: "error",
+      message:
+        "Date and time must be an absolute ISO timestamp with Z or a numeric offset.",
+    };
+  }
+  return { kind: "value", value: parsed };
+}
+
+function parseOptionalAbsoluteTimestampField(
+  value: unknown
+): FieldParseResult<string | null> {
+  if (isFormValueAbsent(value)) {
+    return { kind: "value", value: null };
+  }
+  const parsed = parseIsoTimestamp(trimFormValue(value));
+  if (!parsed) {
+    return {
+      kind: "error",
+      message:
+        "Date and time must be an absolute ISO timestamp with Z or a numeric offset.",
+    };
+  }
+  return { kind: "value", value: parsed };
+}
+
+function formFailure(
+  fieldErrors: readonly ActivityFieldError[],
+  code: "VALIDATION_FAILED" | "CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE" = "VALIDATION_FAILED"
+): ActivityFormParseResult<never> {
+  const record = activityFieldErrorsToRecord(fieldErrors);
+  return {
+    success: false,
+    code,
+    message: fieldErrors[0]?.message ?? "Validation failed.",
+    fieldErrors: record,
+  };
+}
+
+function closedWonFailure(): ActivityFormParseResult<never> {
+  return {
+    success: false,
+    code: "CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE",
+    message: "Closed Won is created only through accepted quotation.",
+    fieldErrors: {},
+  };
 }
 
 function trimNullableText(value: unknown): string | null {
@@ -306,6 +511,346 @@ export function activityFieldErrorsToRecord(
   errors: readonly ActivityFieldError[]
 ): Record<string, string> {
   return Object.fromEntries(errors.map((entry) => [entry.field, entry.message]));
+}
+
+const CROSS_RESOLUTION_MESSAGE =
+  "Resolution payload includes fields that are not allowed for the selected resolution.";
+
+type CompleteLeadActivityFormRaw = {
+  activityId: unknown;
+  outcomeCode: unknown;
+  completionNote?: unknown;
+  whatsappSendIntentId?: unknown;
+  resolution: unknown;
+  nextActivityType?: unknown;
+  nextTitle?: unknown;
+  nextDueAt?: unknown;
+  nextPriority?: unknown;
+  nextDurationMinutes?: unknown;
+  nextReminderAt?: unknown;
+  nextQuotationId?: unknown;
+  onHoldReason?: unknown;
+  onHoldReviewAt?: unknown;
+  closedLostReason?: unknown;
+  closureReasonCode?: unknown;
+};
+
+function hasNextPrimaryPayload(raw: CompleteLeadActivityFormRaw): boolean {
+  return (
+    isFormValuePresent(raw.nextActivityType) ||
+    isFormValuePresent(raw.nextTitle) ||
+    isFormValuePresent(raw.nextDueAt) ||
+    isFormValuePresent(raw.nextPriority) ||
+    isFormValuePresent(raw.nextDurationMinutes) ||
+    isFormValuePresent(raw.nextReminderAt) ||
+    isFormValuePresent(raw.nextQuotationId)
+  );
+}
+
+function hasOnHoldPayload(raw: CompleteLeadActivityFormRaw): boolean {
+  return (
+    isFormValuePresent(raw.onHoldReason) ||
+    isFormValuePresent(raw.onHoldReviewAt)
+  );
+}
+
+function hasClosedLostPayload(raw: CompleteLeadActivityFormRaw): boolean {
+  return (
+    isFormValuePresent(raw.closedLostReason) ||
+    isFormValuePresent(raw.closureReasonCode)
+  );
+}
+
+function crossResolutionFieldErrors(
+  resolution: CrmActivityResolution,
+  raw: CompleteLeadActivityFormRaw
+): ActivityFieldError[] {
+  const hasNext = hasNextPrimaryPayload(raw);
+  const hasOnHold = hasOnHoldPayload(raw);
+  const hasClosedLost = hasClosedLostPayload(raw);
+
+  if (resolution === "NONE" && (hasNext || hasOnHold || hasClosedLost)) {
+    return [{ field: "resolution", message: CROSS_RESOLUTION_MESSAGE }];
+  }
+  if (resolution === "NEXT_PRIMARY" && (hasOnHold || hasClosedLost)) {
+    return [{ field: "resolution", message: CROSS_RESOLUTION_MESSAGE }];
+  }
+  if (resolution === "ON_HOLD" && (hasNext || hasClosedLost)) {
+    return [{ field: "resolution", message: CROSS_RESOLUTION_MESSAGE }];
+  }
+  if (resolution === "CLOSED_LOST" && (hasNext || hasOnHold)) {
+    return [{ field: "resolution", message: CROSS_RESOLUTION_MESSAGE }];
+  }
+  return [];
+}
+
+function unwrapFieldValue<T>(result: FieldParseResult<T>): T {
+  if (result.kind !== "value") {
+    throw new Error("Expected parsed field value.");
+  }
+  return result.value;
+}
+
+export function parseCreateLeadActivityForm(raw: {
+  leadId: unknown;
+  activityType: unknown;
+  title: unknown;
+  dueAt: unknown;
+  priority?: unknown;
+  ownerId?: unknown;
+  isPrimary?: unknown;
+  durationMinutes?: unknown;
+  reminderAt?: unknown;
+  quotationId?: unknown;
+}): ActivityFormParseResult<CreateLeadActivityInput> {
+  const errors: ActivityFieldError[] = [];
+
+  const activityType = parseRequiredActivityType(raw.activityType);
+  pushFieldParseError(errors, "activityType", activityType);
+
+  const priority = parseOptionalPriorityWithDefault(raw.priority);
+  pushFieldParseError(errors, "priority", priority);
+
+  const dueAt = parseRequiredAbsoluteTimestampField(raw.dueAt);
+  pushFieldParseError(errors, "dueAt", dueAt);
+
+  const isPrimary = parseOptionalBooleanWithDefault(
+    raw.isPrimary,
+    false,
+    "Primary flag is invalid."
+  );
+  pushFieldParseError(errors, "isPrimary", isPrimary);
+
+  const durationMinutes = parseOptionalIntegerField(raw.durationMinutes);
+  pushFieldParseError(errors, "durationMinutes", durationMinutes);
+
+  const ownerId = parseOptionalUuidField(
+    raw.ownerId,
+    "Owner identifier is invalid."
+  );
+  pushFieldParseError(errors, "ownerId", ownerId);
+
+  const reminderAt = parseOptionalAbsoluteTimestampField(raw.reminderAt);
+  pushFieldParseError(errors, "reminderAt", reminderAt);
+
+  const quotationId = parseOptionalUuidField(
+    raw.quotationId,
+    "Quotation identifier is invalid."
+  );
+  pushFieldParseError(errors, "quotationId", quotationId);
+
+  if (errors.length > 0) {
+    return formFailure(errors);
+  }
+
+  const input: CreateLeadActivityInput = {
+    leadId: trimFormValue(raw.leadId),
+    activityType: unwrapFieldValue(activityType),
+    title: trimFormValue(raw.title),
+    dueAt: unwrapFieldValue(dueAt),
+    priority: unwrapFieldValue(priority),
+    ownerId: unwrapFieldValue(ownerId),
+    isPrimary: unwrapFieldValue(isPrimary),
+    durationMinutes: unwrapFieldValue(durationMinutes),
+    reminderAt: unwrapFieldValue(reminderAt),
+    quotationId: unwrapFieldValue(quotationId),
+  };
+
+  const semanticErrors = validateCreateLeadActivityInput(input);
+  if (semanticErrors.length > 0) {
+    return formFailure(semanticErrors);
+  }
+
+  return { success: true, input };
+}
+
+export function parseRescheduleLeadActivityForm(raw: {
+  activityId: unknown;
+  dueAt: unknown;
+  reminderAt?: unknown;
+  clearReminder?: unknown;
+}): ActivityFormParseResult<RescheduleLeadActivityInput> {
+  const errors: ActivityFieldError[] = [];
+
+  const clearReminder = parseOptionalBooleanWithDefault(
+    raw.clearReminder,
+    false,
+    "Clear reminder flag is invalid."
+  );
+  pushFieldParseError(errors, "clearReminder", clearReminder);
+
+  const dueAt = parseRequiredAbsoluteTimestampField(raw.dueAt);
+  pushFieldParseError(errors, "dueAt", dueAt);
+
+  let reminderAt: FieldParseResult<string | null> = { kind: "value", value: null };
+  if (clearReminder.kind === "value" && clearReminder.value) {
+    reminderAt = { kind: "value", value: null };
+  } else {
+    reminderAt = parseOptionalAbsoluteTimestampField(raw.reminderAt);
+    pushFieldParseError(errors, "reminderAt", reminderAt);
+  }
+
+  if (errors.length > 0) {
+    return formFailure(errors);
+  }
+
+  const input: RescheduleLeadActivityInput = {
+    activityId: trimFormValue(raw.activityId),
+    dueAt: unwrapFieldValue(dueAt),
+    reminderAt: unwrapFieldValue(reminderAt),
+    clearReminder: unwrapFieldValue(clearReminder),
+  };
+
+  const semanticErrors = validateRescheduleLeadActivityInput(input);
+  if (semanticErrors.length > 0) {
+    return formFailure(semanticErrors);
+  }
+
+  return { success: true, input };
+}
+
+export function parseCompleteLeadActivityForm(
+  raw: CompleteLeadActivityFormRaw
+): ActivityFormParseResult<CompleteLeadActivityInput> {
+  const resolutionLabel = trimFormValue(raw.resolution).toUpperCase();
+  if (resolutionLabel === "CLOSED_WON") {
+    return closedWonFailure();
+  }
+
+  const resolution = parseActivityResolution(raw.resolution);
+  if (!resolution) {
+    return formFailure([
+      { field: "resolution", message: "Resolution is invalid." },
+    ]);
+  }
+
+  const crossErrors = crossResolutionFieldErrors(resolution, raw);
+  if (crossErrors.length > 0) {
+    return formFailure(crossErrors);
+  }
+
+  const errors: ActivityFieldError[] = [];
+
+  const whatsappSendIntentId = parseOptionalUuidField(
+    raw.whatsappSendIntentId,
+    "WhatsApp send intent identifier is invalid."
+  );
+  pushFieldParseError(errors, "whatsappSendIntentId", whatsappSendIntentId);
+
+  if (errors.length > 0) {
+    return formFailure(errors);
+  }
+
+  const base = {
+    activityId: trimFormValue(raw.activityId),
+    outcomeCode: trimFormValue(raw.outcomeCode),
+    completionNote: trimNullableText(raw.completionNote),
+    whatsappSendIntentId: unwrapFieldValue(whatsappSendIntentId),
+  };
+
+  if (resolution === "NONE") {
+    const input: CompleteLeadActivityInput = { ...base, resolution: "NONE" };
+    const semanticErrors = validateCompleteLeadActivityInput(input);
+    if (semanticErrors.length > 0) {
+      return formFailure(semanticErrors);
+    }
+    return { success: true, input };
+  }
+
+  if (resolution === "NEXT_PRIMARY") {
+    const nextErrors: ActivityFieldError[] = [];
+
+    const nextActivityType = parseRequiredActivityTypeField(
+      raw.nextActivityType,
+      "Next activity type is required.",
+      "Next activity type is invalid."
+    );
+    pushFieldParseError(nextErrors, "nextActivityType", nextActivityType);
+
+    const nextPriority = parseOptionalPriorityWithDefault(
+      raw.nextPriority,
+      "Next priority is invalid."
+    );
+    pushFieldParseError(nextErrors, "nextPriority", nextPriority);
+
+    const nextDueAt = parseRequiredAbsoluteTimestampField(raw.nextDueAt);
+    pushFieldParseError(nextErrors, "nextDueAt", nextDueAt);
+
+    const nextDurationMinutes = parseOptionalIntegerField(
+      raw.nextDurationMinutes
+    );
+    pushFieldParseError(nextErrors, "nextDurationMinutes", nextDurationMinutes);
+
+    const nextReminderAt = parseOptionalAbsoluteTimestampField(raw.nextReminderAt);
+    pushFieldParseError(nextErrors, "nextReminderAt", nextReminderAt);
+
+    const nextQuotationId = parseOptionalUuidField(
+      raw.nextQuotationId,
+      "Next quotation identifier is invalid."
+    );
+    pushFieldParseError(nextErrors, "nextQuotationId", nextQuotationId);
+
+    if (nextErrors.length > 0) {
+      return formFailure(nextErrors);
+    }
+
+    const input: CompleteLeadActivityInput = {
+      ...base,
+      resolution: "NEXT_PRIMARY",
+      nextActivityType: unwrapFieldValue(nextActivityType),
+      nextTitle: trimFormValue(raw.nextTitle),
+      nextDueAt: unwrapFieldValue(nextDueAt),
+      nextPriority: unwrapFieldValue(nextPriority),
+      nextDurationMinutes: unwrapFieldValue(nextDurationMinutes),
+      nextReminderAt: unwrapFieldValue(nextReminderAt),
+      nextQuotationId: unwrapFieldValue(nextQuotationId),
+    };
+
+    const semanticErrors = validateCompleteLeadActivityInput(input);
+    if (semanticErrors.length > 0) {
+      return formFailure(semanticErrors);
+    }
+    return { success: true, input };
+  }
+
+  if (resolution === "ON_HOLD") {
+    const onHoldErrors: ActivityFieldError[] = [];
+
+    const onHoldReviewAt = parseRequiredAbsoluteTimestampField(
+      raw.onHoldReviewAt
+    );
+    pushFieldParseError(onHoldErrors, "onHoldReviewAt", onHoldReviewAt);
+
+    if (onHoldErrors.length > 0) {
+      return formFailure(onHoldErrors);
+    }
+
+    const input: CompleteLeadActivityInput = {
+      ...base,
+      resolution: "ON_HOLD",
+      onHoldReason: trimFormValue(raw.onHoldReason),
+      onHoldReviewAt: unwrapFieldValue(onHoldReviewAt),
+    };
+
+    const semanticErrors = validateCompleteLeadActivityInput(input);
+    if (semanticErrors.length > 0) {
+      return formFailure(semanticErrors);
+    }
+    return { success: true, input };
+  }
+
+  const input: CompleteLeadActivityInput = {
+    ...base,
+    resolution: "CLOSED_LOST",
+    closedLostReason: trimFormValue(raw.closedLostReason),
+    closureReasonCode: trimNullableText(raw.closureReasonCode),
+  };
+
+  const semanticErrors = validateCompleteLeadActivityInput(input);
+  if (semanticErrors.length > 0) {
+    return formFailure(semanticErrors);
+  }
+  return { success: true, input };
 }
 
 export function normalizeCreateLeadActivityInput(raw: {
