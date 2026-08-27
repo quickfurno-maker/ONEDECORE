@@ -60,6 +60,7 @@ function buildGroups(flags: OpsNavFlags, hrefs: AdminSidebarProps["hrefs"]): rea
   if (flags.crm) {
     const children: NavItem[] = [
       { href: "/admin/crm", label: "Overview", icon: "crm" },
+      { href: "/admin/crm/my-day", label: "My Day", icon: "clock" },
       { href: hrefs.crmLeads, label: "Leads", icon: "leads" },
     ];
     if (flags.crmTargets) {

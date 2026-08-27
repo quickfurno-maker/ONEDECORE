@@ -154,6 +154,25 @@ describe("Operations Suite correction contracts", () => {
     assert.match(metric, /iconForKpi/);
   });
 
+  test("My Day is exposed in both CRM navigation surfaces", () => {
+    const sidebar = readFileSync(
+      join(root, "src/features/admin-ops/components/AdminSidebar.tsx"),
+      "utf8"
+    );
+    const crmNav = readFileSync(
+      join(root, "src/features/crm/components/shell/CrmNav.tsx"),
+      "utf8"
+    );
+
+    assert.match(
+      sidebar,
+      /href: "\/admin\/crm\/my-day", label: "My Day", icon: "clock"/
+    );
+    assert.match(
+      crmNav,
+      /href: "\/admin\/crm\/my-day", label: "My Day"/
+    );
+  });
   test("does not add fake order or payment routes", () => {
     const routes = readFileSync(join(root, "src/features/admin-ops/nav-routes.ts"), "utf8");
     const sidebar = readFileSync(

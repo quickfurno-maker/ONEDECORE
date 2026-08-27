@@ -13,7 +13,10 @@ interface CrmNavProps {
   readonly reportsLabel?: string;
 }
 
-const BASE_NAV_ITEMS = [{ href: "/admin/crm/leads", label: "Leads" }] as const;
+const BASE_NAV_ITEMS = [
+  { href: "/admin/crm/my-day", label: "My Day" },
+  { href: "/admin/crm/leads", label: "Leads" },
+] as const;
 
 export function CrmNav({
   currentPath,
