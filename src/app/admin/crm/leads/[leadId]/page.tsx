@@ -8,7 +8,7 @@ import { MarketingConsentPanel } from "@/features/marketing/components/Marketing
 import { probeCampaignPermissions } from "@/features/marketing/server/campaign-permissions";
 import { getMarketingConsentState } from "@/features/marketing/server/campaign-queries";
 import { LeadDetailContact } from "@/features/crm/components/leads/LeadDetailContact";
-import { LeadDetailFollowUps } from "@/features/crm/components/leads/LeadDetailFollowUps";
+import { LeadActivityWorkspace } from "@/features/crm/components/activities/LeadActivityWorkspace.tsx";
 import { LeadDetailNotes } from "@/features/crm/components/leads/LeadDetailNotes";
 import { LeadDetailOverview } from "@/features/crm/components/leads/LeadDetailOverview";
 import { LeadDetailSourcePanel } from "@/features/crm/components/leads/LeadDetailSourcePanel";
@@ -19,6 +19,8 @@ import { LeadStatusTransitionPanel } from "@/features/crm/components/leads/LeadS
 import type { LeadStageCode } from "@/features/crm/contracts/lead-stages";
 import { isTerminalLeadStage } from "@/features/crm/contracts/lead-stages";
 import { getLeadDetailForCurrentUser } from "@/features/crm/server/crm-lead-repository";
+import { listActivityOutcomeOptionsForCurrentUser } from "@/features/crm/server/crm-activity-service.ts";
+import { fetchGovernedWhatsappSendIntentsForLead } from "@/features/crm/server/crm-whatsapp-evidence-queries.ts";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
 import {
   fetchActiveLeadClosureReasons,
@@ -54,7 +56,7 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
     context?.canReadBroad &&
     (context.canAssignLeads || context.canManageLeadFollowUps);
 
-  const [assigneeDirectory, closureReasons, existingDraft, quotationPermissions, campaignPermissions] =
+  const [assigneeDirectory, closureReasons, existingDraft, quotationPermissions, campaignPermissions, outcomeOptions, whatsappSendIntents] =
     await Promise.all([
       needsDirectory ? fetchCrmAssigneeDirectory(context!) : Promise.resolve([]),
       context?.canTransitionLeads
@@ -63,11 +65,20 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
       getQuotationDraftByLeadId(lead.id).catch(() => null),
       probeQuotationPermissions(),
       probeCampaignPermissions(),
+      context?.canManageLeadFollowUps
+        ? listActivityOutcomeOptionsForCurrentUser()
+        : Promise.resolve([]),
+      context?.canManageLeadFollowUps
+        ? fetchGovernedWhatsappSendIntentsForLead(lead.id)
+        : Promise.resolve([]),
     ]);
 
   const marketingConsentState = campaignPermissions.canManageMarketingConsent
     ? await getMarketingConsentState(lead.contact.id)
     : null;
+
+  const quotationId = existingDraft?.quotationId ?? null;
+  const quotationLabel = existingDraft?.version?.title ?? existingDraft?.quotationNumber ?? null;
 
   return (
     <div className="space-y-6">
@@ -104,6 +115,21 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
             canTransitionLeads={context?.canTransitionLeads ?? false}
             closureReasons={closureReasons}
           />
+          <LeadActivityWorkspace
+            leadId={lead.id}
+            leadStatus={leadStatus}
+            isAssigned={lead.assignment.currentAssigneeId !== null}
+            followUps={lead.followUps}
+            canManageLeadFollowUps={context?.canManageLeadFollowUps ?? false}
+            canChooseFollowUpOwner={context?.canReadBroad ?? false}
+            showComposer={!isTerminal}
+            assigneeDirectory={assigneeDirectory}
+            outcomeOptions={outcomeOptions}
+            closureReasons={closureReasons}
+            whatsappSendIntents={whatsappSendIntents}
+            quotationId={quotationId}
+            quotationLabel={quotationLabel}
+          />
           <LeadDetailOverview overview={lead.overview} />
           <LeadDetailTimeline timeline={lead.timeline} />
           <LeadDetailNotes
@@ -118,14 +144,6 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
             existingDraft={existingDraft}
             canCreateQuotation={quotationPermissions.canCreateQuotations}
             canEditQuotation={quotationPermissions.canEditQuotations}
-          />
-          <LeadDetailFollowUps
-            leadId={lead.id}
-            followUps={lead.followUps}
-            canManageLeadFollowUps={context?.canManageLeadFollowUps ?? false}
-            canChooseFollowUpOwner={context?.canReadBroad ?? false}
-            showComposer={!isTerminal}
-            assigneeDirectory={assigneeDirectory}
           />
         </div>
         <aside className="space-y-6 xl:sticky xl:top-20 xl:self-start">

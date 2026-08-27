@@ -205,11 +205,10 @@ describe("Phase 5C2C architecture", () => {
     assert.match(pageSrc, /LeadStatusTransitionPanel/);
   });
 
-  test("repository exposes resume target and follow-up owner id", () => {
+  test("repository maps structured activity fields on follow-ups", () => {
     const repoSrc = readSrc("src/features/crm/server/crm-lead-repository.ts");
-    assert.match(repoSrc, /on_hold_previous_status/);
-    assert.match(repoSrc, /resumeTargetStatus/);
-    assert.match(repoSrc, /ownerId: followUp\.owner_id/);
+    assert.match(repoSrc, /activityType: followUp\.activity_type/);
+    assert.match(repoSrc, /isPrimaryNextAction: followUp\.is_primary_next_action/);
   });
 
   test("errors normalize lifecycle postgres tokens", () => {
@@ -245,5 +244,29 @@ describe("Phase 5C2C architecture", () => {
       "previewManualLeadDuplicateAction",
       "createManualLeadAction",
     ]);
+  });
+});
+
+describe("CRM 2A-5 lead activity workspace", () => {
+  test("lead detail page wires LeadActivityWorkspace instead of legacy follow-ups panel", () => {
+    const pageSrc = readSrc("src/app/admin/crm/leads/[leadId]/page.tsx");
+    assert.match(pageSrc, /LeadActivityWorkspace/);
+    assert.doesNotMatch(pageSrc, /LeadDetailFollowUps/);
+    assert.match(pageSrc, /LeadStatusTransitionPanel/);
+    assert.match(pageSrc, /LeadDetailAssignmentPanel/);
+  });
+
+  test("create activity form submits via 2A-4 action with ISO conversion", () => {
+    const src = readSrc("src/features/crm/components/activities/CreateActivityForm.tsx");
+    assert.match(src, /createLeadActivityAction/);
+    assert.match(src, /appendAbsoluteTimestampsFromLocalFields/);
+    assert.doesNotMatch(src, /createLeadFollowUpAction/);
+  });
+
+  test("complete dialog excludes CLOSED_WON and supports governed WhatsApp intent", () => {
+    const src = readSrc("src/features/crm/components/activities/CompleteActivityDialog.tsx");
+    assert.match(src, /completeLeadActivityAction/);
+    assert.doesNotMatch(src, /CLOSED_WON/);
+    assert.match(src, /whatsappSendIntentId/);
   });
 });
