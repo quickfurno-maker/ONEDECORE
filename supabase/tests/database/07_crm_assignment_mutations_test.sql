@@ -215,18 +215,21 @@ select public.create_lead_follow_up(
   'c4444444-4444-4444-4444-444444444444'::uuid
 );
 
-select throws_ok(
-  $$select public.assign_lead(
-    current_setting('test.phase5c2a_lead_one')::uuid,
-    'c3333333-3333-3333-3333-333333333333'::uuid,
-    'Attempting blocked reassignment due follow-up',
-    'c4444444-4444-4444-4444-444444444444'::uuid,
-    (select updated_at from public.leads where id = current_setting('test.phase5c2a_lead_one')::uuid),
-    true
-  )$$,
-  '22023',
-  null,
-  'reassignment blocked by open follow-up owned by different user'
+select public.assign_lead(
+  current_setting('test.phase5c2a_lead_one')::uuid,
+  'c3333333-3333-3333-3333-333333333333'::uuid,
+  'Reassigning with open follow-up transfers ownership',
+  'c4444444-4444-4444-4444-444444444444'::uuid,
+  (select updated_at from public.leads where id = current_setting('test.phase5c2a_lead_one')::uuid),
+  true
+);
+
+select results_eq(
+  $$select owner_id::text from public.lead_follow_ups
+    where lead_id = current_setting('test.phase5c2a_lead_one')::uuid and status = 'open'
+    order by id desc limit 1$$,
+  array['c3333333-3333-3333-3333-333333333333'::text],
+  'reassignment transfers open follow-up ownership to new assignee'
 );
 
 select public.complete_lead_follow_up(

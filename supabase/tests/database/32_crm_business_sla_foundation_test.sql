@@ -657,6 +657,11 @@ set effective_from = timezone('Asia/Kolkata', timestamp '2026-06-01 00:00:00'),
     activated_at = timezone('Asia/Kolkata', timestamp '2026-06-01 00:00:00')
 where policy_code = 'first_contact';
 
+-- CRM 2A-7 receipt trigger may have created a snapshot clock at insert; delete to
+-- exercise the new-clock path with corrected receipt time + active policy.
+delete from public.crm_sla_clocks
+where lead_id = current_setting('test.lead_c')::uuid;
+
 select private.ensure_first_contact_sla_clock(current_setting('test.lead_c')::uuid);
 
 select results_eq(
@@ -725,6 +730,9 @@ select set_config('test.lead_d', (select id::text from public.leads where submit
 update public.leads
 set created_at = timezone('Asia/Kolkata', timestamp '2026-05-01 10:00:00')
 where id = current_setting('test.lead_d')::uuid;
+
+delete from public.crm_sla_clocks
+where lead_id = current_setting('test.lead_d')::uuid;
 
 select results_eq(
   $$select (private.ensure_first_contact_sla_clock(current_setting('test.lead_d')::uuid)).sla_due_at is null$$,
