@@ -194,7 +194,7 @@ export async function getLeadDetailForCurrentUser(
     supabase
       .from("lead_follow_ups")
       .select(
-        "id, owner_id, due_at, status, outcome, completed_at, cancelled_at"
+        "id, owner_id, due_at, status, outcome, completed_at, cancelled_at, activity_type, title, priority, is_primary_next_action, duration_minutes, reminder_at, outcome_code, completion_note, quotation_id, source, created_at, updated_at"
       )
       .eq("lead_id", leadId)
       .order("due_at", { ascending: true }),
@@ -322,6 +322,18 @@ export async function getLeadDetailForCurrentUser(
       outcome: followUp.outcome,
       completedAt: followUp.completed_at,
       cancelledAt: followUp.cancelled_at,
+      activityType: followUp.activity_type,
+      title: followUp.title,
+      priority: followUp.priority,
+      isPrimaryNextAction: followUp.is_primary_next_action,
+      durationMinutes: followUp.duration_minutes,
+      reminderAt: followUp.reminder_at,
+      outcomeCode: followUp.outcome_code,
+      completionNote: followUp.completion_note,
+      quotationId: followUp.quotation_id,
+      source: followUp.source,
+      createdAt: followUp.created_at,
+      updatedAt: followUp.updated_at,
     })),
     consentSummary: (consentResult.data ?? []).map((consent) => ({
       id: consent.id,

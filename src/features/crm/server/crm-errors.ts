@@ -20,6 +20,29 @@ export type CrmErrorCode =
   | "LEAD_CREATE_FAILED"
   | "FOLLOW_UP_NOT_FOUND"
   | "FOLLOW_UP_NOT_OPEN"
+  | "ACTIVITY_NOT_FOUND"
+  | "ACTIVITY_NOT_OPEN"
+  | "ACTIVITY_OWNER_NOT_AUTHORIZED"
+  | "ACTIVITY_TYPE_INVALID"
+  | "ACTIVITY_TITLE_INVALID"
+  | "ACTIVITY_PRIORITY_INVALID"
+  | "ACTIVITY_DUE_REQUIRED"
+  | "ACTIVITY_DUE_MUST_BE_FUTURE"
+  | "ACTIVITY_DURATION_INVALID"
+  | "ACTIVITY_REMINDER_INVALID"
+  | "ACTIVITY_QUOTATION_MISMATCH"
+  | "ACTIVITY_TERMINAL_REJECTED"
+  | "ACTIVITY_OUTCOME_REQUIRED"
+  | "ACTIVITY_OUTCOME_INVALID"
+  | "ACTIVITY_OUTCOME_NOT_ALLOWED_FOR_TYPE"
+  | "PRIMARY_TRANSFER_REQUIRES_LEAD_REASSIGNMENT"
+  | "ON_HOLD_PRIMARY_RESERVED"
+  | "ON_HOLD_REVIEW_REQUIRED"
+  | "NEXT_ACTION_REQUIRED"
+  | "NEXT_PRIMARY_INVALID"
+  | "WHATSAPP_SEND_EVIDENCE_REQUIRED"
+  | "WHATSAPP_SEND_EVIDENCE_INVALID"
+  | "CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE"
   | "IMPORT_AUTH_REQUIRED"
   | "IMPORT_PERMISSION_DENIED"
   | "IMPORT_BATCH_NOT_FOUND"
@@ -84,6 +107,165 @@ export function crmErrorFromPostgresMessage(
   fallbackCode: CrmErrorCode = "RPC_FAILED"
 ): CrmError {
   const normalised = message.toLowerCase();
+
+  // CRM 2A-3 activity tokens — match BEFORE generic "not found" / "permission denied".
+  const activityTokenMap: ReadonlyArray<{
+    readonly token: string;
+    readonly code: CrmErrorCode;
+    readonly message: string;
+    readonly httpStatus: number;
+  }> = [
+    {
+      token: "activity_not_found",
+      code: "ACTIVITY_NOT_FOUND",
+      message: "Activity not found.",
+      httpStatus: 404,
+    },
+    {
+      token: "activity_not_open",
+      code: "ACTIVITY_NOT_OPEN",
+      message: "This activity is no longer open.",
+      httpStatus: 422,
+    },
+    {
+      token: "activity_owner_not_authorized",
+      code: "ACTIVITY_OWNER_NOT_AUTHORIZED",
+      message: "You are not allowed to perform this activity action.",
+      httpStatus: 403,
+    },
+    {
+      token: "activity_type_invalid",
+      code: "ACTIVITY_TYPE_INVALID",
+      message: "Activity type is invalid.",
+      httpStatus: 422,
+    },
+    {
+      token: "activity_title_invalid",
+      code: "ACTIVITY_TITLE_INVALID",
+      message: "Activity title must be 1–120 characters.",
+      httpStatus: 422,
+    },
+    {
+      token: "activity_priority_invalid",
+      code: "ACTIVITY_PRIORITY_INVALID",
+      message: "Activity priority is invalid.",
+      httpStatus: 422,
+    },
+    {
+      token: "activity_due_required",
+      code: "ACTIVITY_DUE_REQUIRED",
+      message: "Due date and time are required.",
+      httpStatus: 422,
+    },
+    {
+      token: "activity_due_must_be_future",
+      code: "ACTIVITY_DUE_MUST_BE_FUTURE",
+      message: "Due date and time must be in the future.",
+      httpStatus: 422,
+    },
+    {
+      token: "activity_duration_invalid",
+      code: "ACTIVITY_DURATION_INVALID",
+      message: "Duration must be between 1 and 1440 minutes.",
+      httpStatus: 422,
+    },
+    {
+      token: "activity_reminder_invalid",
+      code: "ACTIVITY_REMINDER_INVALID",
+      message: "Reminder must be at or before the due time.",
+      httpStatus: 422,
+    },
+    {
+      token: "activity_quotation_mismatch",
+      code: "ACTIVITY_QUOTATION_MISMATCH",
+      message: "Quotation does not belong to this lead.",
+      httpStatus: 422,
+    },
+    {
+      token: "activity_terminal_rejected",
+      code: "ACTIVITY_TERMINAL_REJECTED",
+      message: "This action is not allowed on a closed lead.",
+      httpStatus: 422,
+    },
+    {
+      token: "activity_outcome_required",
+      code: "ACTIVITY_OUTCOME_REQUIRED",
+      message: "Outcome is required.",
+      httpStatus: 422,
+    },
+    {
+      token: "activity_outcome_not_allowed_for_type",
+      code: "ACTIVITY_OUTCOME_NOT_ALLOWED_FOR_TYPE",
+      message: "Outcome is not allowed for this activity type.",
+      httpStatus: 422,
+    },
+    {
+      token: "activity_outcome_invalid",
+      code: "ACTIVITY_OUTCOME_INVALID",
+      message: "Outcome is invalid.",
+      httpStatus: 422,
+    },
+    {
+      token: "primary_transfer_requires_lead_reassignment",
+      code: "PRIMARY_TRANSFER_REQUIRES_LEAD_REASSIGNMENT",
+      message: "Primary next-action ownership follows lead assignment.",
+      httpStatus: 422,
+    },
+    {
+      token: "on_hold_primary_reserved",
+      code: "ON_HOLD_PRIMARY_RESERVED",
+      message: "On-hold primary is reserved for the review task.",
+      httpStatus: 422,
+    },
+    {
+      token: "on_hold_review_required",
+      code: "ON_HOLD_REVIEW_REQUIRED",
+      message: "On-hold reason and future review time are required.",
+      httpStatus: 422,
+    },
+    {
+      token: "next_action_required",
+      code: "NEXT_ACTION_REQUIRED",
+      message: "Choose the next action before completing this activity.",
+      httpStatus: 422,
+    },
+    {
+      token: "next_primary_invalid",
+      code: "NEXT_PRIMARY_INVALID",
+      message: "Next primary activity details are invalid.",
+      httpStatus: 422,
+    },
+    {
+      token: "whatsapp_send_evidence_required",
+      code: "WHATSAPP_SEND_EVIDENCE_REQUIRED",
+      message:
+        "This WhatsApp activity can only be marked sent after a governed message is sent.",
+      httpStatus: 422,
+    },
+    {
+      token: "whatsapp_send_evidence_invalid",
+      code: "WHATSAPP_SEND_EVIDENCE_INVALID",
+      message: "The linked WhatsApp send could not be verified.",
+      httpStatus: 422,
+    },
+    {
+      token: "closed_won_requires_quotation_acceptance",
+      code: "CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE",
+      message: "Closed Won is created only through accepted quotation.",
+      httpStatus: 422,
+    },
+  ];
+
+  for (const entry of activityTokenMap) {
+    if (normalised.includes(entry.token)) {
+      return new CrmError({
+        code: entry.code,
+        message: entry.message,
+        httpStatus: entry.httpStatus,
+        details: message,
+      });
+    }
+  }
 
   if (
     normalised.includes("crm_assignment_auth_required") ||
