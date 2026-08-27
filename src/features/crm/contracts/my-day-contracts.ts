@@ -2,6 +2,7 @@
  * CRM 2A-6 — My Day workspace contracts and DTO mappers.
  */
 
+import { isUuid } from "./assignment-contracts.ts";
 import type { LeadStageCode } from "./lead-stages.ts";
 import { REPORT_TIMEZONE } from "./reporting-contracts.ts";
 
@@ -202,12 +203,20 @@ export function mapMyDayRpcPayload(raw: RawMyDayRpcPayload): MyDaySnapshot {
   };
 }
 
+/**
+ * Parse `?owner=` for My Day. Invalid values fall back to team (null)
+ * so PostgREST never receives a non-UUID for `p_owner_id`.
+ */
 export function parseMyDayOwnerFilter(
   raw: string | string[] | undefined
 ): string | null {
   const value = Array.isArray(raw) ? raw[0] : raw;
-  if (!value || value.trim() === "" || value === "team") {
+  if (!value) {
     return null;
   }
-  return value.trim();
+  const trimmed = value.trim();
+  if (trimmed === "" || trimmed === "team") {
+    return null;
+  }
+  return isUuid(trimmed) ? trimmed : null;
 }

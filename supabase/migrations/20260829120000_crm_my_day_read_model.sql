@@ -20,7 +20,6 @@ as $$
 declare
   v_now timestamptz;
   v_local_date date;
-  v_today_start timestamptz;
   v_tomorrow_start timestamptz;
   v_actor uuid;
   v_broad boolean;
@@ -60,7 +59,6 @@ begin
 
   v_now := clock_timestamp();
   v_local_date := (v_now at time zone 'Asia/Kolkata')::date;
-  v_today_start := (v_local_date::timestamp at time zone 'Asia/Kolkata');
   v_tomorrow_start := ((v_local_date + 1)::timestamp at time zone 'Asia/Kolkata');
 
   return (
@@ -285,6 +283,7 @@ begin
         and c.sla_due_at is not null
         and c.first_contact_attempt_at is null
         and c.sla_due_at < v_now
+        and (v_scope_owner is null or l.assigned_to = v_scope_owner)
       order by c.sla_due_at asc, l.created_at asc, l.id asc
       limit v_attention_limit
     ),
@@ -346,6 +345,7 @@ begin
             and c.sla_due_at is not null
             and c.first_contact_attempt_at is null
             and c.sla_due_at < v_now
+            and (v_scope_owner is null or l.assigned_to = v_scope_owner)
         ), 0) else 0 end as sla_breach_count
     )
     select jsonb_build_object(

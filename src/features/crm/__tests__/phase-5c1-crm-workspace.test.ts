@@ -460,6 +460,71 @@ describe("CRM 2A-6 My Day workspace", () => {
     assert.match(uiSrc, /canFilterOwner/);
   });
 
+  test("owner filter form has submit control and no client island", () => {
+    const uiSrc = readFileSync(
+      join(root, "src/features/crm/components/my-day/MyDayWorkspace.tsx"),
+      "utf8"
+    );
+    assert.match(uiSrc, /method=\"get\"/);
+    assert.match(uiSrc, /name=\"owner\"/);
+    assert.match(uiSrc, /type=\"submit\"/);
+    assert.match(uiSrc, /Apply/);
+    assert.match(uiSrc, /min-h-10/);
+    assert.match(uiSrc, /focus-visible:outline/);
+    assert.doesNotMatch(uiSrc, /['\"]use client['\"]/);
+    assert.doesNotMatch(uiSrc, /onChange/);
+  });
+
+  test("executive page path does not render owner filter without canFilterOwner", () => {
+    const uiSrc = readFileSync(
+      join(root, "src/features/crm/components/my-day/MyDayWorkspace.tsx"),
+      "utf8"
+    );
+    assert.match(uiSrc, /canFilterOwner \? \(/);
+    assert.match(uiSrc, /: null/);
+  });
+
+  test("parseMyDayOwnerFilter validates UUID and falls back safely", async () => {
+    const { parseMyDayOwnerFilter } = await import(
+      "../contracts/my-day-contracts.ts"
+    );
+    const validOwner = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    assert.equal(parseMyDayOwnerFilter(undefined), null);
+    assert.equal(parseMyDayOwnerFilter(""), null);
+    assert.equal(parseMyDayOwnerFilter("team"), null);
+    assert.equal(parseMyDayOwnerFilter("  team  "), null);
+    assert.equal(parseMyDayOwnerFilter("garbage"), null);
+    assert.equal(parseMyDayOwnerFilter("not-a-uuid"), null);
+    assert.equal(
+      parseMyDayOwnerFilter("d3333333-3333-3333-3333-333333333333"),
+      null
+    );
+    assert.equal(parseMyDayOwnerFilter(validOwner), validOwner);
+    assert.equal(parseMyDayOwnerFilter([validOwner, "other"]), validOwner);
+    assert.equal(parseMyDayOwnerFilter(["garbage", "team"]), null);
+  });
+
+  test("migration scopes SLA breaches by lead assignee when owner selected", () => {
+    const migration = readFileSync(
+      join(root, "supabase/migrations/20260829120000_crm_my_day_read_model.sql"),
+      "utf8"
+    );
+    assert.match(migration, /sla_breach_base as \(/);
+    const breachBaseIdx = migration.indexOf("sla_breach_base as (");
+    const breachBaseSlice = migration.slice(breachBaseIdx, breachBaseIdx + 1200);
+    assert.match(
+      breachBaseSlice,
+      /v_scope_owner is null or l\.assigned_to = v_scope_owner/
+    );
+    const countIdx = migration.indexOf("as sla_breach_count");
+    assert.ok(countIdx > 0);
+    const countSlice = migration.slice(countIdx - 500, countIdx);
+    assert.match(
+      countSlice,
+      /v_scope_owner is null or l\.assigned_to = v_scope_owner/
+    );
+  });
+
   test("CrmNav unchanged — no My Day nav entry in 2A-6", () => {
     const navSrc = readFileSync(
       join(root, "src/features/crm/components/shell/CrmNav.tsx"),

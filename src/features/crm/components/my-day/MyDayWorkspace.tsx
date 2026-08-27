@@ -185,13 +185,16 @@ export function MyDayWorkspace({
           </p>
         </div>
         {canFilterOwner ? (
-          <form method="get" className="min-w-[220px]">
-            <label className="text-xs text-[var(--od-muted)]">
+          <form
+            method="get"
+            className="flex min-w-[220px] flex-col gap-2 sm:flex-row sm:items-end"
+          >
+            <label className="flex-1 text-xs text-[var(--od-muted)]">
               View
               <select
                 name="owner"
                 defaultValue={selectedOwnerId ?? "team"}
-                className="mt-1 w-full rounded-md border border-[var(--od-border)] bg-[var(--od-surface)] px-3 py-2 text-sm text-[var(--od-text)]"
+                className="mt-1 min-h-10 w-full rounded-[8px] border border-[var(--od-border)] bg-[var(--od-surface)] px-3 text-sm text-[var(--od-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
               >
                 <option value="team">Team</option>
                 {assignees.map((entry) => (
@@ -201,6 +204,12 @@ export function MyDayWorkspace({
                 ))}
               </select>
             </label>
+            <button
+              type="submit"
+              className="inline-flex min-h-10 items-center justify-center rounded-[8px] bg-[var(--od-gold)] px-4 text-sm font-semibold text-[#1a1408] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--od-gold)]"
+            >
+              Apply
+            </button>
           </form>
         ) : null}
       </div>

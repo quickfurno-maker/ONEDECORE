@@ -1,7 +1,7 @@
 -- CRM 2A-6 — My Day read model pgTAP
 
 begin;
-select plan(42);
+select plan(47);
 
 -- =============================================================================
 -- Section 1: RPC surface, privileges, security (8)
@@ -292,14 +292,45 @@ select * from public.submit_lead_intake(
   p_notice_version => 'privacy-notice-v0.1-draft'
 );
 
+select * from public.submit_lead_intake(
+  p_idempotency_key => 'd2a60007-0000-0000-0000-000000000007'::uuid,
+  p_request_hash => repeat('3', 64),
+  p_network_fingerprint_hash => repeat('4', 64),
+  p_phone_fingerprint_hash => repeat('5', 64),
+  p_planner_version => 'home-r4-v1',
+  p_submitted_name => '2A6 Lead Breach B',
+  p_phone_e164 => '+919677777777',
+  p_submitted_email => null,
+  p_service_code => 'complete-home-interiors',
+  p_property_code => 'apartment-2bhk',
+  p_timeline_code => 'within-1-month',
+  p_room_codes => array['bedrooms']::text[],
+  p_budget_comfort_code => '6-12l',
+  p_estimate_snapshot => null,
+  p_locality => 'Pune',
+  p_message => null,
+  p_landing_path => '/',
+  p_attribution => '{}'::jsonb,
+  p_source => 'local-test',
+  p_consent_service_enquiry => true,
+  p_consent_service_phone => true,
+  p_consent_service_email => false,
+  p_consent_whatsapp => false,
+  p_copy_service_enquiry => 'service-enquiry-v0.1-draft',
+  p_copy_service_communication => 'service-communication-v0.1-draft',
+  p_copy_whatsapp => null,
+  p_notice_version => 'privacy-notice-v0.1-draft'
+);
+
 select set_config('test.lead_overdue', (select id::text from public.leads where submitted_name = '2A6 Lead Overdue' limit 1), true);
 select set_config('test.lead_today', (select id::text from public.leads where submitted_name = '2A6 Lead Today' limit 1), true);
 select set_config('test.lead_upcoming', (select id::text from public.leads where submitted_name = '2A6 Lead Upcoming' limit 1), true);
 select set_config('test.lead_no_primary', (select id::text from public.leads where submitted_name = '2A6 Lead No Primary' limit 1), true);
 select set_config('test.lead_unassigned', (select id::text from public.leads where submitted_name = '2A6 Lead Unassigned' limit 1), true);
 select set_config('test.lead_terminal', (select id::text from public.leads where submitted_name = '2A6 Lead Terminal' limit 1), true);
+select set_config('test.lead_breach_b', (select id::text from public.leads where submitted_name = '2A6 Lead Breach B' limit 1), true);
 
--- Assign leads to exec 2A6 (except unassigned)
+-- Assign leads to exec 2A6 (except unassigned); breach B -> exec 2B6
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
@@ -308,6 +339,7 @@ select public.assign_lead(current_setting('test.lead_today')::uuid, 'd3333333-33
 select public.assign_lead(current_setting('test.lead_upcoming')::uuid, 'd3333333-3333-3333-3333-333333333333'::uuid, null);
 select public.assign_lead(current_setting('test.lead_no_primary')::uuid, 'd3333333-3333-3333-3333-333333333333'::uuid, null);
 select public.assign_lead(current_setting('test.lead_terminal')::uuid, 'd3333333-3333-3333-3333-333333333333'::uuid, null);
+select public.assign_lead(current_setting('test.lead_breach_b')::uuid, 'd4444444-4444-4444-4444-444444444444'::uuid, null);
 select public.transition_lead_status(current_setting('test.lead_terminal')::uuid, 'closed_lost', 'Terminal fixture', 'other');
 
 -- Create primary tasks with bucket-specific due_at using Asia/Kolkata boundaries
@@ -346,15 +378,21 @@ select set_config('test.act_secondary', (
   )
 ), true);
 
--- SLA breach fixture: ensure clocks then mutate as postgres
+-- SLA breach fixtures: Exec A (overdue lead) + Exec B (breach B lead)
 reset role;
 select private.ensure_first_contact_sla_clock(current_setting('test.lead_overdue')::uuid);
 select private.ensure_first_contact_sla_clock(current_setting('test.lead_today')::uuid);
+select private.ensure_first_contact_sla_clock(current_setting('test.lead_breach_b')::uuid);
 
 update public.crm_sla_clocks
 set sla_due_at = now() - interval '1 hour',
     first_contact_attempt_at = null
 where lead_id = current_setting('test.lead_overdue')::uuid;
+
+update public.crm_sla_clocks
+set sla_due_at = now() - interval '30 minutes',
+    first_contact_attempt_at = null
+where lead_id = current_setting('test.lead_breach_b')::uuid;
 
 update public.crm_sla_clocks
 set first_contact_attempt_at = now()
@@ -463,7 +501,7 @@ select ok(
 );
 
 -- =============================================================================
--- Section 5: Manager scope + SLA + limits (10)
+-- Section 5: Manager scope + SLA + limits (15)
 -- =============================================================================
 
 select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
@@ -489,6 +527,85 @@ select ok(
     where a->>'leadId' = current_setting('test.lead_overdue')
   ),
   'manager sees SLA breach when due past and attempt null'
+);
+
+select ok(
+  exists (
+    select 1
+    from jsonb_array_elements(public.get_crm_my_day(null, 50, 50)->'attention'->'slaBreaches') a
+    where a->>'leadId' = current_setting('test.lead_overdue')
+  )
+  and exists (
+    select 1
+    from jsonb_array_elements(public.get_crm_my_day(null, 50, 50)->'attention'->'slaBreaches') a
+    where a->>'leadId' = current_setting('test.lead_breach_b')
+  ),
+  'team scope sees Exec A and Exec B SLA breaches'
+);
+
+select ok(
+  exists (
+    select 1
+    from jsonb_array_elements(
+      public.get_crm_my_day('d3333333-3333-3333-3333-333333333333'::uuid, 50, 50)
+        ->'attention'->'slaBreaches'
+    ) a
+    where a->>'leadId' = current_setting('test.lead_overdue')
+  )
+  and not exists (
+    select 1
+    from jsonb_array_elements(
+      public.get_crm_my_day('d3333333-3333-3333-3333-333333333333'::uuid, 50, 50)
+        ->'attention'->'slaBreaches'
+    ) a
+    where a->>'leadId' = current_setting('test.lead_breach_b')
+  ),
+  'owner A filter sees A SLA breach, not B'
+);
+
+select ok(
+  exists (
+    select 1
+    from jsonb_array_elements(
+      public.get_crm_my_day('d4444444-4444-4444-4444-444444444444'::uuid, 50, 50)
+        ->'attention'->'slaBreaches'
+    ) a
+    where a->>'leadId' = current_setting('test.lead_breach_b')
+  )
+  and not exists (
+    select 1
+    from jsonb_array_elements(
+      public.get_crm_my_day('d4444444-4444-4444-4444-444444444444'::uuid, 50, 50)
+        ->'attention'->'slaBreaches'
+    ) a
+    where a->>'leadId' = current_setting('test.lead_overdue')
+  ),
+  'owner B filter sees B SLA breach, not A'
+);
+
+select ok(
+  (
+    public.get_crm_my_day('d3333333-3333-3333-3333-333333333333'::uuid, 50, 50)
+      ->'summary'->>'slaBreaches'
+  )::integer
+  =
+  jsonb_array_length(
+    public.get_crm_my_day('d3333333-3333-3333-3333-333333333333'::uuid, 50, 50)
+      ->'attention'->'slaBreaches'
+  ),
+  'owner A summary.slaBreaches matches filtered breach row count'
+);
+
+select ok(
+  exists (
+    select 1
+    from jsonb_array_elements(
+      public.get_crm_my_day('d3333333-3333-3333-3333-333333333333'::uuid, 50, 50)
+        ->'attention'->'unassigned'
+    ) a
+    where a->>'leadId' = current_setting('test.lead_unassigned')
+  ),
+  'Unassigned remains global when owner filter is set'
 );
 
 select ok(
@@ -528,7 +645,7 @@ select ok(
 );
 
 select ok(
-  (public.get_crm_my_day(null, 50, 50)->'summary'->>'slaBreaches')::integer >= 1,
+  (public.get_crm_my_day(null, 50, 50)->'summary'->>'slaBreaches')::integer >= 2,
   'manager summary includes sla breach count'
 );
 

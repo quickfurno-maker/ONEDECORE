@@ -37,12 +37,18 @@
 
 ### Auth / scope
 
-| Actor | Task scope | Attention scope | Manager sections |
-|-------|-----------|-----------------|------------------|
+| Actor | Task scope | Assigned attention | Manager sections |
+|-------|-----------|--------------------|------------------|
 | Sales executive | `owner_id = auth.uid()` only | assigned leads only | hidden |
-| Manager / broad | optional `p_owner_id` filter; NULL = team | team or filtered owner | Unassigned, SLA Breaches |
+| Manager / broad | optional `p_owner_id` filter; NULL = team | filtered lead assignee or team | Unassigned, SLA Breaches |
 
 Broad scope: `private.crm_has_broad_lead_read()` (`leads.read_all` or legacy `leads.read` without `read_assigned`).
+
+**Owner-filter contract (manager):**
+- Task queues: filter by activity `owner_id` (`v_scope_owner`)
+- No Next Action / New Uncontacted: filter by lead `assigned_to`
+- SLA Breaches: filter by lead `assigned_to` (same as assigned attention)
+- **Unassigned exception:** always global manager attention — unassigned leads cannot match a selected owner and must remain visible regardless of owner filter
 
 ## Read Architecture
 
@@ -73,8 +79,8 @@ Sort: `due_at ASC`, `id ASC` tie-break.
 |---------|------|
 | No Next Action | Active non-terminal assigned lead with no open primary activity |
 | New Uncontacted | Assigned active non-terminal; `first_contact_attempt_at IS NULL` (missing clock = uncontacted) |
-| Unassigned | Manager only; active non-terminal; `assigned_to IS NULL` |
-| SLA Breaches | Manager only; `sla_due_at IS NOT NULL AND first_contact_attempt_at IS NULL AND sla_due_at < v_now` |
+| Unassigned | Manager only; active non-terminal; `assigned_to IS NULL` (global — not owner-filtered) |
+| SLA Breaches | Manager only; `sla_due_at IS NOT NULL AND attempt IS NULL AND sla_due_at < v_now`; scoped by `assigned_to` when owner selected |
 
 ### Timezone
 
