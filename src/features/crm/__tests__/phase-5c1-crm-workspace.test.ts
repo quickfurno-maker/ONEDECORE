@@ -383,3 +383,166 @@ describe("Phase 5C1 regression guards", () => {
     }
   });
 });
+
+describe("CRM 2A-6 My Day workspace", () => {
+  test("migration and pgTAP suite exist", () => {
+    assert.ok(
+      fileExists("supabase/migrations/20260829120000_crm_my_day_read_model.sql")
+    );
+    assert.ok(
+      fileExists("supabase/tests/database/34_crm_my_day_read_model_test.sql")
+    );
+  });
+
+  test("route file exists: src/app/admin/crm/my-day/page.tsx", () => {
+    assert.ok(fileExists("src/app/admin/crm/my-day/page.tsx"));
+  });
+
+  test("my-day page uses requireCrmReadAccess and server RPC query", () => {
+    const pageSrc = readFileSync(
+      join(root, "src/app/admin/crm/my-day/page.tsx"),
+      "utf8"
+    );
+    assert.match(pageSrc, /requireCrmReadAccess/);
+    assert.match(pageSrc, /fetchCrmMyDaySnapshot/);
+    assert.doesNotMatch(pageSrc, /getUser\(/);
+    assert.doesNotMatch(pageSrc, /createClient\(\)\.from/);
+  });
+
+  test("my-day queries call get_crm_my_day RPC only", () => {
+    const src = readFileSync(
+      join(root, "src/features/crm/server/crm-my-day-queries.ts"),
+      "utf8"
+    );
+    assert.match(src, /rpc\("get_crm_my_day"/);
+    assert.doesNotMatch(src, /\.from\("lead_follow_ups"\)/);
+    assert.doesNotMatch(src, /\.from\("leads"\)/);
+  });
+
+  test("my-day contracts use Asia/Kolkata reporting timezone", () => {
+    const src = readFileSync(
+      join(root, "src/features/crm/contracts/my-day-contracts.ts"),
+      "utf8"
+    );
+    assert.match(src, /REPORT_TIMEZONE/);
+    assert.match(src, /formatMyDayLocalDateLabel/);
+  });
+
+  test("my-day UI renders task and attention sections with lead links", () => {
+    const src = readFileSync(
+      join(root, "src/features/crm/components/my-day/MyDayWorkspace.tsx"),
+      "utf8"
+    );
+    assert.match(src, /Overdue/);
+    assert.match(src, /Due Today/);
+    assert.match(src, /Upcoming/);
+    assert.match(src, /No Next Action/);
+    assert.match(src, /New Uncontacted/);
+    assert.match(src, /Nothing overdue\./);
+    assert.match(src, /You're clear for today\./);
+    assert.match(src, /\/admin\/crm\/leads\//);
+    assert.match(src, /canViewManagerSections/);
+    assert.match(src, /Unassigned/);
+    assert.match(src, /SLA Breaches/);
+    assert.match(src, /md:grid-cols-2/);
+  });
+
+  test("manager owner filter gated by canReadBroad", () => {
+    const pageSrc = readFileSync(
+      join(root, "src/app/admin/crm/my-day/page.tsx"),
+      "utf8"
+    );
+    assert.match(pageSrc, /canReadBroad/);
+    const uiSrc = readFileSync(
+      join(root, "src/features/crm/components/my-day/MyDayWorkspace.tsx"),
+      "utf8"
+    );
+    assert.match(uiSrc, /canFilterOwner/);
+  });
+
+  test("owner filter form has submit control and no client island", () => {
+    const uiSrc = readFileSync(
+      join(root, "src/features/crm/components/my-day/MyDayWorkspace.tsx"),
+      "utf8"
+    );
+    assert.match(uiSrc, /method=\"get\"/);
+    assert.match(uiSrc, /name=\"owner\"/);
+    assert.match(uiSrc, /type=\"submit\"/);
+    assert.match(uiSrc, /Apply/);
+    assert.match(uiSrc, /min-h-10/);
+    assert.match(uiSrc, /focus-visible:outline/);
+    assert.doesNotMatch(uiSrc, /['\"]use client['\"]/);
+    assert.doesNotMatch(uiSrc, /onChange/);
+  });
+
+  test("executive page path does not render owner filter without canFilterOwner", () => {
+    const uiSrc = readFileSync(
+      join(root, "src/features/crm/components/my-day/MyDayWorkspace.tsx"),
+      "utf8"
+    );
+    assert.match(uiSrc, /canFilterOwner \? \(/);
+    assert.match(uiSrc, /: null/);
+  });
+
+  test("parseMyDayOwnerFilter validates UUID and falls back safely", async () => {
+    const { parseMyDayOwnerFilter } = await import(
+      "../contracts/my-day-contracts.ts"
+    );
+    const validOwner = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    assert.equal(parseMyDayOwnerFilter(undefined), null);
+    assert.equal(parseMyDayOwnerFilter(""), null);
+    assert.equal(parseMyDayOwnerFilter("team"), null);
+    assert.equal(parseMyDayOwnerFilter("  team  "), null);
+    assert.equal(parseMyDayOwnerFilter("garbage"), null);
+    assert.equal(parseMyDayOwnerFilter("not-a-uuid"), null);
+    assert.equal(
+      parseMyDayOwnerFilter("d3333333-3333-3333-3333-333333333333"),
+      null
+    );
+    assert.equal(parseMyDayOwnerFilter(validOwner), validOwner);
+    assert.equal(parseMyDayOwnerFilter([validOwner, "other"]), validOwner);
+    assert.equal(parseMyDayOwnerFilter(["garbage", "team"]), null);
+  });
+
+  test("migration scopes SLA breaches by lead assignee when owner selected", () => {
+    const migration = readFileSync(
+      join(root, "supabase/migrations/20260829120000_crm_my_day_read_model.sql"),
+      "utf8"
+    );
+    assert.match(migration, /sla_breach_base as \(/);
+    const breachBaseIdx = migration.indexOf("sla_breach_base as (");
+    const breachBaseSlice = migration.slice(breachBaseIdx, breachBaseIdx + 1200);
+    assert.match(
+      breachBaseSlice,
+      /v_scope_owner is null or l\.assigned_to = v_scope_owner/
+    );
+    const countIdx = migration.indexOf("as sla_breach_count");
+    assert.ok(countIdx > 0);
+    const countSlice = migration.slice(countIdx - 500, countIdx);
+    assert.match(
+      countSlice,
+      /v_scope_owner is null or l\.assigned_to = v_scope_owner/
+    );
+  });
+
+  test("CrmNav unchanged — no My Day nav entry in 2A-6", () => {
+    const navSrc = readFileSync(
+      join(root, "src/features/crm/components/shell/CrmNav.tsx"),
+      "utf8"
+    );
+    assert.doesNotMatch(navSrc, /my-day/);
+    assert.doesNotMatch(navSrc, /My Day/);
+  });
+
+  test("my-day DTO exposes only approved public keys", () => {
+    const contractsSrc = readFileSync(
+      join(root, "src/features/crm/contracts/my-day-contracts.ts"),
+      "utf8"
+    );
+    for (const key of ["activityId", "leadDisplayLabel", "attentionReason"]) {
+      assert.match(contractsSrc, new RegExp(key));
+    }
+    assert.match(contractsSrc, /MY_DAY_FORBIDDEN_FIELDS/);
+    assert.match(contractsSrc, /submitted_email/);
+  });
+});

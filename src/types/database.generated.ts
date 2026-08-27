@@ -7473,6 +7473,14 @@ export type Database = {
         Args: { p_contact_id: string }
         Returns: Json
       }
+      get_crm_my_day: {
+        Args: {
+          p_attention_limit?: number
+          p_owner_id?: string | null
+          p_upcoming_limit?: number
+        }
+        Returns: Json
+      }
       get_live_landing_publication: { Args: { p_slug: string }; Returns: Json }
       get_project_design_high_level_status: {
         Args: { p_project_id: string }
