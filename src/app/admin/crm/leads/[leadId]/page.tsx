@@ -69,7 +69,7 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
         ? listActivityOutcomeOptionsForCurrentUser()
         : Promise.resolve([]),
       context?.canManageLeadFollowUps
-        ? fetchGovernedWhatsappSendIntentsForLead(lead.id).catch(() => [])
+        ? fetchGovernedWhatsappSendIntentsForLead(lead.id)
         : Promise.resolve([]),
     ]);
 

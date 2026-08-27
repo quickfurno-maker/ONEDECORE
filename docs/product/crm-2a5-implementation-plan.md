@@ -56,19 +56,44 @@ When assigned, non-terminal, non–on-hold lead has no open primary: red **No ne
 Types, title, due, priority, duration, reminder, optional owner (broad scope), optional quotation link, make-primary toggle. Default durations per type; suggested titles editable.
 
 ### Complete activity
-Structured outcome from DB catalogue (filtered by activity type). Primary defaults toward **Schedule next action** (`NEXT_PRIMARY`). Resolutions: NEXT_PRIMARY, ON_HOLD, CLOSED_LOST — **never CLOSED_WON**. Secondary with existing primary: **Complete only** (`NONE`). WhatsApp `whatsapp_sent` requires governed send-intent picker.
+Structured outcome from DB catalogue (filtered by activity type). Resolution matrix via `getCompletionResolutionOptions`:
+
+| Lead state | Activity | Options |
+| :--- | :--- | :--- |
+| Terminal | primary or secondary | `NONE` only |
+| Active primary | open primary | `NEXT_PRIMARY`, `ON_HOLD`, `CLOSED_LOST` |
+| Active secondary + surviving primary | secondary | `NONE`, `NEXT_PRIMARY`, `ON_HOLD`, `CLOSED_LOST` |
+| Active secondary without primary | secondary | `NEXT_PRIMARY`, `ON_HOLD`, `CLOSED_LOST` |
+| `on_hold` | any | same as active, but `ON_HOLD` omitted |
+
+Defaults: terminal / secondary-with-primary → `NONE`; otherwise → `NEXT_PRIMARY`. **Never CLOSED_WON.**
+
+Resolution-specific FormData only: `nextActivityType` and other next fields submit only when `NEXT_PRIMARY` is selected (no cross-resolution leakage).
+
+### Create activity owner
+Broad-scope owner select defaults to empty string (“Assign to me”) → parser `null` → service `context.userId`. Real UUIDs unchanged. Do not send `"self"`.
 
 ### Timestamp boundary
 All forms use `datetime-local` in UI; `appendAbsoluteTimestampsFromLocalFields` converts to ISO with `Z` before server actions.
 
 ### WhatsApp evidence
-`fetchGovernedWhatsappSendIntentsForLead`: conversations by `lead_id` → `whatsapp_send_intents` where `lifecycle_status = dispatch_bound`. No CRM migration; RLS authoritative.
+`fetchGovernedWhatsappSendIntentsForLead`: conversations by `lead_id` → `whatsapp_send_intents` where `lifecycle_status = dispatch_bound`. No CRM migration; RLS authoritative. Lead page does **not** swallow arbitrary query failures with `.catch(() => [])`.
 
 ### Capability-driven controls
 - `canManageLeadFollowUps`: mutations
 - `canReadBroad` (`canChooseFollowUpOwner`): owner select + secondary transfer
 - Primary never shows transfer or Make Primary
 
+---
+
+## Pre-merge UX contract corrections (2026-08-27)
+
+| Fix | Result |
+| :--- | :--- |
+| Create owner `"self"` | Replaced with empty option; strict 2A-4 parser unchanged |
+| Always-submitted `nextActivityType` | Rendered only inside NEXT_PRIMARY branch |
+| Resolution matrix | Pure helper matches 2A-3; terminal + secondary paths corrected |
+| WhatsApp `.catch(() => [])` | Removed from lead-detail page |
 ---
 
 ## Tests

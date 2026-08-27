@@ -158,6 +158,7 @@ export function LeadActivityWorkspace({
         open={completeTarget !== null}
         activity={completeTarget}
         leadId={leadId}
+        leadStatus={leadStatus}
         hasOtherOpenPrimary={Boolean(
           primaryActivity &&
             completeTarget &&

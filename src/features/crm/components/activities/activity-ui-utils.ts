@@ -3,9 +3,14 @@ import {
   CRM_ACTIVITY_TYPES,
   type CrmActivityOutcomeOption,
   type CrmActivityPriority,
+  type CrmActivityResolution,
   type CrmActivityType,
 } from "../../contracts/activity-contracts.ts";
 import { formatCrmCodeLabel } from "../../contracts/crm-labels.ts";
+import {
+  isTerminalLeadStage,
+  type LeadStageCode,
+} from "../../contracts/lead-stages.ts";
 
 export const CRM_ACTIVITY_DEFAULT_DURATIONS: Readonly<
   Record<CrmActivityType, number>
@@ -134,6 +139,51 @@ export const CRM_ACTIVITY_RESOLUTION_LABELS = {
   CLOSED_LOST: "Close lost",
   NONE: "Complete only",
 } as const;
+
+/**
+ * Completion resolution matrix aligned with CRM 2A-3 complete_lead_activity.
+ * CLOSED_WON is never offered. on_hold leads omit ON_HOLD (already held).
+ */
+export function getCompletionResolutionOptions(input: {
+  readonly leadStatus: LeadStageCode;
+  readonly isPrimary: boolean;
+  readonly hasOtherOpenPrimary: boolean;
+}): readonly CrmActivityResolution[] {
+  if (isTerminalLeadStage(input.leadStatus)) {
+    return ["NONE"];
+  }
+
+  const allowOnHold = input.leadStatus !== "on_hold";
+  const withOnHold = (
+    options: readonly CrmActivityResolution[]
+  ): readonly CrmActivityResolution[] =>
+    allowOnHold ? options : options.filter((entry) => entry !== "ON_HOLD");
+
+  if (input.isPrimary) {
+    return withOnHold(["NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"]);
+  }
+
+  if (input.hasOtherOpenPrimary) {
+    return withOnHold(["NONE", "NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"]);
+  }
+
+  return withOnHold(["NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"]);
+}
+
+export function getDefaultCompletionResolution(
+  options: readonly CrmActivityResolution[]
+): CrmActivityResolution {
+  if (options.includes("NONE") && options.length === 1) {
+    return "NONE";
+  }
+  if (options.includes("NONE") && options.includes("NEXT_PRIMARY")) {
+    return "NONE";
+  }
+  if (options.includes("NEXT_PRIMARY")) {
+    return "NEXT_PRIMARY";
+  }
+  return options[0] ?? "NONE";
+}
 
 export function inputClassName(hasError = false): string {
   return [

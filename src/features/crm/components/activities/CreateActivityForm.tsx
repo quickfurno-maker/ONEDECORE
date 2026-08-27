@@ -258,11 +258,11 @@ export function CreateActivityForm({
           <select
             id={`${formId}-owner`}
             name="ownerId"
-            defaultValue="self"
+            defaultValue=""
             className={inputClassName(Boolean(fieldErrors.ownerId))}
             data-testid="crm-create-activity-owner"
           >
-            <option value="self">Assign to me</option>
+            <option value="">Assign to me</option>
             {assigneeDirectory.map((entry) => (
               <option key={entry.userId} value={entry.userId}>
                 {entry.displayName}

@@ -6,7 +6,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
-import { filterOutcomeOptionsForActivityType } from "../components/activities/activity-ui-utils.ts";
+import {
+  parseCompleteLeadActivityForm,
+  parseCreateLeadActivityForm,
+} from "../contracts/activity-contracts.ts";
+import {
+  filterOutcomeOptionsForActivityType,
+  getCompletionResolutionOptions,
+  getDefaultCompletionResolution,
+} from "../components/activities/activity-ui-utils.ts";
 import {
   appendAbsoluteTimestampsFromLocalFields,
   isValidDatetimeLocalValue,
@@ -14,6 +22,10 @@ import {
 } from "../lib/local-datetime-to-iso.ts";
 
 const root = process.cwd();
+const FUTURE = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+const ACTIVITY_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const OWNER_UUID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const LEAD_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 function readSrc(relativePath: string): string {
   return readFileSync(join(root, relativePath), "utf8");
@@ -45,6 +57,241 @@ describe("CRM 2A-5 local datetime boundary", () => {
   });
 });
 
+describe("CRM 2A-5 create owner default", () => {
+  test("create form default owner option is empty, not self", () => {
+    const src = readSrc(
+      "src/features/crm/components/activities/CreateActivityForm.tsx"
+    );
+    assert.match(src, /defaultValue=""/);
+    assert.match(src, /<option value="">Assign to me<\/option>/);
+    assert.doesNotMatch(src, /value="self"/);
+    assert.doesNotMatch(src, /defaultValue="self"/);
+  });
+
+  test("empty ownerId passes strict create parser as null", () => {
+    const parsed = parseCreateLeadActivityForm({
+      leadId: LEAD_ID,
+      activityType: "call",
+      title: "Follow-up call",
+      dueAt: FUTURE,
+      priority: "normal",
+      ownerId: "",
+      isPrimary: "true",
+      durationMinutes: "15",
+    });
+    assert.equal(parsed.success, true);
+    if (parsed.success) {
+      assert.equal(parsed.input.ownerId, null);
+    }
+  });
+
+  test("selected owner UUID still parses", () => {
+    const parsed = parseCreateLeadActivityForm({
+      leadId: LEAD_ID,
+      activityType: "call",
+      title: "Follow-up call",
+      dueAt: FUTURE,
+      priority: "normal",
+      ownerId: OWNER_UUID,
+      isPrimary: "false",
+      durationMinutes: "15",
+    });
+    assert.equal(parsed.success, true);
+    if (parsed.success) {
+      assert.equal(parsed.input.ownerId, OWNER_UUID);
+    }
+  });
+
+  test("self string still fails strict parser (2A-4 unchanged)", () => {
+    const parsed = parseCreateLeadActivityForm({
+      leadId: LEAD_ID,
+      activityType: "call",
+      title: "Follow-up call",
+      dueAt: FUTURE,
+      ownerId: "self",
+    });
+    assert.equal(parsed.success, false);
+    if (!parsed.success) {
+      assert.ok(parsed.fieldErrors.ownerId);
+    }
+  });
+});
+
+describe("CRM 2A-5 completion resolution matrix", () => {
+  test("active primary has no NONE", () => {
+    const options = getCompletionResolutionOptions({
+      leadStatus: "contacted",
+      isPrimary: true,
+      hasOtherOpenPrimary: false,
+    });
+    assert.deepEqual(options, ["NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"]);
+    assert.equal(getDefaultCompletionResolution(options), "NEXT_PRIMARY");
+  });
+
+  test("active secondary + other primary has all four valid options", () => {
+    const options = getCompletionResolutionOptions({
+      leadStatus: "qualified",
+      isPrimary: false,
+      hasOtherOpenPrimary: true,
+    });
+    assert.deepEqual(options, [
+      "NONE",
+      "NEXT_PRIMARY",
+      "ON_HOLD",
+      "CLOSED_LOST",
+    ]);
+    assert.equal(getDefaultCompletionResolution(options), "NONE");
+  });
+
+  test("active secondary without primary has no NONE", () => {
+    const options = getCompletionResolutionOptions({
+      leadStatus: "assigned",
+      isPrimary: false,
+      hasOtherOpenPrimary: false,
+    });
+    assert.deepEqual(options, ["NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"]);
+    assert.equal(getDefaultCompletionResolution(options), "NEXT_PRIMARY");
+  });
+
+  test("terminal primary and secondary are NONE only", () => {
+    for (const status of ["closed_won", "closed_lost"] as const) {
+      for (const isPrimary of [true, false]) {
+        const options = getCompletionResolutionOptions({
+          leadStatus: status,
+          isPrimary,
+          hasOtherOpenPrimary: !isPrimary,
+        });
+        assert.deepEqual(options, ["NONE"]);
+        assert.equal(getDefaultCompletionResolution(options), "NONE");
+      }
+    }
+  });
+
+  test("on_hold omits ON_HOLD resolution", () => {
+    const primary = getCompletionResolutionOptions({
+      leadStatus: "on_hold",
+      isPrimary: true,
+      hasOtherOpenPrimary: false,
+    });
+    assert.deepEqual(primary, ["NEXT_PRIMARY", "CLOSED_LOST"]);
+    assert.equal(primary.includes("ON_HOLD"), false);
+
+    const secondary = getCompletionResolutionOptions({
+      leadStatus: "on_hold",
+      isPrimary: false,
+      hasOtherOpenPrimary: true,
+    });
+    assert.deepEqual(secondary, ["NONE", "NEXT_PRIMARY", "CLOSED_LOST"]);
+  });
+
+  test("CLOSED_WON absent from every matrix result", () => {
+    const samples = [
+      getCompletionResolutionOptions({
+        leadStatus: "contacted",
+        isPrimary: true,
+        hasOtherOpenPrimary: false,
+      }),
+      getCompletionResolutionOptions({
+        leadStatus: "contacted",
+        isPrimary: false,
+        hasOtherOpenPrimary: true,
+      }),
+      getCompletionResolutionOptions({
+        leadStatus: "closed_lost",
+        isPrimary: true,
+        hasOtherOpenPrimary: false,
+      }),
+    ];
+    for (const options of samples) {
+      assert.equal(
+        (options as readonly string[]).includes("CLOSED_WON"),
+        false
+      );
+    }
+  });
+});
+
+describe("CRM 2A-5 complete FormData / parser payloads", () => {
+  test("NONE parses with no next / on-hold / closed-lost fields", () => {
+    const parsed = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "NONE",
+    });
+    assert.equal(parsed.success, true);
+    if (parsed.success) {
+      assert.equal(parsed.input.resolution, "NONE");
+    }
+  });
+
+  test("ON_HOLD parses with on-hold fields only", () => {
+    const parsed = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "ON_HOLD",
+      onHoldReason: "Customer travelling",
+      onHoldReviewAt: FUTURE,
+    });
+    assert.equal(parsed.success, true);
+    if (parsed.success) {
+      assert.equal(parsed.input.resolution, "ON_HOLD");
+    }
+  });
+
+  test("CLOSED_LOST parses with closed-lost fields only", () => {
+    const parsed = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "CLOSED_LOST",
+      closedLostReason: "Budget too low",
+      closureReasonCode: "budget",
+    });
+    assert.equal(parsed.success, true);
+    if (parsed.success) {
+      assert.equal(parsed.input.resolution, "CLOSED_LOST");
+    }
+  });
+
+  test("NEXT_PRIMARY parses with required next fields", () => {
+    const parsed = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "NEXT_PRIMARY",
+      nextActivityType: "call",
+      nextTitle: "Next call",
+      nextDueAt: FUTURE,
+      nextPriority: "normal",
+      nextDurationMinutes: "15",
+    });
+    assert.equal(parsed.success, true);
+    if (parsed.success) {
+      assert.equal(parsed.input.resolution, "NEXT_PRIMARY");
+    }
+  });
+
+  test("NONE with nextActivityType still fails cross-resolution guard", () => {
+    const parsed = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "NONE",
+      nextActivityType: "call",
+    });
+    assert.equal(parsed.success, false);
+  });
+
+  test("CLOSED_WON still rejected", () => {
+    const parsed = parseCompleteLeadActivityForm({
+      activityId: ACTIVITY_ID,
+      outcomeCode: "connected",
+      resolution: "CLOSED_WON",
+    });
+    assert.equal(parsed.success, false);
+    if (!parsed.success) {
+      assert.equal(parsed.code, "CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE");
+    }
+  });
+});
+
 describe("CRM 2A-5 outcome filtering", () => {
   test("filters outcome catalogue by activity type", () => {
     const options = [
@@ -72,10 +319,10 @@ describe("CRM 2A-5 outcome filtering", () => {
     ] as const;
 
     const callOutcomes = filterOutcomeOptionsForActivityType(options, "call");
-    assert.deepEqual(callOutcomes.map((entry) => entry.code), [
-      "connected",
-      "general",
-    ]);
+    assert.deepEqual(
+      callOutcomes.map((entry) => entry.code),
+      ["connected", "general"]
+    );
   });
 });
 
@@ -91,6 +338,14 @@ describe("CRM 2A-5 lead detail architecture", () => {
     assert.match(pageSrc, /LeadDetailAssignmentPanel/);
   });
 
+  test("lead-detail does not blindly catch all WhatsApp evidence errors", () => {
+    const pageSrc = readSrc("src/app/admin/crm/leads/[leadId]/page.tsx");
+    assert.doesNotMatch(
+      pageSrc,
+      /fetchGovernedWhatsappSendIntentsForLead\([^)]*\)\.catch\(\s*\(\)\s*=>\s*\[\]\s*\)/
+    );
+  });
+
   test("create form uses createLeadActivityAction not legacy follow-up action", () => {
     const src = readSrc(
       "src/features/crm/components/activities/CreateActivityForm.tsx"
@@ -103,17 +358,22 @@ describe("CRM 2A-5 lead detail architecture", () => {
     assert.doesNotMatch(src, /\.from\(/);
   });
 
-  test("complete dialog never offers CLOSED_WON resolution", () => {
+  test("complete dialog never offers CLOSED_WON and scopes next fields", () => {
     const src = readSrc(
       "src/features/crm/components/activities/CompleteActivityDialog.tsx"
     );
     assert.match(src, /completeLeadActivityAction/);
-    assert.match(src, /NEXT_PRIMARY/);
-    assert.match(src, /ON_HOLD/);
-    assert.match(src, /CLOSED_LOST/);
+    assert.match(src, /getCompletionResolutionOptions/);
+    assert.match(src, /name="nextActivityType"/);
+    assert.match(src, /showNextPrimaryFields/);
     assert.doesNotMatch(src, /CLOSED_WON/);
     assert.match(src, /whatsappSendIntentId/);
     assert.match(src, /crm-closed-won-absent/);
+    // nextActivityType must only appear inside the NEXT_PRIMARY branch, not as a global hidden.
+    assert.doesNotMatch(
+      src,
+      /<input type="hidden" name="nextActivityType"/
+    );
   });
 
   test("primary card omits transfer and make-primary controls", () => {
@@ -128,7 +388,9 @@ describe("CRM 2A-5 lead detail architecture", () => {
   });
 
   test("secondary open row exposes Make Primary and conditional transfer", () => {
-    const src = readSrc("src/features/crm/components/activities/OpenActivityRow.tsx");
+    const src = readSrc(
+      "src/features/crm/components/activities/OpenActivityRow.tsx"
+    );
     assert.match(src, /Make Primary/);
     assert.match(src, /designatePrimaryNextActionAction/);
     assert.match(src, /canTransfer/);
@@ -157,7 +419,9 @@ describe("CRM 2A-5 lead detail architecture", () => {
   });
 
   test("whatsapp evidence query reuses inbox tables without CRM migration", () => {
-    const src = readSrc("src/features/crm/server/crm-whatsapp-evidence-queries.ts");
+    const src = readSrc(
+      "src/features/crm/server/crm-whatsapp-evidence-queries.ts"
+    );
     assert.match(src, /whatsapp_conversations/);
     assert.match(src, /whatsapp_send_intents/);
     assert.match(src, /dispatch_bound/);
@@ -172,6 +436,7 @@ describe("CRM 2A-5 lead detail architecture", () => {
       "src/features/crm/components/activities/CreateActivityForm.tsx"
     );
     assert.match(workspace, /crm-activity-workspace/);
+    assert.match(workspace, /leadStatus=\{leadStatus\}/);
     assert.match(createForm, /w-full/);
     assert.match(createForm, /sm:grid-cols-2/);
   });
