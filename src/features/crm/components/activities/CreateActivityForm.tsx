@@ -65,7 +65,6 @@ export function CreateActivityForm({
 
   useEffect(() => {
     if (state.success) {
-      setClientError(null);
       router.refresh();
     }
   }, [state.success, router]);

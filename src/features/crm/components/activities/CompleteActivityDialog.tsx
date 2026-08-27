@@ -49,8 +49,45 @@ interface CompleteActivityDialogProps {
   readonly onClose: () => void;
 }
 
-export function CompleteActivityDialog({
-  open,
+interface CompleteActivityFormProps {
+  readonly activity: CrmLeadDetailFollowUp;
+  readonly leadId: string;
+  readonly hasOtherOpenPrimary: boolean;
+  readonly outcomeOptions: readonly CrmActivityOutcomeOption[];
+  readonly closureReasons: readonly CrmLeadClosureReasonOption[];
+  readonly whatsappSendIntents: readonly CrmWhatsappSendIntentOption[];
+  readonly quotationId: string | null;
+  readonly quotationLabel: string | null;
+  readonly onClose: () => void;
+}
+
+function buildCompleteFormDefaults(
+  activity: CrmLeadDetailFollowUp,
+  outcomeOptions: readonly CrmActivityOutcomeOption[],
+  hasOtherOpenPrimary: boolean
+) {
+  const filteredOutcomes = filterOutcomeOptionsForActivityType(
+    outcomeOptions,
+    activity.activityType
+  );
+  const suggested = suggestNextActivityType(activity.activityType);
+  const isPrimary = activity.isPrimaryNextAction;
+
+  return {
+    filteredOutcomes,
+    suggested,
+    isPrimary,
+    outcomeCode: filteredOutcomes[0]?.code ?? "",
+    resolution: (isPrimary || !hasOtherOpenPrimary
+      ? "NEXT_PRIMARY"
+      : "NONE") as CrmActivityResolution,
+    nextType: suggested,
+    nextTitle: CRM_ACTIVITY_SUGGESTED_TITLES[suggested],
+    nextDuration: String(CRM_ACTIVITY_DEFAULT_DURATIONS[suggested]),
+  };
+}
+
+function CompleteActivityForm({
   activity,
   leadId,
   hasOtherOpenPrimary,
@@ -60,36 +97,37 @@ export function CompleteActivityDialog({
   quotationId,
   quotationLabel,
   onClose,
-}: CompleteActivityDialogProps) {
+}: CompleteActivityFormProps) {
   const router = useRouter();
   const titleId = useId();
+  const defaults = buildCompleteFormDefaults(
+    activity,
+    outcomeOptions,
+    hasOtherOpenPrimary
+  );
   const [state, formAction, pending] = useActionState(
     completeLeadActivityAction,
     INITIAL_CRM_ACTIVITY_ACTION_STATE
   );
   const [clientError, setClientError] = useState<string | null>(null);
-  const [outcomeCode, setOutcomeCode] = useState("");
-  const [resolution, setResolution] = useState<CrmActivityResolution>("NEXT_PRIMARY");
-  const [nextType, setNextType] = useState<CrmActivityType>("call");
-  const [nextTitle, setNextTitle] = useState(CRM_ACTIVITY_SUGGESTED_TITLES.call);
-  const [nextDuration, setNextDuration] = useState("15");
+  const [outcomeCode, setOutcomeCode] = useState(defaults.outcomeCode);
+  const [resolution, setResolution] = useState<CrmActivityResolution>(
+    defaults.resolution
+  );
+  const [nextType, setNextType] = useState<CrmActivityType>(defaults.nextType);
+  const [nextTitle, setNextTitle] = useState(defaults.nextTitle);
+  const [nextDuration, setNextDuration] = useState(defaults.nextDuration);
 
-  const isPrimary = activity?.isPrimaryNextAction ?? false;
-  const filteredOutcomes = useMemo(
-    () =>
-      activity
-        ? filterOutcomeOptionsForActivityType(outcomeOptions, activity.activityType)
-        : [],
-    [activity, outcomeOptions]
+  const isPrimary = activity.isPrimaryNextAction;
+  const filteredOutcomes = filterOutcomeOptionsForActivityType(
+    outcomeOptions,
+    activity.activityType
   );
 
   const showWhatsappEvidence =
-    activity?.activityType === "whatsapp" && outcomeCode === "whatsapp_sent";
+    activity.activityType === "whatsapp" && outcomeCode === "whatsapp_sent";
 
   const resolutionOptions = useMemo((): readonly CrmActivityResolution[] => {
-    if (!activity) {
-      return [];
-    }
     if (isPrimary) {
       return ["NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"];
     }
@@ -97,20 +135,7 @@ export function CompleteActivityDialog({
       return ["NONE"];
     }
     return ["NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"];
-  }, [activity, hasOtherOpenPrimary, isPrimary]);
-
-  useEffect(() => {
-    if (!open || !activity) {
-      return;
-    }
-    const suggested = suggestNextActivityType(activity.activityType);
-    setNextType(suggested);
-    setNextTitle(CRM_ACTIVITY_SUGGESTED_TITLES[suggested]);
-    setNextDuration(String(CRM_ACTIVITY_DEFAULT_DURATIONS[suggested]));
-    setOutcomeCode(filteredOutcomes[0]?.code ?? "");
-    setResolution(isPrimary || !hasOtherOpenPrimary ? "NEXT_PRIMARY" : "NONE");
-    setClientError(null);
-  }, [open, activity, filteredOutcomes, hasOtherOpenPrimary, isPrimary]);
+  }, [hasOtherOpenPrimary, isPrimary]);
 
   useEffect(() => {
     if (state.success) {
@@ -118,10 +143,6 @@ export function CompleteActivityDialog({
       onClose();
     }
   }, [state.success, router, onClose]);
-
-  if (!activity) {
-    return null;
-  }
 
   const fieldErrors = state.fieldErrors ?? {};
   const showNextPrimaryFields = resolution === "NEXT_PRIMARY";
@@ -154,15 +175,7 @@ export function CompleteActivityDialog({
   };
 
   return (
-    <CrmActivityDialogShell
-      open={open}
-      title="Complete activity"
-      titleId={titleId}
-      description={`${activity.title} · ${activity.activityType.replace(/_/g, " ")}`}
-      onClose={onClose}
-      testId="crm-complete-activity-dialog"
-    >
-      <form action={submitForm} className="space-y-4">
+    <form action={submitForm} className="space-y-4">
         <input type="hidden" name="activityId" value={activity.id} />
         <input type="hidden" name="leadId" value={leadId} />
         <input type="hidden" name="resolution" value={resolution} />
@@ -474,6 +487,48 @@ export function CompleteActivityDialog({
           </button>
         </div>
       </form>
+  );
+}
+
+export function CompleteActivityDialog({
+  open,
+  activity,
+  leadId,
+  hasOtherOpenPrimary,
+  outcomeOptions,
+  closureReasons,
+  whatsappSendIntents,
+  quotationId,
+  quotationLabel,
+  onClose,
+}: CompleteActivityDialogProps) {
+  const titleId = useId();
+
+  if (!open || !activity) {
+    return null;
+  }
+
+  return (
+    <CrmActivityDialogShell
+      open={open}
+      title="Complete activity"
+      titleId={titleId}
+      description={`${activity.title} · ${activity.activityType.replace(/_/g, " ")}`}
+      onClose={onClose}
+      testId="crm-complete-activity-dialog"
+    >
+      <CompleteActivityForm
+        key={activity.id}
+        activity={activity}
+        leadId={leadId}
+        hasOtherOpenPrimary={hasOtherOpenPrimary}
+        outcomeOptions={outcomeOptions}
+        closureReasons={closureReasons}
+        whatsappSendIntents={whatsappSendIntents}
+        quotationId={quotationId}
+        quotationLabel={quotationLabel}
+        onClose={onClose}
+      />
     </CrmActivityDialogShell>
   );
 }

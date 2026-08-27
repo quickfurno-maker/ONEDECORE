@@ -42,13 +42,6 @@ export function RescheduleActivityDialog({
     }
   }, [state.success, router, onClose]);
 
-  useEffect(() => {
-    if (open) {
-      setReminderMode(activity?.reminderAt ? "unchanged" : "unchanged");
-      setClientError(null);
-    }
-  }, [open, activity?.reminderAt]);
-
   if (!activity) {
     return null;
   }
