@@ -74,6 +74,14 @@ describe("Phase 10 COD production readiness", () => {
     assert.match(loader, /return\s*\{\s*ok:\s*false\s*\}/);
   });
 
+  test("server action body size limit is 21mb", () => {
+    const nextConfig = read("next.config.ts");
+    const experimental = nextConfig.match(
+      /experimental:\s*\{[\s\S]*?serverActions:\s*\{[\s\S]*?bodySizeLimit:\s*"([^"]+)"/
+    );
+    assert.equal(experimental?.[1], "21mb");
+  });
+
   test("security headers and health probe exist without payment routes", () => {
     const nextConfig = read("next.config.ts");
     const health = read("src/app/api/health/route.ts");
