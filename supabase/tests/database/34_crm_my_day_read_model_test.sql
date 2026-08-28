@@ -356,7 +356,18 @@ select set_config('test.act_today', (
   select id::text from public.create_lead_activity(
     current_setting('test.lead_today')::uuid,
     'call', 'Today task',
-    (date_trunc('day', now() at time zone 'Asia/Kolkata') + interval '18 hours') at time zone 'Asia/Kolkata',
+    -- Deterministic "due later today" anchor: the midpoint between the current
+    -- Asia/Kolkata wall-clock instant and the start of the next Asia/Kolkata day.
+    -- Always strictly after v_now and always before v_tomorrow_start, so this
+    -- fixture lands in the dueToday bucket at whatever hour CI happens to run.
+    -- A fixed 18:00 IST anchor became overdue for every run after 18:00 IST.
+    (
+      (now() at time zone 'Asia/Kolkata')
+      + (
+          (date_trunc('day', now() at time zone 'Asia/Kolkata') + interval '1 day')
+          - (now() at time zone 'Asia/Kolkata')
+        ) / 2
+    ) at time zone 'Asia/Kolkata',
     'normal', null, true, null, null, null
   )
 ), true);
