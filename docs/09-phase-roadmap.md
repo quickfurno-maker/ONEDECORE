@@ -1,7 +1,7 @@
 # 09 — PHASE IMPLEMENTATION ROADMAP
 
-**Document Status:** Locked Roadmap (truth-synced through Phase 10 COD production readiness + public website simplification lock, August 25, 2026)
-**Current Phase:** Phase 10 **COD PRODUCTION READINESS** with **owner-approved public website simplification** in flight. Website lead intake is LIVE. Shop public gate **OFF**. Online payments **DEFERRED** (M38 untouched).
+**Document Status:** Locked Roadmap (truth-synced through Phase 10A production hardening local pass, August 28, 2026)
+**Current Phase:** Phase **10A** — production hardening (**LOCAL PASS**; owner review pending). **Production/main baseline:** `0a27b2ff26eeeeff4b538841c75cebe89ccd63ed`. CRM 2A + 2B-1 **PRODUCTION LIVE** (PR #107). Website lead intake **LIVE**. Shop public gate **OFF**. Online payments **DEFERRED** (M38 untouched). CRM SLA **OFF**.
 **Next Phase:** Owner review/merge of public-site simplification PR; Shop remains fail-closed until explicit activation.
 **Previous Phase:** CRM lead-list hotfix (PR #96) + notes privilege repair (PR #95) + timeline taxonomy v2 (PR #94)
 
@@ -207,8 +207,12 @@ Phase 9D ──► Ready-Made Furniture E-commerce
     │         • Phase 10 — COD PRODUCTION READINESS PASS / OWNER ACTIVATION PENDING
     │         • Online payment activation is NOT implied by Phase 10 COD activation
     │         • Public shop requires ONEDECORE_SHOP_PUBLIC_ENABLED=true (DEC-0095)
+    │         • Phase 10A — production hardening LOCAL PASS (Next 16.3.3; no activation)
+    │         • Phase 10B — COD shop public activation (owner gate; not started)
     ▼
 Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
+    │         • 10A: dependency security + operational readiness (DEC-0096)
+    │         • 10B: COD shop public activation when owner authorizes (DEC-0095)
 ```
 
 **Landing Page Lab principles (9B):** Structured blocks (not unrestricted drag-and-drop V1); optimize for qualified outcomes; public submissions reuse controlled intake architecture; no fabricated marketing consent; production use remains Phase 10 gated.
@@ -337,7 +341,9 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 
 ### Phase 10
 - **Objective:** Security hardening, full E2E, performance budgets, Hostinger VPS deployment.
-- **Exit gate:** After 9D-F COD certification, owner may authorize **COD-only** public `/shop` activation. Phase 10 COD activation **MUST NOT** activate online payments, provider secrets, or live provider traffic (ADR-0033 / DEC-0094). Online-payment activation requires later separate owner authorization after 9D-E.
+- **10A (current):** Dependency security audit; bounded Next.js 16.3.3 remediation; operational smoke matrix; governance truth sync. **No Shop/payments/SLA/WhatsApp/campaign/Landing Lab activation.** [10A closeout](audits/phase-10a-production-hardening-closeout.md).
+- **10B (next owner gate):** COD-only public `/shop` activation when owner sets `ONEDECORE_SHOP_PUBLIC_ENABLED=true` after 10A merge/deploy.
+- **Exit gate:** After 9D-F COD certification and 10A hardening, owner may authorize **COD-only** public `/shop` activation. Phase 10 COD activation **MUST NOT** activate online payments, provider secrets, or live provider traffic (ADR-0033 / DEC-0094). Online-payment activation requires later separate owner authorization after 9D-E.
 
 ---
 
@@ -384,6 +390,8 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - [COD-first governance amendment](audits/phase-9d-cod-first-launch-governance-amendment.md)
 - [Phase 9D-F COD storefront certification](audits/phase-9d-f-cod-storefront-certification.md)
 - [Phase 10 COD production readiness](audits/phase-10-cod-production-readiness.md)
+- [Phase 10A production hardening closeout](audits/phase-10a-production-hardening-closeout.md)
+- [Phase 10A production smoke matrix](runbooks/phase-10a-production-smoke-matrix.md)
 - [Phase 9D-D2 cart/checkout/tracking](audits/phase-9d-d2-cart-checkout-tracking-implementation.md)
 - [Unified homepage design](design/phase-9d-c-unified-homepage.md)
 - [Phase 9D-A entry audit](audits/phase-9d-a-ecommerce-entry-audit-architecture-freeze.md)

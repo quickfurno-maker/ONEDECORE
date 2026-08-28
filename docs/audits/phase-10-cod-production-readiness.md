@@ -32,7 +32,7 @@
 | :--- | :--- |
 | Hosting target | Hostinger VPS (docs/README); **no repo PM2/systemd/Docker/nginx** |
 | Runtime | Node **24** (`package.json` engines, `.nvmrc`) |
-| App | Next.js 16.2.11 — `npm run build` / `npm run start` |
+| App | Next.js **16.3.3** after Phase 10A merge (baseline **16.2.11** at `0a27b2f`); `npm run build` / `npm run start` |
 | Process manager | **Not in repo** — owner must use Hostinger/PM2/systemd of record |
 | Reverse proxy | **Not in repo** — terminate TLS at proxy; proxy to Node port |
 | App port | Next default **3000** (or `PORT` if process manager sets it) |

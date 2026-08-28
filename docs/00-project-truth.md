@@ -1,14 +1,14 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced through Phase 10 COD production readiness, August 24, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced through Phase 10A production hardening local pass, August 28, 2026)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
-**Deployment Target:** Hostinger VPS
-**Current Phase:** Phase 10 **COD PRODUCTION READINESS PASS / OWNER ACTIVATION PENDING**. Phase 9D-F **COMPLETE / MERGED** (PR #87 / `7e4391a…`). Repository **M1–M37**. Managed **M1–M37** (D1/D2 closeout evidence; re-confirm before activate). Phase 9D-E **DEFERRED**. Public shop gate **OFF** (`ONEDECORE_SHOP_PUBLIC_ENABLED`). Production **OFF**.
-**Next Phase:** Owner deployment (gate OFF) then separate COD shop activation. Online payments remain deferred. Production storefront not marked active in this gate.
-**Previous Phase:** Phase 9D-F COD storefront certification (**COMPLETE** / PR #87)
+**Deployment Target:** Hostinger VPS (`91.108.105.192`; app `/var/www/onedecore`; PM2 `onedecore`; Nginx → `127.0.0.1:3000`)
+**Current Phase:** Phase **10A** — production hardening, dependency security & operational readiness (**LOCAL PASS**; owner review pending — no merge/deploy). **Production/main baseline:** `0a27b2ff26eeeeff4b538841c75cebe89ccd63ed`. CRM **2A COMPLETE**; CRM **2B-1 COMPLETE / PRODUCTION LIVE** (PR #107). Premium mobile-first CRM + My Day navigation live. Public website lead intake **LIVE**. Shop public gate **OFF** (`ONEDECORE_SHOP_PUBLIC_ENABLED`). Online payments **DEFERRED**. CRM SLA **OFF**.
+**Next Phase:** Owner review of Phase 10A; then optional Phase **10B** COD shop public activation (separate owner gate). Online payments remain deferred.
+**Previous Phase:** CRM 2B-1 premium UX polish (**COMPLETE** / PR #107 / production smoke passed)
 
 ---
 
@@ -42,7 +42,7 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 ├─────────────────────────────────────────────────────────┤
 │ 2. Dedicated Portfolio System (/portfolio)            │
 ├─────────────────────────────────────────────────────────┤
-│ 3. Secure Public Lead Intake (dual-gated; disabled)     │
+│ 3. Secure Public Lead Intake (dual-gated; production LIVE) │
 ├─────────────────────────────────────────────────────────┤
 │ 4. Sales & Operations CRM (/admin/crm — partial on main) │
 ├─────────────────────────────────────────────────────────┤
@@ -79,8 +79,10 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Lead assignment mutations (Phase 5C2A) | Merged on `main` |
 | Manual lead creation (Phase 5C2B) | Merged on `main` |
 | Lifecycle collaboration (Phase 5C2C) | Merged on `main` (PR #11) |
-| Lead intake data plane (migrations 9–10) | Schema merged; **public route disabled by default** |
-| Public lead form UI | **Merged; default `copy-only`; server `disabled`** |
+| Lead intake data plane (migrations 9–10) | Schema merged; **production activated** (`ONEDECORE_LEAD_INTAKE_MODE=enabled`) |
+| Public lead form UI | **Merged; production LIVE** on canonical public website |
+| CRM 2A (activities, My Day, assignment automation) | Merged on `main`; production live |
+| CRM 2B-1 (premium mobile CRM UX, My Day nav, manual lead phone rule) | Merged PR #107; **production live** @ `0a27b2f` |
 
 ### Managed database applied (not production deployment)
 
@@ -190,7 +192,7 @@ WhatsApp production outbound, public lead activation, production deployment, **M
 
 ## 5. Master Governance Rules & Mandatory Corrections
 
-1. **Next.js Version Target:** Next.js 16.x (pinned `16.2.11` in Phase 2A).
+1. **Next.js Version Target:** Next.js 16.x. Baseline scaffold **16.2.11** (Phase 2A / DEC-0015). Phase **10A** bounded security bump to **16.3.3** pending owner merge (DEC-0096).
 2. **Supabase Source of Truth:** Supabase PostgreSQL is the sole permanent database for structured application data.
 3. **Database-Before-Automation:** Valid submissions and inbound messages persist to Supabase *before* n8n or outbound notifications.
 4. **Meta WhatsApp:** Official Cloud API only; webhooks terminate at verified ONEDECORE endpoint; unofficial WhatsApp Web automation prohibited.
@@ -328,5 +330,9 @@ Phase 9D product locks remain **OD9D-1–OD9D-12** (ADR-0028 / DEC-0079). Archit
 
 ## Phase 9D COD-First Launch (Governance)
 
-Owner amendment **ADR-0033 / DEC-0094**: furniture-shop MVP launch is **COD-only**. Phase 9D-E online payment is **DEFERRED** (preserved locally on `phase-9d-e-online-payments` @ `b2ea05c…`; not on `main`; M38 not managed). **9D-F COMPLETE / MERGED** (PR #87). **Phase 10 COD PRODUCTION READINESS PASS / OWNER ACTIVATION PENDING** — [readiness audit](audits/phase-10-cod-production-readiness.md); public shop requires `ONEDECORE_SHOP_PUBLIC_ENABLED=true` (**DEC-0095**). Online payment requires later separate 9D-E certification + explicit activation. Production remains **OFF**.
+Owner amendment **ADR-0033 / DEC-0094**: furniture-shop MVP launch is **COD-only**. Phase 9D-E online payment is **DEFERRED** (preserved locally on `phase-9d-e-online-payments` @ `b2ea05c…`; not on `main`; M38 not managed). **9D-F COMPLETE / MERGED** (PR #87). Public shop requires `ONEDECORE_SHOP_PUBLIC_ENABLED=true` (**DEC-0095**) — remains **OFF**. Online payment requires later separate 9D-E certification + explicit activation. **Production website + CRM + lead intake LIVE** at `0a27b2f`; shop storefront **OFF**.
+
+## Phase 10A — Production Hardening (Local Pass)
+
+Phase **10A** is security, dependency, and operational-readiness hardening only — **not** Shop activation, payments, CRM SLA, WhatsApp, campaigns, or Landing Lab. [Closeout audit](audits/phase-10a-production-hardening-closeout.md). Bounded remediation: `next` + `eslint-config-next` **16.2.11 → 16.3.3** (DEC-0096); ExcelJS/uuid and dev-toolchain advisories documented deferred. **No commit/push/deploy** in this gate. Manual CRM New Lead phone rule (2B-1): staff enter exactly **10 Indian digits**; server canonicalizes to `+91XXXXXXXXXX`.
 <!-- PHASE_9D_D2_AND_COD_FIRST_END -->
