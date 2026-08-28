@@ -24,7 +24,7 @@ export function OneDecoreWordmark({
       href={href}
       className={classes}
       data-size={size}
-      aria-label="ONEDECORE — One Vision. Complete Interiors. Home"
+      aria-label="ONEDECORE — Made for Pune. Home"
     >
       <span className="od-wordmark__row" aria-hidden="true">
         <span className="od-wordmark__one">ONE</span>
@@ -32,7 +32,7 @@ export function OneDecoreWordmark({
       </span>
       <span className="od-wordmark__meta" aria-hidden="true">
         <span className="od-wordmark__rule" />
-        <span className="od-wordmark__tag">ONE VISION · COMPLETE INTERIORS</span>
+        <span className="od-wordmark__tag">MADE FOR PUNE</span>
       </span>
     </Link>
   );

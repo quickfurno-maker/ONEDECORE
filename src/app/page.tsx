@@ -64,7 +64,7 @@ async function loadDiscoveryCommerce(): Promise<DiscoveryCommerceState> {
 async function loadPortfolioPreview(): Promise<readonly PublicPortfolioCard[]> {
   try {
     const featured = await getFeaturedProjects();
-    return featured.slice(0, 3);
+    return featured.slice(0, 6);
   } catch {
     return [];
   }

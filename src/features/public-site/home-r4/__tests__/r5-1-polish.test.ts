@@ -127,8 +127,8 @@ describe("R5.1 tab semantics and wordmark", () => {
   test("OneDecoreWordmark is shared across nav drawer footer", () => {
     assert.equal(existsSync(join(home, "OneDecoreWordmark.tsx")), true);
     const mark = read("OneDecoreWordmark.tsx");
-    assert.match(mark, /ONE VISION · COMPLETE INTERIORS/);
-    assert.match(mark, /ONEDECORE — One Vision\. Complete Interiors\. Home/);
+    assert.match(mark, /MADE FOR PUNE/);
+    assert.match(mark, /ONEDECORE — Made for Pune\. Home/);
     assert.doesNotMatch(mark, /QuickFurno|Luxury Interiors/i);
     assert.match(read("HomeNavigation.tsx"), /OneDecoreWordmark/);
     assert.match(read("HomeFooter.tsx"), /OneDecoreWordmark/);

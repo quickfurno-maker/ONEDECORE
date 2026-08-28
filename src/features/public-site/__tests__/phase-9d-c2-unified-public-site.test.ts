@@ -37,22 +37,24 @@ describe("Public site simplification — discovery IA", () => {
     assert.deepEqual([...DISCOVERY_SECTION_ORDER], [
       "header",
       "hero",
-      "complete-home",
-      "modular-kitchen",
-      "wardrobes",
-      "why",
+      "trust",
+      "benefits",
+      "browse",
       "real-homes",
+      "about",
+      "process",
       "furniture",
       "consultation",
       "footer",
     ]);
     assert.deepEqual([...DISCOVERY_MAJOR_SECTIONS], [
       "hero",
-      "complete-home",
-      "modular-kitchen",
-      "wardrobes",
-      "why",
+      "trust",
+      "benefits",
+      "browse",
       "real-homes",
+      "about",
+      "process",
       "furniture",
       "consultation",
     ]);
@@ -60,9 +62,14 @@ describe("Public site simplification — discovery IA", () => {
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     const css = read("src/features/public-site/discovery/discovery.css");
     assert.match(page, /data-od-discovery-order=\{DISCOVERY_SECTION_ORDER\.join/);
-    assert.match(page, /data-od-disc-section="hero"/);
-    assert.match(page, /data-od-disc-section=\{service\.id\}/);
-    assert.match(page, /data-od-disc-section="why"/);
+    assert.doesNotMatch(page, /DiscoveryPromoStrip/);
+    assert.doesNotMatch(page, /od-disc-top-chrome/);
+    assert.match(page, /DiscoveryHeroSlider/);
+    assert.match(page, /DiscoveryBenefitCards/);
+    assert.match(page, /DiscoveryBrowseTiles/);
+    const browse = read("src/features/public-site/discovery/DiscoveryBrowseTiles.tsx");
+    assert.match(browse, /data-od-disc-section="browse"/);
+    assert.match(page, /id="about"/);
     assert.match(page, /data-od-disc-section="real-homes"/);
     assert.match(page, /data-od-disc-section="furniture"/);
     assert.match(page, /data-od-disc-section="consultation"/);
@@ -71,20 +78,21 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(page, /PUBLIC_CONSULTATION\.href/);
     assert.doesNotMatch(page, /Book Free Consultation/);
     assert.match(page, /href="\/portfolio"/);
-    assert.match(page, /service\.href/);
     assert.doesNotMatch(page, /\/interiors#consultation/);
     assert.doesNotMatch(page, /\/interiors\?service=/);
     assert.match(page, /ShopPincodeChecker/);
     assert.match(page, /showPincode/);
     assert.doesNotMatch(page, /furniture collection is being prepared/i);
     assert.doesNotMatch(page, /DiscoveryPuneCoverage/);
-    assert.doesNotMatch(page, /od-disc-hero__portrait|od-disc-hero__inset/);
     assert.doesNotMatch(page, /heroConsultant|hero-consultant-indian-woman/);
     assert.doesNotMatch(page, /HomePlannerSheet|HomeBudgetEstimator|HomePlannerInline/);
     assert.match(page, /HomeConsultationCapture/);
     assert.match(page, /PortfolioCard/);
     assert.match(page, /data-od-portfolio-preview/);
-    assert.match(css, /od-disc-service/);
+    assert.match(css, /od-disc-browse-tile/);
+    assert.doesNotMatch(css, /od-disc-top-chrome/);
+    assert.doesNotMatch(css, /od-disc-promo/);
+    assert.match(css, /od-disc-benefit-card/);
     assert.match(css, /od-disc-band--surface|od-disc-band--deep|od-disc-band--divided/);
     assert.match(css, /prefers-reduced-motion/);
   });
@@ -104,10 +112,12 @@ describe("Public site simplification — discovery IA", () => {
       "/?service=custom-wardrobes#consultation"
     );
     const copy = read("src/features/public-site/discovery/discovery-copy.ts");
-    assert.match(copy, /\?service=complete-home-interiors#consultation/);
-    assert.match(copy, /\?service=modular-kitchens#consultation/);
-    assert.match(copy, /\?service=custom-wardrobes#consultation/);
-    assert.doesNotMatch(copy, /\/interiors/);
+    assert.match(copy, /PUBLIC_CONSULTATION_BY_SERVICE\["complete-home-interiors"\]/);
+    assert.match(copy, /PUBLIC_CONSULTATION_BY_SERVICE\["modular-kitchens"\]/);
+    assert.match(copy, /PUBLIC_CONSULTATION_BY_SERVICE\["custom-wardrobes"\]/);
+    assert.match(copy, /href: "\/interiors"/);
+    assert.doesNotMatch(copy, /\/interiors#consultation/);
+    assert.doesNotMatch(copy, /\/interiors\?service=/);
     const nav = read("src/features/public-site/chrome/public-nav.ts");
     assert.match(nav, /href: "\/#consultation"/);
     assert.doesNotMatch(nav, /\/interiors#consultation/);
@@ -142,24 +152,29 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(nav, /getPublicNavDestinations/);
     assert.deepEqual(
       getPublicNavDestinations(false).map((row) => row.id),
-      ["home", "portfolio"]
+      ["home", "interiors", "portfolio", "about"]
     );
     assert.deepEqual(
       getPublicNavDestinations(true).map((row) => row.id),
-      ["home", "portfolio", "shop"]
+      ["home", "interiors", "portfolio", "about", "shop"]
     );
     assert.ok(!existsSync(join(root, "src/features/public-site/discovery/DiscoveryPuneCoverage.tsx")));
     assert.ok(HOME_PUNE_AREAS.includes("Kharadi"));
   });
 
-  test("homepage uses owner-supplied cohesive major image set without hero reuse", () => {
+  test("homepage uses owner-supplied cohesive major image set without hero reuse on services", () => {
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
+    const copy = read("src/features/public-site/discovery/discovery-copy.ts");
+    const assets = read("src/features/public-site/discovery/discovery-assets.ts");
     const content = read("src/features/public-site/home-r4/content.ts");
     assert.doesNotMatch(page, /OWNER_ASSET_REQUIRED/);
-    assert.match(page, /HOMEPAGE_HERO = PM_ASSETS\.hero/);
-    assert.match(page, /completeHomeInteriors/);
-    assert.match(page, /modularKitchens/);
-    assert.match(page, /customWardrobes/);
+    assert.match(assets, /PM_ASSETS\.hero/);
+    assert.match(assets, /completeHomeInteriors/);
+    assert.match(assets, /modularKitchens/);
+    assert.match(assets, /customWardrobes/);
+    assert.match(copy, /assetKey: "hero"/);
+    assert.match(copy, /assetKey: "modularKitchens"/);
+    assert.match(copy, /assetKey: "completeHomeInteriors"/);
     assert.match(content, /hero-living-warmth\.webp/);
     assert.match(content, /service-complete-home-interiors\.webp/);
     assert.match(content, /service-modular-kitchens\.webp/);
@@ -169,7 +184,7 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(content, /bytes: 115712/);
     assert.match(content, /bytes: 323002/);
     assert.doesNotMatch(page, /heroConsultant/);
-    assert.doesNotMatch(page, /SERVICE_ASSETS[\s\S]*PM_ASSETS\.hero/);
+    assert.doesNotMatch(copy, /assetKey: "hero"[\s\S]*assetKey: "hero"/);
     assert.ok(
       existsSync(join(root, "public/assets/onedecore/home/hero-living-warmth.webp"))
     );
@@ -186,12 +201,12 @@ describe("Public site simplification — discovery IA", () => {
     );
   });
 
-  test("consultation CTA uses canonical Get Free Consultation labels", () => {
+  test("consultation CTA uses canonical Get Free Design Consultation labels", () => {
     const nav = read("src/features/public-site/chrome/public-nav.ts");
     const content = read("src/features/public-site/home-r4/content.ts");
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
-    assert.match(nav, /label: "Get Free Consultation"/);
-    assert.match(nav, /shortLabel: "Free Consultation"/);
+    assert.match(nav, /label: "Get Free Design Consultation"/);
+    assert.match(nav, /shortLabel: "Free Design Consultation"/);
     assert.match(content, /open: "Get Free Consultation"/);
     assert.match(page, /PUBLIC_CONSULTATION\.label/);
     assert.doesNotMatch(page, /Book Free Consultation/);
@@ -275,18 +290,19 @@ describe("Public site simplification — interiors and portfolio", () => {
 });
 
 describe("Public site simplification — nav seo and shop", () => {
-  test("locked nav is Home | Portfolio | conditional Shop", () => {
+  test("locked nav is Home | Interiors | Portfolio | About | conditional Shop", () => {
     const nav = read("src/features/public-site/chrome/public-nav.ts");
     const header = read("src/features/public-site/chrome/PublicSiteHeader.tsx");
     assert.match(nav, /label: "Home"/);
+    assert.match(nav, /label: "Interiors"/);
     assert.match(nav, /label: "Portfolio"/);
+    assert.match(nav, /label: "About"/);
     assert.match(nav, /label: "Shop"/);
-    assert.doesNotMatch(nav, /label: "Interiors"/);
     assert.doesNotMatch(nav, /label: "Kitchens"/);
-    assert.doesNotMatch(nav, /label: "About"/);
     assert.match(header, /Escape/);
     assert.match(header, /ShopCartLink/);
     assert.match(header, /current === "shop"/);
+    assert.match(header, /getPublicNavDestinations/);
     assert.equal(existsSync(join(root, "src/app/modular-kitchen")), false);
     assert.equal(existsSync(join(root, "src/app/shop/cart/page.tsx")), true);
     assert.equal(existsSync(join(root, "src/app/interiors/page.tsx")), true);

@@ -24,6 +24,7 @@ function isCurrent(current: PublicNavCurrent, href: string): boolean {
   if (current === "interiors" && href.startsWith("/interiors")) return href === "/interiors";
   if (current === "shop" && href === "/shop") return true;
   if (current === "portfolio" && href === "/portfolio") return true;
+  if (current === "about" && href === "/#about") return true;
   return false;
 }
 
@@ -85,7 +86,7 @@ export function PublicSiteHeader({
         [
           document.querySelector<HTMLElement>("main"),
           document.querySelector<HTMLElement>(".od-site-footer"),
-          document.querySelector<HTMLElement>(".pm-sticky"),
+          document.querySelector<HTMLElement>(".od-disc-dock"),
         ].filter((node): node is HTMLElement => node !== null)
       )
     );
@@ -106,6 +107,21 @@ export function PublicSiteHeader({
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [close, open]);
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeAtDesktop = () => {
+      if (desktop.matches) setOpen(false);
+    };
+
+    closeAtDesktop();
+    desktop.addEventListener("change", closeAtDesktop);
+    window.addEventListener("resize", closeAtDesktop);
+    return () => {
+      desktop.removeEventListener("change", closeAtDesktop);
+      window.removeEventListener("resize", closeAtDesktop);
+    };
+  }, []);
 
   return (
     <header className="od-site-header">
@@ -137,11 +153,7 @@ export function PublicSiteHeader({
               <span className="od-site-header__ctaFull">{PUBLIC_CONSULTATION.label}</span>
               <span className="od-site-header__ctaShort">{PUBLIC_CONSULTATION.shortLabel}</span>
             </Link>
-          ) : (
-            <Link href="/interiors" className="od-site-header__cta">
-              Planning a complete home?
-            </Link>
-          )}
+          ) : null}
           <button
             ref={toggleRef}
             type="button"
@@ -193,11 +205,7 @@ export function PublicSiteHeader({
             <Link href={PUBLIC_CONSULTATION.href} onClick={() => setOpen(false)}>
               {PUBLIC_CONSULTATION.label}
             </Link>
-          ) : (
-            <Link href="/interiors" onClick={() => setOpen(false)}>
-              Planning a complete home?
-            </Link>
-          )}
+          ) : null}
         </nav>
       </div>
     </header>

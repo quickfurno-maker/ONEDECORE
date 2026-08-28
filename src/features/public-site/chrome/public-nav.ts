@@ -1,6 +1,14 @@
+export const PUBLIC_NAV_ABOUT = {
+  id: "about",
+  label: "About",
+  href: "/#about",
+} as const;
+
 export const PUBLIC_NAV_CORE = [
   { id: "home", label: "Home", href: "/" },
+  { id: "interiors", label: "Interiors", href: "/interiors" },
   { id: "portfolio", label: "Portfolio", href: "/portfolio" },
+  PUBLIC_NAV_ABOUT,
 ] as const;
 
 export const PUBLIC_NAV_SHOP = {
@@ -24,8 +32,10 @@ export const PUBLIC_NAV_DESTINATIONS = [
 
 /** Canonical public consultation target — homepage owns the lead form. */
 export const PUBLIC_CONSULTATION = {
-  label: "Get Free Consultation",
-  shortLabel: "Free Consultation",
+  label: "Get Free Design Consultation",
+  shortLabel: "Free Design Consultation",
+  /** Compact label for mobile bottom dock */
+  mobileLabel: "Get Free Design",
   href: "/#consultation",
 } as const;
 
@@ -44,4 +54,4 @@ export const PUBLIC_FOOTER_LEGAL = [
   { label: "Warranty", href: "/warranty" },
 ] as const;
 
-export type PublicNavCurrent = "home" | "interiors" | "shop" | "portfolio" | "none";
+export type PublicNavCurrent = "home" | "interiors" | "shop" | "portfolio" | "about" | "none";
