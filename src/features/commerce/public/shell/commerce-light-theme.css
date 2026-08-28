@@ -1,0 +1,99 @@
+/**
+ * ONEDECORE commerce light retail theme.
+ *
+ * Scope: every rule is confined to the [data-commerce-light] shell subtree so the
+ * dark public site (home / interiors / portfolio) is never affected.
+ *
+ * The public dark theme defines its palette on :root from the root layout, which
+ * loads on /shop as well. `:root [data-commerce-light]` scores (0,2,0) against that
+ * (0,1,0) baseline, so the light palette wins regardless of stylesheet order.
+ */
+
+:root [data-commerce-light] {
+  /* Surfaces — warm ivory page, white merchandising surfaces. */
+  --od-bg-page: #faf7f1;
+  --od-bg-deepest: #f2ebe0;
+  --od-bg-section: #f7f2ea;
+  --od-bg-raised: #ffffff;
+  --od-bg-elevated: #ffffff;
+  --od-bg-rich: #efe8dc;
+
+  /* Ink — charcoal primary, warm greys beneath. */
+  --od-text-primary: #221d19;
+  --od-text-secondary: #4c443c;
+  --od-text-muted: #6b6158;
+  --od-text-subtle: #7a6f64;
+
+  /* Muted gold / bronze accent, darkened for contrast on light surfaces. */
+  --od-gold: #8a6a2a;
+  --od-gold-light: #6f5420;
+  --od-gold-soft: rgba(138, 106, 42, 0.1);
+  --od-gold-strong: rgba(138, 106, 42, 0.34);
+
+  /* Warm hairlines and glass. */
+  --od-line: rgba(34, 29, 25, 0.12);
+  --od-line-strong: rgba(34, 29, 25, 0.24);
+  --od-surface-glass: rgba(255, 255, 255, 0.74);
+  --od-surface-glass-strong: #ffffff;
+
+  --od-success: #3e6b4f;
+  --od-warning: #8a6a2a;
+  --od-error: #a3453a;
+
+  --od-shadow-soft: 0 6px 20px rgba(58, 44, 30, 0.07);
+  --od-shadow-deep: 0 18px 44px rgba(58, 44, 30, 0.12);
+  --od-radius: 14px;
+  --od-radius-lg: 20px;
+  --od-focus: 0 0 0 2px var(--od-bg-page), 0 0 0 4px var(--od-gold);
+
+  /* Commerce-only additions. */
+  --odc-terracotta: #b0563e;
+  --odc-terracotta-soft: rgba(176, 86, 62, 0.1);
+  --odc-shell-max: 82rem;
+  --odc-gutter: clamp(1rem, 3.5vw, 2.5rem);
+  --odc-tap: 2.75rem;
+
+  color-scheme: light;
+  background: var(--od-bg-page);
+  color: var(--od-text-primary);
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* The viewer paints the document behind the shell — keep it ivory, not dark. */
+html:has([data-commerce-light]) {
+  background: #faf7f1;
+  color-scheme: light;
+}
+
+body:has([data-commerce-light]) {
+  background: #faf7f1;
+  color: #221d19;
+}
+
+:root [data-commerce-light] a:focus-visible,
+:root [data-commerce-light] button:focus-visible,
+:root [data-commerce-light] input:focus-visible,
+:root [data-commerce-light] select:focus-visible,
+:root [data-commerce-light] textarea:focus-visible,
+:root [data-commerce-light] summary:focus-visible,
+:root [data-commerce-light] [tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--od-focus);
+  border-radius: 6px;
+}
+
+/* Product imagery sits on a warm plate rather than the dark plate. */
+:root [data-commerce-light] .od-shop-card__media,
+:root [data-commerce-light] .od-shop-gallery__main {
+  background: var(--od-bg-rich);
+}
+
+/* Form controls inherit light surfaces from the tokens above; this keeps the
+   browser's own widget rendering (date pickers, select arrows) in light mode. */
+:root [data-commerce-light] input,
+:root [data-commerce-light] select,
+:root [data-commerce-light] textarea {
+  color-scheme: light;
+}

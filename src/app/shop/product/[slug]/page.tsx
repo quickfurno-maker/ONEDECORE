@@ -50,6 +50,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ShopProductPage({ params }: PageProps) {
+  // Fail closed before any catalogue read. The layout renders the inactive
+  // boundary in place of these children while the gate is off.
+  if (!isShopPublicEnabled()) {
+    return null;
+  }
+
   const { slug } = await params;
   let product: PublicCommerceProductDetail | null;
   try {
@@ -57,9 +63,14 @@ export default async function ShopProductPage({ params }: PageProps) {
   } catch (error) {
     if (isPublicCommerceReadFailure(error)) {
       return (
-        <main className="od-shop">
-          <div className="od-shop__error" role="alert">
-            This product could not be loaded right now.
+        <main className="od-shop odc-listing">
+          <header className="od-shop__hero odc-listing__head">
+            <h1>Furniture</h1>
+          </header>
+          <div className="odc-listing__body">
+            <div className="od-shop__error" role="alert">
+              This product could not be loaded right now.
+            </div>
           </div>
         </main>
       );
@@ -74,11 +85,17 @@ export default async function ShopProductPage({ params }: PageProps) {
   const variant = product.variants[0];
   return (
     <main className="od-shop">
-      <p className="od-shop__kicker">
-        <Link href="/shop">Shop</Link>
-        {" / "}
-        <Link href={`/shop/c/${product.category.slug}`}>{product.category.name}</Link>
-      </p>
+      <nav className="odc-crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li>
+            <Link href="/shop">Shop</Link>
+          </li>
+          <li>
+            <Link href={`/shop/c/${product.category.slug}`}>{product.category.name}</Link>
+          </li>
+          <li aria-current="page">{product.name}</li>
+        </ol>
+      </nav>
       {variant ? (
         <>
           <script

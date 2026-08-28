@@ -1,0 +1,507 @@
+/**
+ * ONEDECORE light commerce surfaces — breadcrumbs, listing controls, filter
+ * sheet, product detail, cart, checkout and order tracking.
+ *
+ * Scoped to [data-commerce-light] throughout.
+ */
+
+/* ------------------------------------------------------------ breadcrumbs */
+
+[data-commerce-light] .odc-crumbs {
+  max-width: var(--odc-shell-max);
+  margin: 0 auto;
+  padding: clamp(0.85rem, 2.5vw, 1.35rem) var(--odc-gutter) 0;
+}
+
+[data-commerce-light] .odc-crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.82rem;
+  color: var(--od-text-muted);
+}
+
+[data-commerce-light] .odc-crumbs li + li::before {
+  content: "/";
+  margin-right: 0.4rem;
+  color: var(--od-text-subtle);
+}
+
+[data-commerce-light] .odc-crumbs a {
+  color: var(--od-text-secondary);
+  text-decoration: none;
+}
+
+[data-commerce-light] .odc-crumbs a:hover {
+  color: var(--od-gold-light);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+[data-commerce-light] .odc-crumbs li[aria-current="page"] {
+  color: var(--od-text-primary);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- listing */
+
+[data-commerce-light] .odc-listing__head {
+  margin-bottom: clamp(0.85rem, 2vw, 1.25rem);
+  padding-top: clamp(0.5rem, 1.5vw, 0.85rem);
+}
+
+[data-commerce-light] .odc-listing__body {
+  max-width: var(--odc-shell-max);
+  margin: 0 auto;
+  padding-inline: var(--odc-gutter);
+}
+
+[data-commerce-light] .od-shop__pager {
+  align-items: center;
+  justify-content: center;
+  margin-top: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+[data-commerce-light] .odc-pager__status {
+  color: var(--od-text-muted);
+  font-size: 0.88rem;
+}
+
+/* ---------------------------------------------------------------- filters */
+
+[data-commerce-light] .odc-filters {
+  margin-bottom: clamp(1rem, 2.5vw, 1.5rem);
+}
+
+[data-commerce-light] .odc-filters__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--od-line);
+  margin-bottom: 1rem;
+}
+
+[data-commerce-light] .odc-filters__count {
+  margin: 0;
+  color: var(--od-text-muted);
+  font-size: 0.9rem;
+}
+
+[data-commerce-light] .odc-filters__trigger {
+  display: none;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: var(--odc-tap);
+  padding: 0 1.1rem;
+  border: 1px solid var(--od-line-strong);
+  border-radius: 999px;
+  background: var(--od-bg-raised);
+  color: var(--od-text-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+[data-commerce-light] .odc-filters__pill {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  background: var(--od-gold);
+  color: #fffdf8;
+  font-size: 0.72rem;
+}
+
+[data-commerce-light] .odc-filters__scrim {
+  display: none;
+}
+
+[data-commerce-light] .odc-filters__panelHead {
+  display: none;
+}
+
+@media (max-width: 859px) {
+  [data-commerce-light] .odc-filters__trigger {
+    display: inline-flex;
+  }
+
+  [data-commerce-light] .odc-filters__scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 48;
+    background: rgba(34, 29, 25, 0.42);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 200ms ease, visibility 200ms ease;
+  }
+
+  [data-commerce-light] .odc-filters__scrim[data-open] {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  [data-commerce-light] .odc-filters__panel {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 49;
+    max-height: 82dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--od-bg-page);
+    border-top-left-radius: var(--od-radius-lg);
+    border-top-right-radius: var(--od-radius-lg);
+    box-shadow: var(--od-shadow-deep);
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform 240ms ease, visibility 240ms ease;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  [data-commerce-light] .odc-filters__panel[data-open] {
+    transform: translateY(0);
+    visibility: visible;
+  }
+
+  [data-commerce-light] .odc-filters__panelHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem var(--odc-gutter) 0.75rem;
+    border-bottom: 1px solid var(--od-line);
+  }
+
+  [data-commerce-light] .odc-filters__panelTitle {
+    margin: 0;
+    font-weight: 700;
+  }
+
+  [data-commerce-light] .odc-filters__close {
+    min-height: var(--odc-tap);
+    padding: 0 0.9rem;
+    border: 1px solid var(--od-line);
+    border-radius: 10px;
+    background: var(--od-bg-raised);
+    color: var(--od-text-primary);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  [data-commerce-light] .odc-filters__panel .od-shop__filters {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 1rem var(--odc-gutter);
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  [data-commerce-light] .odc-filters__panel .od-shop__filters label,
+  [data-commerce-light] .odc-filters__panel .od-shop__filters select,
+  [data-commerce-light] .odc-filters__panel .od-shop__filters input,
+  [data-commerce-light] .odc-filters__panel .od-shop__filters button {
+    width: 100%;
+  }
+}
+
+/* -------------------------------------------------------------------- PDP */
+
+[data-commerce-light] .odc-pdp__title {
+  margin-top: 0.35rem;
+  font-size: clamp(1.45rem, 3.2vw, 2.2rem);
+}
+
+[data-commerce-light] .odc-pdp__price {
+  margin: 0.85rem 0 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+[data-commerce-light] .odc-pdp__price strong {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--od-text-primary);
+}
+
+[data-commerce-light] .odc-pdp__availability {
+  margin: 0 0 0.85rem;
+}
+
+[data-commerce-light] .odc-pdp__lede {
+  color: var(--od-text-secondary);
+  line-height: 1.6;
+  max-width: 52ch;
+}
+
+[data-commerce-light] .odc-pdp__save {
+  margin: 0.85rem 0 1.25rem;
+}
+
+[data-commerce-light] .odc-pdp__save .od-shop-heart {
+  min-height: var(--odc-tap);
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  background: var(--od-bg-raised);
+  border: 1px solid var(--od-line-strong);
+  color: var(--od-text-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+[data-commerce-light] .odc-pdp__save .od-shop-heart[aria-pressed="true"] {
+  border-color: var(--od-gold);
+  color: var(--od-gold-light);
+}
+
+[data-commerce-light] .odc-pdp__section {
+  margin-top: 1.75rem;
+  padding-top: 1.35rem;
+  border-top: 1px solid var(--od-line);
+}
+
+[data-commerce-light] .odc-pdp__section h2 {
+  margin: 0 0 0.7rem;
+  font-family: var(--dc-font-wordmark), Georgia, serif;
+  font-weight: 500;
+  font-size: 1.15rem;
+}
+
+[data-commerce-light] .odc-pdp__related {
+  grid-column: 1 / -1;
+  padding-inline: 0;
+}
+
+/* Raw option keys come through as catalogue field names (color, finish). */
+[data-commerce-light] .od-shop-pdp__options legend {
+  text-transform: capitalize;
+  font-weight: 600;
+  color: var(--od-text-secondary);
+}
+
+/* The detail column is taller than the gallery; pinning the gallery keeps the
+   imagery in view instead of leaving a dead panel beside the specifications. */
+@media (min-width: 900px) {
+  [data-commerce-light] .odc-gallery {
+    position: sticky;
+    top: 9.5rem;
+    align-self: start;
+  }
+}
+
+[data-commerce-light] .odc-pdp__related h2 {
+  font-family: var(--dc-font-wordmark), Georgia, serif;
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------------- cart */
+
+[data-commerce-light] .odc-cart {
+  display: grid;
+  gap: clamp(1rem, 3vw, 2rem);
+  align-items: start;
+}
+
+[data-commerce-light] .odc-cart__item {
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: start;
+}
+
+[data-commerce-light] .odc-cart__media img {
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+[data-commerce-light] .odc-cart__qty {
+  margin-top: 0.6rem;
+  flex-wrap: wrap;
+}
+
+[data-commerce-light] .odc-cart__remove {
+  min-height: var(--odc-tap);
+  padding: 0 0.9rem;
+  border: 1px solid var(--od-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--od-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+[data-commerce-light] .odc-cart__remove:hover {
+  color: var(--od-error);
+  border-color: color-mix(in srgb, var(--od-error) 45%, transparent);
+}
+
+[data-commerce-light] .odc-cart__summary {
+  display: grid;
+  gap: 0.85rem;
+  padding: clamp(1.1rem, 3vw, 1.6rem);
+  border: 1px solid var(--od-line);
+  border-radius: var(--od-radius);
+  background: var(--od-bg-raised);
+  box-shadow: var(--od-shadow-soft);
+}
+
+[data-commerce-light] .odc-cart__summaryRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  font-size: 1rem;
+}
+
+[data-commerce-light] .odc-cart__summaryRow strong {
+  font-size: 1.2rem;
+}
+
+[data-commerce-light] .odc-cart__cta {
+  width: 100%;
+}
+
+[data-commerce-light] .odc-cart__continue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--odc-tap);
+  color: var(--od-text-muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+[data-commerce-light] .odc-cart__empty {
+  display: grid;
+  gap: 0.85rem;
+  justify-items: start;
+}
+
+@media (min-width: 900px) {
+  [data-commerce-light] .odc-cart {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
+
+  [data-commerce-light] .odc-cart__summary {
+    position: sticky;
+    top: 8.5rem;
+  }
+}
+
+/* --------------------------------------------------------------- checkout */
+
+[data-commerce-light] .odc-checkout {
+  display: grid;
+  gap: 1rem;
+}
+
+[data-commerce-light] .odc-checkout__mode {
+  margin: 0;
+}
+
+[data-commerce-light] .odc-checkout__panel {
+  margin: 0;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid var(--od-line);
+  border-radius: var(--od-radius);
+  background: var(--od-bg-raised);
+}
+
+[data-commerce-light] .odc-checkout__panel fieldset {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+[data-commerce-light] .odc-checkout__panel legend {
+  font-family: var(--dc-font-wordmark), Georgia, serif;
+  font-size: 1.1rem;
+  color: var(--od-text-primary);
+  padding: 0;
+  margin-bottom: 0.35rem;
+}
+
+[data-commerce-light] .odc-checkout__review {
+  border-color: var(--od-gold-strong);
+  background: var(--od-bg-deepest);
+}
+
+[data-commerce-light] .odc-checkout__review h2 {
+  margin: 0 0 0.6rem;
+  font-family: var(--dc-font-wordmark), Georgia, serif;
+  font-weight: 500;
+  font-size: 1.15rem;
+}
+
+[data-commerce-light] .odc-checkout__review ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  display: grid;
+  gap: 0.35rem;
+  color: var(--od-text-secondary);
+}
+
+/* -------------------------------------------------------- track and order */
+
+[data-commerce-light] .odc-track__note {
+  margin-top: 0.85rem;
+}
+
+[data-commerce-light] .odc-order__timeline {
+  list-style: none;
+  padding-left: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+[data-commerce-light] .odc-order__timeline li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--od-text-muted);
+  text-transform: capitalize;
+}
+
+[data-commerce-light] .odc-order__timeline li::before {
+  content: "";
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  border: 2px solid var(--od-line-strong);
+  background: transparent;
+  flex: 0 0 auto;
+}
+
+[data-commerce-light] .odc-order__timeline li[data-reached="true"]::before {
+  border-color: var(--od-gold);
+  background: var(--od-gold);
+}
+
+[data-commerce-light] .odc-order__timeline li[aria-current="step"] {
+  color: var(--od-text-primary);
+  font-weight: 700;
+}
+
+[data-commerce-light] .odc-order h2 {
+  margin: 1.35rem 0 0.6rem;
+  font-family: var(--dc-font-wordmark), Georgia, serif;
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-commerce-light] .odc-filters__panel,
+  [data-commerce-light] .odc-filters__scrim {
+    transition: none;
+  }
+}
