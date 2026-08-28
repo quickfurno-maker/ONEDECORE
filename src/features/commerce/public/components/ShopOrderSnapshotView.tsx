@@ -7,11 +7,11 @@ export function ShopOrderSnapshotView({ snapshot }: { readonly snapshot: Commerc
   const activeIndex = STEPS.indexOf(snapshot.status as (typeof STEPS)[number]);
 
   return (
-    <div className="od-shop-order">
+    <div className="od-shop-order odc-order">
       <p className="od-shop__kicker">Order {snapshot.orderReference}</p>
       <h1 className="od-shop__title">Order status</h1>
       <p className="od-shop-note">Payment: {snapshot.paymentMethod.toUpperCase()}</p>
-      <ol className="od-shop-order__timeline" aria-label="Order status timeline">
+      <ol className="od-shop-order__timeline odc-order__timeline" aria-label="Order status timeline">
         {STEPS.map((step, index) => {
           const reached =
             snapshot.status === "cancelled"

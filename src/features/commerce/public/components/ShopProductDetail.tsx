@@ -75,16 +75,22 @@ export function ShopProductDetail({ product }: { readonly product: PublicCommerc
         name={product.name}
         imagePath={product.media[0]?.publicPath ?? null}
       />
-      <div className="od-shop-gallery">
+      <div className="od-shop-gallery odc-gallery">
         <div className="od-shop-gallery__main">
           {activeUrl ? (
-            <Image src={activeUrl} alt={activeAlt} fill sizes="(max-width: 720px) 100vw, 50vw" />
+            <Image
+              src={activeUrl}
+              alt={activeAlt}
+              fill
+              priority
+              sizes="(max-width: 720px) 100vw, 50vw"
+            />
           ) : (
             <div className="od-shop-card__fallback">Image being prepared</div>
           )}
         </div>
         {media.length > 1 ? (
-          <div className="od-shop-gallery__strip">
+          <div className="od-shop-gallery__strip" role="group" aria-label="Product images">
             {media.map((row) => {
               const url = buildCommercePublicUrl(row.publicPath);
               return (
@@ -95,11 +101,7 @@ export function ShopProductDetail({ product }: { readonly product: PublicCommerc
                   aria-pressed={row.publicPath === activePath}
                   onClick={() => setActivePath(row.publicPath)}
                 >
-                  {url ? (
-                    <Image src={url} alt="" width={72} height={72} />
-                  ) : (
-                    "—"
-                  )}
+                  {url ? <Image src={url} alt="" width={72} height={72} /> : "—"}
                 </button>
               );
             })}
@@ -107,10 +109,10 @@ export function ShopProductDetail({ product }: { readonly product: PublicCommerc
         ) : null}
       </div>
 
-      <div>
+      <div className="odc-pdp__col">
         <p className="od-shop__kicker">{product.category.name}</p>
-        <h1 className="od-shop__title">{product.name}</h1>
-        <p>
+        <h1 className="od-shop__title odc-pdp__title">{product.name}</h1>
+        <p className="odc-pdp__price">
           <strong>{formatInrFromPaise(variant.sellingPricePaise)}</strong>
           {variant.compareAtPricePaise ? (
             <>
@@ -122,11 +124,13 @@ export function ShopProductDetail({ product }: { readonly product: PublicCommerc
           ) : null}
           <span className="od-shop-note"> · GST inclusive</span>
         </p>
-        <p className="od-shop-note">
+        <p className="od-shop-note odc-pdp__availability">
           {variant.isAvailable ? "Available" : "Currently unavailable"} ·{" "}
           {variant.availabilityMode === "made_to_order" ? "Made to order" : "Ready stock"}
         </p>
-        {product.shortDescription ? <p>{product.shortDescription}</p> : null}
+        {product.shortDescription ? (
+          <p className="odc-pdp__lede">{product.shortDescription}</p>
+        ) : null}
 
         <div className="od-shop-pdp__options">
           {keys.map((key) => (
@@ -149,21 +153,23 @@ export function ShopProductDetail({ product }: { readonly product: PublicCommerc
         </div>
 
         <ShopPurchasePanel product={product} variant={variant} />
-        <ShopWishlistButton
-          slug={product.slug}
-          name={product.name}
-          imagePath={product.media[0]?.publicPath ?? null}
-        />
+        <div className="odc-pdp__save">
+          <ShopWishlistButton
+            slug={product.slug}
+            name={product.name}
+            imagePath={product.media[0]?.publicPath ?? null}
+          />
+        </div>
 
         {product.fullDescription ? (
-          <section>
+          <section className="odc-pdp__section">
             <h2>Details</h2>
             <p>{product.fullDescription}</p>
           </section>
         ) : null}
 
         {product.specifications.length > 0 ? (
-          <section>
+          <section className="odc-pdp__section">
             <h2>Specifications</h2>
             <table className="od-shop-specs">
               <tbody>
@@ -180,14 +186,14 @@ export function ShopProductDetail({ product }: { readonly product: PublicCommerc
 
         {product.hsnSacCode ? <p className="od-shop-note">HSN {product.hsnSacCode}</p> : null}
 
-        <section>
-          <h2>Pincode</h2>
+        <section className="odc-pdp__section odc-pdp__pin">
+          <h2>Delivery</h2>
           <ShopPincodeChecker />
         </section>
       </div>
 
       {product.related.length > 0 ? (
-        <section className="od-shop__section" style={{ gridColumn: "1 / -1" }}>
+        <section className="od-shop__section odc-pdp__related">
           <h2>Related furniture</h2>
           <div className="od-shop__grid">
             {product.related.map((card) => (

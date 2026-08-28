@@ -12,7 +12,7 @@ export function ShopTrackForm() {
   const [state, action, pending] = useActionState(verifyOrderTracking, INITIAL);
 
   return (
-    <form action={action} className="od-shop-form">
+    <form action={action} className="od-shop-form odc-track">
       <fieldset>
         <legend>Track your order</legend>
         <label htmlFor="orderReference">Order reference</label>
@@ -23,9 +23,14 @@ export function ShopTrackForm() {
           required
           maxLength={32}
           placeholder="OD-O-2026-000001"
+          autoComplete="off"
         />
         <label htmlFor="mobile">Mobile number</label>
-        <input id="mobile" name="mobile" required inputMode="tel" maxLength={20} />
+        <input id="mobile" name="mobile" required inputMode="tel" maxLength={20} autoComplete="tel" />
+        <p className="od-shop-note odc-track__note">
+          We match the details you provided at checkout. Order details stay hidden until they
+          verify.
+        </p>
       </fieldset>
       {state.status === "mismatch" || state.status === "error" ? (
         <p className="od-shop__error" role="alert">

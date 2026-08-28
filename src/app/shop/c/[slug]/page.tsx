@@ -86,14 +86,25 @@ async function loadCategory(
 }
 
 export default async function ShopCategoryPage({ params, searchParams }: PageProps) {
+  // Fail closed before any catalogue read. The layout renders the inactive
+  // boundary in place of these children while the gate is off.
+  if (!isShopPublicEnabled()) {
+    return null;
+  }
+
   const { slug } = await params;
   const query = parseShopListingParams(await searchParams, slug);
   const loaded = await loadCategory(slug, query);
   if (!loaded.ok) {
     return (
-      <main className="od-shop">
-        <div className="od-shop__error" role="alert">
-          This category could not be loaded right now.
+      <main className="od-shop odc-listing">
+        <header className="od-shop__hero odc-listing__head">
+          <h1>Furniture category</h1>
+        </header>
+        <div className="odc-listing__body">
+          <div className="od-shop__error" role="alert">
+            This category could not be loaded right now.
+          </div>
         </div>
       </main>
     );
@@ -104,42 +115,53 @@ export default async function ShopCategoryPage({ params, searchParams }: PagePro
   const path = `/shop/c/${slug}`;
 
   return (
-    <main className="od-shop">
-      <header className="od-shop__hero">
-        <p className="od-shop__kicker">
-          <Link href="/shop">Shop</Link>
+    <main className="od-shop odc-listing">
+      <nav className="odc-crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li>
+            <Link href="/shop">Shop</Link>
+          </li>
           {loaded.category.parentSlug && loaded.parentName ? (
-            <>
-              {" / "}
+            <li>
               <Link href={`/shop/c/${loaded.category.parentSlug}`}>{loaded.parentName}</Link>
-            </>
+            </li>
           ) : null}
-        </p>
+          <li aria-current="page">{loaded.category.name}</li>
+        </ol>
+      </nav>
+
+      <header className="od-shop__hero odc-listing__head">
         <h1>{loaded.category.name}</h1>
         {loaded.category.shortDescription ? (
           <p className="od-shop__lede">{loaded.category.shortDescription}</p>
         ) : null}
       </header>
-      <ShopFilters action={path} input={query} />
-      {loaded.page.items.length === 0 ? (
-        <p className="od-shop__empty">No published products in this category yet.</p>
-      ) : (
-        <div className="od-shop__grid">
-          {loaded.page.items.map((card) => (
-            <ShopProductCard key={card.slug} card={card} />
-          ))}
-        </div>
-      )}
-      {totalPages > 1 ? (
-        <nav className="od-shop__pager" aria-label="Pagination">
-          {currentPage > 1 ? (
-            <Link href={listingPageHref(path, query, currentPage - 1)}>Previous</Link>
-          ) : null}
-          {currentPage < totalPages ? (
-            <Link href={listingPageHref(path, query, currentPage + 1)}>Next</Link>
-          ) : null}
-        </nav>
-      ) : null}
+
+      <div className="odc-listing__body">
+        <ShopFilters action={path} input={query} resultCount={loaded.page.total} />
+        {loaded.page.items.length === 0 ? (
+          <p className="od-shop__empty">No published products in this category yet.</p>
+        ) : (
+          <div className="od-shop__grid">
+            {loaded.page.items.map((card) => (
+              <ShopProductCard key={card.slug} card={card} />
+            ))}
+          </div>
+        )}
+        {totalPages > 1 ? (
+          <nav className="od-shop__pager" aria-label="Pagination">
+            {currentPage > 1 ? (
+              <Link href={listingPageHref(path, query, currentPage - 1)}>Previous</Link>
+            ) : null}
+            <span className="odc-pager__status">
+              Page {currentPage} of {totalPages}
+            </span>
+            {currentPage < totalPages ? (
+              <Link href={listingPageHref(path, query, currentPage + 1)}>Next</Link>
+            ) : null}
+          </nav>
+        ) : null}
+      </div>
     </main>
   );
 }

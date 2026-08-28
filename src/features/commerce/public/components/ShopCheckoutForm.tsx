@@ -103,11 +103,11 @@ export function ShopCheckoutForm() {
   }
 
   return (
-    <div className="od-shop-checkout">
-      <p className="od-shop-note">
+    <div className="od-shop-checkout odc-checkout">
+      <p className="od-shop-note odc-checkout__mode">
         {mode === "buy-now" ? "Buy Now checkout (one item)." : "Cart checkout."} Cash on delivery only.
       </p>
-      <form action={onReview} className="od-shop-form">
+      <form action={onReview} className="od-shop-form odc-checkout__panel">
         <fieldset>
           <legend>Delivery pincode</legend>
           <label htmlFor="pincode">Pincode</label>
@@ -140,7 +140,7 @@ export function ShopCheckoutForm() {
       ) : null}
 
       {quoteState.status === "ok" ? (
-        <section aria-live="polite" className="od-shop-checkout__review">
+        <section aria-live="polite" className="od-shop-checkout__review odc-checkout__review">
           <h2>Order review</h2>
           <ul>
             {quoteState.quote.lines.map((line) => (
@@ -165,7 +165,7 @@ export function ShopCheckoutForm() {
         </section>
       ) : null}
 
-      <form action={onPlace} className="od-shop-form">
+      <form action={onPlace} className="od-shop-form odc-checkout__panel">
         <input type="hidden" name="pincode" value={pincode} />
         <fieldset>
           <legend>Customer</legend>

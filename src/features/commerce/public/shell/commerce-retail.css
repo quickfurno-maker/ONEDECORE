@@ -1,0 +1,900 @@
+/**
+ * ONEDECORE light retail merchandising — shop homepage bands, hero mosaic,
+ * product presentation, and light-theme polish for the listing, PDP, cart,
+ * checkout and tracking surfaces.
+ *
+ * Scoped to [data-commerce-light] throughout.
+ */
+
+/* ------------------------------------------------------------ page frame */
+
+[data-commerce-light] .od-shop {
+  padding: 0 0 clamp(2rem, 5vw, 3.5rem);
+}
+
+[data-commerce-light] .odc-retail__h1 {
+  max-width: var(--odc-shell-max);
+  margin: 0 auto;
+  padding: clamp(1.35rem, 3.5vw, 2.25rem) var(--odc-gutter) 0;
+  font-family: var(--dc-font-wordmark), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(1.5rem, 3.2vw, 2.15rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--od-text-primary);
+}
+
+/* Listing / PDP / cart pages keep the shared hero block, restyled for light. */
+[data-commerce-light] .od-shop__hero {
+  max-width: var(--odc-shell-max);
+  margin: 0 auto clamp(1.25rem, 3vw, 2rem);
+  padding: clamp(1.35rem, 3.5vw, 2.25rem) var(--odc-gutter) 0;
+}
+
+[data-commerce-light] .od-shop__hero h1,
+[data-commerce-light] .od-shop__title {
+  font-family: var(--dc-font-wordmark), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(1.7rem, 3.6vw, 2.6rem);
+  letter-spacing: -0.01em;
+  color: var(--od-text-primary);
+}
+
+[data-commerce-light] .od-shop__kicker {
+  color: var(--od-gold-light);
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+}
+
+[data-commerce-light] .od-shop__kicker a {
+  color: inherit;
+}
+
+[data-commerce-light] .od-shop__section {
+  max-width: var(--odc-shell-max);
+  margin: 0 auto clamp(2rem, 4vw, 2.75rem);
+  padding-inline: var(--odc-gutter);
+}
+
+[data-commerce-light] .od-shop__empty {
+  background: var(--od-bg-raised);
+  border: 1px solid var(--od-line);
+  color: var(--od-text-muted);
+}
+
+[data-commerce-light] .od-shop__error {
+  border-color: color-mix(in srgb, var(--od-error) 40%, transparent);
+  background: color-mix(in srgb, var(--od-error) 7%, transparent);
+  color: var(--od-text-secondary);
+}
+
+/* ------------------------------------------------------------ hero mosaic */
+
+[data-commerce-light] .odc-hero {
+  max-width: var(--odc-shell-max);
+  margin: 0 auto clamp(2rem, 4.5vw, 3rem);
+  padding: clamp(0.85rem, 2.5vw, 1.35rem) var(--odc-gutter) 0;
+}
+
+[data-commerce-light] .odc-hero__mosaic {
+  display: grid;
+  gap: clamp(0.6rem, 1.6vw, 1rem);
+}
+
+[data-commerce-light] .odc-hero__side {
+  display: grid;
+  gap: clamp(0.6rem, 1.6vw, 1rem);
+}
+
+[data-commerce-light] .odc-hero__panel {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--od-radius-lg);
+  border: 1px solid var(--od-line);
+  background: var(--od-bg-rich);
+  text-decoration: none;
+  color: inherit;
+  isolation: isolate;
+}
+
+[data-commerce-light] .odc-hero__panel--feature {
+  aspect-ratio: 4 / 3;
+}
+
+[data-commerce-light] .odc-hero__panel--support {
+  aspect-ratio: 16 / 10;
+}
+
+[data-commerce-light] .odc-hero__media {
+  position: absolute;
+  inset: 0;
+}
+
+[data-commerce-light] .odc-hero__media img {
+  object-fit: cover;
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-commerce-light] .odc-hero__panel:hover .odc-hero__media img {
+  transform: scale(1.03);
+}
+
+[data-commerce-light] .odc-hero__mediaFallback {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(140deg, #efe8dc, #e2d8c8);
+}
+
+[data-commerce-light] .odc-hero__overlay {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.2rem;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: linear-gradient(
+    to top,
+    rgba(24, 19, 15, 0.88) 0%,
+    rgba(24, 19, 15, 0.52) 46%,
+    rgba(24, 19, 15, 0) 80%
+  );
+  color: #fdfaf4;
+  text-shadow: 0 1px 2px rgba(20, 15, 12, 0.45);
+}
+
+/* Support panels are short, so their text sits over a brighter part of the
+   image — the scrim has to cover the full tile to stay legible. */
+[data-commerce-light] .odc-hero__panel--support .odc-hero__overlay {
+  background: linear-gradient(
+    to top,
+    rgba(24, 19, 15, 0.9) 0%,
+    rgba(24, 19, 15, 0.66) 55%,
+    rgba(24, 19, 15, 0.34) 100%
+  );
+}
+
+[data-commerce-light] .odc-hero__eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #f0dcb0;
+}
+
+[data-commerce-light] .odc-hero__title {
+  margin: 0.25rem 0 0;
+  font-family: var(--dc-font-wordmark), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(1.15rem, 2.6vw, 1.9rem);
+  line-height: 1.15;
+}
+
+[data-commerce-light] .odc-hero__panel--support .odc-hero__title {
+  font-size: clamp(1rem, 2vw, 1.3rem);
+}
+
+[data-commerce-light] .odc-hero__meta {
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+[data-commerce-light] .odc-hero__metaNote {
+  font-weight: 400;
+  opacity: 0.82;
+  font-size: 0.85rem;
+}
+
+[data-commerce-light] .odc-hero__cta {
+  margin-top: 0.6rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #f0dcb0;
+}
+
+[data-commerce-light] .odc-hero__panel--note {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  background: var(--od-bg-deepest);
+  aspect-ratio: 16 / 10;
+}
+
+[data-commerce-light] .odc-hero__panel--note .odc-hero__eyebrow {
+  color: var(--od-gold-light);
+}
+
+[data-commerce-light] .odc-hero__noteCopy {
+  margin: 0;
+  color: var(--od-text-secondary);
+  line-height: 1.55;
+}
+
+[data-commerce-light] .odc-hero__intro {
+  border: 1px solid var(--od-line);
+  border-radius: var(--od-radius-lg);
+  background: var(--od-bg-deepest);
+  padding: clamp(1.75rem, 5vw, 3.25rem);
+}
+
+[data-commerce-light] .odc-hero__introTitle {
+  margin: 0.5rem 0 0;
+  max-width: 24ch;
+  font-family: var(--dc-font-wordmark), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(1.5rem, 4vw, 2.4rem);
+  line-height: 1.15;
+  color: var(--od-text-primary);
+}
+
+[data-commerce-light] .odc-hero__introLede {
+  margin: 0.85rem 0 0;
+  max-width: 46ch;
+  color: var(--od-text-muted);
+  line-height: 1.6;
+}
+
+@media (min-width: 900px) {
+  [data-commerce-light] .odc-hero__mosaic {
+    grid-template-columns: minmax(0, 1.85fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  [data-commerce-light] .odc-hero__panel--feature {
+    aspect-ratio: auto;
+    min-height: 30rem;
+  }
+
+  [data-commerce-light] .odc-hero__panel--support,
+  [data-commerce-light] .odc-hero__panel--note {
+    aspect-ratio: auto;
+  }
+
+  /* Rows follow the number of support panels the catalogue actually supplies —
+     a fixed two-row track leaves a dead half-column when there is only one. */
+  [data-commerce-light] .odc-hero__side {
+    grid-auto-rows: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------------ bands */
+
+[data-commerce-light] .odc-band {
+  padding-block: clamp(1.75rem, 4vw, 2.75rem);
+}
+
+[data-commerce-light] .odc-band--tint {
+  background: var(--od-bg-deepest);
+  border-block: 1px solid var(--od-line);
+}
+
+[data-commerce-light] .odc-band__inner {
+  max-width: var(--odc-shell-max);
+  margin: 0 auto;
+  padding-inline: var(--odc-gutter);
+}
+
+[data-commerce-light] .odc-band__inner--split {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  align-items: start;
+}
+
+[data-commerce-light] .odc-band__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: clamp(1rem, 2.5vw, 1.5rem);
+}
+
+[data-commerce-light] .odc-band__title {
+  margin: 0;
+  font-family: var(--dc-font-wordmark), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(1.25rem, 2.6vw, 1.75rem);
+  letter-spacing: -0.005em;
+  color: var(--od-text-primary);
+}
+
+[data-commerce-light] .odc-band__lede {
+  margin: 0.4rem 0 0;
+  max-width: 52ch;
+  color: var(--od-text-muted);
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+[data-commerce-light] .odc-band__more {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--odc-tap);
+  color: var(--od-gold-light);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+[data-commerce-light] .odc-band__more:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ------------------------------------------------------------- categories */
+
+/* auto-fill, not auto-fit: with a single published category auto-fit collapses
+   the empty tracks and stretches one card across the whole row. */
+[data-commerce-light] .odc-cats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: clamp(0.6rem, 1.6vw, 1rem);
+}
+
+[data-commerce-light] .odc-cat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-height: 6.5rem;
+  padding: 1.1rem 2.2rem 1.1rem 1.15rem;
+  border: 1px solid var(--od-line);
+  border-radius: var(--od-radius);
+  background: var(--od-bg-raised);
+  color: var(--od-text-primary);
+  text-decoration: none;
+  box-shadow: var(--od-shadow-soft);
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+
+[data-commerce-light] .odc-cat:hover {
+  border-color: var(--od-gold-strong);
+  transform: translateY(-2px);
+}
+
+[data-commerce-light] .odc-cat__name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+[data-commerce-light] .odc-cat__desc {
+  color: var(--od-text-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+[data-commerce-light] .odc-cat__arrow {
+  position: absolute;
+  right: 1rem;
+  top: 1.05rem;
+  color: var(--od-gold);
+}
+
+/* ---------------------------------------------------------- product cards */
+
+[data-commerce-light] .od-shop__grid {
+  gap: clamp(0.7rem, 1.8vw, 1.15rem);
+}
+
+[data-commerce-light] .odc-product {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--od-line);
+  border-radius: var(--od-radius);
+  background: var(--od-bg-raised);
+  overflow: hidden;
+  box-shadow: var(--od-shadow-soft);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+[data-commerce-light] .odc-product:hover {
+  border-color: var(--od-gold-strong);
+  box-shadow: var(--od-shadow-deep);
+  transform: translateY(-2px);
+}
+
+[data-commerce-light] .odc-product__link {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+[data-commerce-light] .odc-product__media {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+}
+
+[data-commerce-light] .odc-product__media img {
+  object-fit: cover;
+  transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-commerce-light] .odc-product:hover .odc-product__media img {
+  transform: scale(1.04);
+}
+
+[data-commerce-light] .odc-product__badge {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.94);
+  border: 1px solid var(--od-line);
+  color: var(--od-text-primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+[data-commerce-light] .odc-product__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  padding: 0.85rem 0.9rem 1rem;
+  flex: 1 1 auto;
+}
+
+[data-commerce-light] .odc-product__cat {
+  margin: 0;
+  color: var(--od-text-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+
+[data-commerce-light] .odc-product__name {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--od-text-primary);
+}
+
+[data-commerce-light] .odc-product__desc {
+  margin: 0;
+  color: var(--od-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+[data-commerce-light] .odc-product__price {
+  margin: 0.25rem 0 0;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+[data-commerce-light] .odc-product__price strong {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--od-text-primary);
+}
+
+[data-commerce-light] .odc-product__gst {
+  color: var(--od-text-subtle);
+  font-size: 0.72rem;
+}
+
+[data-commerce-light] .odc-product__meta {
+  margin: 0;
+  color: var(--od-text-muted);
+  font-size: 0.78rem;
+}
+
+[data-commerce-light] .odc-product__cta {
+  margin-top: auto;
+  padding-top: 0.6rem;
+  color: var(--od-gold-light);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+[data-commerce-light] .odc-product__save {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 2;
+}
+
+[data-commerce-light] .odc-product__save .od-shop-heart {
+  min-width: var(--odc-tap);
+  min-height: var(--odc-tap);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.94);
+  border: 1px solid var(--od-line);
+  color: var(--od-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+[data-commerce-light] .odc-product__save .od-shop-heart[aria-pressed="true"] {
+  color: var(--od-gold-light);
+  border-color: var(--od-gold-strong);
+}
+
+/* -------------------------------------------------------------- editorial */
+
+[data-commerce-light] .odc-editorial {
+  background: linear-gradient(135deg, #2b241d 0%, #3a2f24 100%);
+  color: #fdfaf4;
+  padding-block: clamp(2.25rem, 5vw, 3.5rem);
+}
+
+[data-commerce-light] .odc-editorial__inner {
+  max-width: var(--odc-shell-max);
+  margin: 0 auto;
+  padding-inline: var(--odc-gutter);
+}
+
+[data-commerce-light] .odc-editorial__eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #e6c98d;
+}
+
+[data-commerce-light] .odc-editorial__title {
+  margin: 0.6rem 0 0;
+  max-width: 22ch;
+  font-family: var(--dc-font-wordmark), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(1.4rem, 3.4vw, 2.2rem);
+  line-height: 1.18;
+}
+
+[data-commerce-light] .odc-editorial__lede {
+  margin: 0.9rem 0 0;
+  max-width: 56ch;
+  color: rgba(253, 250, 244, 0.82);
+  line-height: 1.65;
+}
+
+/* ------------------------------------------------------------------ trust */
+
+[data-commerce-light] .odc-trust {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+[data-commerce-light] .odc-trust__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.1rem;
+  border: 1px solid var(--od-line);
+  border-radius: var(--od-radius);
+  background: var(--od-bg-raised);
+}
+
+[data-commerce-light] .odc-trust__title {
+  font-weight: 600;
+  color: var(--od-text-primary);
+}
+
+[data-commerce-light] .odc-trust__body {
+  color: var(--od-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+[data-commerce-light] .odc-pinbox {
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid var(--od-line);
+  border-radius: var(--od-radius);
+  background: var(--od-bg-raised);
+}
+
+@media (min-width: 860px) {
+  [data-commerce-light] .odc-band__inner--split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+  }
+}
+
+/* ----------------------------------------------------------------- bridge */
+
+[data-commerce-light] .odc-bridge {
+  padding-block: clamp(2rem, 4.5vw, 3rem);
+}
+
+[data-commerce-light] .odc-bridge__inner {
+  max-width: var(--odc-shell-max);
+  margin: 0 auto;
+  padding: clamp(1.75rem, 4vw, 2.75rem) clamp(1.25rem, 4vw, 2.5rem);
+  border: 1px solid var(--od-gold-strong);
+  border-radius: var(--od-radius-lg);
+  background: var(--od-bg-deepest);
+  margin-inline: var(--odc-gutter);
+}
+
+[data-commerce-light] .odc-bridge__eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--od-gold-light);
+}
+
+[data-commerce-light] .odc-bridge__title {
+  margin: 0.5rem 0 0;
+  font-family: var(--dc-font-wordmark), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  color: var(--od-text-primary);
+}
+
+[data-commerce-light] .odc-bridge__lede {
+  margin: 0.75rem 0 0;
+  max-width: 54ch;
+  color: var(--od-text-muted);
+  line-height: 1.6;
+}
+
+[data-commerce-light] .odc-bridge__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 1.35rem;
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+[data-commerce-light] .odc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--odc-tap);
+  padding: 0.7rem 1.35rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+[data-commerce-light] .odc-btn--primary {
+  background: var(--od-gold);
+  color: #fffdf8;
+}
+
+[data-commerce-light] .odc-btn--primary:hover {
+  background: var(--od-gold-light);
+}
+
+[data-commerce-light] .odc-btn--ghost {
+  background: transparent;
+  border-color: var(--od-line-strong);
+  color: var(--od-text-primary);
+}
+
+[data-commerce-light] .odc-btn--ghost:hover {
+  border-color: var(--od-gold);
+  color: var(--od-gold-light);
+}
+
+/* Shared shop buttons, restyled for light surfaces. */
+[data-commerce-light] .od-shop-btn {
+  border-radius: 999px;
+  border-color: var(--od-line-strong);
+  background: var(--od-bg-raised);
+  color: var(--od-text-primary);
+  font-weight: 600;
+}
+
+[data-commerce-light] .od-shop-btn--gold {
+  border-color: transparent;
+  background: var(--od-gold);
+  color: #fffdf8;
+}
+
+[data-commerce-light] .od-shop-btn--gold:hover {
+  background: var(--od-gold-light);
+}
+
+[data-commerce-light] .od-shop-btn--ghost {
+  background: transparent;
+}
+
+/* ------------------------------------- listing, PDP, cart, checkout polish */
+
+[data-commerce-light] .od-shop__filters {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--od-line);
+  border-radius: var(--od-radius);
+  background: var(--od-bg-raised);
+}
+
+[data-commerce-light] .od-shop__filters label {
+  color: var(--od-text-secondary);
+  font-weight: 600;
+}
+
+[data-commerce-light] .od-shop__filters select,
+[data-commerce-light] .od-shop__filters input,
+[data-commerce-light] .od-shop-pincode input,
+[data-commerce-light] .od-shop-form input,
+[data-commerce-light] .od-shop-form select {
+  background: var(--od-bg-page);
+  border-color: var(--od-line-strong);
+  color: var(--od-text-primary);
+  border-radius: 10px;
+}
+
+[data-commerce-light] .od-shop__filters button,
+[data-commerce-light] .od-shop-pincode button {
+  background: var(--od-gold);
+  border-color: transparent;
+  color: #fffdf8;
+  font-weight: 600;
+}
+
+[data-commerce-light] .od-shop__filters a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--odc-tap);
+  color: var(--od-text-muted);
+}
+
+[data-commerce-light] .od-shop__pager a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--odc-tap);
+  padding: 0 1rem;
+  border: 1px solid var(--od-line-strong);
+  border-radius: 999px;
+  color: var(--od-text-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+[data-commerce-light] .od-shop-pdp {
+  padding-inline: var(--odc-gutter);
+  max-width: var(--odc-shell-max);
+  gap: clamp(1.5rem, 4vw, 3rem);
+}
+
+[data-commerce-light] .od-shop-gallery__main {
+  border: 1px solid var(--od-line);
+}
+
+/* Catalogue photography is not square; without this the portrait source is
+   squashed into the 1:1 gallery frame. */
+[data-commerce-light] .od-shop-gallery__main img {
+  object-fit: cover;
+}
+
+[data-commerce-light] .od-shop-gallery__strip img {
+  object-fit: cover;
+}
+
+[data-commerce-light] .od-shop-gallery__strip button {
+  background: var(--od-bg-raised);
+  border-color: var(--od-line);
+}
+
+[data-commerce-light] .od-shop-gallery__strip button[aria-pressed="true"] {
+  border-color: var(--od-gold);
+}
+
+[data-commerce-light] .od-shop-pdp__chips button {
+  min-height: var(--odc-tap);
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--od-line-strong);
+  border-radius: 999px;
+  background: var(--od-bg-raised);
+  color: var(--od-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+[data-commerce-light] .od-shop-pdp__chips button[aria-pressed="true"] {
+  border-color: var(--od-gold);
+  background: var(--od-gold-soft);
+  color: var(--od-gold-light);
+  font-weight: 600;
+}
+
+[data-commerce-light] .od-shop-purchase {
+  background: var(--od-bg-raised);
+  border-color: var(--od-line-strong);
+  box-shadow: var(--od-shadow-soft);
+}
+
+[data-commerce-light] .od-shop-purchase__qtyControls button {
+  background: var(--od-bg-page);
+  border-color: var(--od-line-strong);
+  color: var(--od-text-primary);
+}
+
+[data-commerce-light] .od-shop-cart__item {
+  background: var(--od-bg-raised);
+  border-color: var(--od-line);
+  border-radius: var(--od-radius);
+}
+
+[data-commerce-light] .od-shop-checkout__review,
+[data-commerce-light] .od-shop-checkout__success,
+[data-commerce-light] .od-shop-order {
+  background: var(--od-bg-raised);
+  border-color: var(--od-line);
+}
+
+[data-commerce-light] .od-shop-form fieldset {
+  background: var(--od-bg-raised);
+  border-color: var(--od-line);
+}
+
+[data-commerce-light] .od-shop-specs th,
+[data-commerce-light] .od-shop-specs td {
+  border-bottom-color: var(--od-line);
+}
+
+[data-commerce-light] .od-shop-order__timeline li[aria-current="step"] {
+  color: var(--od-gold-light);
+}
+
+/* Recently-viewed chips only — scoped to that section so the cart, order and
+   checkout lists inside .od-shop__section keep their own block layout. */
+[data-commerce-light] .od-shop__section[aria-labelledby="recent-heading"] ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+[data-commerce-light] .od-shop__section[aria-labelledby="recent-heading"] ul li a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--odc-tap);
+  padding: 0 0.9rem;
+  border: 1px solid var(--od-line);
+  border-radius: 999px;
+  background: var(--od-bg-raised);
+  color: var(--od-text-secondary);
+  text-decoration: none;
+  font-size: 0.88rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-commerce-light] .odc-hero__media img,
+  [data-commerce-light] .odc-product__media img,
+  [data-commerce-light] .odc-product,
+  [data-commerce-light] .odc-cat {
+    transition: none;
+  }
+
+  [data-commerce-light] .odc-hero__panel:hover .odc-hero__media img,
+  [data-commerce-light] .odc-product:hover .odc-product__media img,
+  [data-commerce-light] .odc-product:hover,
+  [data-commerce-light] .odc-cat:hover {
+    transform: none;
+  }
+}
