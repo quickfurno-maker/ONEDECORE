@@ -44,7 +44,11 @@ export function PublicSiteHeader({
     () => getPublicNavDestinations(shopEnabled),
     [shopEnabled]
   );
-  const showSearch = current === "shop" || (current === "home" && showShopSearch);
+  // Shop utilities are commerce navigation: they must stay fail-closed with the
+  // gate, including on the /shop inactive boundary (current === "shop").
+  const showSearch =
+    shopEnabled && (current === "shop" || (current === "home" && showShopSearch));
+  const showCart = shopEnabled && current === "shop";
   const [open, setOpen] = useState(false);
   const drawerId = useId();
   const toggleRef = useRef<HTMLButtonElement | null>(null);
@@ -145,9 +149,7 @@ export function PublicSiteHeader({
               Search
             </Link>
           ) : null}
-          {current === "shop" ? (
-            <ShopCartLink className="od-site-header__util" />
-          ) : null}
+          {showCart ? <ShopCartLink className="od-site-header__util" /> : null}
           {showConsultation ? (
             <Link href={PUBLIC_CONSULTATION.href} className="od-site-header__cta">
               <span className="od-site-header__ctaFull">{PUBLIC_CONSULTATION.label}</span>
@@ -198,7 +200,7 @@ export function PublicSiteHeader({
               Search furniture
             </Link>
           ) : null}
-          {current === "shop" ? (
+          {showCart ? (
             <ShopCartLink className="od-site-header__drawerCart" />
           ) : null}
           {showConsultation ? (

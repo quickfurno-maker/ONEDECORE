@@ -30,7 +30,9 @@ function useCountUp(
 ): number {
   const reduced = usePrefersReducedMotion();
   const decimals = options?.decimals ?? 0;
-  const [value, setValue] = useState(0);
+  // Seed with the approved claim so SSR / no-JS / pre-hydration never renders a
+  // zeroed metric. The count-up starts from 0 on the first animation frame.
+  const [value, setValue] = useState(target);
   const finished = useRef(false);
 
   useEffect(() => {

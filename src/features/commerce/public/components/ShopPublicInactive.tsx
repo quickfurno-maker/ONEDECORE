@@ -5,10 +5,11 @@ export function ShopPublicInactive() {
     <main className="od-shop">
       <header className="od-shop__hero">
         <p className="od-shop__kicker">Furniture shop</p>
-        <h1 className="od-shop__title">Not activated yet</h1>
+        <h1 className="od-shop__title">Coming soon</h1>
         <p className="od-shop__lede">
-          The public furniture storefront remains gated until the owner enables
-          production activation. Interiors consultation is available now.
+          Our ready-made furniture collection is not open for browsing yet.
+          Complete home interiors, modular kitchens and custom wardrobes are
+          available now — start with a free design consultation.
         </p>
       </header>
       <section className="od-shop__section">
