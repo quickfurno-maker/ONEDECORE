@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
-import { buildLeadListHref, PIPELINE_STAGE_PREVIEW_SIZE } from "../../crm/contracts/lead-list-query.ts";
+import { buildLeadListHref } from "../../crm/contracts/lead-list-query.ts";
 import { buildOpsCommandRoutes } from "../nav-routes.ts";
 import type { OpsNavFlags } from "../types.ts";
 
@@ -76,7 +76,7 @@ describe("Operations Suite correction contracts", () => {
     );
   });
 
-  test("pipeline toggle URL drops status while preserving other filters", () => {
+  test("lead list URL clears one filter while preserving the others", () => {
     const href = buildLeadListHref(
       {
         q: "rahul",
@@ -88,30 +88,31 @@ describe("Operations Suite correction contracts", () => {
         page: 1,
         pageSize: 25,
       },
-      "pipeline"
+      "status"
     );
-    assert.match(href, /view=pipeline/);
     assert.doesNotMatch(href, /status=new/);
     assert.match(href, /q=rahul/);
     assert.match(href, /followUpDue=overdue/);
     assert.match(href, /assignment=unassigned/);
   });
 
-  test("pipeline stage totals are not derived from the 50-row page", () => {
+  // CRM 2B cutover: the board moved to /admin/crm/pipeline and the Leads page
+  // keeps no second pipeline implementation.
+  test("leads page links to the dedicated pipeline instead of previewing one", () => {
     const leadsPage = readFileSync(
       join(root, "src/app/admin/crm/leads/page.tsx"),
       "utf8"
     );
-    const board = readFileSync(
-      join(root, "src/features/crm/components/leads/LeadPipelineBoard.tsx"),
-      "utf8"
-    );
-    assert.match(leadsPage, /countLeadListForCurrentUser/);
-    assert.match(leadsPage, /PIPELINE_STAGE_PREVIEW_SIZE/);
+    assert.match(leadsPage, /\/admin\/crm\/pipeline/);
+    assert.doesNotMatch(leadsPage, /LeadPipelineBoard/);
+    assert.doesNotMatch(leadsPage, /view=pipeline/);
     assert.doesNotMatch(leadsPage, /pageSize: 50/);
-    assert.match(board, /stage\.total/);
-    assert.match(board, /View all/);
-    assert.equal(PIPELINE_STAGE_PREVIEW_SIZE < 50, true);
+    assert.equal(
+      existsSync(
+        join(root, "src/features/crm/components/leads/LeadPipelineBoard.tsx")
+      ),
+      false
+    );
   });
 
   test("lead filter controls expose accessible names", () => {

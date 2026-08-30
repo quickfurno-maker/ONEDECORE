@@ -13,9 +13,15 @@ interface CrmNavProps {
   readonly reportsLabel?: string;
 }
 
+/**
+ * CRM 2B execution order: daily work first, then the two workspaces added in
+ * this phase, then overview/reporting. Secondary links stay permission-gated.
+ */
 const BASE_NAV_ITEMS = [
   { href: "/admin/crm/my-day", label: "My Day" },
   { href: "/admin/crm/leads", label: "Leads" },
+  { href: "/admin/crm/pipeline", label: "Pipeline" },
+  { href: "/admin/crm/calendar", label: "Calendar" },
 ] as const;
 
 export function CrmNav({
@@ -30,13 +36,13 @@ export function CrmNav({
   const pathname = usePathname();
   const activePath = currentPath && currentPath !== "/admin/crm" ? currentPath : pathname;
   const items = [
-    { href: "/admin/crm", label: "Overview" },
     ...BASE_NAV_ITEMS,
-    ...(showTargets
-      ? [{ href: "/admin/crm/targets", label: targetsLabel } as const]
-      : []),
+    { href: "/admin/crm", label: "Overview" },
     ...(showReports
       ? [{ href: "/admin/crm/reports", label: reportsLabel } as const]
+      : []),
+    ...(showTargets
+      ? [{ href: "/admin/crm/targets", label: targetsLabel } as const]
       : []),
     ...(showImports
       ? [{ href: "/admin/crm/imports", label: "Imports" } as const]
