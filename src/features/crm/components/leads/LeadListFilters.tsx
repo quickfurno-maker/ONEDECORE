@@ -18,7 +18,6 @@ interface LeadListFiltersProps {
   readonly sources: readonly CrmLeadSourceOption[];
   readonly assignees: readonly CrmAssigneeDirectoryEntry[];
   readonly showBroadFilters: boolean;
-  readonly view: "table" | "pipeline";
 }
 
 function Chip({ label, href }: { label: string; href: string }) {
@@ -37,11 +36,10 @@ export function LeadListFilters({
   sources,
   assignees,
   showBroadFilters,
-  view,
 }: LeadListFiltersProps) {
   const formId = useId();
   const selectClass = "crm-select min-h-11 w-full sm:w-auto";
-  const filterQuery = view === "pipeline" ? { ...query, status: null } : query;
+  const filterQuery = query;
   const sourceLabel = sources.find((source) => source.id === query.sourceId)?.displayName;
   const assigneeLabel = assignees.find((row) => row.userId === query.assigneeId)?.displayName;
 
@@ -55,7 +53,6 @@ export function LeadListFilters({
         method="get"
         className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
       >
-        <input type="hidden" name="view" value={view} />
         <input
           id={`${formId}-q`}
           name="q"
@@ -67,22 +64,20 @@ export function LeadListFilters({
           className="crm-input min-h-11 w-full flex-1 sm:min-w-[220px]"
         />
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-          {view === "pipeline" ? null : (
-            <select
-              id={`${formId}-status`}
-              name="status"
-              defaultValue={query.status ?? ""}
-              aria-label="Filter by status"
-              className={selectClass}
-            >
-              <option value="">Status</option>
-              {LEAD_STAGE_CODES.map((status) => (
-                <option key={status} value={status}>
-                  {formatCrmCodeLabel(status.replaceAll("_", "-"))}
-                </option>
-              ))}
-            </select>
-          )}
+          <select
+            id={`${formId}-status`}
+            name="status"
+            defaultValue={query.status ?? ""}
+            aria-label="Filter by status"
+            className={selectClass}
+          >
+            <option value="">Status</option>
+            {LEAD_STAGE_CODES.map((status) => (
+              <option key={status} value={status}>
+                {formatCrmCodeLabel(status.replaceAll("_", "-"))}
+              </option>
+            ))}
+          </select>
           <select
             id={`${formId}-source`}
             name="sourceId"
@@ -144,7 +139,7 @@ export function LeadListFilters({
             Apply
           </button>
           <Link
-            href={view === "pipeline" ? "/admin/crm/leads?view=pipeline" : "/admin/crm/leads"}
+            href="/admin/crm/leads"
             className="crm-btn crm-btn-ghost min-h-11 flex-1 sm:flex-none"
           >
             Clear
@@ -153,31 +148,31 @@ export function LeadListFilters({
       </form>
       <div className="flex flex-wrap gap-1.5">
         {filterQuery.q ? (
-          <Chip label={`Search: ${filterQuery.q}`} href={buildLeadListHref(filterQuery, view, "q")} />
+          <Chip label={`Search: ${filterQuery.q}`} href={buildLeadListHref(filterQuery, "q")} />
         ) : null}
         {filterQuery.status ? (
           <Chip
             label={formatCrmCodeLabel(filterQuery.status.replaceAll("_", "-"))}
-            href={buildLeadListHref(filterQuery, view, "status")}
+            href={buildLeadListHref(filterQuery, "status")}
           />
         ) : null}
         {filterQuery.sourceId ? (
           <Chip
             label={sourceLabel ?? "Source"}
-            href={buildLeadListHref(filterQuery, view, "sourceId")}
+            href={buildLeadListHref(filterQuery, "sourceId")}
           />
         ) : null}
         {filterQuery.assignment ? (
-          <Chip label={filterQuery.assignment} href={buildLeadListHref(filterQuery, view, "assignment")} />
+          <Chip label={filterQuery.assignment} href={buildLeadListHref(filterQuery, "assignment")} />
         ) : null}
         {filterQuery.assigneeId ? (
           <Chip
             label={assigneeLabel ?? "Assignee"}
-            href={buildLeadListHref(filterQuery, view, "assigneeId")}
+            href={buildLeadListHref(filterQuery, "assigneeId")}
           />
         ) : null}
         {filterQuery.followUpDue ? (
-          <Chip label={filterQuery.followUpDue} href={buildLeadListHref(filterQuery, view, "followUpDue")} />
+          <Chip label={filterQuery.followUpDue} href={buildLeadListHref(filterQuery, "followUpDue")} />
         ) : null}
       </div>
     </section>
