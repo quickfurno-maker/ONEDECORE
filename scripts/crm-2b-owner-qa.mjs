@@ -151,19 +151,74 @@ function runFixtureSql() {
 }
 
 /**
+ * Runs privileged fixture SQL as the local `postgres` superuser.
+ *
+ * `public.crm_sla_clocks` grants SELECT to `authenticated` and NOTHING to
+ * `service_role`: in production the clock is written only by the postgres-owned
+ * SECURITY DEFINER authorities (`private.mark_first_contact_attempt_if_qualifying`
+ * and the CRM SLA foundation inserts). That grant is correct and this QA harness
+ * does not widen it to make seeding convenient — it seeds as postgres instead,
+ * the same way scripts/crm-2e-owner-qa.mjs does.
+ *
+ * Local-only: `supabase db query --local` targets the loopback stack.
+ */
+function runPrivilegedSql(sql, label) {
+  const sqlPath = path.join(artifactsDir, `privileged-${label}.sql`);
+  fs.writeFileSync(sqlPath, `${sql}\n`);
+  const result = spawnSync(`npx supabase db query --local --file "${sqlPath}"`, {
+    encoding: "utf8",
+    cwd: root,
+    shell: true,
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `privileged fixture SQL (${label}) failed:\n${result.stderr || result.stdout}`
+    );
+  }
+  return result.stdout;
+}
+
+/** Runs a privileged read as postgres and returns the result rows. */
+function queryPrivilegedRows(sql, label) {
+  const stdout = runPrivilegedSql(sql, label);
+  const start = stdout.indexOf("{");
+  if (start < 0) {
+    throw new Error(`privileged query (${label}) returned no JSON:\n${stdout}`);
+  }
+  const parsed = JSON.parse(stdout.slice(start));
+  return parsed.rows ?? [];
+}
+
+/** Fixture ids are interpolated into SQL, so refuse anything but a UUID. */
+function assertUuid(value, label) {
+  if (
+    typeof value !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  ) {
+    throw new Error(`${label} is not a uuid: ${String(value)}`);
+  }
+  return value;
+}
+
+/**
  * CRM 2C stage gates require canonical evidence before contacted /
- * consultation_scheduled / proposal_sent. Fixture evidence is written with the
- * service-role client (first-contact clock, quotation delivery) or through the
- * canonical activity RPC (scheduled visit) so the stage walk below stays real.
+ * consultation_scheduled / proposal_sent. Fixture evidence is written as
+ * postgres (first-contact clock), with the service-role client (quotation
+ * delivery) or through the canonical activity RPC (scheduled visit) so the
+ * stage walk below stays real.
  */
 async function ensureStageGateEvidence(admin, sa, leadId, hops, ownerId, key) {
   if (hops.includes("contacted")) {
-    const { error } = await admin
-      .from("crm_sla_clocks")
-      .update({ first_contact_attempt_at: new Date().toISOString() })
-      .eq("lead_id", leadId)
-      .is("first_contact_attempt_at", null);
-    if (error) throw new Error(`first-contact evidence ${key}: ${error.message}`);
+    // Mirrors private.mark_first_contact_attempt_if_qualifying: set once, never
+    // overwrite an existing attempt instant.
+    runPrivilegedSql(
+      `update public.crm_sla_clocks
+         set first_contact_attempt_at = now(),
+             updated_at = clock_timestamp()
+       where lead_id = '${assertUuid(leadId, `lead ${key}`)}'::uuid
+         and first_contact_attempt_at is null;`,
+      `first-contact-${key}`
+    );
   }
 
   if (hops.includes("consultation_scheduled")) {
@@ -192,7 +247,7 @@ async function ensureStageGateEvidence(admin, sa, leadId, hops, ownerId, key) {
   }
 
   if (hops.includes("proposal_sent")) {
-    await ensureProposalDeliveryEvidence(admin, leadId, key);
+    ensureProposalDeliveryEvidence(leadId, key);
   }
 }
 
@@ -208,7 +263,18 @@ async function ensureStageGateEvidence(admin, sa, leadId, hops, ownerId, key) {
  * already qualifies is reused; only the missing links are created, from
  * lead-deterministic ids so repeated seed runs never collide.
  */
-async function ensureProposalDeliveryEvidence(admin, leadId, key) {
+/**
+ * Seeds the CRM 2C gate-3 evidence (a non-revoked access grant on a finalized
+ * quotation version) as postgres.
+ *
+ * `public.quotations`, `public.quotation_versions` and
+ * `public.quotation_access_grants` grant `service_role` no SELECT/INSERT: the
+ * quotation domain is reached through RLS and postgres-owned SECURITY DEFINER
+ * RPCs. This harness seeds as postgres rather than widening those grants.
+ */
+function ensureProposalDeliveryEvidence(leadId, key) {
+  const lead = assertUuid(leadId, `lead ${key}`);
+
   /** Deterministic v4-shaped uuid so a re-run reuses the same fixture rows. */
   const fixtureUuid = (seed) => {
     const digest = hex(seed);
@@ -222,40 +288,34 @@ async function ensureProposalDeliveryEvidence(admin, leadId, key) {
     ].join("-");
   };
 
-  const { data: quotationRows, error: quotationReadError } = await admin
-    .from("quotations")
-    .select("id")
-    .eq("lead_id", leadId);
-  if (quotationReadError) {
-    throw new Error(`quotation lookup ${key}: ${quotationReadError.message}`);
-  }
-  const quotationIds = (quotationRows ?? []).map((row) => row.id);
+  const quotationIds = queryPrivilegedRows(
+    `select id from public.quotations where lead_id = '${lead}'::uuid order by created_at;`,
+    `quotations-${key}`
+  ).map((row) => row.id);
 
   let finalizedVersionIds = [];
   if (quotationIds.length > 0) {
-    const { data: versionRows, error: versionReadError } = await admin
-      .from("quotation_versions")
-      .select("id")
-      .in("quotation_id", quotationIds)
-      .eq("status", "finalized");
-    if (versionReadError) {
-      throw new Error(`version lookup ${key}: ${versionReadError.message}`);
-    }
-    finalizedVersionIds = (versionRows ?? []).map((row) => row.id);
-  }
+    const inList = quotationIds
+      .map((id) => `'${assertUuid(id, `quotation ${key}`)}'::uuid`)
+      .join(", ");
+    finalizedVersionIds = queryPrivilegedRows(
+      `select id from public.quotation_versions
+        where quotation_id in (${inList}) and status = 'finalized' order by version_number;`,
+      `versions-${key}`
+    ).map((row) => row.id);
 
-  if (finalizedVersionIds.length > 0) {
-    const { data: grantRows, error: grantReadError } = await admin
-      .from("quotation_access_grants")
-      .select("id")
-      .in("quotation_version_id", finalizedVersionIds)
-      .is("revoked_at", null)
-      .limit(1);
-    if (grantReadError) {
-      throw new Error(`grant lookup ${key}: ${grantReadError.message}`);
-    }
-    if ((grantRows ?? []).length > 0) {
-      return; // Qualifying evidence already exists — reuse it.
+    if (finalizedVersionIds.length > 0) {
+      const versionList = finalizedVersionIds
+        .map((id) => `'${assertUuid(id, `version ${key}`)}'::uuid`)
+        .join(", ");
+      const liveGrants = queryPrivilegedRows(
+        `select id from public.quotation_access_grants
+          where quotation_version_id in (${versionList}) and revoked_at is null limit 1;`,
+        `grants-${key}`
+      );
+      if (liveGrants.length > 0) {
+        return; // Qualifying evidence already exists — reuse it.
+      }
     }
   }
 
@@ -266,64 +326,59 @@ async function ensureProposalDeliveryEvidence(admin, leadId, key) {
       .replace(/\D/g, "")
       .padEnd(8, "0")
       .slice(0, 8)}`;
-    const { error } = await admin.from("quotations").insert({
-      id: quotationId,
-      lead_id: leadId,
-      quotation_number: quotationNumber,
-      created_by: SUPER_ADMIN,
-    });
-    if (error) throw new Error(`quotation evidence ${key}: ${error.message}`);
+    runPrivilegedSql(
+      `insert into public.quotations (id, lead_id, quotation_number, created_by)
+       values ('${assertUuid(quotationId, `quotation ${key}`)}'::uuid, '${lead}'::uuid,
+               '${quotationNumber}', '${SUPER_ADMIN}'::uuid);`,
+      `quotation-insert-${key}`
+    );
   }
 
   let versionId = finalizedVersionIds[0] ?? null;
   if (!versionId) {
     // Draft versions may already occupy version numbers on this quotation.
-    const { data: existingVersions, error: existingError } = await admin
-      .from("quotation_versions")
-      .select("version_number")
-      .eq("quotation_id", quotationId);
-    if (existingError) {
-      throw new Error(`version numbering ${key}: ${existingError.message}`);
-    }
+    const existingVersions = queryPrivilegedRows(
+      `select version_number from public.quotation_versions
+        where quotation_id = '${assertUuid(quotationId, `quotation ${key}`)}'::uuid;`,
+      `version-numbers-${key}`
+    );
     const nextVersionNumber =
-      (existingVersions ?? []).reduce(
+      existingVersions.reduce(
         (max, row) => Math.max(max, row.version_number ?? 0),
         0
       ) + 1;
 
     versionId = fixtureUuid(`version:${quotationId}:${nextVersionNumber}`);
-    const { error } = await admin.from("quotation_versions").insert({
-      id: versionId,
-      quotation_id: quotationId,
-      version_number: nextVersionNumber,
-      status: "finalized",
-      is_current_draft: false,
-      title: "QA delivered proposal",
-      created_by: SUPER_ADMIN,
-    });
-    if (error) throw new Error(`version evidence ${key}: ${error.message}`);
+    runPrivilegedSql(
+      `insert into public.quotation_versions
+         (id, quotation_id, version_number, status, is_current_draft, title, created_by)
+       values ('${assertUuid(versionId, `version ${key}`)}'::uuid,
+               '${assertUuid(quotationId, `quotation ${key}`)}'::uuid,
+               ${nextVersionNumber}, 'finalized', false,
+               'QA delivered proposal', '${SUPER_ADMIN}'::uuid);`,
+      `version-insert-${key}`
+    );
   }
 
   // Grant identity is derived from the version AND the number of grants already
   // on it: a version whose earlier grant was revoked can then be re-granted
   // without colliding with that revoked row's primary key or token digest.
-  const { data: priorGrants, error: priorGrantError } = await admin
-    .from("quotation_access_grants")
-    .select("id")
-    .eq("quotation_version_id", versionId);
-  if (priorGrantError) {
-    throw new Error(`grant numbering ${key}: ${priorGrantError.message}`);
-  }
-  const grantSeed = `grant:${versionId}:${(priorGrants ?? []).length + 1}`;
+  const priorGrants = queryPrivilegedRows(
+    `select id from public.quotation_access_grants
+      where quotation_version_id = '${assertUuid(versionId, `version ${key}`)}'::uuid;`,
+    `prior-grants-${key}`
+  );
+  const grantSeed = `grant:${versionId}:${priorGrants.length + 1}`;
 
-  const { error: grantError } = await admin.from("quotation_access_grants").insert({
-    id: fixtureUuid(grantSeed),
-    quotation_id: quotationId,
-    quotation_version_id: versionId,
-    derivation_nonce: hex(`nonce:${grantSeed}`).slice(0, 32),
-    capability_token_hash: hex(grantSeed),
-  });
-  if (grantError) throw new Error(`grant evidence ${key}: ${grantError.message}`);
+  runPrivilegedSql(
+    `insert into public.quotation_access_grants
+       (id, quotation_id, quotation_version_id, derivation_nonce, capability_token_hash)
+     values ('${assertUuid(fixtureUuid(grantSeed), `grant ${key}`)}'::uuid,
+             '${assertUuid(quotationId, `quotation ${key}`)}'::uuid,
+             '${assertUuid(versionId, `version ${key}`)}'::uuid,
+             '${hex(`nonce:${grantSeed}`).slice(0, 32)}', '${hex(grantSeed)}');`,
+    `grant-insert-${key}`
+  );
 }
 
 /** Deterministic 64-char hex digest for fixture fingerprints. */
