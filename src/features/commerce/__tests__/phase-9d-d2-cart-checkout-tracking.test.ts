@@ -42,12 +42,12 @@ function latestMigrationName(): string {
 }
 
 describe("Phase 9D-D2 repository contracts", () => {
-  test("latest migration is CRM 2E management analytics; deferred payment M38 absent", () => {
+  test("latest migration is the WhatsApp lead-link repair; deferred payment M38 absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260901140000_crm_management_analytics_read_model.sql"
+      "20260902140000_crm_whatsapp_lead_link_repair.sql"
     );
-    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 47);
+    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 48);
     assert.equal(
       existsSync(join(migrationDir, "20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false
