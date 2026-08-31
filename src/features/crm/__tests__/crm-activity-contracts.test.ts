@@ -61,6 +61,7 @@ describe("CRM 2A-4 activity enums", () => {
     assert.deepEqual([...CRM_ACTIVITY_RESOLUTIONS], [
       "NONE",
       "NEXT_PRIMARY",
+      "CADENCE_NEXT",
       "ON_HOLD",
       "CLOSED_LOST",
     ]);

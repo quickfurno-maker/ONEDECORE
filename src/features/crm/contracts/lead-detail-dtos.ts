@@ -115,6 +115,8 @@ export interface CrmLeadDetailFollowUp {
   readonly completionNote: string | null;
   readonly quotationId: string | null;
   readonly source: string;
+  readonly cadenceEnrollmentId: string | null;
+  readonly cadenceStepId: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }

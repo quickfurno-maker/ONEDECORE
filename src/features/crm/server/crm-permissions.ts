@@ -122,6 +122,22 @@ export async function probeBulkImportPermissions(): Promise<BulkImportPermission
   };
 }
 
+export interface CadencePermissionProbeResult {
+  readonly canManageCadences: boolean;
+}
+
+/**
+ * Probes `crm.cadences.manage` — CRM 2C cadence template lifecycle (D3).
+ */
+export async function probeCadencePermissions(): Promise<CadencePermissionProbeResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("authorize", {
+    requested_permission: "crm.cadences.manage",
+  });
+
+  return { canManageCadences: !error && data === true };
+}
+
 export interface SalesTargetPermissionProbeResult {
   readonly canReadSalesTargets: boolean;
   readonly canManageSalesTargets: boolean;

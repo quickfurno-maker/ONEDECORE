@@ -446,6 +446,14 @@ select lives_ok(
   )$$,
   'SA assigns lead for CRM transitions'
 );
+-- CRM 2C stage gate evidence: canonical first-contact ATTEMPT.
+reset role;
+set local role postgres;
+update public.crm_sla_clocks
+set first_contact_attempt_at = clock_timestamp()
+where lead_id = '9ccb1111-bbbb-bbbb-bbbb-bbbbbbbbbbb1';
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"9c111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 select lives_ok(
   $$select public.transition_lead_status('9ccb1111-bbbb-bbbb-bbbb-bbbbbbbbbbb1', 'contacted', null, null)$$,
   'contacted'
@@ -464,6 +472,50 @@ select is(
   ),
   1,
   'QualifiedLead once on transition into qualified'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"9c111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+-- CRM 2C stage gate evidence: scheduled site visit + delivered quotation.
+reset role;
+set local role postgres;
+
+insert into public.lead_follow_ups (
+  lead_id, owner_id, due_at, status, created_by,
+  activity_type, title, priority, is_primary_next_action, source
+) values (
+  '9ccb1111-bbbb-bbbb-bbbb-bbbbbbbbbbb1',
+  '9c333333-3333-3333-3333-333333333333',
+  now() + interval '2 days',
+  'open',
+  '9c111111-1111-1111-1111-111111111111',
+  'site_visit', 'Measurement visit', 'normal', false, 'manual'
+);
+
+insert into public.quotations (id, lead_id, quotation_number, created_by)
+values (
+  '9ccb2001-0000-4000-8000-000000000001',
+  '9ccb1111-bbbb-bbbb-bbbb-bbbbbbbbbbb1',
+  'OD-Q-2026-000926',
+  '9c111111-1111-1111-1111-111111111111'
+);
+
+insert into public.quotation_versions (
+  id, quotation_id, version_number, status, is_current_draft, title, created_by
+) values (
+  '9ccb2002-0000-4000-8000-000000000002',
+  '9ccb2001-0000-4000-8000-000000000001',
+  1, 'finalized', false, 'Gate evidence version',
+  '9c111111-1111-1111-1111-111111111111'
+);
+
+insert into public.quotation_access_grants (
+  id, quotation_id, quotation_version_id, derivation_nonce, capability_token_hash
+) values (
+  '9ccb2003-0000-4000-8000-000000000003',
+  '9ccb2001-0000-4000-8000-000000000001',
+  '9ccb2002-0000-4000-8000-000000000002',
+  repeat('a', 32), repeat('b', 64)
 );
 
 set local role authenticated;

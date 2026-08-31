@@ -9,6 +9,7 @@ import { probeCampaignPermissions } from "@/features/marketing/server/campaign-p
 import { getMarketingConsentState } from "@/features/marketing/server/campaign-queries";
 import { LeadDetailContact } from "@/features/crm/components/leads/LeadDetailContact";
 import { LeadActivityWorkspace } from "@/features/crm/components/activities/LeadActivityWorkspace.tsx";
+import { LeadCadencePanel } from "@/features/crm/components/leads/LeadCadencePanel";
 import { LeadDetailNotes } from "@/features/crm/components/leads/LeadDetailNotes";
 import { LeadDetailOverview } from "@/features/crm/components/leads/LeadDetailOverview";
 import { LeadDetailSourcePanel } from "@/features/crm/components/leads/LeadDetailSourcePanel";
@@ -22,6 +23,10 @@ import { getLeadDetailForCurrentUser } from "@/features/crm/server/crm-lead-repo
 import { listActivityOutcomeOptionsForCurrentUser } from "@/features/crm/server/crm-activity-service.ts";
 import { fetchGovernedWhatsappSendIntentsForLead } from "@/features/crm/server/crm-whatsapp-evidence-queries.ts";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
+import {
+  fetchEnrollableCadenceTemplates,
+  fetchLeadCadenceState,
+} from "@/features/crm/server/crm-cadence-queries";
 import {
   fetchActiveLeadClosureReasons,
   fetchCrmAssigneeDirectory,
@@ -56,7 +61,17 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
     context?.canReadBroad &&
     (context.canAssignLeads || context.canManageLeadFollowUps);
 
-  const [assigneeDirectory, closureReasons, existingDraft, quotationPermissions, campaignPermissions, outcomeOptions, whatsappSendIntents] =
+  const [
+    assigneeDirectory,
+    closureReasons,
+    existingDraft,
+    quotationPermissions,
+    campaignPermissions,
+    outcomeOptions,
+    whatsappSendIntents,
+    leadCadence,
+    enrollableCadences,
+  ] =
     await Promise.all([
       needsDirectory ? fetchCrmAssigneeDirectory(context!) : Promise.resolve([]),
       context?.canTransitionLeads
@@ -71,7 +86,18 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
       context?.canManageLeadFollowUps
         ? fetchGovernedWhatsappSendIntentsForLead(lead.id)
         : Promise.resolve([]),
+      context?.canManageLeadFollowUps
+        ? fetchLeadCadenceState(lead.id)
+        : Promise.resolve(null),
+      context?.canManageLeadFollowUps
+        ? fetchEnrollableCadenceTemplates()
+        : Promise.resolve([]),
     ]);
+
+  // Only an ACTIVE enrollment with a further step may offer CADENCE_NEXT.
+  const activeCadenceEnrollmentId =
+    leadCadence?.status === "active" ? leadCadence.enrollmentId : null;
+  const hasNextCadenceStep = leadCadence?.upcomingStepTitle != null;
 
   const marketingConsentState = campaignPermissions.canManageMarketingConsent
     ? await getMarketingConsentState(lead.contact.id)
@@ -140,6 +166,16 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
             whatsappSendIntents={whatsappSendIntents}
             quotationId={quotationId}
             quotationLabel={quotationLabel}
+            activeCadenceEnrollmentId={activeCadenceEnrollmentId}
+            hasNextCadenceStep={hasNextCadenceStep}
+          />
+          <LeadCadencePanel
+            leadId={lead.id}
+            leadStatus={leadStatus}
+            isAssigned={lead.assignment.currentAssigneeId !== null}
+            canManage={context?.canManageLeadFollowUps ?? false}
+            cadence={leadCadence}
+            enrollableTemplates={enrollableCadences}
           />
           <LeadDetailOverview overview={lead.overview} />
           <LeadDetailNotes

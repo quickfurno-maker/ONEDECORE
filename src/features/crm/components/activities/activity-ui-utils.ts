@@ -135,6 +135,7 @@ export function activityPriorityOptions(): readonly CrmActivityPriority[] {
 
 export const CRM_ACTIVITY_RESOLUTION_LABELS = {
   NEXT_PRIMARY: "Schedule next action",
+  CADENCE_NEXT: "Continue cadence (next step)",
   ON_HOLD: "Put lead on hold",
   CLOSED_LOST: "Close lost",
   NONE: "Complete only",
@@ -148,26 +149,34 @@ export function getCompletionResolutionOptions(input: {
   readonly leadStatus: LeadStageCode;
   readonly isPrimary: boolean;
   readonly hasOtherOpenPrimary: boolean;
+  /** True only for an activity materialized by an ACTIVE cadence enrollment. */
+  readonly canContinueCadence?: boolean;
 }): readonly CrmActivityResolution[] {
   if (isTerminalLeadStage(input.leadStatus)) {
     return ["NONE"];
   }
 
   const allowOnHold = input.leadStatus !== "on_hold";
+  const withCadence = (
+    options: readonly CrmActivityResolution[]
+  ): readonly CrmActivityResolution[] =>
+    input.canContinueCadence ? (["CADENCE_NEXT", ...options] as const) : options;
   const withOnHold = (
     options: readonly CrmActivityResolution[]
   ): readonly CrmActivityResolution[] =>
     allowOnHold ? options : options.filter((entry) => entry !== "ON_HOLD");
 
   if (input.isPrimary) {
-    return withOnHold(["NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"]);
+    return withOnHold(withCadence(["NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"]));
   }
 
   if (input.hasOtherOpenPrimary) {
-    return withOnHold(["NONE", "NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"]);
+    return withOnHold(
+      withCadence(["NONE", "NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"])
+    );
   }
 
-  return withOnHold(["NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"]);
+  return withOnHold(withCadence(["NEXT_PRIMARY", "ON_HOLD", "CLOSED_LOST"]));
 }
 
 export function getDefaultCompletionResolution(
@@ -175,6 +184,9 @@ export function getDefaultCompletionResolution(
 ): CrmActivityResolution {
   if (options.includes("NONE") && options.length === 1) {
     return "NONE";
+  }
+  if (options.includes("CADENCE_NEXT")) {
+    return "CADENCE_NEXT";
   }
   if (options.includes("NONE") && options.includes("NEXT_PRIMARY")) {
     return "NONE";

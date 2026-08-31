@@ -32,6 +32,10 @@ interface LeadActivityWorkspaceProps {
   readonly whatsappSendIntents: readonly CrmWhatsappSendIntentOption[];
   readonly quotationId: string | null;
   readonly quotationLabel: string | null;
+  /** Enrollment id when the lead has an ACTIVE cadence, else null. */
+  readonly activeCadenceEnrollmentId?: string | null;
+  /** True when that cadence still has a further step to materialize. */
+  readonly hasNextCadenceStep?: boolean;
 }
 
 type DialogTarget = CrmLeadDetailFollowUp | null;
@@ -50,6 +54,8 @@ export function LeadActivityWorkspace({
   whatsappSendIntents,
   quotationId,
   quotationLabel,
+  activeCadenceEnrollmentId = null,
+  hasNextCadenceStep = false,
 }: LeadActivityWorkspaceProps) {
   const createFormRef = useRef<HTMLFormElement>(null);
   const [completeTarget, setCompleteTarget] = useState<DialogTarget>(null);
@@ -169,6 +175,11 @@ export function LeadActivityWorkspace({
         whatsappSendIntents={whatsappSendIntents}
         quotationId={quotationId}
         quotationLabel={quotationLabel}
+        canContinueCadence={
+          hasNextCadenceStep &&
+          activeCadenceEnrollmentId != null &&
+          completeTarget?.cadenceEnrollmentId === activeCadenceEnrollmentId
+        }
         onClose={() => setCompleteTarget(null)}
       />
 

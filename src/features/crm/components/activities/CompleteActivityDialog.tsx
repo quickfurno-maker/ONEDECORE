@@ -51,6 +51,7 @@ interface CompleteActivityDialogProps {
   readonly whatsappSendIntents: readonly CrmWhatsappSendIntentOption[];
   readonly quotationId: string | null;
   readonly quotationLabel: string | null;
+  readonly canContinueCadence?: boolean;
   readonly onClose: () => void;
 }
 
@@ -64,6 +65,7 @@ interface CompleteActivityFormProps {
   readonly whatsappSendIntents: readonly CrmWhatsappSendIntentOption[];
   readonly quotationId: string | null;
   readonly quotationLabel: string | null;
+  readonly canContinueCadence: boolean;
   readonly onClose: () => void;
 }
 
@@ -71,7 +73,8 @@ function buildCompleteFormDefaults(
   activity: CrmLeadDetailFollowUp,
   outcomeOptions: readonly CrmActivityOutcomeOption[],
   leadStatus: LeadStageCode,
-  hasOtherOpenPrimary: boolean
+  hasOtherOpenPrimary: boolean,
+  canContinueCadence: boolean
 ) {
   const filteredOutcomes = filterOutcomeOptionsForActivityType(
     outcomeOptions,
@@ -82,6 +85,7 @@ function buildCompleteFormDefaults(
     leadStatus,
     isPrimary: activity.isPrimaryNextAction,
     hasOtherOpenPrimary,
+    canContinueCadence,
   });
 
   return {
@@ -106,6 +110,7 @@ function CompleteActivityForm({
   whatsappSendIntents,
   quotationId,
   quotationLabel,
+  canContinueCadence,
   onClose,
 }: CompleteActivityFormProps) {
   const router = useRouter();
@@ -114,7 +119,8 @@ function CompleteActivityForm({
     activity,
     outcomeOptions,
     leadStatus,
-    hasOtherOpenPrimary
+    hasOtherOpenPrimary,
+    canContinueCadence
   );
   const [state, formAction, pending] = useActionState(
     completeLeadActivityAction,
@@ -143,8 +149,14 @@ function CompleteActivityForm({
         leadStatus,
         isPrimary: activity.isPrimaryNextAction,
         hasOtherOpenPrimary,
+        canContinueCadence,
       }),
-    [activity.isPrimaryNextAction, hasOtherOpenPrimary, leadStatus]
+    [
+      activity.isPrimaryNextAction,
+      canContinueCadence,
+      hasOtherOpenPrimary,
+      leadStatus,
+    ]
   );
 
   useEffect(() => {
@@ -481,11 +493,24 @@ function CompleteActivityForm({
           {clientError}
         </p>
       ) : null}
+      {resolution === "CADENCE_NEXT" ? (
+        <p
+          className="text-sm text-[var(--crm-muted)]"
+          data-testid="crm-complete-cadence-hint"
+        >
+          The next cadence step becomes this lead&rsquo;s primary next action. No
+          message is sent.
+        </p>
+      ) : null}
+
       {state.message && !state.success ? (
         <p className="text-sm text-[var(--crm-danger)]" role="alert">
           {state.message}
           {state.code === "NEXT_ACTION_REQUIRED"
             ? " Choose a next primary action or resolution."
+            : ""}
+          {state.code === "CADENCE_NEXT_STEP_UNAVAILABLE"
+            ? " Choose the next action for this lead."
             : ""}
         </p>
       ) : null}
@@ -524,6 +549,7 @@ export function CompleteActivityDialog({
   whatsappSendIntents,
   quotationId,
   quotationLabel,
+  canContinueCadence = false,
   onClose,
 }: CompleteActivityDialogProps) {
   const titleId = useId();
@@ -542,7 +568,7 @@ export function CompleteActivityDialog({
       testId="crm-complete-activity-dialog"
     >
       <CompleteActivityForm
-        key={`${activity.id}:${leadStatus}:${hasOtherOpenPrimary}`}
+        key={`${activity.id}:${leadStatus}:${hasOtherOpenPrimary}:${canContinueCadence}`}
         activity={activity}
         leadId={leadId}
         leadStatus={leadStatus}
@@ -552,6 +578,7 @@ export function CompleteActivityDialog({
         whatsappSendIntents={whatsappSendIntents}
         quotationId={quotationId}
         quotationLabel={quotationLabel}
+        canContinueCadence={canContinueCadence}
         onClose={onClose}
       />
     </CrmActivityDialogShell>

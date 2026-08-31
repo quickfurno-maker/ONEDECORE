@@ -43,6 +43,25 @@ export type CrmErrorCode =
   | "WHATSAPP_SEND_EVIDENCE_REQUIRED"
   | "WHATSAPP_SEND_EVIDENCE_INVALID"
   | "CLOSED_WON_REQUIRES_QUOTATION_ACCEPTANCE"
+  | "CRM_STAGE_GATE_FIRST_CONTACT_REQUIRED"
+  | "CRM_STAGE_GATE_CONSULTATION_REQUIRED"
+  | "CRM_STAGE_GATE_PROPOSAL_DELIVERY_REQUIRED"
+  | "CADENCE_AUTH_REQUIRED"
+  | "CADENCE_PERMISSION_DENIED"
+  | "CADENCE_TEMPLATE_NOT_FOUND"
+  | "CADENCE_TEMPLATE_NOT_EDITABLE"
+  | "CADENCE_TEMPLATE_NOT_PUBLISHED"
+  | "CADENCE_TEMPLATE_REQUIRES_STEPS"
+  | "CADENCE_TEMPLATE_NAME_TAKEN"
+  | "CADENCE_TEMPLATE_INVALID"
+  | "CADENCE_STEP_INVALID"
+  | "CADENCE_ENROLLMENT_NOT_FOUND"
+  | "CADENCE_ENROLLMENT_EXISTS"
+  | "CADENCE_ENROLLMENT_NOT_ACTIVE"
+  | "CADENCE_ENROLLMENT_NOT_PAUSED"
+  | "CADENCE_LEAD_NOT_ELIGIBLE"
+  | "CADENCE_NEXT_STEP_UNAVAILABLE"
+  | "CADENCE_ACTIVITY_NOT_CADENCE"
   | "IMPORT_AUTH_REQUIRED"
   | "IMPORT_PERMISSION_DENIED"
   | "IMPORT_BATCH_NOT_FOUND"
@@ -107,6 +126,141 @@ export function crmErrorFromPostgresMessage(
   fallbackCode: CrmErrorCode = "RPC_FAILED"
 ): CrmError {
   const normalised = message.toLowerCase();
+
+  // CRM 2C stage-gate and cadence tokens — matched FIRST so that
+  // "CADENCE_TEMPLATE_NOT_FOUND" never falls through to the generic
+  // "not found" -> LEAD_NOT_FOUND branch below.
+  const crm2cTokenMap: ReadonlyArray<{
+    readonly token: string;
+    readonly code: CrmErrorCode;
+    readonly message: string;
+    readonly httpStatus: number;
+  }> = [
+    {
+      token: "crm_stage_gate_first_contact_required",
+      code: "CRM_STAGE_GATE_FIRST_CONTACT_REQUIRED",
+      message:
+        "Record a first contact attempt before moving this lead to Contacted.",
+      httpStatus: 422,
+    },
+    {
+      token: "crm_stage_gate_consultation_required",
+      code: "CRM_STAGE_GATE_CONSULTATION_REQUIRED",
+      message:
+        "Schedule a consultation or site visit before moving this lead to Consultation Scheduled.",
+      httpStatus: 422,
+    },
+    {
+      token: "crm_stage_gate_proposal_delivery_required",
+      code: "CRM_STAGE_GATE_PROPOSAL_DELIVERY_REQUIRED",
+      message:
+        "Send the finalized quotation through the controlled client-access flow before moving this lead to Proposal Sent.",
+      httpStatus: 422,
+    },
+    {
+      token: "cadence_permission_denied",
+      code: "CADENCE_PERMISSION_DENIED",
+      message: "You are not allowed to manage this cadence.",
+      httpStatus: 403,
+    },
+    {
+      token: "cadence_template_not_found",
+      code: "CADENCE_TEMPLATE_NOT_FOUND",
+      message: "Cadence template not found.",
+      httpStatus: 404,
+    },
+    {
+      token: "cadence_template_not_editable",
+      code: "CADENCE_TEMPLATE_NOT_EDITABLE",
+      message: "Only a draft cadence template can be edited.",
+      httpStatus: 422,
+    },
+    {
+      token: "cadence_template_not_published",
+      code: "CADENCE_TEMPLATE_NOT_PUBLISHED",
+      message: "Only a published cadence can be used for enrollment.",
+      httpStatus: 422,
+    },
+    {
+      token: "cadence_template_requires_steps",
+      code: "CADENCE_TEMPLATE_REQUIRES_STEPS",
+      message: "Add at least one step before publishing this cadence.",
+      httpStatus: 422,
+    },
+    {
+      token: "cadence_template_name_taken",
+      code: "CADENCE_TEMPLATE_NAME_TAKEN",
+      message: "Another active cadence already uses this name.",
+      httpStatus: 422,
+    },
+    {
+      token: "cadence_template_invalid",
+      code: "CADENCE_TEMPLATE_INVALID",
+      message: "Cadence name or description is invalid.",
+      httpStatus: 422,
+    },
+    {
+      token: "cadence_step_invalid",
+      code: "CADENCE_STEP_INVALID",
+      message: "One or more cadence steps are invalid.",
+      httpStatus: 422,
+    },
+    {
+      token: "cadence_enrollment_not_found",
+      code: "CADENCE_ENROLLMENT_NOT_FOUND",
+      message: "Cadence enrollment not found.",
+      httpStatus: 404,
+    },
+    {
+      token: "cadence_enrollment_exists",
+      code: "CADENCE_ENROLLMENT_EXISTS",
+      message: "This lead already has an active cadence.",
+      httpStatus: 422,
+    },
+    {
+      token: "cadence_enrollment_not_active",
+      code: "CADENCE_ENROLLMENT_NOT_ACTIVE",
+      message: "This cadence is not active.",
+      httpStatus: 422,
+    },
+    {
+      token: "cadence_enrollment_not_paused",
+      code: "CADENCE_ENROLLMENT_NOT_PAUSED",
+      message: "Only a paused cadence can be resumed.",
+      httpStatus: 422,
+    },
+    {
+      token: "cadence_lead_not_eligible",
+      code: "CADENCE_LEAD_NOT_ELIGIBLE",
+      message:
+        "This lead cannot run a cadence right now. It must be assigned, active and not on hold.",
+      httpStatus: 422,
+    },
+    {
+      token: "cadence_next_step_unavailable",
+      code: "CADENCE_NEXT_STEP_UNAVAILABLE",
+      message:
+        "This cadence has no further steps. Choose the next action for this lead.",
+      httpStatus: 422,
+    },
+    {
+      token: "cadence_activity_not_cadence",
+      code: "CADENCE_ACTIVITY_NOT_CADENCE",
+      message: "This activity was not created by a cadence.",
+      httpStatus: 422,
+    },
+  ];
+
+  for (const entry of crm2cTokenMap) {
+    if (normalised.includes(entry.token)) {
+      return new CrmError({
+        code: entry.code,
+        message: entry.message,
+        httpStatus: entry.httpStatus,
+        details: message,
+      });
+    }
+  }
 
   // CRM 2A-3 activity tokens — match BEFORE generic "not found" / "permission denied".
   const activityTokenMap: ReadonlyArray<{

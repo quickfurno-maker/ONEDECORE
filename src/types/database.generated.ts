@@ -2072,6 +2072,268 @@ export type Database = {
           },
         ]
       }
+      crm_cadence_enrollment_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          enrollment_id: string
+          event_type: string
+          follow_up_id: string | null
+          id: string
+          lead_id: string
+          new_values: Json
+          previous_values: Json
+          reason_code: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          enrollment_id: string
+          event_type: string
+          follow_up_id?: string | null
+          id?: string
+          lead_id: string
+          new_values?: Json
+          previous_values?: Json
+          reason_code?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          enrollment_id?: string
+          event_type?: string
+          follow_up_id?: string | null
+          id?: string
+          lead_id?: string
+          new_values?: Json
+          previous_values?: Json
+          reason_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_cadence_enrollment_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_cadence_enrollment_events_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "crm_lead_cadence_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_cadence_enrollment_events_follow_up_id_fkey"
+            columns: ["follow_up_id"]
+            isOneToOne: false
+            referencedRelation: "lead_follow_ups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_cadence_enrollment_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_cadence_steps: {
+        Row: {
+          activity_type: string
+          created_at: string
+          delay_hours: number
+          duration_minutes: number | null
+          id: string
+          priority: string
+          reminder_offset_minutes: number | null
+          step_order: number
+          template_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          delay_hours: number
+          duration_minutes?: number | null
+          id?: string
+          priority?: string
+          reminder_offset_minutes?: number | null
+          step_order: number
+          template_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          delay_hours?: number
+          duration_minutes?: number | null
+          id?: string
+          priority?: string
+          reminder_offset_minutes?: number | null
+          step_order?: number
+          template_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_cadence_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "crm_cadence_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_cadence_templates: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          published_at: string | null
+          published_by: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_cadence_templates_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_cadence_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_cadence_templates_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_cadence_templates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_lead_cadence_enrollments: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_step_order: number | null
+          enrolled_at: string
+          enrolled_by: string
+          id: string
+          lead_id: string
+          paused_at: string | null
+          status: string
+          stop_reason: string | null
+          stopped_at: string | null
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_step_order?: number | null
+          enrolled_at?: string
+          enrolled_by: string
+          id?: string
+          lead_id: string
+          paused_at?: string | null
+          status?: string
+          stop_reason?: string | null
+          stopped_at?: string | null
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_step_order?: number | null
+          enrolled_at?: string
+          enrolled_by?: string
+          id?: string
+          lead_id?: string
+          paused_at?: string | null
+          status?: string
+          stop_reason?: string | null
+          stopped_at?: string | null
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_lead_cadence_enrollments_enrolled_by_fkey"
+            columns: ["enrolled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_lead_cadence_enrollments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_lead_cadence_enrollments_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "crm_cadence_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_sla_clocks: {
         Row: {
           breached_at: string | null
@@ -3021,6 +3283,8 @@ export type Database = {
       lead_follow_ups: {
         Row: {
           activity_type: string
+          cadence_enrollment_id: string | null
+          cadence_step_id: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
@@ -3046,6 +3310,8 @@ export type Database = {
         }
         Insert: {
           activity_type?: string
+          cadence_enrollment_id?: string | null
+          cadence_step_id?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           completed_at?: string | null
@@ -3071,6 +3337,8 @@ export type Database = {
         }
         Update: {
           activity_type?: string
+          cadence_enrollment_id?: string | null
+          cadence_step_id?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           completed_at?: string | null
@@ -3095,6 +3363,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "lead_follow_ups_cadence_enrollment_id_fkey"
+            columns: ["cadence_enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "crm_lead_cadence_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_follow_ups_cadence_step_id_fkey"
+            columns: ["cadence_step_id"]
+            isOneToOne: false
+            referencedRelation: "crm_cadence_steps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lead_follow_ups_cancelled_by_fkey"
             columns: ["cancelled_by"]
@@ -6434,6 +6716,29 @@ export type Database = {
         }
         Returns: Json
       }
+      archive_cadence_template: {
+        Args: { p_template_id: string }
+        Returns: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          published_at: string | null
+          published_by: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crm_cadence_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       archive_commerce_product: {
         Args: {
           p_expected_lock_version: number
@@ -6589,10 +6894,36 @@ export type Database = {
         }
         Returns: Json
       }
+      cancel_lead_cadence: {
+        Args: { p_enrollment_id: string }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          current_step_order: number | null
+          enrolled_at: string
+          enrolled_by: string
+          id: string
+          lead_id: string
+          paused_at: string | null
+          status: string
+          stop_reason: string | null
+          stopped_at: string | null
+          template_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crm_lead_cadence_enrollments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       cancel_lead_follow_up: {
         Args: { p_follow_up_id: string; p_outcome?: string }
         Returns: {
           activity_type: string
+          cadence_enrollment_id: string | null
+          cadence_step_id: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
@@ -6771,6 +7102,8 @@ export type Database = {
         }
         Returns: {
           activity_type: string
+          cadence_enrollment_id: string | null
+          cadence_step_id: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
@@ -6805,6 +7138,8 @@ export type Database = {
         Args: { p_follow_up_id: string; p_outcome?: string }
         Returns: {
           activity_type: string
+          cadence_enrollment_id: string | null
+          cadence_step_id: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
@@ -6923,6 +7258,29 @@ export type Database = {
         }
         Returns: Json
       }
+      create_cadence_template: {
+        Args: { p_description?: string; p_name: string }
+        Returns: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          published_at: string | null
+          published_by: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crm_cadence_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_campaign_draft: {
         Args: {
           p_budget_snapshot: Json
@@ -6992,6 +7350,8 @@ export type Database = {
         }
         Returns: {
           activity_type: string
+          cadence_enrollment_id: string | null
+          cadence_step_id: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
@@ -7056,6 +7416,8 @@ export type Database = {
         Args: { p_due_at: string; p_lead_id: string; p_owner_id?: string }
         Returns: {
           activity_type: string
+          cadence_enrollment_id: string | null
+          cadence_step_id: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
@@ -7385,6 +7747,8 @@ export type Database = {
         Args: { p_activity_id: string }
         Returns: {
           activity_type: string
+          cadence_enrollment_id: string | null
+          cadence_step_id: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
@@ -7415,6 +7779,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      duplicate_cadence_template: {
+        Args: { p_name: string; p_template_id: string }
+        Returns: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          published_at: string | null
+          published_by: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crm_cadence_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       enqueue_campaign_conversion_feedback: {
         Args: { p_event_id: string }
         Returns: Json
@@ -7426,6 +7813,30 @@ export type Database = {
       enqueue_pending_attributable_campaign_conversion_feedback: {
         Args: never
         Returns: Json
+      }
+      enroll_lead_in_cadence: {
+        Args: { p_lead_id: string; p_template_id: string }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          current_step_order: number | null
+          enrolled_at: string
+          enrolled_by: string
+          id: string
+          lead_id: string
+          paused_at: string | null
+          status: string
+          stop_reason: string | null
+          stopped_at: string | null
+          template_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crm_lead_cadence_enrollments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       fail_campaign_run_operation: {
         Args: {
@@ -7652,6 +8063,30 @@ export type Database = {
         Args: { p_campaign_run_id: string; p_idempotency_key: string }
         Returns: Json
       }
+      pause_lead_cadence: {
+        Args: { p_enrollment_id: string }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          current_step_order: number | null
+          enrolled_at: string
+          enrolled_by: string
+          id: string
+          lead_id: string
+          paused_at: string | null
+          status: string
+          stop_reason: string | null
+          stopped_at: string | null
+          template_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crm_lead_cadence_enrollments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       prepare_staff_invite_saga: {
         Args: {
           p_attendance_eligible: boolean
@@ -7695,6 +8130,29 @@ export type Database = {
           p_workday_start_local: string
         }
         Returns: Json
+      }
+      publish_cadence_template: {
+        Args: { p_template_id: string }
+        Returns: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          published_at: string | null
+          published_by: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crm_cadence_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       publish_commerce_product: {
         Args: {
@@ -7887,6 +8345,29 @@ export type Database = {
         Args: { p_idempotency_key: string; p_project_id: string }
         Returns: Json
       }
+      replace_cadence_template_steps: {
+        Args: { p_steps: Json; p_template_id: string }
+        Returns: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          published_at: string | null
+          published_by: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crm_cadence_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       replace_commerce_product_specifications: {
         Args: { p_idempotency_key: string; p_product_id: string; p_specs: Json }
         Returns: Json
@@ -8035,6 +8516,8 @@ export type Database = {
         }
         Returns: {
           activity_type: string
+          cadence_enrollment_id: string | null
+          cadence_step_id: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
@@ -8114,6 +8597,30 @@ export type Database = {
       resume_campaign_run: {
         Args: { p_campaign_run_id: string; p_idempotency_key: string }
         Returns: Json
+      }
+      resume_lead_cadence: {
+        Args: { p_enrollment_id: string }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          current_step_order: number | null
+          enrolled_at: string
+          enrolled_by: string
+          id: string
+          lead_id: string
+          paused_at: string | null
+          status: string
+          stop_reason: string | null
+          stopped_at: string | null
+          template_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crm_lead_cadence_enrollments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       resume_project_design: {
         Args: {
@@ -8414,6 +8921,8 @@ export type Database = {
         Args: { p_activity_id: string; p_new_owner_id: string }
         Returns: {
           activity_type: string
+          cadence_enrollment_id: string | null
+          cadence_step_id: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           completed_at: string | null
@@ -8530,6 +9039,29 @@ export type Database = {
           p_target_state: string
         }
         Returns: Json
+      }
+      update_cadence_template: {
+        Args: { p_description?: string; p_name: string; p_template_id: string }
+        Returns: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          published_at: string | null
+          published_by: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crm_cadence_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       update_commerce_product: {
         Args: {

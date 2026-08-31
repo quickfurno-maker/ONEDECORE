@@ -172,6 +172,16 @@ select results_eq(
   'note creation writes exactly one note.created activity'
 );
 
+-- CRM 2C stage gate evidence: canonical first-contact ATTEMPT.
+reset role;
+set local role postgres;
+update public.crm_sla_clocks
+set first_contact_attempt_at = clock_timestamp()
+where lead_id = current_setting('test.lead_alpha_id')::uuid;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'a3333333-3333-3333-3333-333333333333', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+
 select results_eq(
   $$select status::text from public.transition_lead_status(current_setting('test.lead_alpha_id')::uuid, 'contacted', null, null)$$,
   array['contacted'],

@@ -7,6 +7,7 @@ interface CrmNavProps {
   readonly currentPath?: string;
   readonly showImports?: boolean;
   readonly showAssignmentRules?: boolean;
+  readonly showCadences?: boolean;
   readonly showTargets?: boolean;
   readonly showReports?: boolean;
   readonly targetsLabel?: string;
@@ -28,6 +29,7 @@ export function CrmNav({
   currentPath,
   showImports = false,
   showAssignmentRules = false,
+  showCadences = false,
   showTargets = false,
   showReports = false,
   targetsLabel = "Sales Targets",
@@ -46,6 +48,9 @@ export function CrmNav({
       : []),
     ...(showImports
       ? [{ href: "/admin/crm/imports", label: "Imports" } as const]
+      : []),
+    ...(showCadences
+      ? [{ href: "/admin/crm/cadences", label: "Cadences" } as const]
       : []),
     ...(showAssignmentRules
       ? [

@@ -150,6 +150,182 @@ function runFixtureSql() {
   }
 }
 
+/**
+ * CRM 2C stage gates require canonical evidence before contacted /
+ * consultation_scheduled / proposal_sent. Fixture evidence is written with the
+ * service-role client (first-contact clock, quotation delivery) or through the
+ * canonical activity RPC (scheduled visit) so the stage walk below stays real.
+ */
+async function ensureStageGateEvidence(admin, sa, leadId, hops, ownerId, key) {
+  if (hops.includes("contacted")) {
+    const { error } = await admin
+      .from("crm_sla_clocks")
+      .update({ first_contact_attempt_at: new Date().toISOString() })
+      .eq("lead_id", leadId)
+      .is("first_contact_attempt_at", null);
+    if (error) throw new Error(`first-contact evidence ${key}: ${error.message}`);
+  }
+
+  if (hops.includes("consultation_scheduled")) {
+    const { data: existing } = await admin
+      .from("lead_follow_ups")
+      .select("id")
+      .eq("lead_id", leadId)
+      .in("activity_type", ["consultation", "site_visit"])
+      .limit(1)
+      .maybeSingle();
+    if (!existing) {
+      const { error } = await sa.rpc("create_lead_activity", {
+        p_lead_id: leadId,
+        p_activity_type: "site_visit",
+        p_title: "Measurement visit",
+        p_due_at: new Date(Date.now() + 48 * 3_600_000).toISOString(),
+        p_priority: "normal",
+        p_owner_id: ownerId ?? undefined,
+        p_is_primary: false,
+        p_duration_minutes: undefined,
+        p_reminder_at: undefined,
+        p_quotation_id: undefined,
+      });
+      if (error) throw new Error(`visit evidence ${key}: ${error.message}`);
+    }
+  }
+
+  if (hops.includes("proposal_sent")) {
+    await ensureProposalDeliveryEvidence(admin, leadId, key);
+  }
+}
+
+/**
+ * CRM 2C gate 3 accepts exactly one thing: a **finalized** quotation version for
+ * this lead carrying a **non-revoked** client access grant (the predicate in
+ * private.transition_lead_status_impl). A quotation on its own — or a draft-only
+ * version, or a version whose only grant is revoked — is NOT evidence, so
+ * detection mirrors the gate predicate rather than testing for a quotation row.
+ *
+ * The lead's quotations are read as a collection (never maybeSingle), so the
+ * helper stays correct no matter how many quotation rows a lead owns. Whatever
+ * already qualifies is reused; only the missing links are created, from
+ * lead-deterministic ids so repeated seed runs never collide.
+ */
+async function ensureProposalDeliveryEvidence(admin, leadId, key) {
+  /** Deterministic v4-shaped uuid so a re-run reuses the same fixture rows. */
+  const fixtureUuid = (seed) => {
+    const digest = hex(seed);
+    const variant = "89ab"[parseInt(digest[16], 16) % 4];
+    return [
+      digest.slice(0, 8),
+      digest.slice(8, 12),
+      `4${digest.slice(13, 16)}`,
+      `${variant}${digest.slice(17, 20)}`,
+      digest.slice(20, 32),
+    ].join("-");
+  };
+
+  const { data: quotationRows, error: quotationReadError } = await admin
+    .from("quotations")
+    .select("id")
+    .eq("lead_id", leadId);
+  if (quotationReadError) {
+    throw new Error(`quotation lookup ${key}: ${quotationReadError.message}`);
+  }
+  const quotationIds = (quotationRows ?? []).map((row) => row.id);
+
+  let finalizedVersionIds = [];
+  if (quotationIds.length > 0) {
+    const { data: versionRows, error: versionReadError } = await admin
+      .from("quotation_versions")
+      .select("id")
+      .in("quotation_id", quotationIds)
+      .eq("status", "finalized");
+    if (versionReadError) {
+      throw new Error(`version lookup ${key}: ${versionReadError.message}`);
+    }
+    finalizedVersionIds = (versionRows ?? []).map((row) => row.id);
+  }
+
+  if (finalizedVersionIds.length > 0) {
+    const { data: grantRows, error: grantReadError } = await admin
+      .from("quotation_access_grants")
+      .select("id")
+      .in("quotation_version_id", finalizedVersionIds)
+      .is("revoked_at", null)
+      .limit(1);
+    if (grantReadError) {
+      throw new Error(`grant lookup ${key}: ${grantReadError.message}`);
+    }
+    if ((grantRows ?? []).length > 0) {
+      return; // Qualifying evidence already exists — reuse it.
+    }
+  }
+
+  let quotationId = quotationIds[0] ?? null;
+  if (!quotationId) {
+    quotationId = fixtureUuid(`quotation:${leadId}`);
+    const quotationNumber = `OD-Q-2026-${hex(`quotation-number:${leadId}`)
+      .replace(/\D/g, "")
+      .padEnd(8, "0")
+      .slice(0, 8)}`;
+    const { error } = await admin.from("quotations").insert({
+      id: quotationId,
+      lead_id: leadId,
+      quotation_number: quotationNumber,
+      created_by: SUPER_ADMIN,
+    });
+    if (error) throw new Error(`quotation evidence ${key}: ${error.message}`);
+  }
+
+  let versionId = finalizedVersionIds[0] ?? null;
+  if (!versionId) {
+    // Draft versions may already occupy version numbers on this quotation.
+    const { data: existingVersions, error: existingError } = await admin
+      .from("quotation_versions")
+      .select("version_number")
+      .eq("quotation_id", quotationId);
+    if (existingError) {
+      throw new Error(`version numbering ${key}: ${existingError.message}`);
+    }
+    const nextVersionNumber =
+      (existingVersions ?? []).reduce(
+        (max, row) => Math.max(max, row.version_number ?? 0),
+        0
+      ) + 1;
+
+    versionId = fixtureUuid(`version:${quotationId}:${nextVersionNumber}`);
+    const { error } = await admin.from("quotation_versions").insert({
+      id: versionId,
+      quotation_id: quotationId,
+      version_number: nextVersionNumber,
+      status: "finalized",
+      is_current_draft: false,
+      title: "QA delivered proposal",
+      created_by: SUPER_ADMIN,
+    });
+    if (error) throw new Error(`version evidence ${key}: ${error.message}`);
+  }
+
+  // Grant identity is derived from the version AND the number of grants already
+  // on it: a version whose earlier grant was revoked can then be re-granted
+  // without colliding with that revoked row's primary key or token digest.
+  const { data: priorGrants, error: priorGrantError } = await admin
+    .from("quotation_access_grants")
+    .select("id")
+    .eq("quotation_version_id", versionId);
+  if (priorGrantError) {
+    throw new Error(`grant numbering ${key}: ${priorGrantError.message}`);
+  }
+  const grantSeed = `grant:${versionId}:${(priorGrants ?? []).length + 1}`;
+
+  const { error: grantError } = await admin.from("quotation_access_grants").insert({
+    id: fixtureUuid(grantSeed),
+    quotation_id: quotationId,
+    quotation_version_id: versionId,
+    derivation_nonce: hex(`nonce:${grantSeed}`).slice(0, 32),
+    capability_token_hash: hex(grantSeed),
+  });
+  if (grantError) throw new Error(`grant evidence ${key}: ${grantError.message}`);
+}
+
 /** Deterministic 64-char hex digest for fixture fingerprints. */
 function hex(seed) {
   return crypto.createHash("sha256").update(`crm-2b-qa:${seed}`).digest("hex");
@@ -252,6 +428,8 @@ async function main() {
     const fullPath = STAGE_PATH[fixture.stage] ?? [];
     const alreadyAt = fullPath.indexOf(currentStatus);
     const remaining = alreadyAt >= 0 ? fullPath.slice(alreadyAt + 1) : fullPath;
+
+    await ensureStageGateEvidence(admin, sa, leadId, remaining, fixture.owner, fixture.key);
 
     for (const stage of remaining) {
       const { error } = await sa.rpc("transition_lead_status", {
