@@ -70,7 +70,8 @@
     "test:crm-2a-2e": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/crm/__tests__/crm-activity-contracts.test.ts src/features/crm/__tests__/crm-activity-service.test.ts src/features/crm/__tests__/crm-activity-actions.test.ts src/features/crm/__tests__/crm-activity-ui.test.ts src/features/crm/__tests__/crm-2b-calendar-pipeline.test.ts src/features/crm/__tests__/crm-2c-cadences-stage-gates.test.ts src/features/crm/__tests__/crm-2d-communication-intelligence.test.ts src/features/crm/__tests__/crm-2e-management-analytics.test.ts src/features/crm/__tests__/phase-5e-sales-targets-reporting.test.ts",
     "qa:crm-2e-browser": "node scripts/crm-2e-browser-qa.mjs",
     "qa:crm-2e-owner": "node scripts/crm-2e-owner-qa.mjs",
-    "qa:crm-whatsapp-lead-link": "node scripts/crm-whatsapp-lead-link-owner-qa.mjs"
+    "qa:crm-whatsapp-lead-link": "node scripts/crm-whatsapp-lead-link-owner-qa.mjs",
+    "qa:crm-whatsapp-launch-certification": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types scripts/crm-whatsapp-launch-certification-e2e.ts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",
