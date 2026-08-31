@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { LifecycleActionState } from "../../contracts/lifecycle-contracts.ts";
 import { addLeadNoteAction } from "../../server/crm-lifecycle-actions.ts";
+import { useLeadActions } from "./LeadActionsProvider.tsx";
 
 const INITIAL_STATE: LifecycleActionState = {
   success: false,
@@ -18,6 +19,8 @@ interface LeadNoteComposerProps {
 
 export function LeadNoteComposer({ leadId }: LeadNoteComposerProps) {
   const router = useRouter();
+  const actions = useLeadActions();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [state, formAction, pending] = useActionState(addLeadNoteAction, INITIAL_STATE);
 
   useEffect(() => {
@@ -25,6 +28,20 @@ export function LeadNoteComposer({ leadId }: LeadNoteComposerProps) {
       router.refresh();
     }
   }, [state.success, router]);
+
+  // Quick action "Add note": scroll the composer into view and focus it. The
+  // mutation path is unchanged — this only moves the caret. Keyed on the nonce
+  // so a repeat click re-fires; the effect sets no state.
+  const intentKind = actions?.intent?.kind ?? null;
+  const intentNonce = actions?.nonce ?? 0;
+
+  useEffect(() => {
+    if (intentNonce === 0 || intentKind !== "add-note") {
+      return;
+    }
+    textareaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    textareaRef.current?.focus();
+  }, [intentKind, intentNonce]);
 
   return (
     <form
@@ -38,6 +55,7 @@ export function LeadNoteComposer({ leadId }: LeadNoteComposerProps) {
           Add note
         </label>
         <textarea
+          ref={textareaRef}
           id="lead-note-body"
           name="body"
           rows={4}

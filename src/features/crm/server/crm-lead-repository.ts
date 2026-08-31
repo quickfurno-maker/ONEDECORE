@@ -12,6 +12,7 @@ import type {
 import { CrmError, crmErrorFromPostgresMessage } from "./crm-errors.ts";
 import { getCrmAccessContext } from "./crm-auth.ts";
 import { formatMarketingTouchSummary } from "./crm-attribution-summary.ts";
+import { fetchLeadTimelinePage } from "./crm-lead-timeline-queries.ts";
 import {
   fetchCrmAssigneeDirectory,
   queryLeadListPage,
@@ -149,11 +150,11 @@ export async function getLeadDetailForCurrentUser(
     contactResult,
     touchpointsResult,
     assignmentHistoryResult,
-    activitiesResult,
-    eventsResult,
     notesResult,
     followUpsResult,
     consentResult,
+    slaClockResult,
+    timeline,
   ] = await Promise.all([
     supabase
       .from("contacts")
@@ -172,18 +173,6 @@ export async function getLeadDetailForCurrentUser(
       .select(
         "id, previous_assignee, new_assignee, assignment_method, actor_id, occurred_at, reason"
       )
-      .eq("lead_id", leadId)
-      .order("occurred_at", { ascending: false }),
-    context.canReadActivities
-      ? supabase
-          .from("lead_activities")
-          .select("id, summary, occurred_at, actor_id, activity_type")
-          .eq("lead_id", leadId)
-          .order("occurred_at", { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    supabase
-      .from("lead_events")
-      .select("id, event_type, occurred_at, actor_id")
       .eq("lead_id", leadId)
       .order("occurred_at", { ascending: false }),
     supabase
@@ -207,49 +196,36 @@ export async function getLeadDetailForCurrentUser(
           .eq("lead_id", leadId)
           .order("occurred_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
+    // A clock row exists for every lead regardless of SLA policy activation,
+    // so first-contact evidence is available while sla_due_at stays null.
+    supabase
+      .from("crm_sla_clocks")
+      .select("sla_due_at, first_contact_attempt_at, breached_at")
+      .eq("lead_id", leadId)
+      .maybeSingle(),
+    // CRM 2D-1: the unified timeline is assembled from canonical, RLS-scoped
+    // audit rows. It replaces the previous lead_activities + lead_events concat,
+    // which rendered raw event codes and duplicated every twin write.
+    fetchLeadTimelinePage(leadId, context, labelForUser),
   ]);
 
   for (const result of [
     contactResult,
     touchpointsResult,
     assignmentHistoryResult,
-    activitiesResult,
-    eventsResult,
     notesResult,
     followUpsResult,
     consentResult,
+    slaClockResult,
   ]) {
     if (result.error) {
       throw crmErrorFromPostgresMessage(result.error.message, "RPC_FAILED");
     }
   }
 
-  const timeline = [
-    ...(activitiesResult.data ?? []).map((row) => ({
-      id: `activity:${row.id}`,
-      kind: "activity" as const,
-      title: row.summary,
-      occurredAt: row.occurred_at,
-      actorLabel: labelForUser(row.actor_id),
-    })),
-    ...(eventsResult.data ?? []).map((row) => ({
-      id: `event:${row.id}`,
-      kind: "event" as const,
-      title: row.event_type,
-      occurredAt: row.occurred_at,
-      actorLabel: labelForUser(row.actor_id),
-    })),
-  ].sort((left, right) => {
-    const delta =
-      new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime();
-    if (delta !== 0) {
-      return delta;
-    }
-    return right.id.localeCompare(left.id);
-  });
-
   return {
     id: lead.id,
+    capturedAt: new Date().toISOString(),
     overview: {
       submittedName: lead.submitted_name,
       submittedEmail: lead.submitted_email,
@@ -366,6 +342,12 @@ export async function getLeadDetailForCurrentUser(
           : null,
       closedLostNote:
         lead.status === "closed_lost" ? lead.closed_lost_note : null,
+    },
+    slaClock: {
+      slaDueAt: slaClockResult.data?.sla_due_at ?? null,
+      firstContactAttemptAt:
+        slaClockResult.data?.first_contact_attempt_at ?? null,
+      breachedAt: slaClockResult.data?.breached_at ?? null,
     },
   };
 }

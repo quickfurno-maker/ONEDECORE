@@ -1,7 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import type { CrmActivityOutcomeOption } from "../../contracts/activity-contracts.ts";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type {
+  CrmActivityOutcomeOption,
+  CrmActivityType,
+} from "../../contracts/activity-contracts.ts";
+import { useLeadActions } from "../leads/LeadActionsProvider.tsx";
 import type {
   CrmAssigneeDirectoryEntry,
   CrmLeadClosureReasonOption,
@@ -91,6 +95,49 @@ export function LeadActivityWorkspace({
     titleInput?.focus();
   };
 
+  /* ---------------------------------------------------------------------- */
+  /* CRM 2D quick-action intents                                             */
+  /*                                                                        */
+  /* The header dispatches; this workspace reacts by driving the dialogs and */
+  /* form it already owns. No mutation path is duplicated or bypassed.       */
+  /*                                                                        */
+  /* State is adjusted during render on the nonce change (React's prop-change */
+  /* pattern, as used by CrmPipelineBoard) so no cascading render is queued.  */
+  /* The effect below performs the DOM scroll only and sets no state.         */
+  /* ---------------------------------------------------------------------- */
+  const actions = useLeadActions();
+  const [requestedType, setRequestedType] = useState<CrmActivityType | null>(null);
+  const [requestNonce, setRequestNonce] = useState(0);
+  const [scrollNonce, setScrollNonce] = useState(0);
+
+  const intent = actions?.intent ?? null;
+  const intentNonce = actions?.nonce ?? 0;
+  const [lastIntentNonce, setLastIntentNonce] = useState(intentNonce);
+
+  if (lastIntentNonce !== intentNonce) {
+    setLastIntentNonce(intentNonce);
+
+    if (intent?.kind === "complete-primary") {
+      if (primaryActivity && canManageLeadFollowUps) {
+        setCompleteTarget(primaryActivity);
+      }
+    } else if (intent?.kind === "create-activity") {
+      if (canManageLeadFollowUps && showComposer) {
+        if (intent.activityType) {
+          setRequestedType(intent.activityType);
+          setRequestNonce((current) => current + 1);
+        }
+        setScrollNonce((current) => current + 1);
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (scrollNonce > 0) {
+      scrollToCreateForm();
+    }
+  }, [scrollNonce]);
+
   return (
     <div className="space-y-6" data-testid="crm-activity-workspace">
       {primaryActivity ? (
@@ -127,6 +174,8 @@ export function LeadActivityWorkspace({
               quotationLabel={quotationLabel}
               formRef={createFormRef}
               defaultPrimary={showNoNextAction}
+              requestedType={requestedType}
+              requestNonce={requestNonce}
             />
           </div>
         ) : null}

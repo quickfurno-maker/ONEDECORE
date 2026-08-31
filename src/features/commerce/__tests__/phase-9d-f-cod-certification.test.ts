@@ -40,12 +40,12 @@ function walkTs(dir: string, acc: string[] = []): string[] {
 }
 
 describe("Phase 9D-F baseline and payment absence", () => {
-  test("latest migration is CRM 2C cadence playbook foundation and deferred payment M38 is absent", () => {
+  test("latest migration is CRM 2D lead commercial read models and deferred payment M38 is absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260830140000_crm_cadence_playbook_foundation.sql"
+      "20260831140000_crm_lead_commercial_read_models.sql"
     );
-    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 45);
+    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 46);
     assert.equal(
       existsSync(join(root, "supabase/migrations/20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false

@@ -37,6 +37,10 @@ interface CreateActivityFormProps {
   readonly quotationLabel: string | null;
   readonly formRef?: RefObject<HTMLFormElement | null>;
   readonly defaultPrimary?: boolean;
+  /** CRM 2D quick action: preselect a type. Null leaves the current choice. */
+  readonly requestedType?: CrmActivityType | null;
+  /** Changes on every quick-action dispatch so a repeat click re-applies. */
+  readonly requestNonce?: number;
 }
 
 export function CreateActivityForm({
@@ -47,6 +51,8 @@ export function CreateActivityForm({
   quotationLabel,
   formRef,
   defaultPrimary = false,
+  requestedType = null,
+  requestNonce = 0,
 }: CreateActivityFormProps) {
   const router = useRouter();
   const formId = useId();
@@ -77,6 +83,21 @@ export function CreateActivityForm({
     }
     setDurationMinutes(String(CRM_ACTIVITY_DEFAULT_DURATIONS[nextType]));
   };
+
+  // Quick-action prefill. Adjusted during render on the nonce change (React's
+  // prop-change pattern, as used by CrmPipelineBoard) rather than in an effect,
+  // so no cascading render is scheduled. A user's own title edit is preserved.
+  const [lastRequestNonce, setLastRequestNonce] = useState(requestNonce);
+  if (lastRequestNonce !== requestNonce) {
+    setLastRequestNonce(requestNonce);
+    if (requestedType !== null) {
+      setActivityType(requestedType);
+      setDurationMinutes(String(CRM_ACTIVITY_DEFAULT_DURATIONS[requestedType]));
+      if (!titleTouched) {
+        setTitle(CRM_ACTIVITY_SUGGESTED_TITLES[requestedType]);
+      }
+    }
+  }
 
   const submitForm = (formData: FormData) => {
     setClientError(null);
