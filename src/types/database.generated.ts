@@ -7896,6 +7896,16 @@ export type Database = {
           taxable_base_paise: number
         }[]
       }
+      get_crm_management_analytics: {
+        Args: {
+          p_end: string
+          p_owner_id?: string | null
+          p_source_id?: string | null
+          p_start: string
+          p_target_month?: string | null
+        }
+        Returns: Json
+      }
       get_crm_my_day: {
         Args: {
           p_attention_limit?: number
