@@ -43,6 +43,7 @@ import {
   type CrmPipelineCard,
 } from "../contracts/pipeline-contracts.ts";
 import { LEAD_STAGE_CODES } from "../contracts/lead-stages.ts";
+import { deriveLeadScore } from "../contracts/lead-score-contracts.ts";
 
 const root = process.cwd();
 
@@ -102,6 +103,27 @@ function makeCard(overrides: Partial<CrmPipelineCard> = {}): CrmPipelineCard {
     stageEnteredAt: "2026-09-01T06:00:00.000Z",
     stageEnteredSource: "event",
     createdAt: "2026-08-25T06:00:00.000Z",
+    // CRM 2D additive card fields. Derived, never persisted; they do not
+    // participate in any CRM 2B urgency or ordering assertion below.
+    score: deriveLeadScore(
+      {
+        status: "contacted",
+        isAssigned: true,
+        hasFirstContactAttempt: false,
+        hasMeaningfulOutcome: false,
+        hasConsultationOrSiteVisit: false,
+        commercialState: "unknown",
+        lastMeaningfulActivityAt: null,
+        latestMeaningfulSalesTouchAt: "2026-09-04T06:00:00.000Z",
+        receivedAt: "2026-08-25T06:00:00.000Z",
+        hasOpenPrimaryNextAction: true,
+        primaryNextActionDueAt: "2026-09-10T06:00:00.000Z",
+        slaDueAt: null,
+      },
+      Date.parse("2026-09-05T06:00:00.000Z")
+    ),
+    dealValuePaise: null,
+    commercialState: "unknown",
     ...overrides,
   };
 }

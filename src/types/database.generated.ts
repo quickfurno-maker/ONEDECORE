@@ -7884,12 +7884,28 @@ export type Database = {
         Args: { p_contact_id: string }
         Returns: Json
       }
+      get_crm_lead_commercial_state: {
+        Args: { p_lead_id: string }
+        Returns: Json
+      }
+      get_crm_lead_deal_values: {
+        Args: { p_lead_ids: string[] }
+        Returns: {
+          commercial_state: string
+          lead_id: string
+          taxable_base_paise: number
+        }[]
+      }
       get_crm_my_day: {
         Args: {
           p_attention_limit?: number
           p_owner_id?: string | null
           p_upcoming_limit?: number
         }
+        Returns: Json
+      }
+      get_crm_pipeline_value_summary: {
+        Args: { p_owner_id?: string | null }
         Returns: Json
       }
       get_live_landing_publication: { Args: { p_slug: string }; Returns: Json }

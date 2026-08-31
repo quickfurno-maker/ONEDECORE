@@ -16,6 +16,10 @@ import {
   type CrmPipelineBoardStage,
   type CrmPipelineCard,
 } from "../../contracts/pipeline-contracts.ts";
+import {
+  formatCompactInrFromPaise,
+  formatProbabilityLabel,
+} from "../../contracts/deal-value-contracts.ts";
 import { transitionLeadStatusAction } from "../../server/crm-lifecycle-actions.ts";
 import { PipelineLeadCard } from "./PipelineLeadCard.tsx";
 import { PipelineMoveStageDialog } from "./PipelineMoveStageDialog.tsx";
@@ -165,6 +169,16 @@ export function CrmPipelineBoard({
 
   const showOwner = board.isTeamScope || canFilterOwner;
 
+  // Aggregates come from the server RPC over the FULL RLS-scoped set — never
+  // from the bounded per-column head, which would understate any column past
+  // CRM_PIPELINE_STAGE_FETCH_LIMIT. They are therefore not recomputed on an
+  // optimistic drag; the board refreshes after every accepted transition.
+  const summary = board.valueSummary;
+  const stageValueByStage = useMemo(
+    () => new Map(summary.stages.map((entry) => [entry.stage, entry])),
+    [summary]
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -202,6 +216,40 @@ export function CrmPipelineBoard({
         ) : null}
       </div>
 
+      <div
+        className="rounded-[10px] border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-3 py-2"
+        data-testid="crm-pipeline-value-summary"
+      >
+        <p className="text-[12px] text-[var(--crm-text)]">
+          <span className="font-semibold">
+            Open pipeline {formatCompactInrFromPaise(summary.activeWeightedValuePaise)} weighted
+          </span>
+          <span className="text-[var(--crm-muted)]">
+            {" "}
+            (ex-tax) ·{" "}
+            {formatCompactInrFromPaise(summary.activeDealValuePaise)} total ·{" "}
+            {summary.activeValuedLeadCount} of {summary.activeLeadCount} leads valued
+          </span>
+        </p>
+        {summary.parkedLeadCount > 0 ? (
+          <p
+            className="mt-0.5 text-[11px] text-[var(--crm-muted)]"
+            data-testid="crm-pipeline-parked-summary"
+          >
+            On hold: {summary.parkedLeadCount} lead
+            {summary.parkedLeadCount === 1 ? "" : "s"} ·{" "}
+            {formatCompactInrFromPaise(summary.parkedDealValuePaise)} parked,
+            excluded from weighted totals.
+          </p>
+        ) : null}
+        {summary.activeValuedLeadCount < summary.activeLeadCount ? (
+          <p className="mt-0.5 text-[11px] text-[var(--crm-muted)]">
+            Leads without a quotation value are excluded from totals rather than
+            counted as zero.
+          </p>
+        ) : null}
+      </div>
+
       {errorMessage ? (
         <p
           role="alert"
@@ -233,13 +281,35 @@ export function CrmPipelineBoard({
               data-stage={column.stage}
               {...dropProps(column.stage)}
             >
-              <header className="mb-2 flex items-center justify-between gap-2 px-1">
-                <h2 className="truncate text-[13px] font-semibold text-[var(--crm-text)]">
-                  {formatPipelineStageLabel(column.stage)}
-                </h2>
-                <span className="shrink-0 text-[11px] font-medium tabular-nums text-[var(--crm-muted)]">
-                  {column.total}
-                </span>
+              <header className="mb-2 px-1">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="truncate text-[13px] font-semibold text-[var(--crm-text)]">
+                    {formatPipelineStageLabel(column.stage)}
+                  </h2>
+                  <span className="shrink-0 text-[11px] font-medium tabular-nums text-[var(--crm-muted)]">
+                    {column.total}
+                  </span>
+                </div>
+                {(() => {
+                  const value = stageValueByStage.get(column.stage);
+                  if (!value) {
+                    return null;
+                  }
+                  return (
+                    <p
+                      className="mt-0.5 truncate text-[10px] tabular-nums text-[var(--crm-muted)]"
+                      data-testid="crm-pipeline-column-value"
+                      data-stage-value={column.stage}
+                      title={`${formatCompactInrFromPaise(value.weightedValuePaise)} weighted at ${formatProbabilityLabel(value.probabilityBasisPoints)} · ${value.valuedLeadCount} of ${value.leadCount} valued`}
+                    >
+                      {column.stage === "on_hold"
+                        ? `${formatCompactInrFromPaise(value.dealValuePaise)} parked`
+                        : `${formatCompactInrFromPaise(value.weightedValuePaise)} · ${formatProbabilityLabel(value.probabilityBasisPoints)}`}
+                      {" · "}
+                      {value.valuedLeadCount}/{value.leadCount} valued
+                    </p>
+                  );
+                })()}
               </header>
 
               <div className="space-y-2">

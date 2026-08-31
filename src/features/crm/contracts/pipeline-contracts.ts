@@ -9,6 +9,11 @@
  */
 
 import { calendarLocalDate } from "./calendar-contracts.ts";
+import type {
+  CrmCommercialState,
+  CrmPipelineValueSummary,
+} from "./deal-value-contracts.ts";
+import type { CrmLeadScore } from "./lead-score-contracts.ts";
 import type { LeadStageCode } from "./lead-stages.ts";
 import {
   isLeadTransitionAllowed,
@@ -115,6 +120,17 @@ export interface CrmPipelineCard {
   /** `event` when derived from a stage-entry event, `created` when falling back. */
   readonly stageEnteredSource: "event" | "created";
   readonly createdAt: string;
+  /**
+   * CRM 2D deterministic priority score. Derived, never persisted, and
+   * identical to the value the lead detail page computes for the same lead.
+   */
+  readonly score: CrmLeadScore;
+  /**
+   * Canonical deal value in ex-tax paise, or `null` for UNKNOWN.
+   * `null` must never be rendered as ₹0.
+   */
+  readonly dealValuePaise: number | null;
+  readonly commercialState: CrmCommercialState;
 }
 
 export interface CrmPipelineStageColumn {
@@ -134,6 +150,12 @@ export interface CrmPipelineBoard {
    * implies SLA coverage that is not configured.
    */
   readonly slaSignalAvailable: boolean;
+  /**
+   * CRM 2D weighted pipeline aggregate over the FULL RLS-scoped lead set — not
+   * over the bounded per-column head, which would understate every column past
+   * `CRM_PIPELINE_STAGE_FETCH_LIMIT`.
+   */
+  readonly valueSummary: CrmPipelineValueSummary;
 }
 
 export function isPipelineBoardStage(

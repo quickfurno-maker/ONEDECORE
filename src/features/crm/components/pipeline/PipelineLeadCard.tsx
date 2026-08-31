@@ -12,7 +12,9 @@ import {
   type CrmPipelineUrgencyCode,
 } from "../../contracts/pipeline-contracts.ts";
 import { formatCalendarTimestampLabel } from "../../contracts/calendar-contracts.ts";
+import { formatCompactInrFromPaise } from "../../contracts/deal-value-contracts.ts";
 import { formatActivityTypeLabel } from "../activities/activity-ui-utils.ts";
+import { LeadScoreChip } from "../leads/LeadScoreChip.tsx";
 
 interface PipelineLeadCardProps {
   readonly card: CrmPipelineCard;
@@ -93,6 +95,22 @@ export function PipelineLeadCard({
         >
           {CRM_PIPELINE_URGENCY_LABELS[urgency]}
         </span>
+      </div>
+
+      <div className="mt-1 flex items-center gap-1.5">
+        {/* Priority is derived, never persisted; breakdown stays off on a dense
+            card, where the lead detail header is one tap away. */}
+        <LeadScoreChip score={card.score} />
+        {/* Unknown deal value is omitted entirely — never rendered as ₹0. */}
+        {card.dealValuePaise !== null ? (
+          <span
+            className="truncate text-[11px] tabular-nums text-[var(--crm-text-secondary)]"
+            data-testid="crm-pipeline-card-deal-value"
+            title={`${formatCompactInrFromPaise(card.dealValuePaise)} ex-tax`}
+          >
+            {formatCompactInrFromPaise(card.dealValuePaise)}
+          </span>
+        ) : null}
       </div>
 
       <p className="mt-1 truncate text-[11px] text-[var(--crm-text-secondary)]">

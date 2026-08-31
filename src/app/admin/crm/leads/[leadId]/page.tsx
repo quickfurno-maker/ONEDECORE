@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CrmPageHeader } from "@/features/crm/components/shell/CrmPageHeader";
+import { LeadActionsProvider } from "@/features/crm/components/leads/LeadActionsProvider";
+import { LeadCommandHeader } from "@/features/crm/components/leads/LeadCommandHeader";
+import { LeadQuickActions } from "@/features/crm/components/leads/LeadQuickActions";
 import { LeadDetailAssignmentPanel } from "@/features/crm/components/leads/LeadDetailAssignmentPanel";
 import { LeadDetailConsentSummary, LeadDetailStatusSummary } from "@/features/crm/components/leads/LeadDetailConsentSummary";
 import { MarketingConsentPanel } from "@/features/marketing/components/MarketingConsentPanel";
@@ -15,11 +16,13 @@ import { LeadDetailOverview } from "@/features/crm/components/leads/LeadDetailOv
 import { LeadDetailSourcePanel } from "@/features/crm/components/leads/LeadDetailSourcePanel";
 import { LeadDetailTimeline } from "@/features/crm/components/leads/LeadDetailTimeline";
 import { LeadDetailQuotationPanel } from "@/features/crm/components/leads/LeadDetailQuotationPanel";
-import { LeadStatusBadge } from "@/features/crm/components/leads/LeadStatusBadge";
 import { LeadStatusTransitionPanel } from "@/features/crm/components/leads/LeadStatusTransitionPanel";
 import type { LeadStageCode } from "@/features/crm/contracts/lead-stages";
 import { isTerminalLeadStage } from "@/features/crm/contracts/lead-stages";
+import { deriveLeadScore } from "@/features/crm/contracts/lead-score-contracts";
 import { getLeadDetailForCurrentUser } from "@/features/crm/server/crm-lead-repository";
+import { fetchLeadCommercialState } from "@/features/crm/server/crm-lead-commercial-queries";
+import { buildLeadScoreSignalsFromDetail } from "@/features/crm/server/crm-lead-score-signals";
 import { listActivityOutcomeOptionsForCurrentUser } from "@/features/crm/server/crm-activity-service.ts";
 import { fetchGovernedWhatsappSendIntentsForLead } from "@/features/crm/server/crm-whatsapp-evidence-queries.ts";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
@@ -71,6 +74,7 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
     whatsappSendIntents,
     leadCadence,
     enrollableCadences,
+    commercialState,
   ] =
     await Promise.all([
       needsDirectory ? fetchCrmAssigneeDirectory(context!) : Promise.resolve([]),
@@ -92,6 +96,9 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
       context?.canManageLeadFollowUps
         ? fetchEnrollableCadenceTemplates()
         : Promise.resolve([]),
+      // Canonical deal value + commercial state. The RPC is the only path able
+      // to distinguish an ISSUED quotation from a merely FINALIZED one.
+      fetchLeadCommercialState(lead.id),
     ]);
 
   // Only an ACTIVE enrollment with a further step may offer CADENCE_NEXT.
@@ -105,30 +112,60 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
 
   const quotationId = existingDraft?.quotationId ?? null;
   const quotationLabel = existingDraft?.version?.title ?? existingDraft?.quotationNumber ?? null;
-  const createdLabel = new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-  }).format(new Date(lead.overview.createdAt));
-  const updatedLabel = new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(lead.overview.updatedAt));
+
+  // One server-captured `now` for the whole render, so the score, risk flags
+  // and due states can never disagree — and the render stays pure.
+  const nowMs = Date.parse(lead.capturedAt);
+  const leadScore = deriveLeadScore(
+    buildLeadScoreSignalsFromDetail({
+      status: leadStatus,
+      assignedTo: lead.assignment.currentAssigneeId,
+      receivedAt: lead.overview.createdAt,
+      followUps: lead.followUps,
+      notes: lead.notes,
+      timeline: lead.timeline,
+      slaClock: lead.slaClock,
+      commercialState: commercialState.state,
+    }),
+    nowMs
+  );
+
+  const primaryNextAction =
+    lead.followUps.find(
+      (entry) => entry.status === "open" && entry.isPrimaryNextAction
+    ) ?? null;
+
+  // Consent is a secondary header fact unless outreach is actually blocked.
+  const consentBlocked = lead.consentSummary.some(
+    (entry) => entry.eventType === "withdrawn" || entry.eventType === "denied"
+  );
 
   return (
+    <LeadActionsProvider>
     <div className="space-y-5">
-      <div className="space-y-3">
-        <Link
-          href="/admin/crm/leads"
-          className="crm-btn crm-btn-ghost min-h-10 px-2 text-[13px]"
-        >
-          ← Back to leads
-        </Link>
-        <CrmPageHeader
-          title={lead.overview.submittedName}
-          description={`${lead.source.primarySourceLabel} · Created ${createdLabel}`}
-          actions={<LeadStatusBadge status={leadStatus} />}
-        />
-        <p className="text-xs text-[var(--crm-muted)]">Updated {updatedLabel}</p>
-      </div>
+      <LeadCommandHeader
+        overview={lead.overview}
+        ownerLabel={lead.assignment.currentAssigneeLabel}
+        primaryNextAction={primaryNextAction}
+        score={leadScore}
+        commercial={commercialState}
+        cadence={leadCadence}
+        consentBlocked={consentBlocked}
+        canReadConsents={context?.canReadConsents ?? false}
+        quickActions={
+          <LeadQuickActions
+            leadId={lead.id}
+            submittedName={lead.overview.submittedName}
+            leadStatus={leadStatus}
+            canManageLeadFollowUps={context?.canManageLeadFollowUps ?? false}
+            canManageLeadNotes={context?.canManageLeadNotes ?? false}
+            hasOpenPrimaryNextAction={primaryNextAction !== null}
+            quotationId={quotationId}
+            canCreateQuotation={quotationPermissions.canCreateQuotations}
+            canEditQuotation={quotationPermissions.canEditQuotations}
+          />
+        }
+      />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.9fr)_minmax(18rem,1fr)]">
         <div className="flex flex-col gap-4 sm:gap-5">
@@ -178,13 +215,12 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
             enrollableTemplates={enrollableCadences}
           />
           <LeadDetailOverview overview={lead.overview} />
+          <LeadDetailTimeline timeline={lead.timeline} />
           <LeadDetailNotes
-            notes={lead.notes}
             leadId={lead.id}
             canManageLeadNotes={context?.canManageLeadNotes ?? false}
             showComposer={!isTerminal}
           />
-          <LeadDetailTimeline timeline={lead.timeline} />
           <LeadDetailQuotationPanel
             leadId={lead.id}
             submittedName={lead.overview.submittedName}
@@ -227,5 +263,6 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
         </aside>
       </div>
     </div>
+    </LeadActionsProvider>
   );
 }

@@ -1,4 +1,5 @@
 import type { LeadStageCode } from "./lead-stages.ts";
+import type { CrmLeadTimelinePage } from "./lead-timeline-contracts.ts";
 
 export interface CrmAssigneeDirectoryEntry {
   readonly userId: string;
@@ -76,12 +77,17 @@ export interface CrmLeadDetailAssignmentPanel {
   readonly history: readonly CrmLeadDetailAssignmentEntry[];
 }
 
-export interface CrmLeadDetailTimelineEntry {
-  readonly id: string;
-  readonly kind: "activity" | "event";
-  readonly title: string;
-  readonly occurredAt: string;
-  readonly actorLabel: string | null;
+/**
+ * CRM 2D-1: per-lead SLA clock facts. Read for the command header and the
+ * score's engagement/risk signals. A clock row exists for every lead
+ * independently of SLA policy activation, so `firstContactAttemptAt` is always
+ * meaningful while `slaDueAt` stays null until an owner configures business
+ * hours — the UI must never imply SLA coverage that is not configured.
+ */
+export interface CrmLeadDetailSlaClock {
+  readonly slaDueAt: string | null;
+  readonly firstContactAttemptAt: string | null;
+  readonly breachedAt: string | null;
 }
 
 export interface CrmLeadDetailNote {
@@ -142,13 +148,21 @@ export interface CrmLeadDetailStatusSummary {
 
 export interface CrmLeadDetail {
   readonly id: string;
+  /**
+   * Server capture instant for this read. Every time-dependent derivation on
+   * the page (score, risk flags, due states) threads this single value, so the
+   * surfaces can never disagree and the render stays pure.
+   */
+  readonly capturedAt: string;
   readonly overview: CrmLeadDetailOverview;
   readonly contact: CrmLeadDetailContact;
   readonly source: CrmLeadDetailSourcePanel;
   readonly assignment: CrmLeadDetailAssignmentPanel;
-  readonly timeline: readonly CrmLeadDetailTimelineEntry[];
+  /** CRM 2D-1 unified timeline — the chronological history surface. */
+  readonly timeline: CrmLeadTimelinePage;
   readonly notes: readonly CrmLeadDetailNote[];
   readonly followUps: readonly CrmLeadDetailFollowUp[];
   readonly consentSummary: readonly CrmLeadDetailConsentSummaryItem[];
   readonly statusSummary: CrmLeadDetailStatusSummary;
+  readonly slaClock: CrmLeadDetailSlaClock;
 }
