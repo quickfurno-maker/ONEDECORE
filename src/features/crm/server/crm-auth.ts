@@ -13,6 +13,7 @@ import {
   probeCanAssignLeads,
   probeBulkImportPermissions,
   probeLifecycleMutationPermissions,
+  probeCadencePermissions,
   probeManualLeadPermissions,
   probeSalesTargetPermissions,
 } from "./crm-permissions.ts";
@@ -49,12 +50,18 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
 
   const permissions = await probeCrmPermissions();
   const canAssignLeads = await probeCanAssignLeads();
-  const [manualLeadPermissions, lifecyclePermissions, bulkImportPermissions, salesTargetPermissions] =
-    await Promise.all([
+  const [
+    manualLeadPermissions,
+    lifecyclePermissions,
+    bulkImportPermissions,
+    salesTargetPermissions,
+    cadencePermissions,
+  ] = await Promise.all([
       probeManualLeadPermissions(),
       probeLifecycleMutationPermissions(),
       probeBulkImportPermissions(),
       probeSalesTargetPermissions(),
+      probeCadencePermissions(),
     ]);
   const context: CrmAccessContext = {
     userId: staff.userId,
@@ -78,6 +85,7 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
     canReadSalesTargets: salesTargetPermissions.canReadSalesTargets,
     canManageSalesTargets: salesTargetPermissions.canManageSalesTargets,
     canReadCrmReporting: salesTargetPermissions.canReadCrmReporting,
+    canManageCadences: cadencePermissions.canManageCadences,
   };
 
   if (!hasCrmLeadReadAccess(context)) {
@@ -220,6 +228,31 @@ export async function requireCrmSalesTargetsAccess(
   }
 
   if (resolution.kind === "denied" || !resolution.context.canReadSalesTargets) {
+    redirect("/auth/forbidden");
+  }
+
+  return resolution.context;
+}
+
+export async function requireCrmCadenceAccess(
+  currentPath: string = "/admin/crm/cadences"
+): Promise<CrmAccessContext> {
+  const resolution = await resolveCrmAccess();
+
+  if (resolution.kind === "unauthenticated") {
+    const safeNext = getSafeAdminRedirect(currentPath);
+    const loginUrl =
+      safeNext !== "/admin"
+        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
+        : "/auth/login";
+    redirect(loginUrl);
+  }
+
+  if (resolution.kind === "inactive") {
+    redirect("/auth/forbidden");
+  }
+
+  if (resolution.kind === "denied" || !resolution.context.canManageCadences) {
     redirect("/auth/forbidden");
   }
 

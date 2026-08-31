@@ -38,6 +38,7 @@ export default async function CrmLayout({ children }: { children: ReactNode }) {
         currentPath="/admin/crm"
         showImports={resolution.context.canBulkImportLeads}
         showAssignmentRules={resolution.context.canManageLeadAssignmentRules}
+        showCadences={resolution.context.canManageCadences}
         showTargets={resolution.context.canReadSalesTargets}
         showReports={resolution.context.canReadCrmReporting}
         targetsLabel={

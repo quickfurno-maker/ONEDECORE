@@ -194,7 +194,7 @@ export async function getLeadDetailForCurrentUser(
     supabase
       .from("lead_follow_ups")
       .select(
-        "id, owner_id, due_at, status, outcome, completed_at, cancelled_at, activity_type, title, priority, is_primary_next_action, duration_minutes, reminder_at, outcome_code, completion_note, quotation_id, source, created_at, updated_at"
+        "id, owner_id, due_at, status, outcome, completed_at, cancelled_at, activity_type, title, priority, is_primary_next_action, duration_minutes, reminder_at, outcome_code, completion_note, quotation_id, source, cadence_enrollment_id, cadence_step_id, created_at, updated_at"
       )
       .eq("lead_id", leadId)
       .order("due_at", { ascending: true }),
@@ -332,6 +332,8 @@ export async function getLeadDetailForCurrentUser(
       completionNote: followUp.completion_note,
       quotationId: followUp.quotation_id,
       source: followUp.source,
+      cadenceEnrollmentId: followUp.cadence_enrollment_id,
+      cadenceStepId: followUp.cadence_step_id,
       createdAt: followUp.created_at,
       updatedAt: followUp.updated_at,
     })),

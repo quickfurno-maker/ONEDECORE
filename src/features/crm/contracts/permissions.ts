@@ -25,6 +25,7 @@ export const CRM_PERMISSION_CODES = [
   "sales_targets.read",
   "sales_targets.manage",
   "crm.reporting.read",
+  "crm.cadences.manage",
 ] as const;
 
 export type CrmPermissionCode = (typeof CRM_PERMISSION_CODES)[number];
@@ -100,6 +101,7 @@ export const CRM_ROLE_PERMISSIONS: Readonly<
     "sales_targets.read",
     "sales_targets.manage",
     "crm.reporting.read",
+    "crm.cadences.manage",
   ],
   management: [
     "leads.read",
@@ -134,6 +136,7 @@ export const CRM_ROLE_PERMISSIONS: Readonly<
     "leads.bulk_import",
     "sales_targets.read",
     "crm.reporting.read",
+    "crm.cadences.manage",
   ],
   sales: [
     "leads.read_assigned",

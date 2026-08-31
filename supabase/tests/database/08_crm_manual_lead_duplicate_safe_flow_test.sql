@@ -673,6 +673,16 @@ select set_config(
   true
 );
 
+-- CRM 2C stage gate evidence: canonical first-contact ATTEMPT.
+reset role;
+set local role postgres;
+update public.crm_sla_clocks
+set first_contact_attempt_at = clock_timestamp()
+where lead_id = current_setting('test.phase5c2b_active_lead')::uuid;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'c2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+
 select public.transition_lead_status(
   current_setting('test.phase5c2b_active_lead')::uuid,
   'contacted',

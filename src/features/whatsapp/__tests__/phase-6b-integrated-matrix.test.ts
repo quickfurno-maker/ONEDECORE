@@ -97,7 +97,7 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 44, "Migration count must be exactly 44");
+    assert.equal(files.length, 45, "Migration count must be exactly 45");
 
     const phase6c = files.filter((f) => f.startsWith("20260809"));
     assert.equal(phase6c.length, 1);
@@ -181,8 +181,9 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
         "20260828140000_crm_activity_rpc_workflows.sql",
         "20260829120000_crm_my_day_read_model.sql",
         "20260829140000_crm_assignment_first_contact_automation.sql",
+        "20260830140000_crm_cadence_playbook_foundation.sql",
       ],
-      "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, and CRM 2A-7 may follow 9D-D1 COD order foundation"
+      "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, CRM 2A-7, and CRM 2C cadences may follow 9D-D1 COD order foundation"
     );
     assert.equal(
       files.includes("20260825140000_commerce_online_payment_adapter_foundation.sql"),

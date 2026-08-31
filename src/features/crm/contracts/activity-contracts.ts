@@ -32,6 +32,7 @@ export type CrmActivityStatus = (typeof CRM_ACTIVITY_STATUSES)[number];
 export const CRM_ACTIVITY_RESOLUTIONS = [
   "NONE",
   "NEXT_PRIMARY",
+  "CADENCE_NEXT",
   "ON_HOLD",
   "CLOSED_LOST",
 ] as const;
@@ -43,6 +44,7 @@ export const CRM_ACTIVITY_SOURCES = [
   "on_hold_review",
   "sla_auto",
   "import",
+  "cadence",
 ] as const;
 export type CrmActivitySource = (typeof CRM_ACTIVITY_SOURCES)[number];
 
@@ -89,6 +91,7 @@ interface CompleteLeadActivityBase {
 
 export type CompleteLeadActivityInput =
   | (CompleteLeadActivityBase & { readonly resolution: "NONE" })
+  | (CompleteLeadActivityBase & { readonly resolution: "CADENCE_NEXT" })
   | (CompleteLeadActivityBase & {
       readonly resolution: "NEXT_PRIMARY";
       readonly nextActivityType: CrmActivityType;
@@ -572,6 +575,9 @@ function crossResolutionFieldErrors(
   if (resolution === "NONE" && (hasNext || hasOnHold || hasClosedLost)) {
     return [{ field: "resolution", message: CROSS_RESOLUTION_MESSAGE }];
   }
+  if (resolution === "CADENCE_NEXT" && (hasNext || hasOnHold || hasClosedLost)) {
+    return [{ field: "resolution", message: CROSS_RESOLUTION_MESSAGE }];
+  }
   if (resolution === "NEXT_PRIMARY" && (hasOnHold || hasClosedLost)) {
     return [{ field: "resolution", message: CROSS_RESOLUTION_MESSAGE }];
   }
@@ -748,8 +754,8 @@ export function parseCompleteLeadActivityForm(
     whatsappSendIntentId: unwrapFieldValue(whatsappSendIntentId),
   };
 
-  if (resolution === "NONE") {
-    const input: CompleteLeadActivityInput = { ...base, resolution: "NONE" };
+  if (resolution === "NONE" || resolution === "CADENCE_NEXT") {
+    const input: CompleteLeadActivityInput = { ...base, resolution };
     const semanticErrors = validateCompleteLeadActivityInput(input);
     if (semanticErrors.length > 0) {
       return formFailure(semanticErrors);
@@ -1069,8 +1075,8 @@ export function normalizeCompleteLeadActivityInput(raw: {
     whatsappSendIntentId: parseNullableUuid(raw.whatsappSendIntentId),
   };
 
-  if (resolution === "NONE") {
-    return { ...base, resolution: "NONE" };
+  if (resolution === "NONE" || resolution === "CADENCE_NEXT") {
+    return { ...base, resolution };
   }
 
   if (resolution === "NEXT_PRIMARY") {
