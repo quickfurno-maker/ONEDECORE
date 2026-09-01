@@ -47,7 +47,7 @@ describe("Phase 9D-D2 repository contracts", () => {
       latestMigrationName(),
       "20260902140000_crm_whatsapp_lead_link_repair.sql"
     );
-    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 48);
+    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 49);
     assert.equal(
       existsSync(join(migrationDir, "20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false
