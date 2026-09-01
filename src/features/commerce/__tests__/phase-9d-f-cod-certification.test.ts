@@ -45,7 +45,7 @@ describe("Phase 9D-F baseline and payment absence", () => {
       latestMigrationName(),
       "20260902140000_crm_whatsapp_lead_link_repair.sql"
     );
-    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 48);
+    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 49);
     assert.equal(
       existsSync(join(root, "supabase/migrations/20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false
