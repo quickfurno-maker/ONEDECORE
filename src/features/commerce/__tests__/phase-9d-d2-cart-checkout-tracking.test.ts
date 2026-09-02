@@ -42,12 +42,12 @@ function latestMigrationName(): string {
 }
 
 describe("Phase 9D-D2 repository contracts", () => {
-  test("latest migration is the Workforce V1 salary payment ledger; deferred payment M38 absent", () => {
+  test("latest migration is the staff optional-email employment identity; deferred payment M38 absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260902170000_workforce_salary_payment_ledger.sql"
+      "20260903120000_staff_optional_email_employment_identity.sql"
     );
-    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 51);
+    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 52);
     assert.equal(
       existsSync(join(migrationDir, "20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false

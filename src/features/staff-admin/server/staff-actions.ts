@@ -11,12 +11,16 @@ import {
   type SetReportingManagerInput,
   type SetStaffStatusInput,
   type UpdateStaffEmploymentInput,
+  normalizeStaffEmail,
   validateCreateStaffMemberInput,
 } from "../contracts/dto.ts";
 import { isStaffProfileStatusCode } from "../contracts/permissions.ts";
 import { StaffError, staffErrorFromPostgresMessage } from "../contracts/errors.ts";
 import { getStaffAdminAccessContext } from "./staff-auth.ts";
-import { inviteStaffMemberByEmail } from "./staff-invite-adapter.ts";
+import {
+  inviteStaffMemberByEmail,
+  provisionStaffLoginIdentity,
+} from "./staff-invite-adapter.ts";
 
 type StaffServerClient = SupabaseClient<Database>;
 
@@ -72,7 +76,28 @@ interface UpdateStaffEmploymentRpcArgs {
   readonly p_reason?: string | null;
 }
 
+interface CreateStaffWithoutInviteRpcArgs {
+  readonly p_client_request_id: string;
+  readonly p_employee_code: string;
+  readonly p_display_name: string;
+  readonly p_phone_e164: string | null;
+  readonly p_designation: string;
+  readonly p_joining_date: string;
+  readonly p_role_code: string;
+  readonly p_reporting_manager_id: string | null;
+  readonly p_attendance_eligible: boolean;
+  readonly p_attendance_policy_id: string | null;
+}
+
 type StaffRpcClient = StaffServerClient & {
+  rpc(
+    fn: "attach_staff_app_access",
+    args: { readonly p_staff_id: string; readonly p_email: string }
+  ): ReturnType<StaffServerClient["rpc"]>;
+  rpc(
+    fn: "create_staff_member_without_invite",
+    args: CreateStaffWithoutInviteRpcArgs
+  ): ReturnType<StaffServerClient["rpc"]>;
   rpc(
     fn: "prepare_staff_invite_saga",
     args: PrepareStaffInviteSagaRpcArgs
@@ -179,13 +204,39 @@ export async function createStaffMember(
 
   const employeeCode = normalizeEmployeeCode(input.employeeCode);
   const displayName = input.displayName.trim();
-  const email = input.email.trim().toLowerCase();
+  const email = normalizeStaffEmail(input.email ?? null);
   const phoneE164 = input.phoneE164?.trim() || null;
   const designation = input.designation.trim();
   const reportingManagerId = input.reportingManagerId?.trim() || null;
 
   const supabase = await createClient();
   const rpcClient = supabase as StaffRpcClient;
+
+  // No email means no login identity. The employment record is created
+  // directly, in one transaction, with no auth user and no invitation. A
+  // placeholder address is never generated.
+  if (email === null) {
+    const { data, error } = await rpcClient.rpc("create_staff_member_without_invite", {
+      p_client_request_id: input.clientRequestId,
+      p_employee_code: employeeCode,
+      p_display_name: displayName,
+      p_phone_e164: phoneE164,
+      p_designation: designation,
+      p_joining_date: input.joiningDate,
+      p_role_code: input.roleCode,
+      p_reporting_manager_id: reportingManagerId,
+      p_attendance_eligible: input.attendanceEligible,
+      p_attendance_policy_id: input.attendancePolicyId ?? null,
+    });
+
+    if (error) {
+      throw staffErrorFromPostgresMessage(error.message);
+    }
+
+    return mapCreateStaffMemberRpcResult(
+      assertRpcJson(data, "create_staff_member_without_invite")
+    );
+  }
 
   const { data: prepareData, error: prepareError } = await rpcClient.rpc(
     "prepare_staff_invite_saga",
@@ -259,6 +310,7 @@ export async function createStaffMember(
       employeeCode,
       profileStatus: "pending",
       invitationState: "reconciliation_required",
+      accessState: "invited",
       reconciliationState: "auth_created_db_pending",
       idempotentReplay: false,
     };
@@ -446,4 +498,65 @@ export async function updateEmployment(
     staffId: String(payload.staffId ?? input.staffId),
     attendanceEligible: payload.attendanceEligible === true,
   };
+}
+
+/**
+ * Attaches a LOGIN identity to an existing employment record.
+ *
+ * Order mirrors the invite saga: mark intent in the database first, then call
+ * the identity provider. A provider failure leaves access_state at "invited"
+ * and is safely retryable, and the auth user is always created with the
+ * pre-allocated employment id so profiles.id === auth.users.id.
+ */
+export async function attachStaffAppAccess(input: {
+  readonly staffId: string;
+  readonly email: string;
+  readonly displayName: string;
+}): Promise<{ readonly staffId: string; readonly accessState: string }> {
+  await requireManageStaffContext();
+
+  const email = normalizeStaffEmail(input.email);
+  if (email === null) {
+    throw new StaffError({
+      code: "STAFF_EMAIL_INVALID",
+      message: "Enter the work email to activate app access.",
+      httpStatus: 422,
+    });
+  }
+
+  const supabase = await createClient();
+  const rpcClient = supabase as StaffRpcClient;
+
+  const { error: attachError } = await rpcClient.rpc("attach_staff_app_access", {
+    p_staff_id: input.staffId,
+    p_email: email,
+  });
+
+  if (attachError) {
+    throw staffErrorFromPostgresMessage(attachError.message);
+  }
+
+  try {
+    await provisionStaffLoginIdentity({
+      staffId: input.staffId,
+      email,
+      displayName: input.displayName,
+    });
+  } catch (error) {
+    // The database was already moved to "invited" above, so claiming the record
+    // is unchanged would be false. State is deliberately left at "invited":
+    // either the login identity exists and only the email failed, or neither
+    // happened. Retrying is safe in both cases — attach_staff_app_access
+    // refuses only once access is genuinely active, and creating an identity
+    // that already exists surfaces as a provider error rather than a duplicate.
+    throw new StaffError({
+      code: "STAFF_INVITE_FAILED",
+      message:
+        "App access is marked invited but activation did not finish. Nothing was lost — retry to create the login and resend the set-password email.",
+      httpStatus: 502,
+      details: error instanceof Error ? error.message : undefined,
+    });
+  }
+
+  return { staffId: input.staffId, accessState: "invited" };
 }

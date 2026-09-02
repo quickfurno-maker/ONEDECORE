@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { StaffListItem } from "../contracts/dto.ts";
-import { StaffStatusBadge } from "./StaffStatusBadge.tsx";
+import { StaffAccessStateBadge, StaffStatusBadge } from "./StaffStatusBadge.tsx";
 
 interface StaffDirectoryTableProps {
   readonly items: readonly StaffListItem[];
@@ -37,7 +37,10 @@ export function StaffDirectoryTable({ items }: StaffDirectoryTableProps) {
               Manager
             </th>
             <th scope="col" className="px-4 py-3 text-left font-medium text-neutral-300">
-              Status
+              Employment
+            </th>
+            <th scope="col" className="px-4 py-3 text-left font-medium text-neutral-300">
+              App access
             </th>
             <th scope="col" className="px-4 py-3 text-left font-medium text-neutral-300">
               Joined
@@ -61,6 +64,9 @@ export function StaffDirectoryTable({ items }: StaffDirectoryTableProps) {
               <td className="px-4 py-3 text-neutral-400">{item.managerName ?? "—"}</td>
               <td className="px-4 py-3">
                 <StaffStatusBadge status={item.status} />
+              </td>
+              <td className="px-4 py-3">
+                <StaffAccessStateBadge accessState={item.accessState} />
               </td>
               <td className="px-4 py-3 text-neutral-400">{item.joiningDate}</td>
             </tr>

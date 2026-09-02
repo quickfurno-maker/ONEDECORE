@@ -237,10 +237,16 @@ describe("Phase 6D-A server module boundaries", () => {
     assert.match(createBlock, /prepare_staff_invite_saga/);
     assert.match(createBlock, /record_staff_invite_auth_success/);
     assert.match(createBlock, /create_staff_member/);
-    assert.ok(createBlock.indexOf("prepare_staff_invite_saga") < createBlock.indexOf("inviteStaffMemberByEmail"));
+    assert.ok(
+      createBlock.indexOf("prepare_staff_invite_saga") <
+        createBlock.indexOf("inviteStaffMemberByEmail")
+    );
+    // Match the exact RPC invocation: "create_staff_member" is also a prefix of
+    // "create_staff_member_without_invite", which the blank-email path calls
+    // earlier in the same function.
     assert.ok(
       createBlock.indexOf("record_staff_invite_auth_success") <
-        createBlock.indexOf("create_staff_member")
+        createBlock.indexOf('rpc("create_staff_member"')
     );
     assert.doesNotMatch(src, /serviceRoleKey/);
     assert.doesNotMatch(src, /createAdminClient/);

@@ -16,6 +16,7 @@ import {
   type StaffCreateFormValues,
 } from "../contracts/staff-form-state.ts";
 import {
+  attachStaffAppAccess,
   createStaffMember,
   reconcileStaffInvite,
   setReportingManager,
@@ -231,5 +232,40 @@ export async function updateStaffEmploymentAction(
       return { success: false, message: error.message, code: error.code };
     }
     return { success: false, message: "Unable to update employment details." };
+  }
+}
+
+/**
+ * Super Admin attaches a login identity to a staff member created without one.
+ *
+ * Email is required HERE (unlike creation) because this action's entire purpose
+ * is to supply the missing address. A placeholder is still never generated.
+ */
+export async function attachStaffAppAccessAction(
+  _prevState: StaffFormActionState,
+  formData: FormData
+): Promise<StaffFormActionState> {
+  try {
+    await requireStaffAdminAccess();
+
+    const staffId = String(formData.get("staffId") ?? "");
+    await attachStaffAppAccess({
+      staffId,
+      email: String(formData.get("email") ?? ""),
+      displayName: String(formData.get("displayName") ?? ""),
+    });
+
+    revalidatePath(`/admin/staff/${staffId}`);
+    revalidatePath("/admin/staff");
+    return {
+      success: true,
+      message:
+        "App access activated. A set-password email has been sent to the staff member.",
+    };
+  } catch (error) {
+    if (error instanceof StaffError) {
+      return { success: false, message: error.message, code: error.code };
+    }
+    return { success: false, message: "Unable to activate app access." };
   }
 }

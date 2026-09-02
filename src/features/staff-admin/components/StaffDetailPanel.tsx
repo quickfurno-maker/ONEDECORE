@@ -9,12 +9,13 @@ import type {
 } from "../server/staff-queries.ts";
 import {
   setReportingManagerAction,
+  attachStaffAppAccessAction,
   setStaffStatusAction,
   updateStaffEmploymentAction,
   type StaffFormActionState,
 } from "../server/staff-form-actions.ts";
 import { ReportingManagerPicker } from "./ReportingManagerPicker.tsx";
-import { StaffStatusBadge } from "./StaffStatusBadge.tsx";
+import { StaffAccessStateBadge, StaffStatusBadge } from "./StaffStatusBadge.tsx";
 
 const fieldClassName =
   "mt-1 block w-full min-h-11 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400";
@@ -52,6 +53,10 @@ export function StaffDetailPanel({
   managers,
   policies,
 }: StaffDetailPanelProps) {
+  const [appAccessState, appAccessAction, appAccessPending] = useActionState(
+    attachStaffAppAccessAction,
+    INITIAL_STATE
+  );
   const [statusState, statusAction, statusPending] = useActionState(
     setStaffStatusAction,
     INITIAL_STATE
@@ -75,7 +80,13 @@ export function StaffDetailPanel({
               {staff.employeeCode} · {staff.designation}
             </p>
           </div>
-          <StaffStatusBadge status={staff.status} />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] uppercase tracking-wide text-neutral-500">
+              Employment
+            </span>
+            <StaffStatusBadge status={staff.status} />
+            <StaffAccessStateBadge accessState={staff.accessState} />
+          </div>
         </div>
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -228,6 +239,65 @@ export function StaffDetailPanel({
                 Update manager
               </button>
             </form>
+          </section>
+
+          <section className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-6">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-300">
+              App access
+            </h3>
+            <p className="mt-2 text-sm text-neutral-400">
+              Employment and login are separate. This staff member is employed and
+              fully manageable; app access is only about signing in.
+            </p>
+
+            {staff.accessState !== "active" ? (
+              <form action={appAccessAction} className="mt-4 space-y-4">
+                <input type="hidden" name="staffId" value={staff.staffId} />
+                <input type="hidden" name="displayName" value={staff.displayName} />
+                {staff.accessState === "invited" ? (
+                  <p className="rounded-md border border-sky-900/60 bg-sky-950/30 px-3 py-2 text-sm text-sky-100">
+                    A login identity may already exist for this employee. Resending will
+                    not recreate it — it only sends the set-password email again.
+                  </p>
+                ) : null}
+                <div>
+                  <label htmlFor="app-access-email" className="text-sm font-medium text-neutral-200">
+                    Work email
+                  </label>
+                  <input
+                    id="app-access-email"
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="person@onedecore.in"
+                    className={fieldClassName}
+                  />
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Uses this employment record&rsquo;s existing id, creating the login
+                    only if one does not already exist, then emails a link to set a
+                    password. No placeholder address is ever used.
+                  </p>
+                </div>
+                <button
+                  type="submit"
+                  disabled={appAccessPending}
+                  className="inline-flex min-h-11 items-center rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-60"
+                >
+                  {appAccessPending
+                    ? "Sending…"
+                    : staff.accessState === "invited"
+                      ? "Resend setup email"
+                      : "Activate app access"}
+                </button>
+                <ActionFeedback state={appAccessState} />
+              </form>
+            ) : (
+              <p className="mt-4 text-sm text-neutral-300">
+                App access is{" "}
+                <span className="font-medium text-neutral-100">active</span> — this staff
+                member has signed in. Activation controls are closed.
+              </p>
+            )}
           </section>
 
           <section className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-6">
