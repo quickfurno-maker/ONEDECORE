@@ -57,6 +57,7 @@ export function crmOverviewNavFlags(
     crmReports: context.canReadCrmReporting,
     crmImports: context.canBulkImportLeads,
     crmAssignmentRules: context.canManageLeadAssignmentRules,
+    crmSlaSettings: context.canManageSlaPolicy,
     createLead: context.canCreateLeads,
     createQuotation: quotationAccess.createQuotation,
     commerceCatalog: false,

@@ -16,6 +16,7 @@ import {
   probeCadencePermissions,
   probeManualLeadPermissions,
   probeSalesTargetPermissions,
+  probeSlaPolicyPermissions,
 } from "./crm-permissions.ts";
 
 export type CrmAccessResolution =
@@ -56,12 +57,14 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
     bulkImportPermissions,
     salesTargetPermissions,
     cadencePermissions,
+    slaPolicyPermissions,
   ] = await Promise.all([
       probeManualLeadPermissions(),
       probeLifecycleMutationPermissions(),
       probeBulkImportPermissions(),
       probeSalesTargetPermissions(),
       probeCadencePermissions(),
+      probeSlaPolicyPermissions(),
     ]);
   const context: CrmAccessContext = {
     userId: staff.userId,
@@ -86,6 +89,7 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
     canManageSalesTargets: salesTargetPermissions.canManageSalesTargets,
     canReadCrmReporting: salesTargetPermissions.canReadCrmReporting,
     canManageCadences: cadencePermissions.canManageCadences,
+    canManageSlaPolicy: slaPolicyPermissions.canManageSlaPolicy,
   };
 
   if (!hasCrmLeadReadAccess(context)) {
@@ -203,6 +207,31 @@ export async function requireCrmAssignmentRuleAccess(
     resolution.kind === "denied" ||
     !resolution.context.canManageLeadAssignmentRules
   ) {
+    redirect("/auth/forbidden");
+  }
+
+  return resolution.context;
+}
+
+export async function requireCrmSlaPolicyAccess(
+  currentPath: string = "/admin/crm/settings/sla"
+): Promise<CrmAccessContext> {
+  const resolution = await resolveCrmAccess();
+
+  if (resolution.kind === "unauthenticated") {
+    const safeNext = getSafeAdminRedirect(currentPath);
+    const loginUrl =
+      safeNext !== "/admin"
+        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
+        : "/auth/login";
+    redirect(loginUrl);
+  }
+
+  if (resolution.kind === "inactive") {
+    redirect("/auth/forbidden");
+  }
+
+  if (resolution.kind === "denied" || !resolution.context.canManageSlaPolicy) {
     redirect("/auth/forbidden");
   }
 
