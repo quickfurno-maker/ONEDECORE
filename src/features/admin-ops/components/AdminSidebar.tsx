@@ -79,6 +79,13 @@ function buildGroups(flags: OpsNavFlags, hrefs: AdminSidebarProps["hrefs"]): rea
         icon: "rules",
       });
     }
+    if (flags.crmSlaSettings) {
+      children.push({
+        href: "/admin/crm/settings/sla",
+        label: "SLA Settings",
+        icon: "clock",
+      });
+    }
     sales.push({ href: "/admin/crm", label: "CRM", icon: "crm", children });
   }
   if (flags.quotations) {

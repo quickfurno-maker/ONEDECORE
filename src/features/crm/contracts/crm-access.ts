@@ -24,6 +24,7 @@ export interface CrmAccessContext {
   readonly canManageSalesTargets: boolean;
   readonly canReadCrmReporting: boolean;
   readonly canManageCadences: boolean;
+  readonly canManageSlaPolicy: boolean;
 }
 
 export function hasCrmLeadReadAccess(context: CrmAccessContext): boolean {

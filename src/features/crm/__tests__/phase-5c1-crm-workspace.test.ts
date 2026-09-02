@@ -111,6 +111,7 @@ describe("Phase 5C1 CRM authorization contracts", () => {
         canManageSalesTargets: false,
         canReadCrmReporting: false,
         canManageCadences: false,
+        canManageSlaPolicy: false,
       }),
       true
     );
@@ -137,6 +138,7 @@ describe("Phase 5C1 CRM authorization contracts", () => {
         canManageSalesTargets: false,
         canReadCrmReporting: false,
         canManageCadences: false,
+        canManageSlaPolicy: false,
       }),
       true
     );
@@ -163,6 +165,7 @@ describe("Phase 5C1 CRM authorization contracts", () => {
         canManageSalesTargets: false,
         canReadCrmReporting: false,
         canManageCadences: false,
+        canManageSlaPolicy: false,
       }),
       false
     );

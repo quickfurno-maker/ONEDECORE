@@ -25,6 +25,7 @@ function flags(overrides: Partial<OpsNavFlags> = {}): OpsNavFlags {
     crmReports: false,
     crmImports: false,
     crmAssignmentRules: false,
+    crmSlaSettings: false,
     createLead: true,
     createQuotation: false,
     commerceCatalog: false,

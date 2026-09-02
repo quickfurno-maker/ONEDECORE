@@ -97,6 +97,14 @@ export type CrmErrorCode =
   | "SALES_TARGET_INVALID"
   | "SALES_TARGET_DUPLICATE"
   | "SALES_TARGET_REVISION_MISMATCH"
+  | "CRM_SLA_AUTH_REQUIRED"
+  | "CRM_SLA_PERMISSION_DENIED"
+  | "CRM_SLA_POLICY_NOT_FOUND"
+  | "CRM_SLA_INVALID"
+  | "CRM_SLA_TARGET_INVALID"
+  | "CRM_SLA_TIMEZONE_INVALID"
+  | "CRM_SLA_HOURS_INVALID"
+  | "CRM_SLA_ACTIVATION_REQUIRES_HOURS"
   | "CRM_REPORTING_AUTH_REQUIRED"
   | "CRM_REPORTING_PERMISSION_DENIED"
   | "RPC_FAILED";
@@ -126,6 +134,65 @@ export function crmErrorFromPostgresMessage(
   fallbackCode: CrmErrorCode = "RPC_FAILED"
 ): CrmError {
   const normalised = message.toLowerCase();
+
+  // CRM SLA admin tokens — matched FIRST so "SLA policy ... not found" and
+  // "Permission denied to manage CRM SLA policy" never fall through to the
+  // generic LEAD_NOT_FOUND / PERMISSION_DENIED branches below.
+  const crmSlaTokenMap: ReadonlyArray<{
+    readonly token: string;
+    readonly code: CrmErrorCode;
+    readonly message: string;
+    readonly httpStatus: number;
+  }> = [
+    {
+      token: "crm_sla_target_invalid",
+      code: "CRM_SLA_TARGET_INVALID",
+      message: "Target response must be between 1 and 10080 business minutes.",
+      httpStatus: 422,
+    },
+    {
+      token: "crm_sla_timezone_invalid",
+      code: "CRM_SLA_TIMEZONE_INVALID",
+      message: "Timezone is not a recognized IANA timezone name.",
+      httpStatus: 422,
+    },
+    {
+      token: "crm_sla_activation_requires_hours",
+      code: "CRM_SLA_ACTIVATION_REQUIRES_HOURS",
+      message:
+        "Activating the SLA policy requires business hours to be enabled with at least one open day.",
+      httpStatus: 422,
+    },
+    {
+      token: "crm_sla_hours_invalid",
+      code: "CRM_SLA_HOURS_INVALID",
+      message: "Business hours are invalid. Each open day needs a start before its end.",
+      httpStatus: 422,
+    },
+    {
+      token: "permission denied to manage crm sla policy",
+      code: "CRM_SLA_PERMISSION_DENIED",
+      message: "You are not allowed to manage the CRM SLA policy.",
+      httpStatus: 403,
+    },
+    {
+      token: "sla policy",
+      code: "CRM_SLA_POLICY_NOT_FOUND",
+      message: "CRM SLA policy not found.",
+      httpStatus: 404,
+    },
+  ];
+
+  for (const entry of crmSlaTokenMap) {
+    if (normalised.includes(entry.token)) {
+      return new CrmError({
+        code: entry.code,
+        message: entry.message,
+        httpStatus: entry.httpStatus,
+        details: message,
+      });
+    }
+  }
 
   // CRM 2C stage-gate and cadence tokens — matched FIRST so that
   // "CADENCE_TEMPLATE_NOT_FOUND" never falls through to the generic

@@ -73,6 +73,7 @@ export const resolveOpsNavFlags = cache(async (): Promise<OpsNavFlags> => {
     crmReports: crmContext?.canReadCrmReporting ?? false,
     crmImports: crmContext?.canBulkImportLeads ?? false,
     crmAssignmentRules: crmContext?.canManageLeadAssignmentRules ?? false,
+    crmSlaSettings: crmContext?.canManageSlaPolicy ?? false,
     createLead: crmContext?.canCreateLeads ?? false,
     createQuotation: quotationPermissions.canCreateQuotations,
     commerceCatalog: commercePermissions.canManageCatalog,

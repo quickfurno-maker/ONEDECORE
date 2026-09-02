@@ -138,6 +138,23 @@ export async function probeCadencePermissions(): Promise<CadencePermissionProbeR
   return { canManageCadences: !error && data === true };
 }
 
+export interface SlaPolicyPermissionProbeResult {
+  readonly canManageSlaPolicy: boolean;
+}
+
+/**
+ * Probes `crm.sla.manage` — CRM first-contact SLA policy administration.
+ * Super Admin only; `public.update_crm_sla_policy` re-checks it in the DB.
+ */
+export async function probeSlaPolicyPermissions(): Promise<SlaPolicyPermissionProbeResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("authorize", {
+    requested_permission: "crm.sla.manage",
+  });
+
+  return { canManageSlaPolicy: !error && data === true };
+}
+
 export interface SalesTargetPermissionProbeResult {
   readonly canReadSalesTargets: boolean;
   readonly canManageSalesTargets: boolean;
