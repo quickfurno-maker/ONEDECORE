@@ -54,8 +54,8 @@ select results_eq(
 -- 5. Verify seeded system permissions count and is_system flag
 select results_eq(
   'select count(*)::integer from public.permissions where is_system = true',
-  array[85],
-  'Should have exactly 85 seeded system permissions (6 foundation + 2 portfolio + 4 lead intake + 9 Phase 5B CRM + 2 Phase 5C2B manual lead + 3 Phase 5D bulk import + 3 Phase 5E targets/reporting + 3 Phase 6B inbox + 12 Phase 6D staff attendance leave + 3 Phase 7A commercial quotations + 2 Phase 7B finalization send + 3 Phase 8A projects + 6 Phase 8B project design + 5 Phase 8C project execution + 5 Phase 9A campaigns/consent + 5 Phase 9B landing lab + 3 Phase 9C-B execution + 6 Phase 9D-B commerce + 1 CRM 2A-2 sla.manage + 1 CRM 2C cadences.manage + 1 Workforce V1 attendance.approve) with is_system = true'
+  array[87],
+  'Should have exactly 87 seeded system permissions (6 foundation + 2 portfolio + 4 lead intake + 9 Phase 5B CRM + 2 Phase 5C2B manual lead + 3 Phase 5D bulk import + 3 Phase 5E targets/reporting + 3 Phase 6B inbox + 12 Phase 6D staff attendance leave + 3 Phase 7A commercial quotations + 2 Phase 7B finalization send + 3 Phase 8A projects + 6 Phase 8B project design + 5 Phase 8C project execution + 5 Phase 9A campaigns/consent + 5 Phase 9B landing lab + 3 Phase 9C-B execution + 6 Phase 9D-B commerce + 1 CRM 2A-2 sla.manage + 1 CRM 2C cadences.manage + 1 Workforce V1 attendance.approve + 2 Workforce V1 salary.manage/salary.self) with is_system = true'
 );
 
 -- 6. Verify user_roles starts empty
@@ -104,8 +104,8 @@ select results_eq(
 -- 10. Verify authorized application tables count
 select results_eq(
   'select count(*)::integer from information_schema.tables where table_schema = ''public'' and table_type = ''BASE TABLE''',
-  array[111],
-  'Public schema must contain exactly the 111 authorized application tables (… + Phase 9D-D1 COD orders + CRM 2A-1 lead_activity_outcome_codes + lead_follow_up_events + CRM 2A-2 crm_sla_policies + crm_sla_clocks + CRM 2C crm_cadence_templates + crm_cadence_steps + crm_lead_cadence_enrollments + crm_cadence_enrollment_events + Workforce V1 attendance_submissions + attendance_submission_events)'
+  array[116],
+  'Public schema must contain exactly the 116 authorized application tables (… + Phase 9D-D1 COD orders + CRM 2A-1 lead_activity_outcome_codes + lead_follow_up_events + CRM 2A-2 crm_sla_policies + crm_sla_clocks + CRM 2C crm_cadence_templates + crm_cadence_steps + crm_lead_cadence_enrollments + crm_cadence_enrollment_events + Workforce V1 attendance_submissions + attendance_submission_events + salary_profiles + salary_statements + salary_statement_lines + salary_payments + salary_statement_events)'
 );
 
 -- 11. Phase 2C3 — rls_auto_enable existence and security properties
