@@ -5,6 +5,16 @@ import { redirect } from "next/navigation";
 import type { StaffAssignableRoleCode, StaffProfileStatusCode } from "../contracts/permissions.ts";
 import { isStaffAssignableRoleCode, isStaffProfileStatusCode } from "../contracts/permissions.ts";
 import { StaffError } from "../contracts/errors.ts";
+import { validateCreateStaffMemberInput } from "../contracts/dto.ts";
+import {
+  EMPTY_STAFF_CREATE_FORM_VALUES,
+  readStaffCreateFormValues,
+  staffErrorCodeToField,
+  STAFF_FORM_CORRECTION_SUMMARY,
+  toStaffCreateFieldErrors,
+  type StaffCreateFieldErrors,
+  type StaffCreateFormValues,
+} from "../contracts/staff-form-state.ts";
 import {
   createStaffMember,
   reconcileStaffInvite,
@@ -18,11 +28,20 @@ export interface StaffFormActionState {
   readonly success: boolean;
   readonly message: string;
   readonly code?: string;
+  /**
+   * Values echoed back so a rejected submit never clears the form. Present only
+   * on the staff create action.
+   */
+  readonly values?: StaffCreateFormValues;
+  /** Structured per-field errors keyed by form field name. */
+  readonly fieldErrors?: StaffCreateFieldErrors;
 }
 
-const INITIAL_STATE: StaffFormActionState = {
+export const INITIAL_STAFF_FORM_STATE: StaffFormActionState = {
   success: false,
   message: "",
+  values: EMPTY_STAFF_CREATE_FORM_VALUES,
+  fieldErrors: {},
 };
 
 function parseBoolean(value: FormDataEntryValue | null): boolean {
@@ -38,40 +57,89 @@ function parseNullableString(value: FormDataEntryValue | null): string | null {
 }
 
 export async function createStaffMemberAction(
-  _prevState: StaffFormActionState,
+  prevState: StaffFormActionState,
   formData: FormData
 ): Promise<StaffFormActionState> {
+  void prevState;
+
+  // Read every control up front so any rejection path can echo it back intact.
+  const values = readStaffCreateFormValues(formData);
+  const clientRequestId = String(formData.get("clientRequestId") ?? "");
+
+  const reject = (
+    message: string,
+    fieldErrors: StaffCreateFieldErrors,
+    code?: string
+  ): StaffFormActionState => ({
+    success: false,
+    message,
+    code,
+    values,
+    fieldErrors,
+  });
+
   try {
     await requireStaffAdminAccess("/admin/staff/new");
 
-    const roleCode = String(formData.get("roleCode") ?? "");
-    if (!isStaffAssignableRoleCode(roleCode)) {
-      return { success: false, message: "Select a valid operational role." };
+    // Presentation-side validation produces the full field map in one pass so
+    // the user sees every problem at once instead of one error per round trip.
+    // `createStaffMember` re-validates below and remains authoritative.
+    const validationErrors = validateCreateStaffMemberInput({
+      clientRequestId,
+      employeeCode: values.employeeCode,
+      displayName: values.displayName,
+      email: values.email,
+      phoneE164: values.phoneE164 || null,
+      designation: values.designation,
+      joiningDate: values.joiningDate,
+      roleCode: values.roleCode as StaffAssignableRoleCode,
+      reportingManagerId: values.reportingManagerId || null,
+      attendanceEligible: values.attendanceEligible,
+      attendancePolicyId: values.attendancePolicyId || null,
+    });
+
+    const fieldErrors = toStaffCreateFieldErrors(validationErrors);
+    if (Object.keys(fieldErrors).length > 0) {
+      return reject(STAFF_FORM_CORRECTION_SUMMARY, fieldErrors, "STAFF_VALIDATION_FAILED");
+    }
+
+    if (!isStaffAssignableRoleCode(values.roleCode)) {
+      return reject(
+        STAFF_FORM_CORRECTION_SUMMARY,
+        { roleCode: "Select a valid operational role." },
+        "STAFF_INVALID_ROLE"
+      );
     }
 
     const result = await createStaffMember({
-      clientRequestId: String(formData.get("clientRequestId") ?? ""),
-      employeeCode: String(formData.get("employeeCode") ?? ""),
-      displayName: String(formData.get("displayName") ?? ""),
-      email: String(formData.get("email") ?? ""),
-      phoneE164: parseNullableString(formData.get("phoneE164")),
-      designation: String(formData.get("designation") ?? ""),
-      joiningDate: String(formData.get("joiningDate") ?? ""),
-      roleCode: roleCode as StaffAssignableRoleCode,
-      reportingManagerId: parseNullableString(formData.get("reportingManagerId")),
-      attendanceEligible: parseBoolean(formData.get("attendanceEligible")),
-      attendancePolicyId: parseNullableString(formData.get("attendancePolicyId")),
+      clientRequestId,
+      employeeCode: values.employeeCode,
+      displayName: values.displayName,
+      email: values.email,
+      phoneE164: values.phoneE164 || null,
+      designation: values.designation,
+      joiningDate: values.joiningDate,
+      roleCode: values.roleCode as StaffAssignableRoleCode,
+      reportingManagerId: values.reportingManagerId || null,
+      attendanceEligible: values.attendanceEligible,
+      attendancePolicyId: values.attendancePolicyId || null,
     });
 
     if (result.reconciliationState === "auth_created_db_pending") {
-      await reconcileStaffInvite(String(formData.get("clientRequestId") ?? ""));
+      await reconcileStaffInvite(clientRequestId);
     }
 
     revalidatePath("/admin/staff");
     redirect(`/admin/staff/${result.staffId}`);
   } catch (error) {
+    // `redirect()` signals success by throwing; it must not be treated as a
+    // failure, so only StaffError is converted into form state here.
     if (error instanceof StaffError) {
-      return { success: false, message: error.message, code: error.code };
+      const field = staffErrorCodeToField(error.code);
+      if (field) {
+        return reject(STAFF_FORM_CORRECTION_SUMMARY, { [field]: error.message }, error.code);
+      }
+      return reject(error.message, {}, error.code);
     }
     throw error;
   }
