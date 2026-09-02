@@ -48,6 +48,7 @@ export default async function AttendanceLayout({ children }: { children: ReactNo
           context.canCorrectAllAttendance || context.canCorrectTeamAttendance
         }
         showPolicies={context.canManagePolicies}
+        showApprovals={context.canApproveAttendance}
       />
       <div id="attendance-main-content">{children}</div>
     </div>

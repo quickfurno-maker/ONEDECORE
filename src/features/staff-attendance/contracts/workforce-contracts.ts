@@ -318,3 +318,50 @@ export function mapMonthlySummary(raw: Record<string, unknown>): WorkforceMonthl
     unresolvedCount: asNumber(raw.unresolvedCount),
   };
 }
+
+/** Maps a raw `attendance_submissions` row into the shared submission shape. */
+export function mapSubmissionRow(raw: Record<string, unknown>): WorkforceSubmissionRow {
+  const state = asString(raw.lifecycle_state);
+  const submitted = raw.submitted_category == null ? null : asString(raw.submitted_category);
+  const final = raw.final_category == null ? null : asString(raw.final_category);
+
+  return {
+    staffId: asString(raw.staff_id),
+    attendanceDate: asString(raw.attendance_date),
+    lifecycleState: isWorkforceLifecycleState(state) ? state : "NOT_STARTED",
+    submittedCategory:
+      submitted && isWorkforceSubmittableCategory(submitted) ? submitted : null,
+    finalCategory: final && isWorkforceFinalCategory(final) ? final : null,
+    creditedMinutes: asNullableNumber(raw.credited_minutes),
+    lateMinutes: asNumber(raw.late_minutes),
+    isLate: raw.is_late === true,
+    reviewNote: raw.review_note == null ? null : asString(raw.review_note),
+    reviewedAt: raw.reviewed_at == null ? null : asString(raw.reviewed_at),
+  };
+}
+
+/** `YYYY-MM-DD` bounds of the calendar month containing `date`. */
+export function monthBounds(date: string): {
+  readonly monthStart: string;
+  readonly monthEnd: string;
+} {
+  const [year, month] = date.split("-").map((part) => Number(part));
+  const safeYear = Number.isFinite(year) ? year : new Date().getUTCFullYear();
+  const safeMonth = Number.isFinite(month) && month >= 1 && month <= 12 ? month : 1;
+  const lastDay = new Date(Date.UTC(safeYear, safeMonth, 0)).getUTCDate();
+  const mm = String(safeMonth).padStart(2, "0");
+  return {
+    monthStart: `${safeYear}-${mm}-01`,
+    monthEnd: `${safeYear}-${mm}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
+/** Human duration for elapsed/credited minutes. */
+export function formatMinutes(minutes: number | null): string {
+  if (minutes == null) {
+    return "—";
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `${hours}h ${rest}m`;
+}

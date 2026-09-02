@@ -6,6 +6,7 @@ interface AttendanceNavProps {
   readonly showCalendar?: boolean;
   readonly showCorrections?: boolean;
   readonly showPolicies?: boolean;
+  readonly showApprovals?: boolean;
 }
 
 export function AttendanceNav({
@@ -14,9 +15,13 @@ export function AttendanceNav({
   showCalendar = true,
   showCorrections = false,
   showPolicies = false,
+  showApprovals = false,
 }: AttendanceNavProps) {
   const items = [
     { href: "/admin/attendance", label: "Today" },
+    ...(showApprovals
+      ? [{ href: "/admin/attendance/approvals", label: "Approvals" } as const]
+      : []),
     ...(showCalendar
       ? [{ href: "/admin/attendance/calendar", label: "Calendar" } as const]
       : []),

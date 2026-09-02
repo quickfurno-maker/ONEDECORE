@@ -33,6 +33,7 @@ function attendanceAuthContext(
     canCorrectAllAttendance: false,
     canCorrectTeamAttendance: false,
     canManagePolicies: false,
+    canApproveAttendance: false,
     ...overrides,
   };
 }
