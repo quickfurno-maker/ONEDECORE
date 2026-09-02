@@ -1,8 +1,28 @@
-# ONEDECORE CRM 2.0 — Product Roadmap
+# ONEDECORE CRM 2.0 — Product Roadmap (HISTORICAL APPROVED PLAN)
 
-**Document status:** Approved (owner decisions locked 2026-08-26)  
-**Baseline:** protected `main` @ `6f07e08bf349ada2cabc96145585b89506e770d8`  
-**Date:** 2026-08-26  
+> ## ⚠ IMPLEMENTED — THIS DOCUMENT NO LONGER SCHEDULES WORK
+>
+> **Document status as of 2026-09-02:** *historical approved CRM 2.0 product plan*. It is preserved in full because it holds the **original CRM design reasoning and the locked owner decisions**, which remain binding as product architecture.
+>
+> **Repository implementation of this plan is COMPLETE through CRM 2E and merged to protected `main`:**
+>
+> | Release | Status |
+> | :--- | :--- |
+> | CRM 2A — Follow-up Control Plane | **MERGED / production live** |
+> | CRM 2B — Calendar + Premium Pipeline | **MERGED** (PR #114; 2B-1 UX earlier via PR #107) |
+> | CRM 2C — Sales Playbook + Cadences | **MERGED** (PR #115) |
+> | CRM 2D — Communication + Intelligence | **MERGED** (PR #116) |
+> | CRM 2E — Management Analytics | **MERGED** (PR #117) |
+> | CRM SLA admin settings | **MERGED** (PR #121) |
+>
+> The **first-contact SLA is ACTIVE in managed Supabase** — 60 business minutes, Asia/Kolkata, Monday–Saturday, 09:00–19:00, non-retroactive activation. The "Deployment configuration" table below, which recorded business hours as **pending owner lock**, is therefore **satisfied and historical**.
+>
+> **Production closeout is governed by [docs/11 — Accelerated Closeout Roadmap](../11-accelerated-closeout-roadmap.md)** (owner-locked 2026-09-02, **DEC-0097**). Read the "Release train" section below as **delivered scope**, not as a queue. CRM production operational certification is sequenced there as **P3**.
+
+**Document status:** Historical — Approved plan, fully implemented through 2E (owner decisions locked 2026-08-26; superseded as a schedule 2026-09-02)
+**Baseline at authorship:** protected `main` @ `6f07e08bf349ada2cabc96145585b89506e770d8`
+**Protected `main` at reclassification:** `27bcee1f36468175e1509e5ec10a0b3533f9c7d7`
+**Date:** 2026-08-26 (reclassified 2026-09-02)
 **Companion spec:** [CRM 2A — Follow-up Control Plane](./crm-2a-follow-up-control-plane-design.md)
 
 ---
@@ -231,7 +251,8 @@ First-response SLA compliance, velocity, conversion, forecast, target achievemen
 
 | Document | Purpose |
 | :--- | :--- |
-| This roadmap | Full CRM 2.0 phased product plan |
+| [docs/11 — Accelerated Closeout Roadmap](../11-accelerated-closeout-roadmap.md) | **Current execution authority** (DEC-0097); CRM production certification = P3 |
+| This roadmap | **Historical** full CRM 2.0 phased product plan — implemented through 2E |
 | [CRM 2A design](./crm-2a-follow-up-control-plane-design.md) | Implementation-ready spec for the first slice |
 | [ADR-0019](../ADR/ADR-0019-five-role-crm-authorization-model.md) | Five-role authorization model |
 | [Phase 5A audit](../audits/phase-5a-crm-architecture-freeze.md) | Historical architecture freeze |
@@ -247,3 +268,4 @@ First-response SLA compliance, velocity, conversion, forecast, target achievemen
 | 2026-08-26 | Owner review: roadmap approved; decision log added; primary-next-action & business-window SLA corrections |
 | 2026-08-26 | Pre-PR corrections: business hours = deployment config (no migration default schedule); reassignment authorization rules for secondary activities |
 | 2026-08-26 | Final pre-merge: overdue=`now()`; Closed-Won commercial-only; owner-aware reassignment helper; SLA attempt + non-retroactive activation |
+| 2026-09-02 | **Reclassified as historical approved plan.** Implementation complete and merged through **CRM 2E** (PRs #114–#117) plus SLA admin settings (PR #121); first-contact SLA **ACTIVE** in managed Supabase (60 business minutes, Asia/Kolkata, Mon–Sat, 09:00–19:00, non-retroactive). Production closeout now governed by [docs/11](../11-accelerated-closeout-roadmap.md) (DEC-0097). Original design reasoning and locked owner decisions preserved unchanged. |
