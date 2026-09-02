@@ -543,9 +543,16 @@ export async function attachStaffAppAccess(input: {
       displayName: input.displayName,
     });
   } catch (error) {
+    // The database was already moved to "invited" above, so claiming the record
+    // is unchanged would be false. State is deliberately left at "invited":
+    // either the login identity exists and only the email failed, or neither
+    // happened. Retrying is safe in both cases — attach_staff_app_access
+    // refuses only once access is genuinely active, and creating an identity
+    // that already exists surfaces as a provider error rather than a duplicate.
     throw new StaffError({
       code: "STAFF_INVITE_FAILED",
-      message: "App access could not be activated. The record is unchanged and you can retry.",
+      message:
+        "App access is marked invited but activation did not finish. Nothing was lost — retry to create the login and resend the set-password email.",
       httpStatus: 502,
       details: error instanceof Error ? error.message : undefined,
     });

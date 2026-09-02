@@ -259,7 +259,8 @@ export async function attachStaffAppAccessAction(
     revalidatePath("/admin/staff");
     return {
       success: true,
-      message: "App access activated. The staff member has been emailed a link to set their password.",
+      message:
+        "App access activated. A set-password email has been sent to the staff member.",
     };
   } catch (error) {
     if (error instanceof StaffError) {

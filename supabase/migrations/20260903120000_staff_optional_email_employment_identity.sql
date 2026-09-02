@@ -479,7 +479,13 @@ begin
 end;
 $$;
 
-/** Confirms the login identity now exists and matches the employment identity. */
+/**
+ * Confirms a login identity has been GENUINELY activated.
+ *
+ * "active" means the staff member actually signed in. The mere existence of an
+ * auth user only proves an invitation was provisioned, so this refuses unless
+ * `auth.users.last_sign_in_at` carries real activation evidence.
+ */
 create or replace function public.confirm_staff_app_access(p_staff_id uuid)
 returns jsonb
 language plpgsql
@@ -499,6 +505,14 @@ begin
     raise exception 'STAFF_ACCESS_NOT_PROVISIONED' using errcode = 'P0001';
   end if;
 
+  -- Provisioned but never signed in is "invited", never "active".
+  if not exists (
+    select 1 from auth.users u
+    where u.id = p_staff_id and u.last_sign_in_at is not null
+  ) then
+    raise exception 'STAFF_ACCESS_NOT_ACTIVATED' using errcode = 'P0001';
+  end if;
+
   update public.staff_employment_profiles
   set access_state = 'active', updated_at = now()
   where staff_id = p_staff_id;
@@ -512,6 +526,57 @@ begin
 end;
 $$;
 
+/**
+ * Reconciles stored access_state with authoritative Auth sign-in evidence.
+ *
+ * `access_state` is a cache of a fact that lives in `auth.users`, and a sign-in
+ * that happens later cannot retroactively fire the INSERT trigger. This is the
+ * synchroniser: staff read paths call it so the stored value converges on the
+ * truth. It only ever mirrors Auth — it never invents activation, and it is not
+ * a second authentication system.
+ *
+ * Pass a staff id to sync one row, or null to sync every row that disagrees.
+ */
+create or replace function public.sync_staff_access_states(p_staff_id uuid default null)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_updated integer;
+begin
+  perform private.staff_require_active_actor();
+
+  if not (select public.authorize('staff.read')) then
+    raise exception 'ATTENDANCE_UNAUTHORIZED' using errcode = '42501';
+  end if;
+
+  with derived as (
+    select
+      sep.staff_id,
+      case
+        when exists (
+          select 1 from auth.users u
+          where u.id = sep.staff_id and u.last_sign_in_at is not null
+        ) then 'active'
+        when exists (select 1 from auth.users u where u.id = sep.staff_id) then 'invited'
+        else 'not_activated'
+      end as truth
+    from public.staff_employment_profiles sep
+    where p_staff_id is null or sep.staff_id = p_staff_id
+  )
+  update public.staff_employment_profiles sep
+  set access_state = derived.truth, updated_at = now()
+  from derived
+  where derived.staff_id = sep.staff_id
+    and sep.access_state is distinct from derived.truth;
+
+  get diagnostics v_updated = row_count;
+  return v_updated;
+end;
+$$;
+
 -- -----------------------------------------------------------------------------
 -- E. Grants
 -- -----------------------------------------------------------------------------
@@ -519,11 +584,14 @@ $$;
 revoke all on function public.create_staff_member_without_invite(uuid, text, text, text, text, date, text, uuid, boolean, uuid) from public, anon;
 revoke all on function public.attach_staff_app_access(uuid, text) from public, anon;
 revoke all on function public.confirm_staff_app_access(uuid) from public, anon;
+revoke all on function public.sync_staff_access_states(uuid) from public, anon;
 
 grant execute on function public.create_staff_member_without_invite(uuid, text, text, text, text, date, text, uuid, boolean, uuid) to authenticated;
 grant execute on function public.attach_staff_app_access(uuid, text) to authenticated;
 grant execute on function public.confirm_staff_app_access(uuid) to authenticated;
+grant execute on function public.sync_staff_access_states(uuid) to authenticated;
 
 alter function public.create_staff_member_without_invite(uuid, text, text, text, text, date, text, uuid, boolean, uuid) owner to postgres;
 alter function public.attach_staff_app_access(uuid, text) owner to postgres;
 alter function public.confirm_staff_app_access(uuid) owner to postgres;
+alter function public.sync_staff_access_states(uuid) owner to postgres;

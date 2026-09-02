@@ -374,9 +374,11 @@ describe("PR127 corrections", () => {
     assert.match(contract, /result\.userId !== input\.staffId/);
     assert.match(contract, /did not honour the requested user id/);
 
-    const adapter = read("src/features/staff-admin/server/staff-invite-adapter.ts");
-    assert.match(adapter, /id: input\.staffId/);
-    assert.match(adapter, /admin\/users/);
+    // The REST call moved into staff-login-provisioning.ts so the delivery step
+    // could be unit tested with an injected fetch.
+    const rest = read("src/features/staff-admin/server/staff-login-provisioning.ts");
+    assert.match(rest, /id: input\.staffId/);
+    assert.match(rest, /AUTH_ADMIN_USERS_PATH/);
   });
 
   test("CORRECTION 3: attachment still generates no placeholder address", () => {
@@ -391,5 +393,65 @@ describe("PR127 corrections", () => {
     assert.doesNotMatch(executable, /@example\./);
     assert.doesNotMatch(executable, /noreply/i);
     assert.doesNotMatch(executable, /placeholder/i);
+  });
+});
+
+describe("PR127 final corrections", () => {
+  const sql = read(MIGRATION);
+  const actions = read(STAFF_ACTIONS);
+
+  test("FINAL 1: delivery is a real send, not link generation", () => {
+    const adapter = read("src/features/staff-admin/server/staff-invite-adapter.ts");
+    const executable = adapter
+      .split(/\r?\n/)
+      .filter((line) => {
+        const t = line.trimStart();
+        return !t.startsWith("//") && !t.startsWith("*") && !t.startsWith("/*");
+      })
+      .join(" ");
+    assert.doesNotMatch(executable, /generateLink/);
+
+    const rest = read("src/features/staff-admin/server/staff-login-provisioning.ts");
+    assert.match(rest, /AUTH_RECOVER_PATH = "\/auth\/v1\/recover"/);
+    assert.match(rest, /deliveryInvoked/);
+  });
+
+  test("FINAL 2: active requires genuine sign-in evidence", () => {
+    // confirm refuses without last_sign_in_at.
+    assert.match(sql, /STAFF_ACCESS_NOT_ACTIVATED/);
+    const confirmFn = sql.slice(
+      sql.indexOf("function public.confirm_staff_app_access"),
+      sql.indexOf("function public.sync_staff_access_states")
+    );
+    assert.match(confirmFn, /last_sign_in_at is not null/);
+
+    // And a synchroniser exists so a later sign-in is reflected.
+    assert.match(sql, /create or replace function public\.sync_staff_access_states/);
+  });
+
+  test("FINAL 2: the synchroniser mirrors Auth and never invents activation", () => {
+    const syncFn = sql.slice(sql.indexOf("function public.sync_staff_access_states"));
+    assert.match(syncFn, /last_sign_in_at is not null[\s\S]{0,80}'active'/);
+    assert.match(syncFn, /'not_activated'/);
+    // It is read-gated, not open.
+    assert.match(syncFn, /public\.authorize\('staff\.read'\)/);
+  });
+
+  test("FINAL 2: staff read paths reconcile before returning rows", () => {
+    const queries = read("src/features/staff-admin/server/staff-queries.ts");
+    assert.match(queries, /syncStaffAccessStates\(supabase, null\)/);
+    assert.match(queries, /syncStaffAccessStates\(supabase, staffId\)/);
+    // The list select must actually carry access_state, or it silently falls back.
+    const listSelect = queries.slice(
+      queries.indexOf("export async function loadStaffList"),
+      queries.indexOf("export async function loadStaffDetail")
+    );
+    assert.match(listSelect, /access_state/);
+  });
+
+  test("FINAL 3: failure wording does not claim the record is unchanged", () => {
+    assert.doesNotMatch(actions, /The record is unchanged/);
+    assert.match(actions, /marked invited but activation did not finish/);
+    assert.match(actions, /retry/i);
   });
 });

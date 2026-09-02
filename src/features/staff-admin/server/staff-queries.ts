@@ -155,14 +155,41 @@ function mapEmploymentRowToListItem(
   };
 }
 
+/**
+ * Reconciles cached app-access state with authoritative Auth sign-in evidence.
+ *
+ * access_state is derived on INSERT, but a sign-in happening later cannot fire
+ * that trigger. Staff read paths therefore resync first, so "invited" becomes
+ * "active" only when a real sign-in exists. Best-effort: a sync failure must
+ * never block reading the directory.
+ */
+async function syncStaffAccessStates(
+  client: Awaited<ReturnType<typeof createClient>>,
+  staffId: string | null
+): Promise<void> {
+  try {
+    await (
+      client as unknown as {
+        rpc(
+          fn: "sync_staff_access_states",
+          args: { readonly p_staff_id: string | null }
+        ): PromiseLike<{ error: { message: string } | null }>;
+      }
+    ).rpc("sync_staff_access_states", { p_staff_id: staffId });
+  } catch {
+    // Non-fatal: the stored value is still shown, just possibly one sign-in stale.
+  }
+}
+
 export async function loadStaffList(): Promise<readonly StaffListItem[]> {
   await requireStaffReadAccess();
 
   const supabase = await createClient();
+  await syncStaffAccessStates(supabase, null);
   const { data, error } = await staffQueryClient(supabase)
     .from("staff_employment_profiles")
     .select(
-      "staff_id, employee_code, designation, joining_date, reporting_manager_id, profiles!staff_employment_profiles_staff_id_fkey(display_name, status), manager:profiles!staff_employment_profiles_reporting_manager_id_fkey(display_name)"
+      "staff_id, employee_code, designation, joining_date, reporting_manager_id, access_state, profiles!staff_employment_profiles_staff_id_fkey(display_name, status), manager:profiles!staff_employment_profiles_reporting_manager_id_fkey(display_name)"
     )
     .order("employee_code", { ascending: true });
 
@@ -185,6 +212,7 @@ export async function loadStaffDetail(staffId: string): Promise<StaffDetail | nu
   await requireStaffReadAccess();
 
   const supabase = await createClient();
+  await syncStaffAccessStates(supabase, staffId);
   const { data, error } = await staffQueryClient(supabase)
     .from("staff_employment_profiles")
     .select(

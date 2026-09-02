@@ -1,7 +1,7 @@
 -- ONEDECORE — staff creation without an email: employment identity vs login identity
 
 begin;
-select plan(53);
+select plan(66);
 
 -- -----------------------------------------------------------------------------
 -- A. Employment identity is no longer welded to a login identity
@@ -304,11 +304,13 @@ select throws_ok(
   'access cannot be confirmed before the auth user exists'
 );
 
--- Simulate the app creating the auth user WITH THE SAME UUID.
+-- Simulate the app creating the auth user WITH THE SAME UUID, and the staff
+-- member then genuinely signing in. Without that sign-in the day stays
+-- "invited" — proven separately in section J.
 reset role;
-insert into auth.users (id, instance_id, email, aud, role)
+insert into auth.users (id, instance_id, email, aud, role, last_sign_in_at)
 select sep.staff_id, '00000000-0000-0000-0000-000000000000',
-       'later.activated@example.test', 'authenticated', 'authenticated'
+       'later.activated@example.test', 'authenticated', 'authenticated', now()
 from public.staff_employment_profiles sep
 where sep.employee_code = 'OE-EXEC-1';
 
@@ -560,6 +562,116 @@ select ok(
     where n.nspname = 'public' and p.proname = 'attach_staff_app_access'
   ),
   'CORRECTION 3: attach_staff_app_access exists'
+);
+
+-- -----------------------------------------------------------------------------
+-- J. FINAL CORRECTION — invited becomes active only on genuine sign-in
+-- -----------------------------------------------------------------------------
+
+reset role;
+
+-- An auth identity that has NEVER signed in.
+insert into auth.users (id, instance_id, email, aud, role) values
+  ('42a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1', '00000000-0000-0000-0000-000000000000',
+   '42-never@example.test', 'authenticated', 'authenticated');
+
+insert into public.profiles (id, display_name, status)
+values ('42a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1', 'Never Signed In', 'active')
+on conflict (id) do update set display_name = excluded.display_name;
+
+insert into public.staff_employment_profiles
+  (staff_id, employee_code, designation, joining_date, attendance_eligible)
+values ('42a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1', 'OE-NEVER-1', 'Executive', date '2026-05-01', false);
+
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-NEVER-1'),
+  'invited',
+  'FINAL: auth identity exists but never signed in -> invited'
+);
+
+set local role authenticated;
+set local request.jwt.claim.sub = '42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+-- Confirming before a real sign-in must be refused.
+select throws_ok(
+  $q$select public.confirm_staff_app_access('42a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1')$q$,
+  'STAFF_ACCESS_NOT_ACTIVATED',
+  'FINAL: confirm before sign-in is refused'
+);
+
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-NEVER-1'),
+  'invited',
+  'FINAL: a refused confirm leaves the state at invited'
+);
+
+-- Syncing must not promote a never-signed-in identity either.
+select lives_ok(
+  $q$select public.sync_staff_access_states('42a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1')$q$,
+  'FINAL: sync runs for a specific staff member'
+);
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-NEVER-1'),
+  'invited',
+  'FINAL: sync cannot invent activation'
+);
+
+-- Now record genuine sign-in evidence, exactly as GoTrue would.
+reset role;
+update auth.users set last_sign_in_at = now()
+where id = '42a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1';
+
+set local role authenticated;
+set local request.jwt.claim.sub = '42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+-- The stored cache is still stale until it is reconciled: a later sign-in
+-- cannot retroactively fire the INSERT trigger. This is the defect the
+-- synchroniser fixes.
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-NEVER-1'),
+  'invited',
+  'FINAL: a later sign-in does not update the cache by itself'
+);
+
+select is(
+  public.sync_staff_access_states('42a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1'),
+  1,
+  'FINAL: sync reconciles exactly the one stale row'
+);
+
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-NEVER-1'),
+  'active',
+  'FINAL: genuine sign-in evidence -> active'
+);
+
+-- And confirm now succeeds because the evidence is real.
+select lives_ok(
+  $q$select public.confirm_staff_app_access('42a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1')$q$,
+  'FINAL: confirm succeeds once a real sign-in exists'
+);
+
+-- A staff member with no auth identity is never promoted by the synchroniser.
+select lives_ok(
+  $q$select public.sync_staff_access_states(null)$q$,
+  'FINAL: bulk sync runs'
+);
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-EXEC-1'),
+  'active',
+  'FINAL: the earlier activated staff member stays active after bulk sync'
+);
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-IDEM-1'),
+  'not_activated',
+  'FINAL: no auth identity stays not_activated through bulk sync'
+);
+
+-- The synchroniser is read-gated, not open.
+set local request.jwt.claim.sub = '42bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+select lives_ok(
+  $q$select public.sync_staff_access_states(null)$q$,
+  'FINAL: a sales manager holding staff.read may reconcile'
 );
 
 reset role;
