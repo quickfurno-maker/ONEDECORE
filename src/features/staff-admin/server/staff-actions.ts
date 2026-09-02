@@ -17,7 +17,10 @@ import {
 import { isStaffProfileStatusCode } from "../contracts/permissions.ts";
 import { StaffError, staffErrorFromPostgresMessage } from "../contracts/errors.ts";
 import { getStaffAdminAccessContext } from "./staff-auth.ts";
-import { inviteStaffMemberByEmail } from "./staff-invite-adapter.ts";
+import {
+  inviteStaffMemberByEmail,
+  provisionStaffLoginIdentity,
+} from "./staff-invite-adapter.ts";
 
 type StaffServerClient = SupabaseClient<Database>;
 
@@ -87,6 +90,10 @@ interface CreateStaffWithoutInviteRpcArgs {
 }
 
 type StaffRpcClient = StaffServerClient & {
+  rpc(
+    fn: "attach_staff_app_access",
+    args: { readonly p_staff_id: string; readonly p_email: string }
+  ): ReturnType<StaffServerClient["rpc"]>;
   rpc(
     fn: "create_staff_member_without_invite",
     args: CreateStaffWithoutInviteRpcArgs
@@ -491,4 +498,58 @@ export async function updateEmployment(
     staffId: String(payload.staffId ?? input.staffId),
     attendanceEligible: payload.attendanceEligible === true,
   };
+}
+
+/**
+ * Attaches a LOGIN identity to an existing employment record.
+ *
+ * Order mirrors the invite saga: mark intent in the database first, then call
+ * the identity provider. A provider failure leaves access_state at "invited"
+ * and is safely retryable, and the auth user is always created with the
+ * pre-allocated employment id so profiles.id === auth.users.id.
+ */
+export async function attachStaffAppAccess(input: {
+  readonly staffId: string;
+  readonly email: string;
+  readonly displayName: string;
+}): Promise<{ readonly staffId: string; readonly accessState: string }> {
+  await requireManageStaffContext();
+
+  const email = normalizeStaffEmail(input.email);
+  if (email === null) {
+    throw new StaffError({
+      code: "STAFF_EMAIL_INVALID",
+      message: "Enter the work email to activate app access.",
+      httpStatus: 422,
+    });
+  }
+
+  const supabase = await createClient();
+  const rpcClient = supabase as StaffRpcClient;
+
+  const { error: attachError } = await rpcClient.rpc("attach_staff_app_access", {
+    p_staff_id: input.staffId,
+    p_email: email,
+  });
+
+  if (attachError) {
+    throw staffErrorFromPostgresMessage(attachError.message);
+  }
+
+  try {
+    await provisionStaffLoginIdentity({
+      staffId: input.staffId,
+      email,
+      displayName: input.displayName,
+    });
+  } catch (error) {
+    throw new StaffError({
+      code: "STAFF_INVITE_FAILED",
+      message: "App access could not be activated. The record is unchanged and you can retry.",
+      httpStatus: 502,
+      details: error instanceof Error ? error.message : undefined,
+    });
+  }
+
+  return { staffId: input.staffId, accessState: "invited" };
 }

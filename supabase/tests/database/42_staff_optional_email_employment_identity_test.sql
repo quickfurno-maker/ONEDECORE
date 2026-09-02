@@ -1,7 +1,7 @@
 -- ONEDECORE — staff creation without an email: employment identity vs login identity
 
 begin;
-select plan(38);
+select plan(53);
 
 -- -----------------------------------------------------------------------------
 -- A. Employment identity is no longer welded to a login identity
@@ -379,6 +379,187 @@ select throws_ok(
     )$$,
   'ATTENDANCE_UNAUTHORIZED',
   'a sales manager cannot confirm app access'
+);
+
+reset role;
+
+-- -----------------------------------------------------------------------------
+-- G. CORRECTION 1 — access_state persists correctly on BOTH creation paths
+-- -----------------------------------------------------------------------------
+
+reset role;
+
+-- The Phase 6D invite saga inserts staff_employment_profiles WITHOUT
+-- access_state. The derive trigger must classify it from the login identity, or
+-- every newly invited staff member would read "not_activated".
+insert into auth.users (id, instance_id, email, aud, role) values
+  ('42eeeeee-eeee-4eee-8eee-eeeeeeeeeeee', '00000000-0000-0000-0000-000000000000',
+   '42-invited@example.test', 'authenticated', 'authenticated');
+
+insert into public.staff_employment_profiles
+  (staff_id, employee_code, designation, joining_date, attendance_eligible)
+values ('42eeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'OE-INV-1', 'Executive', date '2026-03-01', false);
+
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-INV-1'),
+  'invited',
+  'CORRECTION 1: an invite-path row with an auth user is invited, not not_activated'
+);
+
+-- A staff member who has actually signed in is active.
+insert into auth.users (id, instance_id, email, aud, role, last_sign_in_at) values
+  ('42ffffff-ffff-4fff-8fff-ffffffffffff', '00000000-0000-0000-0000-000000000000',
+   '42-signedin@example.test', 'authenticated', 'authenticated', now());
+
+insert into public.staff_employment_profiles
+  (staff_id, employee_code, designation, joining_date, attendance_eligible)
+values ('42ffffff-ffff-4fff-8fff-ffffffffffff', 'OE-ACT-1', 'Executive', date '2026-03-01', false);
+
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-ACT-1'),
+  'active',
+  'CORRECTION 1: a signed-in staff member is active'
+);
+
+-- A row with no login identity stays not_activated even when a caller asserts
+-- otherwise: the trigger derives the value, it does not trust input.
+insert into public.profiles (id, display_name, status)
+values ('42999999-9999-4999-8999-999999999999', 'Trigger Probe', 'active');
+
+insert into public.staff_employment_profiles
+  (staff_id, employee_code, designation, joining_date, attendance_eligible, access_state)
+values ('42999999-9999-4999-8999-999999999999', 'OE-TRG-1', 'Executive', date '2026-03-01', false, 'active');
+
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-TRG-1'),
+  'not_activated',
+  'CORRECTION 1: a claimed access_state cannot outrank the absence of a login identity'
+);
+
+-- -----------------------------------------------------------------------------
+-- H. CORRECTION 2 — strong clientRequestId idempotency
+-- -----------------------------------------------------------------------------
+
+set local role authenticated;
+set local request.jwt.claim.sub = '42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select lives_ok(
+  $q$select public.create_staff_member_without_invite(
+      '42aaabbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
+      'OE-IDEM-1', 'Idempotency Probe', null, 'Executive',
+      date '2026-04-01', 'designer', null, false, null
+    )$q$,
+  'CORRECTION 2: first call succeeds'
+);
+
+-- The ledger, not the audit log, is the idempotency record. It is revoked from
+-- `authenticated` by design, so these are asserted as the owner.
+reset role;
+select is(
+  (select count(*)::integer from private.staff_direct_create_requests
+   where client_request_id = '42aaabbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+  1,
+  'CORRECTION 2: the request id is claimed in the ledger'
+);
+
+select ok(
+  (select result is not null from private.staff_direct_create_requests
+   where client_request_id = '42aaabbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+  'CORRECTION 2: the real result is persisted for replay'
+);
+
+select ok(
+  (select staff_id is not null from private.staff_direct_create_requests
+   where client_request_id = '42aaabbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+  'CORRECTION 2: the ledger records which staff record the request produced'
+);
+set local role authenticated;
+set local request.jwt.claim.sub = '42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+-- Replay with an identical payload returns the SAME staff id.
+select is(
+  (public.create_staff_member_without_invite(
+      '42aaabbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
+      'OE-IDEM-1', 'Idempotency Probe', null, 'Executive',
+      date '2026-04-01', 'designer', null, false, null
+   ) ->> 'staffId'),
+  (select sep.staff_id::text from public.staff_employment_profiles sep
+   where sep.employee_code = 'OE-IDEM-1'),
+  'CORRECTION 2: replay returns the original staff id'
+);
+
+select is(
+  (public.create_staff_member_without_invite(
+      '42aaabbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
+      'OE-IDEM-1', 'Idempotency Probe', null, 'Executive',
+      date '2026-04-01', 'designer', null, false, null
+   ) ->> 'idempotentReplay')::boolean,
+  true,
+  'CORRECTION 2: replay is flagged as a replay'
+);
+
+select is(
+  (select count(*)::integer from public.staff_employment_profiles
+   where employee_code = 'OE-IDEM-1'),
+  1,
+  'CORRECTION 2: replay created no second employment record'
+);
+
+-- Replay reports the ACTUAL stored access state, not a hardcoded guess.
+select is(
+  (public.create_staff_member_without_invite(
+      '42aaabbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
+      'OE-IDEM-1', 'Idempotency Probe', null, 'Executive',
+      date '2026-04-01', 'designer', null, false, null
+   ) ->> 'accessState'),
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-IDEM-1'),
+  'CORRECTION 2: replay reports the stored access state'
+);
+
+-- Same request id with a DIFFERENT payload is a hard conflict, matching the
+-- invite saga contract, rather than silently returning the earlier record.
+select throws_ok(
+  $q$select public.create_staff_member_without_invite(
+      '42aaabbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
+      'OE-IDEM-2', 'Different Payload', null, 'Executive',
+      date '2026-04-01', 'designer', null, false, null
+    )$q$,
+  'STAFF_IDEMPOTENCY_CONFLICT',
+  'CORRECTION 2: same request id with a different payload is refused'
+);
+
+-- A DIFFERENT request id reusing the same employee code is still a duplicate.
+select throws_ok(
+  $q$select public.create_staff_member_without_invite(
+      '42aaaccc-cccc-4ccc-8ccc-cccccccccccc'::uuid,
+      'OE-IDEM-1', 'Idempotency Probe', null, 'Executive',
+      date '2026-04-01', 'designer', null, false, null
+    )$q$,
+  'employee_code already exists',
+  'CORRECTION 2: a new request id cannot duplicate an employee code'
+);
+
+-- The ledger primary key is what makes concurrent replay safe.
+reset role;
+select ok(
+  exists (
+    select 1 from pg_constraint
+    where conrelid = 'private.staff_direct_create_requests'::regclass
+      and contype = 'p'
+  ),
+  'CORRECTION 2: client_request_id is a primary key, so concurrent submits cannot both insert'
+);
+
+-- -----------------------------------------------------------------------------
+-- I. CORRECTION 3 — app-access attachment exists in the database
+-- -----------------------------------------------------------------------------
+
+select ok(
+  exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'attach_staff_app_access'
+  ),
+  'CORRECTION 3: attach_staff_app_access exists'
 );
 
 reset role;

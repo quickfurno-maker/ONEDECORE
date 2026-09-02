@@ -9,6 +9,7 @@ import type {
 } from "../server/staff-queries.ts";
 import {
   setReportingManagerAction,
+  attachStaffAppAccessAction,
   setStaffStatusAction,
   updateStaffEmploymentAction,
   type StaffFormActionState,
@@ -52,6 +53,10 @@ export function StaffDetailPanel({
   managers,
   policies,
 }: StaffDetailPanelProps) {
+  const [appAccessState, appAccessAction, appAccessPending] = useActionState(
+    attachStaffAppAccessAction,
+    INITIAL_STATE
+  );
   const [statusState, statusAction, statusPending] = useActionState(
     setStaffStatusAction,
     INITIAL_STATE
@@ -234,6 +239,56 @@ export function StaffDetailPanel({
                 Update manager
               </button>
             </form>
+          </section>
+
+          <section className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-6">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-300">
+              App access
+            </h3>
+            <p className="mt-2 text-sm text-neutral-400">
+              Employment and login are separate. This staff member is employed and
+              fully manageable; app access is only about signing in.
+            </p>
+
+            {staff.accessState === "not_activated" ? (
+              <form action={appAccessAction} className="mt-4 space-y-4">
+                <input type="hidden" name="staffId" value={staff.staffId} />
+                <input type="hidden" name="displayName" value={staff.displayName} />
+                <div>
+                  <label htmlFor="app-access-email" className="text-sm font-medium text-neutral-200">
+                    Work email
+                  </label>
+                  <input
+                    id="app-access-email"
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="person@onedecore.in"
+                    className={fieldClassName}
+                  />
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Creates the login using this employment record&rsquo;s existing id and
+                    emails a link to set a password. No placeholder address is ever used.
+                  </p>
+                </div>
+                <button
+                  type="submit"
+                  disabled={appAccessPending}
+                  className="inline-flex min-h-11 items-center rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-60"
+                >
+                  {appAccessPending ? "Activating…" : "Activate app access"}
+                </button>
+                <ActionFeedback state={appAccessState} />
+              </form>
+            ) : (
+              <p className="mt-4 text-sm text-neutral-300">
+                App access is{" "}
+                <span className="font-medium text-neutral-100">
+                  {staff.accessState === "invited" ? "invited" : "active"}
+                </span>
+                . Use the invite controls above to resend if needed.
+              </p>
+            )}
           </section>
 
           <section className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-6">

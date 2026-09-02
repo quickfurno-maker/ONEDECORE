@@ -89,13 +89,53 @@ alter table public.staff_employment_profiles
 comment on column public.staff_employment_profiles.access_state is
   'LOGIN identity state: not_activated (no auth user), invited (email attached, invite sent), active (has signed in). Separate from employment status and from invite_reconciliation_state, which stays the saga reconciliation marker.';
 
--- Every staff record that exists today came through the email invite saga and
--- therefore already owns an auth user.
+-- Backfill using the same rule the trigger below applies, so historical rows
+-- and future rows can never disagree:
+--   signed in at least once -> active
+--   auth user but never signed in -> invited
+--   no auth user -> not_activated
 update public.staff_employment_profiles sep
 set access_state = case
-  when exists (select 1 from auth.users u where u.id = sep.staff_id) then 'active'
-  else 'invited'
+  when exists (
+    select 1 from auth.users u
+    where u.id = sep.staff_id and u.last_sign_in_at is not null
+  ) then 'active'
+  when exists (select 1 from auth.users u where u.id = sep.staff_id) then 'invited'
+  else 'not_activated'
 end;
+
+-- The Phase 6D invite saga (M23 `staff_finalize_invite_from_saga`) inserts
+-- staff_employment_profiles WITHOUT access_state, so the column default alone
+-- would mark every NEWLY INVITED staff member "not_activated" — a regression.
+-- M23 is already applied and must not be edited, so access_state is DERIVED on
+-- insert instead. Both creation paths converge here, so they cannot disagree.
+--
+-- Only BEFORE INSERT: attach/confirm update the column explicitly afterwards.
+create or replace function private.staff_derive_access_state()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  new.access_state := case
+    when exists (
+      select 1 from auth.users u
+      where u.id = new.staff_id and u.last_sign_in_at is not null
+    ) then 'active'
+    when exists (select 1 from auth.users u where u.id = new.staff_id) then 'invited'
+    else 'not_activated'
+  end;
+  return new;
+end;
+$$;
+
+create trigger trg_staff_employment_profiles_derive_access_state
+before insert on public.staff_employment_profiles
+for each row execute function private.staff_derive_access_state();
+
+revoke all on function private.staff_derive_access_state() from public, anon, authenticated;
+alter function private.staff_derive_access_state() owner to postgres;
 
 create index if not exists idx_staff_employment_profiles_access_state
   on public.staff_employment_profiles (access_state);
@@ -125,6 +165,40 @@ alter table public.staff_admin_events
       'staff.app_access_activated'
     ])
   );
+
+-- -----------------------------------------------------------------------------
+-- B3. Idempotency ledger for the no-invite path
+-- -----------------------------------------------------------------------------
+--
+-- `private.staff_invite_saga_requests` cannot be reused: its `intended_email` is
+-- NOT NULL with a length >= 3 check, and inventing a value there would be a
+-- fabricated address.
+--
+-- This is an idempotency LEDGER, not a second state machine: it has no states.
+-- The primary key on client_request_id is what makes replay concurrency-safe —
+-- two simultaneous submits of the same request cannot both insert, so they
+-- cannot both create staff. The digest makes a same-id/different-payload replay
+-- a hard conflict, matching the invite saga's contract.
+
+create table private.staff_direct_create_requests (
+  client_request_id uuid primary key,
+  request_digest text not null,
+  employee_code text not null,
+  staff_id uuid references public.profiles (id) on delete restrict,
+  created_by uuid not null references public.profiles (id) on delete restrict,
+  request_payload jsonb not null,
+  result jsonb,
+  created_at timestamptz not null default now(),
+
+  constraint chk_staff_direct_create_payload_size check (
+    pg_column_size(request_payload) <= 4096
+  )
+);
+
+comment on table private.staff_direct_create_requests is
+  'Idempotency ledger for create_staff_member_without_invite. PK on client_request_id makes concurrent replay safe; request_digest turns a same-id different-payload replay into STAFF_IDEMPOTENCY_CONFLICT.';
+
+revoke all on table private.staff_direct_create_requests from public, anon, authenticated;
 
 -- -----------------------------------------------------------------------------
 -- C. Direct creation without an invitation
@@ -159,7 +233,10 @@ declare
   v_staff_id uuid;
   v_role_id uuid;
   v_normalized_code text;
-  v_existing uuid;
+  v_payload jsonb;
+  v_digest text;
+  v_request private.staff_direct_create_requests%rowtype;
+  v_result jsonb;
 begin
   v_actor := private.staff_require_active_actor();
 
@@ -177,28 +254,63 @@ begin
     raise exception 'validation: employee_code required' using errcode = '22023';
   end if;
 
-  -- Idempotent replay: the same employee code returns the existing record
-  -- rather than raising, so a retried submit cannot create a duplicate.
-  select sep.staff_id into v_existing
-  from public.staff_employment_profiles sep
-  where sep.employee_code = v_normalized_code;
+  -- Idempotency is keyed on the CLIENT REQUEST ID, not the employee code, and is
+  -- claimed by an insert so concurrent duplicates are impossible.
+  v_payload := jsonb_build_object(
+    'employeeCode', v_normalized_code,
+    'displayName', trim(p_display_name),
+    'phoneE164', nullif(trim(coalesce(p_phone_e164, '')), ''),
+    'designation', trim(p_designation),
+    'joiningDate', p_joining_date::text,
+    'roleCode', p_role_code,
+    'reportingManagerId', p_reporting_manager_id,
+    'attendanceEligible', coalesce(p_attendance_eligible, false),
+    'attendancePolicyId', p_attendance_policy_id
+  );
+  v_digest := private.staff_digest_json(v_payload);
 
-  if v_existing is not null then
-    if exists (
-      select 1 from public.staff_admin_events e
-      where e.staff_id = v_existing
-        and e.event_type = 'staff.created_without_invite'
-        and e.details ->> 'clientRequestId' = p_client_request_id::text
-    ) then
-      return jsonb_build_object(
-        'staffId', v_existing,
-        'employeeCode', v_normalized_code,
-        'accessState', 'not_activated',
-        'invitationState', 'not_activated',
-        'reconciliationState', 'none',
-        'idempotentReplay', true
-      );
+  select * into v_request
+  from private.staff_direct_create_requests
+  where client_request_id = p_client_request_id;
+
+  if found then
+    -- Same id, different payload is a conflict, exactly as the invite saga
+    -- treats it. Never silently return a record the caller did not ask for.
+    if v_request.request_digest <> v_digest then
+      raise exception 'STAFF_IDEMPOTENCY_CONFLICT' using errcode = 'P0001';
     end if;
+
+    return coalesce(v_request.result, '{}'::jsonb)
+      || jsonb_build_object('idempotentReplay', true);
+  end if;
+
+  -- Claim the request id. A concurrent identical submit loses this race with a
+  -- unique violation and is converted into the same idempotent replay below.
+  begin
+    insert into private.staff_direct_create_requests (
+      client_request_id, request_digest, employee_code, created_by, request_payload
+    )
+    values (
+      p_client_request_id, v_digest, v_normalized_code, v_actor, v_payload
+    );
+  exception
+    when unique_violation then
+      select * into v_request
+      from private.staff_direct_create_requests
+      where client_request_id = p_client_request_id;
+
+      if v_request.request_digest <> v_digest then
+        raise exception 'STAFF_IDEMPOTENCY_CONFLICT' using errcode = 'P0001';
+      end if;
+
+      return coalesce(v_request.result, '{}'::jsonb)
+        || jsonb_build_object('idempotentReplay', true);
+  end;
+
+  if exists (
+    select 1 from public.staff_employment_profiles sep
+    where sep.employee_code = v_normalized_code
+  ) then
     raise exception 'employee_code already exists' using errcode = 'P0001';
   end if;
 
@@ -269,14 +381,25 @@ begin
     )
   );
 
-  return jsonb_build_object(
+  -- Persist the real outcome so an idempotent replay returns exactly what the
+  -- first call returned, including the actual stored access_state rather than a
+  -- hardcoded guess.
+  v_result := jsonb_build_object(
     'staffId', v_staff_id,
     'employeeCode', v_normalized_code,
-    'accessState', 'not_activated',
+    'accessState', (
+      select sep.access_state from public.staff_employment_profiles sep
+      where sep.staff_id = v_staff_id
+    ),
     'invitationState', 'not_activated',
-    'reconciliationState', 'none',
-    'idempotentReplay', false
+    'reconciliationState', 'none'
   );
+
+  update private.staff_direct_create_requests
+  set staff_id = v_staff_id, result = v_result
+  where client_request_id = p_client_request_id;
+
+  return v_result || jsonb_build_object('idempotentReplay', false);
 end;
 $$;
 

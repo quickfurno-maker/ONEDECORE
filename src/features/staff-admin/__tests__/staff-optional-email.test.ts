@@ -309,3 +309,87 @@ describe("staff optional email — migration contract", () => {
     assert.match(sql, /STAFF_ACCESS_ALREADY_ACTIVE/);
   });
 });
+
+describe("PR127 corrections", () => {
+  const sql = read(MIGRATION);
+  const actions = read(STAFF_ACTIONS);
+
+  test("CORRECTION 1: access_state is derived on insert, so the invite path cannot regress", () => {
+    // M23's finalize function inserts staff_employment_profiles WITHOUT
+    // access_state. Relying on the column default alone would mark every newly
+    // invited staff member "not_activated".
+    assert.match(sql, /create trigger trg_staff_employment_profiles_derive_access_state/);
+    assert.match(sql, /before insert on public\.staff_employment_profiles/);
+    assert.match(sql, /private\.staff_derive_access_state/);
+
+    // The rule is identical in the trigger and in the backfill.
+    const rule = /last_sign_in_at is not null[\s\S]{0,120}'active'[\s\S]{0,160}'invited'[\s\S]{0,80}'not_activated'/;
+    const occurrences = sql.split("last_sign_in_at is not null").length - 1;
+    assert.ok(occurrences >= 2, "backfill and trigger must share the rule");
+    assert.match(sql, rule);
+  });
+
+  test("CORRECTION 2: idempotency is a keyed ledger, not an audit-log scan", () => {
+    assert.match(sql, /create table private\.staff_direct_create_requests/);
+    assert.match(sql, /client_request_id uuid primary key/);
+    assert.match(sql, /request_digest text not null/);
+    assert.match(sql, /STAFF_IDEMPOTENCY_CONFLICT/);
+    assert.match(sql, /when unique_violation then/);
+
+    // The weak guard is gone: idempotency must not be inferred from events.
+    assert.doesNotMatch(
+      sql,
+      /from public\.staff_admin_events[\s\S]{0,200}details ->> 'clientRequestId'/
+    );
+  });
+
+  test("CORRECTION 2: replay returns the persisted result, not a hardcoded state", () => {
+    assert.match(sql, /update private\.staff_direct_create_requests[\s\S]{0,120}set staff_id = v_staff_id, result = v_result/);
+    assert.match(sql, /coalesce\(v_request\.result, '\{\}'::jsonb\)/);
+    // accessState on the happy path is read back from the row, not literal.
+    assert.match(
+      sql,
+      /'accessState', \(\s*select sep\.access_state from public\.staff_employment_profiles sep/
+    );
+  });
+
+  test("CORRECTION 3: app-access attachment is implemented end to end", () => {
+    // Server action exists and provisions the login identity.
+    assert.match(actions, /export async function attachStaffAppAccess/);
+    assert.match(actions, /attach_staff_app_access/);
+    assert.match(actions, /provisionStaffLoginIdentity/);
+
+    // Form action + UI surface.
+    const formActions = read("src/features/staff-admin/server/staff-form-actions.ts");
+    assert.match(formActions, /attachStaffAppAccessAction/);
+    const panel = read("src/features/staff-admin/components/StaffDetailPanel.tsx");
+    assert.match(panel, /attachStaffAppAccessAction/);
+    assert.match(panel, /Activate app access/);
+    assert.match(panel, /staff\.accessState === "not_activated"/);
+  });
+
+  test("CORRECTION 3: the login identity must reuse the employment id", () => {
+    const contract = read("src/features/staff-admin/contracts/staff-invite.ts");
+    // A mismatch is a hard failure, never a silently-created second identity.
+    assert.match(contract, /result\.userId !== input\.staffId/);
+    assert.match(contract, /did not honour the requested user id/);
+
+    const adapter = read("src/features/staff-admin/server/staff-invite-adapter.ts");
+    assert.match(adapter, /id: input\.staffId/);
+    assert.match(adapter, /admin\/users/);
+  });
+
+  test("CORRECTION 3: attachment still generates no placeholder address", () => {
+    const adapter = read("src/features/staff-admin/server/staff-invite-adapter.ts");
+    const executable = adapter
+      .split(/\r?\n/)
+      .filter((line) => {
+        const t = line.trimStart();
+        return !t.startsWith("//") && !t.startsWith("*") && !t.startsWith("/*");
+      })
+      .join(" ");
+    assert.doesNotMatch(executable, /@example\./);
+    assert.doesNotMatch(executable, /noreply/i);
+    assert.doesNotMatch(executable, /placeholder/i);
+  });
+});
