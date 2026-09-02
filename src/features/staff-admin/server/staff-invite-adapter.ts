@@ -74,15 +74,15 @@ async function defaultProvisionStaffLoginIdentity(
   const key = env.serviceRoleKey;
 
   const result = await provisionLoginIdentityViaRest(input, {
-    authorizedFetch: async (path, body) =>
+    authorizedRequest: async (path, init) =>
       fetch(`${base}${path}`, {
-        method: "POST",
+        method: init.method,
         headers: {
           apikey: key,
           Authorization: `Bearer ${key}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
+        body: init.body === undefined ? undefined : JSON.stringify(init.body),
       }),
   });
 

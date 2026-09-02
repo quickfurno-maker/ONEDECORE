@@ -1,7 +1,7 @@
 -- ONEDECORE — staff creation without an email: employment identity vs login identity
 
 begin;
-select plan(66);
+select plan(78);
 
 -- -----------------------------------------------------------------------------
 -- A. Employment identity is no longer welded to a login identity
@@ -672,6 +672,132 @@ set local request.jwt.claim.sub = '42bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 select lives_ok(
   $q$select public.sync_staff_access_states(null)$q$,
   'FINAL: a sales manager holding staff.read may reconcile'
+);
+
+-- -----------------------------------------------------------------------------
+-- K. RETRY SAFETY — partial activation must stay recoverable
+-- -----------------------------------------------------------------------------
+
+reset role;
+
+-- Employment record with no login identity yet.
+insert into public.profiles (id, display_name, status)
+values ('42b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2', 'Partial Activation', 'active');
+
+insert into public.staff_employment_profiles
+  (staff_id, employee_code, designation, joining_date, attendance_eligible)
+values ('42b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2', 'OE-PART-1', 'Executive', date '2026-06-01', false);
+
+set local role authenticated;
+set local request.jwt.claim.sub = '42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select lives_ok(
+  $q$select public.attach_staff_app_access(
+      '42b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2', 'partial@onedecore.in')$q$,
+  'RETRY: first attach marks the day invited'
+);
+
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-PART-1'),
+  'invited',
+  'RETRY: state is invited before the identity exists'
+);
+
+-- Simulate the partial failure: the exact-id identity WAS created, but the
+-- setup email never went out.
+reset role;
+insert into auth.users (id, instance_id, email, aud, role) values
+  ('42b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2', '00000000-0000-0000-0000-000000000000',
+   'partial@onedecore.in', 'authenticated', 'authenticated');
+
+set local role authenticated;
+set local request.jwt.claim.sub = '42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+-- The old behaviour refused here, stranding the staff member forever.
+select lives_ok(
+  $q$select public.attach_staff_app_access(
+      '42b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2', 'partial@onedecore.in')$q$,
+  'RETRY: an existing matching identity is a resend, not a refusal'
+);
+
+select is(
+  (public.attach_staff_app_access(
+     '42b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2', 'partial@onedecore.in') ->> 'identityExists')::boolean,
+  true,
+  'RETRY: the caller is told the identity already exists so it will not recreate'
+);
+
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-PART-1'),
+  'invited',
+  'RETRY: an existing identity never counts as active'
+);
+
+-- Wrong address for this employment identity is an explicit conflict.
+select throws_ok(
+  $q$select public.attach_staff_app_access(
+      '42b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2', 'someone.else@onedecore.in')$q$,
+  'STAFF_IDENTITY_CONFLICT',
+  'RETRY: an existing identity under a different email fails closed'
+);
+
+-- The address already belonging to a different employment identity is also a
+-- conflict, so activation can never hijack another account. A fresh, still
+-- not_activated employee is used so the terminal check cannot mask it.
+reset role;
+insert into public.profiles (id, display_name, status)
+values ('42c3c3c3-c3c3-4c3c-8c3c-c3c3c3c3c3c3', 'Hijack Probe', 'active');
+
+insert into public.staff_employment_profiles
+  (staff_id, employee_code, designation, joining_date, attendance_eligible)
+values ('42c3c3c3-c3c3-4c3c-8c3c-c3c3c3c3c3c3', 'OE-HIJACK-1', 'Executive', date '2026-06-01', false);
+
+set local role authenticated;
+set local request.jwt.claim.sub = '42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-HIJACK-1'),
+  'not_activated',
+  'RETRY: the hijack probe starts not_activated'
+);
+
+select throws_ok(
+  $q$select public.attach_staff_app_access(
+      '42c3c3c3-c3c3-4c3c-8c3c-c3c3c3c3c3c3', 'partial@onedecore.in')$q$,
+  'STAFF_IDENTITY_CONFLICT',
+  'RETRY: an email owned by another identity fails closed'
+);
+
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-HIJACK-1'),
+  'not_activated',
+  'RETRY: a refused hijack leaves the record untouched'
+);
+
+-- Once genuinely signed in, activation is terminal.
+reset role;
+update auth.users set last_sign_in_at = now()
+where id = '42b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2';
+
+set local role authenticated;
+set local request.jwt.claim.sub = '42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select throws_ok(
+  $q$select public.attach_staff_app_access(
+      '42b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2', 'partial@onedecore.in')$q$,
+  'STAFF_ACCESS_ALREADY_ACTIVE',
+  'RETRY: a genuinely signed-in staff member refuses re-activation'
+);
+
+select is(
+  public.sync_staff_access_states('42b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2'),
+  1,
+  'RETRY: sign-in evidence reconciles the cached state'
+);
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'OE-PART-1'),
+  'active',
+  'RETRY: only a real sign-in produces active'
 );
 
 reset role;

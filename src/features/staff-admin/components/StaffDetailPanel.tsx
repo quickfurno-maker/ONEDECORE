@@ -250,10 +250,16 @@ export function StaffDetailPanel({
               fully manageable; app access is only about signing in.
             </p>
 
-            {staff.accessState === "not_activated" ? (
+            {staff.accessState !== "active" ? (
               <form action={appAccessAction} className="mt-4 space-y-4">
                 <input type="hidden" name="staffId" value={staff.staffId} />
                 <input type="hidden" name="displayName" value={staff.displayName} />
+                {staff.accessState === "invited" ? (
+                  <p className="rounded-md border border-sky-900/60 bg-sky-950/30 px-3 py-2 text-sm text-sky-100">
+                    A login identity may already exist for this employee. Resending will
+                    not recreate it — it only sends the set-password email again.
+                  </p>
+                ) : null}
                 <div>
                   <label htmlFor="app-access-email" className="text-sm font-medium text-neutral-200">
                     Work email
@@ -267,8 +273,9 @@ export function StaffDetailPanel({
                     className={fieldClassName}
                   />
                   <p className="mt-1 text-xs text-neutral-500">
-                    Creates the login using this employment record&rsquo;s existing id and
-                    emails a link to set a password. No placeholder address is ever used.
+                    Uses this employment record&rsquo;s existing id, creating the login
+                    only if one does not already exist, then emails a link to set a
+                    password. No placeholder address is ever used.
                   </p>
                 </div>
                 <button
@@ -276,17 +283,19 @@ export function StaffDetailPanel({
                   disabled={appAccessPending}
                   className="inline-flex min-h-11 items-center rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-60"
                 >
-                  {appAccessPending ? "Activating…" : "Activate app access"}
+                  {appAccessPending
+                    ? "Sending…"
+                    : staff.accessState === "invited"
+                      ? "Resend setup email"
+                      : "Activate app access"}
                 </button>
                 <ActionFeedback state={appAccessState} />
               </form>
             ) : (
               <p className="mt-4 text-sm text-neutral-300">
                 App access is{" "}
-                <span className="font-medium text-neutral-100">
-                  {staff.accessState === "invited" ? "invited" : "active"}
-                </span>
-                . Use the invite controls above to resend if needed.
+                <span className="font-medium text-neutral-100">active</span> — this staff
+                member has signed in. Activation controls are closed.
               </p>
             )}
           </section>

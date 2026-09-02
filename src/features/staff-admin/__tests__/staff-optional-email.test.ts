@@ -365,7 +365,8 @@ describe("PR127 corrections", () => {
     const panel = read("src/features/staff-admin/components/StaffDetailPanel.tsx");
     assert.match(panel, /attachStaffAppAccessAction/);
     assert.match(panel, /Activate app access/);
-    assert.match(panel, /staff\.accessState === "not_activated"/);
+    // Mutation controls are now gated on NOT-active, so invited stays retryable.
+    assert.match(panel, /staff\.accessState !== "active"/);
   });
 
   test("CORRECTION 3: the login identity must reuse the employment id", () => {
@@ -453,5 +454,47 @@ describe("PR127 final corrections", () => {
     assert.doesNotMatch(actions, /The record is unchanged/);
     assert.match(actions, /marked invited but activation did not finish/);
     assert.match(actions, /retry/i);
+  });
+});
+
+describe("PR127 retry safety", () => {
+  const sql = read(MIGRATION);
+  const panel = read("src/features/staff-admin/components/StaffDetailPanel.tsx");
+
+  test("RETRY: the UI exposes a retry action while invited", () => {
+    // Mutation controls close only for active; invited must stay actionable.
+    assert.match(panel, /staff\.accessState !== "active"/);
+    assert.match(panel, /Resend setup email/);
+    assert.match(panel, /Activate app access/);
+    assert.doesNotMatch(panel, /staff\.accessState === "not_activated" \? \(/);
+  });
+
+  test("RETRY: the resend path explains it will not recreate the identity", () => {
+    assert.match(panel, /will\s*\n?\s*not recreate it/);
+  });
+
+  test("RETRY: attach no longer refuses merely because an identity exists", () => {
+    const attachFn = sql.slice(
+      sql.indexOf("function public.attach_staff_app_access"),
+      sql.indexOf("function public.confirm_staff_app_access")
+    );
+    // Terminal only on real activation.
+    assert.match(attachFn, /last_sign_in_at is not null/);
+    assert.match(attachFn, /STAFF_ACCESS_ALREADY_ACTIVE/);
+    // Existence alone must not raise ALREADY_ACTIVE any more.
+    assert.doesNotMatch(
+      attachFn,
+      /if exists \(select 1 from auth\.users u where u\.id = p_staff_id\) then\s*raise exception 'STAFF_ACCESS_ALREADY_ACTIVE'/
+    );
+    assert.match(attachFn, /STAFF_IDENTITY_CONFLICT/);
+    assert.match(attachFn, /identityExists/);
+  });
+
+  test("RETRY: provisioning looks up before creating", () => {
+    const rest = read("src/features/staff-admin/server/staff-login-provisioning.ts");
+    assert.match(rest, /method: "GET"/);
+    assert.match(rest, /if \(!existing\)/);
+    assert.match(rest, /identityCreated/);
+    assert.match(rest, /StaffIdentityConflictError/);
   });
 });

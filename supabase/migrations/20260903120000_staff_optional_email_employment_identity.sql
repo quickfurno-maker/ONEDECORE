@@ -430,6 +430,7 @@ as $$
 declare
   v_actor uuid;
   v_sep public.staff_employment_profiles%rowtype;
+  v_identity auth.users%rowtype;
   v_email text;
 begin
   v_actor := private.staff_require_active_actor();
@@ -453,13 +454,34 @@ begin
     raise exception 'employment profile not found' using errcode = 'P0002';
   end if;
 
-  if v_sep.access_state = 'active' then
+  -- `active` is terminal, and genuine sign-in evidence IS active regardless of
+  -- what the cached column says.
+  if v_sep.access_state = 'active' or exists (
+    select 1 from auth.users u
+    where u.id = p_staff_id and u.last_sign_in_at is not null
+  ) then
     raise exception 'STAFF_ACCESS_ALREADY_ACTIVE' using errcode = 'P0001';
   end if;
 
-  -- A login identity must not already exist for this employment identity.
-  if exists (select 1 from auth.users u where u.id = p_staff_id) then
-    raise exception 'STAFF_ACCESS_ALREADY_ACTIVE' using errcode = 'P0001';
+  -- Partial activation is a REAL state: the login identity can exist while the
+  -- setup email failed to send. That must stay retryable, so the mere existence
+  -- of an auth user is NOT a refusal — it only means "resend, do not recreate".
+  select * into v_identity from auth.users u where u.id = p_staff_id;
+
+  if found then
+    -- Same employment id but a different address is an identity conflict, not a
+    -- resend: silently emailing a different account would be worse than failing.
+    if lower(coalesce(v_identity.email, '')) <> v_email then
+      raise exception 'STAFF_IDENTITY_CONFLICT' using errcode = 'P0001';
+    end if;
+  end if;
+
+  -- The address must not already belong to a DIFFERENT employment identity.
+  if exists (
+    select 1 from auth.users u
+    where lower(coalesce(u.email, '')) = v_email and u.id <> p_staff_id
+  ) then
+    raise exception 'STAFF_IDENTITY_CONFLICT' using errcode = 'P0001';
   end if;
 
   update public.staff_employment_profiles
@@ -468,13 +490,19 @@ begin
 
   perform private.staff_append_admin_event(
     p_staff_id, v_actor, 'staff.app_access_attached',
-    jsonb_build_object('accessState', 'invited')
+    jsonb_build_object(
+      'accessState', 'invited',
+      'identityExisted', v_identity.id is not null
+    )
   );
 
   return jsonb_build_object(
     'staffId', p_staff_id,
     'accessState', 'invited',
-    'email', v_email
+    'email', v_email,
+    -- Lets the caller report a resend accurately; the app still verifies the
+    -- identity against the Auth Admin API before deciding to create.
+    'identityExists', v_identity.id is not null
   );
 end;
 $$;
