@@ -1,14 +1,37 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced through Phase 10A production hardening local pass, August 28, 2026)
+**Document Status:** Locked Governance Baseline (truth-synced 2026-09-02 to the accelerated closeout lock)
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS (`91.108.105.192`; app `/var/www/onedecore`; PM2 `onedecore`; Nginx → `127.0.0.1:3000`)
-**Current Phase:** Phase **10A** — production hardening, dependency security & operational readiness (**LOCAL PASS**; owner review pending — no merge/deploy). **Production/main baseline:** `0a27b2ff26eeeeff4b538841c75cebe89ccd63ed`. CRM **2A COMPLETE**; CRM **2B-1 COMPLETE / PRODUCTION LIVE** (PR #107). Premium mobile-first CRM + My Day navigation live. Public website lead intake **LIVE**. Shop public gate **OFF** (`ONEDECORE_SHOP_PUBLIC_ENABLED`). Online payments **DEFERRED**. CRM SLA **OFF**.
-**Next Phase:** Owner review of Phase 10A; then optional Phase **10B** COD shop public activation (separate owner gate). Online payments remain deferred.
-**Previous Phase:** CRM 2B-1 premium UX polish (**COMPLETE** / PR #107 / production smoke passed)
+
+> **CURRENT EXECUTION AUTHORITY:** [docs/11 — Accelerated Closeout Roadmap](11-accelerated-closeout-roadmap.md) (owner-locked 2026-09-02, **DEC-0097**).
+> Sequencing instructions in [09 — Phase Implementation Roadmap](09-phase-roadmap.md) and [CRM 2.0 Product Roadmap](product/crm-2.0-roadmap.md) are **historical evidence only** and no longer schedule work.
+
+**Protected `main` baseline:** `27bcee1f36468175e1509e5ec10a0b3533f9c7d7` (PR **#121** merged; exact certified head `0a42534213c817b05b48c96fb6fa6e6c7761cd85`).
+**Current Phase:** **P1** — governance truth sync & release freeze (**documentation/governance only; no runtime change**).
+**Next Phase:** **P2** — production exact-SHA alignment & smoke verification.
+**Final lock:** **P8** is E-commerce production activation (**second-last**); **P9** is Meta WhatsApp + n8n production activation (**final**).
+**Previous Phase:** CRM 2E management analytics + WhatsApp lead-link repair + WhatsApp launch certification + CRM SLA admin settings (PRs #117–#121, all **MERGED**).
+
+### Live vs off (current, 2026-09-02)
+
+| Capability | State |
+| :--- | :--- |
+| Public website, homepage, portfolio | **LIVE** |
+| Public website lead intake | **LIVE** |
+| CRM through **2E** (2A–2E) | **MERGED / PRODUCTION LIVE** |
+| CRM first-contact SLA | **ACTIVE in managed Supabase** — 60 business minutes, Asia/Kolkata, Mon–Sat, 09:00–19:00, non-retroactive |
+| Repository migrations / managed migrations | **49 / 49** — aligned; **no pending managed batch** |
+| Shop public gate (`ONEDECORE_SHOP_PUBLIC_ENABLED`) | **OFF / fail-closed** — activation is **P8** |
+| Online payments / M38 | **DEFERRED** — not on `main`, not managed |
+| Meta WhatsApp live callback / tokens / outbound | **OFF** — activation is **P9** |
+| n8n production automation | **DEFERRED** — activation is **P9** |
+| Campaign live spend | **OFF** — activation is **P6** |
+| Landing Lab public gate | **OFF** — activation is **P6** |
+| Kriti provider production activation | **DEFERRED** — activation is **P7** |
 
 ---
 
@@ -34,33 +57,23 @@ This document defines the immutable business identity, project boundaries, and g
 
 ## 3. Product Architecture Domains
 
-ONEDECORE is an integrated operating system spanning multiple product domains. **Merged and live capabilities** are distinguished from **planned modules** in Section 4.
+ONEDECORE is an integrated operating system spanning multiple product domains. **Built** (implemented and merged) is distinguished from **activated** (running in production). Activation is always a separate, explicit owner gate — see [docs/11](11-accelerated-closeout-roadmap.md).
 
-```
-┌─────────────────────────────────────────────────────────┐
-│ 1. Premium Public Website & Legal Presentation          │
-├─────────────────────────────────────────────────────────┤
-│ 2. Dedicated Portfolio System (/portfolio)            │
-├─────────────────────────────────────────────────────────┤
-│ 3. Secure Public Lead Intake (dual-gated; production LIVE) │
-├─────────────────────────────────────────────────────────┤
-│ 4. Sales & Operations CRM (/admin/crm — partial on main) │
-├─────────────────────────────────────────────────────────┤
-│ 5. Commercial Quotation System (planned)              │
-├─────────────────────────────────────────────────────────┤
-│ 6. Project Execution & Design Collaboration (planned)   │
-├─────────────────────────────────────────────────────────┤
-│ 7. Official Meta WhatsApp Cloud API (foundation managed; not activated) │
-├─────────────────────────────────────────────────────────┤
-│ 8. Human-Controlled Groq Copilot (planned)            │
-├─────────────────────────────────────────────────────────┤
-│ 9. Marketing Campaigns with Consent Controls (planned)│
-├─────────────────────────────────────────────────────────┤
-│ 10. Controlled n8n Workflows (async notification bus)  │
-├─────────────────────────────────────────────────────────┤
-│ 11. Ready-Made Furniture Shop (/shop) (M36 public read + C1 /shop + C2 journey; no cart) │
-└─────────────────────────────────────────────────────────┘
-```
+| # | Product domain | Built | Production activation |
+| :--- | :--- | :--- | :--- |
+| 1 | Premium Public Website & Legal Presentation | Yes | **LIVE** |
+| 2 | Dedicated Portfolio System (`/portfolio`) | Yes | **LIVE** |
+| 3 | Secure Public Lead Intake (dual-gated) | Yes | **LIVE** |
+| 4 | Sales & Operations CRM (`/admin/crm`) — built through **CRM 2E** | Yes | **LIVE** (first-contact SLA active) |
+| 5 | Commercial Quotation System | Yes | Certification in **P4** |
+| 6 | Project Execution & Design Collaboration | Yes | Certification in **P4** |
+| 7 | Official Meta WhatsApp Cloud API | Foundation built | **OFF** — activation **P9** |
+| 8 | Human-Controlled Kriti / Groq Copilot | Foundation built | **DEFERRED** — provider activation **P7** |
+| 9 | Marketing Campaigns with Consent Controls + Landing Lab | Foundation built | **OFF** — activation **P6** |
+| 10 | Controlled n8n Workflows (async notification bus) | Boundary defined | **DEFERRED** — activation **P9** |
+| 11 | Ready-Made Furniture Shop (`/shop`, COD commerce) | Foundation built | **OFF / fail-closed** — activation **P8** |
+| 12 | Staff Administration, Attendance & Leave | Yes | Operational activation **P5** |
+| — | Online payments / M38 | Not on `main` | **DEFERRED** (ADR-0033 / DEC-0094) |
 
 ---
 
@@ -83,6 +96,17 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Public lead form UI | **Merged; production LIVE** on canonical public website |
 | CRM 2A (activities, My Day, assignment automation) | Merged on `main`; production live |
 | CRM 2B-1 (premium mobile CRM UX, My Day nav, manual lead phone rule) | Merged PR #107; **production live** @ `0a27b2f` |
+| Phase 10C premium interior-first homepage launch UX | Merged PR #110 |
+| Phase 10D premium commerce storefront UI | Merged PR #111 (Shop remains **OFF / fail-closed**) |
+| Phase 10E interior launch closeout | Merged PR #113 |
+| CRM 2B (calendar + premium pipeline) | Merged PR #114 |
+| CRM 2C (sales playbook + cadences) | Merged PR #115 |
+| CRM 2D (communication + intelligence) | Merged PR #116 |
+| CRM 2E (management analytics) | Merged PR #117 |
+| CRM WhatsApp lead-link repair | Merged PR #118 |
+| CRM WhatsApp launch certification | Merged PR #119 |
+| Managed migration ledger reconciliation | Merged PR #120 |
+| CRM SLA admin settings | Merged PR #121; exact head `0a42534213c817b05b48c96fb6fa6e6c7761cd85` certified |
 
 ### Managed database applied (not production deployment)
 
@@ -115,9 +139,17 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Commerce catalogue & inventory foundation (migration 35) | Managed-applied and certified 2026-08-23 (9D-B closeout); 11 commerce tables; all RLS + FORCE RLS |
 | Commerce public storefront read foundation (`20260823140000`) | M36 managed-applied and certified 2026-08-23; git blob `81a096f4c31c6003fdcf6e4595c84dfe0e806911`; PR #82 merged `34741dac155aad67c1ae9f93bd41a2d7316c9b5a` |
 | Commerce order COD checkout foundation (`20260824140000`) | Conceptual M37; **COMPLETE / CLOSED** with PR #84 + managed M37 certification (D1/D2 closeout evidence) |
-| Migration alignment | Repository: **M1–M37**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M37** (D1/D2 closeout evidence); **M38 absent** from `main` |
+| Migration alignment *(historical entry — state as at Phase 9D-D2 closeout)* | Repository: **M1–M37**; Managed OneDecore (`lpurlfmpvriyvpkujvyl`): **M1–M37** (D1/D2 closeout evidence); **M38 absent** from `main` |
+
+**Current migration alignment (2026-09-02):** Repository **49** migrations; managed OneDecore (`lpurlfmpvriyvpkujvyl`) **49** applied; **aligned**; **no pending managed batch**. Tail: `20260830140000_crm_cadence_playbook_foundation`, `20260831140000_crm_lead_commercial_read_models`, `20260831174021_crm_lead_notes_insert_privilege_redrift_repair`, `20260901140000_crm_management_analytics_read_model`, `20260902140000_crm_whatsapp_lead_link_repair`. **M38 (online payments) remains absent** from `main` and from managed.
+
+> **HISTORICAL — the paragraph below records phase-completion evidence as it stood at Phase 9D-C.** Its trailing claims "Production deployment pending (Phase 10)" and "public intake remains inactive" were true when written and are **no longer current**: production is deployed and public lead intake is **LIVE**. Current state is the table in the header and the current migration alignment note above.
 
 CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed database (`lpurlfmpvriyvpkujvyl`) through **M27**. Phase 7B is **COMPLETE** (PR #55 merged). Phase 8A is **COMPLETE** (PR #57 merged `db879b5ca27fe9d26543c23d8f130811c7feadab`; managed **M1–M28**). Phase 8B is **COMPLETE** (OD8B-1–OD8B-8 / ADR-0025 / DEC-0073–DEC-0074; PR #59 merged `6b31052973cf9e50e25803b232ce446308c1fa3a`; managed **M1–M29**). Phase 8C is **COMPLETE** (OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; architecture PR #60 merged `5b4a7f300e63b438884a2b440a69a569d91b9e5d`; implementation PR #61 true merge `8f4f3ecf082450e82ab15f02703c951e50f0817e`; managed **M1–M30**). Phase 9A architecture is frozen (OD9A-1–OD9A-6 / ADR-0027 / DEC-0077; architecture PR #62 true merge `caff9d0864e1546dff38646df4355dafa851a473`). Phase 9A repository implementation is **REPOSITORY_COMPLETE** (DEC-0078). Phase 9A managed apply is **CERTIFIED** (DEC-0080; M31 applied 2026-08-18; managed **M1–M31**; pending **NONE**; M31 immutable). PR #63 **MERGED** `26e6346ef6722b7c6ff5908c12f208854b513ad6`. Phase 9D-A is **ARCHITECTURE_FROZEN**. Phase 9D-B is **COMPLETE / CLOSED**. Phase 9D-C1 is **MERGED** and M36 is **MANAGED APPLIED / CERTIFIED**. Phase 9D-C2 is **REPOSITORY IMPLEMENTED** on this branch. Phase 9D-C is **IMPLEMENTATION SUBSTANTIALLY COMPLETE / FINAL QA-CLOSEOUT PENDING**. **Production deployment pending** (Phase 10); **public intake remains inactive**.
+
+### Historical phase-truth sections — scope note
+
+> The per-phase truth sections that follow (**Phase 5F through Phase 6D**, plus the recovery-truth and planned-module notes) are **preserved historical evidence**, accurate as at their stated dates. Their recurring statements — "**public intake inactive**", "**no production deployment**", "**production activation remains Phase 10**" — were **true pre-Phase-10 facts** and are **superseded** by the current-state table in this document's header. Production is deployed; public lead intake is **LIVE**. Do not read these sections as current state, and do not delete them: they are the audit trail.
 
 ### Phase 5F truth
 
@@ -182,17 +214,27 @@ CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed
 - Backups `1281893546` and `1306358570` do **not** permanently satisfy Phase 10 — each predates subsequent managed state.
 - **Before Phase 10 production activation**, a **current** fresh physical backup or qualified active PITR recovery point appropriate to then-current managed state is mandatory (DEC-0053 per migration).
 
-### Planned — not live
+### Not live (current, 2026-09-02)
 
-WhatsApp production outbound, public lead activation, production deployment, **Meta production webhook/callback activation**, Landing Lab / campaign **production** execution, Phase 9D-C public `/shop` and `/interiors` runtime, checkout, payments.
+Built but **not activated in production**, each behind its own fail-closed gate:
 
-**Do not claim planned modules are live or production-deployed.**
+- Meta WhatsApp production webhook/callback, token activation, and outbound — **P9**
+- n8n production automation — **P9**
+- Public `/shop` COD storefront runtime and checkout — **P8** (`ONEDECORE_SHOP_PUBLIC_ENABLED` **OFF**)
+- Landing Lab public gate and campaign live spend — **P6**
+- Kriti provider production activation — **P7**
+- Staff attendance/leave operational activation — **P5**
+- Online payments / **M38** — **DEFERRED** outside the P1–P9 sequence
+
+**Do not claim a non-activated module is live.** Public website, portfolio, public lead intake, and CRM through 2E **are** live — see the header table.
+
+> *Superseded historical wording (pre-Phase-10):* this section previously also listed "public lead activation" and "production deployment" as not live. Both were true at that time and are no longer current.
 
 ---
 
 ## 5. Master Governance Rules & Mandatory Corrections
 
-1. **Next.js Version Target:** Next.js 16.x. Baseline scaffold **16.2.11** (Phase 2A / DEC-0015). Phase **10A** bounded security bump to **16.3.3** pending owner merge (DEC-0096).
+1. **Next.js Version Target:** Next.js 16.x. Baseline scaffold **16.2.11** (Phase 2A / DEC-0015); Phase 10A bounded security bump to **16.3.3** (DEC-0096) **merged**.
 2. **Supabase Source of Truth:** Supabase PostgreSQL is the sole permanent database for structured application data.
 3. **Database-Before-Automation:** Valid submissions and inbound messages persist to Supabase *before* n8n or outbound notifications.
 4. **Meta WhatsApp:** Official Cloud API only; webhooks terminate at verified ONEDECORE endpoint; unofficial WhatsApp Web automation prohibited.
@@ -205,7 +247,9 @@ WhatsApp production outbound, public lead activation, production deployment, **M
 11. **Admin Route Prefix:** Internal routes use `/admin`.
 12. **Five-Role CRM Model:** `super_admin`, `sales_manager`, `sales_executive`, `project_manager`, `designer` — see ADR-0019.
 13. **Closed-Won Invariant:** Requires Accepted quotation before project creation — see ADR-0020.
-14. **Public Lead Intake:** Defaults remain disabled (`copy-only` / `disabled`); M17 identity hardening applied managed; **production activation requires Phase 10** with current backup/PITR and separate owner authority.
+14. **Public Lead Intake:** **ACTIVATED in production** (`ONEDECORE_LEAD_INTAKE_MODE=enabled`) under the Phase 10 owner gate. The code default remains **fail-closed** (`copy-only` / `disabled`) in every unconfigured environment; M17 identity, DNC and loopback hardening remain in force. *(Historical: prior to Phase 10 this rule read "production activation requires Phase 10" — that gate has since been satisfied and exercised.)*
+15. **Fail-Closed Activation:** Deploy is never activation. Every unactivated capability (Shop, online payments, Meta WhatsApp live, n8n, campaign live spend, Landing Lab public, Kriti provider) must fail closed when its flag is absent or false, and may only be activated by the explicit owner act assigned to its phase in [docs/11](11-accelerated-closeout-roadmap.md).
+16. **Current Execution Authority:** Work sequencing is governed solely by [docs/11 — Accelerated Closeout Roadmap](11-accelerated-closeout-roadmap.md) (DEC-0097). Documents 09 and `product/crm-2.0-roadmap.md` are historical evidence and do not schedule work.
 
 ---
 
@@ -220,9 +264,11 @@ WhatsApp production outbound, public lead activation, production deployment, **M
 
 ## 7. Related Governance Documents
 
+- **[11 — Accelerated Closeout Roadmap](11-accelerated-closeout-roadmap.md) — CURRENT EXECUTION AUTHORITY (DEC-0097)**
 - [Product Requirements](01-product-requirements.md)
 - [Architecture & Repository Structure](02-architecture.md)
-- [Phase Roadmap](09-phase-roadmap.md)
+- [09 — Phase Roadmap](09-phase-roadmap.md) — *historical implementation roadmap + evidence ledger*
+- [CRM 2.0 Product Roadmap](product/crm-2.0-roadmap.md) — *historical approved CRM product plan (implemented through 2E)*
 - [Decision Register](10-decision-register.md)
 - [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
 - [ADR-0019: Five-Role CRM Authorization](ADR/ADR-0019-five-role-crm-authorization-model.md)
@@ -332,7 +378,21 @@ Phase 9D product locks remain **OD9D-1–OD9D-12** (ADR-0028 / DEC-0079). Archit
 
 Owner amendment **ADR-0033 / DEC-0094**: furniture-shop MVP launch is **COD-only**. Phase 9D-E online payment is **DEFERRED** (preserved locally on `phase-9d-e-online-payments` @ `b2ea05c…`; not on `main`; M38 not managed). **9D-F COMPLETE / MERGED** (PR #87). Public shop requires `ONEDECORE_SHOP_PUBLIC_ENABLED=true` (**DEC-0095**) — remains **OFF**. Online payment requires later separate 9D-E certification + explicit activation. **Production website + CRM + lead intake LIVE** at `0a27b2f`; shop storefront **OFF**.
 
-## Phase 10A — Production Hardening (Local Pass)
+## Phase 10A — Production Hardening (Closed)
 
-Phase **10A** is security, dependency, and operational-readiness hardening only — **not** Shop activation, payments, CRM SLA, WhatsApp, campaigns, or Landing Lab. [Closeout audit](audits/phase-10a-production-hardening-closeout.md). Bounded remediation: `next` + `eslint-config-next` **16.2.11 → 16.3.3** (DEC-0096); ExcelJS/uuid and dev-toolchain advisories documented deferred. **No commit/push/deploy** in this gate. Manual CRM New Lead phone rule (2B-1): staff enter exactly **10 Indian digits**; server canonicalizes to `+91XXXXXXXXXX`.
+Phase **10A** was security, dependency, and operational-readiness hardening only — **not** Shop activation, payments, CRM SLA, WhatsApp, campaigns, or Landing Lab. [Closeout audit](audits/phase-10a-production-hardening-closeout.md). Bounded remediation: `next` + `eslint-config-next` **16.2.11 → 16.3.3** (DEC-0096) — **merged and current on `main`**; ExcelJS/uuid and dev-toolchain advisories documented deferred. Manual CRM New Lead phone rule (2B-1): staff enter exactly **10 Indian digits**; server canonicalizes to `+91XXXXXXXXXX`. *(The "no commit/push/deploy" restriction was scoped to the 10A gate itself and has been discharged.)*
 <!-- PHASE_9D_D2_AND_COD_FIRST_END -->
+
+<!-- ACCELERATED_CLOSEOUT_LOCK_START -->
+## Accelerated Closeout Lock (2026-09-02) — CURRENT
+
+Owner-locked under **DEC-0097**. Current execution authority is [docs/11 — Accelerated Closeout Roadmap](11-accelerated-closeout-roadmap.md).
+
+- Protected `main` baseline: `27bcee1f36468175e1509e5ec10a0b3533f9c7d7` (PR **#121**; exact certified head `0a42534213c817b05b48c96fb6fa6e6c7761cd85`).
+- Certification recorded at lock: focused SLA **51/51**, app **1543/1543**, DB **2401 PASS**, lint/typecheck/build **PASS**, desktop + mobile owner QA **PASS**.
+- Repository **49** migrations / managed **49** applied — aligned; **no pending managed batch**.
+- CRM first-contact SLA **ACTIVE** in managed Supabase: 60 business minutes, Asia/Kolkata, Mon–Sat, 09:00–19:00, non-retroactive activation.
+- Sequence: **P1 → P2 → P3 → P4 → P5 → P6 → P7 → P8 → P9**. **P1 current**, **P2 next**. **P8** = E-commerce production activation (**second-last**). **P9** = Meta WhatsApp + n8n production activation (**final**).
+- Acceleration may retire stale planning and duplicated work; it may **not** bypass protected `main`, exact-head CI, forward-only migration/recovery gates, RLS/RBAC, consent/DNC boundaries, fail-closed feature gates, or production smoke/E2E certification.
+- **P1 is documentation/governance only** — no migration, schema, RLS, RPC, `.env*`, dependency, feature-gate, SLA-configuration, deployment, or CI change.
+<!-- ACCELERATED_CLOSEOUT_LOCK_END -->

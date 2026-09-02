@@ -1,9 +1,37 @@
-# 09 — PHASE IMPLEMENTATION ROADMAP
+# 09 — PHASE IMPLEMENTATION ROADMAP (HISTORICAL LEDGER)
 
-**Document Status:** Locked Roadmap (truth-synced through Phase 10A production hardening local pass, August 28, 2026)
-**Current Phase:** Phase **10A** — production hardening (**LOCAL PASS**; owner review pending). **Production/main baseline:** `0a27b2ff26eeeeff4b538841c75cebe89ccd63ed`. CRM 2A + 2B-1 **PRODUCTION LIVE** (PR #107). Website lead intake **LIVE**. Shop public gate **OFF**. Online payments **DEFERRED** (M38 untouched). CRM SLA **OFF**.
-**Next Phase:** Owner review/merge of public-site simplification PR; Shop remains fail-closed until explicit activation.
-**Previous Phase:** CRM lead-list hotfix (PR #96) + notes privilege repair (PR #95) + timeline taxonomy v2 (PR #94)
+> ## ⚠ THIS DOCUMENT NO LONGER SCHEDULES WORK
+>
+> **Current execution authority:** **[docs/11 — Accelerated Closeout Roadmap](11-accelerated-closeout-roadmap.md)** (owner-locked 2026-09-02, **DEC-0097**).
+>
+> **Document role as of 2026-09-02:** *historical implementation roadmap + evidence ledger*. Every "Current Phase", "Next Phase", "NEXT", "READY / NEXT", and "not started" marker below is **historical**, accurate as at its stated date, and must **not** be read as an instruction. Phase evidence is preserved deliberately and must not be deleted.
+>
+> For what runs next, read [docs/11](11-accelerated-closeout-roadmap.md). For what is live today, read [docs/00](00-project-truth.md).
+
+**Document Status:** Historical Implementation Roadmap & Evidence Ledger (superseded as sequencing authority 2026-09-02)
+**Historical header (as at August 28, 2026 — retained for the record):** Current Phase **10A** production hardening (LOCAL PASS); production/main baseline `0a27b2ff26eeeeff4b538841c75cebe89ccd63ed`; next phase = owner review/merge of the public-site simplification PR; previous phase = CRM lead-list hotfix (PR #96) + notes privilege repair (PR #95) + timeline taxonomy v2 (PR #94).
+
+---
+
+## 0. Current-state reconciliation (2026-09-02)
+
+This section reconciles the historical body below against merged reality. Where the two disagree, **this section and [docs/11](11-accelerated-closeout-roadmap.md) win**.
+
+| Item | Historical body says | **Current truth** |
+| :--- | :--- | :--- |
+| Protected `main` | `0a27b2ff…` (Phase 10A era) | **`27bcee1f36468175e1509e5ec10a0b3533f9c7d7`** (PR #121; exact certified head `0a42534213c817b05b48c96fb6fa6e6c7761cd85`) |
+| Website lead intake | "inactive" / "activation Phase 10 only" in pre-Phase-10 sections | **LIVE in production** |
+| CRM | 2A + 2B-1 live | **CRM 2A–2E all merged** (PRs #114–#117) and production live |
+| CRM first-contact SLA | **OFF** | **ACTIVE** in managed Supabase — 60 business minutes, Asia/Kolkata, Mon–Sat, 09:00–19:00, non-retroactive |
+| Phase 10C homepage launch UX | not recorded | **MERGED** (PR #110) |
+| Phase 10D premium commerce UI | not recorded | **MERGED** (PR #111) — **Shop public gate remains OFF / fail-closed**; merging the UI is not activation |
+| Phase 10E interior launch closeout | not recorded | **MERGED** (PR #113) |
+| WhatsApp lead-link repair / launch certification / ledger reconciliation | not recorded | **MERGED** (PRs #118, #119, #120) |
+| Migrations | "Repository M1–M37; Managed M1–M37" | **Repository 49 / managed 49 — aligned; no pending batch** |
+| "Next Phase" / "10B next" / "READY / NEXT" markers | scheduling instructions | **Historical only.** Sequencing is now **P1→P9** in [docs/11](11-accelerated-closeout-roadmap.md) |
+| Shop / online payments / Meta WhatsApp live / n8n / campaign spend / Landing Lab / Kriti | various | All still **OFF or DEFERRED**; activation assigned to **P8 / deferred / P9 / P9 / P6 / P6 / P7** respectively |
+
+**Sequence now in force:** P1 → P2 → P3 → P4 → P5 → P6 → P7 → **P8 E-commerce (second-last)** → **P9 Meta WhatsApp + n8n (final)**. P1 is current; P2 is next.
 
 ---
 
@@ -242,7 +270,7 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
 - **Objective:** Controlled public lead activation hardening (identity, DNC, loopback); **not** production activation.
 - **Exit gate:** PR #17 merged; M17 applied managed (DB-6B); DB-6A physical recovery Route A; H1 browser QA PASS; governance closeout merged.
 - **Dependencies:** 4B2 merged; 5F-A preflight complete.
-- **Status:** Public intake **inactive** (`copy-only` / `disabled`); production activation Phase 10 only.
+- **Status (historical, as at Phase 5F closeout):** Public intake **inactive** (`copy-only` / `disabled`); production activation Phase 10 only. **Superseded:** public lead intake is now **LIVE in production**; the code default remains fail-closed and M17 identity/DNC/loopback hardening remains in force.
 - **Closeout:** `docs/audits/phase-5f-controlled-public-lead-activation-closeout.md`
 
 ### Phase 6A (Completed)
@@ -339,11 +367,14 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 - **Placement:** after 9C, before Phase 10. Architecture lock is unchanged.
 - **Status:** **9D-F COMPLETE / MERGED** (PR #87 / `7e4391a15f36028f2f7059ad6288c419d4c25b24`). Repository **M1–M37**. Managed **M1–M37** (D1/D2 closeout evidence). **9D-E DEFERRED**. **Phase 10 COD PRODUCTION READINESS PASS / OWNER ACTIVATION PENDING** — [readiness audit](audits/phase-10-cod-production-readiness.md); shop gate **OFF** (DEC-0095). Production **OFF**. Online payments separately gated.
 
-### Phase 10
+### Phase 10 *(historical — superseded by the P1–P9 sequence)*
 - **Objective:** Security hardening, full E2E, performance budgets, Hostinger VPS deployment.
-- **10A (current):** Dependency security audit; bounded Next.js 16.3.3 remediation; operational smoke matrix; governance truth sync. **No Shop/payments/SLA/WhatsApp/campaign/Landing Lab activation.** [10A closeout](audits/phase-10a-production-hardening-closeout.md).
-- **10B (next owner gate):** COD-only public `/shop` activation when owner sets `ONEDECORE_SHOP_PUBLIC_ENABLED=true` after 10A merge/deploy.
-- **Exit gate:** After 9D-F COD certification and 10A hardening, owner may authorize **COD-only** public `/shop` activation. Phase 10 COD activation **MUST NOT** activate online payments, provider secrets, or live provider traffic (ADR-0033 / DEC-0094). Online-payment activation requires later separate owner authorization after 9D-E.
+- **10A:** Dependency security audit; bounded Next.js 16.3.3 remediation; operational smoke matrix; governance truth sync. **No Shop/payments/SLA/WhatsApp/campaign/Landing Lab activation.** [10A closeout](audits/phase-10a-production-hardening-closeout.md). **MERGED** — `next`/`eslint-config-next` `16.3.3` are current on `main`.
+- **10C:** Premium interior-first homepage launch UX — **MERGED** (PR #110).
+- **10D:** Premium commerce storefront UI — **MERGED** (PR #111). **Merging the storefront UI did not activate the Shop**; `ONEDECORE_SHOP_PUBLIC_ENABLED` remains **OFF / fail-closed**.
+- **10E:** Interior launch closeout — **MERGED** (PR #113).
+- **10B (historical marker — "next owner gate"):** COD-only public `/shop` activation. **This is no longer the next gate.** It is now sequenced as **P8 (second-last)** in [docs/11](11-accelerated-closeout-roadmap.md).
+- **Exit gate (unchanged boundary):** COD-only public `/shop` activation **MUST NOT** activate online payments, provider secrets, or live provider traffic (ADR-0033 / DEC-0094). Online-payment activation requires later separate owner authorization after 9D-E certification.
 
 ---
 
@@ -365,6 +396,7 @@ See [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md) and ADRs 0020�
 
 ## 5. Related Governance Documents
 
+- **[11 — Accelerated Closeout Roadmap](11-accelerated-closeout-roadmap.md) — CURRENT EXECUTION AUTHORITY (DEC-0097)**
 - [Project Truth](00-project-truth.md)
 - [Phase 5D Closeout Audit](audits/phase-5d-bulk-import-source-assignment-closeout.md)
 - [Phase 5A Audit](audits/phase-5a-crm-architecture-freeze.md)
