@@ -42,12 +42,12 @@ function latestMigrationName(): string {
 }
 
 describe("Phase 9D-D2 repository contracts", () => {
-  test("latest migration is the WhatsApp lead-link repair; deferred payment M38 absent", () => {
+  test("latest migration is the Workforce V1 attendance lifecycle; deferred payment M38 absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260902140000_crm_whatsapp_lead_link_repair.sql"
+      "20260902160000_workforce_attendance_v1_lifecycle.sql"
     );
-    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 49);
+    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 50);
     assert.equal(
       existsSync(join(migrationDir, "20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false

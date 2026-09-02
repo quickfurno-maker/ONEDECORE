@@ -183,7 +183,7 @@ Every production capability is **fail-closed by default**. Deploy ≠ activate. 
 ### P5 — Staff administration, attendance & leave activation
 
 - **Objective:** Resolve the outstanding owner-value gaps (OD-1–OD-10) and activate attendance/leave operationally.
-- **Scope:** attendance policy catalogue values, holiday calendar, leave types, `attendance.correct.team` grant decision; idempotent check-in/check-out verified in production.
+- **Scope:** attendance policy catalogue values, holiday calendar, leave types, `attendance.correct.team` grant decision; idempotent check-in/check-out verified in production. Workforce V1 attendance lifecycle, salary and payment rules are locked in [docs/12](12-workforce-v1-attendance-salary.md) (**DEC-0098**).
 - **Exit gate:** owner-supplied policy values recorded in governance; correction authority explicitly granted or explicitly withheld; attendance E2E PASS; no fabricated schedules.
 
 ### P6 — Landing Lab + campaign production activation
@@ -232,6 +232,7 @@ A branch is **not** deletable merely because it is old. Deletion requires proof 
 - [CRM 2.0 Product Roadmap](product/crm-2.0-roadmap.md) — **historical** approved CRM product plan (implemented through 2E)
 - [06 — Security, Privacy & RLS](06-security-privacy-and-rls.md)
 - [08 — WhatsApp & n8n Boundary](08-whatsapp-and-n8n-boundary.md)
+- [12 — Workforce V1: Attendance, Salary & Payment Lock](12-workforce-v1-attendance-salary.md) — DEC-0098
 - [ADR-0019: Five-Role CRM Authorization Model](ADR/ADR-0019-five-role-crm-authorization-model.md)
 - [ADR-0021: Groq Copilot and WhatsApp Boundary](ADR/ADR-0021-groq-copilot-and-whatsapp-boundary.md)
 - [ADR-0033: COD-first launch and online payment deferral](ADR/ADR-0033-phase-9d-cod-first-launch-and-online-payment-deferral.md)
