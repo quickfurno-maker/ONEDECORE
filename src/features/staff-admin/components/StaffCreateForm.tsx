@@ -148,19 +148,25 @@ export function StaffCreateForm({ managers, policies }: StaffCreateFormProps) {
         </div>
         <div>
           <label htmlFor={`${formId}-email`} className={labelClassName}>
-            Work email <span className="text-amber-400">*</span>
+            Work email (optional)
           </label>
           <input
             id={`${formId}-email`}
             name="email"
             type="email"
-            required
             defaultValue={values.email}
             aria-invalid={fieldErrors.email ? true : undefined}
-            aria-describedby={describedBy("email", emailErrorId)}
+            aria-describedby={
+              describedBy("email", emailErrorId) ?? `${formId}-email-hint`
+            }
             className={classFor("email")}
           />
           <FieldError id={emailErrorId} message={fieldErrors.email} />
+          {fieldErrors.email ? null : (
+            <p id={`${formId}-email-hint`} className="mt-1 text-xs text-neutral-500">
+              You can add app/login access later.
+            </p>
+          )}
         </div>
         <div>
           <label htmlFor={`${formId}-phoneE164`} className={labelClassName}>

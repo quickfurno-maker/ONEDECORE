@@ -40,12 +40,12 @@ function walkTs(dir: string, acc: string[] = []): string[] {
 }
 
 describe("Phase 9D-F baseline and payment absence", () => {
-  test("latest migration is the Workforce V1 salary payment ledger and deferred payment M38 is absent", () => {
+  test("latest migration is the staff optional-email employment identity and deferred payment M38 is absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260902170000_workforce_salary_payment_ledger.sql"
+      "20260903120000_staff_optional_email_employment_identity.sql"
     );
-    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 51);
+    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 52);
     assert.equal(
       existsSync(join(root, "supabase/migrations/20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false

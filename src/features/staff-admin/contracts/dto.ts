@@ -6,6 +6,7 @@ import {
   isStaffAssignableRoleCode,
   type StaffAssignableRoleCode,
   type StaffInvitationStateCode,
+  type StaffAccessStateCode,
   type StaffProfileStatusCode,
   type StaffReconciliationStateCode,
 } from "./permissions.ts";
@@ -29,6 +30,7 @@ export interface StaffListItem {
   readonly roleCode: StaffAssignableRoleCode | "super_admin";
   readonly managerName: string | null;
   readonly status: StaffProfileStatusCode;
+  readonly accessState: StaffAccessStateCode;
   readonly joiningDate: string;
 }
 
@@ -49,7 +51,12 @@ export interface CreateStaffMemberInput {
   readonly clientRequestId: string;
   readonly employeeCode: string;
   readonly displayName: string;
-  readonly email: string;
+  /**
+   * Optional. Blank means the employment record is created with no auth user
+   * and no invitation; a Super Admin attaches a login identity later. A
+   * placeholder address is never generated.
+   */
+  readonly email?: string | null;
   readonly phoneE164?: string | null;
   readonly designation: string;
   readonly joiningDate: string;
@@ -64,6 +71,8 @@ export interface CreateStaffMemberResult {
   readonly employeeCode: string;
   readonly profileStatus: Extract<StaffProfileStatusCode, "pending" | "active">;
   readonly invitationState: StaffInvitationStateCode;
+  /** LOGIN identity state, independent of employment status. */
+  readonly accessState: StaffAccessStateCode;
   readonly reconciliationState: StaffReconciliationStateCode;
   readonly idempotentReplay: boolean;
 }
@@ -113,6 +122,17 @@ export function normalizeEmployeeCode(value: string): string {
   return value.trim().toUpperCase();
 }
 
+/**
+ * Normalizes an optional staff email.
+ *
+ * Returns `null` for a blank field so callers can branch on "no login identity"
+ * instead of inventing a placeholder address.
+ */
+export function normalizeStaffEmail(value: string | null | undefined): string | null {
+  const trimmed = (value ?? "").trim().toLowerCase();
+  return trimmed.length === 0 ? null : trimmed;
+}
+
 export function validateCreateStaffMemberInput(
   input: CreateStaffMemberInput
 ): readonly StaffValidationError[] {
@@ -142,8 +162,11 @@ export function validateCreateStaffMemberInput(
     });
   }
 
-  const email = input.email.trim().toLowerCase();
-  if (email.length === 0 || email.length > 254 || !EMAIL_PATTERN.test(email)) {
+  // Email is optional. It is validated only when the Super Admin actually
+  // supplied one; a blank field creates the employment record without a login
+  // identity rather than failing.
+  const email = normalizeStaffEmail(input.email ?? null);
+  if (email !== null && (email.length > 254 || !EMAIL_PATTERN.test(email))) {
     errors.push({
       field: "email",
       message: "Email must be a valid address up to 254 characters.",
@@ -233,7 +256,19 @@ export function mapCreateStaffMemberRpcResult(
         ? "reconciliation_required"
         : record.invitationState === "invited"
           ? "invited"
-          : "completed",
+          : record.invitationState === "not_activated"
+            ? "not_activated"
+            : "completed",
+    accessState:
+      record.accessState === "active"
+        ? "active"
+        : record.accessState === "invited"
+          ? "invited"
+          : record.accessState === "not_activated"
+            ? "not_activated"
+            // Existing invite path returns no accessState; a completed invite
+            // means a login identity exists.
+            : "invited",
     reconciliationState:
       record.reconciliationState === "auth_created_db_pending"
         ? "auth_created_db_pending"

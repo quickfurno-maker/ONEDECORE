@@ -41,12 +41,37 @@ export const STAFF_PROFILE_STATUS_CODES = [
 export type StaffProfileStatusCode = (typeof STAFF_PROFILE_STATUS_CODES)[number];
 
 export const STAFF_INVITATION_STATE_CODES = [
+  "not_activated",
   "invited",
   "reconciliation_required",
   "completed",
 ] as const;
 
 export type StaffInvitationStateCode = (typeof STAFF_INVITATION_STATE_CODES)[number];
+
+/**
+ * LOGIN identity state, distinct from employment status.
+ *
+ * `not_activated` means no auth user exists for this employment identity, so
+ * auth.uid() can never match it and every RLS policy denies access.
+ */
+export const STAFF_ACCESS_STATE_CODES = [
+  "not_activated",
+  "invited",
+  "active",
+] as const;
+
+export type StaffAccessStateCode = (typeof STAFF_ACCESS_STATE_CODES)[number];
+
+export const STAFF_ACCESS_STATE_LABELS: Record<StaffAccessStateCode, string> = {
+  not_activated: "Not activated",
+  invited: "Invited",
+  active: "Active",
+};
+
+export function isStaffAccessStateCode(value: string): value is StaffAccessStateCode {
+  return (STAFF_ACCESS_STATE_CODES as readonly string[]).includes(value);
+}
 
 export const STAFF_RECONCILIATION_STATE_CODES = [
   "none",

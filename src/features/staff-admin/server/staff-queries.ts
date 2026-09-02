@@ -6,7 +6,9 @@ import type { Database } from "@/types/database.generated";
 import type { StaffDetail, StaffListItem } from "../contracts/dto.ts";
 import {
   isStaffAssignableRoleCode,
+  isStaffAccessStateCode,
   isStaffProfileStatusCode,
+  type StaffAccessStateCode,
   type StaffProfileStatusCode,
 } from "../contracts/permissions.ts";
 import { StaffError, staffErrorFromPostgresMessage } from "../contracts/errors.ts";
@@ -65,6 +67,7 @@ type EmploymentRow = {
   readonly reporting_manager_id: string | null;
   readonly attendance_eligible: boolean;
   readonly attendance_policy_id: string | null;
+  readonly access_state: string | null;
   readonly profiles: {
     readonly display_name: string | null;
     readonly status: string;
@@ -144,6 +147,9 @@ function mapEmploymentRowToListItem(
     designation: row.designation,
     roleCode: resolveRoleCode(roleCodes),
     managerName: row.manager?.display_name?.trim() || null,
+    accessState: isStaffAccessStateCode(row.access_state ?? "")
+      ? (row.access_state as StaffAccessStateCode)
+      : "invited",
     status,
     joiningDate: row.joining_date,
   };
@@ -182,7 +188,7 @@ export async function loadStaffDetail(staffId: string): Promise<StaffDetail | nu
   const { data, error } = await staffQueryClient(supabase)
     .from("staff_employment_profiles")
     .select(
-      "staff_id, employee_code, designation, joining_date, reporting_manager_id, attendance_eligible, attendance_policy_id, profiles!staff_employment_profiles_staff_id_fkey(display_name, status, phone_e164), manager:profiles!staff_employment_profiles_reporting_manager_id_fkey(display_name), attendance_policies(name)"
+      "staff_id, employee_code, designation, joining_date, reporting_manager_id, attendance_eligible, attendance_policy_id, access_state, profiles!staff_employment_profiles_staff_id_fkey(display_name, status, phone_e164), manager:profiles!staff_employment_profiles_reporting_manager_id_fkey(display_name), attendance_policies(name)"
     )
     .eq("staff_id", staffId)
     .maybeSingle();

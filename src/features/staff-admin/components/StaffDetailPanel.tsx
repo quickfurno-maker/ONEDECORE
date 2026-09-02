@@ -14,7 +14,7 @@ import {
   type StaffFormActionState,
 } from "../server/staff-form-actions.ts";
 import { ReportingManagerPicker } from "./ReportingManagerPicker.tsx";
-import { StaffStatusBadge } from "./StaffStatusBadge.tsx";
+import { StaffAccessStateBadge, StaffStatusBadge } from "./StaffStatusBadge.tsx";
 
 const fieldClassName =
   "mt-1 block w-full min-h-11 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400";
@@ -75,7 +75,13 @@ export function StaffDetailPanel({
               {staff.employeeCode} · {staff.designation}
             </p>
           </div>
-          <StaffStatusBadge status={staff.status} />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] uppercase tracking-wide text-neutral-500">
+              Employment
+            </span>
+            <StaffStatusBadge status={staff.status} />
+            <StaffAccessStateBadge accessState={staff.accessState} />
+          </div>
         </div>
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
