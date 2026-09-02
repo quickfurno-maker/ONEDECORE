@@ -12,6 +12,7 @@ const ATTENDANCE_PERMISSION_PROBE_CODES = [
   "attendance.correct.all",
   "attendance.correct.team",
   "attendance.policies.manage",
+  "attendance.approve",
 ] as const;
 
 export type AttendancePermissionCode = (typeof ATTENDANCE_PERMISSION_PROBE_CODES)[number];
@@ -27,6 +28,8 @@ export interface AttendanceAccessContext {
   readonly canCorrectAllAttendance: boolean;
   readonly canCorrectTeamAttendance: boolean;
   readonly canManagePolicies: boolean;
+  /** Workforce V1 final-attendance approval authority. Super Admin only. */
+  readonly canApproveAttendance: boolean;
 }
 
 export type AttendanceAccessResolution =
@@ -83,13 +86,15 @@ export async function resolveAttendanceAccess(): Promise<AttendanceAccessResolut
     canCorrectAllAttendance: permissions["attendance.correct.all"],
     canCorrectTeamAttendance: permissions["attendance.correct.team"],
     canManagePolicies: permissions["attendance.policies.manage"],
+    canApproveAttendance: permissions["attendance.approve"],
   };
 
   if (
     !context.canSelfAttendance &&
     !context.canReadTeamAttendance &&
     !context.canReadAllAttendance &&
-    !context.canManagePolicies
+    !context.canManagePolicies &&
+    !context.canApproveAttendance
   ) {
     return { kind: "denied" };
   }

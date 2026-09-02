@@ -12,9 +12,11 @@ import {
   isWorkforceSubmittableCategory,
   mapApprovalInboxRow,
   mapMonthlySummary,
+  mapSubmissionRow,
   type WorkforceApprovalInboxRow,
   type WorkforceFinalCategory,
   type WorkforceMonthlySummary,
+  type WorkforceSubmissionRow,
   type WorkforceSubmittableCategory,
 } from "../contracts/workforce-contracts.ts";
 import { getAttendanceAccessContext } from "./attendance-auth.ts";
@@ -256,4 +258,76 @@ export async function loadMonthlyAttendanceSummary(input: {
   }
 
   return mapMonthlySummary(assertJsonObject(data, "get_attendance_monthly_summary"));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Staff read models                                                          */
+/* -------------------------------------------------------------------------- */
+
+interface SubmissionQueryBuilder
+  extends PromiseLike<{ data: unknown; error: { message: string } | null }> {
+  select(columns: string): SubmissionQueryBuilder;
+  eq(column: string, value: string): SubmissionQueryBuilder;
+  gte(column: string, value: string): SubmissionQueryBuilder;
+  lte(column: string, value: string): SubmissionQueryBuilder;
+  order(column: string, opts: { ascending: boolean }): SubmissionQueryBuilder;
+  maybeSingle(): Promise<{ data: unknown; error: { message: string } | null }>;
+}
+
+type SubmissionQueryClient = {
+  from(table: "attendance_submissions"): SubmissionQueryBuilder;
+};
+
+const SUBMISSION_COLUMNS =
+  "staff_id, attendance_date, lifecycle_state, submitted_category, final_category, credited_minutes, late_minutes, is_late, review_note, reviewed_at";
+
+function submissionQueryClient(client: WorkforceServerClient): SubmissionQueryClient {
+  return client as unknown as SubmissionQueryClient;
+}
+
+/**
+ * One day's submission for the signed-in staff member. RLS restricts the row to
+ * what `private.staff_can_view_attendance` allows, so no owner filter is needed
+ * beyond the explicit staff id.
+ */
+export async function loadSubmissionForDay(input: {
+  readonly staffId: string;
+  readonly attendanceDate: string;
+}): Promise<WorkforceSubmissionRow | null> {
+  const client = await createClient();
+  const { data, error } = await submissionQueryClient(client)
+    .from("attendance_submissions")
+    .select(SUBMISSION_COLUMNS)
+    .eq("staff_id", input.staffId)
+    .eq("attendance_date", input.attendanceDate)
+    .maybeSingle();
+
+  if (error) {
+    throw workforceErrorFromPostgresMessage(error.message);
+  }
+
+  return data ? mapSubmissionRow(data as Record<string, unknown>) : null;
+}
+
+/** A staff member's own submissions across one month, newest first. */
+export async function loadSubmissionsForMonth(input: {
+  readonly staffId: string;
+  readonly monthStart: string;
+  readonly monthEnd: string;
+}): Promise<readonly WorkforceSubmissionRow[]> {
+  const client = await createClient();
+  const { data, error } = await submissionQueryClient(client)
+    .from("attendance_submissions")
+    .select(SUBMISSION_COLUMNS)
+    .eq("staff_id", input.staffId)
+    .gte("attendance_date", input.monthStart)
+    .lte("attendance_date", input.monthEnd)
+    .order("attendance_date", { ascending: false });
+
+  if (error) {
+    throw workforceErrorFromPostgresMessage(error.message);
+  }
+
+  const rows = Array.isArray(data) ? data : [];
+  return rows.map((row) => mapSubmissionRow(row as Record<string, unknown>));
 }
