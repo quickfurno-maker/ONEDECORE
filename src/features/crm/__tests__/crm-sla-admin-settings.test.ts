@@ -793,11 +793,16 @@ describe("status block", () => {
 /* ========================================================================== */
 
 describe("containment", () => {
-  test("migration count is unchanged at 49", () => {
+  test("migration ledger is 50 after the Workforce V1 lifecycle migration", () => {
     const migrations = readdirSync(join(root, "supabase/migrations")).filter(
       (name) => name.endsWith(".sql")
     );
-    assert.equal(migrations.length, 49);
+    assert.equal(migrations.length, 50);
+    // CRM SLA admin settings itself added no migration; the 50th is
+    // Workforce V1 attendance lifecycle.
+    assert.ok(
+      migrations.includes("20260902160000_workforce_attendance_v1_lifecycle.sql")
+    );
   });
 
   test("this slice adds no SQL of its own", () => {

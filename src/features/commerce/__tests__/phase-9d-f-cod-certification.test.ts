@@ -40,12 +40,12 @@ function walkTs(dir: string, acc: string[] = []): string[] {
 }
 
 describe("Phase 9D-F baseline and payment absence", () => {
-  test("latest migration is the WhatsApp lead-link repair and deferred payment M38 is absent", () => {
+  test("latest migration is the Workforce V1 attendance lifecycle and deferred payment M38 is absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260902140000_crm_whatsapp_lead_link_repair.sql"
+      "20260902160000_workforce_attendance_v1_lifecycle.sql"
     );
-    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 49);
+    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 50);
     assert.equal(
       existsSync(join(root, "supabase/migrations/20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false

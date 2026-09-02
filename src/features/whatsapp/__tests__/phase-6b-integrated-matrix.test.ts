@@ -97,7 +97,15 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 49, "Migration count must be exactly 49");
+    assert.equal(files.length, 50, "Migration count must be exactly 50");
+
+    // Workforce V1 attendance lifecycle. Still no payment M38.
+    const workforce = files.filter((f) => f.startsWith("20260902160000"));
+    assert.equal(workforce.length, 1);
+    assert.equal(
+      workforce[0],
+      "20260902160000_workforce_attendance_v1_lifecycle.sql"
+    );
 
     const phase6c = files.filter((f) => f.startsWith("20260809"));
     assert.equal(phase6c.length, 1);
@@ -186,8 +194,9 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
         "20260831174021_crm_lead_notes_insert_privilege_redrift_repair.sql",
         "20260901140000_crm_management_analytics_read_model.sql",
         "20260902140000_crm_whatsapp_lead_link_repair.sql",
+        "20260902160000_workforce_attendance_v1_lifecycle.sql",
       ],
-      "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, CRM 2A-7, CRM 2C cadences, CRM 2D commercial read models, the lead_notes INSERT privilege redrift repair, CRM 2E management analytics, and the WhatsApp lead-link repair may follow 9D-D1 COD order foundation"
+      "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, CRM 2A-7, CRM 2C cadences, CRM 2D commercial read models, the lead_notes INSERT privilege redrift repair, CRM 2E management analytics, the WhatsApp lead-link repair, and the Workforce V1 attendance lifecycle may follow 9D-D1 COD order foundation"
     );
     assert.equal(
       files.includes("20260825140000_commerce_online_payment_adapter_foundation.sql"),
