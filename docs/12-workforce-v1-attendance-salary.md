@@ -86,7 +86,7 @@ Each row shows employee, date, In/Out time, elapsed duration, submitted category
 
 Every meaningful mutation preserves **previous value, new value, changed by, changed at** and a reason where relevant, in the append-only `attendance_submission_events`. **Approved historical attendance is never silently overwritten.**
 
-## 9. Salary *(model locked; implementation lands with PR C)*
+## 9. Salary *(model locked; implemented in PR C)*
 
 - Salary is decided and controlled by **Super Admin**.
 - **Effective-dated versioned salary profile**: employee, monthly base salary, `effective_from`, `effective_to` (or open-ended current version), `set_by`, `created_at`.
@@ -103,7 +103,7 @@ Additions and deductions are **admin-controlled line items**: bonus, incentive, 
 
 Super Admin reviews and **finalizes**. Once finalized, historical integrity is preserved; correction uses a **controlled amendment/reopen workflow with audit evidence**, never a silent overwrite.
 
-## 10. Payment ledger *(model locked; implementation lands with PR C)*
+## 10. Payment ledger *(model locked; implemented in PR C)*
 
 Salary **payable** and **payment** are separate. State is **derived**: `unpaid` / `partially paid` / `paid` — never a single `salary_paid` boolean.
 
@@ -132,11 +132,11 @@ Tax engine · statutory payroll compliance · PF/ESI · payslip tax calculations
 | Piece | Status |
 | :--- | :--- |
 | Staff create form value preservation | **MERGED** (PR #123) |
-| Attendance lifecycle migration `20260902160000` | **In PR B** — repository only, **not applied to managed** |
-| Attendance lifecycle pgTAP (59 assertions) | **In PR B** |
-| Workforce domain contracts + server actions | **In PR B** |
-| Admin approval inbox UI / staff submission UI | **Pending** |
-| Salary profile, statement, payment ledger | **Pending (PR C)** |
+| Attendance lifecycle migration `20260902160000` | **MERGED** (PR #124) — repository only, **not applied to managed** |
+| Attendance lifecycle pgTAP (59 assertions) | **MERGED** (PR #124) |
+| Workforce domain contracts + server actions | **MERGED** (PR #124) |
+| Admin approval inbox UI / staff submission UI | **MERGED** (PR #125) |
+| Salary profile, statement, payment ledger | **In PR C** — migration `20260902170000`, repository only |
 | Managed migration apply | **Pending owner authorization + backup/PITR gate** |
 | Production deployment | **Pending** |
 
