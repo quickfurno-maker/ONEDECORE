@@ -181,3 +181,30 @@ export function shouldShowFormWideMessage(
 ): boolean {
   return message.length > 0 && !hasStaffCreateFieldErrors(errors);
 }
+
+/**
+ * Result of one staff administration form action.
+ *
+ * Declared here rather than beside the server actions: a "use server"
+ * module may only export async functions at runtime, so a plain object
+ * exported from one breaks the whole route at request time.
+ */
+export interface StaffFormActionState {
+  readonly success: boolean;
+  readonly message: string;
+  readonly code?: string;
+  /**
+   * Values echoed back so a rejected submit never clears the form. Present only
+   * on the staff create action.
+   */
+  readonly values?: StaffCreateFormValues;
+  /** Structured per-field errors keyed by form field name. */
+  readonly fieldErrors?: StaffCreateFieldErrors;
+}
+
+export const INITIAL_STAFF_FORM_STATE: StaffFormActionState = {
+  success: false,
+  message: "",
+  values: EMPTY_STAFF_CREATE_FORM_VALUES,
+  fieldErrors: {},
+};

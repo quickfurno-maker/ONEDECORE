@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { LEAVE_HALF_DAY_PARTS, isLeaveHalfDayPart } from "../contracts/dto.ts";
+import { isLeaveHalfDayPart } from "../contracts/dto.ts";
 import { LeaveError } from "../contracts/errors.ts";
 import {
   approve,
@@ -155,5 +155,3 @@ export async function archiveHolidayAction(
     return { success: false, message: "Holiday could not be archived." };
   }
 }
-
-export { LEAVE_HALF_DAY_PARTS };

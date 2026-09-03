@@ -1,11 +1,11 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef } from "react";
-import type { WhatsappSendActionState } from "../../contracts/send-action-state.ts";
 import {
-  createWhatsappServiceSendIntentAction,
   INITIAL_WHATSAPP_SEND_ACTION_STATE,
-} from "../../server/whatsapp-send-actions.ts";
+  type WhatsappSendActionState,
+} from "../../contracts/send-action-state.ts";
+import { createWhatsappServiceSendIntentAction } from "../../server/whatsapp-send-actions.ts";
 
 interface InboxComposerProps {
   readonly conversationId: string;

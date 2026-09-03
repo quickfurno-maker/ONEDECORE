@@ -314,3 +314,21 @@ export function mapSalaryStatementSummary(
     paymentStatus: isSalaryPaymentStatus(paymentStatus) ? paymentStatus : "unpaid",
   };
 }
+
+/**
+ * Result of one salary form action.
+ *
+ * Declared here rather than beside the server actions: a "use server"
+ * module may only export async functions at runtime, so a plain object
+ * exported from one breaks the whole route at request time.
+ */
+export interface SalaryFormActionState {
+  readonly success: boolean;
+  readonly message: string;
+  readonly code?: string;
+}
+
+export const INITIAL_SALARY_FORM_STATE: SalaryFormActionState = {
+  success: false,
+  message: "",
+};

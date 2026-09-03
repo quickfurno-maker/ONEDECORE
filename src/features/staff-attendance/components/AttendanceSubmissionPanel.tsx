@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import {
+  INITIAL_WORKFORCE_FORM_STATE,
   WORKFORCE_CATEGORY_LABELS,
   WORKFORCE_STATE_LABELS,
   WORKFORCE_SUBMITTABLE_CATEGORIES,
@@ -11,7 +12,6 @@ import {
   type WorkforceSubmissionRow,
 } from "../contracts/workforce-contracts.ts";
 import {
-  INITIAL_WORKFORCE_FORM_STATE,
   requestAttendanceCorrectionAction,
   submitAttendanceDayAction,
 } from "../server/workforce-form-actions.ts";

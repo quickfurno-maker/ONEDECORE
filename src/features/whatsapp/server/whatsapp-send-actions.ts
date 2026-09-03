@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { WHATSAPP_SERVICE_PURPOSE_CODE } from "../contracts/inbox-permissions.ts";
 import {
-  INITIAL_WHATSAPP_SEND_ACTION_STATE,
   type WhatsappSendActionState,
 } from "../contracts/send-action-state.ts";
 import {
@@ -156,5 +155,3 @@ export async function createWhatsappServiceSendIntentAction(
     return toSendActionState(error);
   }
 }
-
-export { INITIAL_WHATSAPP_SEND_ACTION_STATE };

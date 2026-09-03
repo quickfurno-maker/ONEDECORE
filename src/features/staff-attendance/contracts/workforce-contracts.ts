@@ -431,3 +431,23 @@ export function parseLegacyWeeklyOffDays(raw: string): WeeklyOffParseResult {
   // The database requires a sorted, distinct array.
   return { ok: true, days: days.slice().sort((a, b) => a - b) };
 }
+
+/**
+ * Result of one Workforce attendance form action.
+ *
+ * Declared here rather than beside the server actions: a "use server"
+ * module may only export async functions at runtime, so a plain object
+ * exported from one breaks the whole route at request time.
+ */
+export interface WorkforceFormActionState {
+  readonly success: boolean;
+  readonly message: string;
+  readonly code?: string;
+  /** Rows that failed during a bulk action, so partial success stays visible. */
+  readonly failures?: readonly string[];
+}
+
+export const INITIAL_WORKFORCE_FORM_STATE: WorkforceFormActionState = {
+  success: false,
+  message: "",
+};

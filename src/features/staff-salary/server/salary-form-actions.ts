@@ -5,6 +5,7 @@ import {
   isSalaryLineType,
   isSalaryPaymentMethod,
   rupeesToPaise,
+  type SalaryFormActionState,
   type SalaryLineType,
   type SalaryPaymentMethod,
 } from "../contracts/salary-contracts.ts";
@@ -19,16 +20,9 @@ import {
   setSalaryProfile,
 } from "./salary-actions.ts";
 
-export interface SalaryFormActionState {
-  readonly success: boolean;
-  readonly message: string;
-  readonly code?: string;
-}
-
-export const INITIAL_SALARY_FORM_STATE: SalaryFormActionState = {
-  success: false,
-  message: "",
-};
+// Type-only re-export: erased at compile time, so the "use server" contract
+// holds. The runtime value lives in ../contracts/salary-contracts.ts.
+export type { SalaryFormActionState };
 
 function fail(error: unknown, fallback: string): SalaryFormActionState {
   if (error instanceof SalaryError) {

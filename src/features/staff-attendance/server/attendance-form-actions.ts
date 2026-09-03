@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { parseLegacyWeeklyOffDays } from "../contracts/workforce-contracts.ts";
 import {
   ATTENDANCE_CORRECTION_TYPES,
-  ATTENDANCE_LOCATION_CATEGORIES,
   isAttendanceCorrectionType,
   isAttendanceLocationCategory,
 } from "../contracts/dto.ts";
@@ -191,5 +190,3 @@ export async function setCurrentAttendancePolicyAction(
     return { success: false, message: "Current attendance policy could not be updated." };
   }
 }
-
-export { ATTENDANCE_LOCATION_CATEGORIES };
