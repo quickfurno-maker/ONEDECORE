@@ -62,7 +62,12 @@ export interface QuotationVersionDTO {
   readonly id: string;
   readonly versionNumber: number;
   readonly lockVersion: number;
-  readonly status: "draft" | "archived";
+  /**
+   * quotation_versions supports all three. The type omitted "finalized",
+   * which is what allowed callers to treat "not draft" as finalized and
+   * present a superseded ARCHIVED version as the live commercial record.
+   */
+  readonly status: "draft" | "finalized" | "archived";
   readonly isCurrentDraft: boolean;
   readonly title: string;
   readonly clientNameSnapshot?: string | null;
@@ -87,6 +92,16 @@ export interface QuotationVersionDTO {
   /** Present once the version is finalized; the frozen commercial record. */
   readonly finalizedAt?: string | null;
   readonly finalizedContentSha256?: string | null;
+  readonly taxProfileName?: string | null;
+  readonly pdfStatus?: string | null;
+  /**
+   * Acceptance is a fact of `quotation_acceptances`. The version STAYS
+   * `finalized` after acceptance, so it must never be inferred from the
+   * version status or from the lead status.
+   */
+  readonly isAccepted?: boolean;
+  readonly acceptedAt?: string | null;
+  readonly acceptedByName?: string | null;
 }
 
 export interface QuotationDraftDTO {

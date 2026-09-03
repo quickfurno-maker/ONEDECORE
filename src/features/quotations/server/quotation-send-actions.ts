@@ -326,6 +326,36 @@ export async function generateQuotationClientLinkAction(
     return { success: false, status: "failure", message: "Authentication required." };
   }
 
+  // The grant issuer keys on the VERSION alone, so a caller pairing a version
+  // with someone else's quotation id would have been believed. The persisted
+  // version -> quotation relation is the authority.
+  const supabase = await resolveUserClient(deps);
+  const { data: versionRow, error: versionErr } = await supabase
+    .from("quotation_versions")
+    .select("id, quotation_id, status")
+    .eq("id", params.versionId)
+    .single();
+
+  if (versionErr || !versionRow) {
+    return {
+      success: false,
+      status: "failure",
+      message: "Quotation version not found or not accessible.",
+    };
+  }
+
+  const persistedQuotationId = String(
+    (versionRow as { quotation_id?: string }).quotation_id ?? ""
+  );
+  if (!persistedQuotationId || persistedQuotationId !== params.quotationId) {
+    return {
+      success: false,
+      status: "failure",
+      message:
+        "QUOTATION_VERSION_MISMATCH: That version does not belong to this quotation.",
+    };
+  }
+
   let admin;
   try {
     admin = deps.createAdminClient

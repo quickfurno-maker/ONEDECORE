@@ -7,8 +7,12 @@ export interface PDFGeneratorData {
   quotation_number: string;
   version_number: number;
   finalized_at: string;
+  title?: string;
+  scope_summary?: string;
   client_name: string;
   client_phone: string;
+  client_email?: string;
+  property_address?: string;
   property_details: Record<string, unknown>;
   /**
    * Rooms, in order. ONEDECORE quotes room-wise, so a "section" IS a room and
@@ -77,8 +81,14 @@ function formatInr(paise: number): string {
   }).format(rupees);
 }
 
-/** Trims trailing zeros so "5 NOS" does not print as "5.000 NOS". */
-function formatMeasure(value: number, decimals: number): string {
+/**
+ * Up to 3 decimals, trailing zeros trimmed.
+ *
+ * Rounding a dimension or an area to 2 decimals would hide a real digit: a
+ * stored 1.234 shown as "1.23" makes the visible width x height stop producing
+ * the visible amount, so the document contradicts itself in front of the client.
+ */
+function formatMeasure(value: number, decimals = 3): string {
   const fixed = value.toFixed(decimals);
   return fixed.includes(".") ? fixed.replace(/0+$/, "").replace(/\.$/, "") : fixed;
 }
@@ -87,7 +97,7 @@ function formatFeetCell(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value) || value <= 0) {
     return EM_DASH;
   }
-  return value.toFixed(2);
+  return formatMeasure(value);
 }
 
 type InteriorPdfItem = PDFGeneratorData["sections"][number]["items"][number];
@@ -115,7 +125,7 @@ function interiorRowCells(item: InteriorPdfItem): readonly string[] {
       item.item_name,
       formatFeetCell(item.width_ft),
       formatFeetCell(item.height_ft),
-      `${formatMeasure(area, 2)} SQ.FT`,
+      `${formatMeasure(area)} SQ.FT`,
       `${formatInr(item.unit_rate_paise)} / SQ.FT`,
       formatInr(item.line_total_paise),
     ];
@@ -126,7 +136,7 @@ function interiorRowCells(item: InteriorPdfItem): readonly string[] {
     item.item_name,
     EM_DASH,
     EM_DASH,
-    `${formatMeasure(Number(item.quantity), 3)} ${unit}`,
+    `${formatMeasure(Number(item.quantity))} ${unit}`,
     `${formatInr(item.unit_rate_paise)} / ${unit}`,
     formatInr(item.line_total_paise),
   ];
@@ -188,7 +198,31 @@ export async function renderQuotationPdfBuffer(data: PDFGeneratorData): Promise<
       doc.fontSize(10).font("Helvetica").fillColor("#334155");
       doc.text(`Client Name: ${data.client_name}`, 40, y);
       doc.text(`Phone: ${data.client_phone}`, 300, y);
-      y += 25;
+      y += 14;
+
+      if (data.client_email) {
+        doc.text(`Email: ${data.client_email}`, 40, y);
+        y += 14;
+      }
+
+      if (data.property_address) {
+        doc.text(`Site / Property: ${data.property_address}`, 40, y, { width: 500 });
+        y += 14;
+      }
+
+      if (data.title) {
+        doc.font("Helvetica-Bold").text(data.title, 40, y, { width: 500 });
+        doc.font("Helvetica");
+        y += 14;
+      }
+
+      if (data.scope_summary) {
+        doc.fontSize(9).fillColor("#64748b").text(data.scope_summary, 40, y, { width: 500 });
+        doc.fontSize(10).fillColor("#334155");
+        y += 16;
+      }
+
+      y += 10;
 
       doc.moveTo(40, y).lineTo(555, y).strokeColor("#e2e8f0").stroke();
       y += 15;
@@ -282,7 +316,7 @@ export async function renderQuotationPdfBuffer(data: PDFGeneratorData): Promise<
         const areaSubtotal = sec.area_subtotal_sqft ?? 0;
         doc.fontSize(8.5).font("Helvetica").fillColor("#64748b");
         if (areaSubtotal > 0) {
-          doc.text(`AREA TOTAL  ${formatMeasure(areaSubtotal, 2)} SQ.FT`, 40, y, { width: 300 });
+          doc.text(`AREA TOTAL  ${formatMeasure(areaSubtotal)} SQ.FT`, 40, y, { width: 300 });
         }
         doc.font("Helvetica-Bold").fillColor("#0f172a");
         doc.text("ROOM SUBTOTAL", COLS[4].x - 40, y, { width: COLS[4].w + 40, align: "right" });
@@ -337,11 +371,49 @@ export async function renderQuotationPdfBuffer(data: PDFGeneratorData): Promise<
         doc.fontSize(9).font("Helvetica").fillColor("#334155");
 
         for (const ps of data.payment_schedule) {
-          doc.text(`${ps.milestone_name} ${ps.percentage ? `(${ps.percentage}%)` : ""}`, 50, y);
+          if (y > 745) {
+            doc.addPage();
+            y = 40;
+          }
+          doc.font("Helvetica").text(
+            `${ps.milestone_name} ${ps.percentage ? `(${ps.percentage}%)` : ""}`,
+            50,
+            y
+          );
           doc.font("Helvetica-Bold").text(formatInr(ps.amount_paise), 450, y, { align: "right" });
           y += 14;
         }
+        y += 10;
       }
+
+      // The client must be able to read what IS and is NOT included, and the
+      // terms they are accepting, on the same document they accept.
+      const renderList = (heading: string, entries: readonly string[]) => {
+        if (entries.length === 0) {
+          return;
+        }
+        if (y > 700) {
+          doc.addPage();
+          y = 40;
+        }
+        doc.fontSize(11).font("Helvetica-Bold").fillColor("#0f172a").text(heading, 40, y);
+        y += 15;
+        doc.fontSize(9).font("Helvetica").fillColor("#334155");
+        for (const entry of entries) {
+          if (y > 750) {
+            doc.addPage();
+            y = 40;
+          }
+          const height = doc.heightOfString(entry, { width: 495 });
+          doc.text(`\u2022 ${entry}`, 50, y, { width: 495 });
+          y += Math.max(12, height + 3);
+        }
+        y += 10;
+      };
+
+      renderList("Inclusions", data.inclusions);
+      renderList("Exclusions", data.exclusions);
+      renderList("Terms & Conditions", data.terms_and_conditions);
 
       doc.end();
     } catch (err) {

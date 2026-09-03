@@ -24,6 +24,20 @@ import {
 
 const EM_DASH = "—";
 
+/**
+ * Up to 3 decimals, trailing zeros trimmed.
+ *
+ * Rounding to 2 would hide a real digit: a stored 1.234 shown as "1.23" makes
+ * the visible width x height stop producing the visible amount.
+ */
+function formatMeasure(value: number): string {
+  if (!Number.isFinite(value)) {
+    return EM_DASH;
+  }
+  const fixed = value.toFixed(3);
+  return fixed.includes(".") ? fixed.replace(/0+$/, "").replace(/\.$/, "") : fixed;
+}
+
 function Row({ label, value }: { readonly label: string; readonly value: string }) {
   return (
     <div className="flex justify-between gap-4 py-1 text-sm">
@@ -49,15 +63,15 @@ function measureCell(item: {
   if (basis === "area") {
     const area = item.areaSqFt ?? item.quantity;
     return {
-      w: item.widthFt != null ? Number(item.widthFt).toFixed(2) : EM_DASH,
-      h: item.heightFt != null ? Number(item.heightFt).toFixed(2) : EM_DASH,
-      measure: `${Number(area).toFixed(2)} sq.ft`,
+      w: item.widthFt != null ? formatMeasure(Number(item.widthFt)) : EM_DASH,
+      h: item.heightFt != null ? formatMeasure(Number(item.heightFt)) : EM_DASH,
+      measure: `${formatMeasure(Number(area))} sq.ft`,
     };
   }
   return {
     w: EM_DASH,
     h: EM_DASH,
-    measure: `${Number(item.quantity)} ${item.unitOfMeasure}`,
+    measure: `${formatMeasure(Number(item.quantity))} ${item.unitOfMeasure}`,
   };
 }
 
@@ -75,6 +89,13 @@ export function QuotationFinalizedView({
   pdfStatus,
 }: QuotationFinalizedViewProps) {
   const version = draft.version!;
+
+  // Acceptance is a fact of `quotation_acceptances`; the version STAYS
+  // `finalized` after the client accepts. Showing "Status: finalized" for an
+  // already-accepted quotation was misleading, and inferring it from lead
+  // status would be a different fact entirely.
+  const isAccepted = version.isAccepted === true;
+
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
   const [linkPath, setLinkPath] = useState<string | null>(null);
@@ -149,8 +170,14 @@ export function QuotationFinalizedView({
               {formatInrFromPaise(version.grandTotalPaise ?? 0)}
             </p>
             <p className="mt-1 text-[11px] uppercase tracking-wide text-emerald-300">
-              Status: {version.status}
+              {isAccepted ? "Accepted by client" : "Finalized — awaiting acceptance"}
             </p>
+            {isAccepted && version.acceptedAt ? (
+              <p className="text-[11px] text-neutral-400">
+                {version.acceptedAt}
+                {version.acceptedByName ? ` · ${version.acceptedByName}` : ""}
+              </p>
+            ) : null}
           </div>
         </div>
       </header>
@@ -282,6 +309,9 @@ export function QuotationFinalizedView({
             value={version.finalizedContentSha256 ?? EM_DASH}
           />
           <Row label="PDF document" value={pdfStatus ?? "not generated"} />
+          {isAccepted ? (
+            <Row label="Accepted at" value={version.acceptedAt ?? EM_DASH} />
+          ) : null}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -294,7 +324,9 @@ export function QuotationFinalizedView({
             {pdfStatus === "ready" ? "Verify document" : "Generate / retry document"}
           </button>
 
-          {canSend ? (
+          {/* The database already refuses new grants for an accepted quotation,
+              so offering the buttons would only produce an error. */}
+          {canSend && !isAccepted ? (
             <>
               <button
                 type="button"

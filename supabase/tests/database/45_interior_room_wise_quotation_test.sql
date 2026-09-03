@@ -9,7 +9,7 @@
 -- row still matches the dimensions.
 
 begin;
-select plan(60);
+select plan(79);
 
 -- Test helpers are defined BEFORE the role switch below: once the session is
 -- `authenticated` it has no CREATE on schema public, which is correct.
@@ -22,10 +22,15 @@ returns bigint language sql security definer set search_path = '' as $$
   select lock_version from public.quotation_versions
   where quotation_id = public.test_p4_quotation_id() and is_current_draft = true;
 $$;
+-- Deliberately NOT filtered on is_current_draft: section T finalizes the
+-- version, and a helper that only saw the current draft would return null the
+-- moment the flag was cleared.
 create or replace function public.test_p4_version_id()
 returns uuid language sql security definer set search_path = '' as $$
   select id from public.quotation_versions
-  where quotation_id = public.test_p4_quotation_id() and is_current_draft = true;
+  where quotation_id = public.test_p4_quotation_id()
+  order by version_number desc
+  limit 1;
 $$;
 create or replace function public.test_p4_hash()
 returns text language sql security definer set search_path = '' as $$
@@ -541,6 +546,255 @@ select ok(
    where n.nspname = 'public' and p.proname = 'issue_quotation_access_grant_internal')
   like '%QUOTATION_ALREADY_ACCEPTED%',
   'an accepted quotation still refuses new grants'
+);
+
+
+-- -----------------------------------------------------------------------------
+-- S. Service-role grant issuance honours the M54 access state
+-- -----------------------------------------------------------------------------
+--
+-- `issue_quotation_access_grant_internal` runs as service_role and authorizes an
+-- EXPLICIT actor id, so it never passes through RLS. Without the access-state
+-- check an employment-backed user who is not_activated, credentials_ready or
+-- revoked could still have a client capability link issued in their name.
+
+reset role;
+
+-- The Sales Executive fixture becomes employment-backed.
+insert into public.staff_employment_profiles
+  (staff_id, employee_code, designation, joining_date, attendance_eligible,
+   invite_reconciliation_state, access_state)
+values
+  ('45111111-1111-4111-8111-111111111111', 'P4-EXEC', 'Sales Executive',
+   date '2026-01-01', false, 'none', 'not_activated');
+
+select ok(
+  not private.quotation_actor_has_permission(
+    '45111111-1111-4111-8111-111111111111', 'quotations.send'),
+  'NOT_ACTIVATED: an employment-backed actor cannot issue a client link'
+);
+
+update public.staff_employment_profiles
+set access_state = 'credentials_ready', login_phone_e164 = '+919812345671',
+    credentials_issued_at = now()
+where staff_id = '45111111-1111-4111-8111-111111111111';
+
+select ok(
+  not private.quotation_actor_has_permission(
+    '45111111-1111-4111-8111-111111111111', 'quotations.send'),
+  'CREDENTIALS_READY: still cannot issue a client link'
+);
+
+update public.staff_employment_profiles
+set access_state = 'revoked', access_revoked_at = now()
+where staff_id = '45111111-1111-4111-8111-111111111111';
+
+select ok(
+  not private.quotation_actor_has_permission(
+    '45111111-1111-4111-8111-111111111111', 'quotations.send'),
+  'REVOKED: still cannot issue a client link'
+);
+
+update public.staff_employment_profiles
+set access_state = 'active', access_revoked_at = null
+where staff_id = '45111111-1111-4111-8111-111111111111';
+
+select ok(
+  private.quotation_actor_has_permission(
+    '45111111-1111-4111-8111-111111111111', 'quotations.send'),
+  'ACTIVE: a cleared Sales Executive keeps the permission'
+);
+
+-- The existing lead-scope rule is unchanged and still separate.
+select ok(
+  private.quotation_actor_can_send_for_lead(
+    '45111111-1111-4111-8111-111111111111', '45111111-1111-4111-8111-111111111111'),
+  'ACTIVE: lead scope is still evaluated on its own'
+);
+
+-- A Super Admin with NO employment row must be unaffected: `staff_access_denied`
+-- returns false when no employment record exists.
+insert into auth.users (id, instance_id, email, aud, role)
+values ('45999999-9999-4999-8999-999999999999', '00000000-0000-0000-0000-000000000000',
+        '45-sa@onedecore.in', 'authenticated', 'authenticated');
+update public.profiles set status = 'active' where id = '45999999-9999-4999-8999-999999999999';
+insert into public.user_roles (user_id, role_id)
+select '45999999-9999-4999-8999-999999999999', id from public.roles where code = 'super_admin';
+
+select ok(
+  not exists (
+    select 1 from public.staff_employment_profiles
+    where staff_id = '45999999-9999-4999-8999-999999999999'
+  ),
+  'the Super Admin fixture genuinely has no employment row'
+);
+select ok(
+  private.quotation_actor_has_permission(
+    '45999999-9999-4999-8999-999999999999', 'quotations.send'),
+  'SUPER ADMIN without an employment row is preserved'
+);
+
+-- -----------------------------------------------------------------------------
+-- T. An EXPIRED grant is never reused
+-- -----------------------------------------------------------------------------
+--
+-- `get_quotation_by_capability` refuses a grant past `expires_at`, so returning
+-- one as a successful "reuse" would hand the client a link the reader rejects.
+
+-- Promote the fixture version to finalized with a READY document, which is what
+-- the issuer requires. Done directly rather than through the finalize RPC: the
+-- subject here is grant reuse, not finalization.
+update public.quotation_versions
+set status = 'finalized', is_current_draft = false, finalized_at = now()
+where id = public.test_p4_version_id();
+
+insert into public.quotation_pdf_documents
+  (quotation_id, quotation_version_id, object_path, status, pdf_sha256, file_size_bytes, created_by, ready_at)
+values (
+  public.test_p4_quotation_id(),
+  public.test_p4_version_id(),
+  'p4/test.pdf',
+  'ready',
+  repeat('a', 64),
+  1024,
+  '45111111-1111-4111-8111-111111111111',
+  now()
+);
+
+-- An unrevoked grant that has already EXPIRED.
+insert into public.quotation_access_grants
+  (id, quotation_id, quotation_version_id, derivation_nonce, capability_token_hash,
+   expires_at, created_by)
+values (
+  '45aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  public.test_p4_quotation_id(),
+  public.test_p4_version_id(),
+  repeat('b', 64),
+  repeat('c', 64),
+  now() - interval '1 day',
+  '45111111-1111-4111-8111-111111111111'
+);
+
+select is(
+  (public.issue_quotation_access_grant_internal(
+     '45111111-1111-4111-8111-111111111111',
+     '45bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+     public.test_p4_version_id(),
+     repeat('d', 64),
+     repeat('e', 64),
+     false
+   ) ->> 'reused'),
+  'false',
+  'EXPIRED: an expired grant is NOT returned as a reusable success'
+);
+
+select is(
+  (select count(*)::integer from public.quotation_access_grants
+   where quotation_version_id = public.test_p4_version_id()
+     and revoked_at is null),
+  1,
+  'EXPIRED: at most one live grant remains'
+);
+select isnt(
+  (select revoked_at from public.quotation_access_grants
+   where id = '45aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
+  null,
+  'EXPIRED: the stale grant was revoked rather than left dangling'
+);
+
+-- A genuinely LIVE grant is still reused, with its persisted derivation identity.
+select is(
+  (public.issue_quotation_access_grant_internal(
+     '45111111-1111-4111-8111-111111111111',
+     '45cccccc-cccc-4ccc-8ccc-cccccccccccc',
+     public.test_p4_version_id(),
+     repeat('f', 64),
+     repeat('0', 64),
+     false
+   ) ->> 'reused'),
+  'true',
+  'LIVE: an unexpired grant is still reused'
+);
+select is(
+  (public.issue_quotation_access_grant_internal(
+     '45111111-1111-4111-8111-111111111111',
+     '45dddddd-dddd-4ddd-8ddd-dddddddddddd',
+     public.test_p4_version_id(),
+     repeat('f', 64),
+     repeat('0', 64),
+     false
+   ) ->> 'derivation_nonce'),
+  repeat('d', 64),
+  'LIVE: reuse returns the PERSISTED nonce, not the proposed one'
+);
+
+-- A revoked employment state blocks issuance even through the service-role path.
+update public.staff_employment_profiles
+set access_state = 'revoked', access_revoked_at = now()
+where staff_id = '45111111-1111-4111-8111-111111111111';
+
+select throws_ok(
+  $q$select public.issue_quotation_access_grant_internal(
+      '45111111-1111-4111-8111-111111111111',
+      '45eeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      public.test_p4_version_id(),
+      repeat('9', 64),
+      repeat('8', 64),
+      true
+    )$q$,
+  'P0001',
+  'FORBIDDEN: Permission quotations.send is required.',
+  'REVOKED: the service-role issuer refuses, exactly as RLS would'
+);
+
+update public.staff_employment_profiles
+set access_state = 'active', access_revoked_at = null
+where staff_id = '45111111-1111-4111-8111-111111111111';
+
+-- -----------------------------------------------------------------------------
+-- U. The client capability read model carries the interior semantics
+-- -----------------------------------------------------------------------------
+--
+-- The customer must accept the same commercial meaning printed in the finalized
+-- PDF, which they cannot do if the read model only reports quantity and UOM.
+
+select ok(
+  (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'get_quotation_by_capability')
+  like '%''calculation_basis'', qi.calculation_basis%',
+  'the client read model exposes the calculation basis'
+);
+select ok(
+  (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'get_quotation_by_capability')
+  like '%''width_ft'', qi.width_ft%',
+  'the client read model exposes width'
+);
+select ok(
+  (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'get_quotation_by_capability')
+  like '%private.quotation_derive_area_sqft(qi.width_ft, qi.height_ft)%',
+  'the client read model exposes the DERIVED area'
+);
+select ok(
+  (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'get_quotation_by_capability')
+  like '%''area_subtotal_sqft''%',
+  'the client read model exposes the room area total'
+);
+select ok(
+  (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'get_quotation_by_capability')
+  like '%''has_pdf''%',
+  'the client read model reports document availability'
+);
+-- The tax identity stays FROZEN: a later rename of the live profile must not
+-- change what a finalized document says.
+select ok(
+  (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'get_quotation_by_capability')
+  like '%v_version.tax_profile_snapshot->>''display_name''%',
+  'the client read model uses the frozen tax snapshot'
 );
 
 select * from finish();

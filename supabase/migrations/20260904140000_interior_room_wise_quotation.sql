@@ -472,159 +472,6 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
--- D. Read model — rooms, dimensions and derived area
--- -----------------------------------------------------------------------------
---
--- `areaSqFt` is returned as a DERIVED value, never a stored one, so a reader
--- cannot be shown an area that disagrees with the dimensions beside it.
-
-create or replace function public.get_quotation_draft(p_quotation_id uuid)
-returns jsonb
-language plpgsql
-stable
-security definer
-set search_path = ''
-as $$
-declare
-  v_actor_id uuid;
-  v_root_rec record;
-  v_ver_rec record;
-  v_sections jsonb;
-  v_schedules jsonb;
-begin
-  v_actor_id := auth.uid();
-  if v_actor_id is null then
-    raise exception 'QUOTATION_UNAUTHORIZED' using errcode = '42501';
-  end if;
-
-  if not private.quotation_can_view(p_quotation_id) then
-    raise exception 'QUOTATION_NOT_FOUND_OR_FORBIDDEN' using errcode = '42501';
-  end if;
-
-  select * into v_root_rec from public.quotations where id = p_quotation_id;
-  if not found then
-    raise exception 'QUOTATION_NOT_FOUND_OR_FORBIDDEN' using errcode = 'P0001';
-  end if;
-
-  select * into v_ver_rec
-  from public.quotation_versions
-  where quotation_id = p_quotation_id
-    and is_current_draft = true
-  order by version_number desc
-  limit 1;
-
-  if not found then
-    select * into v_ver_rec
-    from public.quotation_versions
-    where quotation_id = p_quotation_id
-    order by version_number desc
-    limit 1;
-  end if;
-
-  if v_ver_rec.id is null then
-    return jsonb_build_object(
-      'quotationId', v_root_rec.id,
-      'leadId', v_root_rec.lead_id,
-      'quotationNumber', v_root_rec.quotation_number,
-      'rootStatus', v_root_rec.status,
-      'status', v_root_rec.status,
-      'version', null
-    );
-  end if;
-
-  select coalesce(jsonb_agg(
-    jsonb_build_object(
-      'id', s.id,
-      'sectionName', s.section_name,
-      'displayOrder', s.display_order,
-      'subtotalPaise', s.subtotal_paise,
-      -- Total AREA in this room, useful to an interior estimator and derived
-      -- from the same dimensions the amounts came from.
-      'areaSubtotalSqFt', (
-        select coalesce(sum(private.quotation_derive_area_sqft(i.width_ft, i.height_ft)), 0)
-        from public.quotation_items i
-        where i.section_id = s.id and i.calculation_basis = 'area'
-      ),
-      'items', (
-        select coalesce(jsonb_agg(
-          jsonb_build_object(
-            'id', i.id,
-            'itemName', i.item_name,
-            'description', i.description,
-            'specifications', i.specifications,
-            'calculationBasis', i.calculation_basis,
-            'widthFt', i.width_ft,
-            'heightFt', i.height_ft,
-            'areaSqFt', private.quotation_derive_area_sqft(i.width_ft, i.height_ft),
-            'quantity', i.quantity,
-            'unitOfMeasure', i.unit_of_measure,
-            'unitRatePaise', i.unit_rate_paise,
-            'lineTotalPaise', i.line_total_paise,
-            'displayOrder', i.display_order
-          ) order by i.display_order
-        ), '[]'::jsonb)
-        from public.quotation_items i
-        where i.section_id = s.id
-      )
-    ) order by s.display_order
-  ), '[]'::jsonb) into v_sections
-  from public.quotation_sections s
-  where s.quotation_version_id = v_ver_rec.id;
-
-  select coalesce(jsonb_agg(
-    jsonb_build_object(
-      'id', ps.id,
-      'milestoneName', ps.milestone_name,
-      'milestoneOrder', ps.milestone_order,
-      'percentage', ps.percentage,
-      'amountPaise', ps.amount_paise
-    ) order by ps.milestone_order
-  ), '[]'::jsonb) into v_schedules
-  from public.quotation_payment_schedules ps
-  where ps.quotation_version_id = v_ver_rec.id;
-
-  return jsonb_build_object(
-    'quotationId', v_root_rec.id,
-    'leadId', v_root_rec.lead_id,
-    'quotationNumber', v_root_rec.quotation_number,
-    'rootStatus', v_root_rec.status,
-    'status', v_root_rec.status,
-    'version', jsonb_build_object(
-      'id', v_ver_rec.id,
-      'versionNumber', v_ver_rec.version_number,
-      'status', v_ver_rec.status,
-      'isCurrentDraft', v_ver_rec.is_current_draft,
-      'lockVersion', v_ver_rec.lock_version,
-      'title', v_ver_rec.title,
-      'scopeSummary', v_ver_rec.scope_summary,
-      'clientNameSnapshot', v_ver_rec.client_name_snapshot,
-      'clientEmailSnapshot', v_ver_rec.client_email_snapshot,
-      'clientPhoneSnapshot', v_ver_rec.client_phone_snapshot,
-      'propertyAddressSnapshot', v_ver_rec.property_address_snapshot,
-      'discountType', v_ver_rec.discount_type,
-      'discountValuePaise', v_ver_rec.discount_value_paise,
-      'discountPercentage', v_ver_rec.discount_percentage,
-      'discountTotalPaise', v_ver_rec.discount_total_paise,
-      'subtotalPaise', v_ver_rec.subtotal_paise,
-      'taxableBasePaise', v_ver_rec.taxable_base_paise,
-      'taxProfileId', v_ver_rec.tax_profile_id,
-      'taxRatePercentage', v_ver_rec.tax_rate_percentage,
-      'taxTotalPaise', v_ver_rec.tax_total_paise,
-      'grandTotalPaise', v_ver_rec.grand_total_paise,
-      'paymentScheduleMode', v_ver_rec.payment_schedule_mode,
-      'inclusions', coalesce(v_ver_rec.inclusions, '{}'::text[]),
-      'exclusions', coalesce(v_ver_rec.exclusions, '{}'::text[]),
-      'termsAndConditions', v_ver_rec.terms_and_conditions,
-      'finalizedAt', v_ver_rec.finalized_at,
-      'finalizedContentSha256', v_ver_rec.finalized_content_sha256,
-      'sections', v_sections,
-      'paymentSchedules', v_schedules
-    )
-  );
-end;
-$$;
-
--- -----------------------------------------------------------------------------
 -- E. Canonical hash must cover the measurements
 -- -----------------------------------------------------------------------------
 --
@@ -733,24 +580,61 @@ begin
 end;
 $$;
 
+
 -- -----------------------------------------------------------------------------
--- F. Access-grant reuse must return the PERSISTED derivation identity
+-- G. Service-role grant issuance must respect the M54 access state
 -- -----------------------------------------------------------------------------
 --
--- The reuse branch returned only `grant_id`. The caller had already generated a
--- fresh grant id and nonce, derived a token from those, and would then hand the
--- client a link derived from values that were never persisted — the token hash
--- could not match the stored grant, so the link simply would not work.
+-- `issue_quotation_access_grant_internal` runs as service_role and authorizes an
+-- EXPLICIT p_actor_id through `private.quotation_actor_has_permission`. That
+-- helper checked active profile, active role and active permission — but not
+-- M54's `staff_access_denied`, so an employment-backed user who is
+-- not_activated, credentials_ready or revoked could still have a capability
+-- link issued in their name. The service-role path bypassed the fail-closed
+-- state that every RLS path honours.
 --
--- The reuse branch now returns the PERSISTED nonce and token hash so the caller
--- can derive the real token and verify it against what is stored. Neither value
--- is a secret on its own: the token is an HMAC keyed by a server-side secret
--- that never leaves the environment, and both columns are already readable by
--- the service-role caller that invokes this function.
+-- Reproduced verbatim apart from that leading guard. A user with NO employment
+-- row — the Super Admin — is unaffected, because `staff_access_denied` returns
+-- false when no employment record exists.
+
+create or replace function private.quotation_actor_has_permission(p_actor_id uuid, p_permission text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select
+    not private.staff_access_denied(p_actor_id)
+    and exists (
+      select 1
+      from public.user_roles ur
+      join public.roles r on r.id = ur.role_id and r.is_active = true
+      join public.role_permissions rp on rp.role_id = r.id
+      join public.permissions perm on perm.id = rp.permission_id and perm.is_active = true
+      join public.profiles p on p.id = ur.user_id and p.status = 'active'
+      where ur.user_id = p_actor_id
+        and perm.code = p_permission
+    );
+$$;
+
+comment on function private.quotation_actor_has_permission(uuid, text) is
+  'Explicit-actor permission check used by service-role quotation helpers. Honours the M54 application access state, so a not_activated, credentials_ready or revoked employment-backed actor is refused exactly as it is on every RLS path.';
+
+revoke all on function private.quotation_actor_has_permission(uuid, text) from public, anon;
+alter function private.quotation_actor_has_permission(uuid, text) owner to postgres;
+
+-- -----------------------------------------------------------------------------
+-- H. An EXPIRED grant is not reusable
+-- -----------------------------------------------------------------------------
 --
--- Everything else — permission checks, finalized-only, READY-PDF-only,
--- lead-scope check, accepted-quotation refusal, reissue revocation and the
--- audit events — is reproduced verbatim.
+-- `get_quotation_by_capability` already refuses a grant past `expires_at`, but
+-- the issuer treated any row with `revoked_at is null` as reusable — so an
+-- expired grant was returned as a successful "reuse" and the caller handed the
+-- client a link the reader would then reject.
+--
+-- An expired row is now revoked in place and a fresh grant is issued, which
+-- also keeps at most one simultaneously valid grant per version.
 
 create or replace function public.issue_quotation_access_grant_internal(
   p_actor_id uuid,
@@ -829,10 +713,13 @@ begin
     raise exception 'QUOTATION_ALREADY_ACCEPTED: Cannot issue new access grants for an accepted quotation.';
   end if;
 
+  -- Only a LIVE grant is reusable. The reader applies the same expiry rule, so
+  -- reusing an expired row would hand back a link that cannot be opened.
   select * into v_existing
   from public.quotation_access_grants
   where quotation_version_id = p_version_id
     and revoked_at is null
+    and (expires_at is null or expires_at > now())
   for update;
 
   if v_existing.id is not null and coalesce(p_reissue, false) = false then
@@ -848,11 +735,21 @@ begin
     );
   end if;
 
-  if v_existing.id is not null and p_reissue = true then
+  -- Revoke whatever is still open — the live grant on an explicit reissue, and
+  -- any EXPIRED row, so at most one grant per version is ever valid.
+  for v_existing in
+    select * from public.quotation_access_grants
+    where quotation_version_id = p_version_id and revoked_at is null
+    for update
+  loop
     update public.quotation_access_grants
     set revoked_at = now(),
         revoked_by = p_actor_id,
-        revocation_reason = 'Reissue of quotation access grant'
+        revocation_reason = case
+          when v_existing.expires_at is not null and v_existing.expires_at <= now()
+            then 'Expired quotation access grant'
+          else 'Reissue of quotation access grant'
+        end
     where id = v_existing.id
       and revoked_at is null;
 
@@ -864,9 +761,9 @@ begin
       v_quotation.lead_id,
       'quotation.capability_revoked',
       p_actor_id,
-      jsonb_build_object('grant_id', v_existing.id, 'reason', 'reissue')
+      jsonb_build_object('grant_id', v_existing.id, 'reason', 'superseded')
     );
-  end if;
+  end loop;
 
   insert into public.quotation_access_grants (
     id, quotation_id, quotation_version_id, derivation_nonce, capability_token_hash, created_by
@@ -899,3 +796,322 @@ $$;
 revoke execute on function public.issue_quotation_access_grant_internal(uuid, uuid, uuid, text, text, boolean) from public, anon, authenticated;
 grant execute on function public.issue_quotation_access_grant_internal(uuid, uuid, uuid, text, text, boolean) to service_role;
 alter function public.issue_quotation_access_grant_internal(uuid, uuid, uuid, text, text, boolean) owner to postgres;
+
+-- -----------------------------------------------------------------------------
+-- I. The CLIENT sees the same interior document the staff finalized
+-- -----------------------------------------------------------------------------
+--
+-- The capability read model returned a generic quantity/UOM line, so the client
+-- portal could not show width, height or area — the customer would be accepting
+-- a document whose commercial meaning differs from the finalized PDF.
+--
+-- Reproduced verbatim apart from the interior fields and the room area total.
+
+create or replace function public.get_quotation_by_capability(p_capability_token text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_token_hash text;
+  v_grant record;
+  v_version record;
+  v_quotation record;
+  v_lead record;
+  v_acceptance record;
+  v_pdf record;
+  v_sections jsonb;
+  v_payment_schedule jsonb;
+begin
+  if p_capability_token is null or length(trim(p_capability_token)) = 0 then
+    return jsonb_build_object('success', false, 'message', 'QUOTATION_NOT_FOUND');
+  end if;
+
+  v_token_hash := encode(extensions.digest(convert_to(trim(p_capability_token), 'UTF8'), 'sha256'), 'hex');
+
+  select * into v_grant
+  from public.quotation_access_grants
+  where capability_token_hash = v_token_hash
+    and revoked_at is null
+    and (expires_at is null or expires_at > now());
+
+  if v_grant.id is null then
+    return jsonb_build_object('success', false, 'message', 'QUOTATION_NOT_FOUND');
+  end if;
+
+  select * into v_version
+  from public.quotation_versions
+  where id = v_grant.quotation_version_id and status = 'finalized';
+
+  if v_version.id is null then
+    return jsonb_build_object('success', false, 'message', 'QUOTATION_NOT_FOUND');
+  end if;
+
+  select * into v_quotation from public.quotations where id = v_grant.quotation_id;
+  select * into v_lead from public.leads where id = v_quotation.lead_id;
+  select * into v_acceptance from public.quotation_acceptances where quotation_version_id = v_version.id;
+  select * into v_pdf from public.quotation_pdf_documents where quotation_version_id = v_version.id;
+
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'id', qs.id,
+      'section_name', qs.section_name,
+      'display_order', qs.display_order,
+      'subtotal_paise', qs.subtotal_paise,
+      'area_subtotal_sqft', (
+        select coalesce(sum(private.quotation_derive_area_sqft(qi.width_ft, qi.height_ft)), 0)
+        from public.quotation_items qi
+        where qi.section_id = qs.id and qi.calculation_basis = 'area'
+      ),
+      'items', (
+        select coalesce(jsonb_agg(
+          jsonb_build_object(
+            'id', qi.id,
+            'item_name', qi.item_name,
+            'description', qi.description,
+            'specifications', qi.specifications,
+            'calculation_basis', qi.calculation_basis,
+            'width_ft', qi.width_ft,
+            'height_ft', qi.height_ft,
+            'area_sqft', private.quotation_derive_area_sqft(qi.width_ft, qi.height_ft),
+            'quantity', qi.quantity,
+            'unit_of_measure', qi.unit_of_measure,
+            'unit_rate_paise', qi.unit_rate_paise,
+            'line_total_paise', qi.line_total_paise,
+            'display_order', qi.display_order
+          ) order by qi.display_order asc, qi.id asc
+        ), '[]'::jsonb)
+        from public.quotation_items qi
+        where qi.section_id = qs.id
+      )
+    ) order by qs.display_order asc, qs.id asc
+  ), '[]'::jsonb) into v_sections
+  from public.quotation_sections qs
+  where qs.quotation_version_id = v_version.id;
+
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'id', qps.id,
+      'milestone_name', qps.milestone_name,
+      'milestone_order', qps.milestone_order,
+      'percentage', qps.percentage,
+      'amount_paise', qps.amount_paise
+    ) order by qps.milestone_order asc, qps.id asc
+  ), '[]'::jsonb) into v_payment_schedule
+  from public.quotation_payment_schedules qps
+  where qps.quotation_version_id = v_version.id;
+
+  return jsonb_build_object(
+    'success', true,
+    'data', jsonb_build_object(
+      'quotation_id', v_quotation.id,
+      'quotation_version_id', v_version.id,
+      'quotation_number', v_quotation.quotation_number,
+      'version_number', v_version.version_number,
+      'finalized_at', v_version.finalized_at,
+      'client_name', v_version.client_name_snapshot,
+      'client_email', v_version.client_email_snapshot,
+      'client_phone', v_version.client_phone_snapshot,
+      'property_address', v_version.property_address_snapshot,
+      'scope_summary', v_version.scope_summary,
+      'title', v_version.title,
+      'sections', v_sections,
+      'payment_schedule', v_payment_schedule,
+      'subtotal_paise', v_version.subtotal_paise,
+      'discount_type', v_version.discount_type,
+      'discount_value_paise', v_version.discount_value_paise,
+      'discount_percentage', v_version.discount_percentage,
+      'discount_total_paise', v_version.discount_total_paise,
+      'taxable_base_paise', v_version.taxable_base_paise,
+      -- FROZEN tax identity. A later rename of the live profile must not change
+      -- what a finalized document says.
+      'tax_profile_name', coalesce(v_version.tax_profile_snapshot->>'display_name', 'GST'),
+      'tax_rate_percentage', v_version.tax_rate_percentage,
+      'tax_total_paise', v_version.tax_total_paise,
+      'grand_total_paise', v_version.grand_total_paise,
+      'inclusions', v_version.inclusions,
+      'exclusions', v_version.exclusions,
+      'terms_and_conditions', v_version.terms_and_conditions,
+      'has_pdf', (v_pdf.id is not null and v_pdf.status = 'ready'),
+      'is_accepted', (v_acceptance.id is not null),
+      'accepted_at', v_acceptance.accepted_at
+    )
+  );
+end;
+$$;
+
+revoke execute on function public.get_quotation_by_capability(text) from public;
+grant execute on function public.get_quotation_by_capability(text) to anon, authenticated;
+alter function public.get_quotation_by_capability(text) owner to postgres;
+
+-- -----------------------------------------------------------------------------
+-- D. Staff read model — rooms, dimensions, derived area and acceptance
+-- -----------------------------------------------------------------------------
+--
+-- Acceptance lives in `quotation_acceptances`; the version stays `finalized`.
+-- Without this the finalized screen shows "Status: finalized" for a quotation
+-- the client already accepted, and it would have to infer acceptance from lead
+-- status, which is a different fact.
+
+create or replace function public.get_quotation_draft(p_quotation_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor_id uuid;
+  v_root_rec record;
+  v_ver_rec record;
+  v_acceptance record;
+  v_pdf record;
+  v_sections jsonb;
+  v_schedules jsonb;
+begin
+  v_actor_id := auth.uid();
+  if v_actor_id is null then
+    raise exception 'QUOTATION_UNAUTHORIZED' using errcode = '42501';
+  end if;
+
+  if not private.quotation_can_view(p_quotation_id) then
+    raise exception 'QUOTATION_NOT_FOUND_OR_FORBIDDEN' using errcode = '42501';
+  end if;
+
+  select * into v_root_rec from public.quotations where id = p_quotation_id;
+  if not found then
+    raise exception 'QUOTATION_NOT_FOUND_OR_FORBIDDEN' using errcode = 'P0001';
+  end if;
+
+  select * into v_ver_rec
+  from public.quotation_versions
+  where quotation_id = p_quotation_id
+    and is_current_draft = true
+  order by version_number desc
+  limit 1;
+
+  if not found then
+    select * into v_ver_rec
+    from public.quotation_versions
+    where quotation_id = p_quotation_id
+    order by version_number desc
+    limit 1;
+  end if;
+
+  if v_ver_rec.id is null then
+    return jsonb_build_object(
+      'quotationId', v_root_rec.id,
+      'leadId', v_root_rec.lead_id,
+      'quotationNumber', v_root_rec.quotation_number,
+      'rootStatus', v_root_rec.status,
+      'status', v_root_rec.status,
+      'version', null
+    );
+  end if;
+
+  select * into v_acceptance
+  from public.quotation_acceptances
+  where quotation_version_id = v_ver_rec.id;
+
+  select * into v_pdf
+  from public.quotation_pdf_documents
+  where quotation_version_id = v_ver_rec.id;
+
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'id', s.id,
+      'sectionName', s.section_name,
+      'displayOrder', s.display_order,
+      'subtotalPaise', s.subtotal_paise,
+      -- Total AREA in this room, derived from the same dimensions the amounts
+      -- came from.
+      'areaSubtotalSqFt', (
+        select coalesce(sum(private.quotation_derive_area_sqft(i.width_ft, i.height_ft)), 0)
+        from public.quotation_items i
+        where i.section_id = s.id and i.calculation_basis = 'area'
+      ),
+      'items', (
+        select coalesce(jsonb_agg(
+          jsonb_build_object(
+            'id', i.id,
+            'itemName', i.item_name,
+            'description', i.description,
+            'specifications', i.specifications,
+            'calculationBasis', i.calculation_basis,
+            'widthFt', i.width_ft,
+            'heightFt', i.height_ft,
+            'areaSqFt', private.quotation_derive_area_sqft(i.width_ft, i.height_ft),
+            'quantity', i.quantity,
+            'unitOfMeasure', i.unit_of_measure,
+            'unitRatePaise', i.unit_rate_paise,
+            'lineTotalPaise', i.line_total_paise,
+            'displayOrder', i.display_order
+          ) order by i.display_order
+        ), '[]'::jsonb)
+        from public.quotation_items i
+        where i.section_id = s.id
+      )
+    ) order by s.display_order
+  ), '[]'::jsonb) into v_sections
+  from public.quotation_sections s
+  where s.quotation_version_id = v_ver_rec.id;
+
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'id', ps.id,
+      'milestoneName', ps.milestone_name,
+      'milestoneOrder', ps.milestone_order,
+      'percentage', ps.percentage,
+      'amountPaise', ps.amount_paise
+    ) order by ps.milestone_order
+  ), '[]'::jsonb) into v_schedules
+  from public.quotation_payment_schedules ps
+  where ps.quotation_version_id = v_ver_rec.id;
+
+  return jsonb_build_object(
+    'quotationId', v_root_rec.id,
+    'leadId', v_root_rec.lead_id,
+    'quotationNumber', v_root_rec.quotation_number,
+    'rootStatus', v_root_rec.status,
+    'status', v_root_rec.status,
+    'version', jsonb_build_object(
+      'id', v_ver_rec.id,
+      'versionNumber', v_ver_rec.version_number,
+      'status', v_ver_rec.status,
+      'isCurrentDraft', v_ver_rec.is_current_draft,
+      'lockVersion', v_ver_rec.lock_version,
+      'title', v_ver_rec.title,
+      'scopeSummary', v_ver_rec.scope_summary,
+      'clientNameSnapshot', v_ver_rec.client_name_snapshot,
+      'clientEmailSnapshot', v_ver_rec.client_email_snapshot,
+      'clientPhoneSnapshot', v_ver_rec.client_phone_snapshot,
+      'propertyAddressSnapshot', v_ver_rec.property_address_snapshot,
+      'discountType', v_ver_rec.discount_type,
+      'discountValuePaise', v_ver_rec.discount_value_paise,
+      'discountPercentage', v_ver_rec.discount_percentage,
+      'discountTotalPaise', v_ver_rec.discount_total_paise,
+      'subtotalPaise', v_ver_rec.subtotal_paise,
+      'taxableBasePaise', v_ver_rec.taxable_base_paise,
+      'taxProfileId', v_ver_rec.tax_profile_id,
+      'taxProfileName', coalesce(v_ver_rec.tax_profile_snapshot->>'display_name', null),
+      'taxRatePercentage', v_ver_rec.tax_rate_percentage,
+      'taxTotalPaise', v_ver_rec.tax_total_paise,
+      'grandTotalPaise', v_ver_rec.grand_total_paise,
+      'paymentScheduleMode', v_ver_rec.payment_schedule_mode,
+      'inclusions', coalesce(v_ver_rec.inclusions, '{}'::text[]),
+      'exclusions', coalesce(v_ver_rec.exclusions, '{}'::text[]),
+      'termsAndConditions', v_ver_rec.terms_and_conditions,
+      'finalizedAt', v_ver_rec.finalized_at,
+      'finalizedContentSha256', v_ver_rec.finalized_content_sha256,
+      'pdfStatus', v_pdf.status,
+      -- Acceptance is a FACT of its own table, never inferred from lead status.
+      'isAccepted', (v_acceptance.id is not null),
+      'acceptedAt', v_acceptance.accepted_at,
+      'acceptedByName', v_acceptance.accepted_by_name,
+      'sections', v_sections,
+      'paymentSchedules', v_schedules
+    )
+  );
+end;
+$$;

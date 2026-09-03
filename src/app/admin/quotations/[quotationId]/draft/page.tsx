@@ -76,7 +76,12 @@ export default async function QuotationDraftPage({ params }: PageProps) {
   // A finalized quotation is the COMMERCIAL RECORD, not an archive. It used to
   // dead-end here after a reload, which took the document, the client link and
   // the revision path with it.
-  if (version.status !== "draft") {
+  //
+  // The status is matched EXPLICITLY. `quotation_versions` supports draft,
+  // finalized and archived, so treating "not draft" as finalized would present
+  // a superseded archived version as the live commercial record and offer
+  // delivery actions on it.
+  if (version.status === "finalized") {
     const pdfStatus = await readPdfStatus(version.id);
     return (
       <div className="p-6">
@@ -86,6 +91,37 @@ export default async function QuotationDraftPage({ params }: PageProps) {
           canEdit={canEditQuotations}
           pdfStatus={pdfStatus}
         />
+      </div>
+    );
+  }
+
+  if (version.status === "archived") {
+    return (
+      <div className="p-8 max-w-2xl mx-auto space-y-4 text-center">
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6">
+          <h2 className="text-lg font-bold text-neutral-100">
+            Archived quotation version
+          </h2>
+          <p className="mt-2 text-xs text-neutral-400">
+            {draft.quotationNumber} · v{version.versionNumber} has been superseded
+            by a later version. It is kept for the record and cannot be edited,
+            delivered or accepted.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Link
+              href={`/admin/crm/leads/${draft.leadId}`}
+              className="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 shadow"
+            >
+              Return to CRM Lead Workspace →
+            </Link>
+            <Link
+              href="/admin/quotations"
+              className="inline-flex items-center rounded-lg bg-neutral-800 px-4 py-2 text-xs font-semibold text-neutral-300 hover:bg-neutral-700 shadow"
+            >
+              Quotations Overview
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

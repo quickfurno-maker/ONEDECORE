@@ -122,7 +122,7 @@ describe("AREA — arithmetic is exact, not merely lucky", () => {
     assert.equal(area, BigInt(1234));
   });
 
-  test("display rounds to 2 decimals without losing the stored precision", () => {
+  test("display keeps every stored decimal", () => {
     const line = computeInteriorLine({
       basis: "area",
       rawWidthFt: "1.111",
@@ -130,7 +130,9 @@ describe("AREA — arithmetic is exact, not merely lucky", () => {
       unitRatePaise: inr(1000),
     });
     assert.equal(line.ok && line.quantity, "1.234");
-    assert.equal(line.ok && formatAreaSqFt(line.areaMilliSqFt!), "1.23");
+    // Truncating to 2 decimals here would show 1.23 while the amount was
+    // billed on 1.234, so the document would contradict itself.
+    assert.equal(line.ok && formatAreaSqFt(line.areaMilliSqFt!), "1.234");
   });
 
   test("invalid dimensions are rejected, never repaired", () => {
@@ -466,8 +468,10 @@ describe("the secure client link does not depend on WhatsApp", () => {
     const start = source.indexOf("export async function generateQuotationClientLinkAction");
     const block = source.slice(start, source.indexOf("export async function", start + 10));
     assert.doesNotMatch(block, /console\.(log|info|warn|error)/);
-    // The token is returned to the caller only; nothing writes it anywhere.
-    assert.doesNotMatch(block, /insert|\.from\(/);
+    // The token is returned to the caller only. The one table read is the
+    // quotation/version identity check; nothing WRITES the token anywhere.
+    assert.doesNotMatch(block, /\.insert\(|\.upsert\(|\.update\(/);
+    assert.match(block, /\.from\("quotation_versions"\)/);
     // Only the relative path is produced — no absolute URL is built or stored.
     assert.match(block, /clientLinkPath: `\/q\/\$\{token\}`/);
   });

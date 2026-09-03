@@ -107,7 +107,16 @@ const labelClass = "text-[11px] font-medium uppercase tracking-wide text-neutral
 
 interface QuotationRoomEditorProps {
   readonly sections: readonly QuotationSectionDTO[];
-  readonly onSaveSections: (sections: readonly QuotationSectionDTO[]) => void;
+  /**
+   * Resolves TRUE only when the server accepted and persisted the rooms.
+   *
+   * The editor used to clear its dirty flag the moment it handed the payload
+   * over, so a rejected save disabled the Save button while the edits were
+   * still unsaved — the estimator's only way out was to retype the room.
+   */
+  readonly onSaveSections: (
+    sections: readonly QuotationSectionDTO[]
+  ) => Promise<boolean> | boolean;
 }
 
 export function QuotationRoomEditor({
@@ -116,6 +125,7 @@ export function QuotationRoomEditor({
 }: QuotationRoomEditorProps) {
   const [rooms, setRooms] = useState<RawRoom[]>(() => toRawRooms(sections));
   const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Resync when the canonical server state changes under us.
@@ -252,7 +262,7 @@ export function QuotationRoomEditor({
     });
   }, [rooms]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const payload: QuotationSectionDTO[] = [];
 
     for (let ri = 0; ri < rooms.length; ri += 1) {
@@ -324,8 +334,20 @@ export function QuotationRoomEditor({
       });
     }
 
-    onSaveSections(payload);
-    setDirty(false);
+    setSaving(true);
+    try {
+      const accepted = await onSaveSections(payload);
+      if (accepted === false) {
+        // The server rejected it. Keep every local edit, keep Save enabled and
+        // leave the parent's error visible so the operator can retry at once.
+        return;
+      }
+      // Accepted: the canonical server DTO arrives through `sections` and the
+      // resync above makes it the source of truth.
+      setDirty(false);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -342,11 +364,11 @@ export function QuotationRoomEditor({
         </div>
         <button
           type="button"
-          disabled={!dirty}
+          disabled={!dirty || saving}
           onClick={handleSave}
           className="rounded-md bg-amber-500 px-4 py-2 text-xs font-bold uppercase tracking-wide text-neutral-950 disabled:opacity-50"
         >
-          Save rooms
+          {saving ? "Saving…" : "Save rooms"}
         </button>
       </header>
 

@@ -27,8 +27,17 @@ export function LeadDetailQuotationPanel({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const version = existingDraft?.version;
-  const hasActiveDraft = Boolean(version && version.status === "draft" && version.isCurrentDraft);
-  const hasArchivedRoot = Boolean(existingDraft && !hasActiveDraft);
+
+  // FOUR distinct states, matched explicitly. Treating everything that is not
+  // an active draft as "prior/archived" described a FINALIZED quotation — the
+  // live commercial record the client is being sent — as archived, and offered
+  // "Start New Draft Version" as the only thing to do with it.
+  const hasActiveDraft = Boolean(
+    version && version.status === "draft" && version.isCurrentDraft
+  );
+  const isFinalized = Boolean(version && version.status === "finalized");
+  const isArchived = Boolean(version && version.status === "archived");
+  const isAccepted = Boolean(version?.isAccepted);
 
   const handleCreateOrReopenDraft = async () => {
     setCreating(true);
@@ -58,9 +67,13 @@ export function LeadDetailQuotationPanel({
           <p className="mt-1 text-xs text-[var(--crm-text-secondary)]">
             {hasActiveDraft
               ? `Active Draft Version ${version?.versionNumber}: "${version?.title}"`
-              : hasArchivedRoot
-              ? `Prior quotation version archived under root ${existingDraft?.quotationNumber}.`
-              : "No commercial quotation draft created for this lead yet."}
+              : isFinalized
+                ? `${existingDraft?.quotationNumber} v${version?.versionNumber} — ${
+                    isAccepted ? "Accepted by client" : "Finalized, awaiting acceptance"
+                  }`
+                : isArchived
+                  ? `${existingDraft?.quotationNumber} v${version?.versionNumber} is archived and superseded.`
+                  : "No commercial quotation draft created for this lead yet."}
           </p>
         </div>
 
@@ -78,8 +91,15 @@ export function LeadDetailQuotationPanel({
                 Viewing active draft requires quotation edit permission (quotations.edit).
               </span>
             )
+          ) : isFinalized ? (
+            <Link
+              href={`/admin/quotations/${existingDraft?.quotationId}/draft`}
+              className="inline-flex min-h-10 items-center rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 shadow"
+            >
+              View Finalized Quotation
+            </Link>
           ) : canCreateQuotation ? (
-            hasArchivedRoot ? (
+            isArchived ? (
               <button
                 type="button"
                 disabled={creating}
@@ -109,6 +129,37 @@ export function LeadDetailQuotationPanel({
       {errorMsg && (
         <div className="mt-3 rounded-md border border-rose-800 bg-rose-950/80 p-2.5 text-xs text-rose-200">
           {errorMsg}
+        </div>
+      )}
+
+      {isFinalized && version && (
+        <div className="mt-4 grid grid-cols-2 gap-4 rounded-lg bg-[var(--crm-surface-subtle)] p-3.5 text-xs border border-[var(--crm-border)]/80 sm:grid-cols-4">
+          <div>
+            <span className="text-[var(--crm-muted)] block">Quotation No.</span>
+            <span className="font-mono font-medium text-[var(--crm-text)]">
+              {existingDraft?.quotationNumber}
+            </span>
+          </div>
+          <div>
+            <span className="text-[var(--crm-muted)] block">Version</span>
+            <span className="font-mono text-[var(--crm-text-secondary)]">
+              v{version.versionNumber}
+            </span>
+          </div>
+          <div>
+            <span className="text-[var(--crm-muted)] block">State</span>
+            <span className="font-medium text-emerald-400">
+              {isAccepted ? "Accepted" : "Finalized"}
+            </span>
+          </div>
+          <div>
+            <span className="text-[var(--crm-muted)] block">Grand Total</span>
+            <span className="font-mono font-semibold text-emerald-400">
+              {version.grandTotalPaise != null
+                ? formatInrFromPaise(version.grandTotalPaise)
+                : "(Unconfigured Tax)"}
+            </span>
+          </div>
         </div>
       )}
 

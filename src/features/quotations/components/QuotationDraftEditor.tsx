@@ -120,7 +120,9 @@ export function QuotationDraftEditor({
     setMessage({ type: "success", text: "Tax profile updated." });
   };
 
-  const handleSaveSections = async (sections: readonly QuotationSectionDTO[]) => {
+  const handleSaveSections = async (
+    sections: readonly QuotationSectionDTO[]
+  ): Promise<boolean> => {
     setSaving(true);
     setMessage(null);
     setConflictMessage(null);
@@ -138,13 +140,16 @@ export function QuotationDraftEditor({
       } else {
         setMessage({ type: "error", text: res.message });
       }
-      return;
+      // Report the rejection so the room editor keeps the unsaved edits and
+      // leaves Save enabled for an immediate retry.
+      return false;
     }
 
     if (res.data) {
       setDraft(res.data);
     }
-    setMessage({ type: "success", text: "Line items saved." });
+    setMessage({ type: "success", text: "Rooms saved." });
+    return true;
   };
 
   const handleUpdateDiscount = async (

@@ -181,9 +181,34 @@ export function formatMilli(value: bigint, decimals: number): string {
   return `${whole}.${fraction.slice(0, decimals)}`;
 }
 
-/** Area for display. Two decimals reads well; the stored value keeps three. */
+/**
+ * Trims trailing zeros without hiding a real digit.
+ *
+ * Truncating to 2 decimals was wrong: an area stored as 1.234 displayed as
+ * "1.23", so the visible width x height no longer produced the visible amount
+ * and the document appeared to contradict itself. Up to 3 decimals are shown,
+ * and only zeros are dropped.
+ *
+ *   10.500 -> 10.5    2.500 -> 2.5    78.750 -> 78.75    1.234 -> 1.234
+ */
+export function trimTrailingZeros(decimalString: string): string {
+  if (!decimalString.includes(".")) {
+    return decimalString;
+  }
+  return decimalString.replace(/0+$/, "").replace(/\.$/, "");
+}
+
+/** Formats a number that may carry up to 3 meaningful decimals. */
+export function formatMeasureDisplay(value: number, maxDecimals = 3): string {
+  if (!Number.isFinite(value)) {
+    return "";
+  }
+  return trimTrailingZeros(value.toFixed(maxDecimals));
+}
+
+/** Area for display: every stored decimal stays visible. */
 export function formatAreaSqFt(areaMilli: bigint): string {
-  return formatMilli(areaMilli, 2);
+  return trimTrailingZeros(formatMilli(areaMilli, 3));
 }
 
 /** The canonical 3-decimal string the server stores as `quantity`. */
