@@ -544,21 +544,33 @@ describe("Phase 7A Commercial Quotation Draft Foundation", () => {
     assert.equal(helpersSource.includes('?? 0'), false);
   });
 
-  test("APP-PREAPPLY-13: Archived or non-active quotation is not exposed as editable active draft UI", () => {
+  test("APP-PREAPPLY-13: a non-editable quotation is never exposed as an editable draft", () => {
     const draftPageSource = fs.readFileSync(
       path.resolve(import.meta.dirname, "../../../app/admin/quotations/[quotationId]/draft/page.tsx"),
       "utf-8"
     );
 
+    // The invariant this guards is unchanged: only a current active draft, with
+    // quotations.edit, reaches the editor.
     assert.equal(
       draftPageSource.includes("isEditableActiveDraft"),
       true,
       "QuotationDraftPage does not check isEditableActiveDraft!"
     );
+
+    // What CHANGED is the other branch. P4 replaced the "Archived or
+    // Non-Editable Quotation State" dead end: a finalized quotation is the
+    // commercial record, not an archive, and every finalized control used to
+    // vanish on reload. It now renders a read-only finalized view.
     assert.equal(
       draftPageSource.includes("Archived or Non-Editable Quotation State"),
+      false,
+      "A finalized quotation must not be presented as archived."
+    );
+    assert.equal(
+      draftPageSource.includes("QuotationFinalizedView"),
       true,
-      "QuotationDraftPage does not render read-only banner for archived draft!"
+      "QuotationDraftPage does not render the finalized quotation view!"
     );
   });
 

@@ -2,11 +2,25 @@
  * Phase 7A — Commercial Quotation DTO Contracts
  */
 
+/**
+ * ONE interior work item.
+ *
+ * `quantity`, `unitOfMeasure`, `areaSqFt` and `lineTotalPaise` are all SERVER
+ * outputs — for an area item the server derives them from the dimensions. They
+ * are present here so a read model can show them, never so a client can set
+ * them.
+ */
 export interface QuotationLineItemDTO {
   readonly id?: string;
   readonly itemName: string;
   readonly description?: string | null;
   readonly specifications?: string | null;
+  readonly calculationBasis?: "area" | "quantity" | "fixed";
+  /** Interior dimensions in FEET. Present only on the area basis. */
+  readonly widthFt?: number | string | null;
+  readonly heightFt?: number | string | null;
+  /** Derived, never stored separately: area = width x height. */
+  readonly areaSqFt?: number | string | null;
   readonly quantity: number | string;
   readonly unitOfMeasure: string;
   readonly unitRatePaise: number;
@@ -14,10 +28,13 @@ export interface QuotationLineItemDTO {
   readonly displayOrder?: number;
 }
 
+/** A ROOM. `sectionName` is the room or area name. */
 export interface QuotationSectionDTO {
   readonly id?: string;
   readonly sectionName: string;
   readonly displayOrder?: number;
+  /** Total area of the area-basis work items in this room, in sq.ft. */
+  readonly areaSubtotalSqFt?: number | string | null;
   readonly subtotalPaise?: number;
   readonly items: readonly QuotationLineItemDTO[];
 }
@@ -67,6 +84,9 @@ export interface QuotationVersionDTO {
   readonly termsAndConditions?: string | null;
   readonly inclusions: readonly string[];
   readonly exclusions: readonly string[];
+  /** Present once the version is finalized; the frozen commercial record. */
+  readonly finalizedAt?: string | null;
+  readonly finalizedContentSha256?: string | null;
 }
 
 export interface QuotationDraftDTO {

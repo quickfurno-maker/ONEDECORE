@@ -23,7 +23,7 @@ import { createQuotationRevisionAction } from "../server/quotation-acceptance-ac
 import { QuotationDiscountCard } from "./QuotationDiscountCard";
 import { QuotationHeaderCard } from "./QuotationHeaderCard";
 import { QuotationPaymentScheduleEditor } from "./QuotationPaymentScheduleEditor";
-import { QuotationSectionAccordion } from "./QuotationSectionAccordion";
+import { QuotationRoomEditor } from "./QuotationRoomEditor";
 import { QuotationTermsEditor } from "./QuotationTermsEditor";
 import { QuotationTotalsSummary } from "./QuotationTotalsSummary";
 
@@ -308,8 +308,8 @@ export function QuotationDraftEditor({
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          {/* Room / Section Accordion & Line Items */}
-          <QuotationSectionAccordion
+          {/* Room-wise interior estimate */}
+          <QuotationRoomEditor
             sections={draft.sections}
             onSaveSections={handleSaveSections}
           />

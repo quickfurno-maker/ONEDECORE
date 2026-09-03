@@ -40,12 +40,12 @@ function walkTs(dir: string, acc: string[] = []): string[] {
 }
 
 describe("Phase 9D-F baseline and payment absence", () => {
-  test("latest migration is the staff phone-login credential migration and deferred payment M38 is absent", () => {
+  test("latest migration is the P4 interior room-wise quotation migration and deferred payment M38 is absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260903160000_staff_phone_login_credentials.sql"
+      "20260904140000_interior_room_wise_quotation.sql"
     );
-    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 54);
+    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 55);
     assert.equal(
       existsSync(join(root, "supabase/migrations/20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false

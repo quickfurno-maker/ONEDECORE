@@ -52,6 +52,25 @@ type QuotationSendUserClient = {
   auth?: { getUser: () => Promise<{ data: { user: { id: string } | null } }> };
 };
 
+/** Resolves the caller's own (RLS-bound) client. Never the service role. */
+async function resolveUserClient(
+  deps: SendQuotationActionDeps
+): Promise<QuotationSendUserClient> {
+  if (deps.userClient) {
+    return deps.userClient as QuotationSendUserClient;
+  }
+  const { createClient } = await import("../../../lib/supabase/server.ts");
+  return (await createClient()) as unknown as QuotationSendUserClient;
+}
+
+async function resolveActorId(deps: SendQuotationActionDeps): Promise<string | null> {
+  if (deps.getUserId) {
+    return deps.getUserId();
+  }
+  const client = await resolveUserClient(deps);
+  return (await client.auth?.getUser())?.data?.user?.id ?? null;
+}
+
 export async function sendQuotationAction(
   params: {
     quotationId: string;
@@ -263,4 +282,232 @@ export async function sendQuotationAction(
     grantId: persistedGrantId,
     message: redactCapabilitySecrets(dispatchResult.message || "Quotation WhatsApp dispatch failed."),
   };
+}
+
+/**
+ * Issues (or recovers) the secure client link WITHOUT WhatsApp.
+ *
+ * P4 certification cannot depend on P9: outbound is deliberately disabled and
+ * production has no usable WhatsApp delivery prerequisite, so a quotation that
+ * can only be delivered through a conversation cannot be certified at all.
+ * This path creates NO conversation, NO send intent and makes NO provider call.
+ * The WhatsApp send above keeps its own prerequisites, untouched, for P9.
+ *
+ * THE GRANT-REUSE RULE
+ * --------------------
+ * `issue_quotation_access_grant_internal` may RETURN AN EXISTING active grant.
+ * The token is an HMAC over (grantId, versionId, nonce), so deriving it from
+ * the freshly generated values we proposed — which in that case were never
+ * persisted — produces a token whose hash cannot match the stored grant. The
+ * link would simply not work.
+ *
+ * So the token is always derived from the PERSISTED identity the RPC returns,
+ * and then verified against the persisted hash. A mismatch fails closed rather
+ * than handing someone a broken link and calling it success.
+ */
+export async function generateQuotationClientLinkAction(
+  params: {
+    quotationId: string;
+    versionId: string;
+    reissue?: boolean;
+  },
+  deps: SendQuotationActionDeps = {}
+): Promise<{
+  success: boolean;
+  status: "link_ready" | "failure";
+  grantId?: string;
+  reused?: boolean;
+  /** Relative path only. The caller composes the absolute URL. */
+  clientLinkPath?: string;
+  message: string;
+}> {
+  const actorId = await resolveActorId(deps);
+  if (!actorId) {
+    return { success: false, status: "failure", message: "Authentication required." };
+  }
+
+  let admin;
+  try {
+    admin = deps.createAdminClient
+      ? deps.createAdminClient()
+      : (await import("../../../lib/supabase/service-role.ts")).createAdminClient();
+  } catch (err) {
+    return {
+      success: false,
+      status: "failure",
+      message: err instanceof Error ? err.message : "Admin client unavailable.",
+    };
+  }
+
+  // Proposed identity. Used only when the RPC actually creates a new grant.
+  const proposedGrantId = crypto.randomUUID();
+  const proposedNonce = crypto.randomBytes(32).toString("hex");
+  const proposedToken = deriveQuotationCapabilityToken(
+    params.versionId,
+    proposedGrantId,
+    proposedNonce
+  );
+
+  const { data: issueResult, error: grantErr } = await admin.rpc(
+    "issue_quotation_access_grant_internal",
+    {
+      p_actor_id: actorId,
+      p_grant_id: proposedGrantId,
+      p_version_id: params.versionId,
+      p_derivation_nonce: proposedNonce,
+      p_capability_token_hash: hashCapabilityToken(proposedToken),
+      p_reissue: Boolean(params.reissue),
+    }
+  );
+
+  const issueObj = issueResult as Record<string, unknown> | null;
+  if (grantErr || !issueObj || typeof issueObj.grant_id !== "string") {
+    // The RPC is the authority on finalized-only, READY-PDF-only, lead scope
+    // and already-accepted; its message is the accurate one.
+    return {
+      success: false,
+      status: "failure",
+      message: redactCapabilitySecrets(
+        grantErr?.message || "Failed to issue quotation access grant."
+      ),
+    };
+  }
+
+  const persistedGrantId = issueObj.grant_id;
+  const persistedNonce =
+    typeof issueObj.derivation_nonce === "string" ? issueObj.derivation_nonce : null;
+  const persistedHash =
+    typeof issueObj.capability_token_hash === "string"
+      ? issueObj.capability_token_hash
+      : null;
+  const persistedVersionId =
+    typeof issueObj.quotation_version_id === "string"
+      ? issueObj.quotation_version_id
+      : params.versionId;
+
+  if (!persistedNonce || !persistedHash) {
+    return {
+      success: false,
+      status: "failure",
+      message:
+        "CAPABILITY_IDENTITY_MISMATCH: The access grant did not return its derivation identity, so a working link cannot be produced.",
+    };
+  }
+
+  const token = deriveQuotationCapabilityToken(
+    persistedVersionId,
+    persistedGrantId,
+    persistedNonce
+  );
+
+  // Fail closed: a token that does not hash to the stored grant is a broken
+  // link, and returning it would look like success.
+  if (hashCapabilityToken(token) !== persistedHash) {
+    return {
+      success: false,
+      status: "failure",
+      message:
+        "CAPABILITY_IDENTITY_MISMATCH: Derived capability does not match the stored access grant. No link issued.",
+    };
+  }
+
+  return {
+    success: true,
+    status: "link_ready",
+    grantId: persistedGrantId,
+    reused: issueObj.reused === true,
+    clientLinkPath: `/q/${token}`,
+    message:
+      issueObj.reused === true
+        ? "Existing secure client link recovered."
+        : "Secure client link issued.",
+  };
+}
+
+/**
+ * Ensures a finalized quotation version has a READY PDF, or retries one that
+ * did not finish.
+ *
+ * Finalization commits the database first and then renders, so a render failure
+ * leaves a legitimately finalized quotation without a document. Reversing the
+ * finalization for that would be far worse than making it retryable — the
+ * commercial record is correct; only the artifact is missing.
+ *
+ * READY is idempotently reused and never re-rendered or overwritten: the
+ * storage upload uses upsert:false and `reserve_quotation_pdf_document` short
+ * circuits on a ready row.
+ */
+export async function ensureQuotationPdfAction(
+  params: { quotationId: string; versionId: string },
+  deps: SendQuotationActionDeps = {}
+): Promise<{
+  success: boolean;
+  status: "ready" | "failure";
+  regenerated?: boolean;
+  message: string;
+}> {
+  const actorId = await resolveActorId(deps);
+  if (!actorId) {
+    return { success: false, status: "failure", message: "Authentication required." };
+  }
+
+  const supabase = await resolveUserClient(deps);
+
+  const { data: versionRow, error: versionErr } = await supabase
+    .from("quotation_versions")
+    .select("id, status")
+    .eq("id", params.versionId)
+    .single();
+
+  if (versionErr || !versionRow) {
+    // RLS is the authority on visibility; a miss here is genuinely not visible.
+    return {
+      success: false,
+      status: "failure",
+      message: "Quotation version not found or not accessible.",
+    };
+  }
+
+  if ((versionRow as { status?: string }).status !== "finalized") {
+    return {
+      success: false,
+      status: "failure",
+      message: "Only a finalized quotation version has a document to generate.",
+    };
+  }
+
+  const { buildQuotationPdfData } = await import("./quotation-pdf-payload.ts");
+  const pdfData = await buildQuotationPdfData(
+    supabase as unknown as Parameters<typeof buildQuotationPdfData>[0],
+    { quotationId: params.quotationId, versionId: params.versionId }
+  );
+
+  if (!pdfData) {
+    return {
+      success: false,
+      status: "failure",
+      message: "Finalized quotation content could not be read.",
+    };
+  }
+
+  try {
+    const { ensureQuotationPdfArtifact } = await import("./quotation-pdf-generator.ts");
+    const result = await ensureQuotationPdfArtifact(pdfData);
+    return {
+      success: true,
+      status: "ready",
+      regenerated: result.skippedRender === false,
+      message: result.skippedRender
+        ? "Document already generated. The existing PDF is unchanged."
+        : "Quotation document generated.",
+    };
+  } catch (err) {
+    return {
+      success: false,
+      status: "failure",
+      message: redactCapabilitySecrets(
+        err instanceof Error ? err.message : "Quotation document generation failed."
+      ),
+    };
+  }
 }
