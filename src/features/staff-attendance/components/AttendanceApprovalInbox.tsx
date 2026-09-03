@@ -2,6 +2,7 @@
 
 import { useActionState, useId, useMemo, useState } from "react";
 import {
+  INITIAL_WORKFORCE_FORM_STATE,
   WORKFORCE_CATEGORY_LABELS,
   WORKFORCE_EXCEPTION_FLAGS,
   WORKFORCE_EXCEPTION_LABELS,
@@ -15,7 +16,6 @@ import {
 import {
   approveAttendanceDayAction,
   approveSelectedAttendanceAction,
-  INITIAL_WORKFORCE_FORM_STATE,
   rejectAttendanceDayAction,
   returnAttendanceForCorrectionAction,
 } from "../server/workforce-form-actions.ts";

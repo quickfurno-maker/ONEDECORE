@@ -7,13 +7,12 @@ import { isStaffAssignableRoleCode, isStaffProfileStatusCode } from "../contract
 import { StaffError } from "../contracts/errors.ts";
 import { validateCreateStaffMemberInput } from "../contracts/dto.ts";
 import {
-  EMPTY_STAFF_CREATE_FORM_VALUES,
   readStaffCreateFormValues,
   staffErrorCodeToField,
   STAFF_FORM_CORRECTION_SUMMARY,
   toStaffCreateFieldErrors,
   type StaffCreateFieldErrors,
-  type StaffCreateFormValues,
+  type StaffFormActionState,
 } from "../contracts/staff-form-state.ts";
 import {
   attachStaffAppAccess,
@@ -25,25 +24,9 @@ import {
 } from "./staff-actions.ts";
 import { requireStaffAdminAccess } from "./staff-auth.ts";
 
-export interface StaffFormActionState {
-  readonly success: boolean;
-  readonly message: string;
-  readonly code?: string;
-  /**
-   * Values echoed back so a rejected submit never clears the form. Present only
-   * on the staff create action.
-   */
-  readonly values?: StaffCreateFormValues;
-  /** Structured per-field errors keyed by form field name. */
-  readonly fieldErrors?: StaffCreateFieldErrors;
-}
-
-export const INITIAL_STAFF_FORM_STATE: StaffFormActionState = {
-  success: false,
-  message: "",
-  values: EMPTY_STAFF_CREATE_FORM_VALUES,
-  fieldErrors: {},
-};
+// Type-only re-export: erased at compile time, so the "use server" contract
+// holds. The runtime value lives in ../contracts/staff-form-state.ts.
+export type { StaffFormActionState };
 
 function parseBoolean(value: FormDataEntryValue | null): boolean {
   return value === "on" || value === "true" || value === "1";

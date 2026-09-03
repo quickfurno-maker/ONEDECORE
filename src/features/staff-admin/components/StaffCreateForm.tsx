@@ -4,15 +4,13 @@ import { useActionState, useEffect, useId, useMemo, useRef } from "react";
 import { STAFF_ASSIGNABLE_ROLE_CODES } from "../contracts/permissions.ts";
 import {
   EMPTY_STAFF_CREATE_FORM_VALUES,
+  INITIAL_STAFF_FORM_STATE,
   firstInvalidStaffCreateField,
   type StaffCreateFieldErrors,
   type StaffCreateFormValues,
 } from "../contracts/staff-form-state.ts";
 import type { AttendancePolicyOption, ReportingManagerOption } from "../server/staff-queries.ts";
-import {
-  createStaffMemberAction,
-  INITIAL_STAFF_FORM_STATE,
-} from "../server/staff-form-actions.ts";
+import { createStaffMemberAction } from "../server/staff-form-actions.ts";
 import { ReportingManagerPicker } from "./ReportingManagerPicker.tsx";
 
 const fieldClassName =

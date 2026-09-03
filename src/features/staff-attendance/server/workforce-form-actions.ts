@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
   isWorkforceFinalCategory,
   isWorkforceSubmittableCategory,
+  type WorkforceFormActionState,
   type WorkforceFinalCategory,
   type WorkforceSubmittableCategory,
 } from "../contracts/workforce-contracts.ts";
@@ -16,18 +17,9 @@ import {
   submitAttendanceDay,
 } from "./workforce-actions.ts";
 
-export interface WorkforceFormActionState {
-  readonly success: boolean;
-  readonly message: string;
-  readonly code?: string;
-  /** Rows that failed during a bulk action, so partial success stays visible. */
-  readonly failures?: readonly string[];
-}
-
-export const INITIAL_WORKFORCE_FORM_STATE: WorkforceFormActionState = {
-  success: false,
-  message: "",
-};
+// Type-only re-export: erased at compile time, so the "use server" contract
+// holds. The runtime value lives in ../contracts/workforce-contracts.ts.
+export type { WorkforceFormActionState };
 
 function fail(error: unknown, fallback: string): WorkforceFormActionState {
   if (error instanceof WorkforceError) {

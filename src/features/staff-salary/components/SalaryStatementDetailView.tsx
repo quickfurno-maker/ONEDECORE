@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import {
+  INITIAL_SALARY_FORM_STATE,
   SALARY_ADDITION_TYPES,
   SALARY_DEDUCTION_TYPES,
   SALARY_LINE_LABELS,
@@ -15,7 +16,6 @@ import {
   type SalaryStatementDetail,
 } from "../contracts/salary-contracts.ts";
 import {
-  INITIAL_SALARY_FORM_STATE,
   addSalaryLineAction,
   finalizeSalaryStatementAction,
   recordSalaryPaymentAction,
