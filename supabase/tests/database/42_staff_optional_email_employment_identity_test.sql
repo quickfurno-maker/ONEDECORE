@@ -61,9 +61,13 @@ select is(
 -- B. Fixtures
 -- -----------------------------------------------------------------------------
 
-insert into auth.users (id, instance_id, email, aud, role) values
-  ('42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', '42-sa@example.test', 'authenticated', 'authenticated'),
-  ('42bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '00000000-0000-0000-0000-000000000000', '42-mgr@example.test', 'authenticated', 'authenticated');
+-- These two ACT: they are the Super Admin and the Sales Manager driving the
+-- RPCs below. last_sign_in_at gives them the sign-in evidence the access-state
+-- derivation needs, so they resolve to 'active' and are refused (or allowed)
+-- on AUTHORIZATION grounds rather than on access state.
+insert into auth.users (id, instance_id, email, aud, role, last_sign_in_at) values
+  ('42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', '42-sa@example.test', 'authenticated', 'authenticated', now()),
+  ('42bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '00000000-0000-0000-0000-000000000000', '42-mgr@example.test', 'authenticated', 'authenticated', now());
 
 update public.profiles set status = 'active'
 where id in ('42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '42bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
@@ -291,8 +295,8 @@ select lives_ok(
 
 select is(
   (select access_state from public.staff_employment_profiles where employee_code = 'OE-EXEC-1'),
-  'invited',
-  'attaching moves app access to invited'
+  'credentials_ready',
+  'attaching moves app access to credentials_ready'
 );
 
 -- Confirmation requires the login identity to actually exist.
@@ -306,7 +310,7 @@ select throws_ok(
 
 -- Simulate the app creating the auth user WITH THE SAME UUID, and the staff
 -- member then genuinely signing in. Without that sign-in the day stays
--- "invited" — proven separately in section J.
+-- "credentials_ready" — proven separately in section J.
 reset role;
 insert into auth.users (id, instance_id, email, aud, role, last_sign_in_at)
 select sep.staff_id, '00000000-0000-0000-0000-000000000000',
@@ -393,7 +397,7 @@ reset role;
 
 -- The Phase 6D invite saga inserts staff_employment_profiles WITHOUT
 -- access_state. The derive trigger must classify it from the login identity, or
--- every newly invited staff member would read "not_activated".
+-- every newly credentials_ready staff member would read "not_activated".
 insert into auth.users (id, instance_id, email, aud, role) values
   ('42eeeeee-eeee-4eee-8eee-eeeeeeeeeeee', '00000000-0000-0000-0000-000000000000',
    '42-invited@example.test', 'authenticated', 'authenticated');
@@ -404,8 +408,8 @@ values ('42eeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'OE-INV-1', 'Executive', date '2
 
 select is(
   (select access_state from public.staff_employment_profiles where employee_code = 'OE-INV-1'),
-  'invited',
-  'CORRECTION 1: an invite-path row with an auth user is invited, not not_activated'
+  'credentials_ready',
+  'CORRECTION 1: an invite-path row with an auth user is credentials_ready, not not_activated'
 );
 
 -- A staff member who has actually signed in is active.
@@ -565,7 +569,7 @@ select ok(
 );
 
 -- -----------------------------------------------------------------------------
--- J. FINAL CORRECTION — invited becomes active only on genuine sign-in
+-- J. FINAL CORRECTION — credentials_ready becomes active only on genuine sign-in
 -- -----------------------------------------------------------------------------
 
 reset role;
@@ -585,8 +589,8 @@ values ('42a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1', 'OE-NEVER-1', 'Executive', date 
 
 select is(
   (select access_state from public.staff_employment_profiles where employee_code = 'OE-NEVER-1'),
-  'invited',
-  'FINAL: auth identity exists but never signed in -> invited'
+  'credentials_ready',
+  'FINAL: auth identity exists but never signed in -> credentials_ready'
 );
 
 set local role authenticated;
@@ -601,8 +605,8 @@ select throws_ok(
 
 select is(
   (select access_state from public.staff_employment_profiles where employee_code = 'OE-NEVER-1'),
-  'invited',
-  'FINAL: a refused confirm leaves the state at invited'
+  'credentials_ready',
+  'FINAL: a refused confirm leaves the state at credentials_ready'
 );
 
 -- Syncing must not promote a never-signed-in identity either.
@@ -612,7 +616,7 @@ select lives_ok(
 );
 select is(
   (select access_state from public.staff_employment_profiles where employee_code = 'OE-NEVER-1'),
-  'invited',
+  'credentials_ready',
   'FINAL: sync cannot invent activation'
 );
 
@@ -629,7 +633,7 @@ set local request.jwt.claim.sub = '42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 -- synchroniser fixes.
 select is(
   (select access_state from public.staff_employment_profiles where employee_code = 'OE-NEVER-1'),
-  'invited',
+  'credentials_ready',
   'FINAL: a later sign-in does not update the cache by itself'
 );
 
@@ -694,13 +698,13 @@ set local request.jwt.claim.sub = '42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 select lives_ok(
   $q$select public.attach_staff_app_access(
       '42b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2', 'partial@onedecore.in')$q$,
-  'RETRY: first attach marks the day invited'
+  'RETRY: first attach marks the day credentials_ready'
 );
 
 select is(
   (select access_state from public.staff_employment_profiles where employee_code = 'OE-PART-1'),
-  'invited',
-  'RETRY: state is invited before the identity exists'
+  'credentials_ready',
+  'RETRY: state is credentials_ready before the identity exists'
 );
 
 -- Simulate the partial failure: the exact-id identity WAS created, but the
@@ -729,7 +733,7 @@ select is(
 
 select is(
   (select access_state from public.staff_employment_profiles where employee_code = 'OE-PART-1'),
-  'invited',
+  'credentials_ready',
   'RETRY: an existing identity never counts as active'
 );
 

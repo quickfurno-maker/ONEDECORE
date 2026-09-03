@@ -42,12 +42,12 @@ function latestMigrationName(): string {
 }
 
 describe("Phase 9D-D2 repository contracts", () => {
-  test("latest migration is the attendance policy publish weekly-off correction; deferred payment M38 absent", () => {
+  test("latest migration is the staff phone-login credential migration; deferred payment M38 absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260903140000_attendance_policy_publish_weekly_off_optional.sql"
+      "20260903160000_staff_phone_login_credentials.sql"
     );
-    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 53);
+    assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 54);
     assert.equal(
       existsSync(join(migrationDir, "20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false

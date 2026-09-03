@@ -23,6 +23,20 @@ export const STAFF_ERROR_CODES = [
   "STAFF_INVITE_FAILED",
   "STAFF_RECONCILIATION_REQUIRED",
   "STAFF_IDEMPOTENCY_CONFLICT",
+  // Phone-login credential lifecycle.
+  "STAFF_CREDENTIALS_UNAUTHORIZED",
+  "STAFF_CREDENTIALS_NOT_ISSUED",
+  "STAFF_CREDENTIAL_OPERATION_BLOCKED",
+  "STAFF_ACCESS_NOT_ACTIVE",
+  "STAFF_LOGIN_PHONE_INVALID",
+  "STAFF_LOGIN_PHONE_CONFLICT",
+  "STAFF_LOGIN_PHONE_UNCHANGED",
+  "STAFF_LOGIN_PHONE_LOCKED",
+  "STAFF_ACCESS_REVOKED",
+  "STAFF_ACCESS_NOT_REVOKED",
+  "STAFF_ACCESS_ALREADY_ACTIVE",
+  "STAFF_PASSWORD_REJECTED",
+  "STAFF_REASON_REQUIRED",
   "STAFF_RPC_FAILED",
 ] as const;
 
@@ -71,6 +85,120 @@ export function staffErrorFromPostgresMessage(
       code: "STAFF_INACTIVE",
       message: "Staff account is not active",
       httpStatus: 403,
+      details: message,
+    });
+  }
+
+  // Credential lifecycle tokens are matched before the generic rules below:
+  // several of them contain substrings ("unauthorized", "reason") that the
+  // broader checks would otherwise swallow into a vaguer message.
+  if (normalised.includes("staff_credentials_unauthorized")) {
+    return new StaffError({
+      code: "STAFF_CREDENTIALS_UNAUTHORIZED",
+      message: "Only a Super Admin can manage staff login credentials.",
+      httpStatus: 403,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_credential_operation_blocked")) {
+    return new StaffError({
+      code: "STAFF_CREDENTIAL_OPERATION_BLOCKED",
+      message:
+        "Another credential operation for this staff member has not finished. Complete or retry that one first.",
+      httpStatus: 409,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_access_not_active")) {
+    return new StaffError({
+      code: "STAFF_ACCESS_NOT_ACTIVE",
+      message: "This staff member does not have active application access.",
+      httpStatus: 403,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_credentials_not_issued")) {
+    return new StaffError({
+      code: "STAFF_CREDENTIALS_NOT_ISSUED",
+      message: "This staff member does not have login credentials yet.",
+      httpStatus: 409,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_login_phone_invalid")) {
+    return new StaffError({
+      code: "STAFF_LOGIN_PHONE_INVALID",
+      message: "Enter the staff member's 10-digit Indian mobile number.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_login_phone_conflict")) {
+    return new StaffError({
+      code: "STAFF_LOGIN_PHONE_CONFLICT",
+      message: "That mobile number is already another staff member's login.",
+      httpStatus: 409,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_login_phone_unchanged")) {
+    return new StaffError({
+      code: "STAFF_LOGIN_PHONE_UNCHANGED",
+      message: "That is already this staff member's login number.",
+      httpStatus: 422,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_login_phone_locked")) {
+    return new StaffError({
+      code: "STAFF_LOGIN_PHONE_LOCKED",
+      message:
+        "This staff member has login credentials, so their phone number can only be changed with Change login phone.",
+      httpStatus: 409,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_access_revoked")) {
+    return new StaffError({
+      code: "STAFF_ACCESS_REVOKED",
+      message: "Application access for this staff member is revoked.",
+      httpStatus: 403,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_access_not_revoked")) {
+    return new StaffError({
+      code: "STAFF_ACCESS_NOT_REVOKED",
+      message: "Application access is not revoked, so it cannot be reactivated.",
+      httpStatus: 409,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_access_already_active")) {
+    return new StaffError({
+      code: "STAFF_ACCESS_ALREADY_ACTIVE",
+      message:
+        "This staff member has already signed in. Use Set / reset password instead.",
+      httpStatus: 409,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_reason_required")) {
+    return new StaffError({
+      code: "STAFF_REASON_REQUIRED",
+      message: "Enter a reason. This is recorded in the audit trail.",
+      httpStatus: 422,
       details: message,
     });
   }

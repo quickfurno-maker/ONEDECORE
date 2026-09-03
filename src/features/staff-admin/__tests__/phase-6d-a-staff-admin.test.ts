@@ -51,7 +51,13 @@ describe("Phase 6D-A migration contract", () => {
   test("migration defines staff permissions and durable invite saga RPCs", () => {
     const sql = readFileSync(M23_MIGRATION, "utf8");
 
+    // staff.credentials.manage arrives with the phone-login migration, not
+    // M23, so it is asserted in the phone-login suite instead. Every other
+    // declared permission must still be seeded here.
     for (const code of STAFF_PERMISSION_CODES) {
+      if (code === "staff.credentials.manage") {
+        continue;
+      }
       assert.match(sql, new RegExp(code.replaceAll(".", "\\.")));
     }
 

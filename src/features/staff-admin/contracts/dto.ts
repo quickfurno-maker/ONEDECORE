@@ -39,11 +39,26 @@ export interface StaffDetailAuditSummary {
   readonly lastEventAt: string | null;
 }
 
+/** An unfinished credential operation, surfaced so it can be retried. */
+export interface StaffCredentialOperationSummary {
+  readonly operationId: string;
+  readonly operation: string;
+  readonly status: string;
+  readonly targetLoginUsername: string | null;
+}
+
 export interface StaffDetail extends StaffListItem {
   readonly phoneE164: string | null;
   readonly email: string | null;
   readonly attendanceEligible: boolean;
   readonly policyName: string | null;
+  /**
+   * Canonical login username (+91XXXXXXXXXX), or null when no credentials
+   * have been issued. Distinct from `phoneE164`, which is contact data.
+   */
+  readonly loginPhoneE164: string | null;
+  readonly credentialsIssuedAt: string | null;
+  readonly accessRevokedAt: string | null;
   readonly auditSummary: StaffDetailAuditSummary;
 }
 
@@ -262,13 +277,15 @@ export function mapCreateStaffMemberRpcResult(
     accessState:
       record.accessState === "active"
         ? "active"
-        : record.accessState === "invited"
-          ? "invited"
-          : record.accessState === "not_activated"
-            ? "not_activated"
-            // Existing invite path returns no accessState; a completed invite
-            // means a login identity exists.
-            : "invited",
+        : record.accessState === "revoked"
+          ? "revoked"
+          : record.accessState === "credentials_ready"
+            ? "credentials_ready"
+            : record.accessState === "not_activated"
+              ? "not_activated"
+              // Existing invite path returns no accessState; a completed
+              // invite means a login identity exists but nobody has signed in.
+              : "credentials_ready",
     reconciliationState:
       record.reconciliationState === "auth_created_db_pending"
         ? "auth_created_db_pending"

@@ -83,11 +83,15 @@ select is(private.workforce_category_credited_minutes('NOT_A_CATEGORY'), null, '
 -- C. Fixtures
 -- -----------------------------------------------------------------------------
 
-insert into auth.users (id, instance_id, email, aud, role) values
-  ('40aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', '40-sa@example.test', 'authenticated', 'authenticated'),
-  ('40bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '00000000-0000-0000-0000-000000000000', '40-exec@example.test', 'authenticated', 'authenticated'),
-  ('40cccccc-cccc-4ccc-8ccc-cccccccccccc', '00000000-0000-0000-0000-000000000000', '40-exec2@example.test', 'authenticated', 'authenticated'),
-  ('40dddddd-dddd-4ddd-8ddd-dddddddddddd', '00000000-0000-0000-0000-000000000000', '40-mgr@example.test', 'authenticated', 'authenticated');
+-- last_sign_in_at is set so the access-state derivation yields 'active':
+-- these fixtures act AS staff, and a staff member exercising the app has
+-- signed in. An employment record whose access_state is not active is
+-- denied staff-domain reads by design (see M54 section E2).
+insert into auth.users (id, instance_id, email, aud, role, last_sign_in_at) values
+  ('40aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', '40-sa@example.test', 'authenticated', 'authenticated', now()),
+  ('40bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '00000000-0000-0000-0000-000000000000', '40-exec@example.test', 'authenticated', 'authenticated', now()),
+  ('40cccccc-cccc-4ccc-8ccc-cccccccccccc', '00000000-0000-0000-0000-000000000000', '40-exec2@example.test', 'authenticated', 'authenticated', now()),
+  ('40dddddd-dddd-4ddd-8ddd-dddddddddddd', '00000000-0000-0000-0000-000000000000', '40-mgr@example.test', 'authenticated', 'authenticated', now());
 
 update public.profiles set status = 'active'
 where id in (

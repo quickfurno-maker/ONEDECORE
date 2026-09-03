@@ -3,7 +3,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.generated";
-import type { StaffDetail, StaffListItem } from "../contracts/dto.ts";
+import type {
+  StaffCredentialOperationSummary,
+  StaffDetail,
+  StaffListItem,
+} from "../contracts/dto.ts";
 import {
   isStaffAssignableRoleCode,
   isStaffAccessStateCode,
@@ -68,6 +72,9 @@ type EmploymentRow = {
   readonly attendance_eligible: boolean;
   readonly attendance_policy_id: string | null;
   readonly access_state: string | null;
+  readonly login_phone_e164: string | null;
+  readonly credentials_issued_at: string | null;
+  readonly access_revoked_at: string | null;
   readonly profiles: {
     readonly display_name: string | null;
     readonly status: string;
@@ -149,7 +156,9 @@ function mapEmploymentRowToListItem(
     managerName: row.manager?.display_name?.trim() || null,
     accessState: isStaffAccessStateCode(row.access_state ?? "")
       ? (row.access_state as StaffAccessStateCode)
-      : "invited",
+      // Fail closed: an unrecognised value must never imply that working
+      // credentials exist.
+      : "not_activated",
     status,
     joiningDate: row.joining_date,
   };
@@ -159,9 +168,10 @@ function mapEmploymentRowToListItem(
  * Reconciles cached app-access state with authoritative Auth sign-in evidence.
  *
  * access_state is derived on INSERT, but a sign-in happening later cannot fire
- * that trigger. Staff read paths therefore resync first, so "invited" becomes
- * "active" only when a real sign-in exists. Best-effort: a sync failure must
- * never block reading the directory.
+ * that trigger. Staff read paths therefore resync first, so "credentials_ready"
+ * becomes "active" only when a real sign-in exists. "revoked" is never
+ * overwritten by the sync. Best-effort: a sync failure must never block
+ * reading the directory.
  */
 async function syncStaffAccessStates(
   client: Awaited<ReturnType<typeof createClient>>,
@@ -216,7 +226,7 @@ export async function loadStaffDetail(staffId: string): Promise<StaffDetail | nu
   const { data, error } = await staffQueryClient(supabase)
     .from("staff_employment_profiles")
     .select(
-      "staff_id, employee_code, designation, joining_date, reporting_manager_id, attendance_eligible, attendance_policy_id, access_state, profiles!staff_employment_profiles_staff_id_fkey(display_name, status, phone_e164), manager:profiles!staff_employment_profiles_reporting_manager_id_fkey(display_name), attendance_policies(name)"
+      "staff_id, employee_code, designation, joining_date, reporting_manager_id, attendance_eligible, attendance_policy_id, access_state, login_phone_e164, credentials_issued_at, access_revoked_at, profiles!staff_employment_profiles_staff_id_fkey(display_name, status, phone_e164), manager:profiles!staff_employment_profiles_reporting_manager_id_fkey(display_name), attendance_policies(name)"
     )
     .eq("staff_id", staffId)
     .maybeSingle();
@@ -250,6 +260,9 @@ export async function loadStaffDetail(staffId: string): Promise<StaffDetail | nu
     email: context?.canManageStaff ? null : null,
     attendanceEligible: row.attendance_eligible,
     policyName: row.attendance_policies?.name ?? null,
+    loginPhoneE164: row.login_phone_e164 ?? null,
+    credentialsIssuedAt: row.credentials_issued_at ?? null,
+    accessRevokedAt: row.access_revoked_at ?? null,
     auditSummary: {
       lastEventType: event?.event_type ?? null,
       lastEventAt: event?.created_at ?? null,
@@ -324,4 +337,44 @@ export async function loadAttendancePolicyOptions(): Promise<
     name: row.name,
     isCurrent: row.is_current,
   }));
+}
+
+/**
+ * The unfinished credential operation for a staff member, if any.
+ *
+ * A prepare/Auth/finalize operation that failed part-way leaves a durable row
+ * rather than silent half-state, and this is what makes it visible so a Super
+ * Admin can retry it. Best-effort: only a credential admin may read it, so a
+ * denial is a normal answer rather than an error.
+ */
+export async function loadStaffCredentialOperation(
+  staffId: string
+): Promise<StaffCredentialOperationSummary | null> {
+  const supabase = await createClient();
+
+  try {
+    const { data, error } = await (
+      supabase as unknown as {
+        rpc(
+          fn: "get_staff_credential_operation",
+          args: { readonly p_staff_id: string }
+        ): PromiseLike<{ data: unknown; error: { message: string } | null }>;
+      }
+    ).rpc("get_staff_credential_operation", { p_staff_id: staffId });
+
+    if (error || !data || typeof data !== "object") {
+      return null;
+    }
+
+    const row = data as Record<string, unknown>;
+    return {
+      operationId: String(row.operationId ?? ""),
+      operation: String(row.operation ?? ""),
+      status: String(row.status ?? ""),
+      targetLoginUsername:
+        row.targetLoginUsername == null ? null : String(row.targetLoginUsername),
+    };
+  } catch {
+    return null;
+  }
 }

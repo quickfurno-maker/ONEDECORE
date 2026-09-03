@@ -101,14 +101,18 @@ select results_eq(
 );
 
 -- E. Synthetic auth.users + profiles + user_roles
-insert into auth.users (id, instance_id, email, aud, role) values
-  ('6d111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', '6d-sa@example.test', 'authenticated', 'authenticated'),
-  ('6d222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', '6d-mgr@example.test', 'authenticated', 'authenticated'),
-  ('6d333333-3333-3333-3333-333333333333', '00000000-0000-0000-0000-000000000000', '6d-exec@example.test', 'authenticated', 'authenticated'),
-  ('6d444444-4444-4444-4444-444444444444', '00000000-0000-0000-0000-000000000000', '6d-exec2@example.test', 'authenticated', 'authenticated'),
-  ('6d555555-5555-5555-5555-555555555555', '00000000-0000-0000-0000-000000000000', '6d-exec3@example.test', 'authenticated', 'authenticated'),
-  ('6d666666-6666-6666-6666-666666666666', '00000000-0000-0000-0000-000000000000', '6d-self@example.test', 'authenticated', 'authenticated'),
-  ('6d777777-7777-7777-7777-777777777777', '00000000-0000-0000-0000-000000000000', '6d-inactive@example.test', 'authenticated', 'authenticated');
+-- last_sign_in_at is set so the access-state derivation yields 'active':
+-- these fixtures act AS staff, and a staff member exercising the app has
+-- signed in. An employment record whose access_state is not active is
+-- denied staff-domain reads by design (see M54 section E2).
+insert into auth.users (id, instance_id, email, aud, role, last_sign_in_at) values
+  ('6d111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', '6d-sa@example.test', 'authenticated', 'authenticated', now()),
+  ('6d222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', '6d-mgr@example.test', 'authenticated', 'authenticated', now()),
+  ('6d333333-3333-3333-3333-333333333333', '00000000-0000-0000-0000-000000000000', '6d-exec@example.test', 'authenticated', 'authenticated', now()),
+  ('6d444444-4444-4444-4444-444444444444', '00000000-0000-0000-0000-000000000000', '6d-exec2@example.test', 'authenticated', 'authenticated', now()),
+  ('6d555555-5555-5555-5555-555555555555', '00000000-0000-0000-0000-000000000000', '6d-exec3@example.test', 'authenticated', 'authenticated', now()),
+  ('6d666666-6666-6666-6666-666666666666', '00000000-0000-0000-0000-000000000000', '6d-self@example.test', 'authenticated', 'authenticated', now()),
+  ('6d777777-7777-7777-7777-777777777777', '00000000-0000-0000-0000-000000000000', '6d-inactive@example.test', 'authenticated', 'authenticated', now());
 
 update public.profiles set status = 'active'
 where id in (

@@ -36,7 +36,10 @@ export interface AuthorizedResponse {
 /** Performs an already-authorized request against an Auth endpoint path. */
 export type AuthorizedRequest = (
   path: string,
-  init: { readonly method: "GET" | "POST"; readonly body?: Record<string, unknown> }
+  init: {
+    readonly method: "GET" | "POST" | "PUT";
+    readonly body?: Record<string, unknown>;
+  }
 ) => Promise<AuthorizedResponse>;
 
 export interface StaffLoginProvisionRestDeps {
