@@ -365,3 +365,69 @@ export function formatMinutes(minutes: number | null): string {
   const rest = minutes % 60;
   return `${hours}h ${rest}m`;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Legacy weekly-off weekday parsing                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Parses the LEGACY weekly-off weekday field.
+ *
+ * Workforce V1 has no fixed weekly-off weekday, so blank is the normal input
+ * and MUST produce an empty array. `Number("")` is 0, which previously turned a
+ * blank field into `[0]` — a Sunday that nobody asked for, and a value the
+ * database rejects as out of the ISO 1..7 domain.
+ *
+ * Days are ISO weekdays: 1 = Monday .. 7 = Sunday, matching the column's own
+ * domain. Invalid tokens are REPORTED, never silently filtered, so a typo
+ * cannot quietly change the published policy.
+ */
+export type WeeklyOffParseResult =
+  | { readonly ok: true; readonly days: readonly number[] }
+  | { readonly ok: false; readonly message: string };
+
+export function parseLegacyWeeklyOffDays(raw: string): WeeklyOffParseResult {
+  const trimmed = (raw ?? "").trim();
+
+  // Blank is the Workforce V1 default, not a zero.
+  if (trimmed.length === 0) {
+    return { ok: true, days: [] };
+  }
+
+  // Empty tokens are NOT filtered out. Once the field is non-blank the operator
+  // has typed something, so a stray or doubled comma is malformed input rather
+  // than an implied blank: "," , "1," , ",1" and "1,,2" must all fail visibly
+  // instead of quietly publishing a different policy.
+  const tokens = trimmed.split(",").map((token) => token.trim());
+
+  const days: number[] = [];
+  for (const token of tokens) {
+    if (token.length === 0) {
+      return {
+        ok: false,
+        message:
+          "Remove the extra comma. Use 1=Mon … 7=Sun separated by commas, or leave blank.",
+      };
+    }
+    if (!/^\d+$/.test(token)) {
+      return {
+        ok: false,
+        message: `"${token}" is not a weekday number. Use 1=Mon … 7=Sun, or leave blank.`,
+      };
+    }
+    const day = Number(token);
+    if (!Number.isInteger(day) || day < 1 || day > 7) {
+      return {
+        ok: false,
+        message: `Weekday ${day} is out of range. Use 1=Mon … 7=Sun, or leave blank.`,
+      };
+    }
+    if (days.includes(day)) {
+      return { ok: false, message: `Weekday ${day} is listed more than once.` };
+    }
+    days.push(day);
+  }
+
+  // The database requires a sorted, distinct array.
+  return { ok: true, days: days.slice().sort((a, b) => a - b) };
+}
