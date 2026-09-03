@@ -394,17 +394,21 @@ export function parseLegacyWeeklyOffDays(raw: string): WeeklyOffParseResult {
     return { ok: true, days: [] };
   }
 
-  const tokens = trimmed
-    .split(",")
-    .map((token) => token.trim())
-    .filter((token) => token.length > 0);
-
-  if (tokens.length === 0) {
-    return { ok: true, days: [] };
-  }
+  // Empty tokens are NOT filtered out. Once the field is non-blank the operator
+  // has typed something, so a stray or doubled comma is malformed input rather
+  // than an implied blank: "," , "1," , ",1" and "1,,2" must all fail visibly
+  // instead of quietly publishing a different policy.
+  const tokens = trimmed.split(",").map((token) => token.trim());
 
   const days: number[] = [];
   for (const token of tokens) {
+    if (token.length === 0) {
+      return {
+        ok: false,
+        message:
+          "Remove the extra comma. Use 1=Mon … 7=Sun separated by commas, or leave blank.",
+      };
+    }
     if (!/^\d+$/.test(token)) {
       return {
         ok: false,

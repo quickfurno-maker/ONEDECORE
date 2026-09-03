@@ -54,12 +54,56 @@ describe("weekly-off parsing — blank is the V1 default", () => {
     assert.deepEqual([...days("\t")], []);
   });
 
+  test("tabs and newlines count as blank", () => {
+    assert.deepEqual([...days("\t\n")], []);
+    assert.deepEqual([...days("\n  \t ")], []);
+  });
+
   test("blank NEVER becomes [0]", () => {
     // The exact regression: Number("") === 0.
-    for (const blank of ["", " ", "  ", ",", " , "]) {
+    // Comma-only values are deliberately NOT in this list: once the field is
+    // non-blank they are malformed input, asserted separately below.
+    for (const blank of ["", " ", "  ", "\t", "\n", " \t\n "]) {
       const parsed = days(blank);
       assert.equal(parsed.length, 0, `"${blank}" must not yield a weekday`);
       assert.ok(!parsed.includes(0), `"${blank}" must never yield 0`);
+    }
+  });
+});
+
+describe("weekly-off parsing — malformed separators fail closed", () => {
+  test("a comma with no weekdays is malformed, not blank", () => {
+    // Previously the empty-token filter collapsed these to [] and published a
+    // policy the operator never described.
+    assert.match(failure(","), /extra comma/i);
+    assert.match(failure(" , "), /extra comma/i);
+    assert.match(failure(",,"), /extra comma/i);
+  });
+
+  test("a trailing comma is rejected", () => {
+    assert.match(failure("1,"), /extra comma/i);
+    assert.match(failure("6,7,"), /extra comma/i);
+  });
+
+  test("a leading comma is rejected", () => {
+    assert.match(failure(",1"), /extra comma/i);
+    assert.match(failure(",6,7"), /extra comma/i);
+  });
+
+  test("a doubled or whitespace-only inner separator is rejected", () => {
+    assert.match(failure("1,,2"), /extra comma/i);
+    assert.match(failure("1, ,2"), /extra comma/i);
+    assert.match(failure("1,\t,2"), /extra comma/i);
+  });
+
+  test("malformed separators never yield a partial day list", () => {
+    // The danger is silently publishing [1,2] from "1,,2".
+    for (const malformed of [",", " , ", "1,", ",1", "1,,2", "1, ,2"]) {
+      assert.equal(
+        parseLegacyWeeklyOffDays(malformed).ok,
+        false,
+        `"${malformed}" must be rejected outright`
+      );
     }
   });
 });
