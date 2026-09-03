@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { parseLegacyWeeklyOffDays } from "../contracts/workforce-contracts.ts";
 import {
   ATTENDANCE_CORRECTION_TYPES,
   ATTENDANCE_LOCATION_CATEGORIES,
@@ -132,11 +133,23 @@ export async function publishAttendancePolicyAction(
   try {
     await requireAttendancePolicyManageAccess();
 
-    const weeklyOffRaw = String(formData.get("weeklyOffDays") ?? "");
-    const weeklyOffDays = weeklyOffRaw
-      .split(",")
-      .map((value) => Number(value.trim()))
-      .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6);
+    // Blank is the Workforce V1 default and must become []. The previous parser
+    // used Number(""), which is 0, so a blank field silently became [0].
+    // Invalid tokens now surface as a validation error rather than being
+    // filtered away, and days are ISO 1=Mon..7=Sun to match the column domain.
+    const weeklyOff = parseLegacyWeeklyOffDays(
+      String(formData.get("weeklyOffDays") ?? "")
+    );
+
+    if (!weeklyOff.ok) {
+      return {
+        success: false,
+        message: weeklyOff.message,
+        code: "ATTENDANCE_POLICY_NOT_CONFIGURED",
+      };
+    }
+
+    const weeklyOffDays = weeklyOff.days;
 
     await publishPolicy({
       code: String(formData.get("code") ?? ""),

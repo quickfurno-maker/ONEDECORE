@@ -150,15 +150,22 @@ export function AttendancePolicyForm({ policies }: AttendancePolicyFormProps) {
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-neutral-200">
-                Weekly off days (0=Sun … 6=Sat, comma-separated)
+              <label
+                htmlFor="weeklyOffDays"
+                className="text-sm font-medium text-neutral-200"
+              >
+                Legacy weekly-off days (optional, 1=Mon … 7=Sun)
               </label>
               <input
+                id="weeklyOffDays"
                 name="weeklyOffDays"
-                placeholder="0,6"
-                required
+                placeholder="Leave blank"
+                aria-describedby="weeklyOffDays-hint"
                 className={fieldClassName}
               />
+              <p id="weeklyOffDays-hint" className="mt-1 text-xs text-neutral-500">
+                Leave blank for Workforce V1. Weekly Off is selected day-by-day.
+              </p>
             </div>
             <div>
               <label className="text-sm font-medium text-neutral-200">Supersedes policy</label>
