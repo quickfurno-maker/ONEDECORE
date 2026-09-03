@@ -310,7 +310,7 @@ export async function createStaffMember(
       employeeCode,
       profileStatus: "pending",
       invitationState: "reconciliation_required",
-      accessState: "invited",
+      accessState: "credentials_ready",
       reconciliationState: "auth_created_db_pending",
       idempotentReplay: false,
     };
@@ -504,9 +504,9 @@ export async function updateEmployment(
  * Attaches a LOGIN identity to an existing employment record.
  *
  * Order mirrors the invite saga: mark intent in the database first, then call
- * the identity provider. A provider failure leaves access_state at "invited"
- * and is safely retryable, and the auth user is always created with the
- * pre-allocated employment id so profiles.id === auth.users.id.
+ * the identity provider. A provider failure leaves access_state at
+ * "credentials_ready" and is safely retryable, and the auth user is always
+ * created with the pre-allocated employment id so profiles.id === auth.users.id.
  */
 export async function attachStaffAppAccess(input: {
   readonly staffId: string;
@@ -543,8 +543,9 @@ export async function attachStaffAppAccess(input: {
       displayName: input.displayName,
     });
   } catch (error) {
-    // The database was already moved to "invited" above, so claiming the record
-    // is unchanged would be false. State is deliberately left at "invited":
+    // The database was already moved to "credentials_ready" above, so claiming
+    // the record is unchanged would be false. State is deliberately left
+    // there:
     // either the login identity exists and only the email failed, or neither
     // happened. Retrying is safe in both cases — attach_staff_app_access
     // refuses only once access is genuinely active, and creating an identity
@@ -558,5 +559,5 @@ export async function attachStaffAppAccess(input: {
     });
   }
 
-  return { staffId: input.staffId, accessState: "invited" };
+  return { staffId: input.staffId, accessState: "credentials_ready" };
 }

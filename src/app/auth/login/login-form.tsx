@@ -30,22 +30,27 @@ export function LoginForm({ nextParam }: LoginFormProps) {
 
       <div>
         <label
-          htmlFor="email"
+          htmlFor="identifier"
           className="block text-xs font-semibold uppercase tracking-wider text-amber-200/80"
         >
-          Staff Email Address
+          Mobile Number or Email
         </label>
         <input
-          id="email"
-          name="email"
-          type="email"
+          id="identifier"
+          name="identifier"
+          type="text"
+          inputMode="text"
           autoComplete="username"
           required
           maxLength={254}
           disabled={isPending}
-          placeholder="staff@onedecore.in"
+          placeholder="7447863402"
+          aria-describedby="identifier-hint"
           className="mt-2 block w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-neutral-100 placeholder-neutral-500 transition-colors focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 disabled:opacity-50"
         />
+        <p id="identifier-hint" className="mt-2 text-[11px] leading-relaxed text-neutral-400">
+          Staff sign in with their 10-digit mobile number. Do not add +91.
+        </p>
       </div>
 
       <div>

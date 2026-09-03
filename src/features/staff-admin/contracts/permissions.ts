@@ -17,6 +17,9 @@ export const STAFF_PERMISSION_CODES = [
   "leave.manage",
   "holidays.manage",
   "attendance.policies.manage",
+  // Credential administration is its own permission so it can never widen
+  // by accident if staff.manage is granted to another role later.
+  "staff.credentials.manage",
 ] as const;
 
 export type StaffPermissionCode = (typeof STAFF_PERMISSION_CODES)[number];
@@ -54,19 +57,28 @@ export type StaffInvitationStateCode = (typeof STAFF_INVITATION_STATE_CODES)[num
  *
  * `not_activated` means no auth user exists for this employment identity, so
  * auth.uid() can never match it and every RLS policy denies access.
+ *
+ * `credentials_ready` replaced the earlier `invited`: both meant exactly
+ * "a login identity exists but nobody has ever signed in", and carrying two
+ * names for one state forced every consumer to guess which to write.
+ *
+ * `revoked` is enforced in the database — `private.has_permission` returns
+ * false outright — so it is never merely a UI state.
  */
 export const STAFF_ACCESS_STATE_CODES = [
   "not_activated",
-  "invited",
+  "credentials_ready",
   "active",
+  "revoked",
 ] as const;
 
 export type StaffAccessStateCode = (typeof STAFF_ACCESS_STATE_CODES)[number];
 
 export const STAFF_ACCESS_STATE_LABELS: Record<StaffAccessStateCode, string> = {
-  not_activated: "Not activated",
-  invited: "Invited",
+  not_activated: "No credentials",
+  credentials_ready: "Credentials ready",
   active: "Active",
+  revoked: "Revoked",
 };
 
 export function isStaffAccessStateCode(value: string): value is StaffAccessStateCode {
@@ -88,6 +100,8 @@ export const STAFF_ROLE_PERMISSIONS: Readonly<
 > = {
   super_admin: [...STAFF_PERMISSION_CODES],
   sales_manager: [
+    // Deliberately NO staff.credentials.manage: a Sales Manager must not
+    // issue, reset, revoke or re-point another staff member's login.
     "staff.read",
     "attendance.self",
     "attendance.team.read",

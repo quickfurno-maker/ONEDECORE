@@ -34,8 +34,9 @@ export function StaffStatusBadge({ status }: StaffStatusBadgeProps) {
 
 const ACCESS_STYLES: Readonly<Record<StaffAccessStateCode, string>> = {
   not_activated: "bg-neutral-800 text-neutral-300 border-neutral-700",
-  invited: "bg-sky-950/70 text-sky-200 border-sky-900/60",
+  credentials_ready: "bg-sky-950/70 text-sky-200 border-sky-900/60",
   active: "bg-emerald-950/70 text-emerald-200 border-emerald-900/60",
+  revoked: "bg-red-950/70 text-red-200 border-red-900/60",
 };
 
 /**

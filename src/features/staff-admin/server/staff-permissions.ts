@@ -20,6 +20,7 @@ const STAFF_PERMISSION_PROBE_CODES = [
   "leave.manage",
   "holidays.manage",
   "attendance.policies.manage",
+  "staff.credentials.manage",
 ] as const satisfies readonly StaffPermissionCode[];
 
 /**
@@ -43,6 +44,17 @@ export async function probeStaffPermissions(): Promise<StaffPermissionProbeResul
 export async function probeCanManageStaff(): Promise<boolean> {
   const permissions = await probeStaffPermissions();
   return permissions["staff.manage"];
+}
+
+/**
+ * Super-Admin-only credential administration.
+ *
+ * Probed separately from `staff.manage` so a future grant of staff.manage to
+ * another role cannot silently hand out credential control as well.
+ */
+export async function probeCanManageStaffCredentials(): Promise<boolean> {
+  const permissions = await probeStaffPermissions();
+  return permissions["staff.credentials.manage"];
 }
 
 export async function probeCanReadStaff(): Promise<boolean> {

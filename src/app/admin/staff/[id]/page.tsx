@@ -6,6 +6,7 @@ import {
   getStaffAdminAccessContext,
   requireStaffReadAccess,
 } from "@/features/staff-admin/server/staff-auth";
+import { probeCanManageStaffCredentials } from "@/features/staff-admin/server/staff-permissions";
 import {
   loadAttendancePolicyOptions,
   loadReportingManagerDirectory,
@@ -33,6 +34,10 @@ export default async function StaffDetailPage({ params }: StaffDetailPageProps) 
     loadAttendancePolicyOptions(),
   ]);
 
+  // Credential administration is Super Admin only and is checked again in
+  // every RPC, so this only decides whether the controls are rendered.
+  const canManageCredentials = await probeCanManageStaffCredentials();
+
   if (!staff) {
     notFound();
   }
@@ -46,6 +51,7 @@ export default async function StaffDetailPage({ params }: StaffDetailPageProps) 
       <StaffDetailPanel
         staff={staff}
         canManage={context?.canManageStaff ?? false}
+        canManageCredentials={canManageCredentials}
         managers={managers}
         policies={policies}
       />

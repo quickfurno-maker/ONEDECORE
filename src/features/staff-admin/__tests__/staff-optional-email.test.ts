@@ -162,13 +162,17 @@ describe("staff optional email — PR #123 form preservation still holds", () =>
 });
 
 describe("staff optional email — access state vocabulary", () => {
-  test("the three login states exist and are labelled", () => {
+  test("the login states exist and are labelled", () => {
+    // `invited` was renamed to `credentials_ready` and `revoked` added when
+    // phone credentials landed; both meant the same thing, and carrying two
+    // names for one state forced every consumer to guess which to write.
     assert.deepEqual(
       [...STAFF_ACCESS_STATE_CODES],
-      ["not_activated", "invited", "active"]
+      ["not_activated", "credentials_ready", "active", "revoked"]
     );
-    assert.equal(STAFF_ACCESS_STATE_LABELS.not_activated, "Not activated");
+    assert.equal(STAFF_ACCESS_STATE_LABELS.not_activated, "No credentials");
     assert.equal(isStaffAccessStateCode("not_activated"), true);
+    assert.equal(isStaffAccessStateCode("invited"), false);
     assert.equal(isStaffAccessStateCode("nonsense"), false);
   });
 });
@@ -353,20 +357,21 @@ describe("PR127 corrections", () => {
     );
   });
 
-  test("CORRECTION 3: app-access attachment is implemented end to end", () => {
-    // Server action exists and provisions the login identity.
+  test("CORRECTION 3: app-access attachment survives as a server path", () => {
+    // The email attach path is still implemented end to end in the server
+    // layer. Its UI was superseded: the owner locked staff authentication to
+    // the staff member's own mobile number, so the detail screen now issues
+    // phone credentials instead of emailing a set-password link.
     assert.match(actions, /export async function attachStaffAppAccess/);
     assert.match(actions, /attach_staff_app_access/);
     assert.match(actions, /provisionStaffLoginIdentity/);
 
-    // Form action + UI surface.
     const formActions = read("src/features/staff-admin/server/staff-form-actions.ts");
     assert.match(formActions, /attachStaffAppAccessAction/);
+
+    // The staff-facing surface is the phone credential panel.
     const panel = read("src/features/staff-admin/components/StaffDetailPanel.tsx");
-    assert.match(panel, /attachStaffAppAccessAction/);
-    assert.match(panel, /Activate app access/);
-    // Mutation controls are now gated on NOT-active, so invited stays retryable.
-    assert.match(panel, /staff\.accessState !== "active"/);
+    assert.match(panel, /StaffLoginAccessPanel/);
   });
 
   test("CORRECTION 3: the login identity must reuse the employment id", () => {
@@ -459,18 +464,34 @@ describe("PR127 final corrections", () => {
 
 describe("PR127 retry safety", () => {
   const sql = read(MIGRATION);
-  const panel = read("src/features/staff-admin/components/StaffDetailPanel.tsx");
 
-  test("RETRY: the UI exposes a retry action while invited", () => {
-    // Mutation controls close only for active; invited must stay actionable.
-    assert.match(panel, /staff\.accessState !== "active"/);
-    assert.match(panel, /Resend setup email/);
-    assert.match(panel, /Activate app access/);
-    assert.doesNotMatch(panel, /staff\.accessState === "not_activated" \? \(/);
+  test("RETRY: the credential panel stays actionable after issuance", () => {
+    // The equivalent guarantee under phone login: credentials_ready is not a
+    // dead end. Password reset, phone change and revoke all remain available,
+    // and only a revoked account swaps them for reactivation.
+    const credentialPanel = read(
+      "src/features/staff-admin/components/StaffLoginAccessPanel.tsx"
+    );
+    assert.match(credentialPanel, /Issue credentials/);
+    assert.match(credentialPanel, /Set \/ reset password/);
+    assert.match(credentialPanel, /Change login phone/);
+    assert.match(credentialPanel, /Revoke access/);
+    assert.match(credentialPanel, /Reactivate access/);
+    assert.match(credentialPanel, /hasCredentials && !isRevoked/);
+    // There is deliberately no way to read an existing password back.
+    assert.doesNotMatch(credentialPanel, /view password/i);
   });
 
-  test("RETRY: the resend path explains it will not recreate the identity", () => {
-    assert.match(panel, /will\s*\n?\s*not recreate it/);
+  test("RETRY: re-issuing credentials never creates a second identity", () => {
+    // The retry guarantee moved with the surface: issuance looks the identity
+    // up first and sets the password on the existing one rather than creating
+    // a duplicate, and any mismatch is a hard conflict.
+    const provisioning = read(
+      "src/features/staff-admin/server/staff-credential-provisioning.ts"
+    );
+    assert.match(provisioning, /Same identity, same number/);
+    assert.match(provisioning, /StaffIdentityConflictError/);
+    assert.match(provisioning, /id: input\.staffId/);
   });
 
   test("RETRY: attach no longer refuses merely because an identity exists", () => {
