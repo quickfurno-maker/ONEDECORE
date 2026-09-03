@@ -14,7 +14,7 @@
 --   O   an unresolved change_phone cannot be escaped by reactivation
 
 begin;
-select plan(151);
+select plan(159);
 
 -- -----------------------------------------------------------------------------
 -- A. Credential metadata and the private operation ledger
@@ -377,9 +377,13 @@ select throws_ok(
   'UNFINISHED: self-service staff RPCs refuse the actor'
 );
 
--- And signing in cannot admit yourself.
+-- A PREMATURE sign-in, while issuance is still unfinished. Dated explicitly in
+-- the past: now() is the transaction timestamp, so without an interval this
+-- would tie with the credentials_issued_at written later in the same
+-- transaction and the "stale evidence" case would prove nothing.
 reset role;
-update auth.users set last_sign_in_at = now() where id = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+update auth.users set last_sign_in_at = now() - interval '1 hour'
+where id = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 set local role authenticated;
 set local request.jwt.claim.sub = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
@@ -394,6 +398,25 @@ select is(
   (select access_state from public.staff_employment_profiles where employee_code = 'SM001T'),
   'not_activated',
   'UNFINISHED: the stored state is untouched by the sign-in attempt'
+);
+
+-- THE RECONCILER MUST NOT BE A BACK DOOR.
+--
+-- Staff admin list and detail reads call sync automatically, so merely OPENING
+-- the staff page must not finish an activation the application never granted.
+set local role authenticated;
+set local request.jwt.claim.sub = '44aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select lives_ok(
+  $q$select public.sync_staff_access_states('44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')$q$,
+  'a Super Admin opening the staff page runs the reconciler'
+);
+
+reset role;
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'SM001T'),
+  'not_activated',
+  'UNFINISHED: sync must NEVER promote not_activated, whatever Auth says'
 );
 
 -- -----------------------------------------------------------------------------
@@ -439,6 +462,43 @@ select is(
   'exactly one issuance audit record exists'
 );
 
+-- -----------------------------------------------------------------------------
+-- F5. Stale, pre-issuance sign-in evidence does NOT activate
+-- -----------------------------------------------------------------------------
+--
+-- The only sign-in on record happened an hour BEFORE issuance was finalized.
+-- Neither authority may treat it as activation.
+
+reset role;
+select ok(
+  (select u.last_sign_in_at < sep.credentials_issued_at
+   from auth.users u
+   join public.staff_employment_profiles sep on sep.staff_id = u.id
+   where u.id = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+  'the recorded sign-in genuinely predates issuance'
+);
+set local role authenticated;
+set local request.jwt.claim.sub = '44aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select lives_ok(
+  $q$select public.sync_staff_access_states('44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')$q$,
+  'the reconciler runs again after finalize'
+);
+reset role;
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'SM001T'),
+  'credentials_ready',
+  'STALE: sync does NOT activate on a pre-issuance sign-in'
+);
+
+set local role authenticated;
+set local request.jwt.claim.sub = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+select is(
+  (public.record_staff_first_login() ->> 'accessState'),
+  'credentials_ready',
+  'STALE: record_staff_first_login does NOT activate on a pre-issuance sign-in'
+);
+
 -- credentials_ready is still not admitted: only a real first login is.
 set local request.jwt.claim.sub = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
@@ -449,11 +509,32 @@ select ok(
   'CREDENTIALS_READY: no permission yet'
 );
 
+-- A genuinely NEW sign-in, after issuance was finalized.
+reset role;
+update auth.users set last_sign_in_at = now() + interval '1 minute'
+where id = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+set local role authenticated;
+set local request.jwt.claim.sub = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
 select is(
   (public.record_staff_first_login() ->> 'accessState'),
   'active',
-  'a genuine sign-in promotes credentials_ready to active'
+  'a POST-issuance sign-in promotes credentials_ready to active'
 );
+
+set local request.jwt.claim.sub = '44aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+select lives_ok(
+  $q$select public.sync_staff_access_states('44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')$q$,
+  'the reconciler runs once more'
+);
+reset role;
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'SM001T'),
+  'active',
+  'a legitimately active account stays active across reconciliation'
+);
+set local role authenticated;
+set local request.jwt.claim.sub = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
 reset role;
 select ok(

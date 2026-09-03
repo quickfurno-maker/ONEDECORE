@@ -489,7 +489,11 @@ describe("state machine and revocation enforcement", () => {
   test("only a genuine sign-in promotes to active", () => {
     const sql = executableSql(MIGRATION);
     const block = sql.slice(sql.indexOf("function public.record_staff_first_login"));
-    assert.match(block, /last_sign_in_at is not null/);
+    // The evidence test lives in the shared rule, so the reconciler cannot
+    // apply a weaker one.
+    assert.match(block, /private\.staff_activation_qualifies\(v_actor\)/);
+    const rule = sql.slice(sql.indexOf("function private.staff_signin_is_post_issuance"));
+    assert.match(rule, /last_sign_in_at is not null/);
     // Signing in must never launder a revocation.
     assert.match(block, /if v_sep\.access_state = 'revoked' then/);
   });
@@ -758,9 +762,16 @@ describe("issuance stays fail-closed while unfinished", () => {
   test("record_staff_first_login promotes ONLY credentials_ready", () => {
     const sql = executableSql(MIGRATION);
     const fn = sql.slice(sql.indexOf("function public.record_staff_first_login"));
-    assert.match(fn, /if v_sep\.access_state <> 'credentials_ready' then/);
     assert.match(fn, /if v_sep\.access_state = 'revoked' then/);
-    assert.match(fn, /last_sign_in_at is not null/);
+    assert.match(fn, /if not private\.staff_activation_qualifies\(v_actor\) then/);
+
+    // The eligible-state half of the rule.
+    const qualifies = sql.slice(
+      sql.indexOf("function private.staff_activation_qualifies"),
+      sql.indexOf("comment on function private.staff_activation_qualifies")
+    );
+    assert.match(qualifies, /sep\.access_state = 'credentials_ready'/);
+    assert.match(qualifies, /private\.staff_signin_is_post_issuance\(p_staff_id\)/);
   });
 
   test("the RLS helpers gate on eligibility, not just revocation", () => {
@@ -820,5 +831,62 @@ describe("strict phone contract matches the database exactly", () => {
     const fn = sql.slice(sql.indexOf("function private.staff_normalize_login_phone"));
     assert.doesNotMatch(fn.slice(0, 900), /regexp_replace/);
     assert.match(fn, /\^\[6-9\]\[0-9\]\{9\}\$/);
+  });
+});
+
+describe("the reconciler is not a second activation authority", () => {
+  test("staff list and detail reads DO call the reconciler", () => {
+    // Which is exactly why it must not be able to advance the state machine:
+    // merely opening the staff page runs it.
+    const queries = read("src/features/staff-admin/server/staff-queries.ts");
+    assert.match(queries, /sync_staff_access_states/);
+    assert.match(queries, /syncStaffAccessStates\(/);
+  });
+
+  test("sync can NEVER promote not_activated", () => {
+    const sql = executableSql(MIGRATION);
+    const fn = sql.slice(sql.indexOf("function public.sync_staff_access_states"));
+    assert.match(fn, /when sep\.access_state = 'not_activated' then 'not_activated'/);
+    assert.match(fn, /when sep\.access_state = 'revoked' then 'revoked'/);
+    // The only promotion path goes through the shared evidence rule.
+    assert.match(fn, /when private\.staff_activation_qualifies\(sep\.staff_id\) then 'active'/);
+    // The old rule — any non-revoked row with a sign-in becomes active — is gone.
+    const derived = fn.slice(
+      fn.indexOf("with derived as"),
+      fn.indexOf("update public.staff_employment_profiles")
+    );
+    assert.doesNotMatch(derived, /last_sign_in_at is not null\s*\)\s*then 'active'/);
+  });
+
+  test("both authorities share ONE evidence rule", () => {
+    const sql = executableSql(MIGRATION);
+    const login = sql.slice(sql.indexOf("function public.record_staff_first_login"));
+    assert.match(login, /private\.staff_activation_qualifies\(v_actor\)/);
+
+    const sync = sql.slice(sql.indexOf("function public.sync_staff_access_states"));
+    assert.match(sync, /private\.staff_activation_qualifies\(sep\.staff_id\)/);
+  });
+
+  test("phone activation requires a sign-in at or after issuance", () => {
+    const sql = executableSql(MIGRATION);
+    const rule = sql.slice(sql.indexOf("function private.staff_signin_is_post_issuance"));
+    assert.match(rule, /sep\.login_phone_e164 is not null/);
+    assert.match(rule, /sep\.credentials_issued_at is not null/);
+    assert.match(rule, /u\.last_sign_in_at >= sep\.credentials_issued_at/);
+    // The legacy M52 email path is handled explicitly, not by a NULL slipping
+    // through and quietly weakening the phone rule.
+    assert.match(
+      rule,
+      /sep\.login_phone_e164 is null[\s\S]{0,80}and sep\.credentials_issued_at is null/
+    );
+  });
+
+  test("reactivation restores through the same rule", () => {
+    const sql = executableSql(MIGRATION);
+    const complete = sql.slice(
+      sql.indexOf("function public.complete_staff_credential_operation")
+    );
+    const branch = complete.slice(complete.indexOf("elsif v_op.operation = 'reactivate'"));
+    assert.match(branch.slice(0, 1200), /private\.staff_signin_is_post_issuance\(v_op\.staff_id\)/);
   });
 });

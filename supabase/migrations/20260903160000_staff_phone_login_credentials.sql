@@ -304,6 +304,93 @@ $$;
 comment on function private.staff_require_active_actor() is
   'Resolves the authenticated active staff actor. Refuses any employment record whose access_state is not active — revoked, not yet activated, or credentials issued but never used.';
 
+/**
+ * The SINGLE definition of what counts as activation evidence.
+ *
+ * Both `record_staff_first_login` and `sync_staff_access_states` call this, so
+ * the reconciler cannot become a second, weaker activation authority — which is
+ * exactly what it was: it promoted ANY non-revoked row to `active` the moment
+ * `auth.users.last_sign_in_at` was non-null. Because the Auth identity is
+ * created BEFORE the database finalizes an issuance, a premature sign-in during
+ * that window followed by a Super Admin merely OPENING the staff page would
+ * have flipped `not_activated` to `active`.
+ *
+ * Two rules make that impossible:
+ *
+ *   * only `credentials_ready` is eligible at all — `not_activated` means the
+ *     application never finished admitting this employee;
+ *   * for the phone credential path the sign-in must have happened AFTER
+ *     issuance was finalized, so evidence produced while the operation was
+ *     still pending does not qualify.
+ *
+ * `>=` rather than `>`: both columns are microsecond-precision timestamptz, and
+ * a legitimate sign-in can land in the same microsecond as the finalize that
+ * preceded it. `>=` cannot admit a PRE-issuance sign-in, because that is
+ * strictly earlier.
+ */
+create or replace function private.staff_signin_is_post_issuance(p_staff_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.staff_employment_profiles sep
+    join auth.users u on u.id = sep.staff_id
+    where sep.staff_id = p_staff_id
+      and u.last_sign_in_at is not null
+      and (
+        -- Phone credential path: sign-in must be at or after issuance.
+        (
+          sep.login_phone_e164 is not null
+          and sep.credentials_issued_at is not null
+          and u.last_sign_in_at >= sep.credentials_issued_at
+        )
+        -- Legacy M52 email-invite path. Those rows carry no login phone and no
+        -- issuance timestamp, so there is nothing to compare against; the
+        -- existence of a sign-in is the only evidence that path ever had. This
+        -- is stated explicitly rather than letting a NULL timestamp silently
+        -- weaken the phone rule above.
+        or (
+          sep.login_phone_e164 is null
+          and sep.credentials_issued_at is null
+        )
+      )
+  );
+$$;
+
+comment on function private.staff_signin_is_post_issuance(uuid) is
+  'The timestamp half of the activation rule: a sign-in exists and, for phone credentials, happened at or after credentials_issued_at. Reactivation shares this so it cannot restore active on pre-issuance evidence.';
+
+revoke all on function private.staff_signin_is_post_issuance(uuid) from public, anon;
+grant execute on function private.staff_signin_is_post_issuance(uuid) to authenticated;
+alter function private.staff_signin_is_post_issuance(uuid) owner to postgres;
+
+/** Eligible STATE plus qualifying EVIDENCE. */
+create or replace function private.staff_activation_qualifies(p_staff_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.staff_employment_profiles sep
+    where sep.staff_id = p_staff_id
+      and sep.access_state = 'credentials_ready'
+  )
+  and private.staff_signin_is_post_issuance(p_staff_id);
+$$;
+
+comment on function private.staff_activation_qualifies(uuid) is
+  'The single activation-evidence rule. Only credentials_ready is eligible, and for phone credentials the sign-in must be at or after credentials_issued_at. Shared by record_staff_first_login and sync_staff_access_states so the two can never disagree.';
+
+revoke all on function private.staff_activation_qualifies(uuid) from public, anon;
+grant execute on function private.staff_activation_qualifies(uuid) to authenticated;
+alter function private.staff_activation_qualifies(uuid) owner to postgres;
+
 -- The BEFORE INSERT derivation must speak the new vocabulary.
 create or replace function private.staff_derive_access_state()
 returns trigger
@@ -327,13 +414,12 @@ $$;
 /**
  * Reconciles stored access_state with authoritative Auth sign-in evidence.
  *
- * Two rules matter here and both are security-relevant:
- *
- *   * `revoked` is NEVER overwritten. Without this a revoked staff member who
- *     had previously signed in would be silently restored to `active` by the
- *     next read, quietly undoing the revocation.
- *   * Activation is only ever MIRRORED from `auth.users.last_sign_in_at`. This
- *     function never invents activation and is not a second auth system.
+ * Staff admin list and detail reads call this automatically, so it runs far
+ * more often than any deliberate credential action — which is precisely why it
+ * must not be able to advance the state machine on its own. It shares
+ * `private.staff_activation_qualifies` with `record_staff_first_login`, so the
+ * two cannot disagree, and it never promotes `not_activated` or overwrites
+ * `revoked`.
  */
 create or replace function public.sync_staff_access_states(p_staff_id uuid default null)
 returns integer
@@ -354,13 +440,27 @@ begin
     select
       sep.staff_id,
       case
+        -- Revocation is terminal until an explicit reactivation.
         when sep.access_state = 'revoked' then 'revoked'
-        when exists (
-          select 1 from auth.users u
-          where u.id = sep.staff_id and u.last_sign_in_at is not null
-        ) then 'active'
-        when exists (select 1 from auth.users u where u.id = sep.staff_id) then 'credentials_ready'
-        else 'not_activated'
+
+        -- NEVER promote an employee the application has not admitted. Only
+        -- `complete_staff_credential_operation` moves a row out of
+        -- not_activated; an Auth identity existing (or having signed in) during
+        -- an unfinished issuance proves nothing about the application's intent.
+        when sep.access_state = 'not_activated' then 'not_activated'
+
+        -- Already active stays active. Demoting on missing Auth evidence would
+        -- be a second authority in the other direction, and a deleted identity
+        -- can never match auth.uid() anyway, so access is impossible regardless.
+        when sep.access_state = 'active' then 'active'
+
+        -- credentials_ready. A vanished identity self-heals back to
+        -- not_activated; otherwise promotion needs the SAME evidence
+        -- record_staff_first_login demands.
+        when not exists (select 1 from auth.users u where u.id = sep.staff_id)
+          then 'not_activated'
+        when private.staff_activation_qualifies(sep.staff_id) then 'active'
+        else 'credentials_ready'
       end as truth
     from public.staff_employment_profiles sep
     where p_staff_id is null or sep.staff_id = p_staff_id
@@ -1156,11 +1256,11 @@ begin
     );
 
   elsif v_op.operation = 'reactivate' then
+    -- Restore through the SAME evidence rule. "A sign-in exists" would let a
+    -- PRE-issuance sign-in restore `active` — the very bypass the reconciler
+    -- was corrected for.
     v_state := case
-      when exists (
-        select 1 from auth.users u
-        where u.id = v_op.staff_id and u.last_sign_in_at is not null
-      ) then 'active'
+      when private.staff_signin_is_post_issuance(v_op.staff_id) then 'active'
       when exists (select 1 from auth.users u where u.id = v_op.staff_id) then 'credentials_ready'
       else 'not_activated'
     end;
@@ -1344,8 +1444,10 @@ $$;
  * Promotes credentials_ready -> active after a GENUINE sign-in.
  *
  * Self-service by design: it acts only on `auth.uid()`, so it cannot be aimed
- * at another staff member, and it refuses unless `auth.users.last_sign_in_at`
- * carries real evidence. Creating credentials never activates anything.
+ * at another staff member, and it refuses unless `private.staff_activation_qualifies`
+ * is satisfied — which for a phone credential means a sign-in at or after
+ * `credentials_issued_at`. Creating credentials never activates anything, and
+ * neither does a sign-in that happened while issuance was still pending.
  */
 create or replace function public.record_staff_first_login()
 returns jsonb
@@ -1383,14 +1485,10 @@ begin
   -- ONLY credentials_ready may be promoted. `not_activated` means the
   -- application never finished issuing credentials, so an Auth identity created
   -- during that window must not be able to admit itself by signing in.
-  if v_sep.access_state <> 'credentials_ready' then
-    return jsonb_build_object('staffId', v_actor, 'accessState', v_sep.access_state);
-  end if;
-
-  if not exists (
-    select 1 from auth.users u
-    where u.id = v_actor and u.last_sign_in_at is not null
-  ) then
+  --
+  -- The evidence rule is shared with the reconciler, so a sign-in that happened
+  -- BEFORE issuance was finalized does not qualify here either.
+  if not private.staff_activation_qualifies(v_actor) then
     return jsonb_build_object('staffId', v_actor, 'accessState', v_sep.access_state);
   end if;
 
