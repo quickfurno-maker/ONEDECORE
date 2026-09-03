@@ -1,4 +1,10 @@
 -- ONEDECORE Phase 7A — Commercial Quotation Data & Draft Foundation pgTAP tests
+--
+-- NOTE (P4): these fixtures use 'rft' rather than 'sqft'. `sqft` is now the
+-- CANONICAL AREA unit, reserved for the area calculation basis where the server
+-- derives the quantity from width x height. These tests exercise quantity
+-- validation, decimal bounds and overflow, none of which depend on the unit
+-- name, so the assertions and their numbers are unchanged.
 
 begin;
 select plan(94);
@@ -237,7 +243,7 @@ select is(
         'sectionName', 'Living Room',
         'items', jsonb_build_array(
           jsonb_build_object('itemName', 'TV Console Unit', 'quantity', '1', 'unitOfMeasure', 'nos', 'unitRatePaise', 4500000),
-          jsonb_build_object('itemName', 'Wooden Wall Paneling', 'quantity', '120.5', 'unitOfMeasure', 'sqft', 'unitRatePaise', 35000)
+          jsonb_build_object('itemName', 'Wooden Wall Paneling', 'quantity', '120.5', 'unitOfMeasure', 'rft', 'unitRatePaise', 35000)
         )
       )
     ),
@@ -257,7 +263,7 @@ select is(
         'sectionName', 'Living Room',
         'items', jsonb_build_array(
           jsonb_build_object('itemName', 'TV Console Unit', 'quantity', '1', 'unitOfMeasure', 'nos', 'unitRatePaise', 4500000),
-          jsonb_build_object('itemName', 'Wooden Wall Paneling', 'quantity', '120.5', 'unitOfMeasure', 'sqft', 'unitRatePaise', 35000)
+          jsonb_build_object('itemName', 'Wooden Wall Paneling', 'quantity', '120.5', 'unitOfMeasure', 'rft', 'unitRatePaise', 35000)
         )
       )
     ),
@@ -553,7 +559,7 @@ select is(
       jsonb_build_object(
         'sectionName', 'Hall',
         'items', jsonb_build_array(
-          jsonb_build_object('itemName', 'Large Panel', 'quantity', '1000000.000', 'unitOfMeasure', 'sqft', 'unitRatePaise', 100)
+          jsonb_build_object('itemName', 'Large Panel', 'quantity', '1000000.000', 'unitOfMeasure', 'rft', 'unitRatePaise', 100)
         )
       )
     )
@@ -570,7 +576,7 @@ select throws_ok(
       jsonb_build_object(
         'sectionName', 'Hall',
         'items', jsonb_build_array(
-          jsonb_build_object('itemName', 'Large Panel', 'quantity', '1000000.001', 'unitOfMeasure', 'sqft', 'unitRatePaise', 100)
+          jsonb_build_object('itemName', 'Large Panel', 'quantity', '1000000.001', 'unitOfMeasure', 'rft', 'unitRatePaise', 100)
         )
       )
     )
@@ -918,7 +924,7 @@ select lives_ok(
       jsonb_build_object(
         'sectionName', 'Civil Work',
         'items', jsonb_build_array(
-          jsonb_build_object('itemName', 'Flooring', 'quantity', '1000.000', 'unitOfMeasure', 'sqft', 'unitRatePaise', 50000)
+          jsonb_build_object('itemName', 'Flooring', 'quantity', '1000.000', 'unitOfMeasure', 'rft', 'unitRatePaise', 50000)
         )
       )
     )
@@ -955,7 +961,7 @@ begin
         'description', 'Detailed specification text for item ' || i || '.' || j || ' with substantial notes to inflate the DTO size above 8192 bytes constraint',
         'specifications', 'Premium material grade A1 fire resistant moisture barrier compliant with BIS standards',
         'quantity', '10.000',
-        'unitOfMeasure', 'sqft',
+        'unitOfMeasure', 'rft',
         'unitRatePaise', 15000
       );
     end loop;

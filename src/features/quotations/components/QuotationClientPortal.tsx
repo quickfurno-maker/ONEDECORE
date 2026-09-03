@@ -1,50 +1,27 @@
 'use client';
 
 import React, { useState } from 'react';
+import {
+  clientQuotationItemCells,
+  formatClientMeasure,
+  type ClientQuotation,
+  type ClientQuotationItem,
+} from '../contracts/client-quotation';
 import { acceptQuotationByCapabilityAction } from '../server/quotation-acceptance-actions';
 
+/**
+ * The client accepts the SAME commercial meaning that is printed in the
+ * finalized PDF, so this renders the same room-wise interior table:
+ *
+ *   PARTICULAR | W (FT) | H (FT) | AREA / QTY | RATE | AMOUNT
+ *
+ * The props are the typed DTO from `mapClientQuotation`. They used to be an
+ * unchecked cast of the RPC payload with DIFFERENT field names, so the
+ * commercial figures rendered blank or NaN on the acceptance document itself.
+ */
 interface QuotationClientPortalProps {
   token: string;
-  quotation: {
-    quotation_number: string;
-    version_number: number;
-    finalized_at: string;
-    client_name: string;
-    client_phone: string;
-    property_details: Record<string, unknown>;
-    subtotal_paise: number;
-    discount_paise: number;
-    taxable_base_paise: number;
-    tax_total_paise: number;
-    grand_total_paise: number;
-    tax_profile: { display_name: string; tax_rate_percentage: number };
-    sections: Array<{
-      id: string;
-      section_name: string;
-      section_subtotal_paise: number;
-      items: Array<{
-        id: string;
-        item_name: string;
-        description?: string;
-        quantity: number;
-        uom: string;
-        unit_rate_paise: number;
-        line_total_paise: number;
-      }>;
-    }>;
-    payment_schedule: Array<{
-      id: string;
-      milestone_name: string;
-      percentage?: number;
-      amount_paise: number;
-    }>;
-    inclusions: string[];
-    exclusions: string[];
-    terms_and_conditions: string[];
-    has_pdf: boolean;
-    is_accepted: boolean;
-    accepted_at?: string;
-  };
+  quotation: ClientQuotation;
 }
 
 function formatInr(paise: number): string {
@@ -53,13 +30,20 @@ function formatInr(paise: number): string {
     style: 'currency',
     currency: 'INR',
     minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(rupees);
 }
 
+// The SAME cell logic the tests exercise directly, shared rather than a
+// second copy that could drift from what the client is shown.
+const formatMeasure = formatClientMeasure;
+const itemCells = (item: ClientQuotationItem) =>
+  clientQuotationItemCells(item, formatInr);
+
 export default function QuotationClientPortal({ token, quotation }: QuotationClientPortalProps) {
-  const [accepted, setAccepted] = useState(quotation.is_accepted);
-  const [acceptedAt, setAcceptedAt] = useState(quotation.accepted_at || '');
-  const [clientName, setClientName] = useState(quotation.client_name || '');
+  const [accepted, setAccepted] = useState(quotation.isAccepted);
+  const [acceptedAt, setAcceptedAt] = useState(quotation.acceptedAt || '');
+  const [clientName, setClientName] = useState(quotation.clientName || '');
   const [clientEmail, setClientEmail] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -104,7 +88,7 @@ export default function QuotationClientPortal({ token, quotation }: QuotationCli
           </div>
           <div className="text-right">
             <span className="inline-block px-2.5 py-1 text-xs font-medium rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-              v{quotation.version_number}
+              v{quotation.versionNumber}
             </span>
           </div>
         </div>
@@ -130,7 +114,7 @@ export default function QuotationClientPortal({ token, quotation }: QuotationCli
               <span className="text-xs font-semibold uppercase tracking-wider text-amber-700">Status</span>
               <p className="text-sm font-semibold text-amber-900">Awaiting Client Acceptance</p>
             </div>
-            {quotation.has_pdf && (
+            {quotation.hasPdf && (
               <a
                 href={`/api/quotations/pdf?token=${encodeURIComponent(token)}`}
                 target="_blank"
@@ -147,46 +131,87 @@ export default function QuotationClientPortal({ token, quotation }: QuotationCli
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-3">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">{quotation.quotation_number}</h2>
+              <h2 className="text-lg font-bold text-slate-900">{quotation.quotationNumber}</h2>
               <p className="text-xs text-slate-500">
-                Finalized: {new Date(quotation.finalized_at).toLocaleDateString('en-IN')}
+                Finalized: {new Date(quotation.finalizedAt).toLocaleDateString('en-IN')}
               </p>
+              {quotation.title && (
+                <p className="mt-1 text-sm font-semibold text-slate-700">{quotation.title}</p>
+              )}
             </div>
             <div className="text-right">
               <span className="text-xs text-slate-500 block">Total Investment</span>
-              <span className="text-xl font-extrabold text-slate-900">{formatInr(quotation.grand_total_paise)}</span>
+              <span className="text-xl font-extrabold text-slate-900">{formatInr(quotation.grandTotalPaise)}</span>
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-3 text-xs text-slate-600 flex justify-between">
-            <span>Client: {quotation.client_name}</span>
-            <span>Phone: {quotation.client_phone}</span>
+          {quotation.scopeSummary && (
+            <p className="text-xs text-slate-600">{quotation.scopeSummary}</p>
+          )}
+
+          <div className="border-t border-slate-100 pt-3 text-xs text-slate-600 flex flex-wrap justify-between gap-2">
+            <span>Client: {quotation.clientName}</span>
+            <span>Phone: {quotation.clientPhone}</span>
           </div>
+          {quotation.propertyAddress && (
+            <p className="text-xs text-slate-500">Site / Property: {quotation.propertyAddress}</p>
+          )}
         </div>
 
-        {/* Scope Sections */}
+        {/* Room-wise interior estimate — the same table as the finalized PDF */}
         <div className="space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 px-1">Scope Breakdown</h3>
-          {quotation.sections.map((sec) => (
-            <div key={sec.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 px-1">
+            Room-wise Interior Estimate
+          </h3>
+          {quotation.rooms.map((room) => (
+            <div key={room.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
-                <h4 className="font-semibold text-sm text-slate-800">{sec.section_name}</h4>
-                <span className="text-xs font-medium text-slate-600">{formatInr(sec.section_subtotal_paise)}</span>
+                <h4 className="font-semibold text-sm text-slate-800">{room.roomName}</h4>
+                <span className="text-xs font-medium text-slate-600">{formatInr(room.subtotalPaise)}</span>
               </div>
-              <div className="divide-y divide-slate-100">
-                {sec.items.map((item) => (
-                  <div key={item.id} className="p-3 text-xs flex justify-between items-start">
-                    <div className="space-y-0.5">
-                      <div className="font-medium text-slate-800">{item.item_name}</div>
-                      {item.description && <div className="text-slate-500">{item.description}</div>}
-                      <div className="text-slate-400">
-                        {item.quantity} {item.uom} @ {formatInr(item.unit_rate_paise)}
-                      </div>
-                    </div>
-                    <div className="font-semibold text-slate-900">{formatInr(item.line_total_paise)}</div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-[11px]">
+                  <thead className="text-[10px] uppercase tracking-wide text-slate-400 bg-slate-50/60">
+                    <tr>
+                      <th className="px-3 py-2">Particular</th>
+                      <th className="px-2 py-2 text-right">W (ft)</th>
+                      <th className="px-2 py-2 text-right">H (ft)</th>
+                      <th className="px-2 py-2 text-right">Area / Qty</th>
+                      <th className="px-2 py-2 text-right">Rate</th>
+                      <th className="px-3 py-2 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {room.items.map((item) => {
+                      const cells = itemCells(item);
+                      return (
+                        <tr key={item.id}>
+                          <td className="px-3 py-2">
+                            <span className="font-medium text-slate-800">{item.itemName}</span>
+                            {(item.description || item.specifications) && (
+                              <span className="block text-[10px] text-slate-500">
+                                {[item.description, item.specifications].filter(Boolean).join(' \u2022 ')}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-2 py-2 text-right text-slate-600">{cells.widthFt}</td>
+                          <td className="px-2 py-2 text-right text-slate-600">{cells.heightFt}</td>
+                          <td className="px-2 py-2 text-right text-slate-600">{cells.measure}</td>
+                          <td className="px-2 py-2 text-right text-slate-600">{cells.rate}</td>
+                          <td className="px-3 py-2 text-right font-semibold text-slate-900">
+                            {formatInr(item.lineTotalPaise)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
+              {room.areaSubtotalSqFt > 0 && (
+                <div className="px-3 py-2 text-[10px] uppercase tracking-wide text-slate-400 border-t border-slate-100">
+                  Area total {formatMeasure(room.areaSubtotalSqFt)} sq.ft
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -196,42 +221,86 @@ export default function QuotationClientPortal({ token, quotation }: QuotationCli
           <h3 className="font-bold text-sm text-slate-900 mb-2">Commercial Summary</h3>
           <div className="flex justify-between text-slate-600">
             <span>Subtotal</span>
-            <span>{formatInr(quotation.subtotal_paise)}</span>
+            <span>{formatInr(quotation.subtotalPaise)}</span>
           </div>
-          {quotation.discount_paise > 0 && (
+          {quotation.discountTotalPaise > 0 && (
             <div className="flex justify-between text-emerald-600 font-medium">
               <span>Discount</span>
-              <span>-{formatInr(quotation.discount_paise)}</span>
+              <span>-{formatInr(quotation.discountTotalPaise)}</span>
             </div>
           )}
           <div className="flex justify-between text-slate-600 border-t border-slate-100 pt-2">
-            <span>Taxable Base (GST Excluded)</span>
-            <span>{formatInr(quotation.taxable_base_paise)}</span>
+            <span>Taxable Value</span>
+            <span>{formatInr(quotation.taxableBasePaise)}</span>
           </div>
+          {/* The FROZEN tax identity. No invented default rate: showing a rate
+              the finalized record does not carry would misstate what is being
+              agreed to. */}
           <div className="flex justify-between text-slate-600">
-            <span>GST ({quotation.tax_profile?.display_name || 'Tax'} @ {quotation.tax_profile?.tax_rate_percentage || 18}%)</span>
-            <span>{formatInr(quotation.tax_total_paise)}</span>
+            <span>
+              {quotation.taxProfileName} @ {formatMeasure(quotation.taxRatePercentage)}%
+            </span>
+            <span>{formatInr(quotation.taxTotalPaise)}</span>
           </div>
           <div className="flex justify-between text-slate-900 font-extrabold text-sm border-t border-slate-200 pt-2">
             <span>Grand Total</span>
-            <span>{formatInr(quotation.grand_total_paise)}</span>
+            <span>{formatInr(quotation.grandTotalPaise)}</span>
           </div>
         </div>
 
         {/* Payment Schedule */}
-        {quotation.payment_schedule.length > 0 && (
+        {quotation.paymentSchedule.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-3">
             <h3 className="font-bold text-sm text-slate-900">Payment Schedule</h3>
             <div className="space-y-2 text-xs">
-              {quotation.payment_schedule.map((ps) => (
+              {quotation.paymentSchedule.map((ps) => (
                 <div key={ps.id} className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                   <span className="font-medium text-slate-700">
-                    {ps.milestone_name} {ps.percentage ? `(${ps.percentage}%)` : ''}
+                    {ps.milestoneName} {ps.percentage ? `(${ps.percentage}%)` : ''}
                   </span>
-                  <span className="font-semibold text-slate-900">{formatInr(ps.amount_paise)}</span>
+                  <span className="font-semibold text-slate-900">{formatInr(ps.amountPaise)}</span>
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* What IS and is NOT included, and the terms being accepted. The
+            client must be able to read these on the page where they accept. */}
+        {(quotation.inclusions.length > 0 ||
+          quotation.exclusions.length > 0 ||
+          quotation.termsAndConditions.length > 0) && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4 text-xs">
+            {quotation.inclusions.length > 0 && (
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 mb-1">Inclusions</h3>
+                <ul className="list-disc pl-5 space-y-1 text-slate-600">
+                  {quotation.inclusions.map((entry, idx) => (
+                    <li key={`inc-${idx}`}>{entry}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {quotation.exclusions.length > 0 && (
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 mb-1">Exclusions</h3>
+                <ul className="list-disc pl-5 space-y-1 text-slate-600">
+                  {quotation.exclusions.map((entry, idx) => (
+                    <li key={`exc-${idx}`}>{entry}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {quotation.termsAndConditions.length > 0 && (
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 mb-1">Terms &amp; Conditions</h3>
+                <ul className="list-disc pl-5 space-y-1 text-slate-600">
+                  {quotation.termsAndConditions.map((entry, idx) => (
+                    <li key={`trm-${idx}`}>{entry}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 
@@ -282,7 +351,7 @@ export default function QuotationClientPortal({ token, quotation }: QuotationCli
                   className="mt-0.5 rounded border-slate-300 text-amber-500 focus:ring-amber-400"
                 />
                 <label htmlFor="confirm-terms" className="text-slate-600 leading-tight">
-                  I accept the commercial scope, pricing, and payment terms specified in Quotation {quotation.quotation_number} (v{quotation.version_number}).
+                  I accept the commercial scope, pricing, and payment terms specified in Quotation {quotation.quotationNumber} (v{quotation.versionNumber}).
                 </label>
               </div>
 

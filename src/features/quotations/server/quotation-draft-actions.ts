@@ -5,6 +5,8 @@
  */
 
 import { revalidatePath } from "next/cache";
+import type { Json } from "@/types/database.generated";
+import { buildSaveRoomsPayload } from "../contracts/save-rooms-payload.ts";
 import { createClient } from "@/lib/supabase/server";
 import type {
   CreateQuotationDraftResult,
@@ -18,7 +20,6 @@ import { quotationErrorFromPostgresMessage } from "./quotation-errors";
 import {
   validateAndFormatPaiseInteger,
   validateAndFormatPercentageString,
-  validateAndFormatQuantityString,
 } from "./quotation-decimal-utils";
 
 export interface QuotationActionResult<T = void> {
@@ -192,18 +193,15 @@ export async function saveQuotationDraftItemsAction(
   try {
     const supabase = await createClient();
 
-    // Map sections validating and preserving exact decimal quantity string
-    const sanitizedSections = sections.map((sec) => ({
-      sectionName: sec.sectionName,
-      items: sec.items.map((item) => ({
-        itemName: item.itemName,
-        description: item.description,
-        specifications: item.specifications,
-        quantity: validateAndFormatQuantityString(item.quantity),
-        unitOfMeasure: item.unitOfMeasure,
-        unitRatePaise: validateAndFormatPaiseInteger(item.unitRatePaise, "Unit rate"),
-      })),
-    }));
+    // Basis-aware payload, built by the extracted (and directly tested)
+    // boundary builder. This step used to flatten every item to the old
+    // generic shape and drop calculationBasis, widthFt and heightFt.
+    // The generated Json type wants a mutable, index-signature shape; the
+    // builder returns a precise readonly one. Round-tripping keeps the
+    // builder strongly typed without loosening it for the RPC call.
+    const sanitizedSections = JSON.parse(
+      JSON.stringify(buildSaveRoomsPayload(sections))
+    ) as unknown as Json;
 
     const { data, error } = await supabase.rpc("save_quotation_draft_items", {
       p_quotation_id: quotationId,

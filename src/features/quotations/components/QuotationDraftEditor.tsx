@@ -23,7 +23,7 @@ import { createQuotationRevisionAction } from "../server/quotation-acceptance-ac
 import { QuotationDiscountCard } from "./QuotationDiscountCard";
 import { QuotationHeaderCard } from "./QuotationHeaderCard";
 import { QuotationPaymentScheduleEditor } from "./QuotationPaymentScheduleEditor";
-import { QuotationSectionAccordion } from "./QuotationSectionAccordion";
+import { QuotationRoomEditor } from "./QuotationRoomEditor";
 import { QuotationTermsEditor } from "./QuotationTermsEditor";
 import { QuotationTotalsSummary } from "./QuotationTotalsSummary";
 
@@ -120,7 +120,9 @@ export function QuotationDraftEditor({
     setMessage({ type: "success", text: "Tax profile updated." });
   };
 
-  const handleSaveSections = async (sections: readonly QuotationSectionDTO[]) => {
+  const handleSaveSections = async (
+    sections: readonly QuotationSectionDTO[]
+  ): Promise<boolean> => {
     setSaving(true);
     setMessage(null);
     setConflictMessage(null);
@@ -138,13 +140,16 @@ export function QuotationDraftEditor({
       } else {
         setMessage({ type: "error", text: res.message });
       }
-      return;
+      // Report the rejection so the room editor keeps the unsaved edits and
+      // leaves Save enabled for an immediate retry.
+      return false;
     }
 
     if (res.data) {
       setDraft(res.data);
     }
-    setMessage({ type: "success", text: "Line items saved." });
+    setMessage({ type: "success", text: "Rooms saved." });
+    return true;
   };
 
   const handleUpdateDiscount = async (
@@ -308,8 +313,8 @@ export function QuotationDraftEditor({
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          {/* Room / Section Accordion & Line Items */}
-          <QuotationSectionAccordion
+          {/* Room-wise interior estimate */}
+          <QuotationRoomEditor
             sections={draft.sections}
             onSaveSections={handleSaveSections}
           />

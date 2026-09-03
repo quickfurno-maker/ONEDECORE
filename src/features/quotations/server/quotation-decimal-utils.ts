@@ -55,6 +55,42 @@ export function validateAndFormatQuantityString(value: unknown): string {
 }
 
 /**
+ * Validates an interior DIMENSION in feet and returns the exact decimal string.
+ *
+ * Same exact-string discipline as quantity, matching `numeric(10,3)` and the
+ * server-side regex. Rejects rather than repairs: a blank, a zero, a negative or
+ * a fourth decimal is a typo, and reinterpreting one would change what the
+ * client is billed for.
+ */
+export function validateAndFormatDimensionString(
+  value: unknown,
+  fieldName = "Dimension"
+): string {
+  if (value === undefined || value === null || value === "") {
+    throw new QuotationValidationError(`${fieldName} is required`);
+  }
+
+  const str = String(value).trim();
+  if (!/^[0-9]+(\.[0-9]{1,3})?$/.test(str)) {
+    throw new QuotationValidationError(
+      `${fieldName} must be a number with at most 3 decimal places`
+    );
+  }
+
+  const [whole, fraction = ""] = str.split(".");
+  const milli = BigInt(whole) * BigInt(1000) + BigInt(fraction.padEnd(3, "0"));
+
+  if (milli <= BigInt(0)) {
+    throw new QuotationValidationError(`${fieldName} must be greater than zero`);
+  }
+  if (milli > BigInt(10000) * BigInt(1000)) {
+    throw new QuotationValidationError(`${fieldName} is out of allowed range`);
+  }
+
+  return str;
+}
+
+/**
  * Validates and formats a percentage decimal string.
  * Scale constraint: max 2 decimal places (numeric(5,2)).
  * Range constraint: >= 0.00 and <= 100.00.

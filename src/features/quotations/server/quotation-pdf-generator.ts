@@ -7,15 +7,30 @@ export interface PDFGeneratorData {
   quotation_number: string;
   version_number: number;
   finalized_at: string;
+  title?: string;
+  scope_summary?: string;
   client_name: string;
   client_phone: string;
+  client_email?: string;
+  property_address?: string;
   property_details: Record<string, unknown>;
+  /**
+   * Rooms, in order. ONEDECORE quotes room-wise, so a "section" IS a room and
+   * an "item" IS an interior work item.
+   */
   sections: Array<{
     section_name: string;
     section_subtotal_paise: number;
+    /** Total AREA of the area-basis items in this room, in sq.ft. */
+    area_subtotal_sqft?: number;
     items: Array<{
       item_name: string;
       description?: string;
+      specifications?: string;
+      calculation_basis?: "area" | "quantity" | "fixed";
+      width_ft?: number | null;
+      height_ft?: number | null;
+      area_sqft?: number | null;
       quantity: number;
       uom: string;
       unit_rate_paise: number;
@@ -47,13 +62,84 @@ export type QuotationPdfStorageUploader = {
   ) => Promise<{ error: { message: string } | null }>;
 };
 
+/**
+ * An em dash, not a zero.
+ *
+ * A fixed-price TV unit has no width, and printing "0.00" in that column would
+ * read as a measurement of zero rather than "not applicable" — on a document
+ * the client signs.
+ */
+const EM_DASH = "\u2014";
+
 function formatInr(paise: number): string {
   const rupees = paise / 100;
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(rupees);
+}
+
+/**
+ * Up to 3 decimals, trailing zeros trimmed.
+ *
+ * Rounding a dimension or an area to 2 decimals would hide a real digit: a
+ * stored 1.234 shown as "1.23" makes the visible width x height stop producing
+ * the visible amount, so the document contradicts itself in front of the client.
+ */
+function formatMeasure(value: number, decimals = 3): string {
+  const fixed = value.toFixed(decimals);
+  return fixed.includes(".") ? fixed.replace(/0+$/, "").replace(/\.$/, "") : fixed;
+}
+
+function formatFeetCell(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value) || value <= 0) {
+    return EM_DASH;
+  }
+  return formatMeasure(value);
+}
+
+type InteriorPdfItem = PDFGeneratorData["sections"][number]["items"][number];
+
+/**
+ * The six cells of one interior work-item row, in the owner's column order:
+ * PARTICULAR | W (FT) | H (FT) | AREA / QTY | RATE | AMOUNT
+ *
+ * The calculation basis shows through what the cells CONTAIN rather than a
+ * seventh column, which would cost width the particular badly needs.
+ */
+function interiorRowCells(item: InteriorPdfItem): readonly string[] {
+  const basis = item.calculation_basis ?? "quantity";
+
+  if (basis === "fixed") {
+    return [item.item_name, EM_DASH, EM_DASH, "FIXED", EM_DASH, formatInr(item.line_total_paise)];
+  }
+
+  if (basis === "area") {
+    const area =
+      item.area_sqft != null && Number.isFinite(item.area_sqft)
+        ? item.area_sqft
+        : Number(item.quantity);
+    return [
+      item.item_name,
+      formatFeetCell(item.width_ft),
+      formatFeetCell(item.height_ft),
+      `${formatMeasure(area)} SQ.FT`,
+      `${formatInr(item.unit_rate_paise)} / SQ.FT`,
+      formatInr(item.line_total_paise),
+    ];
+  }
+
+  const unit = (item.uom || "nos").toUpperCase();
+  return [
+    item.item_name,
+    EM_DASH,
+    EM_DASH,
+    `${formatMeasure(Number(item.quantity))} ${unit}`,
+    `${formatInr(item.unit_rate_paise)} / ${unit}`,
+    formatInr(item.line_total_paise),
+  ];
 }
 
 function formatFrozenDate(iso: string): string {
@@ -112,41 +198,133 @@ export async function renderQuotationPdfBuffer(data: PDFGeneratorData): Promise<
       doc.fontSize(10).font("Helvetica").fillColor("#334155");
       doc.text(`Client Name: ${data.client_name}`, 40, y);
       doc.text(`Phone: ${data.client_phone}`, 300, y);
-      y += 25;
+      y += 14;
+
+      if (data.client_email) {
+        doc.text(`Email: ${data.client_email}`, 40, y);
+        y += 14;
+      }
+
+      if (data.property_address) {
+        doc.text(`Site / Property: ${data.property_address}`, 40, y, { width: 500 });
+        y += 14;
+      }
+
+      if (data.title) {
+        doc.font("Helvetica-Bold").text(data.title, 40, y, { width: 500 });
+        doc.font("Helvetica");
+        y += 14;
+      }
+
+      if (data.scope_summary) {
+        doc.fontSize(9).fillColor("#64748b").text(data.scope_summary, 40, y, { width: 500 });
+        doc.fontSize(10).fillColor("#334155");
+        y += 16;
+      }
+
+      y += 10;
 
       doc.moveTo(40, y).lineTo(555, y).strokeColor("#e2e8f0").stroke();
       y += 15;
 
-      doc.fontSize(13).font("Helvetica-Bold").fillColor("#0f172a").text("Commercial Scope Breakdown", 40, y);
+      doc.fontSize(13).font("Helvetica-Bold").fillColor("#0f172a").text("Room-wise Interior Estimate", 40, y);
       y += 20;
 
+      // PARTICULAR | W (FT) | H (FT) | AREA / QTY | RATE | AMOUNT
+      const COLS = [
+        { x: 40, w: 178, align: "left" as const },
+        { x: 222, w: 44, align: "right" as const },
+        { x: 268, w: 44, align: "right" as const },
+        { x: 314, w: 80, align: "right" as const },
+        { x: 396, w: 80, align: "right" as const },
+        { x: 478, w: 77, align: "right" as const },
+      ];
+      const HEADERS = ["PARTICULAR", "W (FT)", "H (FT)", "AREA / QTY", "RATE", "AMOUNT"];
+      const PAGE_BOTTOM = 745;
+
+      const drawItemsHeader = (top: number): number => {
+        doc.fontSize(7.5).font("Helvetica-Bold").fillColor("#64748b");
+        HEADERS.forEach((label, idx) => {
+          doc.text(label, COLS[idx].x, top, { width: COLS[idx].w, align: COLS[idx].align });
+        });
+        doc.moveTo(40, top + 11).lineTo(555, top + 11).strokeColor("#e2e8f0").stroke();
+        return top + 16;
+      };
+
+      const drawRoomHeading = (name: string, top: number, isContinued: boolean): number => {
+        doc
+          .fontSize(11)
+          .font("Helvetica-Bold")
+          .fillColor("#1e293b")
+          .text(isContinued ? `${name} (continued)` : name, 40, top, { width: 380 });
+        return top + 16;
+      };
+
       for (const sec of data.sections) {
-        if (y > 700) {
+        // Keep a short room whole where it fits: a heading stranded at the
+        // bottom of a page with its first item overleaf reads as an error.
+        const estimatedRoomHeight = 32 + sec.items.length * 15 + 22;
+        if (y + estimatedRoomHeight > PAGE_BOTTOM && y > 560) {
+          doc.addPage();
+          y = 40;
+        } else if (y > PAGE_BOTTOM - 70) {
           doc.addPage();
           y = 40;
         }
 
-        doc.fontSize(11).font("Helvetica-Bold").fillColor("#1e293b").text(sec.section_name, 40, y);
-        doc.fontSize(10).font("Helvetica-Bold").fillColor("#0f172a").text(formatInr(sec.section_subtotal_paise), 450, y, { align: "right" });
-        y += 18;
+        y = drawRoomHeading(sec.section_name, y, false);
+        y = drawItemsHeader(y);
 
         for (const item of sec.items) {
-          if (y > 720) {
+          const cells = interiorRowCells(item);
+          const detail = [item.description, item.specifications]
+            .map((part) => (part ? part.trim() : ""))
+            .filter((part) => part.length > 0)
+            .join(" \u2022 ");
+          const rowHeight = detail ? 25 : 14;
+
+          if (y + rowHeight > PAGE_BOTTOM) {
             doc.addPage();
             y = 40;
+            // The reader must not have to page back to learn which room this is
+            // or what the columns mean.
+            y = drawRoomHeading(sec.section_name, y, true);
+            y = drawItemsHeader(y);
           }
 
-          doc.fontSize(9).font("Helvetica").fillColor("#334155").text(`• ${item.item_name}`, 50, y);
-          doc.text(`${item.quantity} ${item.uom} @ ${formatInr(item.unit_rate_paise)}`, 300, y);
-          doc.font("Helvetica-Bold").text(formatInr(item.line_total_paise), 450, y, { align: "right" });
-          y += 14;
+          doc.fontSize(8.5).fillColor("#334155");
+          cells.forEach((cell, idx) => {
+            doc.font(idx === 5 ? "Helvetica-Bold" : "Helvetica");
+            doc.text(cell, COLS[idx].x, y, {
+              width: COLS[idx].w,
+              align: COLS[idx].align,
+              lineBreak: false,
+            });
+          });
+          y += 13;
 
-          if (item.description) {
-            doc.fontSize(8).font("Helvetica").fillColor("#64748b").text(item.description, 60, y);
-            y += 12;
+          if (detail) {
+            doc.fontSize(7.5).font("Helvetica").fillColor("#94a3b8");
+            doc.text(detail, 48, y, { width: 420, lineBreak: false });
+            y += 11;
           }
         }
-        y += 8;
+
+        doc.moveTo(40, y + 2).lineTo(555, y + 2).strokeColor("#e2e8f0").stroke();
+        y += 7;
+
+        const areaSubtotal = sec.area_subtotal_sqft ?? 0;
+        doc.fontSize(8.5).font("Helvetica").fillColor("#64748b");
+        if (areaSubtotal > 0) {
+          doc.text(`AREA TOTAL  ${formatMeasure(areaSubtotal)} SQ.FT`, 40, y, { width: 300 });
+        }
+        doc.font("Helvetica-Bold").fillColor("#0f172a");
+        doc.text("ROOM SUBTOTAL", COLS[4].x - 40, y, { width: COLS[4].w + 40, align: "right" });
+        doc.text(formatInr(sec.section_subtotal_paise), COLS[5].x, y, {
+          width: COLS[5].w,
+          align: "right",
+        });
+        y += 22;
       }
 
       y += 10;
@@ -193,11 +371,49 @@ export async function renderQuotationPdfBuffer(data: PDFGeneratorData): Promise<
         doc.fontSize(9).font("Helvetica").fillColor("#334155");
 
         for (const ps of data.payment_schedule) {
-          doc.text(`${ps.milestone_name} ${ps.percentage ? `(${ps.percentage}%)` : ""}`, 50, y);
+          if (y > 745) {
+            doc.addPage();
+            y = 40;
+          }
+          doc.font("Helvetica").text(
+            `${ps.milestone_name} ${ps.percentage ? `(${ps.percentage}%)` : ""}`,
+            50,
+            y
+          );
           doc.font("Helvetica-Bold").text(formatInr(ps.amount_paise), 450, y, { align: "right" });
           y += 14;
         }
+        y += 10;
       }
+
+      // The client must be able to read what IS and is NOT included, and the
+      // terms they are accepting, on the same document they accept.
+      const renderList = (heading: string, entries: readonly string[]) => {
+        if (entries.length === 0) {
+          return;
+        }
+        if (y > 700) {
+          doc.addPage();
+          y = 40;
+        }
+        doc.fontSize(11).font("Helvetica-Bold").fillColor("#0f172a").text(heading, 40, y);
+        y += 15;
+        doc.fontSize(9).font("Helvetica").fillColor("#334155");
+        for (const entry of entries) {
+          if (y > 750) {
+            doc.addPage();
+            y = 40;
+          }
+          const height = doc.heightOfString(entry, { width: 495 });
+          doc.text(`\u2022 ${entry}`, 50, y, { width: 495 });
+          y += Math.max(12, height + 3);
+        }
+        y += 10;
+      };
+
+      renderList("Inclusions", data.inclusions);
+      renderList("Exclusions", data.exclusions);
+      renderList("Terms & Conditions", data.terms_and_conditions);
 
       doc.end();
     } catch (err) {
