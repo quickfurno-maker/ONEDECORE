@@ -1,7 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import type { StaffDetail } from "../contracts/dto.ts";
+import type {
+  StaffCredentialOperationSummary,
+  StaffDetail,
+} from "../contracts/dto.ts";
 import { STAFF_ACCESS_STATE_LABELS } from "../contracts/permissions.ts";
 import {
   INITIAL_STAFF_CREDENTIAL_FORM_STATE,
@@ -120,6 +123,8 @@ interface StaffLoginAccessPanelProps {
   readonly staff: StaffDetail;
   /** Super Admin only. Enforced again in the RPC, so this is not the gate. */
   readonly canManageCredentials: boolean;
+  /** An unfinished operation, so a half-done change is visible and retryable. */
+  readonly pendingOperation?: StaffCredentialOperationSummary | null;
 }
 
 /**
@@ -132,6 +137,7 @@ interface StaffLoginAccessPanelProps {
 export function StaffLoginAccessPanel({
   staff,
   canManageCredentials,
+  pendingOperation = null,
 }: StaffLoginAccessPanelProps) {
   const [issueState, issue, issuePending] = useActionState(
     issueStaffCredentialsAction,
@@ -157,6 +163,11 @@ export function StaffLoginAccessPanel({
   const username = staffLoginUsername(staff.loginPhoneE164);
   const hasCredentials = username !== null;
   const isRevoked = staff.accessState === "revoked";
+
+  // The Staff Login ID is the employee's OWN number, read from their employment
+  // record. It is display-only here: the server derives it again from the same
+  // record, so this control cannot choose a different login.
+  const employmentUsername = staffLoginUsername(staff.phoneE164);
 
   return (
     <section className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-6">
@@ -194,34 +205,49 @@ export function StaffLoginAccessPanel({
         </div>
       </dl>
 
+      {pendingOperation ? (
+        <p
+          role="status"
+          className="mt-4 rounded-md border border-amber-900/60 bg-amber-950/30 px-3 py-2 text-sm text-amber-100"
+        >
+          A previous <span className="font-semibold">{pendingOperation.operation}</span>{" "}
+          operation did not finish ({pendingOperation.status}). Access is fail-closed;
+          run it again to complete it.
+        </p>
+      ) : null}
+
       {!canManageCredentials ? (
         <p className="mt-4 rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-400">
           Only a Super Admin can issue or change staff login credentials.
         </p>
       ) : (
         <div className="mt-6 space-y-8">
-          {!hasCredentials ? (
+          {!hasCredentials && employmentUsername === null ? (
+            <p className="rounded-md border border-amber-900/60 bg-amber-950/30 px-3 py-2 text-sm text-amber-100">
+              This staff member has no valid 10-digit mobile number on their
+              employment record. Update the employment details first — the login
+              username is always their own number.
+            </p>
+          ) : null}
+
+          {!hasCredentials && employmentUsername !== null ? (
             <form action={issue} className="space-y-4">
               <input type="hidden" name="staffId" value={staff.staffId} />
               <input type="hidden" name="displayName" value={staff.displayName} />
               <div>
-                <label htmlFor="issue-phone" className="text-sm font-medium text-neutral-200">
-                  Mobile number (username)
-                </label>
-                <input
-                  id="issue-phone"
-                  name="loginPhone"
-                  type="tel"
-                  inputMode="numeric"
-                  required
-                  maxLength={10}
-                  placeholder="7447863402"
-                  defaultValue={staffLoginUsername(staff.phoneE164) ?? ""}
-                  className={fieldClassName}
-                />
+                <span className="text-sm font-medium text-neutral-200">
+                  Staff Login ID
+                </span>
+                <p
+                  data-testid="issue-login-id"
+                  className="mt-1 rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm font-semibold text-neutral-100"
+                >
+                  {employmentUsername}
+                </p>
                 <p className="mt-1 text-xs text-neutral-500">
-                  Exactly 10 digits, no +91. Saved as +91XXXXXXXXXX and used as the
-                  sign-in username. The staff member keeps their existing record and id.
+                  Taken from this staff member&rsquo;s employment record and saved as
+                  +91{employmentUsername}. It cannot be edited here — after credentials
+                  exist, use Change login phone.
                 </p>
               </div>
               <PasswordFields idPrefix="issue" />

@@ -451,6 +451,226 @@ begin
 end;
 $$;
 
+-- =============================================================================
+-- E2. Revocation must block DIRECT RLS READS, not just authorize()
+-- =============================================================================
+--
+-- `private.has_permission` is NOT sufficient on its own, and claiming otherwise
+-- would be wrong. The staff-domain policies reach the row through helpers that
+-- inline their own permission joins, or through a bare self branch:
+--
+--   staff_employment_profiles  private.staff_can_view_employment  -- bare p_viewer = p_staff
+--   attendance_days            private.staff_can_view_attendance  -- inlined join
+--   attendance_events          private.staff_can_view_attendance
+--   attendance_submissions     private.staff_can_view_attendance
+--   attendance_submission_events private.staff_can_view_attendance
+--   leave_requests             staff_id = auth.uid()              -- bare self branch
+--   profiles                   id = auth.uid()                    -- bare self branch
+--   salary_*                   private.salary_can_view            -- authorize(), already covered
+--
+-- None of the first six consults has_permission for the SELF read, so a revoked
+-- employee holding a still-valid access token could keep SELECTing their own
+-- attendance, leave and employment rows directly. Each is closed below.
+--
+-- The predicate is always about the VIEWER, never the subject: a Super Admin
+-- must still be able to read a revoked employee's records, which is exactly how
+-- an offboarding is reviewed.
+
+create or replace function private.staff_access_revoked(p_viewer uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.staff_employment_profiles sep
+    where sep.staff_id = p_viewer
+      and sep.access_state = 'revoked'
+  );
+$$;
+
+comment on function private.staff_access_revoked(uuid) is
+  'True when this user''s application access is revoked. Used by every staff-domain RLS helper so a revoked session is denied at the row, not merely at authorize().';
+
+revoke all on function private.staff_access_revoked(uuid) from public, anon;
+grant execute on function private.staff_access_revoked(uuid) to authenticated;
+alter function private.staff_access_revoked(uuid) owner to postgres;
+
+-- Reproduced verbatim from 20260810140000 apart from the leading revoked guard,
+-- so the super_admin and reporting-manager scopes are bit-for-bit unchanged and
+-- the existing profiles.status = 'active' protections stay exactly where they
+-- were.
+create or replace function private.staff_can_view_employment(p_viewer uuid, p_staff uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select
+    not private.staff_access_revoked(p_viewer)
+    and (
+      p_viewer = p_staff
+      or (
+        exists (
+          select 1
+          from public.user_roles ur
+          join public.roles r on r.id = ur.role_id
+          where ur.user_id = p_viewer
+            and r.code = 'super_admin'
+            and r.is_active = true
+        )
+        and exists (
+          select 1
+          from public.profiles vp
+          where vp.id = p_viewer
+            and vp.status = 'active'
+        )
+      )
+      or (
+        p_staff in (select private.staff_direct_report_ids(p_viewer))
+        and exists (
+          select 1
+          from public.user_roles ur
+          join public.roles r on r.id = ur.role_id
+          join public.role_permissions rp on rp.role_id = r.id
+          join public.permissions perm on perm.id = rp.permission_id
+          join public.profiles vp on vp.id = ur.user_id
+          where ur.user_id = p_viewer
+            and perm.code = 'staff.read'
+            and r.is_active = true
+            and perm.is_active = true
+            and vp.status = 'active'
+        )
+      )
+    );
+$$;
+
+create or replace function private.staff_can_view_attendance(p_viewer uuid, p_staff uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select
+    not private.staff_access_revoked(p_viewer)
+    and (
+      (
+        p_viewer = p_staff
+        and exists (
+          select 1
+          from public.user_roles ur
+          join public.roles r on r.id = ur.role_id
+          join public.role_permissions rp on rp.role_id = r.id
+          join public.permissions perm on perm.id = rp.permission_id
+          join public.profiles vp on vp.id = ur.user_id
+          where ur.user_id = p_viewer
+            and perm.code = 'attendance.self'
+            and r.is_active = true
+            and perm.is_active = true
+            and vp.status = 'active'
+        )
+      )
+      or (
+        exists (
+          select 1
+          from public.user_roles ur
+          join public.roles r on r.id = ur.role_id
+          join public.role_permissions rp on rp.role_id = r.id
+          join public.permissions perm on perm.id = rp.permission_id
+          join public.profiles vp on vp.id = ur.user_id
+          where ur.user_id = p_viewer
+            and perm.code = 'attendance.read.all'
+            and r.is_active = true
+            and perm.is_active = true
+            and vp.status = 'active'
+        )
+      )
+      or (
+        p_staff in (select private.staff_direct_report_ids(p_viewer))
+        and exists (
+          select 1
+          from public.user_roles ur
+          join public.roles r on r.id = ur.role_id
+          join public.role_permissions rp on rp.role_id = r.id
+          join public.permissions perm on perm.id = rp.permission_id
+          join public.profiles vp on vp.id = ur.user_id
+          where ur.user_id = p_viewer
+            and perm.code = 'attendance.team.read'
+            and r.is_active = true
+            and perm.is_active = true
+            and vp.status = 'active'
+        )
+      )
+    );
+$$;
+
+-- Salary already routes through authorize(), so has_permission covers it. The
+-- guard is repeated here so the invariant is local to the helper and survives a
+-- future change to how salary_can_view is written.
+create or replace function private.salary_can_view(p_staff_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select
+    not private.staff_access_revoked((select auth.uid()))
+    and (
+      (select public.authorize('salary.manage'))
+      or (
+        (select public.authorize('salary.self'))
+        and p_staff_id = (select auth.uid())
+      )
+    );
+$$;
+
+-- `private.staff_direct_report_ids` is referenced by leave_requests_select but,
+-- unlike every sibling helper (staff_can_view_employment, staff_can_view_attendance,
+-- salary_can_view), it was never granted to `authenticated`. The self branch
+-- short-circuited in the old policy so nobody hit it — but a manager exercising
+-- the team branch would have got "permission denied for function
+-- staff_direct_report_ids". Granting it matches the siblings and fixes that
+-- latent breakage; the function is SECURITY DEFINER and returns only the direct
+-- reports of the viewer it is asked about.
+grant execute on function private.staff_direct_report_ids(uuid) to authenticated;
+
+-- leave_requests carries the self branch inline in the policy, so the policy
+-- itself is replaced. The manager and leave.manage scopes are unchanged.
+drop policy if exists leave_requests_select on public.leave_requests;
+
+create policy leave_requests_select on public.leave_requests
+for select
+using (
+  not private.staff_access_revoked((select auth.uid()))
+  and (
+    staff_id = (select auth.uid())
+    or (select public.authorize('leave.manage'))
+    or (
+      (select public.authorize('leave.team.approve'))
+      and staff_id in (select private.staff_direct_report_ids((select auth.uid())))
+    )
+  )
+);
+
+-- profiles likewise: the self row is readable through a bare id = auth.uid().
+-- A revoked employee must not keep reading employment-sensitive profile data.
+drop policy if exists profiles_select_policy on public.profiles;
+
+create policy profiles_select_policy on public.profiles
+for select
+using (
+  not private.staff_access_revoked((select auth.uid()))
+  and (
+    id = (select auth.uid())
+    or private.has_permission('users.read')
+  )
+);
+
 -- -----------------------------------------------------------------------------
 -- F. Employment edits can never move the login identity
 -- -----------------------------------------------------------------------------
@@ -530,31 +750,92 @@ alter table public.staff_admin_events
       'staff.access_revoked',
       'staff.access_reactivated',
       'staff.login_phone_changed',
-      'staff.login_first_success'
+      'staff.login_first_success',
+      'staff.credential_operation_failed'
     ])
   );
 
 -- -----------------------------------------------------------------------------
--- H. Credential lifecycle RPCs
+-- H. Credential lifecycle — prepare / Auth / finalize
 -- -----------------------------------------------------------------------------
 --
--- Every one of these records INTENT and AUDIT. None of them touches a password:
--- the password is handed straight to Supabase Auth by the server action and is
--- never seen by Postgres.
+-- The naive ordering (write the DB, then call Auth) publishes a FINAL state and
+-- a success audit before the Auth mutation has succeeded. A failure then leaves
+-- the application claiming something that never happened: credentials "ready"
+-- with no Auth user, a password "reset" that was refused, a new login number
+-- Auth has never heard of.
 --
--- Order is deliberately database-first, mirroring the M52 invite saga. Claiming
--- `login_phone_e164` inside the transaction is what makes uniqueness real under
--- concurrency — two simultaneous issuances for the same number cannot both win
--- the unique index. If the Auth call then fails, the row sits at
--- `credentials_ready` with no auth user and `sync_staff_access_states` pulls it
--- back to `not_activated`, so a failed attempt is self-healing and retryable.
+-- So coordination lives in a PRIVATE ledger instead, and the four public access
+-- states keep their plain meaning. A pending operation is invisible to the
+-- access-state machine; only `complete` publishes final state and success audit.
+--
+--   begin_staff_credential_operation   validate + reserve, publish nothing
+--   <Auth Admin call by the server>
+--   complete_staff_credential_operation  final state + success audit
+--   fail_staff_credential_operation      durable, visibly retryable, fail closed
+--
+-- Revoke is the deliberate exception: DB denial is applied at BEGIN so access
+-- dies immediately, and the ledger row tracks whether session invalidation
+-- actually completed.
+--
+-- THE LEDGER HOLDS NO PASSWORD AND NO HASH. Only phone numbers, reasons,
+-- timestamps and a truncated error string, which the server scrubs first.
+
+create table if not exists private.staff_credential_operations (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid not null references public.profiles (id) on delete restrict,
+  operation text not null,
+  status text not null default 'pending',
+  requested_by uuid not null references public.profiles (id) on delete restrict,
+  target_phone_e164 text,
+  previous_phone_e164 text,
+  reason text,
+  last_error text,
+  -- clock_timestamp(), not now(): `get_staff_credential_operation` orders by
+  -- updated_at to find the latest operation, and now() is the TRANSACTION
+  -- timestamp, so two rows touched in one transaction would tie and the
+  -- "latest" would be arbitrary.
+  created_at timestamptz not null default clock_timestamp(),
+  updated_at timestamptz not null default clock_timestamp(),
+  completed_at timestamptz,
+
+  constraint chk_staff_credential_operations_operation check (
+    operation = any (array['issue', 'password_reset', 'revoke', 'reactivate', 'change_phone'])
+  ),
+  constraint chk_staff_credential_operations_status check (
+    status = any (array['pending', 'completed', 'failed'])
+  ),
+  constraint chk_staff_credential_operations_error_size check (
+    last_error is null or length(last_error) <= 300
+  )
+);
+
+comment on table private.staff_credential_operations is
+  'Coordination ledger for staff credential operations. A pending row publishes NO public state, so a failed Auth call can never leave a success audit behind. Contains no password or hash.';
+
+-- One live operation per staff member per kind: a retry reuses the row rather
+-- than racing a second one.
+create unique index if not exists uq_staff_credential_operations_pending
+  on private.staff_credential_operations (staff_id, operation)
+  where status = 'pending';
+
+-- Reserves the number while the operation is in flight, so two concurrent
+-- issuances cannot both target it even though neither has published state yet.
+create unique index if not exists uq_staff_credential_operations_phone
+  on private.staff_credential_operations (target_phone_e164)
+  where status = 'pending' and target_phone_e164 is not null;
+
+revoke all on table private.staff_credential_operations from public, anon, authenticated;
 
 /**
- * Claims a login phone and marks credentials ready to be created in Auth.
+ * Validates and reserves. Publishes no public state except for `revoke`, which
+ * must deny immediately.
  */
-create or replace function public.issue_staff_credentials(
+create or replace function public.begin_staff_credential_operation(
   p_staff_id uuid,
-  p_phone text
+  p_operation text,
+  p_reason text default null,
+  p_phone text default null
 )
 returns jsonb
 language plpgsql
@@ -564,192 +845,173 @@ as $$
 declare
   v_actor uuid;
   v_sep public.staff_employment_profiles%rowtype;
+  v_profile public.profiles%rowtype;
   v_phone text;
-begin
-  v_actor := private.staff_require_credential_admin();
-
-  v_phone := private.staff_normalize_login_phone(p_phone);
-  if v_phone is null then
-    raise exception 'STAFF_LOGIN_PHONE_INVALID' using errcode = 'P0001';
-  end if;
-
-  select * into v_sep
-  from public.staff_employment_profiles
-  where staff_id = p_staff_id
-  for update;
-
-  if not found then
-    raise exception 'STAFF_EMPLOYMENT_NOT_FOUND' using errcode = 'P0002';
-  end if;
-
-  if v_sep.access_state = 'revoked' then
-    raise exception 'STAFF_ACCESS_REVOKED' using errcode = 'P0001';
-  end if;
-
-  -- Already signed in at least once: use reset password, not re-issue.
-  if v_sep.access_state = 'active' then
-    raise exception 'STAFF_ACCESS_ALREADY_ACTIVE' using errcode = 'P0001';
-  end if;
-
-  -- The number must not already be a DIFFERENT staff member's login.
-  if exists (
-    select 1 from public.staff_employment_profiles other
-    where other.login_phone_e164 = v_phone
-      and other.staff_id <> p_staff_id
-  ) then
-    raise exception 'STAFF_LOGIN_PHONE_CONFLICT' using errcode = 'P0001';
-  end if;
-
-  -- Nor may it belong to another Auth identity.
-  if exists (
-    select 1 from auth.users u
-    where u.phone = replace(v_phone, '+', '') and u.id <> p_staff_id
-  ) then
-    raise exception 'STAFF_LOGIN_PHONE_CONFLICT' using errcode = 'P0001';
-  end if;
-
-  update public.staff_employment_profiles
-  set login_phone_e164 = v_phone,
-      access_state = 'credentials_ready',
-      credentials_issued_at = coalesce(credentials_issued_at, now()),
-      credentials_password_set_at = now(),
-      access_revoked_at = null,
-      updated_at = now()
-  where staff_id = p_staff_id;
-
-  -- Employment contact phone follows the login phone, under the drift flag so
-  -- the section F guard permits this one sanctioned write.
-  perform set_config('onedecore.login_phone_change', 'on', true);
-  update public.profiles set phone_e164 = v_phone, updated_at = now()
-  where id = p_staff_id and phone_e164 is distinct from v_phone;
-  perform set_config('onedecore.login_phone_change', 'off', true);
-
-  perform private.staff_append_admin_event(
-    p_staff_id, v_actor, 'staff.credentials_issued',
-    jsonb_build_object(
-      'accessState', 'credentials_ready',
-      'loginPhone', v_phone,
-      'reissued', v_sep.login_phone_e164 is not null
-    )
-  );
-
-  return jsonb_build_object(
-    'staffId', p_staff_id,
-    'loginPhone', v_phone,
-    'loginUsername', right(v_phone, 10),
-    'accessState', 'credentials_ready'
-  );
-end;
-$$;
-
-/** Records that a Super Admin reset the password through Supabase Auth. */
-create or replace function public.record_staff_password_reset(p_staff_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_actor uuid;
-  v_sep public.staff_employment_profiles%rowtype;
-begin
-  v_actor := private.staff_require_credential_admin();
-
-  select * into v_sep
-  from public.staff_employment_profiles
-  where staff_id = p_staff_id
-  for update;
-
-  if not found then
-    raise exception 'STAFF_EMPLOYMENT_NOT_FOUND' using errcode = 'P0002';
-  end if;
-
-  if v_sep.login_phone_e164 is null then
-    raise exception 'STAFF_CREDENTIALS_NOT_ISSUED' using errcode = 'P0001';
-  end if;
-
-  update public.staff_employment_profiles
-  set credentials_password_set_at = now(), updated_at = now()
-  where staff_id = p_staff_id;
-
-  -- A reset never changes the state: a staff member who had signed in stays
-  -- active, one who had not stays credentials_ready.
-  perform private.staff_append_admin_event(
-    p_staff_id, v_actor, 'staff.credentials_password_reset',
-    jsonb_build_object('accessState', v_sep.access_state)
-  );
-
-  return jsonb_build_object(
-    'staffId', p_staff_id,
-    'accessState', v_sep.access_state,
-    'loginPhone', v_sep.login_phone_e164
-  );
-end;
-$$;
-
-/** Disables application access. Employment, history and salary are untouched. */
-create or replace function public.revoke_staff_access(
-  p_staff_id uuid,
-  p_reason text
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_actor uuid;
-  v_sep public.staff_employment_profiles%rowtype;
   v_reason text;
+  v_op private.staff_credential_operations%rowtype;
 begin
   v_actor := private.staff_require_credential_admin();
 
-  v_reason := trim(coalesce(p_reason, ''));
-  if length(v_reason) < 3 then
+  if p_operation is null or p_operation not in
+     ('issue', 'password_reset', 'revoke', 'reactivate', 'change_phone') then
+    raise exception 'STAFF_CREDENTIAL_OPERATION_INVALID' using errcode = 'P0001';
+  end if;
+
+  select * into v_sep
+  from public.staff_employment_profiles
+  where staff_id = p_staff_id
+  for update;
+
+  if not found then
+    raise exception 'STAFF_EMPLOYMENT_NOT_FOUND' using errcode = 'P0002';
+  end if;
+
+  select * into v_profile from public.profiles where id = p_staff_id;
+
+  v_reason := nullif(trim(coalesce(p_reason, '')), '');
+
+  if p_operation in ('revoke', 'reactivate', 'change_phone')
+     and (v_reason is null or length(v_reason) < 3) then
     raise exception 'STAFF_REASON_REQUIRED' using errcode = 'P0001';
   end if;
 
-  select * into v_sep
-  from public.staff_employment_profiles
-  where staff_id = p_staff_id
+  -- ---------------------------------------------------------------------
+  -- Per-operation preconditions and the target number
+  -- ---------------------------------------------------------------------
+  if p_operation = 'issue' then
+    if v_sep.access_state = 'revoked' then
+      raise exception 'STAFF_ACCESS_REVOKED' using errcode = 'P0001';
+    end if;
+    if v_sep.access_state = 'active' then
+      raise exception 'STAFF_ACCESS_ALREADY_ACTIVE' using errcode = 'P0001';
+    end if;
+
+    -- The username is the employee's OWN number, taken from the authoritative
+    -- staff record. A caller-supplied alternative is never trusted, so a
+    -- tampered form cannot point a login at a different phone.
+    v_phone := private.staff_normalize_login_phone(v_profile.phone_e164);
+    if v_phone is null then
+      raise exception 'STAFF_LOGIN_PHONE_MISSING' using errcode = 'P0001';
+    end if;
+
+  elsif p_operation = 'change_phone' then
+    if v_sep.login_phone_e164 is null then
+      raise exception 'STAFF_CREDENTIALS_NOT_ISSUED' using errcode = 'P0001';
+    end if;
+    v_phone := private.staff_normalize_login_phone(p_phone);
+    if v_phone is null then
+      raise exception 'STAFF_LOGIN_PHONE_INVALID' using errcode = 'P0001';
+    end if;
+    if v_phone = v_sep.login_phone_e164 then
+      raise exception 'STAFF_LOGIN_PHONE_UNCHANGED' using errcode = 'P0001';
+    end if;
+
+  elsif p_operation = 'password_reset' then
+    if v_sep.login_phone_e164 is null then
+      raise exception 'STAFF_CREDENTIALS_NOT_ISSUED' using errcode = 'P0001';
+    end if;
+    if v_sep.access_state = 'revoked' then
+      raise exception 'STAFF_ACCESS_REVOKED' using errcode = 'P0001';
+    end if;
+
+  elsif p_operation = 'revoke' then
+    if v_sep.access_state = 'not_activated' then
+      raise exception 'STAFF_CREDENTIALS_NOT_ISSUED' using errcode = 'P0001';
+    end if;
+
+  elsif p_operation = 'reactivate' then
+    if v_sep.access_state <> 'revoked' then
+      raise exception 'STAFF_ACCESS_NOT_REVOKED' using errcode = 'P0001';
+    end if;
+  end if;
+
+  -- Uniqueness, checked against published logins, live reservations and Auth.
+  if v_phone is not null then
+    if exists (
+      select 1 from public.staff_employment_profiles other
+      where other.login_phone_e164 = v_phone and other.staff_id <> p_staff_id
+    ) or exists (
+      select 1 from private.staff_credential_operations o
+      where o.target_phone_e164 = v_phone
+        and o.status = 'pending'
+        and o.staff_id <> p_staff_id
+    ) or exists (
+      select 1 from auth.users u
+      where u.phone = replace(v_phone, '+', '') and u.id <> p_staff_id
+    ) then
+      raise exception 'STAFF_LOGIN_PHONE_CONFLICT' using errcode = 'P0001';
+    end if;
+  end if;
+
+  -- ---------------------------------------------------------------------
+  -- Claim or reuse the operation. Retrying is idempotent by construction.
+  -- ---------------------------------------------------------------------
+  -- A superseded FAILED row is reused rather than left behind: a retry is the
+  -- same operation, and a dangling failure would keep telling the Super Admin
+  -- that something is outstanding after it has been fixed.
+  select * into v_op
+  from private.staff_credential_operations
+  where staff_id = p_staff_id and operation = p_operation and status <> 'completed'
+  order by updated_at desc
+  limit 1
   for update;
 
-  if not found then
-    raise exception 'STAFF_EMPLOYMENT_NOT_FOUND' using errcode = 'P0002';
+  if found then
+    update private.staff_credential_operations
+    set status = 'pending',
+        target_phone_e164 = v_phone,
+        previous_phone_e164 = v_sep.login_phone_e164,
+        reason = v_reason,
+        last_error = null,
+        updated_at = clock_timestamp()
+    where id = v_op.id
+    returning * into v_op;
+  else
+    insert into private.staff_credential_operations
+      (staff_id, operation, status, requested_by, target_phone_e164, previous_phone_e164, reason)
+    values
+      (p_staff_id, p_operation, 'pending', v_actor, v_phone, v_sep.login_phone_e164, v_reason)
+    returning * into v_op;
   end if;
 
-  if v_sep.access_state = 'not_activated' then
-    raise exception 'STAFF_CREDENTIALS_NOT_ISSUED' using errcode = 'P0001';
+  -- Revocation denies NOW. Everything else waits for Auth to succeed.
+  if p_operation = 'revoke' and v_sep.access_state <> 'revoked' then
+    update public.staff_employment_profiles
+    set access_state = 'revoked', access_revoked_at = now(), updated_at = now()
+    where staff_id = p_staff_id;
+
+    perform private.staff_append_admin_event(
+      p_staff_id, v_actor, 'staff.access_revoked',
+      jsonb_build_object(
+        'accessState', 'revoked',
+        'previousState', v_sep.access_state,
+        'reason', v_reason,
+        'sessionsInvalidated', false
+      )
+    );
   end if;
 
-  update public.staff_employment_profiles
-  set access_state = 'revoked', access_revoked_at = now(), updated_at = now()
-  where staff_id = p_staff_id;
-
-  perform private.staff_append_admin_event(
-    p_staff_id, v_actor, 'staff.access_revoked',
-    jsonb_build_object(
-      'accessState', 'revoked',
-      'previousState', v_sep.access_state,
-      'reason', v_reason
+  return jsonb_build_object(
+    'operationId', v_op.id,
+    'staffId', p_staff_id,
+    'operation', p_operation,
+    'targetPhone', v_phone,
+    'loginUsername', case when v_phone is null then null else right(v_phone, 10) end,
+    'previousPhone', v_sep.login_phone_e164,
+    'accessState', (
+      select sep.access_state from public.staff_employment_profiles sep
+      where sep.staff_id = p_staff_id
     )
   );
-
-  return jsonb_build_object('staffId', p_staff_id, 'accessState', 'revoked');
 end;
 $$;
 
 /**
- * Restores capability without changing the password or the UUID.
- *
- * The restored state is derived from Auth sign-in evidence, so a staff member
- * who had genuinely signed in returns to `active` and one who never did returns
- * to `credentials_ready`. Reactivation never fabricates an activation.
+ * Publishes final state and the success audit. Called only after the Auth
+ * mutation has actually succeeded. Completing twice is a no-op that returns the
+ * same answer, so a retry after a lost response cannot double-apply.
  */
-create or replace function public.reactivate_staff_access(
-  p_staff_id uuid,
-  p_reason text
-)
+create or replace function public.complete_staff_credential_operation(p_operation_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -757,63 +1019,151 @@ set search_path = ''
 as $$
 declare
   v_actor uuid;
+  v_op private.staff_credential_operations%rowtype;
   v_sep public.staff_employment_profiles%rowtype;
-  v_reason text;
   v_state text;
 begin
   v_actor := private.staff_require_credential_admin();
 
-  v_reason := trim(coalesce(p_reason, ''));
-  if length(v_reason) < 3 then
-    raise exception 'STAFF_REASON_REQUIRED' using errcode = 'P0001';
+  select * into v_op
+  from private.staff_credential_operations
+  where id = p_operation_id
+  for update;
+
+  if not found then
+    raise exception 'STAFF_CREDENTIAL_OPERATION_NOT_FOUND' using errcode = 'P0002';
+  end if;
+
+  if v_op.status = 'completed' then
+    return jsonb_build_object(
+      'operationId', v_op.id,
+      'staffId', v_op.staff_id,
+      'operation', v_op.operation,
+      'alreadyCompleted', true,
+      'accessState', (
+        select sep.access_state from public.staff_employment_profiles sep
+        where sep.staff_id = v_op.staff_id
+      )
+    );
   end if;
 
   select * into v_sep
   from public.staff_employment_profiles
-  where staff_id = p_staff_id
+  where staff_id = v_op.staff_id
   for update;
 
-  if not found then
-    raise exception 'STAFF_EMPLOYMENT_NOT_FOUND' using errcode = 'P0002';
+  if v_op.operation = 'issue' then
+    update public.staff_employment_profiles
+    set login_phone_e164 = v_op.target_phone_e164,
+        access_state = 'credentials_ready',
+        credentials_issued_at = coalesce(credentials_issued_at, now()),
+        credentials_password_set_at = now(),
+        access_revoked_at = null,
+        updated_at = now()
+    where staff_id = v_op.staff_id;
+
+    perform private.staff_append_admin_event(
+      v_op.staff_id, v_actor, 'staff.credentials_issued',
+      jsonb_build_object(
+        'accessState', 'credentials_ready',
+        'loginPhone', v_op.target_phone_e164
+      )
+    );
+
+  elsif v_op.operation = 'password_reset' then
+    update public.staff_employment_profiles
+    set credentials_password_set_at = now(), updated_at = now()
+    where staff_id = v_op.staff_id;
+
+    perform private.staff_append_admin_event(
+      v_op.staff_id, v_actor, 'staff.credentials_password_reset',
+      jsonb_build_object('accessState', v_sep.access_state)
+    );
+
+  elsif v_op.operation = 'revoke' then
+    -- State was already denied at begin. Completion records that sessions were
+    -- actually invalidated, which is the part that could fail.
+    perform private.staff_append_admin_event(
+      v_op.staff_id, v_actor, 'staff.access_revoked',
+      jsonb_build_object(
+        'accessState', 'revoked',
+        'reason', v_op.reason,
+        'sessionsInvalidated', true
+      )
+    );
+
+  elsif v_op.operation = 'reactivate' then
+    v_state := case
+      when exists (
+        select 1 from auth.users u
+        where u.id = v_op.staff_id and u.last_sign_in_at is not null
+      ) then 'active'
+      when exists (select 1 from auth.users u where u.id = v_op.staff_id) then 'credentials_ready'
+      else 'not_activated'
+    end;
+
+    update public.staff_employment_profiles
+    set access_state = v_state, access_revoked_at = null, updated_at = now()
+    where staff_id = v_op.staff_id;
+
+    perform private.staff_append_admin_event(
+      v_op.staff_id, v_actor, 'staff.access_reactivated',
+      jsonb_build_object('accessState', v_state, 'reason', v_op.reason)
+    );
+
+  elsif v_op.operation = 'change_phone' then
+    update public.staff_employment_profiles
+    set login_phone_e164 = v_op.target_phone_e164, updated_at = now()
+    where staff_id = v_op.staff_id;
+
+    perform set_config('onedecore.login_phone_change', 'on', true);
+    update public.profiles set phone_e164 = v_op.target_phone_e164, updated_at = now()
+    where id = v_op.staff_id;
+    perform set_config('onedecore.login_phone_change', 'off', true);
+
+    perform private.staff_append_admin_event(
+      v_op.staff_id, v_actor, 'staff.login_phone_changed',
+      jsonb_build_object(
+        'previousLoginPhone', v_op.previous_phone_e164,
+        'loginPhone', v_op.target_phone_e164,
+        'reason', v_op.reason
+      )
+    );
   end if;
 
-  if v_sep.access_state <> 'revoked' then
-    raise exception 'STAFF_ACCESS_NOT_REVOKED' using errcode = 'P0001';
-  end if;
+  update private.staff_credential_operations
+  set status = 'completed', completed_at = clock_timestamp(), updated_at = clock_timestamp(), last_error = null
+  where id = v_op.id;
 
-  v_state := case
-    when exists (
-      select 1 from auth.users u
-      where u.id = p_staff_id and u.last_sign_in_at is not null
-    ) then 'active'
-    when exists (select 1 from auth.users u where u.id = p_staff_id) then 'credentials_ready'
-    else 'not_activated'
-  end;
-
-  update public.staff_employment_profiles
-  set access_state = v_state, access_revoked_at = null, updated_at = now()
-  where staff_id = p_staff_id;
-
-  perform private.staff_append_admin_event(
-    p_staff_id, v_actor, 'staff.access_reactivated',
-    jsonb_build_object('accessState', v_state, 'reason', v_reason)
+  return jsonb_build_object(
+    'operationId', v_op.id,
+    'staffId', v_op.staff_id,
+    'operation', v_op.operation,
+    'alreadyCompleted', false,
+    'loginUsername', case
+      when v_op.target_phone_e164 is null then null
+      else right(v_op.target_phone_e164, 10)
+    end,
+    'accessState', (
+      select sep.access_state from public.staff_employment_profiles sep
+      where sep.staff_id = v_op.staff_id
+    )
   );
-
-  return jsonb_build_object('staffId', p_staff_id, 'accessState', v_state);
 end;
 $$;
 
 /**
- * Re-points the login username at a new mobile number.
+ * Records a failed Auth step, durably and visibly, and keeps access fail-closed.
  *
- * Updates the employment phone and the credential phone in one transaction; the
- * caller updates Supabase Auth and revokes sessions immediately afterwards, so
- * the old number stops authenticating.
+ * `change_phone` is the one operation that can leave Supabase Auth ahead of the
+ * application: the number may already have moved when the follow-up step
+ * failed. Leaving that unresolved would mean the new number authenticates while
+ * ONEDECORE still shows the old one — exactly the drift this design exists to
+ * prevent — so the account is revoked until a Super Admin retries.
  */
-create or replace function public.change_staff_login_phone(
-  p_staff_id uuid,
-  p_phone text,
-  p_reason text
+create or replace function public.fail_staff_credential_operation(
+  p_operation_id uuid,
+  p_error text default null
 )
 returns jsonb
 language plpgsql
@@ -822,78 +1172,94 @@ set search_path = ''
 as $$
 declare
   v_actor uuid;
-  v_sep public.staff_employment_profiles%rowtype;
-  v_phone text;
-  v_reason text;
+  v_op private.staff_credential_operations%rowtype;
+  v_error text;
+  v_fail_closed boolean := false;
 begin
   v_actor := private.staff_require_credential_admin();
 
-  v_reason := trim(coalesce(p_reason, ''));
-  if length(v_reason) < 3 then
-    raise exception 'STAFF_REASON_REQUIRED' using errcode = 'P0001';
-  end if;
-
-  v_phone := private.staff_normalize_login_phone(p_phone);
-  if v_phone is null then
-    raise exception 'STAFF_LOGIN_PHONE_INVALID' using errcode = 'P0001';
-  end if;
-
-  select * into v_sep
-  from public.staff_employment_profiles
-  where staff_id = p_staff_id
+  select * into v_op
+  from private.staff_credential_operations
+  where id = p_operation_id
   for update;
 
   if not found then
-    raise exception 'STAFF_EMPLOYMENT_NOT_FOUND' using errcode = 'P0002';
+    raise exception 'STAFF_CREDENTIAL_OPERATION_NOT_FOUND' using errcode = 'P0002';
   end if;
 
-  if v_sep.login_phone_e164 is null then
-    raise exception 'STAFF_CREDENTIALS_NOT_ISSUED' using errcode = 'P0001';
+  if v_op.status = 'completed' then
+    raise exception 'STAFF_CREDENTIAL_OPERATION_COMPLETED' using errcode = 'P0001';
   end if;
 
-  if v_sep.login_phone_e164 = v_phone then
-    raise exception 'STAFF_LOGIN_PHONE_UNCHANGED' using errcode = 'P0001';
+  v_error := left(nullif(trim(coalesce(p_error, '')), ''), 300);
+
+  if v_op.operation = 'change_phone' then
+    update public.staff_employment_profiles
+    set access_state = 'revoked', access_revoked_at = now(), updated_at = now()
+    where staff_id = v_op.staff_id and access_state <> 'revoked';
+
+    v_fail_closed := found;
   end if;
 
-  if exists (
-    select 1 from public.staff_employment_profiles other
-    where other.login_phone_e164 = v_phone
-      and other.staff_id <> p_staff_id
-  ) then
-    raise exception 'STAFF_LOGIN_PHONE_CONFLICT' using errcode = 'P0001';
-  end if;
-
-  if exists (
-    select 1 from auth.users u
-    where u.phone = replace(v_phone, '+', '') and u.id <> p_staff_id
-  ) then
-    raise exception 'STAFF_LOGIN_PHONE_CONFLICT' using errcode = 'P0001';
-  end if;
-
-  update public.staff_employment_profiles
-  set login_phone_e164 = v_phone, updated_at = now()
-  where staff_id = p_staff_id;
-
-  -- The one sanctioned employment-phone write.
-  perform set_config('onedecore.login_phone_change', 'on', true);
-  update public.profiles set phone_e164 = v_phone, updated_at = now()
-  where id = p_staff_id;
-  perform set_config('onedecore.login_phone_change', 'off', true);
+  update private.staff_credential_operations
+  set status = 'failed', last_error = v_error, updated_at = clock_timestamp()
+  where id = v_op.id;
 
   perform private.staff_append_admin_event(
-    p_staff_id, v_actor, 'staff.login_phone_changed',
+    v_op.staff_id, v_actor, 'staff.credential_operation_failed',
     jsonb_build_object(
-      'previousLoginPhone', v_sep.login_phone_e164,
-      'loginPhone', v_phone,
-      'reason', v_reason
+      'operation', v_op.operation,
+      'failClosed', v_fail_closed,
+      'retryable', true
     )
   );
 
   return jsonb_build_object(
-    'staffId', p_staff_id,
-    'loginPhone', v_phone,
-    'loginUsername', right(v_phone, 10),
-    'previousLoginPhone', v_sep.login_phone_e164
+    'operationId', v_op.id,
+    'staffId', v_op.staff_id,
+    'operation', v_op.operation,
+    'retryable', true,
+    'failClosed', v_fail_closed,
+    'accessState', (
+      select sep.access_state from public.staff_employment_profiles sep
+      where sep.staff_id = v_op.staff_id
+    )
+  );
+end;
+$$;
+
+/** The unfinished operation for a staff member, so the UI can show a retry. */
+create or replace function public.get_staff_credential_operation(p_staff_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_op private.staff_credential_operations%rowtype;
+begin
+  perform private.staff_require_credential_admin();
+
+  select * into v_op
+  from private.staff_credential_operations
+  where staff_id = p_staff_id and status <> 'completed'
+  order by updated_at desc
+  limit 1;
+
+  if not found then
+    return null;
+  end if;
+
+  return jsonb_build_object(
+    'operationId', v_op.id,
+    'operation', v_op.operation,
+    'status', v_op.status,
+    'targetLoginUsername', case
+      when v_op.target_phone_e164 is null then null
+      else right(v_op.target_phone_e164, 10)
+    end,
+    'updatedAt', v_op.updated_at
   );
 end;
 $$;
@@ -962,23 +1328,24 @@ $$;
 -- I. Grants
 -- -----------------------------------------------------------------------------
 
-revoke all on function public.issue_staff_credentials(uuid, text) from public, anon;
-revoke all on function public.record_staff_password_reset(uuid) from public, anon;
-revoke all on function public.revoke_staff_access(uuid, text) from public, anon;
-revoke all on function public.reactivate_staff_access(uuid, text) from public, anon;
-revoke all on function public.change_staff_login_phone(uuid, text, text) from public, anon;
+revoke all on function public.begin_staff_credential_operation(uuid, text, text, text) from public, anon;
+revoke all on function public.complete_staff_credential_operation(uuid) from public, anon;
+revoke all on function public.fail_staff_credential_operation(uuid, text) from public, anon;
+revoke all on function public.get_staff_credential_operation(uuid) from public, anon;
 revoke all on function public.record_staff_first_login() from public, anon;
 
-grant execute on function public.issue_staff_credentials(uuid, text) to authenticated;
-grant execute on function public.record_staff_password_reset(uuid) to authenticated;
-grant execute on function public.revoke_staff_access(uuid, text) to authenticated;
-grant execute on function public.reactivate_staff_access(uuid, text) to authenticated;
-grant execute on function public.change_staff_login_phone(uuid, text, text) to authenticated;
+grant execute on function public.begin_staff_credential_operation(uuid, text, text, text) to authenticated;
+grant execute on function public.complete_staff_credential_operation(uuid) to authenticated;
+grant execute on function public.fail_staff_credential_operation(uuid, text) to authenticated;
+grant execute on function public.get_staff_credential_operation(uuid) to authenticated;
 grant execute on function public.record_staff_first_login() to authenticated;
 
-alter function public.issue_staff_credentials(uuid, text) owner to postgres;
-alter function public.record_staff_password_reset(uuid) owner to postgres;
-alter function public.revoke_staff_access(uuid, text) owner to postgres;
-alter function public.reactivate_staff_access(uuid, text) owner to postgres;
-alter function public.change_staff_login_phone(uuid, text, text) owner to postgres;
+alter function public.begin_staff_credential_operation(uuid, text, text, text) owner to postgres;
+alter function public.complete_staff_credential_operation(uuid) owner to postgres;
+alter function public.fail_staff_credential_operation(uuid, text) owner to postgres;
+alter function public.get_staff_credential_operation(uuid) owner to postgres;
 alter function public.record_staff_first_login() owner to postgres;
+
+alter function private.staff_can_view_employment(uuid, uuid) owner to postgres;
+alter function private.staff_can_view_attendance(uuid, uuid) owner to postgres;
+alter function private.salary_can_view(uuid) owner to postgres;

@@ -307,10 +307,22 @@ export async function changeStaffAuthLoginPhone(
   }
 
   // Invalidate any session opened under the previous number.
-  await deps.authorizedRequest(`${AUTH_ADMIN_USERS_PATH}/${input.staffId}`, {
-    method: "PUT",
-    body: { ban_duration: STAFF_BAN_DURATION },
-  });
+  //
+  // The RESULT of this call is checked. Sending it and moving on would let the
+  // operation report success while a session opened under the old number was
+  // still refreshable — the caller would then finalize the change believing
+  // sessions were closed when they were not.
+  const ban = await deps.authorizedRequest(
+    `${AUTH_ADMIN_USERS_PATH}/${input.staffId}`,
+    { method: "PUT", body: { ban_duration: STAFF_BAN_DURATION } }
+  );
+
+  if (!ban.ok) {
+    throw new Error(
+      `Login phone was changed but existing sessions could not be invalidated: ${await readError(ban)}`
+    );
+  }
+
   const unban = await deps.authorizedRequest(
     `${AUTH_ADMIN_USERS_PATH}/${input.staffId}`,
     { method: "PUT", body: { ban_duration: "none" } }

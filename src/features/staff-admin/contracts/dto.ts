@@ -39,6 +39,14 @@ export interface StaffDetailAuditSummary {
   readonly lastEventAt: string | null;
 }
 
+/** An unfinished credential operation, surfaced so it can be retried. */
+export interface StaffCredentialOperationSummary {
+  readonly operationId: string;
+  readonly operation: string;
+  readonly status: string;
+  readonly targetLoginUsername: string | null;
+}
+
 export interface StaffDetail extends StaffListItem {
   readonly phoneE164: string | null;
   readonly email: string | null;

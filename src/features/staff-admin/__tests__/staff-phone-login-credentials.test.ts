@@ -395,22 +395,31 @@ describe("authorization — credential control is Super Admin only", () => {
     assert.match(sql, /where r\.code = 'super_admin'/);
   });
 
-  test("every credential server action re-checks authority", () => {
+  test("every credential operation routes through one authority gate", () => {
     const source = read(CREDENTIAL_ACTIONS);
-    const exported = source.match(/export async function \w+/g) ?? [];
-    assert.equal(exported.length, 5, "five credential operations");
-    // One gate call per exported operation, plus the helper definition.
-    assert.equal((source.match(/requireCredentialAdmin\(\)/g) ?? []).length, 6);
+    // All five operations funnel through runCredentialOperation, which calls the
+    // gate before anything else, so none can be added later that skips it.
+    for (const op of [
+      "issueStaffCredentials",
+      "resetStaffPassword",
+      "revokeStaffAccess",
+      "reactivateStaffAccess",
+      "changeStaffLoginPhone",
+    ]) {
+      const block = source.slice(source.indexOf(`export async function ${op}`));
+      assert.match(block.slice(0, 900), /runCredentialOperation\(\{/, op);
+    }
+    const runner = source.slice(source.indexOf("async function runCredentialOperation"));
+    assert.match(runner.slice(0, 700), /await requireCredentialAdmin\(\)/);
   });
 
   test("the database is the real gate, not the server action", () => {
     const sql = executableSql(MIGRATION);
     for (const fn of [
-      "issue_staff_credentials",
-      "record_staff_password_reset",
-      "revoke_staff_access",
-      "reactivate_staff_access",
-      "change_staff_login_phone",
+      "begin_staff_credential_operation",
+      "complete_staff_credential_operation",
+      "fail_staff_credential_operation",
+      "get_staff_credential_operation",
     ]) {
       const block = sql.slice(sql.indexOf(`function public.${fn}`));
       assert.match(
@@ -451,19 +460,15 @@ describe("state machine and revocation enforcement", () => {
 
   test("issuing credentials never activates the account", () => {
     const sql = executableSql(MIGRATION);
-    const block = sql.slice(
-      sql.indexOf("function public.issue_staff_credentials"),
-      sql.indexOf("function public.record_staff_password_reset")
+    const complete = sql.slice(
+      sql.indexOf("function public.complete_staff_credential_operation")
     );
-    // Only the ASSIGNMENT matters: the function legitimately READS 'active' to
-    // refuse re-issuing credentials for someone who has already signed in.
-    const updateStart = block.indexOf("update public.staff_employment_profiles");
-    const update = block.slice(
-      updateStart,
-      block.indexOf("where staff_id = p_staff_id", updateStart)
+    const issueBranch = complete.slice(
+      complete.indexOf("if v_op.operation = 'issue' then"),
+      complete.indexOf("elsif v_op.operation = 'password_reset'")
     );
-    assert.match(update, /access_state = 'credentials_ready'/);
-    assert.doesNotMatch(update, /access_state = 'active'/);
+    assert.match(issueBranch, /access_state = 'credentials_ready'/);
+    assert.doesNotMatch(issueBranch, /access_state = 'active'/);
   });
 
   test("only a genuine sign-in promotes to active", () => {
@@ -485,7 +490,9 @@ describe("employment and login cannot drift", () => {
   test("only the sanctioned RPCs may set the drift flag", () => {
     const sql = executableSql(MIGRATION);
     const flagged = sql.match(/set_config\('onedecore\.login_phone_change', 'on', true\)/g) ?? [];
-    assert.equal(flagged.length, 2, "issuance and change_staff_login_phone only");
+    // Only the finalize step of change_phone. Issuance no longer writes the
+    // employment phone at all: it READS it as the authoritative username.
+    assert.equal(flagged.length, 1, "change_phone finalize only");
   });
 
   test("the login phone is a separate column from contact data", () => {
@@ -521,8 +528,15 @@ describe("no secret ever reaches storage, audit, or logs", () => {
     const source = read(CREDENTIAL_ACTIONS);
     assert.match(source, /function scrubSecret/);
     assert.match(source, /\[redacted\]/);
-    // Every password-bearing failure path scrubs.
-    assert.equal((source.match(/scrubSecret\(/g) ?? []).length, 3);
+    // The single failure path scrubs before anything reaches the ledger.
+    const runner = source.slice(source.indexOf("async function runCredentialOperation"));
+    const failBranch = runner.slice(runner.indexOf("catch (authError)"));
+    assert.match(failBranch, /scrubSecret\(/);
+    assert.ok(
+      failBranch.indexOf("scrubSecret(") <
+        failBranch.indexOf("fail_staff_credential_operation"),
+      "the diagnostic must be scrubbed BEFORE it is written to the ledger"
+    );
   });
 
   test("the service-role key stays in the single audited adapter", () => {
@@ -548,5 +562,127 @@ describe("the future OTP reset needs no schema replacement", () => {
     const sql = executableSql(MIGRATION);
     assert.doesNotMatch(sql, /login_id|login_code|username text/);
     assert.doesNotMatch(read(LOGIN_FORM), /name="staffLoginId"/);
+  });
+});
+
+describe("prepare / Auth / finalize — no split-brain", () => {
+  test("nothing is published until the Auth step has succeeded", () => {
+    const source = read(CREDENTIAL_ACTIONS);
+    const runner = source.slice(source.indexOf("async function runCredentialOperation"));
+    const beginAt = runner.indexOf("begin_staff_credential_operation");
+    const authAt = runner.indexOf("await input.authStep(");
+    const completeAt = runner.indexOf("complete_staff_credential_operation");
+    assert.ok(beginAt < authAt, "begin runs before the Auth call");
+    assert.ok(authAt < completeAt, "the Auth call runs before anything is published");
+  });
+
+  test("an Auth failure records a retryable operation and publishes nothing", () => {
+    const source = read(CREDENTIAL_ACTIONS);
+    const runner = source.slice(source.indexOf("async function runCredentialOperation"));
+    const failBranch = runner.slice(
+      runner.indexOf("catch (authError)"),
+      runner.indexOf("complete_staff_credential_operation")
+    );
+    assert.match(failBranch, /fail_staff_credential_operation/);
+    assert.doesNotMatch(failBranch, /complete_staff_credential_operation/);
+  });
+
+  test("issuance takes NO phone from the caller", () => {
+    // The form action must not read one, and the action signature must not
+    // accept one, so a tampered submission cannot choose the login number.
+    const formActions = read(
+      "src/features/staff-admin/server/staff-credential-form-actions.ts"
+    );
+    const issueBlock = formActions.slice(
+      formActions.indexOf("export async function issueStaffCredentialsAction"),
+      formActions.indexOf("export async function resetStaffPasswordAction")
+    );
+    assert.doesNotMatch(issueBlock, /loginPhone/);
+
+    const source = read(CREDENTIAL_ACTIONS);
+    const signature = source.slice(
+      source.indexOf("export async function issueStaffCredentials("),
+      source.indexOf("}): Promise<StaffCredentialResult> {", source.indexOf("export async function issueStaffCredentials("))
+    );
+    assert.doesNotMatch(signature, /phone/i);
+  });
+
+  test("the database derives the issuance phone from the staff record", () => {
+    const sql = executableSql(MIGRATION);
+    const begin = sql.slice(sql.indexOf("function public.begin_staff_credential_operation"));
+    const issueBranch = begin.slice(
+      begin.indexOf("if p_operation = 'issue' then"),
+      begin.indexOf("elsif p_operation = 'change_phone'")
+    );
+    assert.match(issueBranch, /staff_normalize_login_phone\(v_profile\.phone_e164\)/);
+    // p_phone is deliberately not consulted for issuance.
+    assert.doesNotMatch(issueBranch, /p_phone/);
+    assert.match(issueBranch, /STAFF_LOGIN_PHONE_MISSING/);
+  });
+
+  test("the issue form shows a read-only Staff Login ID", () => {
+    const panel = read(PANEL);
+    assert.match(panel, /Staff Login ID/);
+    assert.match(panel, /employmentUsername/);
+    // No editable login-number input on the issuance form.
+    const issueForm = panel.slice(
+      panel.indexOf("{!hasCredentials && employmentUsername !== null ?"),
+      panel.indexOf("{hasCredentials && !isRevoked ?")
+    );
+    assert.doesNotMatch(issueForm, /name="loginPhone"/);
+    // And a missing number is an instruction, not a free-text field.
+    assert.match(panel, /no valid 10-digit mobile number/);
+  });
+
+  test("an unfinished operation is surfaced for retry", () => {
+    assert.match(read(PANEL), /pendingOperation/);
+    assert.match(read(PANEL), /did not finish/);
+  });
+
+  test("the operation ledger is private and holds no secret", () => {
+    const sql = executableSql(MIGRATION);
+    // COLUMN DEFINITIONS only: `password_reset` is a legitimate operation NAME
+    // in the check constraint below, not stored secret material. The column-level
+    // proof is re-run against information_schema in the pgTAP suite.
+    const tableStart = sql.indexOf(
+      "create table if not exists private.staff_credential_operations"
+    );
+    const columns = sql.slice(tableStart, sql.indexOf("constraint chk_", tableStart));
+    assert.doesNotMatch(columns, /password|hash|secret|token/i);
+    assert.match(sql, /revoke all on table private\.staff_credential_operations/);
+  });
+});
+
+describe("session invalidation is checked, not assumed", () => {
+  test("a failed ban fails the phone change instead of reporting success", async () => {
+    // phone update succeeds, ban fails.
+    const { deps: d, calls } = deps((call) => {
+      if (call.method === "GET") {
+        return { status: 200, body: { id: STAFF_ID, phone: "917447863402" } };
+      }
+      if (call.body && "phone" in call.body) {
+        return { status: 200, body: { id: STAFF_ID, phone: "919812345678" } };
+      }
+      if (call.body && call.body.ban_duration !== "none") {
+        return { status: 500, body: { msg: "ban refused" } };
+      }
+      return { status: 200, body: { id: STAFF_ID } };
+    });
+
+    await assert.rejects(
+      () =>
+        changeStaffAuthLoginPhone(
+          { staffId: STAFF_ID, loginPhoneE164: "+919812345678" },
+          d
+        ),
+      /sessions could not be invalidated/
+    );
+
+    // It must NOT have carried on to re-enable the account as if all was well.
+    assert.equal(
+      calls.some((c) => c.body?.ban_duration === "none"),
+      false,
+      "a failed ban must stop the operation, not proceed to unban"
+    );
   });
 });

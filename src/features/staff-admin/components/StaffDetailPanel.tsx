@@ -1,7 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import type { StaffDetail } from "../contracts/dto.ts";
+import type {
+  StaffCredentialOperationSummary,
+  StaffDetail,
+} from "../contracts/dto.ts";
 import { STAFF_PROFILE_STATUS_CODES } from "../contracts/permissions.ts";
 import type {
   AttendancePolicyOption,
@@ -30,6 +33,7 @@ interface StaffDetailPanelProps {
   readonly canManage: boolean;
   /** Super Admin only. Credential control is a separate permission. */
   readonly canManageCredentials: boolean;
+  readonly pendingCredentialOperation?: StaffCredentialOperationSummary | null;
   readonly managers: readonly ReportingManagerOption[];
   readonly policies: readonly AttendancePolicyOption[];
 }
@@ -53,6 +57,7 @@ export function StaffDetailPanel({
   staff,
   canManage,
   canManageCredentials,
+  pendingCredentialOperation = null,
   managers,
   policies,
 }: StaffDetailPanelProps) {
@@ -243,6 +248,7 @@ export function StaffDetailPanel({
           <StaffLoginAccessPanel
             staff={staff}
             canManageCredentials={canManageCredentials}
+            pendingOperation={pendingCredentialOperation}
           />
 
           <section className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-6">

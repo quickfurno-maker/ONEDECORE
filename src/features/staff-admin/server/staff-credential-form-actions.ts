@@ -77,9 +77,11 @@ export async function issueStaffCredentialsAction(
     "issue",
     staffId,
     () =>
+      // No phone is read here. The username is derived server-side from the
+      // authoritative staff record, so a tampered submission cannot point a
+      // login at a different number.
       issueStaffCredentials({
         staffId,
-        phone: read(formData, "loginPhone"),
         password: read(formData, "password"),
         confirmPassword: read(formData, "confirmPassword"),
         displayName: read(formData, "displayName"),

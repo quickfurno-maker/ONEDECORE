@@ -3,7 +3,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.generated";
-import type { StaffDetail, StaffListItem } from "../contracts/dto.ts";
+import type {
+  StaffCredentialOperationSummary,
+  StaffDetail,
+  StaffListItem,
+} from "../contracts/dto.ts";
 import {
   isStaffAssignableRoleCode,
   isStaffAccessStateCode,
@@ -333,4 +337,44 @@ export async function loadAttendancePolicyOptions(): Promise<
     name: row.name,
     isCurrent: row.is_current,
   }));
+}
+
+/**
+ * The unfinished credential operation for a staff member, if any.
+ *
+ * A prepare/Auth/finalize operation that failed part-way leaves a durable row
+ * rather than silent half-state, and this is what makes it visible so a Super
+ * Admin can retry it. Best-effort: only a credential admin may read it, so a
+ * denial is a normal answer rather than an error.
+ */
+export async function loadStaffCredentialOperation(
+  staffId: string
+): Promise<StaffCredentialOperationSummary | null> {
+  const supabase = await createClient();
+
+  try {
+    const { data, error } = await (
+      supabase as unknown as {
+        rpc(
+          fn: "get_staff_credential_operation",
+          args: { readonly p_staff_id: string }
+        ): PromiseLike<{ data: unknown; error: { message: string } | null }>;
+      }
+    ).rpc("get_staff_credential_operation", { p_staff_id: staffId });
+
+    if (error || !data || typeof data !== "object") {
+      return null;
+    }
+
+    const row = data as Record<string, unknown>;
+    return {
+      operationId: String(row.operationId ?? ""),
+      operation: String(row.operation ?? ""),
+      status: String(row.status ?? ""),
+      targetLoginUsername:
+        row.targetLoginUsername == null ? null : String(row.targetLoginUsername),
+    };
+  } catch {
+    return null;
+  }
 }
