@@ -61,9 +61,13 @@ select is(
 -- B. Fixtures
 -- -----------------------------------------------------------------------------
 
-insert into auth.users (id, instance_id, email, aud, role) values
-  ('42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', '42-sa@example.test', 'authenticated', 'authenticated'),
-  ('42bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '00000000-0000-0000-0000-000000000000', '42-mgr@example.test', 'authenticated', 'authenticated');
+-- These two ACT: they are the Super Admin and the Sales Manager driving the
+-- RPCs below. last_sign_in_at gives them the sign-in evidence the access-state
+-- derivation needs, so they resolve to 'active' and are refused (or allowed)
+-- on AUTHORIZATION grounds rather than on access state.
+insert into auth.users (id, instance_id, email, aud, role, last_sign_in_at) values
+  ('42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', '42-sa@example.test', 'authenticated', 'authenticated', now()),
+  ('42bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '00000000-0000-0000-0000-000000000000', '42-mgr@example.test', 'authenticated', 'authenticated', now());
 
 update public.profiles set status = 'active'
 where id in ('42aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '42bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');

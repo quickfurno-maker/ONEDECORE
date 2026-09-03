@@ -15,8 +15,15 @@
 --
 -- No separate numeric login id, no fabricated email alias, no password storage
 -- and no custom session logic. `auth.uid()` continues to equal the employment
--- UUID, so all 130 foreign keys and every existing RLS policy keep working
--- untouched — this migration adds not one policy rewrite.
+-- UUID, so all 130 foreign keys keep working unchanged.
+--
+-- This migration DOES deliberately harden staff-domain access control. It
+-- replaces `private.has_permission`, `private.staff_require_active_actor`,
+-- `private.staff_can_view_employment`, `private.staff_can_view_attendance` and
+-- `private.salary_can_view`, and it recreates the `leave_requests_select` and
+-- `profiles_select_policy` policies. Each is reproduced verbatim apart from a
+-- single added access gate — see section E2 for why the gate could not live in
+-- `has_permission` alone.
 --
 -- EMPLOYMENT vs LOGIN
 -- -------------------
@@ -137,31 +144,31 @@ immutable
 set search_path = ''
 as $$
 declare
-  v_digits text;
+  v_raw text;
 begin
   if p_raw is null then
     return null;
   end if;
 
-  v_digits := regexp_replace(p_raw, '[^0-9]', '', 'g');
+  v_raw := trim(p_raw);
 
-  -- Accept the 10-digit form staff type, and the canonical/pasted 12-digit
-  -- +91 form. Nothing else: a 9- or 11-digit value is a typo, not a number to
-  -- guess at.
-  if length(v_digits) = 12 and left(v_digits, 2) = '91' then
-    v_digits := right(v_digits, 10);
+  -- Matches the application contract EXACTLY. Input is never repaired by
+  -- stripping punctuation: '74478 63402' and '+91-7447863402' are typos, and
+  -- silently fixing one would hand somebody a login they did not type.
+  if v_raw ~ '^[6-9][0-9]{9}$' then
+    return '+91' || v_raw;
   end if;
 
-  if v_digits !~ '^[6-9][0-9]{9}$' then
-    return null;
+  if v_raw ~ '^\+?91[6-9][0-9]{9}$' then
+    return '+91' || right(v_raw, 10);
   end if;
 
-  return '+91' || v_digits;
+  return null;
 end;
 $$;
 
 comment on function private.staff_normalize_login_phone(text) is
-  'Single source of truth for the staff login phone contract: 10 Indian mobile digits (or the +91 12-digit form) canonicalized to +91XXXXXXXXXX. Returns NULL for anything else.';
+  'Single source of truth for the staff login phone contract. Accepts only ^[6-9][0-9]{9}$ or ^\+?91[6-9][0-9]{9}$ and canonicalizes to +91XXXXXXXXXX. Spaces, hyphens, letters and other punctuation are REJECTED, never repaired.';
 
 revoke all on function private.staff_normalize_login_phone(text) from public, anon, authenticated;
 alter function private.staff_normalize_login_phone(text) owner to postgres;
@@ -194,11 +201,13 @@ alter function private.staff_require_credential_admin() owner to postgres;
 -- E. Revocation is enforced in the DATABASE, not the UI
 -- -----------------------------------------------------------------------------
 --
--- `private.has_permission` is the single chokepoint behind `public.authorize`
--- and every RLS policy that uses it, so denying there disables a revoked staff
--- member everywhere at once with no policy rewrite. A staff member with no
--- employment row (the Super Admin) is unaffected: only an explicit `revoked`
--- row denies.
+-- `private.has_permission` is the chokepoint behind `public.authorize`, so
+-- denying here disables an ineligible staff member across every permission at
+-- once. It is NOT sufficient on its own — the staff-domain policies reach rows
+-- through self branches that never consult it, which section E2 closes.
+--
+-- A user with no employment row (the Super Admin) is unaffected: only an
+-- employment row whose access_state is not `active` denies.
 
 create or replace function private.has_permission(requested_permission text)
 returns boolean
@@ -215,15 +224,11 @@ begin
     return false;
   end if;
 
-  -- Revoked application access denies every permission, immediately, for as
-  -- long as the state stands. Checked before the grant lookup so a revoked
-  -- session cannot act on any surviving role grant.
-  if exists (
-    select 1
-    from public.staff_employment_profiles sep
-    where sep.staff_id = v_user_id
-      and sep.access_state = 'revoked'
-  ) then
+  -- An employment record that is not cleared for app access denies every
+  -- permission, immediately. Checked before the grant lookup so neither a
+  -- revoked session nor a JWT minted during an unfinished issuance can act on
+  -- any surviving role grant.
+  if private.staff_access_denied(v_user_id) then
     return false;
   end if;
 
@@ -286,12 +291,18 @@ begin
     raise exception 'STAFF_ACCESS_REVOKED' using errcode = '42501';
   end if;
 
+  -- not_activated / credentials_ready: an Auth identity may exist while the
+  -- application has not admitted this employee yet.
+  if private.staff_access_denied(v_actor) then
+    raise exception 'STAFF_ACCESS_NOT_ACTIVE' using errcode = '42501';
+  end if;
+
   return v_actor;
 end;
 $$;
 
 comment on function private.staff_require_active_actor() is
-  'Resolves the authenticated active staff actor. Refuses staff whose application access has been revoked.';
+  'Resolves the authenticated active staff actor. Refuses any employment record whose access_state is not active — revoked, not yet activated, or credentials issued but never used.';
 
 -- The BEFORE INSERT derivation must speak the new vocabulary.
 create or replace function private.staff_derive_access_state()
@@ -476,7 +487,21 @@ $$;
 -- must still be able to read a revoked employee's records, which is exactly how
 -- an offboarding is reviewed.
 
-create or replace function private.staff_access_revoked(p_viewer uuid)
+/**
+ * True when this user holds an employment record that is NOT cleared for app
+ * access.
+ *
+ * `revoked` is the obvious case. `not_activated` and `credentials_ready` matter
+ * just as much: the Auth identity is created BEFORE the database finalizes an
+ * issuance, so there is a window in which a real JWT exists for an employee the
+ * application has not yet admitted. Gating on "state is active" rather than
+ * "state is revoked" closes that window by construction — a half-finished
+ * issuance grants nothing.
+ *
+ * A user with no employment row is not a workforce user at all (the Super
+ * Admin), and is deliberately unaffected.
+ */
+create or replace function private.staff_access_denied(p_viewer uuid)
 returns boolean
 language sql
 stable
@@ -487,16 +512,16 @@ as $$
     select 1
     from public.staff_employment_profiles sep
     where sep.staff_id = p_viewer
-      and sep.access_state = 'revoked'
+      and sep.access_state <> 'active'
   );
 $$;
 
-comment on function private.staff_access_revoked(uuid) is
-  'True when this user''s application access is revoked. Used by every staff-domain RLS helper so a revoked session is denied at the row, not merely at authorize().';
+comment on function private.staff_access_denied(uuid) is
+  'True when this user has an employment record whose access_state is not active (not_activated, credentials_ready or revoked). Used by every staff-domain RLS helper so an ineligible session is denied at the ROW, not merely at authorize().';
 
-revoke all on function private.staff_access_revoked(uuid) from public, anon;
-grant execute on function private.staff_access_revoked(uuid) to authenticated;
-alter function private.staff_access_revoked(uuid) owner to postgres;
+revoke all on function private.staff_access_denied(uuid) from public, anon;
+grant execute on function private.staff_access_denied(uuid) to authenticated;
+alter function private.staff_access_denied(uuid) owner to postgres;
 
 -- Reproduced verbatim from 20260810140000 apart from the leading revoked guard,
 -- so the super_admin and reporting-manager scopes are bit-for-bit unchanged and
@@ -510,7 +535,7 @@ security definer
 set search_path = ''
 as $$
   select
-    not private.staff_access_revoked(p_viewer)
+    not private.staff_access_denied(p_viewer)
     and (
       p_viewer = p_staff
       or (
@@ -556,7 +581,7 @@ security definer
 set search_path = ''
 as $$
   select
-    not private.staff_access_revoked(p_viewer)
+    not private.staff_access_denied(p_viewer)
     and (
       (
         p_viewer = p_staff
@@ -619,7 +644,7 @@ security definer
 set search_path = ''
 as $$
   select
-    not private.staff_access_revoked((select auth.uid()))
+    not private.staff_access_denied((select auth.uid()))
     and (
       (select public.authorize('salary.manage'))
       or (
@@ -646,7 +671,7 @@ drop policy if exists leave_requests_select on public.leave_requests;
 create policy leave_requests_select on public.leave_requests
 for select
 using (
-  not private.staff_access_revoked((select auth.uid()))
+  not private.staff_access_denied((select auth.uid()))
   and (
     staff_id = (select auth.uid())
     or (select public.authorize('leave.manage'))
@@ -664,7 +689,7 @@ drop policy if exists profiles_select_policy on public.profiles;
 create policy profiles_select_policy on public.profiles
 for select
 using (
-  not private.staff_access_revoked((select auth.uid()))
+  not private.staff_access_denied((select auth.uid()))
   and (
     id = (select auth.uid())
     or private.has_permission('users.read')
@@ -789,6 +814,8 @@ create table if not exists private.staff_credential_operations (
   requested_by uuid not null references public.profiles (id) on delete restrict,
   target_phone_e164 text,
   previous_phone_e164 text,
+  -- What to restore on finalize, for operations that close access at begin.
+  previous_access_state text,
   reason text,
   last_error text,
   -- clock_timestamp(), not now(): `get_staff_credential_operation` orders by
@@ -813,10 +840,12 @@ create table if not exists private.staff_credential_operations (
 comment on table private.staff_credential_operations is
   'Coordination ledger for staff credential operations. A pending row publishes NO public state, so a failed Auth call can never leave a success audit behind. Contains no password or hash.';
 
--- One live operation per staff member per kind: a retry reuses the row rather
--- than racing a second one.
+-- ONE live operation per staff member, whatever its kind. Credential mutations
+-- for one employee are serialized: overlapping operations are what produce
+-- DB/Auth ordering races, and a retry reuses the row rather than racing a
+-- second one.
 create unique index if not exists uq_staff_credential_operations_pending
-  on private.staff_credential_operations (staff_id, operation)
+  on private.staff_credential_operations (staff_id)
   where status = 'pending';
 
 -- Reserves the number while the operation is in flight, so two concurrent
@@ -873,6 +902,30 @@ begin
   if p_operation in ('revoke', 'reactivate', 'change_phone')
      and (v_reason is null or length(v_reason) < 3) then
     raise exception 'STAFF_REASON_REQUIRED' using errcode = 'P0001';
+  end if;
+
+  -- ---------------------------------------------------------------------
+  -- Serialize: at most ONE unresolved credential operation per employee.
+  -- ---------------------------------------------------------------------
+  --
+  -- Overlapping operations are precisely what produce DB/Auth ordering races.
+  -- A single unresolved row per staff member makes the next request either a
+  -- retry of that same operation or a deterministic refusal — never a second
+  -- concurrent mutation.
+  --
+  -- This is also what stops an unresolved `change_phone` being escaped by a
+  -- generic `reactivate`: Supabase Auth may already hold the NEW number while
+  -- the application still shows the old, so the only way forward is to finish
+  -- (or retry) that phone change.
+  select * into v_op
+  from private.staff_credential_operations
+  where staff_id = p_staff_id and status <> 'completed'
+  order by updated_at desc
+  limit 1
+  for update;
+
+  if found and v_op.operation <> p_operation then
+    raise exception 'STAFF_CREDENTIAL_OPERATION_BLOCKED' using errcode = 'P0001';
   end if;
 
   -- ---------------------------------------------------------------------
@@ -948,19 +1001,14 @@ begin
   -- ---------------------------------------------------------------------
   -- A superseded FAILED row is reused rather than left behind: a retry is the
   -- same operation, and a dangling failure would keep telling the Super Admin
-  -- that something is outstanding after it has been fixed.
-  select * into v_op
-  from private.staff_credential_operations
-  where staff_id = p_staff_id and operation = p_operation and status <> 'completed'
-  order by updated_at desc
-  limit 1
-  for update;
-
-  if found then
+  -- that something is outstanding after it has been fixed. `v_op` is already
+  -- held under lock by the serialization check above.
+  if v_op.id is not null then
     update private.staff_credential_operations
     set status = 'pending',
         target_phone_e164 = v_phone,
-        previous_phone_e164 = v_sep.login_phone_e164,
+        previous_phone_e164 = coalesce(v_op.previous_phone_e164, v_sep.login_phone_e164),
+        previous_access_state = coalesce(v_op.previous_access_state, v_sep.access_state),
         reason = v_reason,
         last_error = null,
         updated_at = clock_timestamp()
@@ -968,27 +1016,42 @@ begin
     returning * into v_op;
   else
     insert into private.staff_credential_operations
-      (staff_id, operation, status, requested_by, target_phone_e164, previous_phone_e164, reason)
+      (staff_id, operation, status, requested_by, target_phone_e164,
+       previous_phone_e164, previous_access_state, reason)
     values
-      (p_staff_id, p_operation, 'pending', v_actor, v_phone, v_sep.login_phone_e164, v_reason)
+      (p_staff_id, p_operation, 'pending', v_actor, v_phone,
+       v_sep.login_phone_e164, v_sep.access_state, v_reason)
     returning * into v_op;
   end if;
 
-  -- Revocation denies NOW. Everything else waits for Auth to succeed.
-  if p_operation = 'revoke' and v_sep.access_state <> 'revoked' then
+  -- ---------------------------------------------------------------------
+  -- Operations that must close access BEFORE the Auth call
+  -- ---------------------------------------------------------------------
+  --
+  -- `revoke` is obvious: waiting would leave the account usable.
+  --
+  -- `change_phone` closes for a subtler reason. The Auth call moves the number
+  -- part-way through, so a SECOND failure — a dropped connection while
+  -- recording the outcome, say — must not be what stands between the two
+  -- systems and a silent split. Closing at BEGIN means the fail-closed state is
+  -- already durable before Auth is touched at all, so safety does not depend on
+  -- any later call succeeding. `complete` restores the prior state.
+  if p_operation in ('revoke', 'change_phone') and v_sep.access_state <> 'revoked' then
     update public.staff_employment_profiles
     set access_state = 'revoked', access_revoked_at = now(), updated_at = now()
     where staff_id = p_staff_id;
 
-    perform private.staff_append_admin_event(
-      p_staff_id, v_actor, 'staff.access_revoked',
-      jsonb_build_object(
-        'accessState', 'revoked',
-        'previousState', v_sep.access_state,
-        'reason', v_reason,
-        'sessionsInvalidated', false
-      )
-    );
+    if p_operation = 'revoke' then
+      perform private.staff_append_admin_event(
+        p_staff_id, v_actor, 'staff.access_revoked',
+        jsonb_build_object(
+          'accessState', 'revoked',
+          'previousState', v_sep.access_state,
+          'reason', v_reason,
+          'sessionsInvalidated', false
+        )
+      );
+    end if;
   end if;
 
   return jsonb_build_object(
@@ -1112,8 +1175,18 @@ begin
     );
 
   elsif v_op.operation = 'change_phone' then
+    -- Publish the new number AND restore the access the begin step closed. The
+    -- prior state is replayed from the ledger, so a staff member who was
+    -- already revoked before the change stays revoked.
     update public.staff_employment_profiles
-    set login_phone_e164 = v_op.target_phone_e164, updated_at = now()
+    set login_phone_e164 = v_op.target_phone_e164,
+        access_state = coalesce(v_op.previous_access_state, access_state),
+        access_revoked_at = case
+          when coalesce(v_op.previous_access_state, 'revoked') = 'revoked'
+            then access_revoked_at
+          else null
+        end,
+        updated_at = now()
     where staff_id = v_op.staff_id;
 
     perform set_config('onedecore.login_phone_change', 'on', true);
@@ -1153,13 +1226,16 @@ end;
 $$;
 
 /**
- * Records a failed Auth step, durably and visibly, and keeps access fail-closed.
+ * Records a failed Auth step, durably and visibly.
  *
- * `change_phone` is the one operation that can leave Supabase Auth ahead of the
- * application: the number may already have moved when the follow-up step
- * failed. Leaving that unresolved would mean the new number authenticates while
- * ONEDECORE still shows the old one — exactly the drift this design exists to
- * prevent — so the account is revoked until a Super Admin retries.
+ * This does NOT create the fail-closed state. `revoke` and `change_phone` close
+ * access at BEGIN, before Supabase Auth is touched, precisely so that safety
+ * never depends on a best-effort call made after the number may already have
+ * moved. A second failure here leaves the account closed and the operation
+ * unresolved, which is the safe outcome.
+ *
+ * The unresolved row is what blocks every other credential operation for this
+ * employee until the phone change is retried to completion.
  */
 create or replace function public.fail_staff_credential_operation(
   p_operation_id uuid,
@@ -1193,13 +1269,13 @@ begin
 
   v_error := left(nullif(trim(coalesce(p_error, '')), ''), 300);
 
-  if v_op.operation = 'change_phone' then
-    update public.staff_employment_profiles
-    set access_state = 'revoked', access_revoked_at = now(), updated_at = now()
-    where staff_id = v_op.staff_id and access_state <> 'revoked';
-
-    v_fail_closed := found;
-  end if;
+  -- `revoke` and `change_phone` already closed access at BEGIN, so nothing here
+  -- is load-bearing for safety: this call records WHY, it does not create the
+  -- fail-closed state. If it never runs at all the account is still closed.
+  v_fail_closed := exists (
+    select 1 from public.staff_employment_profiles sep
+    where sep.staff_id = v_op.staff_id and sep.access_state = 'revoked'
+  );
 
   update private.staff_credential_operations
   set status = 'failed', last_error = v_error, updated_at = clock_timestamp()
@@ -1302,6 +1378,13 @@ begin
 
   if v_sep.access_state = 'active' then
     return jsonb_build_object('staffId', v_actor, 'accessState', 'active');
+  end if;
+
+  -- ONLY credentials_ready may be promoted. `not_activated` means the
+  -- application never finished issuing credentials, so an Auth identity created
+  -- during that window must not be able to admit itself by signing in.
+  if v_sep.access_state <> 'credentials_ready' then
+    return jsonb_build_object('staffId', v_actor, 'accessState', v_sep.access_state);
   end if;
 
   if not exists (

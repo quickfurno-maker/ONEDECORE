@@ -247,14 +247,23 @@ export async function revokeStaffAuthAccess(
   return { userId: input.staffId, banned: true };
 }
 
-/** Lifts the ban. The password and the UUID are untouched. */
+/**
+ * Lifts the ban. The password and the UUID are untouched.
+ *
+ * A MISSING identity is a hard failure, not a success. Returning success would
+ * let the caller clear the database revocation for an employee who has no login
+ * at all — the application would show restored access that cannot possibly
+ * work, and the operation would look finished when nothing happened.
+ */
 export async function reactivateStaffAuthAccess(
   input: { readonly staffId: string },
   deps: StaffCredentialDeps
 ): Promise<{ readonly userId: string }> {
   const existing = await findIdentity(input.staffId, deps);
   if (!existing) {
-    return { userId: input.staffId };
+    throw new StaffIdentityConflictError(
+      "There is no login identity to re-enable for this staff member. Issue credentials instead."
+    );
   }
 
   const restored = await deps.authorizedRequest(

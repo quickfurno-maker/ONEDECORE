@@ -32,6 +32,7 @@ import {
   StaffIdentityConflictError,
   changeStaffAuthLoginPhone,
   issueStaffPhoneCredentials,
+  reactivateStaffAuthAccess,
   resetStaffPhonePassword,
   revokeStaffAuthAccess,
   type StaffCredentialDeps,
@@ -439,11 +440,25 @@ describe("state machine and revocation enforcement", () => {
     );
   });
 
-  test("revocation denies every permission at the single chokepoint", () => {
+  test("an ineligible access state denies every permission at the chokepoint", () => {
     const sql = executableSql(MIGRATION);
     const block = sql.slice(sql.indexOf("function private.has_permission"));
-    assert.match(block.slice(0, 1200), /access_state = 'revoked'/);
+    assert.match(block.slice(0, 1200), /private\.staff_access_denied\(v_user_id\)/);
     assert.match(block.slice(0, 1200), /return false;/);
+
+    // The gate is "state is active", not "state is revoked": that is what closes
+    // the window where an Auth identity exists but issuance never finished.
+    const gate = sql.slice(sql.indexOf("function private.staff_access_denied"));
+    assert.match(gate.slice(0, 700), /sep\.access_state <> 'active'/);
+  });
+
+  test("the profiles.status = 'active' hardening is preserved", () => {
+    // Reproduced from 20260725020833; losing it would let a suspended profile
+    // regain every permission.
+    const sql = executableSql(MIGRATION);
+    const block = sql.slice(sql.indexOf("function private.has_permission"));
+    assert.match(block.slice(0, 1600), /join public\.profiles prof on prof\.id = ur\.user_id/);
+    assert.match(block.slice(0, 1600), /prof\.status = 'active'/);
   });
 
   test("self-service staff RPCs also refuse a revoked actor", () => {
@@ -627,7 +642,7 @@ describe("prepare / Auth / finalize — no split-brain", () => {
     // No editable login-number input on the issuance form.
     const issueForm = panel.slice(
       panel.indexOf("{!hasCredentials && employmentUsername !== null ?"),
-      panel.indexOf("{hasCredentials && !isRevoked ?")
+      panel.indexOf("{pendingPhoneChange ? (")
     );
     assert.doesNotMatch(issueForm, /name="loginPhone"/);
     // And a missing number is an instruction, not a free-text field.
@@ -684,5 +699,126 @@ describe("session invalidation is checked, not assumed", () => {
       false,
       "a failed ban must stop the operation, not proceed to unban"
     );
+  });
+});
+
+describe("serialization and unresolved-operation recovery", () => {
+  test("one live operation per employee, whatever its kind", () => {
+    const sql = executableSql(MIGRATION);
+    assert.match(
+      sql,
+      /create unique index if not exists uq_staff_credential_operations_pending\s+on private\.staff_credential_operations \(staff_id\)\s+where status = 'pending'/
+    );
+  });
+
+  test("a different unresolved operation is refused deterministically", () => {
+    const sql = executableSql(MIGRATION);
+    const begin = sql.slice(sql.indexOf("function public.begin_staff_credential_operation"));
+    assert.match(begin, /if found and v_op\.operation <> p_operation then/);
+    assert.match(begin, /STAFF_CREDENTIAL_OPERATION_BLOCKED/);
+
+    // The refusal is evaluated BEFORE the per-operation preconditions, so a
+    // blocked reactivate reports the block rather than a misleading state error.
+    assert.ok(
+      begin.indexOf("STAFF_CREDENTIAL_OPERATION_BLOCKED") <
+        begin.indexOf("if p_operation = 'issue' then")
+    );
+  });
+
+  test("change_phone closes access BEFORE Auth is touched", () => {
+    const sql = executableSql(MIGRATION);
+    const begin = sql.slice(sql.indexOf("function public.begin_staff_credential_operation"));
+    assert.match(begin, /if p_operation in \('revoke', 'change_phone'\)/);
+    // So safety does not depend on the fail RPC landing afterwards.
+    const fail = sql.slice(sql.indexOf("function public.fail_staff_credential_operation"));
+    assert.doesNotMatch(fail, /set access_state = 'revoked'/);
+  });
+
+  test("finalize restores the access the begin step closed", () => {
+    const sql = executableSql(MIGRATION);
+    const complete = sql.slice(
+      sql.indexOf("function public.complete_staff_credential_operation")
+    );
+    const branch = complete.slice(complete.indexOf("elsif v_op.operation = 'change_phone'"));
+    assert.match(branch, /access_state = coalesce\(v_op\.previous_access_state, access_state\)/);
+  });
+
+  test("the UI offers Retry pending phone change and hides Reactivate", () => {
+    const panel = read(PANEL);
+    assert.match(panel, /pendingPhoneChange/);
+    assert.match(panel, /Retry pending phone change/);
+    // Ordinary reactivation is gated on there being no unresolved phone change.
+    assert.match(panel, /\{isRevoked && !pendingPhoneChange \? \(/);
+    // And the server refuses it regardless of what is rendered.
+    assert.match(read(PANEL), /Reactivation\s*\n?\s*is unavailable until this resolves/);
+  });
+});
+
+describe("issuance stays fail-closed while unfinished", () => {
+  test("record_staff_first_login promotes ONLY credentials_ready", () => {
+    const sql = executableSql(MIGRATION);
+    const fn = sql.slice(sql.indexOf("function public.record_staff_first_login"));
+    assert.match(fn, /if v_sep\.access_state <> 'credentials_ready' then/);
+    assert.match(fn, /if v_sep\.access_state = 'revoked' then/);
+    assert.match(fn, /last_sign_in_at is not null/);
+  });
+
+  test("the RLS helpers gate on eligibility, not just revocation", () => {
+    const sql = executableSql(MIGRATION);
+    for (const helper of [
+      "staff_can_view_employment",
+      "staff_can_view_attendance",
+      "salary_can_view",
+    ]) {
+      const block = sql.slice(sql.indexOf(`function private.${helper}`));
+      assert.match(block.slice(0, 400), /not private\.staff_access_denied\(/, helper);
+    }
+    // And the two policies that carry the self branch inline.
+    assert.match(sql, /create policy leave_requests_select[\s\S]*?staff_access_denied/);
+    assert.match(sql, /create policy profiles_select_policy[\s\S]*?staff_access_denied/);
+  });
+});
+
+describe("reactivation cannot succeed without an Auth identity", () => {
+  test("a 404 on lookup is a hard conflict, not a silent success", async () => {
+    const { deps: d, calls } = deps(() => ({ status: 404 }));
+
+    await assert.rejects(
+      () => reactivateStaffAuthAccess({ staffId: STAFF_ID }, d),
+      StaffIdentityConflictError
+    );
+
+    // It must not have attempted to lift a ban on a user that does not exist,
+    // which is what would have let the DB revocation be cleared.
+    assert.equal(calls.some((c) => c.method === "PUT"), false);
+  });
+
+  test("an existing identity is re-enabled normally", async () => {
+    const { deps: d, calls } = deps(() => ({ status: 200, body: { id: STAFF_ID } }));
+    await reactivateStaffAuthAccess({ staffId: STAFF_ID }, d);
+    assert.equal(calls.find((c) => c.method === "PUT")?.body?.ban_duration, "none");
+  });
+});
+
+describe("the failure record is itself verified", () => {
+  test("a failed fail-RPC is surfaced, not assumed to have worked", () => {
+    const source = read(CREDENTIAL_ACTIONS);
+    const runner = source.slice(source.indexOf("async function runCredentialOperation"));
+    assert.match(runner, /const \{ error: failError \} = await rpc\.rpc\(\s*"fail_staff_credential_operation"/);
+    assert.match(runner, /if \(failError\)/);
+    assert.match(runner, /the failure could not be recorded/);
+  });
+});
+
+describe("strict phone contract matches the database exactly", () => {
+  test("punctuation and text are rejected in BOTH layers", () => {
+    for (const raw of ["74478 63402", "+91-7447863402", "abc7447863402", "(744) 786-3402"]) {
+      assert.equal(normalizeStaffLoginPhone(raw).ok, false, raw);
+    }
+    // The SQL contract is the same two patterns, with no punctuation stripping.
+    const sql = executableSql(MIGRATION);
+    const fn = sql.slice(sql.indexOf("function private.staff_normalize_login_phone"));
+    assert.doesNotMatch(fn.slice(0, 900), /regexp_replace/);
+    assert.match(fn, /\^\[6-9\]\[0-9\]\{9\}\$/);
   });
 });

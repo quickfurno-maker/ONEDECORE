@@ -164,6 +164,13 @@ export function StaffLoginAccessPanel({
   const hasCredentials = username !== null;
   const isRevoked = staff.accessState === "revoked";
 
+  // An unresolved phone change means Supabase Auth may already hold the NEW
+  // number while this record still shows the old one. Ordinary reactivation
+  // would re-open access on top of that split, so the only offer is to retry
+  // the change. The server refuses anything else regardless of what is rendered.
+  const pendingPhoneChange =
+    pendingOperation?.operation === "change_phone" ? pendingOperation : null;
+
   // The Staff Login ID is the employee's OWN number, read from their employment
   // record. It is display-only here: the server derives it again from the same
   // record, so this control cannot choose a different login.
@@ -213,6 +220,13 @@ export function StaffLoginAccessPanel({
           A previous <span className="font-semibold">{pendingOperation.operation}</span>{" "}
           operation did not finish ({pendingOperation.status}). Access is fail-closed;
           run it again to complete it.
+          {pendingPhoneChange ? (
+            <>
+              {" "}
+              Until this phone change is completed no other credential action is
+              available — including reactivation.
+            </>
+          ) : null}
         </p>
       ) : null}
 
@@ -258,7 +272,47 @@ export function StaffLoginAccessPanel({
             </form>
           ) : null}
 
-          {hasCredentials && !isRevoked ? (
+          {pendingPhoneChange ? (
+            <form action={changePhone} className="space-y-4">
+              <input type="hidden" name="staffId" value={staff.staffId} />
+              <h4 className="text-sm font-semibold text-neutral-200">
+                Retry pending phone change
+              </h4>
+              <p className="text-xs text-neutral-500">
+                Supabase Auth may already hold{" "}
+                <span className="font-semibold">
+                  {pendingPhoneChange.targetLoginUsername ?? "the new number"}
+                </span>
+                . Retry to finish moving the login and re-open access. Reactivation
+                is unavailable until this resolves.
+              </p>
+              <div>
+                <label
+                  htmlFor="retry-phone"
+                  className="text-sm font-medium text-neutral-200"
+                >
+                  New mobile number
+                </label>
+                <input
+                  id="retry-phone"
+                  name="loginPhone"
+                  type="tel"
+                  inputMode="numeric"
+                  required
+                  maxLength={10}
+                  defaultValue={pendingPhoneChange.targetLoginUsername ?? ""}
+                  className={fieldClassName}
+                />
+              </div>
+              <ReasonField idPrefix="retry" />
+              <button type="submit" disabled={phonePending} className={buttonClassName}>
+                {phonePending ? "Retrying…" : "Retry phone change"}
+              </button>
+              <Feedback state={phoneState} />
+            </form>
+          ) : null}
+
+          {hasCredentials && !isRevoked && !pendingPhoneChange ? (
             <>
               <form action={reset} className="space-y-4">
                 <input type="hidden" name="staffId" value={staff.staffId} />
@@ -324,7 +378,7 @@ export function StaffLoginAccessPanel({
             </>
           ) : null}
 
-          {isRevoked ? (
+          {isRevoked && !pendingPhoneChange ? (
             <form action={reactivate} className="space-y-4">
               <input type="hidden" name="staffId" value={staff.staffId} />
               <h4 className="text-sm font-semibold text-neutral-200">Reactivate</h4>

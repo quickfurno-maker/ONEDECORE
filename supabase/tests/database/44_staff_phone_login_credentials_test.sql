@@ -5,13 +5,16 @@
 -- +917447863402 comes back as "917447863402"). The fixtures mirror production
 -- rather than an idealised shape, so the uniqueness checks are meaningful.
 --
--- Section K is the one that matters most: it sets the REVOKED staff member's
--- JWT and runs DIRECT table SELECTs through RLS. Proving revocation by calling
--- authorize() would prove nothing about the self-read branches, which is
--- exactly where a stale access token could still have read rows.
+-- The sections that matter most:
+--
+--   F3  a JWT minted during an UNFINISHED issuance grants nothing
+--   K   a revoked staff member with a valid JWT reads nothing, proved with
+--       DIRECT table SELECTs rather than by calling authorize()
+--   J2  an unresolved operation refuses every other credential operation
+--   O   an unresolved change_phone cannot be escaped by reactivation
 
 begin;
-select plan(128);
+select plan(151);
 
 -- -----------------------------------------------------------------------------
 -- A. Credential metadata and the private operation ledger
@@ -63,10 +66,12 @@ select ok(
   'authenticated cannot read the operation ledger directly'
 );
 
-select ok(
-  exists (select 1 from pg_indexes where schemaname = 'private'
-          and indexname = 'uq_staff_credential_operations_pending'),
-  'one live operation per staff member per kind'
+-- Serialization: ONE live operation per employee, whatever its kind.
+select is(
+  (select indexdef from pg_indexes
+   where schemaname = 'private' and indexname = 'uq_staff_credential_operations_pending'),
+  'CREATE UNIQUE INDEX uq_staff_credential_operations_pending ON private.staff_credential_operations USING btree (staff_id) WHERE (status = ''pending''::text)',
+  'at most one PENDING operation per staff member, regardless of kind'
 );
 select ok(
   exists (select 1 from pg_indexes where schemaname = 'private'
@@ -109,7 +114,7 @@ select is(
 );
 
 -- -----------------------------------------------------------------------------
--- C. The canonical phone contract
+-- C. The canonical phone contract — strict, never repaired
 -- -----------------------------------------------------------------------------
 
 select is(private.staff_normalize_login_phone('7447863402'), '+917447863402',
@@ -126,6 +131,17 @@ select is(private.staff_normalize_login_phone('0447863402'), null, 'leading zero
 select is(private.staff_normalize_login_phone(''), null, 'empty rejected');
 select is(private.staff_normalize_login_phone(null), null, 'null rejected');
 select is(private.staff_normalize_login_phone('+447447863402'), null, 'non-Indian country code rejected');
+
+-- Punctuation and text are REJECTED, not stripped: repairing input would hand
+-- somebody a login they did not type.
+select is(private.staff_normalize_login_phone('74478 63402'), null,
+  'an embedded space is rejected, not stripped');
+select is(private.staff_normalize_login_phone('+91-7447863402'), null,
+  'a hyphen is rejected, not stripped');
+select is(private.staff_normalize_login_phone('abc7447863402'), null,
+  'alphabetic text is rejected, not stripped');
+select is(private.staff_normalize_login_phone('(744) 786-3402'), null,
+  'formatted input is rejected, not stripped');
 
 -- -----------------------------------------------------------------------------
 -- D. Fixtures — SM001-shaped employment plus real staff-domain rows
@@ -167,7 +183,6 @@ values
   ('44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'SM001T', 'Executive', date '2026-01-01', true,
    (select id from public.attendance_policies where code = 'cred_test'), 'none', 'not_activated');
 
--- A second employee, used for the uniqueness contract.
 insert into public.profiles (id, display_name, phone_e164, status)
 values ('44cccccc-cccc-4ccc-8ccc-cccccccccccc', 'Other Staff', '+919876500001', 'active');
 insert into public.user_roles (user_id, role_id)
@@ -177,7 +192,7 @@ insert into public.staff_employment_profiles
 values
   ('44cccccc-cccc-4ccc-8ccc-cccccccccccc', 'SM002T', 'Executive', date '2026-01-01', false, 'none', 'not_activated');
 
--- Real staff-domain rows, so section K denies actual data rather than nothing.
+-- Real staff-domain rows, so the denial sections deny actual data.
 insert into public.attendance_days
   (staff_id, attendance_date, primary_status, attendance_policy_id)
 values
@@ -191,8 +206,7 @@ values
    (select id from public.attendance_policies where code = 'cred_test'));
 
 -- attendance_submissions and attendance_submission_events are produced by the
--- lifecycle trigger on attendance_events, so they are NOT inserted here; the
--- assertions below confirm the rows genuinely exist before revocation.
+-- lifecycle trigger on attendance_events, so they are NOT inserted here.
 
 insert into public.leave_types (code, display_name) values ('cred_test_casual', 'Casual');
 
@@ -249,12 +263,11 @@ select ok(
 );
 
 -- -----------------------------------------------------------------------------
--- F. Issuance publishes NOTHING until Auth has succeeded
+-- F1. Issuance publishes NOTHING until Auth has succeeded
 -- -----------------------------------------------------------------------------
 
 set local request.jwt.claim.sub = '44aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
--- The username is derived from the employment record, never from the caller.
 select is(
   (public.begin_staff_credential_operation(
      '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'issue', null, '9999999999') ->> 'loginUsername'),
@@ -294,11 +307,6 @@ select is(
   'a failed issuance leaves the staff member with no credentials'
 );
 select is(
-  (select login_phone_e164 from public.staff_employment_profiles where employee_code = 'SM001T'),
-  null,
-  'a failed issuance reserves no published login phone'
-);
-select is(
   (public.get_staff_credential_operation('44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') ->> 'status'),
   'failed',
   'the failure is durable and visible for retry'
@@ -310,10 +318,88 @@ select is(
   'issuance can simply be retried'
 );
 
--- Simulate the Auth identity the server would have created, with the SAME uuid.
+-- -----------------------------------------------------------------------------
+-- F2. The Auth identity now exists while the operation is STILL pending
+-- -----------------------------------------------------------------------------
+--
+-- This is the real window: the server creates the Auth user, then finalizes. A
+-- crash in between leaves a genuine JWT for an employee the application has not
+-- admitted.
+
 reset role;
 insert into auth.users (id, instance_id, phone, aud, role)
 values ('44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '00000000-0000-0000-0000-000000000000', '917447863402', 'authenticated', 'authenticated');
+
+select is(
+  (select id from auth.users where phone = '917447863402'),
+  '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
+  'the Auth user carries the EXACT existing staff UUID'
+);
+select is(
+  (select email from auth.users where id = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+  null,
+  'a phone login needs no email — no alias is fabricated'
+);
+
+-- -----------------------------------------------------------------------------
+-- F3. FAIL-CLOSED: that JWT grants nothing while issuance is unfinished
+-- -----------------------------------------------------------------------------
+
+set local role authenticated;
+set local request.jwt.claim.sub = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+select is(
+  (select access_state from public.staff_employment_profiles sep
+   where sep.staff_id = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+   limit 1),
+  null,
+  'UNFINISHED: the employee cannot even read their own employment row'
+);
+select is((select count(*)::integer from public.attendance_days), 0,
+  'UNFINISHED: direct SELECT on attendance_days returns nothing');
+select is((select count(*)::integer from public.attendance_events), 0,
+  'UNFINISHED: direct SELECT on attendance_events returns nothing');
+select is((select count(*)::integer from public.attendance_submissions), 0,
+  'UNFINISHED: direct SELECT on attendance_submissions returns nothing');
+select is((select count(*)::integer from public.leave_requests), 0,
+  'UNFINISHED: direct SELECT on leave_requests returns nothing');
+select is((select count(*)::integer from public.profiles), 0,
+  'UNFINISHED: direct SELECT on profiles returns nothing');
+select is((select count(*)::integer from public.salary_profiles), 0,
+  'UNFINISHED: direct SELECT on salary_profiles returns nothing');
+select ok(
+  not (select public.authorize('attendance.self')),
+  'UNFINISHED: no permission is granted'
+);
+select throws_ok(
+  $q$select public.sync_staff_access_states(null)$q$,
+  '42501', 'STAFF_ACCESS_NOT_ACTIVE',
+  'UNFINISHED: self-service staff RPCs refuse the actor'
+);
+
+-- And signing in cannot admit yourself.
+reset role;
+update auth.users set last_sign_in_at = now() where id = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+set local role authenticated;
+set local request.jwt.claim.sub = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+select is(
+  (public.record_staff_first_login() ->> 'accessState'),
+  'not_activated',
+  'UNFINISHED: record_staff_first_login does NOT promote not_activated'
+);
+
+reset role;
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'SM001T'),
+  'not_activated',
+  'UNFINISHED: the stored state is untouched by the sign-in attempt'
+);
+
+-- -----------------------------------------------------------------------------
+-- F4. Finalize, then the legitimate activation path
+-- -----------------------------------------------------------------------------
+
 set local role authenticated;
 set local request.jwt.claim.sub = '44aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
@@ -340,28 +426,11 @@ select is(
   '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
   'the staff UUID is unchanged by issuance'
 );
--- auth.users is not readable by `authenticated`, so these two are asserted as
--- the owner. They are facts about the identity, not about RLS.
-reset role;
-select is(
-  (select id from auth.users where phone = '917447863402'),
-  '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
-  'the Auth user carries the EXACT existing staff UUID'
-);
-select is(
-  (select email from auth.users where id = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
-  null,
-  'a phone login needs no email — no alias is fabricated'
-);
-set local role authenticated;
-set local request.jwt.claim.sub = '44aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-
 select is(
   public.get_staff_credential_operation('44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
   null,
   'a completed operation is no longer outstanding'
 );
-
 select is(
   (select count(*)::integer from public.staff_admin_events
    where staff_id = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
@@ -370,49 +439,15 @@ select is(
   'exactly one issuance audit record exists'
 );
 
--- -----------------------------------------------------------------------------
--- G. Uniqueness and the missing-phone instruction
--- -----------------------------------------------------------------------------
-
-reset role;
-update public.profiles set phone_e164 = '+917447863402'
-where id = '44cccccc-cccc-4ccc-8ccc-cccccccccccc';
-set local role authenticated;
-set local request.jwt.claim.sub = '44aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-
-select throws_ok(
-  $q$select public.begin_staff_credential_operation('44cccccc-cccc-4ccc-8ccc-cccccccccccc', 'issue')$q$,
-  'P0001', 'STAFF_LOGIN_PHONE_CONFLICT',
-  'a second staff member cannot claim the same login number'
-);
-
-reset role;
-update public.profiles set phone_e164 = null where id = '44cccccc-cccc-4ccc-8ccc-cccccccccccc';
-set local role authenticated;
-set local request.jwt.claim.sub = '44aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-
-select throws_ok(
-  $q$select public.begin_staff_credential_operation('44cccccc-cccc-4ccc-8ccc-cccccccccccc', 'issue')$q$,
-  'P0001', 'STAFF_LOGIN_PHONE_MISSING',
-  'issuance refuses when the employment record has no valid mobile number'
-);
-
--- -----------------------------------------------------------------------------
--- H. credentials_ready becomes active ONLY after a genuine sign-in
--- -----------------------------------------------------------------------------
-
+-- credentials_ready is still not admitted: only a real first login is.
 set local request.jwt.claim.sub = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
-select is(
-  (public.record_staff_first_login() ->> 'accessState'),
-  'credentials_ready',
-  'with no sign-in evidence the state does not move'
+select is((select count(*)::integer from public.attendance_days), 0,
+  'CREDENTIALS_READY: protected data is still closed');
+select ok(
+  not (select public.authorize('attendance.self')),
+  'CREDENTIALS_READY: no permission yet'
 );
-
-reset role;
-update auth.users set last_sign_in_at = now() where id = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-set local role authenticated;
-set local request.jwt.claim.sub = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
 select is(
   (public.record_staff_first_login() ->> 'accessState'),
@@ -435,9 +470,6 @@ set local request.jwt.claim.sub = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 -- -----------------------------------------------------------------------------
 -- I. An ACTIVE staff member really can read their own staff-domain rows
 -- -----------------------------------------------------------------------------
---
--- Asserted first so section K proves a change in behaviour rather than a
--- permission that never worked.
 
 select ok((select count(*) from public.attendance_days) > 0,
   'active staff can read their own attendance days');
@@ -467,10 +499,37 @@ select ok(
 );
 
 -- -----------------------------------------------------------------------------
--- J. Revoke denies IMMEDIATELY, before the Auth step
+-- G. Uniqueness and the missing-phone instruction
 -- -----------------------------------------------------------------------------
 
 set local request.jwt.claim.sub = '44aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+reset role;
+update public.profiles set phone_e164 = '+917447863402'
+where id = '44cccccc-cccc-4ccc-8ccc-cccccccccccc';
+set local role authenticated;
+set local request.jwt.claim.sub = '44aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select throws_ok(
+  $q$select public.begin_staff_credential_operation('44cccccc-cccc-4ccc-8ccc-cccccccccccc', 'issue')$q$,
+  'P0001', 'STAFF_LOGIN_PHONE_CONFLICT',
+  'a second staff member cannot claim the same login number'
+);
+
+reset role;
+update public.profiles set phone_e164 = null where id = '44cccccc-cccc-4ccc-8ccc-cccccccccccc';
+set local role authenticated;
+set local request.jwt.claim.sub = '44aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select throws_ok(
+  $q$select public.begin_staff_credential_operation('44cccccc-cccc-4ccc-8ccc-cccccccccccc', 'issue')$q$,
+  'P0001', 'STAFF_LOGIN_PHONE_MISSING',
+  'issuance refuses when the employment record has no valid mobile number'
+);
+
+-- -----------------------------------------------------------------------------
+-- J1. Revoke denies IMMEDIATELY, before the Auth step
+-- -----------------------------------------------------------------------------
 
 select throws_ok(
   $q$select public.begin_staff_credential_operation('44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'revoke', 'x')$q$,
@@ -514,11 +573,43 @@ select is(
 );
 
 -- -----------------------------------------------------------------------------
+-- J2. SERIALIZATION — an unresolved operation refuses every other one
+-- -----------------------------------------------------------------------------
+
+select throws_ok(
+  $q$select public.begin_staff_credential_operation(
+      '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'reactivate', 'let them back in')$q$,
+  'P0001', 'STAFF_CREDENTIAL_OPERATION_BLOCKED',
+  'an unresolved revoke REFUSES reactivation — no silent race'
+);
+select throws_ok(
+  $q$select public.begin_staff_credential_operation(
+      '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'password_reset')$q$,
+  'P0001', 'STAFF_CREDENTIAL_OPERATION_BLOCKED',
+  'an unresolved revoke refuses a password reset'
+);
+select throws_ok(
+  $q$select public.begin_staff_credential_operation(
+      '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'change_phone', 'move it', '9812345678')$q$,
+  'P0001', 'STAFF_CREDENTIAL_OPERATION_BLOCKED',
+  'an unresolved revoke refuses a phone change'
+);
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'SM001T'),
+  'revoked',
+  'every refusal left the account closed'
+);
+
+-- Retrying the SAME operation is the way forward.
+select lives_ok(
+  $q$select public.begin_staff_credential_operation(
+      '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'revoke', 'Left the company')$q$,
+  'the same operation can be retried'
+);
+
+-- -----------------------------------------------------------------------------
 -- K. THE CORE PROOF — a revoked staff member with a valid JWT reads NOTHING
 -- -----------------------------------------------------------------------------
---
--- Direct table SELECTs through RLS, with the revoked staff member's own claim
--- set. This is the path a stale access token would take.
 
 set local request.jwt.claim.sub = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
@@ -583,6 +674,13 @@ select is(
   (select access_state from public.staff_employment_profiles where employee_code = 'SM001T'),
   'revoked',
   'sync does NOT flip a revoked account back to active on sign-in evidence'
+);
+
+-- Finish the revoke so the employee is no longer blocked by it.
+select lives_ok(
+  $q$select public.complete_staff_credential_operation(
+      (public.get_staff_credential_operation('44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') ->> 'operationId')::uuid)$q$,
+  'the revoke operation is finalized once sessions were invalidated'
 );
 
 -- -----------------------------------------------------------------------------
@@ -695,14 +793,9 @@ select is(
   'active',
   'a reset does not change the access state'
 );
-select is(
-  (select login_phone_e164 from public.staff_employment_profiles where employee_code = 'SM001T'),
-  '+917447863402',
-  'a reset preserves the login phone'
-);
 
 -- -----------------------------------------------------------------------------
--- O. Changing the login phone cannot drift
+-- O. An unresolved change_phone CANNOT be escaped by reactivation
 -- -----------------------------------------------------------------------------
 
 select is(
@@ -717,17 +810,19 @@ select is(
   'begin does NOT publish the new number while Auth still has the old one'
 );
 
+-- Fail-closed BEFORE Auth is touched, so safety never depends on a later call.
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'SM001T'),
+  'revoked',
+  'begin closes access BEFORE the Auth call, not after it fails'
+);
+
 select is(
   (public.fail_staff_credential_operation(
      (public.get_staff_credential_operation('44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') ->> 'operationId')::uuid,
      'ban refused') ->> 'failClosed'),
   'true',
-  'an incomplete phone change fails closed'
-);
-select is(
-  (select access_state from public.staff_employment_profiles where employee_code = 'SM001T'),
-  'revoked',
-  'access is revoked rather than left ambiguous between old and new numbers'
+  'the failure record confirms the account is closed'
 );
 select is(
   (select count(*)::integer from public.staff_admin_events
@@ -737,17 +832,27 @@ select is(
   'a failed phone change writes no success audit'
 );
 
-select lives_ok(
+-- THE BLOCKER: reactivation must NOT be a way out while Auth may hold the new
+-- number and the application still shows the old one.
+select throws_ok(
   $q$select public.begin_staff_credential_operation(
-      '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'reactivate', 'Recovered')$q$,
-  'the account can be reactivated after a failed phone change'
+      '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'reactivate', 'just let them in')$q$,
+  'P0001', 'STAFF_CREDENTIAL_OPERATION_BLOCKED',
+  'an unresolved change_phone REFUSES reactivation'
 );
-select lives_ok(
-  $q$select public.complete_staff_credential_operation(
-      (public.get_staff_credential_operation('44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') ->> 'operationId')::uuid)$q$,
-  'reactivation completes'
+select throws_ok(
+  $q$select public.begin_staff_credential_operation(
+      '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'password_reset')$q$,
+  'P0001', 'STAFF_CREDENTIAL_OPERATION_BLOCKED',
+  'an unresolved change_phone refuses a password reset'
+);
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'SM001T'),
+  'revoked',
+  'the account stays closed while the phone change is unresolved'
 );
 
+-- Recovery is to retry the SAME change through to completion.
 select lives_ok(
   $q$select public.begin_staff_credential_operation(
       '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'change_phone', 'New number', '9812345678')$q$,
@@ -774,6 +879,16 @@ select is(
   (select phone_e164 from public.profiles where id = '44bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
   '+919812345678',
   'the employment phone follows the login phone in the same transaction'
+);
+select is(
+  (select access_state from public.staff_employment_profiles where employee_code = 'SM001T'),
+  'active',
+  'finalize restores the access the begin step closed'
+);
+select is(
+  (select access_revoked_at from public.staff_employment_profiles where employee_code = 'SM001T'),
+  null,
+  'the temporary revocation is cleared on finalize'
 );
 select is(
   (select staff_id from public.staff_employment_profiles where employee_code = 'SM001T'),

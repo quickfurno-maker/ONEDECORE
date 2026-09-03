@@ -167,12 +167,27 @@ async function runCredentialOperation(input: {
       input.secret ?? ""
     );
 
-    // Record the failure durably. The ledger is what makes the half-finished
-    // operation visible and retryable instead of invisible.
-    await rpc.rpc("fail_staff_credential_operation", {
+    // Record the failure durably — and CHECK that the record was written. Saying
+    // "this is safely recorded" without confirming it would be the same class of
+    // mistake as the unchecked ban call.
+    //
+    // Safety itself does not depend on this call: `revoke` and `change_phone`
+    // close access at BEGIN, before Auth is touched, and the unresolved row that
+    // blocks every other operation was written there too.
+    const { error: failError } = await rpc.rpc("fail_staff_credential_operation", {
       p_operation_id: operationId,
       p_error: detail ?? null,
     });
+
+    if (failError) {
+      throw new StaffError({
+        code: "STAFF_RPC_FAILED",
+        message:
+          "Supabase Auth did not accept the change AND the failure could not be recorded. Access is fail-closed; reload this staff member before retrying.",
+        httpStatus: 502,
+        details: detail,
+      });
+    }
 
     throw new StaffError({
       code: "STAFF_INVITE_FAILED",

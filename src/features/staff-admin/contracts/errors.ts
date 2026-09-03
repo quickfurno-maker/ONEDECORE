@@ -26,6 +26,8 @@ export const STAFF_ERROR_CODES = [
   // Phone-login credential lifecycle.
   "STAFF_CREDENTIALS_UNAUTHORIZED",
   "STAFF_CREDENTIALS_NOT_ISSUED",
+  "STAFF_CREDENTIAL_OPERATION_BLOCKED",
+  "STAFF_ACCESS_NOT_ACTIVE",
   "STAFF_LOGIN_PHONE_INVALID",
   "STAFF_LOGIN_PHONE_CONFLICT",
   "STAFF_LOGIN_PHONE_UNCHANGED",
@@ -94,6 +96,25 @@ export function staffErrorFromPostgresMessage(
     return new StaffError({
       code: "STAFF_CREDENTIALS_UNAUTHORIZED",
       message: "Only a Super Admin can manage staff login credentials.",
+      httpStatus: 403,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_credential_operation_blocked")) {
+    return new StaffError({
+      code: "STAFF_CREDENTIAL_OPERATION_BLOCKED",
+      message:
+        "Another credential operation for this staff member has not finished. Complete or retry that one first.",
+      httpStatus: 409,
+      details: message,
+    });
+  }
+
+  if (normalised.includes("staff_access_not_active")) {
+    return new StaffError({
+      code: "STAFF_ACCESS_NOT_ACTIVE",
+      message: "This staff member does not have active application access.",
       httpStatus: 403,
       details: message,
     });
