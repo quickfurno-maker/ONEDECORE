@@ -437,6 +437,44 @@ describe("finalization and retry share ONE builder", () => {
     assert.doesNotMatch(finalization, /quotation_tax_profiles/);
   });
 
+  test("the retry action builds the payload INSIDE its try, so it cannot escape", () => {
+    // buildQuotationPdfData fails closed by throwing. Called outside the try,
+    // the throw left the server action as an unhandled rejection: the operator
+    // saw a generic framework error instead of the reason, and the redaction
+    // in the catch was bypassed.
+    const sendSource = readFileSync(
+      new URL("../server/quotation-send-actions.ts", import.meta.url),
+      "utf8"
+    );
+    const block = sendSource.slice(
+      sendSource.indexOf("export async function ensureQuotationPdfAction")
+    );
+    const tryAt = block.indexOf("try {");
+    const buildAt = block.indexOf("buildQuotationPdfData(");
+    assert.ok(tryAt > 0 && buildAt > tryAt, "the build must sit inside the try block");
+    assert.match(block, /catch \(err\)[\s\S]{0,200}redactCapabilitySecrets/);
+    // The old dead branch tested a falsy return the builder can never produce.
+    assert.doesNotMatch(block, /if \(!pdfData\)/);
+  });
+
+  test("the finalized values are read on their own, not from the PDF payload", () => {
+    // Sourcing them from the payload meant a transient render failure reported
+    // a fabricated timestamp and a grand total of 0 for a quotation that was
+    // genuinely finalized.
+    const finalizedRead = finalization.slice(
+      finalization.indexOf("const { data: finalizedRow }")
+    );
+    assert.match(finalizedRead.slice(0, 400), /select\('finalized_at, grand_total_paise'\)/);
+    assert.ok(
+      finalization.indexOf("const { data: finalizedRow }") <
+        finalization.indexOf("buildQuotationPdfData("),
+      "the finalized facts must be read BEFORE the render is attempted"
+    );
+    const tryBlock = finalization.slice(finalization.indexOf("try {"));
+    assert.doesNotMatch(tryBlock.slice(0, 600), /finalizedAt = pdfData/);
+    assert.doesNotMatch(tryBlock.slice(0, 600), /grandTotalPaise = pdfData/);
+  });
+
   test("a render failure never reverses the finalization", () => {
     assert.match(finalization, /retry is available/);
   });
@@ -644,7 +682,10 @@ const RPC_PAYLOAD = {
   grand_total_paise: 18509775,
   inclusions: ["Site supervision"],
   exclusions: ["Civil work"],
-  terms_and_conditions: ["50% advance"],
+  // The REAL shape: quotation_versions.terms_and_conditions is a TEXT
+  // column, not text[]. The previous array fixture hid a mapping bug that
+  // dropped the terms entirely on the client acceptance page.
+  terms_and_conditions: "50% advance, balance on delivery",
   has_pdf: true,
   is_accepted: false,
   accepted_at: null,
@@ -689,6 +730,28 @@ describe("the client portal contract matches the RPC exactly", () => {
     assert.equal(room.items[0].widthFt, 11.25);
     assert.equal(room.items[0].heightFt, 7);
     assert.equal(room.items[0].areaSqFt, 78.75);
+  });
+
+  test("terms come through even though the column is TEXT, not text[]", () => {
+    // inclusions/exclusions are text[]; terms is a single TEXT column. Treating
+    // them all as arrays produced an empty list, so the client saw no terms on
+    // the page where they accept them.
+    assert.deepEqual([...dto.termsAndConditions], ["50% advance, balance on delivery"]);
+    assert.deepEqual([...dto.inclusions], ["Site supervision"]);
+    assert.deepEqual([...dto.exclusions], ["Civil work"]);
+  });
+
+  test("an array of terms is still accepted", () => {
+    const asArray = mapClientQuotation({
+      ...RPC_PAYLOAD,
+      terms_and_conditions: ["A", "B"],
+    });
+    assert.deepEqual([...asArray.termsAndConditions], ["A", "B"]);
+  });
+
+  test("empty terms stay empty rather than becoming a blank bullet", () => {
+    const empty = mapClientQuotation({ ...RPC_PAYLOAD, terms_and_conditions: "   " });
+    assert.equal(empty.termsAndConditions.length, 0);
   });
 
   test("a payload missing required identity is refused, not half-rendered", () => {

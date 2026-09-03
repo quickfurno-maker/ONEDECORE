@@ -94,16 +94,30 @@ export async function finalizeQuotationDraftAction(params: {
   const { buildQuotationPdfData } = await import("./quotation-pdf-payload");
   const { ensureQuotationPdfArtifact } = await import("./quotation-pdf-generator");
 
+  // The finalized facts are read on their OWN, before the render. Sourcing them
+  // from the PDF payload meant a transient render failure reported a fabricated
+  // `new Date()` and a grand total of 0 for a quotation that was in fact
+  // finalized with a real timestamp and a real total.
   let finalizedAt: string | null = null;
   let grandTotalPaise = 0;
+
+  const { data: finalizedRow } = await supabase
+    .from('quotation_versions')
+    .select('finalized_at, grand_total_paise')
+    .eq('id', params.versionId)
+    .single();
+
+  if (finalizedRow) {
+    const row = finalizedRow as { finalized_at?: string | null; grand_total_paise?: number | string | null };
+    finalizedAt = row.finalized_at ?? null;
+    grandTotalPaise = Number(row.grand_total_paise ?? 0);
+  }
 
   try {
     const pdfData = await buildQuotationPdfData(
       supabase as unknown as Parameters<typeof buildQuotationPdfData>[0],
       { quotationId: params.quotationId, versionId: params.versionId }
     );
-    finalizedAt = pdfData.finalized_at;
-    grandTotalPaise = pdfData.grand_total_paise;
     await ensureQuotationPdfArtifact(pdfData);
   } catch (pdfErr) {
     // The quotation IS finalized; only the artifact is missing. Reversing a

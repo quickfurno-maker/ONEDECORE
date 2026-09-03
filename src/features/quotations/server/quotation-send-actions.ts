@@ -506,21 +506,17 @@ export async function ensureQuotationPdfAction(
     };
   }
 
-  const { buildQuotationPdfData } = await import("./quotation-pdf-payload.ts");
-  const pdfData = await buildQuotationPdfData(
-    supabase as unknown as Parameters<typeof buildQuotationPdfData>[0],
-    { quotationId: params.quotationId, versionId: params.versionId }
-  );
-
-  if (!pdfData) {
-    return {
-      success: false,
-      status: "failure",
-      message: "Finalized quotation content could not be read.",
-    };
-  }
-
+  // The payload build is INSIDE the try. It fails closed by throwing, so
+  // calling it outside sent the throw out of the server action as an unhandled
+  // rejection: the operator got a generic framework error on the retry button
+  // instead of the reason, and the redaction below was bypassed.
   try {
+    const { buildQuotationPdfData } = await import("./quotation-pdf-payload.ts");
+    const pdfData = await buildQuotationPdfData(
+      supabase as unknown as Parameters<typeof buildQuotationPdfData>[0],
+      { quotationId: params.quotationId, versionId: params.versionId }
+    );
+
     const { ensureQuotationPdfArtifact } = await import("./quotation-pdf-generator.ts");
     const result = await ensureQuotationPdfArtifact(pdfData);
     return {

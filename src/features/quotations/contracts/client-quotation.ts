@@ -112,6 +112,20 @@ function stringList(value: unknown): readonly string[] {
 }
 
 /**
+ * `inclusions` and `exclusions` are text[]; `terms_and_conditions` is a single
+ * TEXT column. Running the text one through an array-only helper silently
+ * produced an empty list, so the client saw NO terms on the very page where
+ * they accept them.
+ */
+function textOrList(value: unknown): readonly string[] {
+  if (Array.isArray(value)) {
+    return value.map((entry) => String(entry));
+  }
+  const single = value == null ? "" : String(value).trim();
+  return single.length > 0 ? [single] : [];
+}
+
+/**
  * Maps the RPC payload onto the client DTO.
  *
  * Required identity and commercial fields are checked: a missing quotation
@@ -203,7 +217,7 @@ export function mapClientQuotation(payload: unknown): ClientQuotation {
     paymentSchedule,
     inclusions: stringList(data.inclusions),
     exclusions: stringList(data.exclusions),
-    termsAndConditions: stringList(data.terms_and_conditions),
+    termsAndConditions: textOrList(data.terms_and_conditions),
     hasPdf: data.has_pdf === true,
     isAccepted: data.is_accepted === true,
     acceptedAt: optionalStr(data.accepted_at),
