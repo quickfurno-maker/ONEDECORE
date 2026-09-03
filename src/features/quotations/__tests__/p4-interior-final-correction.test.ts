@@ -442,10 +442,7 @@ describe("finalization and retry share ONE builder", () => {
     // the throw left the server action as an unhandled rejection: the operator
     // saw a generic framework error instead of the reason, and the redaction
     // in the catch was bypassed.
-    const sendSource = readFileSync(
-      new URL("../server/quotation-send-actions.ts", import.meta.url),
-      "utf8"
-    );
+    const sendSource = read("src/features/quotations/server/quotation-send-actions.ts");
     const block = sendSource.slice(
       sendSource.indexOf("export async function ensureQuotationPdfAction")
     );
@@ -691,6 +688,248 @@ const RPC_PAYLOAD = {
   accepted_at: null,
 };
 
+describe("the client acceptance DTO fails closed", () => {
+  // A customer legally accepts this document. Every coercion that turned a
+  // missing field into a plausible default (0, "Tax", the quantity basis) had
+  // to go: a read-model regression must refuse to render, not render a
+  // confident wrong number.
+
+  const withoutKey = (key: string) => {
+    const clone: Record<string, unknown> = { ...RPC_PAYLOAD };
+    delete clone[key];
+    return clone;
+  };
+
+  const firstItem = (patch: Record<string, unknown>) => ({
+    ...RPC_PAYLOAD,
+    sections: [
+      {
+        ...RPC_PAYLOAD.sections[0],
+        items: [{ ...RPC_PAYLOAD.sections[0].items[0], ...patch }],
+      },
+    ],
+  });
+
+  const firstRoom = (patch: Record<string, unknown>) => ({
+    ...RPC_PAYLOAD,
+    sections: [{ ...RPC_PAYLOAD.sections[0], ...patch }],
+  });
+
+  test("the real RPC payload still maps end to end", () => {
+    const dto = mapClientQuotation(RPC_PAYLOAD);
+    assert.equal(dto.grandTotalPaise, 18509775);
+    assert.equal(dto.rooms[0].items[0].calculationBasis, "area");
+    assert.equal(dto.rooms[0].items[0].areaSqFt, 78.75);
+    assert.equal(dto.taxProfileName, "GST 18% (frozen)");
+  });
+
+  for (const key of [
+    "quotation_id",
+    "quotation_version_id",
+    "quotation_number",
+    "version_number",
+    "finalized_at",
+    "client_name",
+    "client_phone",
+    "subtotal_paise",
+    "discount_total_paise",
+    "taxable_base_paise",
+    "tax_profile_name",
+    "tax_rate_percentage",
+    "tax_total_paise",
+    "grand_total_paise",
+    "sections",
+  ]) {
+    test(`a missing ${key} is refused, not defaulted`, () => {
+      assert.throws(
+        () => mapClientQuotation(withoutKey(key)),
+        /CLIENT_QUOTATION_CONTRACT/
+      );
+    });
+  }
+
+  test("a missing tax rate does not become zero", () => {
+    assert.throws(
+      () => mapClientQuotation({ ...RPC_PAYLOAD, tax_rate_percentage: null }),
+      /tax_rate_percentage is missing/
+    );
+  });
+
+  test("a missing tax profile name does not become \"Tax\"", () => {
+    assert.throws(
+      () => mapClientQuotation({ ...RPC_PAYLOAD, tax_profile_name: "  " }),
+      /tax_profile_name is missing/
+    );
+  });
+
+  test("non-integer money is refused", () => {
+    assert.throws(
+      () => mapClientQuotation({ ...RPC_PAYLOAD, grand_total_paise: "18509775.5" }),
+      /grand_total_paise is not integer paise/
+    );
+  });
+
+  test("unparseable money is refused rather than read as zero", () => {
+    assert.throws(
+      () => mapClientQuotation({ ...RPC_PAYLOAD, subtotal_paise: "not-a-number" }),
+      /subtotal_paise is not a number/
+    );
+  });
+
+  test("negative money is refused", () => {
+    assert.throws(
+      () => mapClientQuotation({ ...RPC_PAYLOAD, tax_total_paise: -1 }),
+      /tax_total_paise is negative/
+    );
+  });
+
+  test("an unknown basis is refused, never coerced to quantity", () => {
+    assert.throws(
+      () => mapClientQuotation(firstItem({ calculation_basis: "per_running_foot" })),
+      /calculation_basis is not a known basis/
+    );
+  });
+
+  test("a missing basis is refused", () => {
+    assert.throws(
+      () => mapClientQuotation(firstItem({ calculation_basis: null })),
+      /calculation_basis is missing/
+    );
+  });
+
+  for (const dim of ["width_ft", "height_ft", "area_sqft"]) {
+    test(`an AREA item missing ${dim} is refused`, () => {
+      assert.throws(
+        () => mapClientQuotation(firstItem({ [dim]: null })),
+        new RegExp(`${dim} is missing`)
+      );
+    });
+
+    test(`an AREA item with a zero ${dim} is refused`, () => {
+      assert.throws(
+        () => mapClientQuotation(firstItem({ [dim]: "0" })),
+        new RegExp(`${dim} must be greater than zero`)
+      );
+    });
+  }
+
+  test("a missing item line total is refused", () => {
+    assert.throws(
+      () => mapClientQuotation(firstItem({ line_total_paise: null })),
+      /line_total_paise is missing/
+    );
+  });
+
+  test("a missing item id, name, quantity or unit is refused", () => {
+    for (const patch of [
+      { id: null },
+      { item_name: "" },
+      { quantity: null },
+      { unit_of_measure: "  " },
+      { unit_rate_paise: null },
+    ]) {
+      assert.throws(() => mapClientQuotation(firstItem(patch)), /CLIENT_QUOTATION_CONTRACT/);
+    }
+  });
+
+  test("a missing room id, name, subtotal or items array is refused", () => {
+    for (const patch of [
+      { id: null },
+      { section_name: "" },
+      { subtotal_paise: null },
+      { items: null },
+    ]) {
+      assert.throws(() => mapClientQuotation(firstRoom(patch)), /CLIENT_QUOTATION_CONTRACT/);
+    }
+  });
+
+  test("sections must be an array, not merely truthy", () => {
+    assert.throws(
+      () => mapClientQuotation({ ...RPC_PAYLOAD, sections: "GUEST ROOM" }),
+      /sections is missing/
+    );
+  });
+
+  test("a milestone missing its amount is refused", () => {
+    assert.throws(
+      () =>
+        mapClientQuotation({
+          ...RPC_PAYLOAD,
+          payment_schedule: [{ id: "m1", milestone_name: "Advance", amount_paise: null }],
+        }),
+      /amount_paise is missing/
+    );
+  });
+
+  test("genuinely optional fields stay optional", () => {
+    const lean: Record<string, unknown> = { ...RPC_PAYLOAD };
+    for (const key of [
+      "title",
+      "scope_summary",
+      "client_email",
+      "property_address",
+      "inclusions",
+      "exclusions",
+      "terms_and_conditions",
+      "accepted_at",
+    ]) {
+      delete lean[key];
+    }
+    const dto = mapClientQuotation(lean);
+    assert.equal(dto.title, undefined);
+    assert.equal(dto.scopeSummary, undefined);
+    assert.equal(dto.propertyAddress, undefined);
+    assert.deepEqual([...dto.termsAndConditions], []);
+    assert.deepEqual([...dto.inclusions], []);
+    // The commercial figures are untouched by the optional fields being absent.
+    assert.equal(dto.grandTotalPaise, 18509775);
+  });
+
+  test("a room of purely non-area work keeps a zero area subtotal", () => {
+    const dto = mapClientQuotation(
+      firstRoom({
+        area_subtotal_sqft: 0,
+        items: [RPC_PAYLOAD.sections[0].items[1]],
+      })
+    );
+    assert.equal(dto.rooms[0].areaSubtotalSqFt, 0);
+    assert.equal(dto.rooms[0].items[0].calculationBasis, "quantity");
+  });
+});
+
+describe("the finalized view respects acceptance and contains failures", () => {
+  const view = read(FINALIZED_VIEW);
+
+  test("Create Revision is hidden once the client has accepted", () => {
+    // The database refuses with QUOTATION_ACCEPTED_IMMUTABLE, so an accepted
+    // quotation offering the button invited an action that can only fail.
+    assert.match(view, /\{canEdit && !isAccepted \? \(/);
+    assert.doesNotMatch(view, /\{canEdit \? \(/);
+  });
+
+  test("an accepted quotation stays readable and PDF-verifiable", () => {
+    // Only the two mutating affordances are withdrawn.
+    assert.match(view, /canSend && !isAccepted/);
+    const revisionAt = view.indexOf("Create Revision");
+    const gateAt = view.indexOf("canEdit && !isAccepted");
+    assert.ok(gateAt > 0 && gateAt < revisionAt, "the gate must precede the button");
+  });
+
+  test("the action runner contains an unexpected rejection", () => {
+    const runner = view.slice(view.indexOf("const run = ("), view.indexOf("const issueLink"));
+    assert.match(runner, /try \{/);
+    assert.match(runner, /\} catch \{/);
+    assert.match(runner, /Something went wrong/);
+    // A raw rejection can carry a token, SQL, or service-role detail.
+    assert.doesNotMatch(runner, /catch \(\w+\)[\s\S]*?String\(/);
+    assert.doesNotMatch(runner, /err\.message/);
+    assert.ok(
+      runner.indexOf("try {") < runner.indexOf("await work()"),
+      "the awaited work must sit inside the try"
+    );
+  });
+});
+
 describe("the client portal contract matches the RPC exactly", () => {
   const dto = mapClientQuotation(RPC_PAYLOAD);
 
@@ -710,14 +949,18 @@ describe("the client portal contract matches the RPC exactly", () => {
     assert.equal(dto.taxProfileName, "GST 18% (frozen)");
     assert.equal(dto.taxRatePercentage, 18);
 
-    // A payload without a rate must report 0, never a fabricated 18.
-    const withoutRate = mapClientQuotation({
-      ...RPC_PAYLOAD,
-      tax_rate_percentage: null,
-      tax_profile_name: null,
-    });
-    assert.equal(withoutRate.taxRatePercentage, 0);
-    assert.equal(withoutRate.taxProfileName, "Tax");
+    // A payload without a rate is now REFUSED outright. Reporting 0 and "Tax"
+    // was still fabrication: it showed the client a complete-looking document
+    // asserting a zero tax on an amount they were about to accept.
+    assert.throws(
+      () =>
+        mapClientQuotation({
+          ...RPC_PAYLOAD,
+          tax_rate_percentage: null,
+          tax_profile_name: null,
+        }),
+      /CLIENT_QUOTATION_CONTRACT/
+    );
 
     assert.doesNotMatch(read(PORTAL), /\|\| 18/);
   });

@@ -9,7 +9,7 @@
 -- row still matches the dimensions.
 
 begin;
-select plan(79);
+select plan(114);
 
 -- Test helpers are defined BEFORE the role switch below: once the session is
 -- `authenticated` it has no CREATE on schema public, which is correct.
@@ -795,6 +795,314 @@ select ok(
    where n.nspname = 'public' and p.proname = 'get_quotation_by_capability')
   like '%v_version.tax_profile_snapshot->>''display_name''%',
   'the client read model uses the frozen tax snapshot'
+);
+
+
+-- -----------------------------------------------------------------------------
+-- V. A revision carries AREA / QUANTITY / FIXED forward intact
+-- -----------------------------------------------------------------------------
+--
+-- `create_quotation_revision` predates the interior columns. It cloned every
+-- other item column and silently dropped calculation_basis, width_ft and
+-- height_ft, so revising a 10.5 x 2.5 sq.ft AREA carcass produced a `quantity`
+-- item with NULL dimensions: the money survived while the measurement that
+-- justified it disappeared. This is a BEHAVIOURAL proof over the real RPCs,
+-- not a source-string check.
+
+reset role;
+
+insert into public.contacts (id, display_name, status)
+values ('45444444-4444-4444-8444-444444444444', 'Revision Client', 'active');
+
+insert into public.contact_channels (contact_id, channel_type, address_normalized, is_primary)
+values ('45444444-4444-4444-8444-444444444444', 'phone', '+919812345672', true);
+
+insert into public.leads (
+  id, contact_id, status, assigned_to, submitted_name, service_code,
+  property_code, timeline_code, primary_source_id, entry_method
+)
+select
+  '45555555-5555-4555-8555-555555555555', '45444444-4444-4444-8444-444444444444',
+  'assigned', '45111111-1111-4111-8111-111111111111', 'Revision Client',
+  'complete-home-interiors', 'apartment-2bhk', 'immediate', id, 'manual'
+from public.lead_sources where code = 'manual_entry';
+
+-- Helpers are defined while still superuser: created under `authenticated`
+-- they fail with permission denied for schema public.
+create or replace function public.test_p4_rev_quotation_id() returns uuid
+language sql stable as $fn$
+  select id from public.quotations
+  where lead_id = '45555555-5555-4555-8555-555555555555';
+$fn$;
+
+create or replace function public.test_p4_rev_lock() returns bigint
+language sql stable as $fn$
+  select lock_version from public.quotation_versions
+  where quotation_id = public.test_p4_rev_quotation_id() and is_current_draft = true;
+$fn$;
+
+create or replace function public.test_p4_rev_source_id() returns uuid
+language sql stable as $fn$
+  select id from public.quotation_versions
+  where quotation_id = public.test_p4_rev_quotation_id() and version_number = 1;
+$fn$;
+
+create or replace function public.test_p4_rev_item(p_version_id uuid, p_name text)
+returns public.quotation_items language sql stable as $fn$
+  select i.* from public.quotation_items i
+  join public.quotation_sections s on s.id = i.section_id
+  where s.quotation_version_id = p_version_id and i.item_name = p_name;
+$fn$;
+
+create or replace function public.test_p4_rev_new_id() returns uuid
+language sql stable as $fn$
+  select id from public.quotation_versions
+  where quotation_id = public.test_p4_rev_quotation_id() and version_number = 2;
+$fn$;
+
+select set_config('request.jwt.claim.sub', '45111111-1111-4111-8111-111111111111', true);
+select set_config('role', 'authenticated', true);
+
+select lives_ok(
+  $q$select public.create_quotation_draft(
+      '45555555-5555-4555-8555-555555555555'::uuid, 'Revision Source'::text, 'p4_rev_001'::text)$q$,
+  'REVISION: a source quotation draft is created'
+);
+
+-- The three bases, saved through the real server-authoritative RPC.
+select lives_ok(
+  $q$select public.save_quotation_draft_items(
+      public.test_p4_rev_quotation_id(),
+      public.test_p4_rev_lock(),
+      jsonb_build_array(
+        jsonb_build_object(
+          'sectionName', 'MASTER BEDROOM',
+          'items', jsonb_build_array(
+            jsonb_build_object('itemName','Carcass','calculationBasis','area','widthFt','10.5','heightFt','2.5','unitRatePaise',155000),
+            jsonb_build_object('itemName','Tandem','calculationBasis','quantity','quantity','5','unitOfMeasure','nos','unitRatePaise',450000),
+            jsonb_build_object('itemName','TV Unit','calculationBasis','fixed','unitRatePaise',1480000)
+          )
+        )
+      ))$q$,
+  'REVISION: AREA, QUANTITY and FIXED are saved on the source'
+);
+
+-- Promoted to finalized directly, exactly as section T does. The subject here
+-- is the revision clone, not the finalization gate, and finalization would
+-- otherwise demand a full payment schedule fixture.
+reset role;
+update public.quotation_versions
+set status = 'finalized', is_current_draft = false, finalized_at = now()
+where id = public.test_p4_rev_source_id();
+select set_config('role', 'authenticated', true);
+
+select lives_ok(
+  $q$select public.create_quotation_revision(public.test_p4_rev_source_id(), 'p4_rev_key_001')$q$,
+  'REVISION: a revision is created from the finalized source'
+);
+
+-- The new draft.
+select is(
+  (select version_number from public.quotation_versions where id = public.test_p4_rev_new_id()),
+  2,
+  'REVISION: the new version is numbered 2'
+);
+select is(
+  (select status from public.quotation_versions where id = public.test_p4_rev_new_id()),
+  'draft',
+  'REVISION: the new version is a draft'
+);
+select ok(
+  (select is_current_draft from public.quotation_versions where id = public.test_p4_rev_new_id()),
+  'REVISION: the new version is the current, editable draft'
+);
+
+-- AREA stays AREA, with its exact dimensions.
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'Carcass')).calculation_basis,
+  'area',
+  'REVISION/AREA: basis is preserved, not defaulted to quantity'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'Carcass')).width_ft,
+  10.500::numeric,
+  'REVISION/AREA: width is cloned exactly'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'Carcass')).height_ft,
+  2.500::numeric,
+  'REVISION/AREA: height is cloned exactly'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'Carcass')).quantity,
+  26.250::numeric,
+  'REVISION/AREA: the derived area is preserved'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'Carcass')).unit_of_measure,
+  'sqft',
+  'REVISION/AREA: the unit is preserved'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'Carcass')).line_total_paise,
+  4068750::bigint,
+  'REVISION/AREA: the amount is unchanged'
+);
+
+-- QUANTITY stays QUANTITY, with null dimensions.
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'Tandem')).calculation_basis,
+  'quantity',
+  'REVISION/QUANTITY: basis is preserved'
+);
+select ok(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'Tandem')).width_ft is null,
+  'REVISION/QUANTITY: width stays null'
+);
+select ok(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'Tandem')).height_ft is null,
+  'REVISION/QUANTITY: height stays null'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'Tandem')).quantity,
+  5.000::numeric,
+  'REVISION/QUANTITY: the quantity is preserved'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'Tandem')).unit_of_measure,
+  'nos',
+  'REVISION/QUANTITY: the unit is preserved'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'Tandem')).line_total_paise,
+  2250000::bigint,
+  'REVISION/QUANTITY: the amount is unchanged'
+);
+
+-- FIXED stays FIXED: one unit, `fixed` UOM, rate equal to the amount.
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'TV Unit')).calculation_basis,
+  'fixed',
+  'REVISION/FIXED: basis is preserved'
+);
+select ok(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'TV Unit')).width_ft is null,
+  'REVISION/FIXED: width stays null'
+);
+select ok(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'TV Unit')).height_ft is null,
+  'REVISION/FIXED: height stays null'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'TV Unit')).quantity,
+  1.000::numeric,
+  'REVISION/FIXED: the quantity stays one'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'TV Unit')).unit_of_measure,
+  'fixed',
+  'REVISION/FIXED: the unit stays fixed'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'TV Unit')).unit_rate_paise,
+  (public.test_p4_rev_item(public.test_p4_rev_new_id(), 'TV Unit')).line_total_paise,
+  'REVISION/FIXED: the lump-sum rate still equals the amount'
+);
+
+-- The clone is additive: the finalized source is untouched.
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_source_id(), 'Carcass')).calculation_basis,
+  'area',
+  'REVISION: the finalized source item keeps its basis'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_source_id(), 'Carcass')).width_ft,
+  10.500::numeric,
+  'REVISION: the finalized source item keeps its width'
+);
+select is(
+  (public.test_p4_rev_item(public.test_p4_rev_source_id(), 'Carcass')).quantity,
+  26.250::numeric,
+  'REVISION: the finalized source item keeps its area'
+);
+select is(
+  (select status from public.quotation_versions where id = public.test_p4_rev_source_id()),
+  'finalized',
+  'REVISION: the source version is still finalized'
+);
+select ok(
+  not (select is_current_draft from public.quotation_versions where id = public.test_p4_rev_source_id()),
+  'REVISION: the source version is no longer the current draft'
+);
+select is(
+  (select count(*)::integer from public.quotation_items i
+   join public.quotation_sections s on s.id = i.section_id
+   where s.quotation_version_id = public.test_p4_rev_source_id()),
+  3,
+  'REVISION: the source still holds exactly its three items'
+);
+
+-- The staff read model shows the revision as an interior estimate again.
+select is(
+  ((public.get_quotation_draft(public.test_p4_rev_quotation_id())
+    -> 'version' -> 'sections' -> 0 -> 'items' -> 0 ->> 'calculationBasis')),
+  'area',
+  'REVISION: the draft read model reports AREA'
+);
+select is(
+  ((public.get_quotation_draft(public.test_p4_rev_quotation_id())
+    -> 'version' -> 'sections' -> 0 -> 'items' -> 0 ->> 'widthFt')::numeric),
+  10.500::numeric,
+  'REVISION: the draft read model reports the width'
+);
+select is(
+  ((public.get_quotation_draft(public.test_p4_rev_quotation_id())
+    -> 'version' -> 'sections' -> 0 -> 'items' -> 0 ->> 'heightFt')::numeric),
+  2.500::numeric,
+  'REVISION: the draft read model reports the height'
+);
+select is(
+  (select subtotal_paise from public.quotation_versions where id = public.test_p4_rev_new_id()),
+  7798750::bigint,
+  'REVISION: totals are recalculated from the cloned lines'
+);
+
+-- Acceptance still closes the door on any further revision.
+reset role;
+insert into public.quotation_access_grants
+  (id, quotation_id, quotation_version_id, derivation_nonce, capability_token_hash,
+   expires_at, created_by)
+select
+  '45ffffff-ffff-4fff-8fff-ffffffffffff',
+  public.test_p4_rev_quotation_id(),
+  public.test_p4_rev_source_id(),
+  repeat('7', 64),
+  repeat('6', 64),
+  now() + interval '7 days',
+  '45111111-1111-4111-8111-111111111111';
+
+insert into public.quotation_acceptances (
+  quotation_id, lead_id, quotation_version_id, access_grant_id,
+  accepted_by_name, accepted_at, credited_sales_executive_id,
+  taxable_base_paise, sales_achievement_month
+)
+select
+  public.test_p4_rev_quotation_id(),
+  '45555555-5555-4555-8555-555555555555',
+  public.test_p4_rev_source_id(),
+  '45ffffff-ffff-4fff-8fff-ffffffffffff',
+  'Revision Client',
+  now(),
+  '45111111-1111-4111-8111-111111111111',
+  7798750,
+  to_char(now(), 'YYYY-MM');
+select set_config('role', 'authenticated', true);
+
+select throws_ok(
+  $q$select public.create_quotation_revision(public.test_p4_rev_source_id(), 'p4_rev_key_002')$q$,
+  'P0001',
+  'QUOTATION_ACCEPTED_IMMUTABLE: Cannot create revision for an accepted quotation.',
+  'REVISION: an accepted quotation still refuses a new revision'
 );
 
 select * from finish();

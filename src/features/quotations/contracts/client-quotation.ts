@@ -82,24 +82,70 @@ export class ClientQuotationContractError extends Error {
   }
 }
 
-function num(value: unknown): number {
-  if (value == null) {
-    return 0;
+/**
+ * REQUIRED-FIELD HELPERS.
+ *
+ * This DTO backs a document a customer legally accepts, so it fails CLOSED.
+ * The previous coercions turned every missing or malformed field into a
+ * plausible-looking default - `undefined` became 0, an unparseable rate became
+ * 0, an unknown basis became `quantity`, an absent tax profile became "Tax" -
+ * which meant a read-model regression would have been shown to the client as a
+ * complete, confident, and wrong quotation. Refusing to render is the only
+ * safe failure here.
+ */
+
+function requiredString(value: unknown, field: string): string {
+  const s = value == null ? "" : String(value).trim();
+  if (!s) {
+    throw new ClientQuotationContractError(`${field} is missing`);
   }
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+  return s;
 }
 
-function optionalNum(value: unknown): number | null {
-  if (value == null) {
-    return null;
+/** Finite, integer, non-negative paise. Money is never a float here. */
+function requiredMoney(value: unknown, field: string): number {
+  if (value == null || (typeof value === "string" && !value.trim())) {
+    throw new ClientQuotationContractError(`${field} is missing`);
   }
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  const parsed = typeof value === "number" ? value : Number(String(value).trim());
+  if (!Number.isFinite(parsed)) {
+    throw new ClientQuotationContractError(`${field} is not a number`);
+  }
+  if (!Number.isInteger(parsed)) {
+    throw new ClientQuotationContractError(`${field} is not integer paise`);
+  }
+  if (parsed < 0) {
+    throw new ClientQuotationContractError(`${field} is negative`);
+  }
+  return parsed;
 }
 
-function str(value: unknown): string {
-  return value == null ? "" : String(value);
+function requiredNumber(
+  value: unknown,
+  field: string,
+  opts: { readonly positive?: boolean } = {}
+): number {
+  if (value == null || (typeof value === "string" && !value.trim())) {
+    throw new ClientQuotationContractError(`${field} is missing`);
+  }
+  const parsed = typeof value === "number" ? value : Number(String(value).trim());
+  if (!Number.isFinite(parsed)) {
+    throw new ClientQuotationContractError(`${field} is not a number`);
+  }
+  if (opts.positive && parsed <= 0) {
+    throw new ClientQuotationContractError(`${field} must be greater than zero`);
+  }
+  if (!opts.positive && parsed < 0) {
+    throw new ClientQuotationContractError(`${field} is negative`);
+  }
+  return parsed;
+}
+
+function requiredArray(value: unknown, field: string): readonly unknown[] {
+  if (!Array.isArray(value)) {
+    throw new ClientQuotationContractError(`${field} is missing`);
+  }
+  return value;
 }
 
 function optionalStr(value: unknown): string | undefined {
@@ -116,6 +162,8 @@ function stringList(value: unknown): readonly string[] {
  * TEXT column. Running the text one through an array-only helper silently
  * produced an empty list, so the client saw NO terms on the very page where
  * they accept them.
+ *
+ * Terms stay OPTIONAL: blank or null is a legitimate empty list, not a fault.
  */
 function textOrList(value: unknown): readonly string[] {
   if (Array.isArray(value)) {
@@ -125,12 +173,25 @@ function textOrList(value: unknown): readonly string[] {
   return single.length > 0 ? [single] : [];
 }
 
+const CLIENT_BASES: readonly ClientQuotationBasis[] = ["area", "quantity", "fixed"];
+
+function requiredBasis(value: unknown, field: string): ClientQuotationBasis {
+  const raw = requiredString(value, field);
+  const match = CLIENT_BASES.find((basis) => basis === raw);
+  if (!match) {
+    // Never silently fall back to `quantity`: an AREA row rendered as a
+    // quantity row shows the client a measurement that is not what was priced.
+    throw new ClientQuotationContractError(`${field} is not a known basis`);
+  }
+  return match;
+}
+
 /**
- * Maps the RPC payload onto the client DTO.
+ * Maps the RPC payload onto the client DTO, refusing anything incomplete.
  *
- * Required identity and commercial fields are checked: a missing quotation
- * number or grand total means the read model changed shape, and rendering a
- * partially-empty acceptance document would be worse than refusing.
+ * Only genuinely optional commercial fields are tolerated as absent: title,
+ * scope summary, client email, property address, item description and
+ * specifications, terms, inclusions, exclusions, and the acceptance timestamp.
  */
 export function mapClientQuotation(payload: unknown): ClientQuotation {
   if (!payload || typeof payload !== "object") {
@@ -139,81 +200,95 @@ export function mapClientQuotation(payload: unknown): ClientQuotation {
 
   const data = payload as Record<string, unknown>;
 
-  const quotationNumber = str(data.quotation_number);
-  if (!quotationNumber) {
-    throw new ClientQuotationContractError("quotation_number is missing");
-  }
-  if (data.grand_total_paise == null) {
-    throw new ClientQuotationContractError("grand_total_paise is missing");
-  }
+  const rooms = requiredArray(data.sections, "sections").map((raw, roomIdx) => {
+    const room = (raw ?? {}) as Record<string, unknown>;
+    const roomLabel = `sections[${roomIdx}]`;
 
-  const rooms = (Array.isArray(data.sections) ? data.sections : []).map((raw) => {
-    const room = raw as Record<string, unknown>;
-    const items = (Array.isArray(room.items) ? room.items : []).map((rawItem) => {
-      const item = rawItem as Record<string, unknown>;
-      const basis = str(item.calculation_basis) || "quantity";
+    const items = requiredArray(room.items, `${roomLabel}.items`).map((rawItem, itemIdx) => {
+      const item = (rawItem ?? {}) as Record<string, unknown>;
+      const label = `${roomLabel}.items[${itemIdx}]`;
+      const basis = requiredBasis(item.calculation_basis, `${label}.calculation_basis`);
+
+      let widthFt: number | null = null;
+      let heightFt: number | null = null;
+      let areaSqFt: number | null = null;
+
+      if (basis === "area") {
+        // An area row without its measurements cannot be shown at all: the
+        // width x height that justifies the amount is the whole point.
+        widthFt = requiredNumber(item.width_ft, `${label}.width_ft`, { positive: true });
+        heightFt = requiredNumber(item.height_ft, `${label}.height_ft`, { positive: true });
+        areaSqFt = requiredNumber(item.area_sqft, `${label}.area_sqft`, { positive: true });
+      }
+
       return {
-        id: str(item.id),
-        itemName: str(item.item_name),
+        id: requiredString(item.id, `${label}.id`),
+        itemName: requiredString(item.item_name, `${label}.item_name`),
         description: optionalStr(item.description),
         specifications: optionalStr(item.specifications),
-        calculationBasis: (basis === "area" || basis === "fixed"
-          ? basis
-          : "quantity") as ClientQuotationBasis,
-        widthFt: optionalNum(item.width_ft),
-        heightFt: optionalNum(item.height_ft),
-        areaSqFt: optionalNum(item.area_sqft),
-        quantity: num(item.quantity),
-        unitOfMeasure: str(item.unit_of_measure),
-        unitRatePaise: num(item.unit_rate_paise),
-        lineTotalPaise: num(item.line_total_paise),
+        calculationBasis: basis,
+        widthFt,
+        heightFt,
+        areaSqFt,
+        quantity: requiredNumber(item.quantity, `${label}.quantity`, { positive: true }),
+        unitOfMeasure: requiredString(item.unit_of_measure, `${label}.unit_of_measure`),
+        unitRatePaise: requiredMoney(item.unit_rate_paise, `${label}.unit_rate_paise`),
+        lineTotalPaise: requiredMoney(item.line_total_paise, `${label}.line_total_paise`),
       } satisfies ClientQuotationItem;
     });
 
     return {
-      id: str(room.id),
-      roomName: str(room.section_name),
-      subtotalPaise: num(room.subtotal_paise),
-      areaSubtotalSqFt: num(room.area_subtotal_sqft),
+      id: requiredString(room.id, `${roomLabel}.id`),
+      roomName: requiredString(room.section_name, `${roomLabel}.section_name`),
+      subtotalPaise: requiredMoney(room.subtotal_paise, `${roomLabel}.subtotal_paise`),
+      // Derived and summed server-side; a room of non-area work is legitimately 0.
+      areaSubtotalSqFt: requiredNumber(
+        room.area_subtotal_sqft ?? 0,
+        `${roomLabel}.area_subtotal_sqft`
+      ),
       items,
     } satisfies ClientQuotationRoom;
   });
 
   const paymentSchedule = (
     Array.isArray(data.payment_schedule) ? data.payment_schedule : []
-  ).map((raw) => {
-    const ms = raw as Record<string, unknown>;
+  ).map((raw, idx) => {
+    const ms = (raw ?? {}) as Record<string, unknown>;
+    const label = `payment_schedule[${idx}]`;
     return {
-      id: str(ms.id),
-      milestoneName: str(ms.milestone_name),
-      percentage: ms.percentage == null ? undefined : num(ms.percentage),
-      amountPaise: num(ms.amount_paise),
+      id: requiredString(ms.id, `${label}.id`),
+      milestoneName: requiredString(ms.milestone_name, `${label}.milestone_name`),
+      percentage:
+        ms.percentage == null
+          ? undefined
+          : requiredNumber(ms.percentage, `${label}.percentage`),
+      amountPaise: requiredMoney(ms.amount_paise, `${label}.amount_paise`),
     } satisfies ClientQuotationMilestone;
   });
 
   return {
-    quotationId: str(data.quotation_id),
-    quotationVersionId: str(data.quotation_version_id),
-    quotationNumber,
-    versionNumber: num(data.version_number),
-    finalizedAt: str(data.finalized_at),
+    quotationId: requiredString(data.quotation_id, "quotation_id"),
+    quotationVersionId: requiredString(data.quotation_version_id, "quotation_version_id"),
+    quotationNumber: requiredString(data.quotation_number, "quotation_number"),
+    versionNumber: requiredNumber(data.version_number, "version_number", { positive: true }),
+    finalizedAt: requiredString(data.finalized_at, "finalized_at"),
     title: optionalStr(data.title),
     scopeSummary: optionalStr(data.scope_summary),
-    clientName: str(data.client_name),
-    clientPhone: str(data.client_phone),
+    clientName: requiredString(data.client_name, "client_name"),
+    clientPhone: requiredString(data.client_phone, "client_phone"),
     clientEmail: optionalStr(data.client_email),
     propertyAddress: optionalStr(data.property_address),
     rooms,
-    subtotalPaise: num(data.subtotal_paise),
-    discountTotalPaise: num(data.discount_total_paise),
-    taxableBasePaise: num(data.taxable_base_paise),
-    // Frozen at finalization. There is deliberately NO 18% fallback: inventing
-    // a rate the finalized record does not carry would misstate the amount the
-    // client is agreeing to.
-    taxProfileName: str(data.tax_profile_name) || "Tax",
-    taxRatePercentage: num(data.tax_rate_percentage),
-    taxTotalPaise: num(data.tax_total_paise),
-    grandTotalPaise: num(data.grand_total_paise),
+    subtotalPaise: requiredMoney(data.subtotal_paise, "subtotal_paise"),
+    discountTotalPaise: requiredMoney(data.discount_total_paise, "discount_total_paise"),
+    taxableBasePaise: requiredMoney(data.taxable_base_paise, "taxable_base_paise"),
+    // Frozen at finalization. There is deliberately NO "Tax" placeholder and no
+    // 18% fallback: inventing a name or a rate the finalized record does not
+    // carry would misstate what the client is agreeing to.
+    taxProfileName: requiredString(data.tax_profile_name, "tax_profile_name"),
+    taxRatePercentage: requiredNumber(data.tax_rate_percentage, "tax_rate_percentage"),
+    taxTotalPaise: requiredMoney(data.tax_total_paise, "tax_total_paise"),
+    grandTotalPaise: requiredMoney(data.grand_total_paise, "grand_total_paise"),
     paymentSchedule,
     inclusions: stringList(data.inclusions),
     exclusions: stringList(data.exclusions),

@@ -103,10 +103,23 @@ export function QuotationFinalizedView({
   const run = (work: () => Promise<{ ok: boolean; text: string; link?: string | null }>) => {
     setNotice(null);
     startTransition(async () => {
-      const result = await work();
-      setNotice({ tone: result.ok ? "ok" : "bad", text: result.text });
-      if (result.link) {
-        setLinkPath(result.link);
+      // Final UI containment. Every action here is expected to RESOLVE with an
+      // ok/text result, but an unexpected rejection (a framework or transport
+      // failure) would otherwise surface as an unhandled rejection and leave
+      // the page stuck with no notice at all. The message is deliberately
+      // generic: a raw rejection can carry a capability token, SQL, or
+      // service-role detail, none of which belongs on screen.
+      try {
+        const result = await work();
+        setNotice({ tone: result.ok ? "ok" : "bad", text: result.text });
+        if (result.link) {
+          setLinkPath(result.link);
+        }
+      } catch {
+        setNotice({
+          tone: "bad",
+          text: "Something went wrong. Nothing was changed — please try again.",
+        });
       }
     });
   };
@@ -347,7 +360,10 @@ export function QuotationFinalizedView({
             </>
           ) : null}
 
-          {canEdit ? (
+          {/* The database refuses a revision of an accepted quotation with
+              QUOTATION_ACCEPTED_IMMUTABLE. Offering the button anyway invited
+              the operator to take an action that can only fail. */}
+          {canEdit && !isAccepted ? (
             <button
               type="button"
               disabled={pending}

@@ -98,8 +98,22 @@ Canonicalizing to one unit keeps the pre-existing database invariant
 - Money is **integer paise** end to end. No floating-point total is ever
   authoritative, and no `578345.8333`-style value can reach a document.
 - Dimensions are `numeric(10,3)` — up to 3 decimal places of a foot.
-- Area is derived to **3 decimals** for calculation and storage semantics; the
-  UI and the PDF normally **display 2**, without rounding the stored value.
+- Area is derived and stored to **exactly 3 decimals**.
+- Measurements — width, height, area — **display up to 3 decimals with trailing
+  zeros trimmed**, never a fixed 2:
+
+  | stored | displayed |
+  | --- | --- |
+  | `10.500` | `10.5` |
+  | `78.750` | `78.75` |
+  | `1.234` | `1.234` |
+
+  Displaying a fixed 2 would hide a real digit: a stored `1.234` shown as `1.23`
+  makes the printed width × height stop producing the printed amount, so the
+  document contradicts itself in front of the customer.
+- Money is **exactly 2 decimals** everywhere it faces a client.
+- Display never rounds before the derivation; `private.quotation_derive_area_sqft`
+  is the only rounding step.
 - The browser preview uses integer milli-foot arithmetic so it agrees with the
   server exactly rather than approximately. `10.5 × 2.5` being exact in IEEE-754
   is luck; `0.1 × 0.3` is not.
@@ -249,6 +263,32 @@ materialization.
 Commercial ranking is unchanged: `accepted > issued > finalized > draft >
 unknown`. Room subtotals feed the same canonical quotation totals and are never
 counted as separate revenue.
+
+---
+
+## 11a. Revisions preserve the interior semantics
+
+`create_quotation_revision` clones a finalized version into a new editable
+draft. It predates the interior columns and cloned every *other* item column,
+so it silently dropped `calculation_basis`, `width_ft` and `height_ft`: an AREA
+carcass came back as the `quantity` default with NULL dimensions, and a FIXED
+item lost its basis. The stored quantity and amount survived, so the money
+looked right while the measurement justifying it was gone.
+
+M55 replaces the function, reproduced verbatim apart from the item-clone column
+list, so the clone now carries all three columns exactly as stored:
+
+| basis | after revision |
+| --- | --- |
+| `area` | still `area`, same width, height, derived area and amount |
+| `quantity` | still `quantity`, dimensions `NULL` |
+| `fixed` | still `fixed`, dimensions `NULL`, quantity `1`, UOM `fixed` |
+
+Nothing is recomputed during the clone: the source rows already satisfy the
+basis shape constraints, and re-deriving would risk drift against a document
+that has already been sent. The finalized source is never mutated, and an
+accepted quotation still refuses a revision with
+`QUOTATION_ACCEPTED_IMMUTABLE` — the UI no longer offers the action either.
 
 ---
 

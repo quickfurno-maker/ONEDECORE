@@ -121,7 +121,15 @@ create index if not exists idx_quotation_items_calculation_basis
  *
  * Three decimals because `quantity` is numeric(10,3) and because a foot
  * measured to millimetre-ish precision is already beyond what a site tape
- * gives. The UI may DISPLAY two decimals; it must not round before this.
+ * gives.
+ *
+ * PRECISION, authoritatively:
+ *   stored and derived : exactly 3 decimals
+ *   measurement display: up to 3 decimals, trailing zeros trimmed
+ *                        10.500 -> "10.5", 78.750 -> "78.75", 1.234 -> "1.234"
+ *   money display      : exactly 2 decimals, client-facing
+ * Display never rounds before this function; rounding to 2 would let a printed
+ * width x height stop producing the printed amount.
  */
 create or replace function private.quotation_derive_area_sqft(
   p_width_ft numeric,
@@ -1113,5 +1121,318 @@ begin
       'paymentSchedules', v_schedules
     )
   );
+end;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- J. Revisions must carry the interior semantics forward
+-- ----------------------------------------------------------------------------
+--
+-- `create_quotation_revision` clones a finalized version into a new draft. It
+-- was written before `calculation_basis`, `width_ft` and `height_ft` existed,
+-- so it cloned every other item column and silently dropped those three: an
+-- AREA item was reborn as the `quantity` default with NULL dimensions, and a
+-- FIXED item lost its basis. The stored quantity and amount survived, so the
+-- money looked right while the measurement that justified it was gone.
+--
+-- Reproduced verbatim from 20260813140000 apart from the item-clone column
+-- list. Authorization, lead scope, accepted immutability, the existing-draft
+-- short circuit, idempotency, capability revocation, version numbering, the
+-- header/commercial clone, the payment schedule, totals recalculation and the
+-- domain events are all unchanged.
+
+create or replace function public.create_quotation_revision(
+  p_source_version_id uuid,
+  p_idempotency_key text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_source record;
+  v_quotation record;
+  v_lead record;
+  v_existing_draft record;
+  v_new_version_id uuid;
+  v_new_version_number integer;
+  v_sec record;
+  v_new_sec_id uuid;
+  v_request_hash text;
+  v_existing_req record;
+  v_result jsonb;
+begin
+  if v_user_id is null then
+    raise exception 'UNAUTHENTICATED: Authentication required.';
+  end if;
+
+  if not (select public.authorize('quotations.edit')) then
+    raise exception 'FORBIDDEN: Permission quotations.edit is required.';
+  end if;
+
+  select * into v_source from public.quotation_versions where id = p_source_version_id;
+  if v_source.id is null then
+    raise exception 'VERSION_NOT_FOUND: Source quotation version % does not exist.', p_source_version_id;
+  end if;
+
+  if v_source.status <> 'finalized' then
+    raise exception 'INVALID_SOURCE_STATE: Revisions can only be created from finalized quotation versions.';
+  end if;
+
+  select * into v_quotation from public.quotations where id = v_source.quotation_id for update;
+  select * into v_lead from public.leads where id = v_quotation.lead_id;
+
+  if not (select private.has_role('super_admin'))
+     and not (select private.has_role('sales_manager'))
+     and not (select private.has_role('management')) then
+    if v_lead.assigned_to is null or v_lead.assigned_to <> v_user_id then
+      raise exception 'FORBIDDEN: Sales Executive can only create revisions for assigned leads.';
+    end if;
+  end if;
+
+  -- Block revisions post-acceptance
+  if exists (select 1 from public.quotation_acceptances where quotation_id = v_quotation.id) then
+    raise exception 'QUOTATION_ACCEPTED_IMMUTABLE: Cannot create revision for an accepted quotation.';
+  end if;
+
+  -- Check if a current draft already exists
+  select * into v_existing_draft
+  from public.quotation_versions
+  where quotation_id = v_quotation.id and status = 'draft' and is_current_draft = true;
+
+  if v_existing_draft.id is not null then
+    return jsonb_build_object(
+      'success', true,
+      'message', 'Current draft revision already exists.',
+      'version_id', v_existing_draft.id,
+      'version_number', v_existing_draft.version_number
+    );
+  end if;
+
+  -- Idempotency check
+  if p_idempotency_key is not null and length(trim(p_idempotency_key)) > 0 then
+    perform pg_advisory_xact_lock(hashtext('create_quotation_revision'), hashtext(v_user_id::text || ':' || p_idempotency_key));
+
+    v_request_hash := encode(extensions.digest(convert_to(jsonb_build_object('source_version_id', p_source_version_id)::text, 'UTF8'), 'sha256'), 'hex');
+
+    select * into v_existing_req
+    from private.quotation_idempotency_requests
+    where actor_id = v_user_id
+      and operation_code = 'create_quotation_revision'
+      and idempotency_key = p_idempotency_key;
+
+    if v_existing_req.id is not null then
+      if v_existing_req.request_hash = v_request_hash then
+        return v_existing_req.response_snapshot;
+      else
+        raise exception 'IDEMPOTENCY_KEY_REUSE_PAYLOAD_MISMATCH: Idempotency key reused with different payload.';
+      end if;
+    end if;
+  end if;
+
+  -- Revoke active capability grants for previous versions
+  insert into public.quotation_events (
+    quotation_id, quotation_version_id, lead_id, event_type, actor_id, details
+  )
+  select
+    g.quotation_id,
+    g.quotation_version_id,
+    v_quotation.lead_id,
+    'quotation.capability_revoked',
+    v_user_id,
+    jsonb_build_object('grant_id', g.id, 'reason', 'revision')
+  from public.quotation_access_grants g
+  where g.quotation_id = v_quotation.id
+    and g.revoked_at is null;
+
+  update public.quotation_access_grants
+  set revoked_at = now(),
+      revoked_by = v_user_id,
+      revocation_reason = 'Automatically revoked upon creation of new draft revision'
+  where quotation_id = v_quotation.id and revoked_at is null;
+
+  v_new_version_number := v_source.version_number + 1;
+
+  -- Create New Draft Version
+  insert into public.quotation_versions (
+    quotation_id,
+    version_number,
+    lock_version,
+    status,
+    is_current_draft,
+    title,
+    client_name_snapshot,
+    client_email_snapshot,
+    client_phone_snapshot,
+    property_address_snapshot,
+    scope_summary,
+    payment_schedule_mode,
+    subtotal_paise,
+    discount_type,
+    discount_value_paise,
+    discount_percentage,
+    discount_total_paise,
+    taxable_base_paise,
+    tax_profile_id,
+    tax_rate_percentage,
+    tax_total_paise,
+    grand_total_paise,
+    terms_and_conditions,
+    inclusions,
+    exclusions,
+    created_by,
+    updated_by
+  ) values (
+    v_quotation.id,
+    v_new_version_number,
+    1,
+    'draft',
+    true,
+    v_source.title,
+    v_source.client_name_snapshot,
+    v_source.client_email_snapshot,
+    v_source.client_phone_snapshot,
+    v_source.property_address_snapshot,
+    v_source.scope_summary,
+    v_source.payment_schedule_mode,
+    v_source.subtotal_paise,
+    v_source.discount_type,
+    v_source.discount_value_paise,
+    v_source.discount_percentage,
+    v_source.discount_total_paise,
+    v_source.taxable_base_paise,
+    v_source.tax_profile_id,
+    v_source.tax_rate_percentage,
+    v_source.tax_total_paise,
+    v_source.grand_total_paise,
+    v_source.terms_and_conditions,
+    v_source.inclusions,
+    v_source.exclusions,
+    v_user_id,
+    v_user_id
+  ) returning id into v_new_version_id;
+
+  -- Clone Sections & Items
+  for v_sec in (select * from public.quotation_sections where quotation_version_id = p_source_version_id order by display_order asc) loop
+    insert into public.quotation_sections (
+      quotation_version_id,
+      section_name,
+      display_order,
+      subtotal_paise
+    ) values (
+      v_new_version_id,
+      v_sec.section_name,
+      v_sec.display_order,
+      v_sec.subtotal_paise
+    ) returning id into v_new_sec_id;
+
+    -- The interior columns are cloned EXACTLY as stored. Omitting them made an
+    -- AREA item come back as the `quantity` default with its width and height
+    -- lost, so a revision of a 10.500 x 2.500 sq.ft carcass silently stopped
+    -- being an area item. Nothing is recomputed here: the source rows already
+    -- satisfy the basis shape constraints, and re-deriving would risk drift.
+    insert into public.quotation_items (
+      section_id,
+      item_name,
+      description,
+      specifications,
+      calculation_basis,
+      width_ft,
+      height_ft,
+      quantity,
+      unit_of_measure,
+      unit_rate_paise,
+      line_total_paise,
+      display_order
+    )
+    select
+      v_new_sec_id,
+      item_name,
+      description,
+      specifications,
+      calculation_basis,
+      width_ft,
+      height_ft,
+      quantity,
+      unit_of_measure,
+      unit_rate_paise,
+      line_total_paise,
+      display_order
+    from public.quotation_items
+    where section_id = v_sec.id
+    order by display_order asc;
+  end loop;
+
+  -- Clone Payment Schedule
+  insert into public.quotation_payment_schedules (
+    quotation_version_id,
+    milestone_name,
+    milestone_order,
+    percentage,
+    amount_paise
+  )
+  select
+    v_new_version_id,
+    milestone_name,
+    milestone_order,
+    percentage,
+    amount_paise
+  from public.quotation_payment_schedules
+  where quotation_version_id = p_source_version_id
+  order by milestone_order asc;
+
+  -- Recalculate Totals
+  perform private.recalculate_quotation_totals(v_new_version_id);
+
+  -- Append Domain Event
+  insert into public.quotation_events (
+    quotation_id,
+    quotation_version_id,
+    lead_id,
+    event_type,
+    actor_id,
+    details
+  ) values (
+    v_quotation.id,
+    v_new_version_id,
+    v_quotation.lead_id,
+    'quotation.revision_created',
+    v_user_id,
+    jsonb_build_object(
+      'source_version_id', p_source_version_id,
+      'new_version_number', v_new_version_number
+    )
+  );
+
+  v_result := jsonb_build_object(
+    'success', true,
+    'version_id', v_new_version_id,
+    'version_number', v_new_version_number,
+    'message', 'New draft revision created successfully.'
+  );
+
+  if p_idempotency_key is not null and length(trim(p_idempotency_key)) > 0 then
+    insert into private.quotation_idempotency_requests (
+      actor_id,
+      operation_code,
+      idempotency_key,
+      request_hash,
+      quotation_id,
+      quotation_version_id,
+      response_snapshot
+    ) values (
+      v_user_id,
+      'create_quotation_revision',
+      p_idempotency_key,
+      v_request_hash,
+      v_quotation.id,
+      v_new_version_id,
+      v_result
+    );
+  end if;
+
+  return v_result;
 end;
 $$;
