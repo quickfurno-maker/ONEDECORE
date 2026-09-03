@@ -292,7 +292,15 @@ describe("Phase 5B CRM server-only boundaries", () => {
 
 describe("Phase 5B CRM lead list DTO minimization", () => {
   test("list mapper exposes only scoped fields", () => {
-    const item = mapLeadRowToListItem(sampleLeadRow());
+    const item = mapLeadRowToListItem(sampleLeadRow(), {
+        salesBucket: "COLD",
+        priorityScore: 0,
+        scoreBand: "COLD",
+        riskFlags: [],
+        stageEnteredAt: "2026-09-01T00:00:00.000Z",
+        slaBreached: false,
+        newUncontacted: false,
+      });
     assert.deepEqual(Object.keys(item).sort(), [...CRM_LEAD_LIST_ITEM_PUBLIC_KEYS].sort());
   });
 
@@ -300,7 +308,16 @@ describe("Phase 5B CRM lead list DTO minimization", () => {
     const item = mapLeadRowToListItem(
       sampleLeadRow({
         submitted_name: "Scoped Lead",
-      })
+      }),
+      {
+        salesBucket: "COLD",
+        priorityScore: 0,
+        scoreBand: "COLD",
+        riskFlags: [],
+        stageEnteredAt: "2026-09-01T00:00:00.000Z",
+        slaBreached: false,
+        newUncontacted: false,
+      }
     );
     const serialised = JSON.stringify(item);
 

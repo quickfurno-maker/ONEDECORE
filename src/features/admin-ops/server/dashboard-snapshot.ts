@@ -6,6 +6,7 @@ import {
   ACHIEVEMENT_INACTIVE_COPY,
   formatInrFromPaise,
 } from "@/features/crm/contracts/sales-target-contracts.ts";
+import { LEAD_MONTH_ALL_COHORT } from "@/features/crm/contracts/lead-month-cohort.ts";
 import { resolveReportDateRange } from "@/features/crm/contracts/reporting-date-range.ts";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth.ts";
 import { getLeadListPageForCurrentUser } from "@/features/crm/server/crm-lead-repository.ts";
@@ -116,6 +117,8 @@ export async function loadOpsDashboardSnapshot(
         assignment: null,
         assigneeId: null,
         followUpDue: null,
+        bucket: null,
+        month: LEAD_MONTH_ALL_COHORT,
         page: 1,
         pageSize: 8,
       }).catch(() => null)

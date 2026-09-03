@@ -1,3 +1,8 @@
+import type {
+  CrmLeadRiskFlag,
+  CrmLeadScoreBand,
+} from "./lead-score-contracts.ts";
+import type { CrmLeadSalesBucket } from "./lead-sales-bucket.ts";
 import type { LeadStageCode } from "./lead-stages.ts";
 
 /**
@@ -35,6 +40,20 @@ export interface CrmLeadListItem {
   readonly nextFollowUpDue: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+  /**
+   * Owner-facing sales bucket, derived from (status, score band) by the ONE
+   * canonical resolver. Never stored, never manually set, and never a
+   * replacement for `status` — both are rendered.
+   */
+  readonly salesBucket: CrmLeadSalesBucket;
+  readonly priorityScore: number;
+  /** The internal band, kept distinct so NURTURE stays visible behind COLD. */
+  readonly scoreBand: CrmLeadScoreBand;
+  readonly riskFlags: readonly CrmLeadRiskFlag[];
+  /** Canonical stage-entry instant; falls back to `createdAt` when no event exists. */
+  readonly stageEnteredAt: string;
+  readonly slaBreached: boolean;
+  readonly newUncontacted: boolean;
 }
 
 const CRM_LEAD_LIST_ITEM_KEYS = [
@@ -51,6 +70,13 @@ const CRM_LEAD_LIST_ITEM_KEYS = [
   "nextFollowUpDue",
   "createdAt",
   "updatedAt",
+  "salesBucket",
+  "priorityScore",
+  "scoreBand",
+  "riskFlags",
+  "stageEnteredAt",
+  "slaBreached",
+  "newUncontacted",
 ] as const satisfies readonly (keyof CrmLeadListItem)[];
 
 export const CRM_LEAD_LIST_ITEM_PUBLIC_KEYS: readonly (keyof CrmLeadListItem)[] =
@@ -78,12 +104,22 @@ export const CRM_LEAD_LIST_FORBIDDEN_FIELDS: readonly string[] = [
   ...FORBIDDEN_LIST_FIELDS,
 ];
 
+export interface CrmLeadListDerivedFields {
+  readonly salesBucket: CrmLeadSalesBucket;
+  readonly priorityScore: number;
+  readonly scoreBand: CrmLeadScoreBand;
+  readonly riskFlags: readonly CrmLeadRiskFlag[];
+  readonly stageEnteredAt: string;
+  readonly slaBreached: boolean;
+  readonly newUncontacted: boolean;
+}
+
 export function mapLeadRowToListItem(
   row: CrmLeadListRow,
   options: {
     readonly assigneeLabel?: string;
     readonly nextFollowUpDue?: string | null;
-  } = {}
+  } & CrmLeadListDerivedFields
 ): CrmLeadListItem {
   return {
     id: row.id,
@@ -101,5 +137,12 @@ export function mapLeadRowToListItem(
     nextFollowUpDue: options.nextFollowUpDue ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    salesBucket: options.salesBucket,
+    priorityScore: options.priorityScore,
+    scoreBand: options.scoreBand,
+    riskFlags: options.riskFlags,
+    stageEnteredAt: options.stageEnteredAt,
+    slaBreached: options.slaBreached,
+    newUncontacted: options.newUncontacted,
   };
 }

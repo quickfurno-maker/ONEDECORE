@@ -75,6 +75,13 @@ const TIMELINE_UI = "src/features/crm/components/leads/LeadDetailTimeline.tsx";
 const NOTES_UI = "src/features/crm/components/leads/LeadDetailNotes.tsx";
 const SCORE_CONTRACTS = "src/features/crm/contracts/lead-score-contracts.ts";
 const PIPELINE_QUERIES = "src/features/crm/server/crm-pipeline-queries.ts";
+// The pipeline read path is now TWO modules: the board query plus the
+// batched signal assembly it shares with the segmented Leads list. These
+// assertions describe that read path, so they read both rather than pinning
+// the batching to the file it used to live in.
+const PIPELINE_SCORE_BATCH = "src/features/crm/server/crm-lead-score-batch.ts";
+const readPipelineReadPath = () =>
+  `${readSrc(PIPELINE_QUERIES)}\n${readSrc(PIPELINE_SCORE_BATCH)}`;
 
 const NOW = Date.parse("2026-08-31T09:00:00.000Z");
 const HOUR_MS = 3_600_000;
@@ -825,7 +832,7 @@ describe("CRM 2D scoring — bands, overrides and risk flags", () => {
       readSrc("src/features/crm/server/crm-lead-score-signals.ts"),
       /internal_task/
     );
-    assert.match(readSrc(PIPELINE_QUERIES), /internal_task/);
+    assert.match(readPipelineReadPath(), /internal_task/);
 
     const stale = deriveLeadScore(
       makeSignals({
@@ -993,7 +1000,7 @@ describe("CRM 2D scoring — surface parity", () => {
       readSrc("src/features/crm/server/crm-lead-score-signals.ts"),
       /internal_task/
     );
-    assert.match(readSrc(PIPELINE_QUERIES), /internal_task/);
+    assert.match(readPipelineReadPath(), /internal_task/);
   });
 
   test("the same signals produce the same score regardless of surface", () => {

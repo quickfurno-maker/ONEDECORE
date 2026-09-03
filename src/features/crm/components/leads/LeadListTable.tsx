@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CrmLeadListItem } from "../../contracts/lead-dtos.ts";
 import { formatCrmCodeLabel } from "../../contracts/crm-labels.ts";
+import { LeadSalesBucketBadge } from "./LeadSalesBucketBadge.tsx";
 import { LeadStatusBadge } from "./LeadStatusBadge.tsx";
 
 interface LeadListTableProps {
@@ -36,8 +37,13 @@ export function LeadListTable({ items }: LeadListTableProps) {
               <th scope="col" className="px-4 py-3 font-medium">
                 Requirement
               </th>
+              {/* Bucket first: it is the primary organiser. Stage stays in its
+                  own column right beside it and is never replaced by it. */}
               <th scope="col" className="px-4 py-3 font-medium">
-                Status
+                Bucket
+              </th>
+              <th scope="col" className="px-4 py-3 font-medium">
+                Stage
               </th>
               <th scope="col" className="px-4 py-3 font-medium">
                 Source
@@ -82,6 +88,12 @@ export function LeadListTable({ items }: LeadListTableProps) {
                 </td>
                 <td className="px-4 text-[var(--crm-text-secondary)]">
                   {formatCrmCodeLabel(item.serviceCode)}
+                </td>
+                <td className="px-4">
+                  <LeadSalesBucketBadge
+                    bucket={item.salesBucket}
+                    priorityScore={item.priorityScore}
+                  />
                 </td>
                 <td className="px-4">
                   <LeadStatusBadge status={item.status} />

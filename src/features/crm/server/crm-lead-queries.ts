@@ -18,7 +18,21 @@ import {
   type CrmLeadListItem,
   type CrmLeadListRow,
 } from "../contracts/lead-dtos.ts";
+import { deriveLeadScore } from "../contracts/lead-score-contracts.ts";
+import {
+  countSalesBuckets,
+  emptySalesBucketCounts,
+  resolveLeadSalesBucket,
+  type CrmLeadSalesBucketCounts,
+} from "../contracts/lead-sales-bucket.ts";
+import { sortSegmentedLeads } from "../contracts/lead-segmentation-order.ts";
+import type { LeadStageCode } from "../contracts/lead-stages.ts";
 import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
+import {
+  CRM_EMPTY_ENGAGEMENT,
+  fetchLeadScoreBatch,
+} from "./crm-lead-score-batch.ts";
+import { latestIso } from "./crm-lead-score-signals.ts";
 
 const CRM_LEAD_LIST_SELECT =
   "id, status, submitted_name, service_code, locality, assigned_to, entry_method, primary_source_id, created_at, updated_at, lead_sources!leads_primary_source_id_fkey(display_name)";
@@ -196,6 +210,8 @@ type LeadListFilterBuilder = {
   eq: (column: string, value: string) => LeadListFilterBuilder;
   not: (column: string, operator: string, value: null) => LeadListFilterBuilder;
   is: (column: string, value: null) => LeadListFilterBuilder;
+  gte: (column: string, value: string) => LeadListFilterBuilder;
+  lt: (column: string, value: string) => LeadListFilterBuilder;
 };
 
 /**
@@ -249,6 +265,16 @@ async function constrainLeadListRequest(
     next = next.in("id", [...leadIds]);
   }
 
+  // RECEIVED-month cohort, on created_at. Never updated_at: a lead must not
+  // move from August to September because someone edited it in September.
+  // Half-open [start, next month start) so a lead at a boundary instant belongs
+  // to exactly one month.
+  if (!query.month.isAllTime && query.month.startIso && query.month.endIso) {
+    next = next
+      .gte("created_at", query.month.startIso)
+      .lt("created_at", query.month.endIso);
+  }
+
   return { request: next };
 }
 
@@ -275,76 +301,221 @@ export async function countLeadListForQuery(
   return count ?? 0;
 }
 
+/**
+ * How many candidate rows one cohort scan will read, and the chunk it reads in.
+ *
+ * The cohort is read COMPLETELY in chunks rather than truncated: bucket counts
+ * and bucket filtering are only correct over the whole cohort. The ceiling exists
+ * so a pathological month cannot exhaust memory; reaching it sets
+ * `cohortTruncated`, which the UI reports honestly instead of quietly showing
+ * counts that are too low.
+ */
+export const CRM_LEAD_COHORT_CHUNK_SIZE = 500;
+export const CRM_LEAD_COHORT_MAX_ROWS = 5_000;
+
+export interface LeadSegmentationPageResult
+  extends LeadListPageResult<CrmLeadListItem> {
+  /** Exact counts over the WHOLE received-month cohort, before bucket filtering. */
+  readonly bucketCounts: CrmLeadSalesBucketCounts;
+  /** Rows in the cohort after bucket filtering, before the page slice. */
+  readonly filteredTotal: number;
+  readonly capturedAt: string;
+  /** True only if the cohort exceeded `CRM_LEAD_COHORT_MAX_ROWS`. */
+  readonly cohortTruncated: boolean;
+}
+
+/**
+ * Reads the whole RLS-visible candidate cohort in bounded chunks.
+ *
+ * `.range()` is applied per chunk, so no single request has to return the entire
+ * month. Rows arrive already ordered by (created_at, id) which makes the scan
+ * deterministic and the truncation boundary reproducible.
+ */
+async function readCohortRows(
+  context: CrmAccessContext,
+  query: LeadListQuery
+): Promise<{ rows: CrmLeadListRow[]; truncated: boolean } | null> {
+  const supabase = await createClient();
+  const rows: CrmLeadListRow[] = [];
+  let offset = 0;
+
+  for (;;) {
+    const constrained = await constrainLeadListRequest(
+      supabase
+        .from("leads")
+        .select(CRM_LEAD_LIST_SELECT)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true }) as unknown as LeadListFilterBuilder,
+      context,
+      query
+    );
+
+    if (!constrained) {
+      return null;
+    }
+
+    const { data, error } = await (
+      constrained.request as unknown as {
+        range: (
+          from: number,
+          to: number
+        ) => Promise<{ data: unknown; error: { message: string } | null }>;
+      }
+    ).range(offset, offset + CRM_LEAD_COHORT_CHUNK_SIZE - 1);
+
+    if (error) {
+      throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+    }
+
+    const chunk = (data ?? []) as CrmLeadListRow[];
+    rows.push(...chunk);
+
+    if (chunk.length < CRM_LEAD_COHORT_CHUNK_SIZE) {
+      return { rows, truncated: false };
+    }
+    offset += CRM_LEAD_COHORT_CHUNK_SIZE;
+
+    if (rows.length >= CRM_LEAD_COHORT_MAX_ROWS) {
+      // Reported, never silent.
+      return { rows, truncated: true };
+    }
+  }
+}
+
+function emptySegmentationPage(
+  query: LeadListQuery,
+  capturedAt: string
+): LeadSegmentationPageResult {
+  return {
+    items: [],
+    pagination: {
+      page: query.page,
+      pageSize: query.pageSize,
+      hasNextPage: false,
+      hasPreviousPage: query.page > 1,
+    },
+    hasActiveFilters: hasLeadListActiveFilters(query),
+    bucketCounts: emptySalesBucketCounts(),
+    filteredTotal: 0,
+    capturedAt,
+    cohortTruncated: false,
+  };
+}
+
+/**
+ * The segmented Leads read model.
+ *
+ * ORDER OF OPERATIONS MATTERS. The bucket is resolved for the WHOLE cohort
+ * before anything is counted, filtered or sliced:
+ *
+ *   cohort scan -> batched signals -> score -> bucket -> counts -> bucket filter
+ *   -> deterministic sales order -> page slice
+ *
+ * Scoring only the current database page would have made every bucket count a
+ * count of that page, the bucket filter would have dropped matching leads that
+ * happened to sit on other pages, and pagination would have been wrong. That is
+ * why the score is not pushed into SQL either: duplicating the formula in a
+ * second language is the other way this drifts.
+ */
 export async function queryLeadListPage(
   context: CrmAccessContext,
   query: LeadListQuery
-): Promise<LeadListPageResult<CrmLeadListItem>> {
-  const supabase = await createClient();
+): Promise<LeadSegmentationPageResult> {
+  const capturedAt = new Date().toISOString();
+  const now = Date.parse(capturedAt);
+
   const assigneeDirectory = await fetchCrmAssigneeDirectory(context);
   const assigneeLabels = buildAssigneeLabelMap(assigneeDirectory);
 
-  const constrained = await constrainLeadListRequest(
-    supabase
-      .from("leads")
-      .select(CRM_LEAD_LIST_SELECT)
-      .order("updated_at", { ascending: false })
-      .order("id", { ascending: false }),
-    context,
-    query
-  );
+  const cohort = await readCohortRows(context, query);
+  if (!cohort || cohort.rows.length === 0) {
+    return emptySegmentationPage(query, capturedAt);
+  }
 
-  if (!constrained) {
-    return {
-      items: [],
-      pagination: {
-        page: query.page,
-        pageSize: query.pageSize,
-        hasNextPage: false,
-        hasPreviousPage: query.page > 1,
+  const leadIds = cohort.rows.map((row) => row.id);
+
+  // Fixed number of batched round trips, independent of cohort size.
+  const [batch, followUpDueMap] = await Promise.all([
+    fetchLeadScoreBatch(leadIds),
+    fetchNextOpenFollowUpDueByLeadIds(leadIds),
+  ]);
+
+  const scored = cohort.rows.map((row) => {
+    const primary = batch.primaryActions[row.id] ?? null;
+    const sla = batch.slaClocks.signals[row.id] ?? null;
+    const engagement = batch.engagement[row.id] ?? CRM_EMPTY_ENGAGEMENT;
+    const deal = batch.dealValues[row.id] ?? null;
+    const touch = batch.salesTouches[row.id] ?? null;
+    const status = row.status as LeadStageCode;
+
+    // The SAME pure derivation the pipeline board and the lead detail use, from
+    // the same signal shape. A lead cannot score differently on two surfaces.
+    const score = deriveLeadScore(
+      {
+        status,
+        isAssigned: row.assigned_to !== null,
+        hasFirstContactAttempt: (sla?.firstContactAttemptAt ?? null) !== null,
+        hasMeaningfulOutcome: engagement.hasMeaningfulOutcome,
+        hasConsultationOrSiteVisit: engagement.hasConsultationOrSiteVisit,
+        commercialState: deal?.state ?? "unknown",
+        lastMeaningfulActivityAt: engagement.lastMeaningfulActivityAt,
+        latestMeaningfulSalesTouchAt: latestIso([
+          engagement.lastMeaningfulActivityAt,
+          touch?.latestNoteAt ?? null,
+          touch?.latestQuotationEventAt ?? null,
+        ]),
+        receivedAt: row.created_at,
+        hasOpenPrimaryNextAction: primary !== null,
+        primaryNextActionDueAt: primary?.dueAt ?? null,
+        slaDueAt: sla?.slaDueAt ?? null,
       },
-      hasActiveFilters: hasLeadListActiveFilters(query),
-    };
-  }
+      now
+    );
 
-  const from = (query.page - 1) * query.pageSize;
-  const to = from + query.pageSize;
-  const { data, error } = await (
-    constrained.request as unknown as {
-      range: (
-        from: number,
-        to: number
-      ) => Promise<{ data: unknown; error: { message: string } | null }>;
-    }
-  ).range(from, to);
-
-  if (error) {
-    throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
-  }
-
-  const rows = (data ?? []) as CrmLeadListRow[];
-  const hasNextPage = rows.length > query.pageSize;
-  const pageRows = hasNextPage ? rows.slice(0, query.pageSize) : rows;
-  const followUpDueMap = await fetchNextOpenFollowUpDueByLeadIds(
-    pageRows.map((row) => row.id)
-  );
-
-  const items = pageRows.map((row) =>
-    mapLeadRowToListItem(row, {
+    return mapLeadRowToListItem(row, {
       assigneeLabel: row.assigned_to
         ? assigneeLabels[row.assigned_to] ?? "Assigned staff"
         : "Unassigned",
       nextFollowUpDue: followUpDueMap[row.id] ?? null,
-    })
-  );
+      salesBucket: resolveLeadSalesBucket(status, score.band),
+      priorityScore: score.priorityScore,
+      scoreBand: score.band,
+      riskFlags: score.riskFlags,
+      stageEnteredAt: batch.stageEntries[row.id] ?? row.created_at,
+      slaBreached:
+        sla?.slaDueAt != null &&
+        sla.firstContactAttemptAt == null &&
+        Date.parse(sla.slaDueAt) < now,
+      newUncontacted:
+        row.assigned_to != null && (sla?.firstContactAttemptAt ?? null) == null,
+    });
+  });
+
+  // Counts describe the whole cohort, so the strip keeps showing where the rest
+  // of the month's leads are even while one bucket is selected.
+  const bucketCounts = countSalesBuckets(scored.map((item) => item.salesBucket));
+
+  const filtered = query.bucket
+    ? scored.filter((item) => item.salesBucket === query.bucket)
+    : scored;
+
+  const ordered = sortSegmentedLeads(filtered, now);
+
+  const from = (query.page - 1) * query.pageSize;
+  const items = ordered.slice(from, from + query.pageSize);
 
   return {
     items,
     pagination: {
       page: query.page,
       pageSize: query.pageSize,
-      hasNextPage,
+      hasNextPage: from + query.pageSize < ordered.length,
       hasPreviousPage: query.page > 1,
     },
     hasActiveFilters: hasLeadListActiveFilters(query),
+    bucketCounts,
+    filteredTotal: ordered.length,
+    capturedAt,
+    cohortTruncated: cohort.truncated,
   };
 }

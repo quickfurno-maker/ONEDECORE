@@ -1,23 +1,25 @@
 import Link from "next/link";
-import type { LeadListPaginationMeta, LeadListQuery } from "../../contracts/lead-list-query.ts";
+import {
+  buildLeadListHref,
+  type LeadListPaginationMeta,
+  type LeadListQuery,
+} from "../../contracts/lead-list-query.ts";
 
 interface LeadListPaginationProps {
   readonly query: LeadListQuery;
   readonly pagination: LeadListPaginationMeta;
 }
 
+/**
+ * Delegates to the canonical URL builder.
+ *
+ * This used to be a second, hand-maintained copy of the query-string logic. It
+ * knew nothing about the sales bucket or the received month, so paging would
+ * have silently dropped both — landing the reader on page 2 of a different
+ * cohort than the one they were looking at.
+ */
 function buildPageHref(query: LeadListQuery, page: number): string {
-  const params = new URLSearchParams();
-  if (query.q) params.set("q", query.q);
-  if (query.status) params.set("status", query.status);
-  if (query.sourceId) params.set("sourceId", query.sourceId);
-  if (query.assignment) params.set("assignment", query.assignment);
-  if (query.assigneeId) params.set("assigneeId", query.assigneeId);
-  if (query.followUpDue) params.set("followUpDue", query.followUpDue);
-  if (query.pageSize !== 25) params.set("pageSize", String(query.pageSize));
-  if (page > 1) params.set("page", String(page));
-  const value = params.toString();
-  return value ? `/admin/crm/leads?${value}` : "/admin/crm/leads";
+  return buildLeadListHref(query, undefined, { page });
 }
 
 export function LeadListPagination({

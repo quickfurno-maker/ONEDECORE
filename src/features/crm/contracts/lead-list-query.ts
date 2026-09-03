@@ -1,3 +1,13 @@
+import {
+  LEAD_MONTH_ALL,
+  parseLeadMonthParam,
+  type LeadMonthCohort,
+} from "./lead-month-cohort.ts";
+import {
+  leadSalesBucketParam,
+  parseLeadSalesBucketParam,
+  type CrmLeadSalesBucket,
+} from "./lead-sales-bucket.ts";
 import { LEAD_STAGE_CODES, type LeadStageCode } from "./lead-stages.ts";
 
 export const LEAD_LIST_DEFAULT_PAGE = 1;
@@ -24,6 +34,14 @@ export interface LeadListQuery {
   readonly assignment: LeadListAssignmentFilter | null;
   readonly assigneeId: string | null;
   readonly followUpDue: LeadListFollowUpDueFilter | null;
+  /**
+   * Owner-facing sales bucket filter. Coexists with `status`: they are different
+   * questions (how hot is this? vs. how far has it got?) and neither silently
+   * mutates the other.
+   */
+  readonly bucket: CrmLeadSalesBucket | null;
+  /** Received-month cohort, Asia/Kolkata. Defaults to the current IST month. */
+  readonly month: LeadMonthCohort;
   readonly page: number;
   readonly pageSize: number;
 }
@@ -114,7 +132,8 @@ export function buildLeadTextSearchOrFilter(rawQuery: string): string {
 }
 
 export function parseLeadListQuery(
-  searchParams: Record<string, string | string[] | undefined>
+  searchParams: Record<string, string | string[] | undefined>,
+  nowMs: number = Date.now()
 ): LeadListQuery {
   const statusRaw = firstParam(searchParams.status);
   const status =
@@ -137,6 +156,11 @@ export function parseLeadListQuery(
     ? (followUpDueRaw as LeadListFollowUpDueFilter)
     : null;
 
+  const bucket = parseLeadSalesBucketParam(firstParam(searchParams.bucket));
+  // An unrecognised month falls back to the CURRENT IST month, never to
+  // all-time: a typo must not quietly widen a scoped view into a full scan.
+  const month = parseLeadMonthParam(firstParam(searchParams.month), nowMs);
+
   const page = parsePositiveInt(firstParam(searchParams.page), LEAD_LIST_DEFAULT_PAGE);
   const pageSize = parsePositiveInt(
     firstParam(searchParams.pageSize),
@@ -151,6 +175,8 @@ export function parseLeadListQuery(
     assignment,
     assigneeId: parseUuid(firstParam(searchParams.assigneeId)),
     followUpDue,
+    bucket,
+    month,
     page,
     pageSize,
   };
@@ -163,7 +189,8 @@ export function hasLeadListActiveFilters(query: LeadListQuery): boolean {
       query.sourceId ||
       query.assignment ||
       query.assigneeId ||
-      query.followUpDue
+      query.followUpDue ||
+      query.bucket
   );
 }
 
@@ -173,9 +200,36 @@ export function hasLeadListActiveFilters(query: LeadListQuery): boolean {
  * CRM 2B removed the `view=pipeline` preview from this page: the board is now
  * the dedicated `/admin/crm/pipeline` workspace, so there is no view parameter.
  */
+export type LeadListClearableFilter =
+  | "q"
+  | "status"
+  | "sourceId"
+  | "assignment"
+  | "assigneeId"
+  | "followUpDue"
+  | "bucket";
+
+export interface LeadListHrefOverrides {
+  readonly bucket?: CrmLeadSalesBucket | null;
+  readonly month?: string;
+  readonly page?: number;
+}
+
+/**
+ * Builds a Leads list URL with one filter optionally cleared, or with the
+ * bucket/month/page explicitly overridden.
+ *
+ * Month and bucket SURVIVE every other filter change and every page link. A
+ * segmentation strip that silently dropped the selected month would show counts
+ * for one cohort and rows for another.
+ *
+ * CRM 2B removed the `view=pipeline` preview from this page: the board is now
+ * the dedicated `/admin/crm/pipeline` workspace, so there is no view parameter.
+ */
 export function buildLeadListHref(
   query: LeadListQuery,
-  clear?: "q" | "status" | "sourceId" | "assignment" | "assigneeId" | "followUpDue"
+  clear?: LeadListClearableFilter,
+  overrides: LeadListHrefOverrides = {}
 ): string {
   const params = new URLSearchParams();
   const q = clear === "q" ? null : query.q;
@@ -184,12 +238,35 @@ export function buildLeadListHref(
   const assignment = clear === "assignment" ? null : query.assignment;
   const assigneeId = clear === "assigneeId" ? null : query.assigneeId;
   const followUpDue = clear === "followUpDue" ? null : query.followUpDue;
+  const bucket =
+    overrides.bucket !== undefined
+      ? overrides.bucket
+      : clear === "bucket"
+        ? null
+        : query.bucket;
+  const month = overrides.month ?? query.month.param;
+
   if (q) params.set("q", q);
   if (status) params.set("status", status);
   if (sourceId) params.set("sourceId", sourceId);
   if (assignment) params.set("assignment", assignment);
   if (assigneeId) params.set("assigneeId", assigneeId);
   if (followUpDue) params.set("followUpDue", followUpDue);
+  if (bucket) params.set("bucket", leadSalesBucketParam(bucket));
+  // All-time is a deliberate, shareable choice, so it stays in the URL; the
+  // default current month is implicit and left out to keep links clean.
+  if (month === LEAD_MONTH_ALL) {
+    params.set("month", LEAD_MONTH_ALL);
+  } else if (month) {
+    params.set("month", month);
+  }
+  if (query.pageSize !== LEAD_LIST_DEFAULT_PAGE_SIZE) {
+    params.set("pageSize", String(query.pageSize));
+  }
+  if (overrides.page !== undefined && overrides.page > 1) {
+    params.set("page", String(overrides.page));
+  }
+
   const value = params.toString();
   return value ? `/admin/crm/leads?${value}` : "/admin/crm/leads";
 }

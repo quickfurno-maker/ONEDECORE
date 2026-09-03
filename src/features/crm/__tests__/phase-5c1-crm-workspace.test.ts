@@ -253,22 +253,41 @@ describe("Phase 5C1 lead list query parsing", () => {
     assert.match(src, /return \{\s*request:\s*next\s*\}/);
     assert.doesNotMatch(src, /return next\s*;/);
     assert.match(src, /constrained\.request/);
-    assert.match(src, /constrained\.request[\s\S]*\.range\(from,\s*to\)/);
-    assert.match(
-      src,
-      /to\s*=\s*from\s*\+\s*query\.pageSize/
-    );
+    assert.match(src, /constrained\.request[\s\S]*\.range\(/);
+    // Pagination moved out of SQL: the cohort is read in bounded chunks and
+    // sliced only AFTER the bucket is resolved, so counts and bucket filtering
+    // cover the whole month rather than one page of it.
+    assert.match(src, /CRM_LEAD_COHORT_CHUNK_SIZE/);
+    assert.match(src, /ordered\.slice\(from,\s*from \+ query\.pageSize\)/);
   });
 });
 
 describe("Phase 5C1 lead list DTO safety", () => {
   test("list mapper exposes only approved public keys", () => {
-    const item = mapLeadRowToListItem(sampleLeadRow());
+    const item = mapLeadRowToListItem(sampleLeadRow(), {
+        salesBucket: "COLD",
+        priorityScore: 0,
+        scoreBand: "COLD",
+        riskFlags: [],
+        stageEnteredAt: "2026-09-01T00:00:00.000Z",
+        slaBreached: false,
+        newUncontacted: false,
+      });
     assert.deepEqual(Object.keys(item).sort(), [...CRM_LEAD_LIST_ITEM_PUBLIC_KEYS].sort());
   });
 
   test("list DTO excludes personal detail and audit payload fields", () => {
-    const serialised = JSON.stringify(mapLeadRowToListItem(sampleLeadRow()));
+    const serialised = JSON.stringify(
+      mapLeadRowToListItem(sampleLeadRow(), {
+        salesBucket: "COLD",
+        priorityScore: 0,
+        scoreBand: "COLD",
+        riskFlags: [],
+        stageEnteredAt: "2026-09-01T00:00:00.000Z",
+        slaBreached: false,
+        newUncontacted: false,
+      })
+    );
     for (const field of CRM_LEAD_LIST_FORBIDDEN_FIELDS) {
       assert.equal(serialised.includes(field), false, `must not expose ${field}`);
     }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CrmLeadListItem } from "../../contracts/lead-dtos.ts";
 import { formatCrmCodeLabel } from "../../contracts/crm-labels.ts";
+import { LeadSalesBucketBadge } from "./LeadSalesBucketBadge.tsx";
 import { LeadStatusBadge } from "./LeadStatusBadge.tsx";
 
 interface LeadListCardsProps {
@@ -39,12 +40,20 @@ export function LeadListCards({ items }: LeadListCardsProps) {
               <p className="truncate text-[15px] font-semibold leading-snug text-[var(--crm-text)]">
                 {item.submittedName}
               </p>
-              <LeadStatusBadge status={item.status} />
+              <LeadSalesBucketBadge bucket={item.salesBucket} />
             </div>
             <p className="mt-1 truncate text-[13px] text-[var(--crm-text-secondary)]">
               {formatCrmCodeLabel(item.serviceCode)}
               {item.locality ? ` · ${item.locality}` : ""}
             </p>
+            {/* Stage is a separate fact from the bucket above, so the card
+                carries both rather than collapsing them into one signal. */}
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <LeadStatusBadge status={item.status} />
+              <span className="text-[11px] tabular-nums text-[var(--crm-muted)]">
+                Priority {item.priorityScore}
+              </span>
+            </div>
             <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[var(--crm-border)] pt-2">
               <div className="min-w-0">
                 <p className="truncate text-[12px] text-[var(--crm-text-secondary)]">

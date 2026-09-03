@@ -5,10 +5,8 @@ import type { CrmLeadDetail } from "../contracts/lead-detail-dtos.ts";
 import type { CrmLeadListItem } from "../contracts/lead-dtos.ts";
 import { resolveOnHoldResumeStage } from "../contracts/lifecycle-contracts.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
-import type {
-  LeadListPageResult,
-  LeadListQuery,
-} from "../contracts/lead-list-query.ts";
+import { LEAD_MONTH_ALL_COHORT } from "../contracts/lead-month-cohort.ts";
+import type { LeadListQuery } from "../contracts/lead-list-query.ts";
 import { CrmError, crmErrorFromPostgresMessage } from "./crm-errors.ts";
 import { getCrmAccessContext } from "./crm-auth.ts";
 import { formatMarketingTouchSummary } from "./crm-attribution-summary.ts";
@@ -17,6 +15,7 @@ import {
   fetchCrmAssigneeDirectory,
   queryLeadListPage,
   countLeadListForQuery,
+  type LeadSegmentationPageResult,
 } from "./crm-lead-queries.ts";
 
 /**
@@ -40,6 +39,10 @@ export async function getLeadsForCurrentUser(): Promise<CrmLeadListItem[]> {
     assignment: null,
     assigneeId: null,
     followUpDue: null,
+    bucket: null,
+    // All-time: this helper backs snapshots and exports, not the month-scoped
+    // workspace, so it must not silently inherit a current-month filter.
+    month: LEAD_MONTH_ALL_COHORT,
     page: 1,
     pageSize: 50,
   });
@@ -49,7 +52,7 @@ export async function getLeadsForCurrentUser(): Promise<CrmLeadListItem[]> {
 
 export async function getLeadListPageForCurrentUser(
   query: LeadListQuery
-): Promise<LeadListPageResult<CrmLeadListItem>> {
+): Promise<LeadSegmentationPageResult> {
   const context = await getCrmAccessContext();
   if (!context) {
     throw new CrmError({
