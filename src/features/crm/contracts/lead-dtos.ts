@@ -2,6 +2,10 @@ import type {
   CrmLeadRiskFlag,
   CrmLeadScoreBand,
 } from "./lead-score-contracts.ts";
+import type {
+  CrmLeadQuotationState,
+  CrmSiteVisitState,
+} from "./lead-milestones.ts";
 import type { CrmLeadSalesBucket } from "./lead-sales-bucket.ts";
 import type { LeadStageCode } from "./lead-stages.ts";
 
@@ -37,7 +41,18 @@ export interface CrmLeadListItem {
   readonly assignedTo: string | null;
   readonly assigneeLabel: string;
   readonly assignmentState: "assigned" | "unassigned";
-  readonly nextFollowUpDue: string | null;
+  /**
+   * The CANONICAL primary next action — `is_primary_next_action = true` and
+   * still open.
+   *
+   * This replaces a generic "next open follow-up". That field selected ANY open
+   * follow-up, and the ordering fed it into the urgency ladder as if it were the
+   * primary action, so a lead with no primary action but some unrelated open
+   * activity dodged the `no_next_action` rank and outranked leads that genuinely
+   * had nothing scheduled.
+   */
+  readonly primaryNextActionDueAt: string | null;
+  readonly primaryNextActionTitle: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
   /**
@@ -54,6 +69,13 @@ export interface CrmLeadListItem {
   readonly stageEnteredAt: string;
   readonly slaBreached: boolean;
   readonly newUncontacted: boolean;
+  /**
+   * Milestone facts, shown SEPARATELY from the bucket and the stage. They may
+   * feed the canonical score, but they are never the bucket: a HOT and a LOST
+   * lead can carry exactly the same two milestones.
+   */
+  readonly siteVisitState: CrmSiteVisitState;
+  readonly quotationState: CrmLeadQuotationState;
 }
 
 const CRM_LEAD_LIST_ITEM_KEYS = [
@@ -67,7 +89,8 @@ const CRM_LEAD_LIST_ITEM_KEYS = [
   "assignedTo",
   "assigneeLabel",
   "assignmentState",
-  "nextFollowUpDue",
+  "primaryNextActionDueAt",
+  "primaryNextActionTitle",
   "createdAt",
   "updatedAt",
   "salesBucket",
@@ -77,6 +100,8 @@ const CRM_LEAD_LIST_ITEM_KEYS = [
   "stageEnteredAt",
   "slaBreached",
   "newUncontacted",
+  "siteVisitState",
+  "quotationState",
 ] as const satisfies readonly (keyof CrmLeadListItem)[];
 
 export const CRM_LEAD_LIST_ITEM_PUBLIC_KEYS: readonly (keyof CrmLeadListItem)[] =
@@ -112,13 +137,16 @@ export interface CrmLeadListDerivedFields {
   readonly stageEnteredAt: string;
   readonly slaBreached: boolean;
   readonly newUncontacted: boolean;
+  readonly primaryNextActionDueAt: string | null;
+  readonly primaryNextActionTitle: string | null;
+  readonly siteVisitState: CrmSiteVisitState;
+  readonly quotationState: CrmLeadQuotationState;
 }
 
 export function mapLeadRowToListItem(
   row: CrmLeadListRow,
   options: {
     readonly assigneeLabel?: string;
-    readonly nextFollowUpDue?: string | null;
   } & CrmLeadListDerivedFields
 ): CrmLeadListItem {
   return {
@@ -134,7 +162,8 @@ export function mapLeadRowToListItem(
       options.assigneeLabel ??
       (row.assigned_to ? "Assigned staff" : "Unassigned"),
     assignmentState: row.assigned_to ? "assigned" : "unassigned",
-    nextFollowUpDue: options.nextFollowUpDue ?? null,
+    primaryNextActionDueAt: options.primaryNextActionDueAt,
+    primaryNextActionTitle: options.primaryNextActionTitle,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     salesBucket: options.salesBucket,
@@ -144,5 +173,7 @@ export function mapLeadRowToListItem(
     stageEnteredAt: options.stageEnteredAt,
     slaBreached: options.slaBreached,
     newUncontacted: options.newUncontacted,
+    siteVisitState: options.siteVisitState,
+    quotationState: options.quotationState,
   };
 }

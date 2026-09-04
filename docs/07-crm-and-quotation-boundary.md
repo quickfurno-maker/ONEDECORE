@@ -108,11 +108,26 @@ HOT/WARM/COLD goes stale, can be gamed, and would contradict the deterministic
 score. A future owner-authorized override needs actor, reason, timestamp,
 expiry and an audit trail, and is out of scope.
 
-Site visit / consultation and quotation state remain their **own** milestones.
-They feed the canonical score as input signals where the existing architecture
-already uses them, but they never become the lead's sales bucket. A lead can be
-`HOT` with a completed site visit and a sent quotation; another can be `LOST`
-with exactly the same two milestones.
+Site visit and quotation state remain their **own** milestones, and both are
+rendered as separate columns beside the bucket and the stage. They feed the
+canonical score as input signals where the existing architecture already uses
+them, but they never become the lead's sales bucket:
+
+| Lead | Bucket | Stage | Site visit | Quotation |
+| :--- | :--- | :--- | :--- | :--- |
+| A | HOT | Negotiation | Completed | Issued to client |
+| B | WARM | Qualified | Scheduled | None |
+| C | LOST | Closed Lost | Completed | Issued to client |
+
+**Site visit** is derived only from `lead_follow_ups` rows with
+`activity_type = 'site_visit'`, through the canonical `open` / `completed` /
+`cancelled` status vocabulary (`scheduled` is the display name for an open
+visit). It is **never** inferred from the `consultation_scheduled` pipeline
+stage — that is a different fact, reachable without any site visit existing.
+
+**Quotation** reuses the canonical commercial state already resolved for deal
+value (`unknown` / `draft` / `finalized` / `issued` / `accepted`) with its
+existing labels. There is no second quotation state model.
 
 ## 1b. Lead Received Month
 
@@ -134,9 +149,21 @@ transition timestamp.
 Bucket counts are exact for the whole received-month cohort and the active
 non-bucket filters — the bucket is resolved for every candidate row **before**
 counting, filtering and pagination, so a count is never a count of the current
-page. The cohort is read in bounded chunks under the caller's RLS; if it ever
-exceeds the read ceiling the workspace says so rather than silently showing low
-counts.
+page. The cohort is read in bounded chunks under the caller's RLS.
+
+Bucket counts are core sales numbers, so they **fail closed**: if the cohort
+exceeds the read ceiling the counts are marked non-exact and the strip renders
+them as `—` with an explanation, rather than showing a partial figure that looks
+authoritative. The rows themselves stay correctly ranked.
+
+The month and the bucket are the workspace's organisation, not ordinary filters.
+They are carried as hidden fields on the filter form and preserved by the Clear
+control and every pagination link, so applying a secondary filter can never move
+the operator to a different cohort without their asking.
+
+Ordering uses the **canonical primary next action** (`is_primary_next_action`
+and still open), never any open follow-up: a generic follow-up would let a lead
+with nothing actually scheduled escape the `no_next_action` urgency rank.
 
 ## 2. Lead Sources & Assignment
 

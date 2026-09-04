@@ -77,16 +77,21 @@ export default async function CrmLeadsPage({ searchParams }: CrmLeadsPageProps) 
           source", so the segmentation is visually dominant and above the rest. */}
       <LeadMonthSelector query={query} nowMs={Date.parse(page.capturedAt)} />
 
-      <LeadSalesBucketStrip query={query} counts={page.bucketCounts} />
+      <LeadSalesBucketStrip
+        query={query}
+        counts={page.bucketCounts}
+        countsExact={page.countsExact}
+      />
 
       {page.cohortTruncated ? (
         <p
           className="rounded-[10px] border border-[var(--crm-warning)]/30 bg-[var(--crm-warning-soft)] px-3 py-2 text-[12px] text-[var(--crm-warning)]"
           data-testid="crm-cohort-truncated"
         >
-          This month has more leads than the workspace reads in one pass, so the
-          counts below cover only the leads that were read. Narrow the month or
-          add a filter for exact totals.
+          This month has more leads than the workspace reads in one pass, so
+          exact bucket counts are unavailable and are shown as “—”. The rows
+          below are still ranked correctly. Narrow the month or add a filter to
+          restore exact counts.
         </p>
       ) : null}
 

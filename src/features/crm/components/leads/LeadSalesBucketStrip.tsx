@@ -41,12 +41,21 @@ const ACTIVE_STYLES: Readonly<Record<CrmLeadSalesBucket, string>> = {
 interface LeadSalesBucketStripProps {
   readonly query: LeadListQuery;
   readonly counts: CrmLeadSalesBucketCounts;
+  /**
+   * FALSE when the cohort exceeded the read ceiling, so `counts` is partial.
+   *
+   * Bucket counts are core sales numbers. A partial figure that LOOKS exact is
+   * worse than no figure, so the tabs stay navigable but the numbers are
+   * withheld rather than under-reported.
+   */
+  readonly countsExact: boolean;
 }
 
 function Tab({
   href,
   label,
   count,
+  countsExact,
   selected,
   emphasis,
   title,
@@ -56,6 +65,7 @@ function Tab({
   readonly href: string;
   readonly label: string;
   readonly count: number;
+  readonly countsExact: boolean;
   readonly selected: boolean;
   readonly emphasis: boolean;
   readonly title: string;
@@ -84,8 +94,10 @@ function Tab({
       <span
         className="tabular-nums rounded-full bg-[var(--crm-surface-subtle)] px-1.5 text-[11px] font-semibold"
         data-testid={`${testId}-count`}
+        data-counts-exact={countsExact ? "true" : "false"}
+        title={countsExact ? undefined : "Count unavailable for this cohort"}
       >
-        {count}
+        {countsExact ? count : "—"}
       </span>
     </Link>
   );
@@ -94,6 +106,7 @@ function Tab({
 export function LeadSalesBucketStrip({
   query,
   counts,
+  countsExact,
 }: LeadSalesBucketStripProps) {
   const secondary = CRM_LEAD_SALES_BUCKETS.filter(
     (bucket) => !PRIMARY.includes(bucket)
@@ -110,7 +123,9 @@ export function LeadSalesBucketStrip({
           {leadMonthCohortHeading(query.month)}
         </h2>
         <p className="text-[11px] text-[var(--crm-muted)]">
-          {counts.TOTAL} total
+          {countsExact
+            ? `${counts.TOTAL} total`
+            : "Counts unavailable — narrow the month or add a filter"}
         </p>
       </div>
 
@@ -121,6 +136,7 @@ export function LeadSalesBucketStrip({
           href={buildLeadListHref(query, "bucket", { page: 1 })}
           label="All"
           count={counts.TOTAL}
+          countsExact={countsExact}
           selected={query.bucket === null}
           emphasis
           title="Every lead received in this month."
@@ -133,6 +149,7 @@ export function LeadSalesBucketStrip({
             href={buildLeadListHref(query, undefined, { bucket, page: 1 })}
             label={CRM_LEAD_SALES_BUCKET_LABELS[bucket]}
             count={counts[bucket]}
+            countsExact={countsExact}
             selected={query.bucket === bucket}
             emphasis
             title={CRM_LEAD_SALES_BUCKET_DESCRIPTIONS[bucket]}
@@ -149,6 +166,7 @@ export function LeadSalesBucketStrip({
             href={buildLeadListHref(query, undefined, { bucket, page: 1 })}
             label={CRM_LEAD_SALES_BUCKET_LABELS[bucket]}
             count={counts[bucket]}
+            countsExact={countsExact}
             selected={query.bucket === bucket}
             emphasis={false}
             title={CRM_LEAD_SALES_BUCKET_DESCRIPTIONS[bucket]}

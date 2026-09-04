@@ -10,8 +10,10 @@ import type {
 } from "../../contracts/lead-detail-dtos.ts";
 import {
   buildLeadListHref,
+  LEAD_LIST_DEFAULT_PAGE_SIZE,
   type LeadListQuery,
 } from "../../contracts/lead-list-query.ts";
+import { leadSalesBucketParam } from "../../contracts/lead-sales-bucket.ts";
 
 interface LeadListFiltersProps {
   readonly query: LeadListQuery;
@@ -53,6 +55,27 @@ export function LeadListFilters({
         method="get"
         className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
       >
+        {/*
+          A GET form submits ONLY its own fields, so without these the month and
+          the bucket were silently dropped on every Apply: "August / HOT" plus a
+          source change became "current month / ALL". They are carried as hidden
+          canonical fields rather than reconstructed, so the submitted URL always
+          matches the workspace the operator was looking at.
+
+          `page` is deliberately absent — a new filter is a new result set, so
+          Apply resets to page 1.
+        */}
+        <input type="hidden" name="month" value={query.month.param} />
+        {query.bucket ? (
+          <input
+            type="hidden"
+            name="bucket"
+            value={leadSalesBucketParam(query.bucket)}
+          />
+        ) : null}
+        {query.pageSize !== LEAD_LIST_DEFAULT_PAGE_SIZE ? (
+          <input type="hidden" name="pageSize" value={String(query.pageSize)} />
+        ) : null}
         <input
           id={`${formId}-q`}
           name="q"
@@ -138,9 +161,14 @@ export function LeadListFilters({
           <button type="submit" className="crm-btn crm-btn-primary min-h-11 flex-1 sm:flex-none">
             Apply
           </button>
+          {/* Clears the secondary filters only. The month and the bucket are
+              the workspace's organisation, not filters this button owns —
+              dropping them would silently move the operator to a different
+              cohort. Page resets to 1. */}
           <Link
-            href="/admin/crm/leads"
+            href={buildLeadListHref(query, "secondary", { page: 1 })}
             className="crm-btn crm-btn-ghost min-h-11 flex-1 sm:flex-none"
+            data-testid="crm-filters-clear"
           >
             Clear
           </Link>

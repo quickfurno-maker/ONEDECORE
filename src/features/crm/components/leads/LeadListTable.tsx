@@ -1,6 +1,10 @@
 import Link from "next/link";
 import type { CrmLeadListItem } from "../../contracts/lead-dtos.ts";
 import { formatCrmCodeLabel } from "../../contracts/crm-labels.ts";
+import {
+  CRM_SITE_VISIT_STATE_LABELS,
+  formatLeadQuotationState,
+} from "../../contracts/lead-milestones.ts";
 import { LeadSalesBucketBadge } from "./LeadSalesBucketBadge.tsx";
 import { LeadStatusBadge } from "./LeadStatusBadge.tsx";
 
@@ -45,6 +49,15 @@ export function LeadListTable({ items }: LeadListTableProps) {
               <th scope="col" className="px-4 py-3 font-medium">
                 Stage
               </th>
+              {/* Site visit and quotation are milestone facts of their OWN.
+                  They may feed the canonical score, but they are never the
+                  bucket: a HOT and a LOST lead can carry the same two. */}
+              <th scope="col" className="px-4 py-3 font-medium">
+                Site visit
+              </th>
+              <th scope="col" className="px-4 py-3 font-medium">
+                Quotation
+              </th>
               <th scope="col" className="px-4 py-3 font-medium">
                 Source
               </th>
@@ -55,10 +68,12 @@ export function LeadListTable({ items }: LeadListTableProps) {
                 Locality
               </th>
               <th scope="col" className="px-4 py-3 font-medium">
-                Follow-up
+                Next action
               </th>
+              {/* RECEIVED, not "Created": the whole workspace is organised by
+                  the month a lead was received. */}
               <th scope="col" className="px-4 py-3 font-medium">
-                Created
+                Received
               </th>
             </tr>
           </thead>
@@ -98,6 +113,24 @@ export function LeadListTable({ items }: LeadListTableProps) {
                 <td className="px-4">
                   <LeadStatusBadge status={item.status} />
                 </td>
+                <td className="px-4">
+                  <span
+                    className="inline-flex items-center rounded-md border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--crm-text-secondary)]"
+                    data-testid="crm-lead-site-visit"
+                    data-site-visit={item.siteVisitState}
+                  >
+                    {CRM_SITE_VISIT_STATE_LABELS[item.siteVisitState]}
+                  </span>
+                </td>
+                <td className="px-4">
+                  <span
+                    className="inline-flex items-center rounded-md border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--crm-text-secondary)]"
+                    data-testid="crm-lead-quotation"
+                    data-quotation={item.quotationState}
+                  >
+                    {formatLeadQuotationState(item.quotationState)}
+                  </span>
+                </td>
                 <td className="px-4 text-[var(--crm-text-secondary)]">
                   {item.primarySourceLabel}
                 </td>
@@ -108,9 +141,11 @@ export function LeadListTable({ items }: LeadListTableProps) {
                   {item.locality ?? "—"}
                 </td>
                 <td className="px-4 text-[var(--crm-text-secondary)]">
-                  {item.nextFollowUpDue ? formatTimestamp(item.nextFollowUpDue) : "—"}
+                  {item.primaryNextActionDueAt
+                    ? formatTimestamp(item.primaryNextActionDueAt)
+                    : "—"}
                 </td>
-                <td className="px-4 text-[var(--crm-muted)]">
+                <td className="px-4 text-[var(--crm-muted)]" data-testid="crm-lead-received">
                   {formatTimestamp(item.createdAt)}
                 </td>
               </tr>

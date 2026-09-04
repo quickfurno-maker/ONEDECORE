@@ -28,6 +28,7 @@ import {
 import { sortSegmentedLeads } from "../contracts/lead-segmentation-order.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
+import { chunkLeadIds } from "../contracts/lead-batch-chunking.ts";
 import {
   CRM_EMPTY_ENGAGEMENT,
   fetchLeadScoreBatch,
@@ -170,35 +171,6 @@ async function fetchLeadIdsForFollowUpDueFilter(
   return [...new Set((data ?? []).map((row) => row.lead_id))];
 }
 
-async function fetchNextOpenFollowUpDueByLeadIds(
-  leadIds: readonly string[]
-): Promise<Readonly<Record<string, string>>> {
-  if (leadIds.length === 0) {
-    return {};
-  }
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("lead_follow_ups")
-    .select("lead_id, due_at")
-    .in("lead_id", [...leadIds])
-    .eq("status", "open")
-    .order("due_at", { ascending: true });
-
-  if (error) {
-    throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
-  }
-
-  const map: Record<string, string> = {};
-  for (const row of data ?? []) {
-    if (!map[row.lead_id]) {
-      map[row.lead_id] = row.due_at;
-    }
-  }
-
-  return map;
-}
-
 function buildAssigneeLabelMap(
   directory: readonly CrmAssigneeDirectoryEntry[]
 ): Readonly<Record<string, string>> {
@@ -223,18 +195,71 @@ type LeadListConstraintResult = {
   request: LeadListFilterBuilder;
 };
 
-async function constrainLeadListRequest(
+/**
+ * The expensive filter prerequisites, resolved ONCE per request.
+ *
+ * `q` and `followUpDue` are answered by separate lookups that return matching
+ * lead ids. Resolving them inside the constraint builder meant the cohort scan
+ * re-ran BOTH on every 500-row chunk. This type carries the already-resolved
+ * result so the per-chunk work is pure.
+ *
+ * `matchedIds === null` means no id-restricting filter is active. An EMPTY array
+ * means a filter matched nothing, which is a legitimate empty result, not an
+ * absent filter — the two must never be conflated.
+ */
+export interface LeadListPreparedFilters {
+  readonly matchedIds: readonly string[] | null;
+}
+
+function intersectIds(
+  left: readonly string[] | null,
+  right: readonly string[]
+): readonly string[] {
+  if (left === null) {
+    return right;
+  }
+  const rightSet = new Set(right);
+  return left.filter((id) => rightSet.has(id));
+}
+
+export async function prepareLeadListFilters(
+  query: LeadListQuery
+): Promise<LeadListPreparedFilters> {
+  let matchedIds: readonly string[] | null = null;
+
+  if (query.q) {
+    matchedIds = intersectIds(matchedIds, await fetchLeadIdsForTextSearch(query.q));
+  }
+
+  if (query.followUpDue) {
+    matchedIds = intersectIds(
+      matchedIds,
+      await fetchLeadIdsForFollowUpDueFilter(query.followUpDue)
+    );
+  }
+
+  // Intersected in memory, so at most ONE id set is ever sent to Postgres and
+  // it is the smaller of the two rather than both in full.
+  return { matchedIds };
+}
+
+/**
+ * Applies the prepared filters. PURE — no awaits, so it is safe to call once
+ * per chunk inside the cohort scan.
+ */
+function constrainLeadListRequest(
   request: LeadListFilterBuilder,
   context: CrmAccessContext,
-  query: LeadListQuery
-): Promise<LeadListConstraintResult | null> {
+  query: LeadListQuery,
+  prepared: LeadListPreparedFilters
+): LeadListConstraintResult | null {
   let next = request;
-  if (query.q) {
-    const leadIds = await fetchLeadIdsForTextSearch(query.q);
-    if (leadIds.length === 0) {
+
+  if (prepared.matchedIds !== null) {
+    if (prepared.matchedIds.length === 0) {
       return null;
     }
-    next = next.in("id", [...leadIds]);
+    next = next.in("id", [...prepared.matchedIds]);
   }
 
   if (query.status) {
@@ -257,14 +282,6 @@ async function constrainLeadListRequest(
     }
   }
 
-  if (query.followUpDue) {
-    const leadIds = await fetchLeadIdsForFollowUpDueFilter(query.followUpDue);
-    if (leadIds.length === 0) {
-      return null;
-    }
-    next = next.in("id", [...leadIds]);
-  }
-
   // RECEIVED-month cohort, on created_at. Never updated_at: a lead must not
   // move from August to September because someone edited it in September.
   // Half-open [start, next month start) so a lead at a boundary instant belongs
@@ -283,10 +300,12 @@ export async function countLeadListForQuery(
   query: LeadListQuery
 ): Promise<number> {
   const supabase = await createClient();
-  const constrained = await constrainLeadListRequest(
+  const prepared = await prepareLeadListFilters(query);
+  const constrained = constrainLeadListRequest(
     supabase.from("leads").select("id", { count: "exact", head: true }),
     context,
-    query
+    query,
+    prepared
   );
   if (!constrained) {
     return 0;
@@ -315,8 +334,23 @@ export const CRM_LEAD_COHORT_MAX_ROWS = 5_000;
 
 export interface LeadSegmentationPageResult
   extends LeadListPageResult<CrmLeadListItem> {
-  /** Exact counts over the WHOLE received-month cohort, before bucket filtering. */
+  /**
+   * Counts over the WHOLE received-month cohort, before bucket filtering.
+   *
+   * Only meaningful when `countsExact` is true. When the cohort exceeded the
+   * read ceiling these are counts of what was READ, not of the month, and the
+   * workspace must not render them as ordinary numbers.
+   */
   readonly bucketCounts: CrmLeadSalesBucketCounts;
+  /**
+   * FALSE means the cohort was larger than one read pass could cover, so the
+   * counts above are partial.
+   *
+   * Bucket counts are core sales numbers. Showing a partial figure that looks
+   * exact is worse than showing none, so the strip suppresses the numbers rather
+   * than quietly under-reporting a month.
+   */
+  readonly countsExact: boolean;
   /** Rows in the cohort after bucket filtering, before the page slice. */
   readonly filteredTotal: number;
   readonly capturedAt: string;
@@ -333,21 +367,63 @@ export interface LeadSegmentationPageResult
  */
 async function readCohortRows(
   context: CrmAccessContext,
-  query: LeadListQuery
+  query: LeadListQuery,
+  prepared: LeadListPreparedFilters
 ): Promise<{ rows: CrmLeadListRow[]; truncated: boolean } | null> {
   const supabase = await createClient();
+
+  const baseRequest = () =>
+    supabase
+      .from("leads")
+      .select(CRM_LEAD_LIST_SELECT)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true }) as unknown as LeadListFilterBuilder;
+
+  // When an id-restricting filter is active the candidate set is ALREADY known,
+  // so the scan walks it in bounded id chunks. That avoids sending one enormous
+  // `.in(...)` list, and avoids re-sending the same list once per range page.
+  if (prepared.matchedIds !== null) {
+    if (prepared.matchedIds.length === 0) {
+      return null;
+    }
+
+    const rows: CrmLeadListRow[] = [];
+    for (const idChunk of chunkLeadIds(prepared.matchedIds)) {
+      const constrained = constrainLeadListRequest(
+        baseRequest(),
+        context,
+        query,
+        { matchedIds: idChunk }
+      );
+      if (!constrained) {
+        continue;
+      }
+
+      const { data, error } = await (
+        constrained.request as unknown as Promise<{
+          data: unknown;
+          error: { message: string } | null;
+        }>
+      );
+
+      if (error) {
+        throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+      }
+      rows.push(...((data ?? []) as CrmLeadListRow[]));
+    }
+    // Bounded by the matched id set, which Postgres already narrowed.
+    return { rows, truncated: false };
+  }
+
   const rows: CrmLeadListRow[] = [];
   let offset = 0;
 
   for (;;) {
-    const constrained = await constrainLeadListRequest(
-      supabase
-        .from("leads")
-        .select(CRM_LEAD_LIST_SELECT)
-        .order("created_at", { ascending: true })
-        .order("id", { ascending: true }) as unknown as LeadListFilterBuilder,
+    const constrained = constrainLeadListRequest(
+      baseRequest(),
       context,
-      query
+      query,
+      prepared
     );
 
     if (!constrained) {
@@ -376,7 +452,8 @@ async function readCohortRows(
     offset += CRM_LEAD_COHORT_CHUNK_SIZE;
 
     if (rows.length >= CRM_LEAD_COHORT_MAX_ROWS) {
-      // Reported, never silent.
+      // Reported, never silent — and the counts derived from a partial read are
+      // marked NON-EXACT rather than rendered as ordinary numbers.
       return { rows, truncated: true };
     }
   }
@@ -396,6 +473,7 @@ function emptySegmentationPage(
     },
     hasActiveFilters: hasLeadListActiveFilters(query),
     bucketCounts: emptySalesBucketCounts(),
+    countsExact: true,
     filteredTotal: 0,
     capturedAt,
     cohortTruncated: false,
@@ -427,18 +505,20 @@ export async function queryLeadListPage(
   const assigneeDirectory = await fetchCrmAssigneeDirectory(context);
   const assigneeLabels = buildAssigneeLabelMap(assigneeDirectory);
 
-  const cohort = await readCohortRows(context, query);
+  // Resolved ONCE per request. Doing this inside the scan re-ran the text and
+  // follow-up lookups for every chunk of the cohort.
+  const prepared = await prepareLeadListFilters(query);
+
+  const cohort = await readCohortRows(context, query, prepared);
   if (!cohort || cohort.rows.length === 0) {
     return emptySegmentationPage(query, capturedAt);
   }
 
   const leadIds = cohort.rows.map((row) => row.id);
 
-  // Fixed number of batched round trips, independent of cohort size.
-  const [batch, followUpDueMap] = await Promise.all([
-    fetchLeadScoreBatch(leadIds),
-    fetchNextOpenFollowUpDueByLeadIds(leadIds),
-  ]);
+  // A fixed number of batched query GROUPS, each chunking its own lead-id list.
+  // Bounded and free of per-lead reads — not a constant number of requests.
+  const batch = await fetchLeadScoreBatch(leadIds);
 
   const scored = cohort.rows.map((row) => {
     const primary = batch.primaryActions[row.id] ?? null;
@@ -476,7 +556,13 @@ export async function queryLeadListPage(
       assigneeLabel: row.assigned_to
         ? assigneeLabels[row.assigned_to] ?? "Assigned staff"
         : "Unassigned",
-      nextFollowUpDue: followUpDueMap[row.id] ?? null,
+      // The CANONICAL primary next action, not any open follow-up. The generic
+      // one let a lead with no primary action dodge the `no_next_action` rank.
+      primaryNextActionDueAt: primary?.dueAt ?? null,
+      primaryNextActionTitle: primary?.title ?? null,
+      // Milestones, kept separate from bucket and stage.
+      siteVisitState: batch.siteVisits[row.id] ?? "none",
+      quotationState: deal?.state ?? "unknown",
       salesBucket: resolveLeadSalesBucket(status, score.band),
       priorityScore: score.priorityScore,
       scoreBand: score.band,
@@ -492,8 +578,10 @@ export async function queryLeadListPage(
   });
 
   // Counts describe the whole cohort, so the strip keeps showing where the rest
-  // of the month's leads are even while one bucket is selected.
+  // of the month's leads are even while one bucket is selected. They are only
+  // EXACT when the whole cohort was read.
   const bucketCounts = countSalesBuckets(scored.map((item) => item.salesBucket));
+  const countsExact = !cohort.truncated;
 
   const filtered = query.bucket
     ? scored.filter((item) => item.salesBucket === query.bucket)
@@ -514,6 +602,7 @@ export async function queryLeadListPage(
     },
     hasActiveFilters: hasLeadListActiveFilters(query),
     bucketCounts,
+    countsExact,
     filteredTotal: ordered.length,
     capturedAt,
     cohortTruncated: cohort.truncated,

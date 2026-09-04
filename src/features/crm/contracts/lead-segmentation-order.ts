@@ -26,7 +26,14 @@ export interface CrmSortableLead {
   readonly id: string;
   readonly salesBucket: CrmLeadSalesBucket;
   readonly priorityScore: number;
-  readonly nextFollowUpDue: string | null;
+  /**
+   * The CANONICAL primary next action only.
+   *
+   * A generic "next open follow-up" used to be fed in here as if it were the
+   * primary action, so a lead with no primary action but an unrelated open
+   * activity escaped the `no_next_action` urgency rank.
+   */
+  readonly primaryNextActionDueAt: string | null;
   readonly slaBreached: boolean;
   readonly newUncontacted: boolean;
   readonly createdAt: string;
@@ -78,7 +85,7 @@ function compareActive(
       resolvePipelineUrgency(
         {
           slaBreached: left.slaBreached,
-          primaryNextActionDueAt: left.nextFollowUpDue,
+          primaryNextActionDueAt: left.primaryNextActionDueAt,
           newUncontacted: left.newUncontacted,
         },
         now
@@ -88,7 +95,7 @@ function compareActive(
       resolvePipelineUrgency(
         {
           slaBreached: right.slaBreached,
-          primaryNextActionDueAt: right.nextFollowUpDue,
+          primaryNextActionDueAt: right.primaryNextActionDueAt,
           newUncontacted: right.newUncontacted,
         },
         now
@@ -98,8 +105,8 @@ function compareActive(
     return urgencyDelta;
   }
 
-  const leftDue = parseMs(left.nextFollowUpDue, Number.POSITIVE_INFINITY);
-  const rightDue = parseMs(right.nextFollowUpDue, Number.POSITIVE_INFINITY);
+  const leftDue = parseMs(left.primaryNextActionDueAt, Number.POSITIVE_INFINITY);
+  const rightDue = parseMs(right.primaryNextActionDueAt, Number.POSITIVE_INFINITY);
   if (leftDue !== rightDue) {
     return leftDue < rightDue ? -1 : 1;
   }

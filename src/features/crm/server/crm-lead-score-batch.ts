@@ -12,6 +12,10 @@ import {
   CRM_LEAD_ID_CHUNK_SIZE,
   chunkLeadIds,
 } from "../contracts/lead-batch-chunking.ts";
+import {
+  resolveSiteVisitState,
+  type CrmSiteVisitState,
+} from "../contracts/lead-milestones.ts";
 import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
 
 export { CRM_LEAD_ID_CHUNK_SIZE, chunkLeadIds };
@@ -24,9 +28,11 @@ export { CRM_LEAD_ID_CHUNK_SIZE, chunkLeadIds };
  * bulk, so giving the list a score meant either N+1 reads or a second, drifting
  * copy of the signal rules.
  *
- * Every function here is batched by lead id and chunked: none of them issues a
+ * Every function here is batched by lead id and CHUNKED: none of them issues a
  * query per lead, and none of them sends an unbounded `.in(...)` list that
- * Postgres or the PostgREST URL length would reject.
+ * Postgres or the PostgREST URL length would reject. The request count grows
+ * with the number of chunks, not with the number of leads — bounded, not
+ * constant.
  *
  * These reads run under the CALLER'S RLS. There is no service-role shortcut, so
  * a signal the user cannot read simply does not contribute — a scoped user can
@@ -73,6 +79,62 @@ export interface CrmSlaSignalResult {
 export interface CrmSalesTouchSignal {
   readonly latestNoteAt: string | null;
   readonly latestQuotationEventAt: string | null;
+}
+
+/**
+ * The SITE VISIT milestone, batched.
+ *
+ * Read only from `activity_type = 'site_visit'` rows and only through the
+ * canonical open/completed/cancelled status vocabulary. It is never inferred
+ * from the `consultation_scheduled` pipeline stage — that is a different fact,
+ * and using it here would turn one milestone into a proxy for another.
+ */
+export async function fetchSiteVisitSignals(
+  leadIds: readonly string[]
+): Promise<Readonly<Record<string, CrmSiteVisitState>>> {
+  const chunks = chunkLeadIds(leadIds);
+  if (chunks.length === 0) {
+    return {};
+  }
+
+  const supabase = await createClient();
+  const tally: Record<
+    string,
+    { completed: number; open: number; cancelled: number }
+  > = {};
+
+  for (const chunk of chunks) {
+    const { data, error } = await supabase
+      .from("lead_follow_ups")
+      .select("lead_id, status")
+      .in("lead_id", [...chunk])
+      .eq("activity_type", "site_visit");
+
+    if (error) {
+      throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+    }
+
+    for (const row of data ?? []) {
+      const entry = (tally[row.lead_id] ??= {
+        completed: 0,
+        open: 0,
+        cancelled: 0,
+      });
+      if (row.status === "completed") {
+        entry.completed += 1;
+      } else if (row.status === "open") {
+        entry.open += 1;
+      } else if (row.status === "cancelled") {
+        entry.cancelled += 1;
+      }
+    }
+  }
+
+  const map: Record<string, CrmSiteVisitState> = {};
+  for (const [leadId, counts] of Object.entries(tally)) {
+    map[leadId] = resolveSiteVisitState(counts);
+  }
+  return map;
 }
 
 /**
@@ -365,11 +427,16 @@ export interface CrmLeadScoreBatch {
   readonly engagement: Readonly<Record<string, CrmEngagementSignal>>;
   readonly dealValues: Readonly<Record<string, CrmDealValueSignal>>;
   readonly salesTouches: Readonly<Record<string, CrmSalesTouchSignal>>;
+  readonly siteVisits: Readonly<Record<string, CrmSiteVisitState>>;
 }
 
 /**
- * Everything the score needs for a set of leads, in a fixed number of batched
- * round trips regardless of how many leads are passed.
+ * Everything the score and the milestone columns need for a set of leads.
+ *
+ * A FIXED NUMBER OF QUERY GROUPS, each of which chunks its own lead-id list.
+ * That is bounded and free of per-lead N+1 reads, but it is NOT a constant
+ * number of database requests: a cohort larger than one chunk issues one
+ * request per chunk per group, by design.
  */
 export async function fetchLeadScoreBatch(
   leadIds: readonly string[]
@@ -381,6 +448,7 @@ export async function fetchLeadScoreBatch(
     engagement,
     dealValues,
     salesTouches,
+    siteVisits,
   ] = await Promise.all([
     fetchPrimaryNextActions(leadIds),
     fetchSlaSignals(leadIds),
@@ -388,6 +456,7 @@ export async function fetchLeadScoreBatch(
     fetchEngagementSignals(leadIds),
     fetchDealValues(leadIds),
     fetchSalesTouchSignals(leadIds),
+    fetchSiteVisitSignals(leadIds),
   ]);
 
   return {
@@ -397,5 +466,6 @@ export async function fetchLeadScoreBatch(
     engagement,
     dealValues,
     salesTouches,
+    siteVisits,
   };
 }

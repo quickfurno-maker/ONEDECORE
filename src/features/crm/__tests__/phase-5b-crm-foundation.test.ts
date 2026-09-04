@@ -300,6 +300,10 @@ describe("Phase 5B CRM lead list DTO minimization", () => {
         stageEnteredAt: "2026-09-01T00:00:00.000Z",
         slaBreached: false,
         newUncontacted: false,
+        primaryNextActionDueAt: null,
+        primaryNextActionTitle: null,
+        siteVisitState: "none",
+        quotationState: "unknown",
       });
     assert.deepEqual(Object.keys(item).sort(), [...CRM_LEAD_LIST_ITEM_PUBLIC_KEYS].sort());
   });
@@ -317,6 +321,10 @@ describe("Phase 5B CRM lead list DTO minimization", () => {
         stageEnteredAt: "2026-09-01T00:00:00.000Z",
         slaBreached: false,
         newUncontacted: false,
+        primaryNextActionDueAt: null,
+        primaryNextActionTitle: null,
+        siteVisitState: "none",
+        quotationState: "unknown",
       }
     );
     const serialised = JSON.stringify(item);

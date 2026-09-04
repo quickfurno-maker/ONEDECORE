@@ -15,6 +15,8 @@ import {
 } from "../contracts/lead-sales-bucket.ts";
 import {
   CRM_LEAD_SCORE_BAND_MIN,
+  CRM_SCORE_ENGAGEMENT_MAX,
+  CRM_SCORE_MATURITY_POINTS,
   resolveScoreBand,
   type CrmLeadScoreBand,
 } from "../contracts/lead-score-contracts.ts";
@@ -42,6 +44,11 @@ import {
   CRM_LEAD_ID_CHUNK_SIZE,
   chunkLeadIds,
 } from "../contracts/lead-batch-chunking.ts";
+import {
+  formatLeadQuotationState,
+  resolveSiteVisitState,
+} from "../contracts/lead-milestones.ts";
+import { CRM_COMMERCIAL_STATES } from "../contracts/deal-value-contracts.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 
 const root = process.cwd();
@@ -57,6 +64,8 @@ const STRIP = "src/features/crm/components/leads/LeadSalesBucketStrip.tsx";
 const HEADER = "src/features/crm/components/leads/LeadCommandHeader.tsx";
 const PAGE = "src/app/admin/crm/leads/page.tsx";
 const SCORE = "src/features/crm/contracts/lead-score-contracts.ts";
+const FILTERS = "src/features/crm/components/leads/LeadListFilters.tsx";
+const MILESTONES = "src/features/crm/contracts/lead-milestones.ts";
 
 /* ========================================================================== */
 /* 1. Bucket resolution                                                        */
@@ -145,9 +154,17 @@ describe("the sales bucket is deterministic", () => {
     assert.doesNotMatch(bucketSource, /priorityScore\s*>=/);
   });
 
-  test("a brand-new unworked lead lands in COLD", () => {
-    // Matches current managed production: every lead is stage `new`, so the
-    // workspace shows them as COLD without any seeded data.
+  test("a stage-new lead cannot reach WARM even at maximum engagement", () => {
+    // Maturity(new) = 0 and engagement is capped at 40 < WARM's 45. This is why
+    // every current production lead reads COLD, and it holds however much
+    // activity those leads accumulate while they stay at stage `new`.
+    assert.equal(CRM_SCORE_MATURITY_POINTS.new, 0);
+    assert.ok(
+      CRM_SCORE_MATURITY_POINTS.new + CRM_SCORE_ENGAGEMENT_MAX <
+        CRM_LEAD_SCORE_BAND_MIN.WARM
+    );
+    const ceiling = CRM_SCORE_MATURITY_POINTS.new + CRM_SCORE_ENGAGEMENT_MAX;
+    assert.equal(resolveLeadSalesBucket("new", resolveScoreBand(ceiling)), "COLD");
     assert.equal(resolveLeadSalesBucket("new", resolveScoreBand(0)), "COLD");
   });
 
@@ -425,7 +442,7 @@ const BASE: CrmSortableLead = {
   id: "00000000-0000-4000-8000-000000000000",
   salesBucket: "COLD",
   priorityScore: 0,
-  nextFollowUpDue: null,
+  primaryNextActionDueAt: null,
   slaBreached: false,
   newUncontacted: false,
   createdAt: "2026-09-01T00:00:00.000Z",
@@ -466,9 +483,9 @@ describe("segmented ordering answers 'who do I call next'", () => {
   test("on an equal score, urgency breaks the tie", () => {
     const sorted = sortSegmentedLeads(
       [
-        lead({ id: "calm", salesBucket: "HOT", priorityScore: 80, nextFollowUpDue: "2026-09-20T06:00:00.000Z" }),
+        lead({ id: "calm", salesBucket: "HOT", priorityScore: 80, primaryNextActionDueAt: "2026-09-20T06:00:00.000Z" }),
         lead({ id: "breach", salesBucket: "HOT", priorityScore: 80, slaBreached: true }),
-        lead({ id: "overdue", salesBucket: "HOT", priorityScore: 80, nextFollowUpDue: "2026-09-01T06:00:00.000Z" }),
+        lead({ id: "overdue", salesBucket: "HOT", priorityScore: 80, primaryNextActionDueAt: "2026-09-01T06:00:00.000Z" }),
       ],
       NOW
     );
@@ -479,8 +496,8 @@ describe("segmented ordering answers 'who do I call next'", () => {
   test("on equal score and urgency, the earlier next action wins", () => {
     const sorted = sortSegmentedLeads(
       [
-        lead({ id: "later", salesBucket: "WARM", priorityScore: 50, nextFollowUpDue: "2026-09-25T06:00:00.000Z" }),
-        lead({ id: "sooner", salesBucket: "WARM", priorityScore: 50, nextFollowUpDue: "2026-09-20T06:00:00.000Z" }),
+        lead({ id: "later", salesBucket: "WARM", priorityScore: 50, primaryNextActionDueAt: "2026-09-25T06:00:00.000Z" }),
+        lead({ id: "sooner", salesBucket: "WARM", priorityScore: 50, primaryNextActionDueAt: "2026-09-20T06:00:00.000Z" }),
       ],
       NOW
     );
@@ -604,8 +621,12 @@ describe("bucket counts are exact and cohort-wide", () => {
     assert.equal(counts.TOTAL, 0);
   });
 
-  test("the current production shape reads as all-COLD without seeded data", () => {
-    // 4 August + 2 September leads, every one at stage `new` with no activity.
+  test("stage-new leads read as COLD regardless of recorded activity", () => {
+    // Managed production currently holds 4 August + 2 September leads, all at
+    // stage `new`. They resolve COLD because maturity for `new` is 0 and the
+    // engagement ceiling is 40, which cannot reach the WARM threshold of 45 —
+    // that is a property of the score weights, NOT an assumption that the leads
+    // have no activity (they do: follow-ups and quotation events exist).
     const september = countSalesBuckets(
       Array.from({ length: 2 }, () =>
         resolveLeadSalesBucket("new", resolveScoreBand(0))
@@ -667,8 +688,6 @@ describe("the read path resolves buckets before paginating, without N+1", () => 
   test("signals are batched by lead id, never per lead", () => {
     const src = read(QUERIES);
     assert.match(src, /fetchLeadScoreBatch\(leadIds\)/);
-    // One batch call for the whole cohort, inside a Promise.all with the
-    // follow-up lookup — not a call per row.
     assert.doesNotMatch(src, /scored\.map\([\s\S]{0,400}await /);
     assert.doesNotMatch(src, /for \(const row of cohort\.rows\)[\s\S]{0,200}await /);
   });
@@ -742,7 +761,7 @@ describe("the read path resolves buckets before paginating, without N+1", () => 
     assert.match(src, /if \(context\.canReadBroad\) \{/);
     // Counts are derived from the same RLS-scoped rows the user can read, so a
     // scoped user can never be shown totals for leads they cannot see.
-    assert.match(src, /readCohortRows\(context, query\)/);
+    assert.match(src, /readCohortRows\(context, query, prepared\)/);
   });
 });
 
@@ -832,6 +851,366 @@ describe("the workspace shows bucket and stage as separate facts", () => {
       const src = read(rel);
       assert.doesNotMatch(src, /manualBucket|bucketOverride|manual_temperature/i);
     }
+  });
+});
+
+/* ========================================================================== */
+/* 9. Adversarial corrections                                                  */
+/* ========================================================================== */
+
+describe("the filter form carries the workspace, not just its own fields", () => {
+  const NOW = Date.parse("2026-09-04T06:00:00.000Z");
+
+  test("the GET form submits the selected month as a hidden field", () => {
+    // A GET form submits ONLY its own fields. Without this, August + HOT plus a
+    // source change silently became current-month + ALL.
+    const src = read(FILTERS);
+    assert.match(src, /<input type="hidden" name="month" value=\{query\.month\.param\} \/>/);
+  });
+
+  test("the GET form submits the selected bucket as a hidden field", () => {
+    const src = read(FILTERS);
+    assert.match(src, /name="bucket"/);
+    assert.match(src, /leadSalesBucketParam\(query\.bucket\)/);
+    // Absent rather than empty when no bucket is selected, so ALL stays ALL.
+    assert.match(src, /\{query\.bucket \? \(/);
+  });
+
+  test("the form is a GET to the leads route and omits page, so Apply resets to 1", () => {
+    const src = read(FILTERS);
+    assert.match(src, /action="\/admin\/crm\/leads"/);
+    assert.match(src, /method="get"/);
+    assert.doesNotMatch(src, /name="page"/);
+    // pageSize is preserved when the reader changed it.
+    assert.match(src, /name="pageSize"/);
+  });
+
+  test("every secondary control the form submits is a real query field", () => {
+    const src = read(FILTERS);
+    for (const field of [
+      "q",
+      "status",
+      "sourceId",
+      "assignment",
+      "assigneeId",
+      "followUpDue",
+      "month",
+      "bucket",
+    ]) {
+      assert.match(src, new RegExp(`name="${field}"`), `form missing ${field}`);
+    }
+  });
+
+  test("Clear wipes the secondary filters but keeps month and bucket", () => {
+    const query = parseLeadListQuery(
+      {
+        q: "rahul",
+        status: "qualified",
+        sourceId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        assignment: "assigned",
+        assigneeId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        followUpDue: "today",
+        bucket: "hot",
+        month: "2026-08",
+        page: "5",
+      },
+      NOW
+    );
+
+    const href = buildLeadListHref(query, "secondary", { page: 1 });
+    for (const gone of ["q=", "status=", "sourceId=", "assignment=", "assigneeId=", "followUpDue="]) {
+      assert.equal(href.includes(gone), false, `Clear must drop ${gone}`);
+    }
+    assert.match(href, /month=2026-08/);
+    assert.match(href, /bucket=hot/);
+    assert.doesNotMatch(href, /page=/, "Clear must reset to page 1");
+  });
+
+  test("the Clear control uses that href, not a bare route", () => {
+    const src = read(FILTERS);
+    assert.match(src, /buildLeadListHref\(query, "secondary", \{ page: 1 \}\)/);
+    // The old bare link silently dropped the cohort.
+    assert.doesNotMatch(src, /href="\/admin\/crm\/leads"\s*\n\s*className="crm-btn crm-btn-ghost/);
+  });
+});
+
+describe("only the canonical primary next action drives urgency", () => {
+  const NOW = Date.parse("2026-09-10T06:00:00.000Z");
+
+  test("a lead with no primary action ranks as no_next_action", () => {
+    const withPrimary = lead({
+      id: "has-primary",
+      salesBucket: "HOT",
+      priorityScore: 80,
+      primaryNextActionDueAt: "2026-09-20T06:00:00.000Z",
+    });
+    const withoutPrimary = lead({
+      id: "no-primary",
+      salesBucket: "HOT",
+      priorityScore: 80,
+      primaryNextActionDueAt: null,
+    });
+
+    // no_next_action (rank 1) beats upcoming (rank 5): it needs attention.
+    const sorted = sortSegmentedLeads([withPrimary, withoutPrimary], NOW);
+    assert.deepEqual(sorted.map((entry) => entry.id), ["no-primary", "has-primary"]);
+  });
+
+  test("a NON-primary open follow-up cannot satisfy the primary-action rank", () => {
+    // The read model no longer has any way to express "some other open
+    // follow-up" on a sortable lead: the only due field is the primary one.
+    const sortable: CrmSortableLead = lead({ primaryNextActionDueAt: null });
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(sortable, "nextFollowUpDue"),
+      false,
+      "a generic follow-up must not exist on the ordering contract"
+    );
+    const src = read("src/features/crm/contracts/lead-segmentation-order.ts");
+    assert.doesNotMatch(src, /nextFollowUpDue/);
+    assert.match(src, /primaryNextActionDueAt: left\.primaryNextActionDueAt/);
+  });
+
+  test("the read model sources the due date from the primary-action batch", () => {
+    const src = read(QUERIES);
+    assert.match(src, /primaryNextActionDueAt: primary\?\.dueAt \?\? null/);
+    assert.match(src, /primaryNextActionTitle: primary\?\.title \?\? null/);
+    // The generic "any open follow-up" helper is gone from the cohort path.
+    assert.doesNotMatch(src, /fetchNextOpenFollowUpDueByLeadIds/);
+  });
+
+  test("the primary-action query filters on is_primary_next_action", () => {
+    const src = read(BATCH);
+    const block = src.slice(src.indexOf("fetchPrimaryNextActions"));
+    assert.match(block.slice(0, 900), /\.eq\("is_primary_next_action", true\)/);
+    assert.match(block.slice(0, 900), /\.eq\("status", "open"\)/);
+  });
+
+  test("an earlier primary due date still wins on equal score and urgency", () => {
+    const sorted = sortSegmentedLeads(
+      [
+        lead({ id: "later", salesBucket: "WARM", priorityScore: 50, primaryNextActionDueAt: "2026-09-25T06:00:00.000Z" }),
+        lead({ id: "sooner", salesBucket: "WARM", priorityScore: 50, primaryNextActionDueAt: "2026-09-20T06:00:00.000Z" }),
+      ],
+      NOW
+    );
+    assert.deepEqual(sorted.map((entry) => entry.id), ["sooner", "later"]);
+  });
+});
+
+describe("no unbounded reads and no repeated prerequisite work", () => {
+  test("no query sends a full-cohort lead_id list", () => {
+    for (const rel of [QUERIES, BATCH]) {
+      const src = read(rel);
+      assert.doesNotMatch(
+        src,
+        /\.in\("lead_id", \[\.\.\.leadIds\]\)/,
+        `${rel} sends an unbounded lead_id list`
+      );
+    }
+    // Every batched lead_id read goes through a chunk.
+    const batchSrc = read(BATCH);
+    const inCalls = batchSrc.match(/\.in\("lead_id", \[[^\]]*\]\)/g) ?? [];
+    assert.ok(inCalls.length >= 5);
+    for (const call of inCalls) {
+      assert.match(call, /\[\.\.\.chunk\]/, `unchunked: ${call}`);
+    }
+  });
+
+  test("the id-restricted cohort scan walks chunks, not one giant IN", () => {
+    const src = read(QUERIES);
+    assert.match(src, /for \(const idChunk of chunkLeadIds\(prepared\.matchedIds\)\)/);
+  });
+
+  test("filter prerequisites are resolved ONCE per request", () => {
+    const src = read(QUERIES);
+    // The constraint applier is now pure — no awaits inside it at all.
+    const applier = src.slice(
+      src.indexOf("function constrainLeadListRequest("),
+      src.indexOf("export async function countLeadListForQuery")
+    );
+    assert.doesNotMatch(applier, /await /, "the per-chunk applier must be pure");
+    assert.doesNotMatch(applier, /fetchLeadIdsForTextSearch/);
+    assert.doesNotMatch(applier, /fetchLeadIdsForFollowUpDueFilter/);
+
+    // And the expensive lookups live in the once-per-request preparer.
+    const preparer = src.slice(
+      src.indexOf("export async function prepareLeadListFilters("),
+      src.indexOf("function constrainLeadListRequest(")
+    );
+    assert.match(preparer, /fetchLeadIdsForTextSearch/);
+    assert.match(preparer, /fetchLeadIdsForFollowUpDueFilter/);
+
+    // Called once, before the scan.
+    assert.match(src, /const prepared = await prepareLeadListFilters\(query\)/);
+    const scan = src.slice(src.indexOf("async function readCohortRows("));
+    assert.doesNotMatch(
+      scan.slice(0, scan.indexOf("export async function queryLeadListPage")),
+      /await prepareLeadListFilters/
+    );
+  });
+
+  test("two id filters are intersected in memory, not both sent", () => {
+    const src = read(QUERIES);
+    assert.match(src, /function intersectIds\(/);
+    assert.match(src, /const rightSet = new Set\(right\)/);
+  });
+
+  test("the batching claim is described truthfully", () => {
+    // "A fixed number of requests independent of cohort size" was wrong: the
+    // request count grows with the number of chunks.
+    for (const rel of [QUERIES, BATCH]) {
+      const src = read(rel);
+      assert.doesNotMatch(src, /independent of cohort size/);
+      assert.doesNotMatch(src, /Fixed number of batched round trips/);
+    }
+    assert.match(read(BATCH), /bounded, not\n \* constant/);
+  });
+});
+
+describe("site visit and quotation are separate milestone facts", () => {
+  test("site visit is derived from canonical site_visit activities only", () => {
+    const src = read(BATCH);
+    const block = src.slice(src.indexOf("fetchSiteVisitSignals"));
+    assert.match(block.slice(0, 1200), /\.eq\("activity_type", "site_visit"\)/);
+    // NEVER inferred from the pipeline stage.
+    assert.doesNotMatch(block.slice(0, 1200), /consultation_scheduled/);
+  });
+
+  test("site visit uses only the canonical open/completed/cancelled vocabulary", () => {
+    const src = read(MILESTONES);
+    assert.match(src, /open, completed, cancelled/);
+    assert.equal(resolveSiteVisitState({ completed: 0, open: 0, cancelled: 0 }), "none");
+    assert.equal(resolveSiteVisitState({ completed: 0, open: 1, cancelled: 0 }), "scheduled");
+    assert.equal(resolveSiteVisitState({ completed: 1, open: 0, cancelled: 0 }), "completed");
+    assert.equal(resolveSiteVisitState({ completed: 0, open: 0, cancelled: 1 }), "cancelled");
+    // A completed visit outranks a later cancelled one; an upcoming visit
+    // outranks an abandoned one.
+    assert.equal(resolveSiteVisitState({ completed: 1, open: 0, cancelled: 3 }), "completed");
+    assert.equal(resolveSiteVisitState({ completed: 0, open: 1, cancelled: 2 }), "scheduled");
+  });
+
+  test("quotation reuses the canonical commercial state — no second model", () => {
+    const src = read(MILESTONES);
+    assert.match(src, /from "\.\/deal-value-contracts\.ts"/);
+    assert.match(src, /CRM_LEAD_QUOTATION_STATE_LABELS = CRM_COMMERCIAL_STATE_LABELS/);
+    for (const state of CRM_COMMERCIAL_STATES) {
+      assert.equal(
+        typeof formatLeadQuotationState(state),
+        "string",
+        `${state} must have a canonical label`
+      );
+    }
+    assert.equal(formatLeadQuotationState("unknown"), "None");
+    assert.equal(formatLeadQuotationState("issued"), "Issued to client");
+
+    // The read model takes it straight from the deal-value batch.
+    assert.match(read(QUERIES), /quotationState: deal\?\.state \?\? "unknown"/);
+  });
+
+  test("milestones are independent of the bucket", () => {
+    // The owner lock: the same two milestones can sit under any bucket.
+    const bucketSrc = read("src/features/crm/contracts/lead-sales-bucket.ts");
+    assert.doesNotMatch(bucketSrc, /siteVisit/i);
+    assert.doesNotMatch(bucketSrc, /quotation/i);
+    assert.doesNotMatch(bucketSrc, /site_visit/);
+
+    // resolveLeadSalesBucket takes ONLY status and band, so no milestone can
+    // reach it.
+    assert.equal(resolveLeadSalesBucket.length, 2);
+    assert.equal(resolveLeadSalesBucket("negotiation", "HOT"), "HOT");
+    assert.equal(resolveLeadSalesBucket("closed_lost", "HOT"), "LOST");
+  });
+
+  test("milestones are independent of the stage", () => {
+    // Strip comments first: the module deliberately NAMES the stage it must not
+    // use, to record why. Only executable code is checked here.
+    const code = read(MILESTONES)
+      .split("\n")
+      .filter((line) => {
+        const trimmed = line.trimStart();
+        return !(
+          trimmed.startsWith("*") ||
+          trimmed.startsWith("/*") ||
+          trimmed.startsWith("//")
+        );
+      })
+      .join("\n");
+
+    for (const stage of ["consultation_scheduled", "proposal_sent", "negotiation"]) {
+      assert.doesNotMatch(code, new RegExp(stage), `milestone code reads ${stage}`);
+    }
+    // The resolver takes activity counts only — no stage can reach it.
+    assert.equal(resolveSiteVisitState.length, 1);
+  });
+});
+
+describe("the workspace shows bucket, stage and both milestones", () => {
+  test("the desktop table carries all five facts", () => {
+    const src = read(TABLE);
+    for (const header of ["Bucket", "Stage", "Site visit", "Quotation", "Received"]) {
+      assert.match(src, new RegExp(`>\\s*${header}\\s*<`), `table missing ${header}`);
+    }
+    assert.match(src, /CRM_SITE_VISIT_STATE_LABELS\[item\.siteVisitState\]/);
+    assert.match(src, /formatLeadQuotationState\(item\.quotationState\)/);
+    assert.match(src, /<LeadSalesBucketBadge/);
+    assert.match(src, /<LeadStatusBadge status=\{item\.status\} \/>/);
+  });
+
+  test("the desktop label says Received, not Created", () => {
+    const src = read(TABLE);
+    assert.doesNotMatch(src, />\s*Created\s*</);
+    assert.match(src, /data-testid="crm-lead-received"[\s\S]{0,120}item\.createdAt/);
+  });
+
+  test("the mobile card carries the same core facts", () => {
+    const src = read(CARDS);
+    assert.match(src, /<LeadSalesBucketBadge bucket=\{item\.salesBucket\} \/>/);
+    assert.match(src, /<LeadStatusBadge status=\{item\.status\} \/>/);
+    assert.match(src, /Site visit: \{CRM_SITE_VISIT_STATE_LABELS\[item\.siteVisitState\]\}/);
+    assert.match(src, /Quotation: \{formatLeadQuotationState\(item\.quotationState\)\}/);
+    assert.match(src, /Priority \{item\.priorityScore\}/);
+  });
+
+  test("the mobile received date comes from createdAt, never updatedAt", () => {
+    const src = read(CARDS);
+    assert.match(src, /Received \{formatTimestamp\(item\.createdAt\)\}/);
+    // updatedAt contradicted a received-month workspace: a lead edited today
+    // read as if it had arrived today.
+    assert.doesNotMatch(src, /item\.updatedAt/);
+  });
+
+  test("the next-action column shows the primary action", () => {
+    assert.match(read(TABLE), />\s*Next action\s*</);
+    assert.match(read(TABLE), /item\.primaryNextActionDueAt/);
+    assert.match(read(CARDS), /item\.primaryNextActionDueAt/);
+    for (const rel of [TABLE, CARDS]) {
+      assert.doesNotMatch(read(rel), /nextFollowUpDue/);
+    }
+  });
+});
+
+describe("partial counts are never presented as exact", () => {
+  test("the read model reports exactness alongside the counts", () => {
+    const src = read(QUERIES);
+    assert.match(src, /readonly countsExact: boolean;/);
+    assert.match(src, /const countsExact = !cohort\.truncated;/);
+    // The empty page is genuinely exact: zero really is zero.
+    assert.match(src, /countsExact: true,/);
+  });
+
+  test("the strip withholds the numbers when the cohort was truncated", () => {
+    const src = read(STRIP);
+    assert.match(src, /\{countsExact \? count : "—"\}/);
+    assert.match(src, /data-counts-exact=\{countsExact \? "true" : "false"\}/);
+    assert.match(src, /Counts unavailable/);
+    // The tabs stay navigable — only the numbers are withheld.
+    assert.match(src, /href=\{buildLeadListHref\(query, undefined, \{ bucket, page: 1 \}\)\}/);
+  });
+
+  test("the page hands the exactness flag through and explains it", () => {
+    const src = read(PAGE);
+    assert.match(src, /countsExact=\{page\.countsExact\}/);
+    assert.match(src, /exact bucket counts are unavailable/);
   });
 });
 

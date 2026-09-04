@@ -200,6 +200,11 @@ export function hasLeadListActiveFilters(query: LeadListQuery): boolean {
  * CRM 2B removed the `view=pipeline` preview from this page: the board is now
  * the dedicated `/admin/crm/pipeline` workspace, so there is no view parameter.
  */
+/**
+ * `"secondary"` clears every filter in the secondary bar at once and
+ * deliberately KEEPS the month and the bucket — those are the workspace's
+ * organisation, not filters the Clear button owns.
+ */
 export type LeadListClearableFilter =
   | "q"
   | "status"
@@ -207,7 +212,8 @@ export type LeadListClearableFilter =
   | "assignment"
   | "assigneeId"
   | "followUpDue"
-  | "bucket";
+  | "bucket"
+  | "secondary";
 
 export interface LeadListHrefOverrides {
   readonly bucket?: CrmLeadSalesBucket | null;
@@ -232,12 +238,13 @@ export function buildLeadListHref(
   overrides: LeadListHrefOverrides = {}
 ): string {
   const params = new URLSearchParams();
-  const q = clear === "q" ? null : query.q;
-  const status = clear === "status" ? null : query.status;
-  const sourceId = clear === "sourceId" ? null : query.sourceId;
-  const assignment = clear === "assignment" ? null : query.assignment;
-  const assigneeId = clear === "assigneeId" ? null : query.assigneeId;
-  const followUpDue = clear === "followUpDue" ? null : query.followUpDue;
+  const all = clear === "secondary";
+  const q = all || clear === "q" ? null : query.q;
+  const status = all || clear === "status" ? null : query.status;
+  const sourceId = all || clear === "sourceId" ? null : query.sourceId;
+  const assignment = all || clear === "assignment" ? null : query.assignment;
+  const assigneeId = all || clear === "assigneeId" ? null : query.assigneeId;
+  const followUpDue = all || clear === "followUpDue" ? null : query.followUpDue;
   const bucket =
     overrides.bucket !== undefined
       ? overrides.bucket
