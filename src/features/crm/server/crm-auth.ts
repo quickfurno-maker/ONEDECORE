@@ -1,7 +1,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import { getSafeAdminRedirect } from "@/server/auth/authorize";
 import { getStaffClaims } from "@/server/auth/session";
 import {
@@ -25,8 +25,8 @@ export type CrmAccessResolution =
   | { readonly kind: "inactive" }
   | { readonly kind: "denied" };
 
-async function isActiveStaff(userId: string): Promise<boolean> {
-  const supabase = await createClient();
+async function isActiveStaff(userId: string, db?: CrmDb): Promise<boolean> {
+  const supabase = await resolveCrmDb(db);
   const { data: profile } = await supabase
     .from("profiles")
     .select("status")
@@ -39,18 +39,28 @@ async function isActiveStaff(userId: string): Promise<boolean> {
 /**
  * Resolves CRM workspace access using getClaims-aligned staff session probes.
  */
-export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
-  const staff = await getStaffClaims();
+export async function resolveCrmAccess(
+  options: { db?: CrmDb; staff?: { userId: string; email: string | null } } = {}
+): Promise<CrmAccessResolution> {
+  const { db } = options;
+
+  /*
+   * The caller is either resolved from cookies (browser workspace) or handed in
+   * already resolved from a bearer token (mobile). Everything after this point
+   * is identical for both, which is the whole point: one permission model, one
+   * access context, two transports.
+   */
+  const staff = options.staff ?? (await getStaffClaims());
   if (!staff) {
     return { kind: "unauthenticated" };
   }
 
-  if (!(await isActiveStaff(staff.userId))) {
+  if (!(await isActiveStaff(staff.userId, db))) {
     return { kind: "inactive" };
   }
 
-  const permissions = await probeCrmPermissions();
-  const canAssignLeads = await probeCanAssignLeads();
+  const permissions = await probeCrmPermissions(db);
+  const canAssignLeads = await probeCanAssignLeads(db);
   const [
     manualLeadPermissions,
     lifecyclePermissions,
@@ -59,12 +69,12 @@ export async function resolveCrmAccess(): Promise<CrmAccessResolution> {
     cadencePermissions,
     slaPolicyPermissions,
   ] = await Promise.all([
-      probeManualLeadPermissions(),
-      probeLifecycleMutationPermissions(),
-      probeBulkImportPermissions(),
-      probeSalesTargetPermissions(),
-      probeCadencePermissions(),
-      probeSlaPolicyPermissions(),
+      probeManualLeadPermissions(db),
+      probeLifecycleMutationPermissions(db),
+      probeBulkImportPermissions(db),
+      probeSalesTargetPermissions(db),
+      probeCadencePermissions(db),
+      probeSlaPolicyPermissions(db),
     ]);
   const context: CrmAccessContext = {
     userId: staff.userId,

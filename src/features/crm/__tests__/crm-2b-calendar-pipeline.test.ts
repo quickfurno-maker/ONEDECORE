@@ -778,7 +778,7 @@ describe("CRM 2B pipeline — bounded reads and premium card content", () => {
     assert.match(src, /\.in\("lead_id", \[\.\.\.chunk\]\)/);
     assert.match(src, /Promise\.all/);
     // Still no per-card read: the board hands the whole id set to the batch.
-    assert.match(readSrc(PIPELINE_QUERIES), /fetchEngagementSignals\(leadIds\)/);
+    assert.match(readSrc(PIPELINE_QUERIES), /fetchEngagementSignals\(leadIds(?:, db)?\)/);
   });
 
   test("cards carry the sales-useful minimum", () => {
