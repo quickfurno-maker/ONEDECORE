@@ -596,8 +596,13 @@ describe("the Leads workspace is premium dark", () => {
     assert.match(css, /focus-visible/);
   });
 
-  test("contrast ratios are documented alongside the palette", () => {
-    assert.match(read(TOKENS), /Contrast \(WCAG AA needs 4\.5:1/);
+  test("MEASURED contrast ratios are documented alongside the palette", () => {
+    const css = read(TOKENS);
+    // Computed, not estimated: every pair was measured before being recorded.
+    assert.match(css, /Contrast, MEASURED \(WCAG AA needs 4\.5:1/);
+    assert.match(css, /#eef2f6 on #0b1017\s+16\.96:1/);
+    assert.match(css, /#14100a on #c89d3c\s+7\.53:1/);
+    assert.match(css, /Every pair clears AA; none relies on colour alone\./);
   });
 });
 
