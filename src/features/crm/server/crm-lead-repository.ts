@@ -14,7 +14,9 @@ import { fetchLeadTimelinePage } from "./crm-lead-timeline-queries.ts";
 import {
   fetchCrmAssigneeDirectory,
   queryLeadListPage,
-  countLeadListForQuery,
+  queryRecentLeads,
+  CRM_RECENT_LEADS_LIMIT,
+  type CrmRecentLead,
   type LeadSegmentationPageResult,
 } from "./crm-lead-queries.ts";
 
@@ -65,9 +67,16 @@ export async function getLeadListPageForCurrentUser(
   return queryLeadListPage(context, query);
 }
 
-export async function countLeadListForCurrentUser(
-  query: LeadListQuery
-): Promise<number> {
+/**
+ * The newest leads by RECEIPT, for the operations dashboard.
+ *
+ * Deliberately NOT `getLeadListPageForCurrentUser`: that read model is the
+ * conversion queue and ranks by bucket and priority, so a panel titled "Recent
+ * Leads" built on it showed the hottest leads rather than the newest.
+ */
+export async function getRecentLeadsForCurrentUser(
+  limit: number = CRM_RECENT_LEADS_LIMIT
+): Promise<readonly CrmRecentLead[]> {
   const context = await getCrmAccessContext();
   if (!context) {
     throw new CrmError({
@@ -77,7 +86,7 @@ export async function countLeadListForCurrentUser(
     });
   }
 
-  return countLeadListForQuery(context, query);
+  return queryRecentLeads(context, limit);
 }
 
 export async function getLeadDetailForCurrentUser(

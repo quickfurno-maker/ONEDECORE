@@ -45,6 +45,12 @@ import {
   chunkLeadIds,
 } from "../contracts/lead-batch-chunking.ts";
 import {
+  CRM_LEAD_COHORT_CHUNK_SIZE,
+  CRM_LEAD_COHORT_MAX_ROWS,
+  cohortScanVerdict,
+  trimCohortRows,
+} from "../contracts/lead-cohort-limits.ts";
+import {
   formatLeadQuotationState,
   resolveSiteVisitState,
 } from "../contracts/lead-milestones.ts";
@@ -66,6 +72,8 @@ const PAGE = "src/app/admin/crm/leads/page.tsx";
 const SCORE = "src/features/crm/contracts/lead-score-contracts.ts";
 const FILTERS = "src/features/crm/components/leads/LeadListFilters.tsx";
 const MILESTONES = "src/features/crm/contracts/lead-milestones.ts";
+const REPOSITORY = "src/features/crm/server/crm-lead-repository.ts";
+const DASHBOARD = "src/features/admin-ops/server/dashboard-snapshot.ts";
 
 /* ========================================================================== */
 /* 1. Bucket resolution                                                        */
@@ -678,8 +686,10 @@ describe("bucket counts are exact and cohort-wide", () => {
 describe("the read path resolves buckets before paginating, without N+1", () => {
   test("the cohort is read in bounded chunks, and truncation is reported", () => {
     const src = read(QUERIES);
-    assert.match(src, /CRM_LEAD_COHORT_CHUNK_SIZE = 500/);
-    assert.match(src, /CRM_LEAD_COHORT_MAX_ROWS = 5_000/);
+    // The limits now live in the pure contract both scan paths share.
+    assert.equal(CRM_LEAD_COHORT_CHUNK_SIZE, 500);
+    assert.equal(CRM_LEAD_COHORT_MAX_ROWS, 5_000);
+    assert.match(src, /cohortScanVerdict/);
     assert.match(src, /cohortTruncated/);
     // Reported, never silent.
     assert.match(read(PAGE), /crm-cohort-truncated/);
@@ -1026,7 +1036,7 @@ describe("no unbounded reads and no repeated prerequisite work", () => {
     // The constraint applier is now pure — no awaits inside it at all.
     const applier = src.slice(
       src.indexOf("function constrainLeadListRequest("),
-      src.indexOf("export async function countLeadListForQuery")
+      src.indexOf("/* ---")
     );
     assert.doesNotMatch(applier, /await /, "the per-chunk applier must be pure");
     assert.doesNotMatch(applier, /fetchLeadIdsForTextSearch/);
@@ -1211,6 +1221,148 @@ describe("partial counts are never presented as exact", () => {
     const src = read(PAGE);
     assert.match(src, /countsExact=\{page\.countsExact\}/);
     assert.match(src, /exact bucket counts are unavailable/);
+  });
+});
+
+/* ========================================================================== */
+/* 10. Final adversarial corrections                                           */
+/* ========================================================================== */
+
+describe("dashboard Recent Leads is genuinely recent", () => {
+  test("the dashboard no longer reads the segmented conversion queue", () => {
+    const src = read(DASHBOARD);
+    // That read model ranks HOT -> WARM -> COLD, so a panel titled "Recent
+    // Leads" built on it showed the hottest leads, and the activity feed
+    // labelled a months-old HOT lead "Lead created".
+    assert.doesNotMatch(src, /getLeadListPageForCurrentUser/);
+    assert.match(src, /getRecentLeadsForCurrentUser/);
+  });
+
+  test("the dedicated read orders by created_at DESC with a stable id tie-break", () => {
+    const src = read(QUERIES);
+    const block = src.slice(
+      src.indexOf("export async function queryRecentLeads("),
+      src.indexOf("How many candidate rows one cohort scan will read")
+    );
+    assert.match(block, /\.order\("created_at", \{ ascending: false \}\)/);
+    assert.match(block, /\.order\("id", \{ ascending: false \}\)/);
+    assert.match(block, /\.limit\(limit\)/);
+    // No bucket, no score, no milestone fan-out for a "what came in last" panel.
+    assert.doesNotMatch(block, /deriveLeadScore/);
+    assert.doesNotMatch(block, /fetchLeadScoreBatch/);
+    assert.doesNotMatch(block, /resolveLeadSalesBucket/);
+    assert.doesNotMatch(block, /fetchSiteVisitSignals/);
+  });
+
+  test("the panel limit is 8", () => {
+    const src = read(QUERIES);
+    assert.match(src, /CRM_RECENT_LEADS_LIMIT = 8/);
+    assert.match(read(DASHBOARD), /RECENT_LEADS_LIMIT = 8/);
+    assert.match(read(DASHBOARD), /getRecentLeadsForCurrentUser\(RECENT_LEADS_LIMIT\)/);
+  });
+
+  test("it runs under caller RLS with no service-role path", () => {
+    const src = read(QUERIES);
+    const block = src.slice(src.indexOf("export async function queryRecentLeads("));
+    assert.match(block.slice(0, 1500), /await createClient\(\)/);
+    assert.doesNotMatch(src, /service_role|createServiceRoleClient/);
+    // Authentication is still required before any read.
+    assert.match(read(REPOSITORY), /getRecentLeadsForCurrentUser[\s\S]{0,400}AUTH_REQUIRED/);
+  });
+
+  test("the activity feed is built from that recent source", () => {
+    const src = read(DASHBOARD);
+    const recentAt = src.indexOf("const recentLeads: OpsRecentLead[]");
+    const activityAt = src.indexOf('title: "Lead created"');
+    assert.ok(recentAt > 0 && activityAt > recentAt);
+    assert.match(src, /const activity: OpsActivityItem\[\] = recentLeads\.map/);
+  });
+
+  test("the smart Leads workspace ordering is untouched", () => {
+    const src = read(QUERIES);
+    // The queue still scores the whole cohort, resolves buckets, then slices.
+    assert.match(src, /const bucketCounts = countSalesBuckets\(scored\.map/);
+    assert.match(src, /sortSegmentedLeads\(filtered, now\)/);
+    assert.match(src, /ordered\.slice\(from, from \+ query\.pageSize\)/);
+    assert.match(src, /fetchLeadScoreBatch\(leadIds\)/);
+  });
+});
+
+describe("the cohort ceiling applies to every scan path", () => {
+  const OPTS = {
+    expectFullChunkOf: CRM_LEAD_COHORT_CHUNK_SIZE,
+    maxRows: CRM_LEAD_COHORT_MAX_ROWS,
+  } as const;
+
+  test("exactly the ceiling is COMPLETE, not truncated", () => {
+    // A full final chunk that lands exactly on the ceiling keeps scanning; the
+    // next empty chunk proves the source is exhausted.
+    assert.equal(cohortScanVerdict(5000, 500, OPTS), "continue");
+    assert.equal(cohortScanVerdict(5000, 0, OPTS), "complete");
+    // `>=` used to mark an exactly-full cohort partial and suppress correct counts.
+    assert.notEqual(cohortScanVerdict(5000, 500, OPTS), "truncated");
+  });
+
+  test("one row past the ceiling is TRUNCATED", () => {
+    assert.equal(cohortScanVerdict(5001, 500, OPTS), "truncated");
+    // Even when the chunk was short — the case that previously slipped through,
+    // because completeness was judged before overflow.
+    assert.equal(cohortScanVerdict(5001, 1, OPTS), "truncated");
+    assert.equal(cohortScanVerdict(9999, 3, OPTS), "truncated");
+  });
+
+  test("the id-chunked path has no short-chunk escape but the same ceiling", () => {
+    const idOpts = { expectFullChunkOf: null, maxRows: CRM_LEAD_COHORT_MAX_ROWS } as const;
+    // A short id chunk proves nothing about how many rows remain.
+    assert.equal(cohortScanVerdict(200, 7, idOpts), "continue");
+    assert.equal(cohortScanVerdict(5000, 200, idOpts), "continue");
+    assert.equal(cohortScanVerdict(5001, 1, idOpts), "truncated");
+  });
+
+  test("both scan paths call the shared rule", () => {
+    const src = read(QUERIES);
+    const scan = src.slice(
+      src.indexOf("async function readCohortRows("),
+      src.indexOf("function emptySegmentationPage(")
+    );
+    const calls = scan.match(/cohortScanVerdict\(/g) ?? [];
+    assert.equal(calls.length, 2, "the filtered and unfiltered scans must both check");
+    assert.match(scan, /expectFullChunkOf: null/);
+    assert.match(scan, /expectFullChunkOf: CRM_LEAD_COHORT_CHUNK_SIZE/);
+    // The filtered path used to return truncated:false unconditionally.
+    assert.doesNotMatch(scan, /\/\/ Bounded by the matched id set/);
+  });
+
+  test("overflow trims to the ceiling and never returns the surplus row", () => {
+    const rows = Array.from({ length: 5001 }, (_, index) => index);
+    assert.equal(trimCohortRows(rows, CRM_LEAD_COHORT_MAX_ROWS).length, 5000);
+    // Exactly at the ceiling nothing is trimmed.
+    assert.equal(trimCohortRows(rows.slice(0, 5000), CRM_LEAD_COHORT_MAX_ROWS).length, 5000);
+    assert.equal(trimCohortRows([1, 2, 3], CRM_LEAD_COHORT_MAX_ROWS).length, 3);
+  });
+
+  test("truncation still suppresses the counts", () => {
+    const src = read(QUERIES);
+    assert.match(src, /const countsExact = !cohort\.truncated;/);
+    assert.match(read(STRIP), /\{countsExact \? count : "—"\}/);
+  });
+});
+
+describe("no exported path can emit a giant id filter", () => {
+  test("the unused count helper is gone from both modules", () => {
+    // It fed the FULL prepared id set into one `.in("id", ...)`. It had no
+    // production caller, so it was removed rather than left as a loaded gun.
+    assert.doesNotMatch(read(QUERIES), /countLeadListForQuery/);
+    assert.doesNotMatch(read(REPOSITORY), /countLeadListForQuery/);
+    assert.doesNotMatch(read(REPOSITORY), /countLeadListForCurrentUser/);
+  });
+
+  test("the only full-set id filter left is the chunked scan", () => {
+    const src = read(QUERIES);
+    const matches = src.match(/\.in\("id", \[\.\.\.[a-zA-Z.]+\]\)/g) ?? [];
+    // One call site, and it receives a chunk because the scan passes idChunk.
+    assert.deepEqual(matches, ['.in("id", [...prepared.matchedIds])']);
+    assert.match(src, /\{ matchedIds: idChunk \}/);
   });
 });
 

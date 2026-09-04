@@ -30,6 +30,12 @@ import type { LeadStageCode } from "../contracts/lead-stages.ts";
 import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
 import { chunkLeadIds } from "../contracts/lead-batch-chunking.ts";
 import {
+  CRM_LEAD_COHORT_CHUNK_SIZE,
+  CRM_LEAD_COHORT_MAX_ROWS,
+  cohortScanVerdict,
+  trimCohortRows,
+} from "../contracts/lead-cohort-limits.ts";
+import {
   CRM_EMPTY_ENGAGEMENT,
   fetchLeadScoreBatch,
 } from "./crm-lead-score-batch.ts";
@@ -295,29 +301,79 @@ function constrainLeadListRequest(
   return { request: next };
 }
 
-export async function countLeadListForQuery(
+/* -------------------------------------------------------------------------- */
+/* Dashboard "Recent Leads" — genuinely recent, deliberately NOT the queue      */
+/* -------------------------------------------------------------------------- */
+
+export const CRM_RECENT_LEADS_LIMIT = 8;
+
+export interface CrmRecentLead {
+  readonly id: string;
+  readonly submittedName: string;
+  readonly serviceCode: string;
+  readonly locality: string | null;
+  readonly status: LeadStageCode;
+  readonly primarySourceLabel: string;
+  readonly assigneeLabel: string;
+  readonly createdAt: string;
+}
+
+/**
+ * The newest leads by RECEIPT, for the operations dashboard.
+ *
+ * This exists because the Leads workspace read model became a conversion queue:
+ * whole cohort -> score -> bucket -> HOT/WARM/COLD ranking -> page slice. Reusing
+ * it for a panel titled "Recent Leads" showed the highest-PRIORITY leads instead
+ * of the newest ones, and the activity feed built from it labelled a months-old
+ * HOT lead "Lead created".
+ *
+ * So this is a deliberately small, separate read: one query, ordered by
+ * `created_at` descending with a stable id tie-break, limited, and selecting only
+ * the fields the dashboard renders. It runs NO scoring and no site-visit or
+ * quotation fan-out — none of that is needed to answer "what came in last".
+ *
+ * Caller RLS applies exactly as everywhere else; there is no service-role path.
+ */
+export async function queryRecentLeads(
   context: CrmAccessContext,
-  query: LeadListQuery
-): Promise<number> {
+  limit: number = CRM_RECENT_LEADS_LIMIT
+): Promise<readonly CrmRecentLead[]> {
   const supabase = await createClient();
-  const prepared = await prepareLeadListFilters(query);
-  const constrained = constrainLeadListRequest(
-    supabase.from("leads").select("id", { count: "exact", head: true }),
-    context,
-    query,
-    prepared
-  );
-  if (!constrained) {
-    return 0;
-  }
-  const { count, error } = await (constrained.request as unknown as Promise<{
-    count: number | null;
-    error: { message: string } | null;
-  }>);
+
+  const { data, error } = await supabase
+    .from("leads")
+    .select(CRM_LEAD_LIST_SELECT)
+    // Newest RECEIVED first. The id tie-break keeps the order total when two
+    // leads share a created_at, so the panel does not reshuffle between loads.
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(limit);
+
   if (error) {
     throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
   }
-  return count ?? 0;
+
+  const rows = (data ?? []) as CrmLeadListRow[];
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const assigneeLabels = buildAssigneeLabelMap(
+    await fetchCrmAssigneeDirectory(context)
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    submittedName: row.submitted_name,
+    serviceCode: row.service_code,
+    locality: row.locality,
+    status: row.status as LeadStageCode,
+    primarySourceLabel: row.lead_sources?.display_name ?? "Unknown source",
+    assigneeLabel: row.assigned_to
+      ? assigneeLabels[row.assigned_to] ?? "Assigned staff"
+      : "Unassigned",
+    createdAt: row.created_at,
+  }));
 }
 
 /**
@@ -329,8 +385,7 @@ export async function countLeadListForQuery(
  * `cohortTruncated`, which the UI reports honestly instead of quietly showing
  * counts that are too low.
  */
-export const CRM_LEAD_COHORT_CHUNK_SIZE = 500;
-export const CRM_LEAD_COHORT_MAX_ROWS = 5_000;
+export { CRM_LEAD_COHORT_CHUNK_SIZE, CRM_LEAD_COHORT_MAX_ROWS };
 
 export interface LeadSegmentationPageResult
   extends LeadListPageResult<CrmLeadListItem> {
@@ -365,6 +420,26 @@ export interface LeadSegmentationPageResult
  * month. Rows arrive already ordered by (created_at, id) which makes the scan
  * deterministic and the truncation boundary reproducible.
  */
+/**
+ * Overflow result.
+ *
+ * The ceiling is compared with a STRICT `>` against a set that has read at least
+ * one row beyond it, so a cohort of exactly `CRM_LEAD_COHORT_MAX_ROWS` is
+ * complete and reports `truncated: false`. The previous `>=` marked an exactly
+ * -full cohort as partial and needlessly suppressed correct counts.
+ *
+ * The surplus row is trimmed so callers never see more than the ceiling.
+ */
+function overflowed(rows: CrmLeadListRow[]): {
+  rows: CrmLeadListRow[];
+  truncated: boolean;
+} {
+  return {
+    rows: [...trimCohortRows(rows, CRM_LEAD_COHORT_MAX_ROWS)],
+    truncated: true,
+  };
+}
+
 async function readCohortRows(
   context: CrmAccessContext,
   query: LeadListQuery,
@@ -382,6 +457,10 @@ async function readCohortRows(
   // When an id-restricting filter is active the candidate set is ALREADY known,
   // so the scan walks it in bounded id chunks. That avoids sending one enormous
   // `.in(...)` list, and avoids re-sending the same list once per range page.
+  //
+  // The SAME ceiling applies here. It used to be enforced only on the
+  // unfiltered path, so a broad `q` or `followUpDue` filter could pull an
+  // unbounded cohort into memory and still report `truncated: false`.
   if (prepared.matchedIds !== null) {
     if (prepared.matchedIds.length === 0) {
       return null;
@@ -409,9 +488,20 @@ async function readCohortRows(
       if (error) {
         throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
       }
-      rows.push(...((data ?? []) as CrmLeadListRow[]));
+      const idRows = (data ?? []) as CrmLeadListRow[];
+      rows.push(...idRows);
+
+      // Same ceiling as the unfiltered scan. `expectFullChunkOf: null` because
+      // chunk sizes here follow the id list, not the number of matching rows.
+      if (
+        cohortScanVerdict(rows.length, idRows.length, {
+          expectFullChunkOf: null,
+          maxRows: CRM_LEAD_COHORT_MAX_ROWS,
+        }) === "truncated"
+      ) {
+        return overflowed(rows);
+      }
     }
-    // Bounded by the matched id set, which Postgres already narrowed.
     return { rows, truncated: false };
   }
 
@@ -446,16 +536,17 @@ async function readCohortRows(
     const chunk = (data ?? []) as CrmLeadListRow[];
     rows.push(...chunk);
 
-    if (chunk.length < CRM_LEAD_COHORT_CHUNK_SIZE) {
+    const verdict = cohortScanVerdict(rows.length, chunk.length, {
+      expectFullChunkOf: CRM_LEAD_COHORT_CHUNK_SIZE,
+      maxRows: CRM_LEAD_COHORT_MAX_ROWS,
+    });
+    if (verdict === "truncated") {
+      return overflowed(rows);
+    }
+    if (verdict === "complete") {
       return { rows, truncated: false };
     }
     offset += CRM_LEAD_COHORT_CHUNK_SIZE;
-
-    if (rows.length >= CRM_LEAD_COHORT_MAX_ROWS) {
-      // Reported, never silent — and the counts derived from a partial read are
-      // marked NON-EXACT rather than rendered as ordinary numbers.
-      return { rows, truncated: true };
-    }
   }
 }
 

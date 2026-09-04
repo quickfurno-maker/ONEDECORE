@@ -411,9 +411,40 @@ describe("Phase 5C1 regression guards", () => {
       assert.ok(fileExists(relativePath), `${relativePath} should exist`);
       const src = readFileSync(join(root, relativePath), "utf8");
       assert.doesNotMatch(src, /whatsapp/i);
-      assert.doesNotMatch(src, /\bquotation\b/i);
       assert.doesNotMatch(src, /\bproject conversion\b/i);
+
+      // The boundary this guard exists to hold is that CRM must not grow a
+      // QUOTATION ENGINE: no quotation tables, no quotation RPCs, no second
+      // quotation state model. That is asserted directly.
+      assert.doesNotMatch(src, /from\("quotation/i, `${relativePath} reads a quotation table`);
+      assert.doesNotMatch(src, /rpc\("[a-z_]*quotation/i, `${relativePath} calls a quotation RPC`);
+      assert.doesNotMatch(src, /quotation_(versions|items|events|sections)/i);
+      assert.doesNotMatch(src, /QUOTATION_STATES|quotationStates\s*=/);
     }
+  });
+
+  test("the leads read model may REPORT quotation state, never model it", () => {
+    // The Leads workspace shows quotation as a milestone fact beside the sales
+    // bucket and the stage, which is owner-locked behaviour. It does so by
+    // reading the CANONICAL commercial state that already backs deal value, so
+    // there is exactly one quotation state model and CRM does not own it.
+    const src = readFileSync(
+      join(root, "src/features/crm/server/crm-lead-queries.ts"),
+      "utf8"
+    );
+    assert.match(src, /quotationState: deal\?\.state \?\? "unknown"/);
+    assert.doesNotMatch(src, /from\("quotation/i);
+    assert.doesNotMatch(src, /rpc\("[a-z_]*quotation/i);
+
+    // And the labels come from the canonical contract, not a CRM-local copy.
+    const milestones = readFileSync(
+      join(root, "src/features/crm/contracts/lead-milestones.ts"),
+      "utf8"
+    );
+    assert.match(
+      milestones,
+      /CRM_LEAD_QUOTATION_STATE_LABELS = CRM_COMMERCIAL_STATE_LABELS/
+    );
   });
 });
 
