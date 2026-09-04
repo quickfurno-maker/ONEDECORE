@@ -29,6 +29,7 @@ import { sortSegmentedLeads } from "../contracts/lead-segmentation-order.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
 import { chunkLeadIds } from "../contracts/lead-batch-chunking.ts";
+import { collectAllIds, unionIds } from "../contracts/lead-id-discovery.ts";
 import {
   CRM_LEAD_COHORT_CHUNK_SIZE,
   CRM_LEAD_COHORT_MAX_ROWS,
@@ -60,29 +61,48 @@ function endOfTodayIso(): string {
   return end.toISOString();
 }
 
+/**
+ * Every lead id whose name or locality matches, PAGED to exhaustion.
+ *
+ * These two selects used to be unpaginated, and `[api] max_rows = 1000` in
+ * `supabase/config.toml` caps a Data API response at 1000 rows with no signal
+ * that more existed. A search matching more than that silently lost leads before
+ * the cohort scan, so they could never reach the bucket counts, the filter, the
+ * ranking or the page — while the counts still claimed to be exact.
+ *
+ * Ordered by `id` ascending, which is unique, so ranging is stable and no row is
+ * skipped or repeated between pages. Caller RLS still decides visibility.
+ */
 async function fetchLeadIdsForTextSearch(
   rawQuery: string
 ): Promise<readonly string[]> {
   const supabase = await createClient();
   const pattern = `%${escapeIlikePattern(rawQuery)}%`;
 
-  const [nameResult, localityResult] = await Promise.all([
-    supabase.from("leads").select("id").ilike("submitted_name", pattern),
-    supabase.from("leads").select("id").ilike("locality", pattern),
+  const pageFetcher =
+    (column: "submitted_name" | "locality") =>
+    async (from: number, to: number): Promise<readonly string[]> => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("id")
+        .ilike(column, pattern)
+        .order("id", { ascending: true })
+        .range(from, to);
+
+      if (error) {
+        throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+      }
+      return (data ?? []).map((row) => row.id as string);
+    };
+
+  const [names, localities] = await Promise.all([
+    collectAllIds(pageFetcher("submitted_name")),
+    collectAllIds(pageFetcher("locality")),
   ]);
 
-  if (nameResult.error) {
-    throw crmErrorFromPostgresMessage(nameResult.error.message, "RPC_FAILED");
-  }
-  if (localityResult.error) {
-    throw crmErrorFromPostgresMessage(localityResult.error.message, "RPC_FAILED");
-  }
-
-  return [
-    ...new Set(
-      [...(nameResult.data ?? []), ...(localityResult.data ?? [])].map((row) => row.id)
-    ),
-  ];
+  // Full union of two COMPLETE sets — a lead matching both is counted once, and
+  // a lead that only appears on a later page of either is still present.
+  return unionIds(names, localities);
 }
 
 export async function fetchCrmAssigneeDirectory(
@@ -156,25 +176,45 @@ async function fetchLeadIdsForFollowUpDueFilter(
   const startToday = startOfTodayIso();
   const endToday = endOfTodayIso();
 
-  let query = supabase
-    .from("lead_follow_ups")
-    .select("lead_id")
-    .eq("status", "open");
+  // Paged to exhaustion for the same reason as the text search, and this one is
+  // more exposed: it returns follow-up ROWS and de-duplicates `lead_id`
+  // afterwards, so 1000 rows can describe a handful of leads while every other
+  // matching lead sits unread on a later page.
+  //
+  // Ordered by (due_at, id) — id is unique, so the total order is stable and
+  // ranging cannot skip or repeat a row.
+  const pageFetcher = async (
+    from: number,
+    to: number
+  ): Promise<readonly string[]> => {
+    let query = supabase
+      .from("lead_follow_ups")
+      .select("lead_id, due_at")
+      .eq("status", "open");
 
-  if (filter === "overdue") {
-    query = query.lt("due_at", startToday);
-  } else if (filter === "today") {
-    query = query.gte("due_at", startToday).lte("due_at", endToday);
-  } else {
-    query = query.gt("due_at", endToday);
-  }
+    if (filter === "overdue") {
+      query = query.lt("due_at", startToday);
+    } else if (filter === "today") {
+      query = query.gte("due_at", startToday).lte("due_at", endToday);
+    } else {
+      query = query.gt("due_at", endToday);
+    }
 
-  const { data, error } = await query;
-  if (error) {
-    throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
-  }
+    const { data, error } = await query
+      .order("due_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to);
 
-  return [...new Set((data ?? []).map((row) => row.lead_id))];
+    if (error) {
+      throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+    }
+    // Raw per-ROW ids: `collectAllIds` de-duplicates, but decides whether to
+    // request another page from the ROW count, so duplicates never end
+    // discovery early.
+    return (data ?? []).map((row) => row.lead_id as string);
+  };
+
+  return collectAllIds(pageFetcher);
 }
 
 function buildAssigneeLabelMap(
@@ -228,6 +268,14 @@ function intersectIds(
   return left.filter((id) => rightSet.has(id));
 }
 
+/**
+ * Resolved ONCE per request.
+ *
+ * Discovery is deliberately NOT capped at the 5,000-row cohort ceiling: the
+ * month, status, source and assignment filters have not been applied yet, so an
+ * id dropped here could be one that would have survived them. The ceiling
+ * belongs to the SCORED cohort, which is where memory is actually at risk.
+ */
 export async function prepareLeadListFilters(
   query: LeadListQuery
 ): Promise<LeadListPreparedFilters> {

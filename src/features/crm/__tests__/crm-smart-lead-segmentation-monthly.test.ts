@@ -51,6 +51,15 @@ import {
   trimCohortRows,
 } from "../contracts/lead-cohort-limits.ts";
 import {
+  CRM_DATA_API_MAX_ROWS,
+  CRM_ID_DISCOVERY_PAGE_SIZE,
+  CrmIdDiscoveryOverflowError,
+  collectAllIds,
+  idDiscoveryPageRange,
+  shouldRequestNextIdPage,
+  unionIds,
+} from "../contracts/lead-id-discovery.ts";
+import {
   formatLeadQuotationState,
   resolveSiteVisitState,
 } from "../contracts/lead-milestones.ts";
@@ -74,6 +83,8 @@ const FILTERS = "src/features/crm/components/leads/LeadListFilters.tsx";
 const MILESTONES = "src/features/crm/contracts/lead-milestones.ts";
 const REPOSITORY = "src/features/crm/server/crm-lead-repository.ts";
 const DASHBOARD = "src/features/admin-ops/server/dashboard-snapshot.ts";
+const CONFIG = "supabase/config.toml";
+const DISCOVERY = "src/features/crm/contracts/lead-id-discovery.ts";
 
 /* ========================================================================== */
 /* 1. Bucket resolution                                                        */
@@ -1363,6 +1374,231 @@ describe("no exported path can emit a giant id filter", () => {
     // One call site, and it receives a chunk because the scan passes idChunk.
     assert.deepEqual(matches, ['.in("id", [...prepared.matchedIds])']);
     assert.match(src, /\{ matchedIds: idChunk \}/);
+  });
+});
+
+/* ========================================================================== */
+/* 11. Prefilter id discovery is complete past the Data API ceiling            */
+/* ========================================================================== */
+
+describe("prefilter id discovery reads to exhaustion", () => {
+  /** A fake source: returns `total` synthetic ids through a stable range. */
+  const pagedSource = (ids: readonly string[], pageSize: number) => {
+    const calls: { from: number; to: number }[] = [];
+    const fetchPage = async (from: number, to: number) => {
+      calls.push({ from, to });
+      // Mirrors PostgREST: an inclusive range, trimmed by the API ceiling.
+      return ids.slice(from, Math.min(to + 1, from + pageSize));
+    };
+    return { calls, fetchPage };
+  };
+
+  const synthetic = (count: number, prefix = "lead") =>
+    Array.from({ length: count }, (_, index) => `${prefix}-${index}`);
+
+  test("the configured Data API ceiling is 1000 and the page size respects it", () => {
+    // The whole defect was assuming an unpaginated select returns everything.
+    const config = read(CONFIG);
+    assert.match(config, /max_rows\s*=\s*1000/);
+    assert.equal(CRM_DATA_API_MAX_ROWS, 1000);
+    assert.ok(
+      CRM_ID_DISCOVERY_PAGE_SIZE <= CRM_DATA_API_MAX_ROWS,
+      "a page larger than max_rows would look short and stop discovery at page 1"
+    );
+  });
+
+  test("a page size above the API ceiling is refused outright", async () => {
+    await assert.rejects(
+      () => collectAllIds(async () => [], { pageSize: CRM_DATA_API_MAX_ROWS + 1 }),
+      /exceeds the Data API max_rows/
+    );
+  });
+
+  test("ranges are contiguous, inclusive and deterministic", () => {
+    assert.deepEqual(idDiscoveryPageRange(0, 1000), { from: 0, to: 999 });
+    assert.deepEqual(idDiscoveryPageRange(1, 1000), { from: 1000, to: 1999 });
+    assert.deepEqual(idDiscoveryPageRange(2, 1000), { from: 2000, to: 2999 });
+    // No gap and no overlap between consecutive pages.
+    const first = idDiscoveryPageRange(0, 1000);
+    const second = idDiscoveryPageRange(1, 1000);
+    assert.equal(second.from, first.to + 1);
+  });
+
+  test("continuation is decided by ROW count, never by new-id count", () => {
+    assert.equal(shouldRequestNextIdPage(1000, 1000), true);
+    assert.equal(shouldRequestNextIdPage(999, 1000), false);
+    assert.equal(shouldRequestNextIdPage(0, 1000), false);
+  });
+
+  test("more than one page of name matches is fully collected", async () => {
+    // 2,500 matches across three pages — the old unpaginated read returned 1000.
+    const ids = synthetic(2500, "name");
+    const { fetchPage, calls } = pagedSource(ids, CRM_ID_DISCOVERY_PAGE_SIZE);
+    const collected = await collectAllIds(fetchPage);
+
+    assert.equal(collected.length, 2500);
+    assert.deepEqual([...collected], ids);
+    assert.equal(calls.length, 3, "must page until the source is exhausted");
+    assert.deepEqual(calls[0], { from: 0, to: 999 });
+    assert.deepEqual(calls[2], { from: 2000, to: 2999 });
+    // The id that would have been lost.
+    assert.ok(collected.includes("name-1500"));
+    assert.ok(collected.includes("name-2499"));
+  });
+
+  test("more than one page of locality matches is fully collected", async () => {
+    const ids = synthetic(1001, "loc");
+    const { fetchPage, calls } = pagedSource(ids, CRM_ID_DISCOVERY_PAGE_SIZE);
+    const collected = await collectAllIds(fetchPage);
+
+    assert.equal(collected.length, 1001);
+    assert.ok(collected.includes("loc-1000"), "the 1001st match must survive");
+    assert.equal(calls.length, 2);
+  });
+
+  test("exactly one full page still checks for a second", async () => {
+    const ids = synthetic(1000, "exact");
+    const { fetchPage, calls } = pagedSource(ids, CRM_ID_DISCOVERY_PAGE_SIZE);
+    const collected = await collectAllIds(fetchPage);
+    assert.equal(collected.length, 1000);
+    // A full page is indistinguishable from "more to come", so it must probe.
+    assert.equal(calls.length, 2);
+  });
+
+  test("the name and locality unions keep every id from every page", () => {
+    const names = synthetic(1500, "shared");
+    const localities = [...synthetic(800, "shared"), ...synthetic(700, "only-loc")];
+    const union = unionIds(names, localities);
+
+    // 1500 shared + 700 locality-only, with the 800 overlap counted once.
+    assert.equal(union.length, 2200);
+    assert.equal(new Set(union).size, union.length, "union must be de-duplicated");
+    assert.ok(union.includes("shared-1499"), "a later-page name id must survive");
+    assert.ok(union.includes("only-loc-699"), "a later-page locality id must survive");
+  });
+
+  test("de-duplication inside a page never ends discovery early", async () => {
+    // The follow-up case: a full page of rows that all belong to ONE lead. It
+    // contributes a single id, but the source clearly has more, so discovery
+    // must continue — otherwise every later unique lead is lost.
+    const pageOne = Array.from({ length: 1000 }, () => "lead-A");
+    const pageTwo = ["lead-B", "lead-C"];
+    const pages = [pageOne, pageTwo];
+    let index = 0;
+    const collected = await collectAllIds(async () => pages[index++] ?? []);
+
+    assert.deepEqual([...collected], ["lead-A", "lead-B", "lead-C"]);
+    assert.equal(index, 2, "a duplicate-heavy page must not stop discovery");
+  });
+
+  test("duplicate follow-up rows across pages collapse without loss", async () => {
+    const pageOne = [
+      ...Array.from({ length: 900 }, () => "lead-A"),
+      ...Array.from({ length: 100 }, (_, i) => `lead-B${i}`),
+    ];
+    const pageTwo = [
+      ...Array.from({ length: 500 }, () => "lead-A"),
+      ...Array.from({ length: 500 }, (_, i) => `lead-C${i}`),
+    ];
+    const pageThree = ["lead-Z"];
+    const pages = [pageOne, pageTwo, pageThree];
+    let index = 0;
+    const collected = await collectAllIds(async () => pages[index++] ?? []);
+
+    assert.equal(index, 3);
+    assert.equal(collected.filter((id) => id === "lead-A").length, 1);
+    assert.equal(collected.length, 1 + 100 + 500 + 1);
+    assert.ok(collected.includes("lead-C499"));
+    assert.ok(collected.includes("lead-Z"), "the final page must be read");
+  });
+
+  test("collection order is stable and first-seen", async () => {
+    const pages = [["c", "a", "c"], ["b", "a"]];
+    let index = 0;
+    const collected = await collectAllIds(async () => pages[index++] ?? [], {
+      pageSize: 3,
+    });
+    assert.deepEqual([...collected], ["c", "a", "b"]);
+  });
+
+  test("an implausible result set fails LOUDLY, never silently short", async () => {
+    await assert.rejects(
+      () =>
+        collectAllIds(async () => synthetic(10, "x"), { pageSize: 10, maxPages: 3 }),
+      CrmIdDiscoveryOverflowError
+    );
+  });
+
+  test("both prefilters page with a stable order and no bare select", () => {
+    const src = read(QUERIES);
+
+    const textBlock = src.slice(
+      src.indexOf("async function fetchLeadIdsForTextSearch("),
+      src.indexOf("export async function fetchCrmAssigneeDirectory(")
+    );
+    assert.match(textBlock, /collectAllIds\(pageFetcher\("submitted_name"\)\)/);
+    assert.match(textBlock, /collectAllIds\(pageFetcher\("locality"\)\)/);
+    assert.match(textBlock, /\.order\("id", \{ ascending: true \}\)/);
+    assert.match(textBlock, /\.range\(from, to\)/);
+    assert.match(textBlock, /unionIds\(names, localities\)/);
+
+    const followBlock = src.slice(
+      src.indexOf("async function fetchLeadIdsForFollowUpDueFilter("),
+      src.indexOf("function buildAssigneeLabelMap(")
+    );
+    assert.match(followBlock, /collectAllIds\(pageFetcher\)/);
+    assert.match(followBlock, /\.order\("due_at", \{ ascending: true \}\)/);
+    assert.match(followBlock, /\.order\("id", \{ ascending: true \}\)/);
+    assert.match(followBlock, /\.range\(from, to\)/);
+  });
+
+  test("no prefilter treats a bare unpaginated select as complete", () => {
+    const src = read(QUERIES);
+    // The exact shapes that silently truncated at max_rows.
+    assert.doesNotMatch(src, /select\("id"\)\s*\.ilike\([^)]*\),/);
+    assert.doesNotMatch(
+      src,
+      /\.from\("leads"\)\.select\("id"\)\.ilike\([^)]*\)(?!\s*\n\s*\.order)/
+    );
+    // Every prefilter read now ends in a range.
+    const ranges = src.match(/\.range\(from, to\)/g) ?? [];
+    assert.ok(ranges.length >= 2, "both prefilters must page");
+  });
+
+  test("discovery is NOT capped by the scored-cohort ceiling", () => {
+    // Later month/status/source/assignment filters can narrow the candidates, so
+    // an id dropped during discovery could be one that would have survived.
+    const src = read(QUERIES);
+    const preparer = src.slice(
+      src.indexOf("export async function prepareLeadListFilters("),
+      src.indexOf("function constrainLeadListRequest(")
+    );
+    assert.doesNotMatch(preparer, /CRM_LEAD_COHORT_MAX_ROWS/);
+    assert.match(src, /Discovery is deliberately NOT capped/);
+  });
+
+  test("discovery adds no per-lead request", () => {
+    const src = read(DISCOVERY);
+    // One await per PAGE, inside the paging loop — never one per id.
+    assert.doesNotMatch(src, /for \(const id of rows\)[\s\S]{0,200}await /);
+    const queries = read(QUERIES);
+    const textBlock = queries.slice(
+      queries.indexOf("async function fetchLeadIdsForTextSearch("),
+      queries.indexOf("export async function fetchCrmAssigneeDirectory(")
+    );
+    assert.doesNotMatch(textBlock, /for \([\s\S]{0,160}await supabase/);
+  });
+
+  test("the downstream cohort contract is unchanged", () => {
+    const src = read(QUERIES);
+    // Still resolved once per request.
+    assert.match(src, /const prepared = await prepareLeadListFilters\(query\)/);
+    // Still chunked at 200 for the final scan.
+    assert.equal(CRM_LEAD_ID_CHUNK_SIZE, 200);
+    assert.match(src, /for \(const idChunk of chunkLeadIds\(prepared\.matchedIds\)\)/);
+    // Still fails closed at the scored-cohort ceiling.
+    assert.equal(CRM_LEAD_COHORT_MAX_ROWS, 5_000);
+    assert.match(src, /const countsExact = !cohort\.truncated;/);
   });
 });
 

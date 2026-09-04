@@ -240,7 +240,13 @@ describe("Phase 5C1 lead list query parsing", () => {
       "utf8"
     );
     assert.match(src, /fetchLeadIdsForTextSearch/);
-    assert.match(src, /\.ilike\("submitted_name"/);
+    // Both searchable columns still go through a PARAMETERISED `.ilike`, which
+    // is the point of this guard: the column is now passed in so the paged
+    // fetcher can serve both, but nothing is interpolated into a filter string.
+    assert.match(src, /\.ilike\(column, pattern\)/);
+    assert.match(src, /"submitted_name" \| "locality"/);
+    assert.match(src, /pageFetcher\("submitted_name"\)/);
+    assert.match(src, /pageFetcher\("locality"\)/);
     assert.doesNotMatch(src, /\.or\(buildLeadTextSearchOrFilter/);
   });
 
