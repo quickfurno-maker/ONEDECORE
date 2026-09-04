@@ -708,7 +708,7 @@ describe("the read path resolves buckets before paginating, without N+1", () => 
 
   test("signals are batched by lead id, never per lead", () => {
     const src = read(QUERIES);
-    assert.match(src, /fetchLeadScoreBatch\(leadIds\)/);
+    assert.match(src, /fetchLeadScoreBatch\(leadIds(?:, db)?\)/);
     assert.doesNotMatch(src, /scored\.map\([\s\S]{0,400}await /);
     assert.doesNotMatch(src, /for \(const row of cohort\.rows\)[\s\S]{0,200}await /);
   });
@@ -772,7 +772,7 @@ describe("the read path resolves buckets before paginating, without N+1", () => 
   test("the read model runs under caller RLS with no service-role shortcut", () => {
     for (const rel of [QUERIES, BATCH]) {
       const src = read(rel);
-      assert.match(src, /createClient/);
+      assert.match(src, /resolveCrmDb\(db\)/);
       assert.doesNotMatch(src, /service_role|SERVICE_ROLE|createServiceRoleClient/);
     }
   });
@@ -782,7 +782,7 @@ describe("the read path resolves buckets before paginating, without N+1", () => 
     assert.match(src, /if \(context\.canReadBroad\) \{/);
     // Counts are derived from the same RLS-scoped rows the user can read, so a
     // scoped user can never be shown totals for leads they cannot see.
-    assert.match(src, /readCohortRows\(context, query, prepared\)/);
+    assert.match(src, /readCohortRows\(context, query, prepared(?:, db)?\)/);
   });
 });
 
@@ -1064,7 +1064,7 @@ describe("no unbounded reads and no repeated prerequisite work", () => {
     assert.match(preparer, /fetchLeadIdsForFollowUpDueFilter/);
 
     // Called once, before the scan.
-    assert.match(src, /const prepared = await prepareLeadListFilters\(query\)/);
+    assert.match(src, /const prepared = await prepareLeadListFilters\(query(?:, db)?\)/);
     const scan = src.slice(src.indexOf("async function readCohortRows("));
     assert.doesNotMatch(
       scan.slice(0, scan.indexOf("export async function queryLeadListPage")),
@@ -1277,7 +1277,7 @@ describe("dashboard Recent Leads is genuinely recent", () => {
   test("it runs under caller RLS with no service-role path", () => {
     const src = read(QUERIES);
     const block = src.slice(src.indexOf("export async function queryRecentLeads("));
-    assert.match(block.slice(0, 1500), /await createClient\(\)/);
+    assert.match(block.slice(0, 1500), /await resolveCrmDb\(db\)/);
     assert.doesNotMatch(src, /service_role|createServiceRoleClient/);
     // Authentication is still required before any read.
     assert.match(read(REPOSITORY), /getRecentLeadsForCurrentUser[\s\S]{0,400}AUTH_REQUIRED/);
@@ -1297,7 +1297,7 @@ describe("dashboard Recent Leads is genuinely recent", () => {
     assert.match(src, /const bucketCounts = countSalesBuckets\(scored\.map/);
     assert.match(src, /sortSegmentedLeads\(filtered, now\)/);
     assert.match(src, /ordered\.slice\(from, from \+ query\.pageSize\)/);
-    assert.match(src, /fetchLeadScoreBatch\(leadIds\)/);
+    assert.match(src, /fetchLeadScoreBatch\(leadIds(?:, db)?\)/);
   });
 });
 
@@ -1594,7 +1594,7 @@ describe("prefilter id discovery reads to exhaustion", () => {
   test("the downstream cohort contract is unchanged", () => {
     const src = read(QUERIES);
     // Still resolved once per request.
-    assert.match(src, /const prepared = await prepareLeadListFilters\(query\)/);
+    assert.match(src, /const prepared = await prepareLeadListFilters\(query(?:, db)?\)/);
     // Still chunked at 200 for the final scan.
     assert.equal(CRM_LEAD_ID_CHUNK_SIZE, 200);
     assert.match(src, /for \(const idChunk of chunkLeadIds\(prepared\.matchedIds\)\)/);

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import type { CrmAccessContext } from "../contracts/crm-access.ts";
 import type {
   CrmAssigneeDirectoryEntry,
@@ -75,9 +75,10 @@ function endOfTodayIso(): string {
  * skipped or repeated between pages. Caller RLS still decides visibility.
  */
 async function fetchLeadIdsForTextSearch(
-  rawQuery: string
+  rawQuery: string,
+  db?: CrmDb
 ): Promise<readonly string[]> {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const pattern = `%${escapeIlikePattern(rawQuery)}%`;
 
   const pageFetcher =
@@ -107,13 +108,14 @@ async function fetchLeadIdsForTextSearch(
 }
 
 export async function fetchCrmAssigneeDirectory(
-  context: CrmAccessContext
+  context: CrmAccessContext,
+  db?: CrmDb
 ): Promise<readonly CrmAssigneeDirectoryEntry[]> {
   if (!context.canReadBroad) {
     return [];
   }
 
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const { data, error } = await supabase.rpc("list_crm_assignable_executives");
 
   if (error) {
@@ -127,10 +129,10 @@ export async function fetchCrmAssigneeDirectory(
   }));
 }
 
-export async function fetchActiveLeadSources(): Promise<
+export async function fetchActiveLeadSources(db?: CrmDb): Promise<
   readonly CrmLeadSourceOption[]
 > {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const { data, error } = await supabase
     .from("lead_sources")
     .select("id, code, display_name")
@@ -149,10 +151,10 @@ export async function fetchActiveLeadSources(): Promise<
   }));
 }
 
-export async function fetchActiveLeadClosureReasons(): Promise<
+export async function fetchActiveLeadClosureReasons(db?: CrmDb): Promise<
   readonly CrmLeadClosureReasonOption[]
 > {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const { data, error } = await supabase
     .from("lead_closure_reasons")
     .select("code, display_name")
@@ -171,9 +173,10 @@ export async function fetchActiveLeadClosureReasons(): Promise<
 }
 
 async function fetchLeadIdsForFollowUpDueFilter(
-  filter: NonNullable<LeadListQuery["followUpDue"]>
+  filter: NonNullable<LeadListQuery["followUpDue"]>,
+  db?: CrmDb
 ): Promise<readonly string[]> {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const startToday = startOfTodayIso();
   const endToday = endOfTodayIso();
 
@@ -278,18 +281,19 @@ function intersectIds(
  * belongs to the SCORED cohort, which is where memory is actually at risk.
  */
 export async function prepareLeadListFilters(
-  query: LeadListQuery
+  query: LeadListQuery,
+  db?: CrmDb
 ): Promise<LeadListPreparedFilters> {
   let matchedIds: readonly string[] | null = null;
 
   if (query.q) {
-    matchedIds = intersectIds(matchedIds, await fetchLeadIdsForTextSearch(query.q));
+    matchedIds = intersectIds(matchedIds, await fetchLeadIdsForTextSearch(query.q, db));
   }
 
   if (query.followUpDue) {
     matchedIds = intersectIds(
       matchedIds,
-      await fetchLeadIdsForFollowUpDueFilter(query.followUpDue)
+      await fetchLeadIdsForFollowUpDueFilter(query.followUpDue, db)
     );
   }
 
@@ -385,9 +389,10 @@ export interface CrmRecentLead {
  */
 export async function queryRecentLeads(
   context: CrmAccessContext,
-  limit: number = CRM_RECENT_LEADS_LIMIT
+  limit: number = CRM_RECENT_LEADS_LIMIT,
+  db?: CrmDb
 ): Promise<readonly CrmRecentLead[]> {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
 
   const { data, error } = await supabase
     .from("leads")
@@ -492,9 +497,10 @@ function overflowed(rows: CrmLeadListRow[]): {
 async function readCohortRows(
   context: CrmAccessContext,
   query: LeadListQuery,
-  prepared: LeadListPreparedFilters
+  prepared: LeadListPreparedFilters,
+  db?: CrmDb
 ): Promise<{ rows: CrmLeadListRow[]; truncated: boolean } | null> {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
 
   const baseRequest = () =>
     supabase
@@ -637,19 +643,20 @@ function emptySegmentationPage(
  */
 export async function queryLeadListPage(
   context: CrmAccessContext,
-  query: LeadListQuery
+  query: LeadListQuery,
+  db?: CrmDb
 ): Promise<LeadSegmentationPageResult> {
   const capturedAt = new Date().toISOString();
   const now = Date.parse(capturedAt);
 
-  const assigneeDirectory = await fetchCrmAssigneeDirectory(context);
+  const assigneeDirectory = await fetchCrmAssigneeDirectory(context, db);
   const assigneeLabels = buildAssigneeLabelMap(assigneeDirectory);
 
   // Resolved ONCE per request. Doing this inside the scan re-ran the text and
   // follow-up lookups for every chunk of the cohort.
-  const prepared = await prepareLeadListFilters(query);
+  const prepared = await prepareLeadListFilters(query, db);
 
-  const cohort = await readCohortRows(context, query, prepared);
+  const cohort = await readCohortRows(context, query, prepared, db);
   if (!cohort || cohort.rows.length === 0) {
     return emptySegmentationPage(query, capturedAt);
   }
@@ -658,7 +665,7 @@ export async function queryLeadListPage(
 
   // A fixed number of batched query GROUPS, each chunking its own lead-id list.
   // Bounded and free of per-lead reads — not a constant number of requests.
-  const batch = await fetchLeadScoreBatch(leadIds);
+  const batch = await fetchLeadScoreBatch(leadIds, db);
 
   const scored = cohort.rows.map((row) => {
     const primary = batch.primaryActions[row.id] ?? null;

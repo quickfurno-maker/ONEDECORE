@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import type { CrmAccessContext } from "../contracts/crm-access.ts";
 import {
   CRM_PIPELINE_BOARD_STAGES,
@@ -61,9 +61,10 @@ export interface FetchCrmPipelineOptions {
  */
 export async function fetchCrmPipelineBoard(
   context: CrmAccessContext,
-  options: FetchCrmPipelineOptions = {}
+  options: FetchCrmPipelineOptions = {},
+  db?: CrmDb
 ): Promise<CrmPipelineBoard> {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const scopeOwnerId = context.canReadBroad ? options.ownerId ?? null : null;
 
   const stageResults = await Promise.all(
@@ -108,15 +109,17 @@ export async function fetchCrmPipelineBoard(
     valueSummary,
     salesTouches,
   ] = await Promise.all([
-    context.canReadBroad ? fetchCrmAssigneeDirectory(context) : Promise.resolve([]),
-    fetchPrimaryNextActions(leadIds),
-    fetchSlaSignals(leadIds),
-    fetchStageEntryInstants(leadIds),
-    fetchEngagementSignals(leadIds),
-    fetchDealValues(leadIds),
+    context.canReadBroad
+      ? fetchCrmAssigneeDirectory(context, db)
+      : Promise.resolve([]),
+    fetchPrimaryNextActions(leadIds, db),
+    fetchSlaSignals(leadIds, db),
+    fetchStageEntryInstants(leadIds, db),
+    fetchEngagementSignals(leadIds, db),
+    fetchDealValues(leadIds, db),
     // Totals come from the full RLS-scoped set, never from the fetched head.
-    fetchCrmPipelineValueSummary(scopeOwnerId),
-    fetchSalesTouchSignals(leadIds),
+    fetchCrmPipelineValueSummary(scopeOwnerId, db),
+    fetchSalesTouchSignals(leadIds, db),
   ]);
 
   const assigneeLabels = Object.fromEntries(

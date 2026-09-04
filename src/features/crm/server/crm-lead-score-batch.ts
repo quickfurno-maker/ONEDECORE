@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import type { CrmCommercialState } from "../contracts/deal-value-contracts.ts";
 import { CRM_SCORE_MEANINGFUL_OUTCOME_CODES } from "../contracts/lead-score-contracts.ts";
 import { CRM_TIMELINE_INCLUDED_QUOTATION_EVENT_TYPES } from "../contracts/lead-timeline-contracts.ts";
@@ -90,14 +90,15 @@ export interface CrmSalesTouchSignal {
  * and using it here would turn one milestone into a proxy for another.
  */
 export async function fetchSiteVisitSignals(
-  leadIds: readonly string[]
+  leadIds: readonly string[],
+  db?: CrmDb
 ): Promise<Readonly<Record<string, CrmSiteVisitState>>> {
   const chunks = chunkLeadIds(leadIds);
   if (chunks.length === 0) {
     return {};
   }
 
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const tally: Record<
     string,
     { completed: number; open: number; cancelled: number }
@@ -142,14 +143,15 @@ export async function fetchSiteVisitSignals(
  * `buildLeadScoreSignalsFromDetail` exactly so all surfaces agree.
  */
 export async function fetchEngagementSignals(
-  leadIds: readonly string[]
+  leadIds: readonly string[],
+  db?: CrmDb
 ): Promise<Readonly<Record<string, CrmEngagementSignal>>> {
   const chunks = chunkLeadIds(leadIds);
   if (chunks.length === 0) {
     return {};
   }
 
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const map: Record<string, CrmEngagementSignal> = {};
 
   for (const chunk of chunks) {
@@ -204,14 +206,15 @@ export async function fetchEngagementSignals(
  * row's value and its column total can never disagree.
  */
 export async function fetchDealValues(
-  leadIds: readonly string[]
+  leadIds: readonly string[],
+  db?: CrmDb
 ): Promise<Readonly<Record<string, CrmDealValueSignal>>> {
   const chunks = chunkLeadIds(leadIds);
   if (chunks.length === 0) {
     return {};
   }
 
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const map: Record<string, CrmDealValueSignal> = {};
 
   for (const chunk of chunks) {
@@ -242,14 +245,15 @@ export async function fetchDealValues(
 }
 
 export async function fetchPrimaryNextActions(
-  leadIds: readonly string[]
+  leadIds: readonly string[],
+  db?: CrmDb
 ): Promise<Readonly<Record<string, CrmPrimaryNextAction>>> {
   const chunks = chunkLeadIds(leadIds);
   if (chunks.length === 0) {
     return {};
   }
 
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const map: Record<string, CrmPrimaryNextAction> = {};
 
   for (const chunk of chunks) {
@@ -280,14 +284,15 @@ export async function fetchPrimaryNextActions(
 }
 
 export async function fetchSlaSignals(
-  leadIds: readonly string[]
+  leadIds: readonly string[],
+  db?: CrmDb
 ): Promise<CrmSlaSignalResult> {
   const chunks = chunkLeadIds(leadIds);
   if (chunks.length === 0) {
     return { signals: {}, hasActiveSlaDue: false };
   }
 
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const signals: Record<string, CrmSlaSignal> = {};
   let hasActiveSlaDue = false;
 
@@ -321,14 +326,15 @@ export async function fetchSlaSignals(
  * which callers report as `stageEnteredSource: "created"`.
  */
 export async function fetchStageEntryInstants(
-  leadIds: readonly string[]
+  leadIds: readonly string[],
+  db?: CrmDb
 ): Promise<Readonly<Record<string, string>>> {
   const chunks = chunkLeadIds(leadIds);
   if (chunks.length === 0) {
     return {};
   }
 
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const map: Record<string, string> = {};
 
   for (const chunk of chunks) {
@@ -361,14 +367,15 @@ export async function fetchStageEntryInstants(
  * Both tables carry a (lead_id, <ts> desc) index.
  */
 export async function fetchSalesTouchSignals(
-  leadIds: readonly string[]
+  leadIds: readonly string[],
+  db?: CrmDb
 ): Promise<Readonly<Record<string, CrmSalesTouchSignal>>> {
   const chunks = chunkLeadIds(leadIds);
   if (chunks.length === 0) {
     return {};
   }
 
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const map: Record<
     string,
     { latestNoteAt: string | null; latestQuotationEventAt: string | null }
@@ -439,7 +446,8 @@ export interface CrmLeadScoreBatch {
  * request per chunk per group, by design.
  */
 export async function fetchLeadScoreBatch(
-  leadIds: readonly string[]
+  leadIds: readonly string[],
+  db?: CrmDb
 ): Promise<CrmLeadScoreBatch> {
   const [
     primaryActions,
@@ -450,13 +458,13 @@ export async function fetchLeadScoreBatch(
     salesTouches,
     siteVisits,
   ] = await Promise.all([
-    fetchPrimaryNextActions(leadIds),
-    fetchSlaSignals(leadIds),
-    fetchStageEntryInstants(leadIds),
-    fetchEngagementSignals(leadIds),
-    fetchDealValues(leadIds),
-    fetchSalesTouchSignals(leadIds),
-    fetchSiteVisitSignals(leadIds),
+    fetchPrimaryNextActions(leadIds, db),
+    fetchSlaSignals(leadIds, db),
+    fetchStageEntryInstants(leadIds, db),
+    fetchEngagementSignals(leadIds, db),
+    fetchDealValues(leadIds, db),
+    fetchSalesTouchSignals(leadIds, db),
+    fetchSiteVisitSignals(leadIds, db),
   ]);
 
   return {

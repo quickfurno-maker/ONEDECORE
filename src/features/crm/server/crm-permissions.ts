@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 
 const CRM_PERMISSION_PROBE_CODES = [
   "leads.read_all",
@@ -20,8 +20,8 @@ export type CrmPermissionProbeResult = Readonly<
 /**
  * Probes CRM-related permissions for the authenticated staff session.
  */
-export async function probeCrmPermissions(): Promise<CrmPermissionProbeResult> {
-  const supabase = await createClient();
+export async function probeCrmPermissions(db?: CrmDb): Promise<CrmPermissionProbeResult> {
+  const supabase = await resolveCrmDb(db);
   const entries = await Promise.all(
     CRM_PERMISSION_PROBE_CODES.map(async (code) => {
       const { data, error } = await supabase.rpc("authorize", {
@@ -35,16 +35,16 @@ export async function probeCrmPermissions(): Promise<CrmPermissionProbeResult> {
   return Object.fromEntries(entries) as CrmPermissionProbeResult;
 }
 
-export async function hasAnyCrmLeadReadPermission(): Promise<boolean> {
-  const permissions = await probeCrmPermissions();
+export async function hasAnyCrmLeadReadPermission(db?: CrmDb): Promise<boolean> {
+  const permissions = await probeCrmPermissions(db);
   return permissions["leads.read_all"] || permissions["leads.read_assigned"];
 }
 
 /**
  * Probes `leads.assign` for the authenticated staff session.
  */
-export async function probeCanAssignLeads(): Promise<boolean> {
-  const supabase = await createClient();
+export async function probeCanAssignLeads(db?: CrmDb): Promise<boolean> {
+  const supabase = await resolveCrmDb(db);
   const { data, error } = await supabase.rpc("authorize", {
     requested_permission: "leads.assign",
   });
@@ -64,8 +64,8 @@ export interface LifecycleMutationPermissionProbeResult {
   readonly canManageLeadFollowUps: boolean;
 }
 
-export async function probeLifecycleMutationPermissions(): Promise<LifecycleMutationPermissionProbeResult> {
-  const supabase = await createClient();
+export async function probeLifecycleMutationPermissions(db?: CrmDb): Promise<LifecycleMutationPermissionProbeResult> {
+  const supabase = await resolveCrmDb(db);
   const codes = [
     "leads.transition",
     "crm.notes.manage",
@@ -96,8 +96,8 @@ export interface BulkImportPermissionProbeResult {
   readonly canManageLeadAssignmentRules: boolean;
 }
 
-export async function probeBulkImportPermissions(): Promise<BulkImportPermissionProbeResult> {
-  const supabase = await createClient();
+export async function probeBulkImportPermissions(db?: CrmDb): Promise<BulkImportPermissionProbeResult> {
+  const supabase = await resolveCrmDb(db);
   const codes = [
     "leads.bulk_import",
     "leads.bulk_import_approve",
@@ -129,8 +129,8 @@ export interface CadencePermissionProbeResult {
 /**
  * Probes `crm.cadences.manage` — CRM 2C cadence template lifecycle (D3).
  */
-export async function probeCadencePermissions(): Promise<CadencePermissionProbeResult> {
-  const supabase = await createClient();
+export async function probeCadencePermissions(db?: CrmDb): Promise<CadencePermissionProbeResult> {
+  const supabase = await resolveCrmDb(db);
   const { data, error } = await supabase.rpc("authorize", {
     requested_permission: "crm.cadences.manage",
   });
@@ -146,8 +146,8 @@ export interface SlaPolicyPermissionProbeResult {
  * Probes `crm.sla.manage` — CRM first-contact SLA policy administration.
  * Super Admin only; `public.update_crm_sla_policy` re-checks it in the DB.
  */
-export async function probeSlaPolicyPermissions(): Promise<SlaPolicyPermissionProbeResult> {
-  const supabase = await createClient();
+export async function probeSlaPolicyPermissions(db?: CrmDb): Promise<SlaPolicyPermissionProbeResult> {
+  const supabase = await resolveCrmDb(db);
   const { data, error } = await supabase.rpc("authorize", {
     requested_permission: "crm.sla.manage",
   });
@@ -161,8 +161,8 @@ export interface SalesTargetPermissionProbeResult {
   readonly canReadCrmReporting: boolean;
 }
 
-export async function probeSalesTargetPermissions(): Promise<SalesTargetPermissionProbeResult> {
-  const supabase = await createClient();
+export async function probeSalesTargetPermissions(db?: CrmDb): Promise<SalesTargetPermissionProbeResult> {
+  const supabase = await resolveCrmDb(db);
   const codes = [
     "sales_targets.read",
     "sales_targets.manage",
@@ -187,8 +187,8 @@ export async function probeSalesTargetPermissions(): Promise<SalesTargetPermissi
   };
 }
 
-export async function probeManualLeadPermissions(): Promise<ManualLeadPermissionProbeResult> {
-  const supabase = await createClient();
+export async function probeManualLeadPermissions(db?: CrmDb): Promise<ManualLeadPermissionProbeResult> {
+  const supabase = await resolveCrmDb(db);
   const codes = [
     "leads.create",
     "leads.duplicate_override",

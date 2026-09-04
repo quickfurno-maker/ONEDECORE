@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import {
   CRM_COMMERCIAL_STATES,
   EMPTY_PIPELINE_VALUE_SUMMARY,
@@ -53,9 +53,10 @@ function asNullableString(value: unknown): string | null {
  * page. `taxableBasePaise === null` means unknown and must never render as 0.
  */
 export async function fetchLeadCommercialState(
-  leadId: string
+  leadId: string,
+  db?: CrmDb
 ): Promise<CrmLeadCommercialState> {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const { data, error } = await supabase.rpc("get_crm_lead_commercial_state", {
     p_lead_id: leadId,
   });
@@ -107,9 +108,10 @@ interface SummaryPayload {
  * locked table is encoded once, in the migration, and echoed here.
  */
 export async function fetchCrmPipelineValueSummary(
-  ownerId: string | null
+  ownerId: string | null,
+  db?: CrmDb
 ): Promise<CrmPipelineValueSummary> {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const { data, error } = await supabase.rpc("get_crm_pipeline_value_summary", {
     p_owner_id: ownerId,
   });
