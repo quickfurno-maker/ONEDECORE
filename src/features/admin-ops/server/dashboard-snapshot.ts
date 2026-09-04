@@ -8,7 +8,7 @@ import {
 } from "@/features/crm/contracts/sales-target-contracts.ts";
 import { resolveReportDateRange } from "@/features/crm/contracts/reporting-date-range.ts";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth.ts";
-import { getLeadListPageForCurrentUser } from "@/features/crm/server/crm-lead-repository.ts";
+import { getRecentLeadsForCurrentUser } from "@/features/crm/server/crm-lead-repository.ts";
 import { fetchCrmReportingSnapshot } from "@/features/crm/server/crm-reporting-queries.ts";
 import { fetchSalesTargetsForCurrentUser } from "@/features/crm/server/crm-sales-target-service.ts";
 import { createClient } from "@/lib/supabase/server";
@@ -101,6 +101,8 @@ export async function loadOpsDashboardSnapshot(
   flags: OpsNavFlags
 ): Promise<OpsDashboardSnapshot> {
   const context = flags.crm ? await getCrmAccessContext() : null;
+  const RECENT_LEADS_LIMIT = 8;
+
   const kpis: OpsKpiItem[] = [];
   const attention: OpsAttentionItem[] = [];
   let pipeline: OpsPipelineStage[] = [];
@@ -108,30 +110,27 @@ export async function loadOpsDashboardSnapshot(
   let trend: number[] = [];
   let target: OpsTargetCard | null = null;
 
-  const leadPage = flags.crm
-    ? await getLeadListPageForCurrentUser({
-        q: null,
-        status: null,
-        sourceId: null,
-        assignment: null,
-        assigneeId: null,
-        followUpDue: null,
-        page: 1,
-        pageSize: 8,
-      }).catch(() => null)
-    : null;
+  // A dedicated, genuinely RECENT read: newest by `created_at`, one small query,
+  // no scoring and no milestone fan-out.
+  //
+  // This used to call the Leads workspace read model, which PR #132 turned into
+  // the conversion queue — whole cohort, scored, ranked HOT -> WARM -> COLD. The
+  // panel below is titled "Recent Leads" and its entries are labelled "Lead
+  // created", so that ordering made a months-old HOT lead read as new activity.
+  const recentLeadRows = flags.crm
+    ? await getRecentLeadsForCurrentUser(RECENT_LEADS_LIMIT).catch(() => [])
+    : [];
 
-  const recentLeads: OpsRecentLead[] =
-    leadPage?.items.map((item) => ({
-      id: item.id,
-      name: item.submittedName,
-      requirement: formatCrmCodeLabel(item.serviceCode),
-      locality: item.locality ?? "—",
-      status: item.status,
-      source: item.primarySourceLabel,
-      assignee: item.assigneeLabel,
-      createdAt: item.createdAt,
-    })) ?? [];
+  const recentLeads: OpsRecentLead[] = recentLeadRows.map((lead) => ({
+    id: lead.id,
+    name: lead.submittedName,
+    requirement: formatCrmCodeLabel(lead.serviceCode),
+    locality: lead.locality ?? "—",
+    status: lead.status,
+    source: lead.primarySourceLabel,
+    assignee: lead.assigneeLabel,
+    createdAt: lead.createdAt,
+  }));
 
   const activity: OpsActivityItem[] = recentLeads.map((lead) => ({
     id: lead.id,

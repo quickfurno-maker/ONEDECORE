@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
 import { buildLeadListHref } from "../../crm/contracts/lead-list-query.ts";
+import { LEAD_MONTH_ALL_COHORT } from "../../crm/contracts/lead-month-cohort.ts";
 import { buildOpsCommandRoutes } from "../nav-routes.ts";
 import type { OpsNavFlags } from "../types.ts";
 
@@ -86,6 +87,8 @@ describe("Operations Suite correction contracts", () => {
         assignment: "unassigned",
         assigneeId: null,
         followUpDue: "overdue",
+        bucket: null,
+        month: LEAD_MONTH_ALL_COHORT,
         page: 1,
         pageSize: 25,
       },

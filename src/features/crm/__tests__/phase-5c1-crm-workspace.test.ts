@@ -240,7 +240,13 @@ describe("Phase 5C1 lead list query parsing", () => {
       "utf8"
     );
     assert.match(src, /fetchLeadIdsForTextSearch/);
-    assert.match(src, /\.ilike\("submitted_name"/);
+    // Both searchable columns still go through a PARAMETERISED `.ilike`, which
+    // is the point of this guard: the column is now passed in so the paged
+    // fetcher can serve both, but nothing is interpolated into a filter string.
+    assert.match(src, /\.ilike\(column, pattern\)/);
+    assert.match(src, /"submitted_name" \| "locality"/);
+    assert.match(src, /pageFetcher\("submitted_name"\)/);
+    assert.match(src, /pageFetcher\("locality"\)/);
     assert.doesNotMatch(src, /\.or\(buildLeadTextSearchOrFilter/);
   });
 
@@ -253,22 +259,49 @@ describe("Phase 5C1 lead list query parsing", () => {
     assert.match(src, /return \{\s*request:\s*next\s*\}/);
     assert.doesNotMatch(src, /return next\s*;/);
     assert.match(src, /constrained\.request/);
-    assert.match(src, /constrained\.request[\s\S]*\.range\(from,\s*to\)/);
-    assert.match(
-      src,
-      /to\s*=\s*from\s*\+\s*query\.pageSize/
-    );
+    assert.match(src, /constrained\.request[\s\S]*\.range\(/);
+    // Pagination moved out of SQL: the cohort is read in bounded chunks and
+    // sliced only AFTER the bucket is resolved, so counts and bucket filtering
+    // cover the whole month rather than one page of it.
+    assert.match(src, /CRM_LEAD_COHORT_CHUNK_SIZE/);
+    assert.match(src, /ordered\.slice\(from,\s*from \+ query\.pageSize\)/);
   });
 });
 
 describe("Phase 5C1 lead list DTO safety", () => {
   test("list mapper exposes only approved public keys", () => {
-    const item = mapLeadRowToListItem(sampleLeadRow());
+    const item = mapLeadRowToListItem(sampleLeadRow(), {
+        salesBucket: "COLD",
+        priorityScore: 0,
+        scoreBand: "COLD",
+        riskFlags: [],
+        stageEnteredAt: "2026-09-01T00:00:00.000Z",
+        slaBreached: false,
+        newUncontacted: false,
+        primaryNextActionDueAt: null,
+        primaryNextActionTitle: null,
+        siteVisitState: "none",
+        quotationState: "unknown",
+      });
     assert.deepEqual(Object.keys(item).sort(), [...CRM_LEAD_LIST_ITEM_PUBLIC_KEYS].sort());
   });
 
   test("list DTO excludes personal detail and audit payload fields", () => {
-    const serialised = JSON.stringify(mapLeadRowToListItem(sampleLeadRow()));
+    const serialised = JSON.stringify(
+      mapLeadRowToListItem(sampleLeadRow(), {
+        salesBucket: "COLD",
+        priorityScore: 0,
+        scoreBand: "COLD",
+        riskFlags: [],
+        stageEnteredAt: "2026-09-01T00:00:00.000Z",
+        slaBreached: false,
+        newUncontacted: false,
+        primaryNextActionDueAt: null,
+        primaryNextActionTitle: null,
+        siteVisitState: "none",
+        quotationState: "unknown",
+      })
+    );
     for (const field of CRM_LEAD_LIST_FORBIDDEN_FIELDS) {
       assert.equal(serialised.includes(field), false, `must not expose ${field}`);
     }
@@ -384,9 +417,40 @@ describe("Phase 5C1 regression guards", () => {
       assert.ok(fileExists(relativePath), `${relativePath} should exist`);
       const src = readFileSync(join(root, relativePath), "utf8");
       assert.doesNotMatch(src, /whatsapp/i);
-      assert.doesNotMatch(src, /\bquotation\b/i);
       assert.doesNotMatch(src, /\bproject conversion\b/i);
+
+      // The boundary this guard exists to hold is that CRM must not grow a
+      // QUOTATION ENGINE: no quotation tables, no quotation RPCs, no second
+      // quotation state model. That is asserted directly.
+      assert.doesNotMatch(src, /from\("quotation/i, `${relativePath} reads a quotation table`);
+      assert.doesNotMatch(src, /rpc\("[a-z_]*quotation/i, `${relativePath} calls a quotation RPC`);
+      assert.doesNotMatch(src, /quotation_(versions|items|events|sections)/i);
+      assert.doesNotMatch(src, /QUOTATION_STATES|quotationStates\s*=/);
     }
+  });
+
+  test("the leads read model may REPORT quotation state, never model it", () => {
+    // The Leads workspace shows quotation as a milestone fact beside the sales
+    // bucket and the stage, which is owner-locked behaviour. It does so by
+    // reading the CANONICAL commercial state that already backs deal value, so
+    // there is exactly one quotation state model and CRM does not own it.
+    const src = readFileSync(
+      join(root, "src/features/crm/server/crm-lead-queries.ts"),
+      "utf8"
+    );
+    assert.match(src, /quotationState: deal\?\.state \?\? "unknown"/);
+    assert.doesNotMatch(src, /from\("quotation/i);
+    assert.doesNotMatch(src, /rpc\("[a-z_]*quotation/i);
+
+    // And the labels come from the canonical contract, not a CRM-local copy.
+    const milestones = readFileSync(
+      join(root, "src/features/crm/contracts/lead-milestones.ts"),
+      "utf8"
+    );
+    assert.match(
+      milestones,
+      /CRM_LEAD_QUOTATION_STATE_LABELS = CRM_COMMERCIAL_STATE_LABELS/
+    );
   });
 });
 

@@ -57,6 +57,114 @@ Full model: [ADR-0019](ADR/ADR-0019-five-role-crm-authorization-model.md).
 
 ---
 
+## 1a. Pipeline Stage is NOT the Sales Bucket
+
+Two independent dimensions. Neither replaces the other, and both are shown side
+by side in the Leads workspace.
+
+**Pipeline stage — how far the work has got.** Owner-locked, audited, and the
+only thing a transition changes:
+
+```
+new → assigned → contacted → qualified → consultation → proposal → negotiation → won / lost
+                                                                 (or on hold, a pause)
+```
+
+**Sales bucket — how the owner organises selling effort.** Derived, never
+stored, never manually set:
+
+| Bucket | Meaning |
+| :--- | :--- |
+| **HOT** | Strongest operational queue — call these first. |
+| **WARM** | Nurture and convert. |
+| **COLD** | Lower intent — re-engagement. |
+| **LOST** | Terminal. Kept out of the active conversion queues. |
+| **WON** | Terminal success. |
+| **ON HOLD** | Parked by decision. |
+
+Resolution is a total function of `(lifecycle status, canonical score band)`, in
+`src/features/crm/contracts/lead-sales-bucket.ts`:
+
+1. `closed_lost` → **LOST**
+2. `closed_won` → **WON**
+3. `on_hold` → **ON_HOLD**
+4. otherwise, score band `HOT` → **HOT**
+5. otherwise, score band `WARM` → **WARM**
+6. otherwise (`NURTURE` or `COLD`) → **COLD**
+
+Lifecycle outcome beats temperature: a lost lead is LOST no matter how hot it
+once scored, because ranking dead work at the top of a call queue is worse than
+losing the temperature detail.
+
+**NURTURE still exists.** The canonical score engine
+(`lead-score-contracts.ts`) keeps all four bands — HOT ≥ 70, WARM ≥ 45,
+NURTURE ≥ 20, COLD ≥ 0 — and none of those thresholds moved. The owner asked
+for a simple HOT / WARM / COLD language, so NURTURE collapses into COLD **only
+at the user-facing bucket layer**. The band itself stays visible in the score
+chip.
+
+There is deliberately **no manual temperature override**: a rep-controlled
+HOT/WARM/COLD goes stale, can be gamed, and would contradict the deterministic
+score. A future owner-authorized override needs actor, reason, timestamp,
+expiry and an audit trail, and is out of scope.
+
+Site visit and quotation state remain their **own** milestones, and both are
+rendered as separate columns beside the bucket and the stage. They feed the
+canonical score as input signals where the existing architecture already uses
+them, but they never become the lead's sales bucket:
+
+| Lead | Bucket | Stage | Site visit | Quotation |
+| :--- | :--- | :--- | :--- | :--- |
+| A | HOT | Negotiation | Completed | Issued to client |
+| B | WARM | Qualified | Scheduled | None |
+| C | LOST | Closed Lost | Completed | Issued to client |
+
+**Site visit** is derived only from `lead_follow_ups` rows with
+`activity_type = 'site_visit'`, through the canonical `open` / `completed` /
+`cancelled` status vocabulary (`scheduled` is the display name for an open
+visit). It is **never** inferred from the `consultation_scheduled` pipeline
+stage — that is a different fact, reachable without any site visit existing.
+
+**Quotation** reuses the canonical commercial state already resolved for deal
+value (`unknown` / `draft` / `finalized` / `issued` / `accepted`) with its
+existing labels. There is no second quotation state model.
+
+## 1b. Lead Received Month
+
+The Leads workspace is organised month by month. **Month means the month the
+lead was RECEIVED**, in Asia/Kolkata, from `public.leads.created_at` — never
+`updated_at`, so a lead cannot jump from August to September because someone
+edited it in September.
+
+Boundaries are half-open, `created_at >= month_start AND created_at <
+next_month_start`, computed at the fixed +05:30 offset (no DST). September 2026
+therefore begins at `2026-08-31T18:30:00Z`.
+
+This is **cohort** reporting, not outcome reporting. A lead received in August
+and lost in September stays in the August cohort and is counted there; it is
+labelled "Leads received in August 2026" and never "lost in August". Anything
+that needs "lost during September" belongs in Reports, keyed on the actual
+transition timestamp.
+
+Bucket counts are exact for the whole received-month cohort and the active
+non-bucket filters — the bucket is resolved for every candidate row **before**
+counting, filtering and pagination, so a count is never a count of the current
+page. The cohort is read in bounded chunks under the caller's RLS.
+
+Bucket counts are core sales numbers, so they **fail closed**: if the cohort
+exceeds the read ceiling the counts are marked non-exact and the strip renders
+them as `—` with an explanation, rather than showing a partial figure that looks
+authoritative. The rows themselves stay correctly ranked.
+
+The month and the bucket are the workspace's organisation, not ordinary filters.
+They are carried as hidden fields on the filter form and preserved by the Clear
+control and every pagination link, so applying a secondary filter can never move
+the operator to a different cohort without their asking.
+
+Ordering uses the **canonical primary next action** (`is_primary_next_action`
+and still open), never any open follow-up: a generic follow-up would let a lead
+with nothing actually scheduled escape the `no_next_action` urgency rank.
+
 ## 2. Lead Sources & Assignment
 
 ### 2.1 Source Catalogue (Controlled)

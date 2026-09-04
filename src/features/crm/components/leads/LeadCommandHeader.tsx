@@ -15,6 +15,7 @@ import {
   type CrmLeadCommercialState,
 } from "../../contracts/deal-value-contracts.ts";
 import type { CrmLeadScore } from "../../contracts/lead-score-contracts.ts";
+import { resolveLeadSalesBucket } from "../../contracts/lead-sales-bucket.ts";
 import type { LeadStageCode } from "../../contracts/lead-stages.ts";
 import {
   activityDueStateClassName,
@@ -25,6 +26,7 @@ import {
 } from "../activities/activity-ui-utils.ts";
 import { LeadRiskFlagChips } from "./LeadRiskFlagChips.tsx";
 import { LeadScoreChip } from "./LeadScoreChip.tsx";
+import { LeadSalesBucketBadge } from "./LeadSalesBucketBadge.tsx";
 import { LeadStatusBadge } from "./LeadStatusBadge.tsx";
 
 /**
@@ -123,6 +125,13 @@ export function LeadCommandHeader({
           {overview.submittedName}
         </h1>
         <div className="flex flex-wrap items-center gap-2">
+          {/* Bucket, stage and score side by side. The bucket is derived HERE
+              from the score this header already holds — never recomputed — so
+              the value can never disagree with the Leads list or the pipeline
+              for the same capturedAt. */}
+          <LeadSalesBucketBadge
+            bucket={resolveLeadSalesBucket(status, score.band)}
+          />
           <LeadStatusBadge status={status} />
           <LeadScoreChip score={score} showBreakdown />
         </div>

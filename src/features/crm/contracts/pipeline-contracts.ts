@@ -175,8 +175,21 @@ export function formatPipelineStageLabel(stage: LeadStageCode): string {
 /* Urgency                                                                     */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * The minimum a row must expose to be ranked for urgency.
+ *
+ * Declared structurally so the Leads list can reuse this exact policy instead of
+ * restating it: `CrmPipelineCard` already satisfies it, so every existing caller
+ * is unaffected. Two copies of an urgency ladder is two places for it to drift.
+ */
+export interface CrmUrgencySignals {
+  readonly slaBreached: boolean;
+  readonly primaryNextActionDueAt: string | null;
+  readonly newUncontacted: boolean;
+}
+
 export function resolvePipelineUrgency(
-  card: CrmPipelineCard,
+  card: CrmUrgencySignals,
   now: number = Date.now()
 ): CrmPipelineUrgencyCode {
   if (card.slaBreached) {

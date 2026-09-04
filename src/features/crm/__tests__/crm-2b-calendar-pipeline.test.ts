@@ -61,6 +61,13 @@ const PIPELINE_CARD = "src/features/crm/components/pipeline/PipelineLeadCard.tsx
 const PIPELINE_MOVE_DIALOG =
   "src/features/crm/components/pipeline/PipelineMoveStageDialog.tsx";
 const PIPELINE_QUERIES = "src/features/crm/server/crm-pipeline-queries.ts";
+// The pipeline read path is now TWO modules: the board query plus the
+// batched signal assembly it shares with the segmented Leads list. These
+// assertions describe that read path, so they read both rather than pinning
+// the batching to the file it used to live in.
+const PIPELINE_SCORE_BATCH = "src/features/crm/server/crm-lead-score-batch.ts";
+const readPipelineReadPath = () =>
+  `${readSrc(PIPELINE_QUERIES)}\n${readSrc(PIPELINE_SCORE_BATCH)}`;
 const PIPELINE_PAGE = "src/app/admin/crm/pipeline/page.tsx";
 const LEADS_PAGE = "src/app/admin/crm/leads/page.tsx";
 const CRM_NAV = "src/features/crm/components/shell/CrmNav.tsx";
@@ -647,7 +654,7 @@ describe("CRM 2B pipeline — deterministic urgency ordering", () => {
     assert.equal(formatPipelineStageAgeLabel(3), "3d in stage");
     assert.equal(formatPipelineStageAgeLabel(0), "Today in stage");
 
-    const src = readSrc(PIPELINE_QUERIES);
+    const src = readPipelineReadPath();
     assert.match(src, /lead_events/);
     assert.match(src, /CRM_PIPELINE_STAGE_ENTRY_EVENT_TYPES/);
   });
@@ -764,9 +771,11 @@ describe("CRM 2B pipeline — bounded reads and premium card content", () => {
   });
 
   test("enrichment is batched by lead id — no per-card queries", () => {
-    const src = readSrc(PIPELINE_QUERIES);
-    assert.match(src, /\.in\("lead_id", \[\.\.\.leadIds\]\)/);
+    const src = readPipelineReadPath();
+    assert.match(src, /\.in\("lead_id", \[\.\.\.chunk\]\)/);
     assert.match(src, /Promise\.all/);
+    // Still no per-card read: the board hands the whole id set to the batch.
+    assert.match(readSrc(PIPELINE_QUERIES), /fetchEngagementSignals\(leadIds\)/);
   });
 
   test("cards carry the sales-useful minimum", () => {
