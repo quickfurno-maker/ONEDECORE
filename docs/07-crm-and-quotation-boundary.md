@@ -129,6 +129,58 @@ stage — that is a different fact, reachable without any site visit existing.
 value (`unknown` / `draft` / `finalized` / `issued` / `accepted`) with its
 existing labels. There is no second quotation state model.
 
+## 1a-2. Manual Sales Temperature (current authoritative refinement)
+
+PR #132 derived the sales bucket entirely from the deterministic score. The owner
+has since locked a **hybrid**: the salesperson controls the working temperature,
+and the system supplies intelligence rather than authority. The earlier
+score-only model is not erased — it remains the fallback, and every threshold in
+it is unchanged.
+
+**Four separate concepts:**
+
+| Concept | Owner | Values |
+| :--- | :--- | :--- |
+| Lifecycle stage | the transition graph | `new` … `closed_won` / `closed_lost` / `on_hold` |
+| **Manual temperature** | **a person** | **HOT / WARM / COLD only** |
+| Advisory system score | the deterministic engine | 0–100, bands HOT / WARM / NURTURE / COLD |
+| Milestones | their own facts | site visit, quotation |
+
+**Effective owner-facing bucket** — one canonical resolver,
+`resolveEffectiveSalesBucket(status, band, manualTemperature)`:
+
+1. `closed_lost` → **LOST**
+2. `closed_won` → **WON**
+3. `on_hold` → **ON_HOLD**
+4. manual `HOT` / `WARM` / `COLD` → that bucket
+5. otherwise the score band, with `NURTURE` folding into **COLD**
+
+The fallback at step 5 is what keeps every lead classified, so the monthly counts
+never grow an unexplained seventh "unclassified" bucket.
+
+**LOST / WON / ON_HOLD are lifecycle-only.** They are not selectable in the
+temperature control and a CHECK constraint forbids storing them as one —
+offering them there would create a second way to close a deal, bypassing the
+transition graph that governs it.
+
+**A lifecycle override outranks the temperature; it never erases it.** A parked
+lead keeps the temperature its owner chose and returns to it when resumed. While
+a lifecycle override is in effect the control is disabled and the RPC refuses.
+
+**Persistence and audit.** `leads.manual_sales_temperature` stores `hot`/`warm`/
+`cold` with `set_at`, `set_by` and an optional `reason`; the effective bucket is
+never stored, because it would drift from the lifecycle the moment a lead closed.
+Every real change appends a `lead.sales_temperature_set` event to the canonical
+`lead_events` ledger with the old value, the new value, the actor and the
+provenance — no second audit mechanism. A no-op writes no history.
+
+**Authorization** reuses `leads.transition` rather than inventing a second
+near-identical permission: the people who may move a lead through the pipeline
+are exactly those who should classify how hot it is. The caller must also be able
+to mutate that specific lead, so an assignment-scoped executive cannot
+reclassify a colleague's. Nothing is backfilled — existing leads stay NULL and
+use the system suggestion until a human chooses.
+
 ## 1b. Lead Received Month
 
 The Leads workspace is organised month by month. **Month means the month the

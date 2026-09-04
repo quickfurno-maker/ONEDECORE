@@ -108,6 +108,7 @@ export function LeadListTable({ items }: LeadListTableProps) {
                   <LeadSalesBucketBadge
                     bucket={item.salesBucket}
                     priorityScore={item.priorityScore}
+                    source={item.salesBucketSource}
                   />
                 </td>
                 <td className="px-4">

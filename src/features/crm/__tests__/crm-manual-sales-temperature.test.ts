@@ -1,0 +1,583 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, test } from "node:test";
+
+import {
+  CRM_LEAD_SALES_BUCKETS,
+  countSalesBuckets,
+  resolveEffectiveSalesBucket,
+  resolveLeadSalesBucket,
+} from "../contracts/lead-sales-bucket.ts";
+import {
+  CRM_LEAD_SCORE_BAND_MIN,
+  CRM_SCORE_ENGAGEMENT_POINTS,
+  CRM_SCORE_MATURITY_POINTS,
+  resolveScoreBand,
+  type CrmLeadScoreBand,
+} from "../contracts/lead-score-contracts.ts";
+import {
+  CRM_MANUAL_SALES_TEMPERATURES,
+  isLifecycleControlledBucket,
+  manualSalesTemperatureValue,
+  parseManualSalesTemperature,
+} from "../contracts/lead-sales-temperature.ts";
+import {
+  sortSegmentedLeads,
+  type CrmSortableLead,
+} from "../contracts/lead-segmentation-order.ts";
+import type { LeadStageCode } from "../contracts/lead-stages.ts";
+
+const root = process.cwd();
+const read = (rel: string) =>
+  readFileSync(join(root, rel), "utf8").replace(/\r\n/g, "\n");
+
+const MIGRATION = "supabase/migrations/20260904150000_crm_manual_sales_temperature.sql";
+const QUERIES = "src/features/crm/server/crm-lead-queries.ts";
+const CONTROL = "src/features/crm/components/leads/LeadSalesTemperatureControl.tsx";
+const HEADER = "src/features/crm/components/leads/LeadCommandHeader.tsx";
+const ACTIONS = "src/features/crm/server/crm-sales-temperature-actions.ts";
+const SERVICE = "src/features/crm/server/crm-sales-temperature-service.ts";
+const TABLE = "src/features/crm/components/leads/LeadListTable.tsx";
+const CARDS = "src/features/crm/components/leads/LeadListCards.tsx";
+const STRIP = "src/features/crm/components/leads/LeadSalesBucketStrip.tsx";
+const SCORE = "src/features/crm/contracts/lead-score-contracts.ts";
+const TEMPERATURE = "src/features/crm/contracts/lead-sales-temperature.ts";
+
+const ACTIVE: LeadStageCode = "qualified";
+
+/* ========================================================================== */
+/* 1. Effective bucket precedence                                              */
+/* ========================================================================== */
+
+describe("effective bucket = lifecycle > manual > system", () => {
+  test("closed_lost is LOST whatever anyone marked it", () => {
+    for (const manual of [...CRM_MANUAL_SALES_TEMPERATURES, null]) {
+      const result = resolveEffectiveSalesBucket("closed_lost", "HOT", manual);
+      assert.equal(result.bucket, "LOST");
+      assert.equal(result.source, "lifecycle");
+    }
+  });
+
+  test("closed_won is WON whatever anyone marked it", () => {
+    for (const manual of [...CRM_MANUAL_SALES_TEMPERATURES, null]) {
+      assert.equal(
+        resolveEffectiveSalesBucket("closed_won", "COLD", manual).bucket,
+        "WON"
+      );
+    }
+  });
+
+  test("on_hold is ON_HOLD whatever anyone marked it", () => {
+    for (const manual of [...CRM_MANUAL_SALES_TEMPERATURES, null]) {
+      assert.equal(
+        resolveEffectiveSalesBucket("on_hold", "HOT", manual).bucket,
+        "ON_HOLD"
+      );
+    }
+  });
+
+  test("a manual WARM overrides a computed COLD", () => {
+    const result = resolveEffectiveSalesBucket(ACTIVE, "COLD", "WARM");
+    assert.equal(result.bucket, "WARM");
+    assert.equal(result.source, "manual");
+  });
+
+  test("a manual COLD overrides a computed HOT", () => {
+    const result = resolveEffectiveSalesBucket(ACTIVE, "HOT", "COLD");
+    assert.equal(result.bucket, "COLD");
+    assert.equal(result.source, "manual");
+  });
+
+  test("a manual HOT overrides a computed NURTURE", () => {
+    assert.equal(
+      resolveEffectiveSalesBucket(ACTIVE, "NURTURE", "HOT").bucket,
+      "HOT"
+    );
+  });
+
+  test("with no manual choice the system band decides", () => {
+    for (const [band, expected] of [
+      ["HOT", "HOT"],
+      ["WARM", "WARM"],
+      ["NURTURE", "COLD"],
+      ["COLD", "COLD"],
+    ] as const) {
+      const result = resolveEffectiveSalesBucket(ACTIVE, band, null);
+      assert.equal(result.bucket, expected, `${band} should fall back to ${expected}`);
+      assert.equal(result.source, "system");
+    }
+  });
+
+  test("NURTURE still folds into COLD, and only at this layer", () => {
+    assert.equal(resolveEffectiveSalesBucket(ACTIVE, "NURTURE", null).bucket, "COLD");
+    const scoreSource = read(SCORE);
+    assert.match(scoreSource, /"HOT", "WARM", "NURTURE", "COLD"/);
+    assert.match(scoreSource, /NURTURE: 20/);
+  });
+
+  test("nothing is ever unclassified", () => {
+    const stages: LeadStageCode[] = [
+      "new",
+      "assigned",
+      "contacted",
+      "qualified",
+      "consultation_scheduled",
+      "proposal_sent",
+      "negotiation",
+      "closed_won",
+      "closed_lost",
+      "on_hold",
+    ];
+    for (const status of stages) {
+      for (const band of ["HOT", "WARM", "NURTURE", "COLD"] as CrmLeadScoreBand[]) {
+        for (const manual of [...CRM_MANUAL_SALES_TEMPERATURES, null]) {
+          const { bucket } = resolveEffectiveSalesBucket(status, band, manual);
+          assert.ok(
+            (CRM_LEAD_SALES_BUCKETS as readonly string[]).includes(bucket),
+            `${status}/${band}/${manual} produced ${bucket}`
+          );
+        }
+      }
+    }
+  });
+
+  test("a parked lead resumes to the temperature its owner chose", () => {
+    // Held: the lifecycle wins and the stored HOT is merely outranked.
+    assert.equal(resolveEffectiveSalesBucket("on_hold", "COLD", "HOT").bucket, "ON_HOLD");
+    // Resumed with the SAME stored value: the human's judgement returns.
+    const resumed = resolveEffectiveSalesBucket("qualified", "COLD", "HOT");
+    assert.equal(resumed.bucket, "HOT");
+    assert.equal(resumed.source, "manual");
+  });
+
+  test("the bucket-only helper agrees with the full resolver", () => {
+    for (const manual of [...CRM_MANUAL_SALES_TEMPERATURES, null]) {
+      assert.equal(
+        resolveLeadSalesBucket(ACTIVE, "COLD", manual),
+        resolveEffectiveSalesBucket(ACTIVE, "COLD", manual).bucket
+      );
+    }
+  });
+});
+
+/* ========================================================================== */
+/* 2. Only three are selectable                                                */
+/* ========================================================================== */
+
+describe("LOST / WON / HOLD are lifecycle-only", () => {
+  test("exactly three temperatures are selectable", () => {
+    assert.deepEqual([...CRM_MANUAL_SALES_TEMPERATURES], ["HOT", "WARM", "COLD"]);
+  });
+
+  test("lifecycle words are never accepted as a temperature", () => {
+    for (const word of ["LOST", "WON", "ON_HOLD", "HOLD", "on_hold", "lost", "won"]) {
+      assert.equal(
+        parseManualSalesTemperature(word),
+        null,
+        `${word} must not parse as a temperature`
+      );
+    }
+  });
+
+  test("the segmented control renders only the three", () => {
+    const src = read(CONTROL);
+    assert.match(src, /CRM_MANUAL_SALES_TEMPERATURES\.map/);
+    // No lifecycle option anywhere in the control.
+    assert.doesNotMatch(src, /value="LOST"/);
+    assert.doesNotMatch(src, /value="WON"/);
+    assert.doesNotMatch(src, /value="ON_HOLD"/);
+  });
+
+  test("the action refuses a lifecycle word", () => {
+    const src = read(ACTIONS);
+    assert.match(src, /parseManualSalesTemperature\(raw\)/);
+    assert.match(src, /must be Hot, Warm or Cold/);
+  });
+
+  test("the database CHECK allows only hot/warm/cold", () => {
+    const src = read(MIGRATION);
+    assert.match(
+      src,
+      /manual_sales_temperature in \('hot', 'warm', 'cold'\)/
+    );
+    // Never a lifecycle word in the allowed set.
+    const check = src.slice(
+      src.indexOf("chk_leads_manual_sales_temperature check"),
+      src.indexOf("comment on column")
+    );
+    for (const word of ["'lost'", "'won'", "'on_hold'"]) {
+      assert.doesNotMatch(check, new RegExp(word));
+    }
+  });
+
+  test("lifecycle-controlled buckets are recognised", () => {
+    assert.equal(isLifecycleControlledBucket("LOST"), true);
+    assert.equal(isLifecycleControlledBucket("WON"), true);
+    assert.equal(isLifecycleControlledBucket("ON_HOLD"), true);
+    assert.equal(isLifecycleControlledBucket("HOT"), false);
+    assert.equal(isLifecycleControlledBucket("WARM"), false);
+    assert.equal(isLifecycleControlledBucket("COLD"), false);
+  });
+});
+
+/* ========================================================================== */
+/* 3. Wire values and reset                                                    */
+/* ========================================================================== */
+
+describe("setting and clearing", () => {
+  test("temperatures travel lowercase, matching the CHECK", () => {
+    assert.equal(manualSalesTemperatureValue("HOT"), "hot");
+    assert.equal(manualSalesTemperatureValue("WARM"), "warm");
+    assert.equal(manualSalesTemperatureValue("COLD"), "cold");
+  });
+
+  test("clearing sends null, not an empty string", () => {
+    assert.equal(manualSalesTemperatureValue(null), null);
+  });
+
+  test("parsing is case-insensitive and whitespace-tolerant", () => {
+    assert.equal(parseManualSalesTemperature("hot"), "HOT");
+    assert.equal(parseManualSalesTemperature("  Warm "), "WARM");
+    assert.equal(parseManualSalesTemperature("COLD"), "COLD");
+    assert.equal(parseManualSalesTemperature(""), null);
+    assert.equal(parseManualSalesTemperature(null), null);
+    assert.equal(parseManualSalesTemperature("tepid"), null);
+  });
+
+  test("the Use system control submits an empty value", () => {
+    const src = read(CONTROL);
+    assert.match(src, /crm-temperature-use-system/);
+    assert.match(src, /name="temperature"\s*\n\s*value=""/);
+    // Offered only when there is an override to clear.
+    assert.match(src, /\{isManual \? \(/);
+  });
+
+  test("an empty submission is a reset, not a validation failure", () => {
+    const src = read(ACTIONS);
+    assert.match(src, /raw\.length === 0 \? null : parseManualSalesTemperature\(raw\)/);
+    assert.match(src, /Using the system suggestion/);
+  });
+
+  test("a reason is optional, never mandatory", () => {
+    const src = read(ACTIONS);
+    assert.match(src, /reasonRaw\.length > 0 \? reasonRaw : null/);
+    assert.doesNotMatch(src, /reason is required/i);
+  });
+});
+
+/* ========================================================================== */
+/* 4. Authorization                                                            */
+/* ========================================================================== */
+
+describe("the database is the authority", () => {
+  test("every gate fails closed, in order", () => {
+    const src = read(MIGRATION);
+    const impl = src.slice(src.indexOf("set_lead_sales_temperature_impl"));
+    assert.match(impl, /v_actor := auth\.uid\(\);[\s\S]{0,120}Authentication required/);
+    assert.match(impl, /public\.authorize\('leads\.transition'\)/);
+    assert.match(impl, /private\.crm_can_mutate_lead\(p_lead_id\)/);
+    assert.ok(
+      impl.indexOf("auth.uid()") < impl.indexOf("authorize('leads.transition')"),
+      "authentication is checked before permission"
+    );
+  });
+
+  test("a lifecycle-controlled lead refuses the mutation", () => {
+    const src = read(MIGRATION);
+    assert.match(
+      src,
+      /v_lead\.status in \('closed_won', 'closed_lost', 'on_hold'\)[\s\S]{0,200}LIFECYCLE_OVERRIDES_TEMPERATURE/
+    );
+  });
+
+  test("a lifecycle override does NOT erase the stored temperature", () => {
+    const src = read(MIGRATION);
+    // The refusal raises before any UPDATE, so the stored value survives.
+    const refusal = src.indexOf("LIFECYCLE_OVERRIDES_TEMPERATURE");
+    const update = src.indexOf("update public.leads\n  set manual_sales_temperature");
+    assert.ok(refusal < update, "the refusal must precede any write");
+  });
+
+  test("a no-op writes no misleading history", () => {
+    assert.match(read(MIGRATION), /v_old is not distinct from v_new[\s\S]{0,80}return v_lead;/);
+  });
+
+  test("no service-role client is used in this path", () => {
+    for (const rel of [SERVICE, ACTIONS, CONTROL]) {
+      assert.doesNotMatch(read(rel), /service_role|createServiceRoleClient|SERVICE_ROLE/);
+    }
+    assert.match(read(SERVICE), /await createClient\(\)/);
+  });
+
+  test("the service adds no second set of rules", () => {
+    const src = read(SERVICE);
+    // The database owns the checks; duplicating them here would let them drift.
+    assert.doesNotMatch(src, /closed_lost|closed_won|on_hold/);
+    assert.match(src, /set_lead_sales_temperature/);
+  });
+
+  test("the audit reuses the canonical lead_events ledger", () => {
+    const src = read(MIGRATION);
+    assert.match(src, /insert into public\.lead_events/);
+    assert.match(src, /'lead\.sales_temperature_set'/);
+    // Every pre-existing event type is preserved.
+    for (const type of [
+      "lead.created",
+      "lead.status_changed",
+      "lead.assigned",
+      "lead.note_added",
+      "lead.duplicate_detected",
+      "lead.consent_updated",
+      "lead.on_hold",
+      "lead.resumed",
+    ]) {
+      assert.match(src, new RegExp(`'${type.replace(".", "\\.")}'`));
+    }
+    // No competing audit table.
+    assert.doesNotMatch(src, /create table[\s\S]{0,60}temperature_history/i);
+  });
+
+  test("the audit records actor, both values and provenance", () => {
+    const src = read(MIGRATION);
+    assert.match(src, /'from', to_jsonb\(v_old\)/);
+    assert.match(src, /'to', to_jsonb\(v_new\)/);
+    assert.match(src, /v_actor,/);
+    assert.match(src, /'source', case when v_new is null then 'system' else 'manual' end/);
+    // clock_timestamp so several changes in one transaction stay ordered.
+    assert.match(src, /clock_timestamp\(\)/);
+  });
+});
+
+/* ========================================================================== */
+/* 5. Counts, filtering, ordering                                              */
+/* ========================================================================== */
+
+describe("the workspace uses the effective bucket", () => {
+  test("monthly counts follow a manual override", () => {
+    // One September lead scores COLD; the salesperson marks it WARM.
+    const before = countSalesBuckets([
+      resolveEffectiveSalesBucket(ACTIVE, "COLD", null).bucket,
+    ]);
+    assert.equal(before.COLD, 1);
+    assert.equal(before.WARM, 0);
+
+    const after = countSalesBuckets([
+      resolveEffectiveSalesBucket(ACTIVE, "COLD", "WARM").bucket,
+    ]);
+    assert.equal(after.COLD, 0);
+    assert.equal(after.WARM, 1);
+    assert.equal(after.TOTAL, before.TOTAL, "the cohort size is unchanged");
+  });
+
+  test("closing that same lead moves it to LOST", () => {
+    const lost = countSalesBuckets([
+      resolveEffectiveSalesBucket("closed_lost", "COLD", "WARM").bucket,
+    ]);
+    assert.equal(lost.WARM, 0);
+    assert.equal(lost.LOST, 1);
+  });
+
+  test("the read model resolves before counting, filtering and slicing", () => {
+    const src = read(QUERIES);
+    assert.match(src, /resolveEffectiveSalesBucket\(/);
+    assert.match(src, /parseManualSalesTemperature\(\s*row\.manual_sales_temperature\s*\)/);
+
+    const resolveAt = src.indexOf("resolveEffectiveSalesBucket(");
+    const countAt = src.indexOf("const bucketCounts = countSalesBuckets");
+    const filterAt = src.indexOf("? scored.filter");
+    const sliceAt = src.indexOf("ordered.slice(from,");
+    assert.ok(resolveAt < countAt, "resolution precedes counting");
+    assert.ok(countAt < filterAt, "counting precedes filtering");
+    assert.ok(filterAt < sliceAt, "filtering precedes the page slice");
+  });
+
+  test("the manual column is actually selected", () => {
+    assert.match(read(QUERIES), /manual_sales_temperature/);
+  });
+
+  test("ordering groups by effective bucket, then advisory score", () => {
+    const base: CrmSortableLead = {
+      id: "00000000-0000-4000-8000-000000000000",
+      salesBucket: "COLD",
+      priorityScore: 0,
+      primaryNextActionDueAt: null,
+      slaBreached: false,
+      newUncontacted: false,
+      createdAt: "2026-09-01T00:00:00.000Z",
+      stageEnteredAt: "2026-09-01T00:00:00.000Z",
+    };
+    const now = Date.parse("2026-09-10T06:00:00.000Z");
+
+    // Two manually-HOT leads: the advisory score still ranks them.
+    const sorted = sortSegmentedLeads(
+      [
+        { ...base, id: "hot-71", salesBucket: "HOT", priorityScore: 71 },
+        { ...base, id: "hot-82", salesBucket: "HOT", priorityScore: 82 },
+        { ...base, id: "warm-99", salesBucket: "WARM", priorityScore: 99 },
+      ],
+      now
+    );
+    assert.deepEqual(
+      sorted.map((entry) => entry.id),
+      ["hot-82", "hot-71", "warm-99"],
+      "bucket groups first, score orders within the group"
+    );
+  });
+
+  test("terminal work still sinks below active work", () => {
+    const base: CrmSortableLead = {
+      id: "x",
+      salesBucket: "COLD",
+      priorityScore: 0,
+      primaryNextActionDueAt: null,
+      slaBreached: false,
+      newUncontacted: false,
+      createdAt: "2026-09-01T00:00:00.000Z",
+      stageEnteredAt: "2026-09-01T00:00:00.000Z",
+    };
+    const sorted = sortSegmentedLeads([
+      { ...base, id: "lost", salesBucket: "LOST", priorityScore: 100 },
+      { ...base, id: "cold", salesBucket: "COLD", priorityScore: 1 },
+    ]);
+    assert.equal(sorted[0]!.id, "cold");
+  });
+});
+
+/* ========================================================================== */
+/* 6. The score engine is untouched                                            */
+/* ========================================================================== */
+
+describe("the advisory score is unchanged", () => {
+  test("thresholds are exactly as before", () => {
+    assert.equal(CRM_LEAD_SCORE_BAND_MIN.HOT, 70);
+    assert.equal(CRM_LEAD_SCORE_BAND_MIN.WARM, 45);
+    assert.equal(CRM_LEAD_SCORE_BAND_MIN.NURTURE, 20);
+    assert.equal(CRM_LEAD_SCORE_BAND_MIN.COLD, 0);
+    assert.equal(resolveScoreBand(70), "HOT");
+    assert.equal(resolveScoreBand(69), "WARM");
+    assert.equal(resolveScoreBand(44), "NURTURE");
+    assert.equal(resolveScoreBand(19), "COLD");
+  });
+
+  test("weights are exactly as before", () => {
+    assert.equal(CRM_SCORE_MATURITY_POINTS.new, 0);
+    assert.equal(CRM_SCORE_MATURITY_POINTS.negotiation, 60);
+    assert.equal(CRM_SCORE_ENGAGEMENT_POINTS.FIRST_CONTACT_ATTEMPT, 5);
+    assert.equal(CRM_SCORE_ENGAGEMENT_POINTS.LIVE_ISSUED_QUOTATION, 10);
+  });
+
+  test("the score engine knows nothing about manual temperature", () => {
+    const src = read(SCORE);
+    assert.doesNotMatch(src, /manual_sales_temperature/);
+    assert.doesNotMatch(src, /manualSalesTemperature/);
+  });
+
+  test("no SQL scoring duplicate was introduced", () => {
+    const src = read(MIGRATION);
+    assert.doesNotMatch(src, /priority_score|score_band|priorityScore/i);
+  });
+});
+
+/* ========================================================================== */
+/* 7. Milestones stay separate                                                 */
+/* ========================================================================== */
+
+describe("site visit and quotation are untouched", () => {
+  test("neither is read by the temperature contract", () => {
+    const src = read(TEMPERATURE);
+    assert.doesNotMatch(src, /siteVisit|site_visit/i);
+    assert.doesNotMatch(src, /quotation/i);
+  });
+
+  test("both still render on desktop and mobile", () => {
+    for (const rel of [TABLE, CARDS]) {
+      const src = read(rel);
+      assert.match(src, /CRM_SITE_VISIT_STATE_LABELS\[item\.siteVisitState\]/);
+      assert.match(src, /formatLeadQuotationState\(item\.quotationState\)/);
+    }
+  });
+
+  test("the migration creates no second milestone model", () => {
+    const src = read(MIGRATION);
+    assert.doesNotMatch(src, /site_visit/);
+    assert.doesNotMatch(src, /quotation_/);
+  });
+});
+
+/* ========================================================================== */
+/* 8. UI                                                                       */
+/* ========================================================================== */
+
+describe("the workspace labels every indicator", () => {
+  test("the header labels temperature, score and stage separately", () => {
+    const src = read(HEADER);
+    // Three chips that all read "COLD" were indistinguishable before.
+    assert.match(src, />\s*Temp\s*</);
+    assert.match(src, />\s*Score\s*</);
+    assert.match(src, />\s*Stage\s*</);
+    assert.match(src, /<LeadSalesBucketBadge bucket=\{effective\.bucket\} \/>/);
+    assert.match(src, /<LeadScoreChip score=\{score\}/);
+    assert.match(src, /<LeadStatusBadge status=\{status\} \/>/);
+  });
+
+  test("the header derives the bucket once, from the shared resolver", () => {
+    const src = read(HEADER);
+    assert.match(src, /resolveEffectiveSalesBucket\(/);
+    assert.doesNotMatch(src, /deriveLeadScore/);
+  });
+
+  test("AUTO vs MANUAL is explicit", () => {
+    const src = read(CONTROL);
+    assert.match(src, /CRM_SALES_BUCKET_SOURCE_LABELS\[source\]/);
+    assert.match(src, /data-testid="crm-temperature-source"/);
+    const contract = read(TEMPERATURE);
+    assert.match(contract, /system: "Auto"/);
+    assert.match(contract, /manual: "Manual"/);
+    assert.match(contract, /Using the system suggestion/);
+  });
+
+  test("the control is disabled while the lifecycle owns the bucket", () => {
+    const src = read(HEADER);
+    assert.match(src, /canEdit=\{canSetTemperature && !lifecycleControlled\}/);
+    assert.match(src, /isLifecycleControlledBucket\(effective\.bucket\)/);
+    const control = read(CONTROL);
+    assert.match(control, /crm-temperature-locked/);
+    assert.match(control, /returns when the lead resumes/);
+  });
+
+  test("classification is one click — no modal", () => {
+    const src = read(CONTROL);
+    assert.match(src, /type="submit"/);
+    assert.doesNotMatch(src, /<dialog|role="dialog"|confirm\(/);
+  });
+
+  test("touch targets stay usable on mobile", () => {
+    const src = read(CONTROL);
+    // 44px practical minimum; min-h-11 is 2.75rem.
+    const buttons = src.match(/min-h-11/g) ?? [];
+    assert.ok(buttons.length >= 2, "temperature buttons need a real touch target");
+    assert.match(src, /flex-wrap/);
+  });
+
+  test("list rows show the provenance without a second column", () => {
+    assert.match(read(TABLE), /source=\{item\.salesBucketSource\}/);
+    assert.match(read(CARDS), /source=\{item\.salesBucketSource\}/);
+    const badge = read("src/features/crm/components/leads/LeadSalesBucketBadge.tsx");
+    // Never shape- or colour-only.
+    assert.match(badge, /<span className="sr-only">Set manually<\/span>/);
+  });
+
+  test("the strip keeps all seven tabs and its labels", () => {
+    const src = read(STRIP);
+    assert.match(src, /crm-bucket-tab-all/);
+    assert.match(src, /CRM_LEAD_SALES_BUCKET_LABELS\[bucket\]/);
+    assert.match(src, /countsExact \? count : "—"/);
+  });
+
+  test("the temperature control is never a lifecycle transition", () => {
+    const src = read(CONTROL);
+    assert.doesNotMatch(src, /transitionLeadStatus|closed_won|closed_lost|Mark WON/i);
+    assert.match(src, /setLeadSalesTemperatureAction/);
+  });
+});

@@ -44,7 +44,10 @@ export function LeadListCards({ items }: LeadListCardsProps) {
               <p className="truncate text-[15px] font-semibold leading-snug text-[var(--crm-text)]">
                 {item.submittedName}
               </p>
-              <LeadSalesBucketBadge bucket={item.salesBucket} />
+              <LeadSalesBucketBadge
+                bucket={item.salesBucket}
+                source={item.salesBucketSource}
+              />
             </div>
             <p className="mt-1 truncate text-[13px] text-[var(--crm-text-secondary)]">
               {formatCrmCodeLabel(item.serviceCode)}

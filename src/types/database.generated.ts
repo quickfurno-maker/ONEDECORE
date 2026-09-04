@@ -3961,6 +3961,10 @@ export type Database = {
           id: string
           landing_path: string | null
           locality: string | null
+          manual_sales_temperature: string | null
+          manual_sales_temperature_reason: string | null
+          manual_sales_temperature_set_at: string | null
+          manual_sales_temperature_set_by: string | null
           message: string | null
           on_hold_previous_status: string | null
           on_hold_reason: string | null
@@ -3991,6 +3995,10 @@ export type Database = {
           id?: string
           landing_path?: string | null
           locality?: string | null
+          manual_sales_temperature?: string | null
+          manual_sales_temperature_reason?: string | null
+          manual_sales_temperature_set_at?: string | null
+          manual_sales_temperature_set_by?: string | null
           message?: string | null
           on_hold_previous_status?: string | null
           on_hold_reason?: string | null
@@ -4021,6 +4029,10 @@ export type Database = {
           id?: string
           landing_path?: string | null
           locality?: string | null
+          manual_sales_temperature?: string | null
+          manual_sales_temperature_reason?: string | null
+          manual_sales_temperature_set_at?: string | null
+          manual_sales_temperature_set_by?: string | null
           message?: string | null
           on_hold_previous_status?: string | null
           on_hold_reason?: string | null
@@ -8694,6 +8706,10 @@ export type Database = {
       revoke_quotation_access_grant: {
         Args: { p_grant_id: string; p_reason?: string }
         Returns: Json
+      }
+      set_lead_sales_temperature: {
+        Args: { p_lead_id: string; p_reason?: string; p_temperature: string }
+        Returns: Database["public"]["Tables"]["leads"]["Row"]
       }
       save_campaign_draft: {
         Args: {

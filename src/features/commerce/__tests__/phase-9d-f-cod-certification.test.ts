@@ -43,9 +43,9 @@ describe("Phase 9D-F baseline and payment absence", () => {
   test("latest migration is the P4 interior room-wise quotation migration and deferred payment M38 is absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260904140000_interior_room_wise_quotation.sql"
+      "20260904150000_crm_manual_sales_temperature.sql"
     );
-    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 55);
+    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 56);
     assert.equal(
       existsSync(join(root, "supabase/migrations/20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false

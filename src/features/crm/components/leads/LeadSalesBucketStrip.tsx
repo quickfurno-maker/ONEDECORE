@@ -28,14 +28,18 @@ import { leadMonthCohortHeading } from "../../contracts/lead-month-cohort.ts";
 
 const PRIMARY: readonly CrmLeadSalesBucket[] = CRM_LEAD_PRIMARY_SALES_BUCKETS;
 
+/**
+ * Restrained, semantic tones — never neon, and never the only signal: every tab
+ * carries its text label and its count.
+ */
 const ACTIVE_STYLES: Readonly<Record<CrmLeadSalesBucket, string>> = {
   HOT: "border-[var(--crm-danger)] bg-[var(--crm-danger-soft)] text-[var(--crm-danger)]",
   WARM: "border-[var(--crm-warning)] bg-[var(--crm-warning-soft)] text-[var(--crm-warning)]",
-  COLD: "border-[var(--crm-border-strong)] bg-[var(--crm-surface-subtle)] text-[var(--crm-text)]",
+  COLD: "border-[var(--crm-info)]/50 bg-[var(--crm-info-soft)] text-[var(--crm-info)]",
   LOST: "border-[var(--crm-danger)]/60 bg-[var(--crm-surface-subtle)] text-[var(--crm-danger)]",
   WON: "border-[var(--crm-success)] bg-[var(--crm-success-soft)] text-[var(--crm-success)]",
   ON_HOLD:
-    "border-[var(--crm-border-strong)] bg-[var(--crm-surface-subtle)] text-[var(--crm-text-secondary)]",
+    "border-[var(--crm-warning)]/40 bg-[var(--crm-surface-subtle)] text-[var(--crm-text-secondary)]",
 };
 
 interface LeadSalesBucketStripProps {
@@ -73,7 +77,7 @@ function Tab({
   readonly bucket: CrmLeadSalesBucket | "ALL";
 }) {
   const base =
-    "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--crm-primary)]";
+    "inline-flex min-h-11 items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12px] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--crm-primary)]";
 
   const tone = selected
     ? bucket === "ALL"
@@ -92,7 +96,7 @@ function Tab({
     >
       <span>{label}</span>
       <span
-        className="tabular-nums rounded-full bg-[var(--crm-surface-subtle)] px-1.5 text-[11px] font-semibold"
+        className="tabular-nums rounded-full bg-[var(--crm-surface-subtle)] px-1.5 text-[12px] font-semibold"
         data-testid={`${testId}-count`}
         data-counts-exact={countsExact ? "true" : "false"}
         title={countsExact ? undefined : "Count unavailable for this cohort"}
@@ -119,7 +123,7 @@ export function LeadSalesBucketStrip({
       data-testid="crm-lead-sales-bucket-strip"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[13px] font-semibold text-[var(--crm-text)]">
+        <h2 className="text-[13px] font-semibold tracking-tight text-[var(--crm-text)]">
           {leadMonthCohortHeading(query.month)}
         </h2>
         <p className="text-[11px] text-[var(--crm-muted)]">

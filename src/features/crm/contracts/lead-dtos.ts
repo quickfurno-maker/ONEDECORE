@@ -7,6 +7,10 @@ import type {
   CrmSiteVisitState,
 } from "./lead-milestones.ts";
 import type { CrmLeadSalesBucket } from "./lead-sales-bucket.ts";
+import type {
+  CrmManualSalesTemperature,
+  CrmSalesBucketSource,
+} from "./lead-sales-temperature.ts";
 import type { LeadStageCode } from "./lead-stages.ts";
 
 /**
@@ -20,6 +24,7 @@ export interface CrmLeadListRow {
   readonly service_code: string;
   readonly locality: string | null;
   readonly assigned_to: string | null;
+  readonly manual_sales_temperature: string | null;
   readonly entry_method: string;
   readonly primary_source_id: string;
   readonly created_at: string;
@@ -61,6 +66,13 @@ export interface CrmLeadListItem {
    * replacement for `status` — both are rendered.
    */
   readonly salesBucket: CrmLeadSalesBucket;
+  /**
+   * Where the bucket came from: the lifecycle, a person, or the score. Rendered
+   * so a salesperson can always tell their own judgement from a suggestion.
+   */
+  readonly salesBucketSource: CrmSalesBucketSource;
+  /** The stored human choice. NULL means nobody has judged this lead yet. */
+  readonly manualSalesTemperature: CrmManualSalesTemperature | null;
   readonly priorityScore: number;
   /** The internal band, kept distinct so NURTURE stays visible behind COLD. */
   readonly scoreBand: CrmLeadScoreBand;
@@ -94,6 +106,8 @@ const CRM_LEAD_LIST_ITEM_KEYS = [
   "createdAt",
   "updatedAt",
   "salesBucket",
+  "salesBucketSource",
+  "manualSalesTemperature",
   "priorityScore",
   "scoreBand",
   "riskFlags",
@@ -131,6 +145,8 @@ export const CRM_LEAD_LIST_FORBIDDEN_FIELDS: readonly string[] = [
 
 export interface CrmLeadListDerivedFields {
   readonly salesBucket: CrmLeadSalesBucket;
+  readonly salesBucketSource: CrmSalesBucketSource;
+  readonly manualSalesTemperature: CrmManualSalesTemperature | null;
   readonly priorityScore: number;
   readonly scoreBand: CrmLeadScoreBand;
   readonly riskFlags: readonly CrmLeadRiskFlag[];
@@ -167,6 +183,8 @@ export function mapLeadRowToListItem(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     salesBucket: options.salesBucket,
+    salesBucketSource: options.salesBucketSource,
+    manualSalesTemperature: options.manualSalesTemperature,
     priorityScore: options.priorityScore,
     scoreBand: options.scoreBand,
     riskFlags: options.riskFlags,
