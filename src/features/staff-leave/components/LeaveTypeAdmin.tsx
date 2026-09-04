@@ -9,8 +9,10 @@ export function LeaveTypeAdmin({ leaveTypes }: LeaveTypeAdminProps) {
     <section className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-6">
       <h2 className="text-lg font-semibold text-neutral-50">Leave types</h2>
       <p className="mt-2 text-sm text-neutral-400">
-        Leave type catalogue is database-managed. Active launch types are selected per OD-9;
-        this view is read-only until dedicated type mutation RPCs are exposed.
+        The P5 launch catalogue — Casual, Sick and Unpaid — is owner-locked and
+        read-only in this MVP. Half-day leave is not approved at launch, so all
+        three are full-day only; that is a LEAVE setting and does not affect the
+        Half Day (4h) attendance category.
       </p>
       {leaveTypes.length === 0 ? (
         <p className="mt-4 text-sm text-neutral-500">No leave types configured.</p>
