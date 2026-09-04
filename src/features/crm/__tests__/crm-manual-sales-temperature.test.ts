@@ -26,6 +26,17 @@ import {
   sortSegmentedLeads,
   type CrmSortableLead,
 } from "../contracts/lead-segmentation-order.ts";
+import {
+  CRM_TIMELINE_INCLUDED_EVENT_TYPES,
+  formatTimelineEventLabel,
+  formatTimelineTemperatureDetail,
+  timelineCategoryForEvent,
+} from "../contracts/lead-timeline-contracts.ts";
+import {
+  resolvePipelineUrgency,
+  sortPipelineCards,
+  type CrmPipelineCard,
+} from "../contracts/pipeline-contracts.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 
 const root = process.cwd();
@@ -43,6 +54,14 @@ const CARDS = "src/features/crm/components/leads/LeadListCards.tsx";
 const STRIP = "src/features/crm/components/leads/LeadSalesBucketStrip.tsx";
 const SCORE = "src/features/crm/contracts/lead-score-contracts.ts";
 const TEMPERATURE = "src/features/crm/contracts/lead-sales-temperature.ts";
+const TOKENS = "src/features/admin-ops/tokens.css";
+const LEADS_PAGE = "src/app/admin/crm/leads/page.tsx";
+const DETAIL_PAGE = "src/app/admin/crm/leads/[leadId]/page.tsx";
+const PIPELINE_QUERIES = "src/features/crm/server/crm-pipeline-queries.ts";
+const PIPELINE_CARD = "src/features/crm/components/pipeline/PipelineLeadCard.tsx";
+const PIPELINE_CONTRACTS = "src/features/crm/contracts/pipeline-contracts.ts";
+const TIMELINE_CONTRACTS = "src/features/crm/contracts/lead-timeline-contracts.ts";
+const TIMELINE_QUERIES = "src/features/crm/server/crm-lead-timeline-queries.ts";
 
 const ACTIVE: LeadStageCode = "qualified";
 
@@ -502,6 +521,272 @@ describe("site visit and quotation are untouched", () => {
     const src = read(MIGRATION);
     assert.doesNotMatch(src, /site_visit/);
     assert.doesNotMatch(src, /quotation_/);
+  });
+});
+
+/* ========================================================================== */
+/* 9. Premium dark theme                                                       */
+/* ========================================================================== */
+
+describe("the Leads workspace is premium dark", () => {
+  test("a dark token layer exists and is centralized", () => {
+    const css = read(TOKENS);
+    assert.match(css, /\.od-crm-dark \{/);
+    // Near-black ground, deep slate cards.
+    assert.match(css, /--crm-bg: #0b1017;/);
+    assert.match(css, /--crm-surface: #141b24;/);
+    // Off-white primary text, muted cool-gray secondary.
+    assert.match(css, /--crm-text: #eef2f6;/);
+    assert.match(css, /--crm-text-secondary: #a9b7c7;/);
+    // Warm ONEDECORE gold as the primary accent.
+    assert.match(css, /--crm-primary: #c89d3c;/);
+  });
+
+  test("the semantic colour roles are restrained and correct", () => {
+    const dark = read(TOKENS).slice(read(TOKENS).indexOf(".od-crm-dark {"));
+    assert.match(dark, /Red is reserved for destructive and SLA alerts/);
+    assert.match(dark, /Amber for warning and hold/);
+    assert.match(dark, /Green for won/);
+    assert.match(dark, /Cool blue for system information/);
+    // No neon, no glass blur, no heavy gradients.
+    assert.doesNotMatch(dark, /backdrop-filter|blur\(/);
+    assert.doesNotMatch(dark, /linear-gradient|radial-gradient/);
+  });
+
+  test("ink on a filled accent is a token, not a hardcoded white", () => {
+    const css = read(TOKENS);
+    // White on gold is ~2:1 and fails. The dark theme supplies near-black ink.
+    assert.match(css, /\.od-crm \.crm-btn-primary \{[\s\S]{0,120}color: var\(--crm-on-primary\)/);
+    assert.match(css, /\.od-crm \.crm-btn-danger \{[\s\S]{0,120}color: var\(--crm-on-danger\)/);
+    assert.match(css, /--crm-on-primary: #14100a;/);
+    assert.doesNotMatch(css, /\.crm-btn-primary \{[\s\S]{0,120}color: #ffffff/);
+  });
+
+  test("elevation is restrained, and radii sit in the 10-14px band", () => {
+    const dark = read(TOKENS).slice(read(TOKENS).indexOf(".od-crm-dark {"));
+    assert.match(dark, /--crm-radius: 12px;/);
+    assert.match(dark, /--crm-radius-sm: 10px;/);
+    assert.match(dark, /border-radius: 14px;/);
+    assert.match(dark, /box-shadow:[\s\S]{0,140}rgba\(0, 0, 0, 0\.4\)/);
+  });
+
+  test("the theme is applied to BOTH leads surfaces and nowhere else", () => {
+    assert.match(read(LEADS_PAGE), /className="od-crm-dark space-y-5"/);
+    assert.match(read(DETAIL_PAGE), /className="od-crm-dark space-y-5"/);
+    // Deliberately not CRM-wide: other workspaces keep their reviewed palette.
+    assert.match(read(TOKENS), /NOT applied CRM-wide/);
+  });
+
+  test("no CRM badge is stranded on a hardcoded light colour", () => {
+    for (const rel of [
+      "src/features/crm/components/leads/LeadStatusBadge.tsx",
+      "src/features/crm/components/leads/LeadDetailTimeline.tsx",
+    ]) {
+      const src = read(rel);
+      // Pale-on-pale literals would stay light inside the dark theme.
+      for (const literal of ["#eef2ff", "#ecfeff", "#f5f3ff", "#4338ca", "#0e7490", "#6d28d9"]) {
+        assert.doesNotMatch(src, new RegExp(literal), `${rel} still hardcodes ${literal}`);
+      }
+    }
+  });
+
+  test("reduced motion and focus rules still apply", () => {
+    const css = read(TOKENS);
+    assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+    assert.match(css, /focus-visible/);
+  });
+
+  test("contrast ratios are documented alongside the palette", () => {
+    assert.match(read(TOKENS), /Contrast \(WCAG AA needs 4\.5:1/);
+  });
+});
+
+/* ========================================================================== */
+/* 10. Pipeline consistency                                                    */
+/* ========================================================================== */
+
+describe("the pipeline board shows the same effective bucket", () => {
+  test("the projection selects the manual temperature", () => {
+    const src = read(PIPELINE_QUERIES);
+    assert.match(src, /manual_sales_temperature/);
+    assert.match(src, /readonly manual_sales_temperature: string \| null;/);
+  });
+
+  test("it parses and resolves with the canonical functions", () => {
+    const src = read(PIPELINE_QUERIES);
+    assert.match(src, /parseManualSalesTemperature\(\s*row\.manual_sales_temperature\s*\)/);
+    assert.match(src, /resolveEffectiveSalesBucket\(/);
+    // No second resolver anywhere on this surface.
+    assert.doesNotMatch(src, /function resolve\w*Bucket/);
+  });
+
+  test("the card contract carries bucket, source and temperature", () => {
+    const src = read(PIPELINE_CONTRACTS);
+    assert.match(src, /readonly salesBucket: CrmLeadSalesBucket;/);
+    assert.match(src, /readonly salesBucketSource: CrmSalesBucketSource;/);
+    assert.match(src, /readonly manualSalesTemperature: CrmManualSalesTemperature \| null;/);
+  });
+
+  test("the card renders the badge with its provenance", () => {
+    const src = read(PIPELINE_CARD);
+    assert.match(src, /<LeadSalesBucketBadge\s+bucket=\{card\.salesBucket\}/);
+    assert.match(src, /source=\{card\.salesBucketSource\}/);
+  });
+
+  test("a manual choice wins on the board exactly as in the list", () => {
+    // The board calls the same resolver, so these are its results too.
+    assert.equal(resolveEffectiveSalesBucket("qualified", "COLD", "WARM").bucket, "WARM");
+    assert.equal(resolveEffectiveSalesBucket("qualified", "HOT", "COLD").bucket, "COLD");
+    assert.equal(resolveEffectiveSalesBucket("qualified", "COLD", null).bucket, "COLD");
+    assert.equal(resolveEffectiveSalesBucket("qualified", "HOT", null).bucket, "HOT");
+  });
+
+  test("an ON HOLD card reads HOLD, because lifecycle wins", () => {
+    // `on_hold` is a board column, so this is a case the board really renders.
+    const held = resolveEffectiveSalesBucket("on_hold", "HOT", "HOT");
+    assert.equal(held.bucket, "ON_HOLD");
+    assert.equal(held.source, "lifecycle");
+  });
+
+  test("existing urgency ordering is untouched", () => {
+    const base: CrmPipelineCard = {
+      leadId: "a",
+      displayName: "A",
+      salesBucket: "COLD",
+      salesBucketSource: "system",
+      manualSalesTemperature: null,
+      status: "contacted",
+      serviceCode: "modular-kitchens",
+      locality: null,
+      sourceLabel: "Manual",
+      assigneeId: null,
+      assigneeLabel: "Unassigned",
+      primaryNextActionTitle: null,
+      primaryNextActionType: null,
+      primaryNextActionDueAt: null,
+      slaBreached: false,
+      newUncontacted: false,
+      stageEnteredAt: "2026-09-01T00:00:00.000Z",
+      stageEnteredSource: "created",
+      createdAt: "2026-09-01T00:00:00.000Z",
+      score: {
+        priorityScore: 0,
+        band: "COLD",
+        reasons: [],
+        riskFlags: [],
+        maturityPoints: 0,
+        engagementPoints: 0,
+        isActivePriorityRankable: true,
+        computedAt: "2026-09-01T00:00:00.000Z",
+        signalsAvailable: { slaPolicyActive: false, whatsappLinked: false },
+      },
+      dealValuePaise: null,
+      commercialState: "unknown",
+    };
+    const now = Date.parse("2026-09-10T06:00:00.000Z");
+
+    // The ladder still ranks by urgency, NOT by the new bucket field.
+    assert.equal(resolvePipelineUrgency({ ...base, slaBreached: true }, now), "sla_breach");
+    assert.equal(resolvePipelineUrgency(base, now), "no_next_action");
+
+    const sorted = sortPipelineCards(
+      [
+        { ...base, leadId: "calm", primaryNextActionDueAt: "2026-09-20T06:00:00.000Z" },
+        { ...base, leadId: "breach", slaBreached: true },
+      ],
+      now
+    );
+    assert.deepEqual(sorted.map((card) => card.leadId), ["breach", "calm"]);
+
+    // A HOT bucket must not jump the urgency ladder on the board.
+    const bucketDoesNotReorder = sortPipelineCards(
+      [
+        { ...base, leadId: "cold-breach", salesBucket: "COLD", slaBreached: true },
+        { ...base, leadId: "hot-calm", salesBucket: "HOT", primaryNextActionDueAt: "2026-09-20T06:00:00.000Z" },
+      ],
+      now
+    );
+    assert.deepEqual(
+      bucketDoesNotReorder.map((card) => card.leadId),
+      ["cold-breach", "hot-calm"],
+      "stage-board ordering stays urgency-first"
+    );
+  });
+});
+
+/* ========================================================================== */
+/* 11. Timeline audit visibility                                               */
+/* ========================================================================== */
+
+describe("the temperature audit is visible in the timeline", () => {
+  test("the event is included in the timeline vocabulary", () => {
+    assert.ok(
+      (CRM_TIMELINE_INCLUDED_EVENT_TYPES as readonly string[]).includes(
+        "lead.sales_temperature_set"
+      )
+    );
+  });
+
+  test("the raw code is never shown", () => {
+    const label = formatTimelineEventLabel("lead.sales_temperature_set");
+    assert.equal(label, "Sales temperature changed");
+    assert.doesNotMatch(label, /lead\./);
+    assert.doesNotMatch(label, /_/);
+  });
+
+  test("it reuses an existing category", () => {
+    const category = timelineCategoryForEvent("lead.sales_temperature_set");
+    assert.equal(category, "stage");
+    // No new category was invented for one event type.
+    const src = read(TIMELINE_CONTRACTS);
+    const categories = src.slice(
+      src.indexOf("export const CRM_TIMELINE_CATEGORIES"),
+      src.indexOf("export type CrmTimelineCategory")
+    );
+    assert.doesNotMatch(categories, /temperature/i);
+  });
+
+  test("from and to render human-readably", () => {
+    assert.equal(
+      formatTimelineTemperatureDetail({ from: null, to: "hot" }),
+      "System \u2192 Hot"
+    );
+    assert.equal(
+      formatTimelineTemperatureDetail({ from: "cold", to: "warm" }),
+      "Cold \u2192 Warm"
+    );
+    // Clearing the override reads as a return to the system suggestion.
+    assert.equal(
+      formatTimelineTemperatureDetail({ from: "warm", to: null }),
+      "Warm \u2192 System"
+    );
+  });
+
+  test("a payload with neither side yields no empty arrow", () => {
+    assert.equal(formatTimelineTemperatureDetail({}), null);
+    assert.equal(formatTimelineTemperatureDetail(null), null);
+    assert.equal(formatTimelineTemperatureDetail("nonsense"), null);
+    assert.equal(formatTimelineTemperatureDetail({ source: "manual" }), null);
+  });
+
+  test("the query renders that detail for this event only", () => {
+    const src = read(TIMELINE_QUERIES);
+    assert.match(
+      src,
+      /row\.event_type === "lead\.sales_temperature_set"\s*\n?\s*\? formatTimelineTemperatureDetail\(row\.event_data\)\s*\n?\s*: null/
+    );
+    // event_data is already projected; actor and instant come from the row.
+    assert.match(src, /select\("id, event_type, occurred_at, actor_id, actor_type, event_data"\)/);
+    assert.match(src, /occurredAt: row\.occurred_at/);
+    assert.match(src, /labelForUser\(row\.actor_id\)/);
+  });
+
+  test("no duplicate activity twin was introduced", () => {
+    const migration = read(MIGRATION);
+    // The audit is one lead_events row; no lead_activities mirror.
+    assert.doesNotMatch(migration, /lead_activities/);
+    const inserts = migration.match(/insert into public\.lead_events/g) ?? [];
+    assert.equal(inserts.length, 1);
   });
 });
 

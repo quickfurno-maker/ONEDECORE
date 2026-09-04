@@ -10,6 +10,7 @@ import {
   CRM_TIMELINE_SOURCE_FETCH_LIMIT,
   formatTimelineActivityLabel,
   formatTimelineEventLabel,
+  formatTimelineTemperatureDetail,
   formatTimelineQuotationLabel,
   sortTimelineEntries,
   timelineCategoryForActivity,
@@ -224,7 +225,12 @@ export async function fetchLeadTimelinePage(
       source: "event",
       category: timelineCategoryForEvent(row.event_type),
       title: formatTimelineEventLabel(row.event_type),
-      detail: null,
+      // Only the temperature event carries a from/to worth rendering; every
+      // other event keeps its title-only presentation.
+      detail:
+        row.event_type === "lead.sales_temperature_set"
+          ? formatTimelineTemperatureDetail(row.event_data)
+          : null,
       occurredAt: row.occurred_at,
       actorLabel:
         row.actor_type === "staff"

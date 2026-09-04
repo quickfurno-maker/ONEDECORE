@@ -150,14 +150,19 @@ export function LeadCommandHeader({
               "COLD" — the effective bucket, the score band and the stage — were
               impossible to tell apart, so each now says what it is. */}
           <span className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-2 py-1">
+            {/* Spelled out where there is room; the short form only appears
+                on the narrowest screens. An unexplained "Temp" beside "Score"
+                and "Stage" was the ambiguity this panel exists to remove. */}
             <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--crm-muted)]">
-              Temp
+              <span className="hidden sm:inline">Sales temperature</span>
+              <span className="sm:hidden">Temp</span>
             </span>
             <LeadSalesBucketBadge bucket={effective.bucket} />
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-2 py-1">
             <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--crm-muted)]">
-              Score
+              <span className="hidden sm:inline">System score</span>
+              <span className="sm:hidden">Score</span>
             </span>
             <LeadScoreChip score={score} showBreakdown />
           </span>

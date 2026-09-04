@@ -96,6 +96,9 @@ function makeCard(overrides: Partial<CrmPipelineCard> = {}): CrmPipelineCard {
   return {
     leadId: "11111111-1111-4111-8111-111111111111",
     displayName: "Lead",
+    salesBucket: "COLD",
+    salesBucketSource: "system",
+    manualSalesTemperature: null,
     status: "contacted",
     serviceCode: "modular-kitchens",
     locality: "Kharadi",

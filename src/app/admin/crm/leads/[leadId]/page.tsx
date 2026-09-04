@@ -142,7 +142,7 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
 
   return (
     <LeadActionsProvider>
-    <div className="space-y-5">
+    <div className="od-crm-dark space-y-5">
       <LeadCommandHeader
         leadId={lead.id}
         overview={lead.overview}

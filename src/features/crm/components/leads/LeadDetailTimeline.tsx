@@ -28,9 +28,12 @@ const CATEGORY_CLASSES: Readonly<Record<CrmTimelineCategory, string>> = {
   note: "border-[var(--crm-border-strong)] bg-[var(--crm-surface-subtle)] text-[var(--crm-text-secondary)]",
   stage:
     "border-[var(--crm-info)]/25 bg-[var(--crm-info-soft)] text-[var(--crm-info)]",
-  assignment: "border-[#c7d2fe] bg-[#eef2ff] text-[#4338ca]",
-  cadence: "border-[#a5f3fc] bg-[#ecfeff] text-[#0e7490]",
-  quotation: "border-[#ddd6fe] bg-[#f5f3ff] text-[#6d28d9]",
+  assignment:
+    "border-[var(--crm-info)]/25 bg-[var(--crm-info-soft)] text-[var(--crm-info)]",
+  cadence:
+    "border-[var(--crm-info)]/25 bg-[var(--crm-info-soft)] text-[var(--crm-info)]",
+  quotation:
+    "border-[var(--crm-primary)]/25 bg-[var(--crm-primary-soft)] text-[var(--crm-primary)]",
   consent:
     "border-[var(--crm-warning)]/25 bg-[var(--crm-warning-soft)] text-[var(--crm-warning)]",
   system:

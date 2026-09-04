@@ -47,7 +47,10 @@ export default async function CrmLeadsPage({ searchParams }: CrmLeadsPageProps) 
   ]);
 
   return (
-    <div className="space-y-5">
+    // `od-crm-dark` re-themes this surface by redefining the shared CRM
+    // tokens. Scoped here rather than CRM-wide so My Day, Pipeline,
+    // Calendar and Reports keep the palette they were reviewed against.
+    <div className="od-crm-dark space-y-5">
       <CrmPageHeader
         title="Leads"
         description="Track, qualify and move opportunities forward."

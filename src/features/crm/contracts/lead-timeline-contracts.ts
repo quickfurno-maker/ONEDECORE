@@ -185,6 +185,11 @@ export const CRM_TIMELINE_INCLUDED_EVENT_TYPES = [
   "lead.created",
   "lead.duplicate_detected",
   "lead.consent_updated",
+  // M56 writes the manual sales temperature audit here. Without it the ledger
+  // recorded who reclassified a lead and from what, and the CRM history could
+  // not show any of it. There is no activity twin for this event, so including
+  // it duplicates nothing.
+  "lead.sales_temperature_set",
 ] as const;
 
 /**
@@ -229,6 +234,7 @@ const EVENT_TYPE_LABELS: Readonly<Record<string, string>> = {
   "lead.on_hold": "Lead put on hold",
   "lead.resumed": "Lead resumed",
   "lead.note_added": "Note added",
+  "lead.sales_temperature_set": "Sales temperature changed",
 };
 
 const QUOTATION_EVENT_LABELS: Readonly<Record<string, string>> = {
@@ -265,6 +271,10 @@ const EVENT_TYPE_CATEGORY: Readonly<Record<string, CrmTimelineCategory>> = {
   "lead.on_hold": "stage",
   "lead.resumed": "stage",
   "lead.note_added": "note",
+  // Reuses the existing `stage` category: it is a classification change on
+  // the lead, and inventing a category for one event type would fragment
+  // the filter vocabulary.
+  "lead.sales_temperature_set": "stage",
 };
 
 /**
@@ -302,6 +312,39 @@ export function timelineCategoryForEvent(
   eventType: string
 ): CrmTimelineCategory {
   return EVENT_TYPE_CATEGORY[eventType] ?? "system";
+}
+
+/**
+ * "Cold → Warm", "System → Hot", "Warm → System".
+ *
+ * The stored values are `hot`/`warm`/`cold`/null, and a NULL on either side is a
+ * real state — the lead using the system suggestion — so it reads as "System"
+ * rather than being hidden. Returns null when the payload carries neither side,
+ * and the caller then shows the title alone rather than an empty arrow.
+ */
+export function formatTimelineTemperatureDetail(
+  eventData: unknown
+): string | null {
+  if (!eventData || typeof eventData !== "object") {
+    return null;
+  }
+  const data = eventData as Record<string, unknown>;
+  if (!("from" in data) && !("to" in data)) {
+    return null;
+  }
+
+  const label = (value: unknown): string => {
+    if (value == null) {
+      return "System";
+    }
+    const raw = String(value).trim();
+    if (!raw) {
+      return "System";
+    }
+    return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+  };
+
+  return `${label(data.from)} \u2192 ${label(data.to)}`;
 }
 
 /** Asia/Kolkata display, matching every other CRM timestamp surface. */
