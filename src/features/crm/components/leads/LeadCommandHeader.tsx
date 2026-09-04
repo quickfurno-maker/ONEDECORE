@@ -20,7 +20,10 @@ import {
   isLifecycleControlledBucket,
   type CrmManualSalesTemperature,
 } from "../../contracts/lead-sales-temperature.ts";
-import type { LeadStageCode } from "../../contracts/lead-stages.ts";
+import {
+  isTerminalLeadStage,
+  type LeadStageCode,
+} from "../../contracts/lead-stages.ts";
 import {
   activityDueStateClassName,
   activityDueStateLabel,
@@ -31,6 +34,7 @@ import {
 import { LeadRiskFlagChips } from "./LeadRiskFlagChips.tsx";
 import { LeadScoreChip } from "./LeadScoreChip.tsx";
 import { LeadSalesBucketBadge } from "./LeadSalesBucketBadge.tsx";
+import { LeadHeaderNextActionCta } from "./LeadHeaderNextActionCta.tsx";
 import { LeadSalesTemperatureControl } from "./LeadSalesTemperatureControl.tsx";
 import { LeadStatusBadge } from "./LeadStatusBadge.tsx";
 
@@ -53,6 +57,9 @@ interface LeadCommandHeaderProps {
   readonly manualSalesTemperature: CrmManualSalesTemperature | null;
   /** False without `leads.transition`; the control renders read-only. */
   readonly canSetTemperature: boolean;
+  /** Canonical prerequisites for creating a primary next action. */
+  readonly isAssigned: boolean;
+  readonly canManageLeadFollowUps: boolean;
   readonly commercial: CrmLeadCommercialState;
   readonly cadence: CrmLeadCadenceState | null;
   /** Latest consent state per channel, already permission-filtered. */
@@ -94,6 +101,8 @@ export function LeadCommandHeader({
   score,
   manualSalesTemperature,
   canSetTemperature,
+  isAssigned,
+  canManageLeadFollowUps,
   commercial,
   cadence,
   consentBlocked,
@@ -224,9 +233,21 @@ export function LeadCommandHeader({
             </span>
           </div>
         ) : (
-          <p className="text-[13px] font-medium text-[var(--crm-danger)]">
-            No primary next action
-          </p>
+          // The operational CTA belongs in the command area, not only in the
+          // workspace further down the page. It dispatches the SAME intent the
+          // quick actions use, so the activity workspace stays the single
+          // mutation authority.
+          <div className="flex flex-wrap items-center gap-2.5">
+            <p className="text-[13px] font-medium text-[var(--crm-danger)]">
+              No primary next action
+            </p>
+            <LeadHeaderNextActionCta
+              isAssigned={isAssigned}
+              canManageLeadFollowUps={canManageLeadFollowUps}
+              isTerminal={isTerminalLeadStage(status)}
+              isOnHold={status === "on_hold"}
+            />
+          </div>
         )}
       </div>
 

@@ -142,12 +142,14 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
 
   return (
     <LeadActionsProvider>
-    <div className="od-crm-dark space-y-5">
+    <div className="space-y-5">
       <LeadCommandHeader
         leadId={lead.id}
         overview={lead.overview}
         manualSalesTemperature={lead.overview.manualSalesTemperature}
         canSetTemperature={context?.canTransitionLeads ?? false}
+        isAssigned={lead.assignment.currentAssigneeId !== null}
+        canManageLeadFollowUps={context?.canManageLeadFollowUps ?? false}
         ownerLabel={lead.assignment.currentAssigneeLabel}
         primaryNextAction={primaryNextAction}
         score={leadScore}

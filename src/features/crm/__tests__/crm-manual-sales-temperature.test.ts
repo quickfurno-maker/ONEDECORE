@@ -37,6 +37,7 @@ import {
   sortPipelineCards,
   type CrmPipelineCard,
 } from "../contracts/pipeline-contracts.ts";
+import { isLeadsWorkspacePath } from "../contracts/crm-workspace-theme.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 
 const root = process.cwd();
@@ -62,6 +63,11 @@ const PIPELINE_CARD = "src/features/crm/components/pipeline/PipelineLeadCard.tsx
 const PIPELINE_CONTRACTS = "src/features/crm/contracts/pipeline-contracts.ts";
 const TIMELINE_CONTRACTS = "src/features/crm/contracts/lead-timeline-contracts.ts";
 const TIMELINE_QUERIES = "src/features/crm/server/crm-lead-timeline-queries.ts";
+const CRM_LAYOUT = "src/app/admin/crm/layout.tsx";
+const SHELL = "src/features/crm/components/shell/CrmWorkspaceShell.tsx";
+const HEADER_CTA = "src/features/crm/components/leads/LeadHeaderNextActionCta.tsx";
+const ACTIVITY_WORKSPACE =
+  "src/features/crm/components/activities/LeadActivityWorkspace.tsx";
 
 const ACTIVE: LeadStageCode = "qualified";
 
@@ -570,9 +576,12 @@ describe("the Leads workspace is premium dark", () => {
     assert.match(dark, /box-shadow:[\s\S]{0,140}rgba\(0, 0, 0, 0\.4\)/);
   });
 
-  test("the theme is applied to BOTH leads surfaces and nowhere else", () => {
-    assert.match(read(LEADS_PAGE), /className="od-crm-dark space-y-5"/);
-    assert.match(read(DETAIL_PAGE), /className="od-crm-dark space-y-5"/);
+  test("the theme is applied at the CRM ROOT for Leads routes only", () => {
+    // It used to sit on an inner page div, which left the outer workspace, the
+    // nav and the gutters light around a dark island.
+    assert.equal(isLeadsWorkspacePath("/admin/crm/leads"), true);
+    assert.equal(isLeadsWorkspacePath("/admin/crm/pipeline"), false);
+    assert.match(read(SHELL), /od-crm space-y-5\$\{dark \? " od-crm-dark" : ""\}/);
     // Deliberately not CRM-wide: other workspaces keep their reviewed palette.
     assert.match(read(TOKENS), /NOT applied CRM-wide/);
   });
@@ -792,6 +801,167 @@ describe("the temperature audit is visible in the timeline", () => {
     assert.doesNotMatch(migration, /lead_activities/);
     const inserts = migration.match(/insert into public\.lead_events/g) ?? [];
     assert.equal(inserts.length, 1);
+  });
+});
+
+/* ========================================================================== */
+/* 12. The dark theme reaches the workspace ROOT                               */
+/* ========================================================================== */
+
+describe("the Leads dark theme is route-scoped at the CRM root", () => {
+  test("only the Leads routes activate it", () => {
+    for (const path of [
+      "/admin/crm/leads",
+      "/admin/crm/leads/new",
+      "/admin/crm/leads/11111111-1111-4111-8111-111111111111",
+      "/admin/crm/leads/abc/anything",
+    ]) {
+      assert.equal(isLeadsWorkspacePath(path), true, `${path} should be dark`);
+    }
+  });
+
+  test("every other CRM route stays light", () => {
+    for (const path of [
+      "/admin/crm",
+      "/admin/crm/pipeline",
+      "/admin/crm/my-day",
+      "/admin/crm/calendar",
+      "/admin/crm/reports",
+      "/admin/crm/imports",
+      // A near-miss that must NOT match: a different segment with the prefix.
+      "/admin/crm/leadsources",
+      "/admin/quotations",
+      null,
+    ]) {
+      assert.equal(isLeadsWorkspacePath(path), false, `${path} should stay light`);
+    }
+  });
+
+  test("the class lands on the SAME element as .od-crm", () => {
+    const shell = read(SHELL);
+    // `.od-crm` declares `background: var(--crm-bg)`; the dark layer only
+    // redefines that variable. On a different element the outer workspace, the
+    // nav and the gutters stayed light around a dark island.
+    assert.match(shell, /className=\{`od-crm space-y-5\$\{dark \? " od-crm-dark" : ""\}`\}/);
+    assert.match(shell, /data-crm-theme=\{dark \? "dark" : "light"\}/);
+  });
+
+  test("the CRM layout renders that shell, so the nav is inside it", () => {
+    const layout = read(CRM_LAYOUT);
+    assert.match(layout, /<CrmWorkspaceShell>/);
+    assert.match(layout, /<\/CrmWorkspaceShell>/);
+    // The nav is a CHILD of the themed root, so it inherits the dark tokens.
+    const shellStart = layout.indexOf("<CrmWorkspaceShell>", layout.indexOf("return ("));
+    const navAt = layout.indexOf("<CrmNav", shellStart);
+    const shellEnd = layout.indexOf("</CrmWorkspaceShell>", shellStart);
+    assert.ok(navAt > shellStart && navAt < shellEnd, "CrmNav must sit inside the themed root");
+    // No raw `.od-crm` div left behind.
+    assert.doesNotMatch(layout, /className="od-crm /);
+  });
+
+  test("the pages no longer carry a second copy of the theme class", () => {
+    // Two sources for one theme is exactly how they drift apart.
+    assert.doesNotMatch(read(LEADS_PAGE), /od-crm-dark/);
+    assert.doesNotMatch(read(DETAIL_PAGE), /od-crm-dark/);
+  });
+
+  test("the palette is defined exactly once", () => {
+    const css = read(TOKENS);
+    const blocks = css.match(/^\.od-crm-dark \{/gm) ?? [];
+    assert.equal(blocks.length, 1, "the dark palette must not be duplicated");
+    // And the token names are declared once inside it.
+    const dark = css.slice(css.indexOf(".od-crm-dark {"));
+    assert.equal((dark.match(/--crm-bg:/g) ?? []).length, 1);
+    assert.equal((dark.match(/--crm-primary:/g) ?? []).length, 1);
+  });
+});
+
+/* ========================================================================== */
+/* 13. The header next-action CTA                                              */
+/* ========================================================================== */
+
+describe("the header carries the next-action CTA", () => {
+  test("the no-primary branch renders the CTA beside the message", () => {
+    const src = read(HEADER);
+    assert.match(src, /No primary next action/);
+    assert.match(src, /<LeadHeaderNextActionCta/);
+    // Both live in one row, so the header states the problem AND offers the fix.
+    const branch = src.slice(src.indexOf("No primary next action") - 400);
+    assert.match(branch.slice(0, 900), /flex flex-wrap items-center/);
+  });
+
+  test("a lead WITH a primary action shows the summary, not the CTA", () => {
+    const src = read(HEADER);
+    const ctaAt = src.indexOf("<LeadHeaderNextActionCta");
+    const elseAt = src.lastIndexOf(") : (", ctaAt);
+    assert.ok(elseAt > 0 && elseAt < ctaAt, "the CTA must sit in the else branch only");
+    // The primary-present branch renders the due state instead.
+    assert.match(src, /activityDueStateLabel\(dueState\)/);
+  });
+
+  test("it dispatches the EXISTING intent and mutates nothing", () => {
+    const src = read(HEADER_CTA);
+    assert.match(src, /useLeadActions/);
+    assert.match(
+      src,
+      /dispatchIntent\(\{ kind: "create-activity", activityType: null \}\)/
+    );
+    // No server action, no form, no fetch — the workspace owns the mutation.
+    assert.doesNotMatch(src, /"use server"/);
+    assert.doesNotMatch(src, /useActionState|<form|fetch\(|supabase/);
+  });
+
+  test("no second activity mutation was introduced anywhere", () => {
+    const src = read(HEADER_CTA);
+    assert.doesNotMatch(src, /createLeadFollowUp|create_lead_follow_up/);
+    // The activity workspace is still the single create-form authority.
+    assert.match(read(ACTIVITY_WORKSPACE), /scrollToCreateForm/);
+  });
+
+  test("gating mirrors the canonical workspace rule exactly", () => {
+    const cta = read(HEADER_CTA);
+    const workspace = read(ACTIVITY_WORKSPACE);
+
+    // The canonical rule.
+    assert.match(
+      workspace,
+      /!primaryActivity &&\s*\n\s*!isTerminal &&\s*\n\s*isAssigned &&\s*\n\s*leadStatus !== "on_hold" &&\s*\n\s*canManageLeadFollowUps/
+    );
+    // The CTA refuses on every one of the same grounds.
+    assert.match(cta, /!canManageLeadFollowUps \|\| isTerminal \|\| isOnHold/);
+    assert.match(cta, /if \(!isAssigned\)/);
+    assert.match(cta, /return null;/);
+  });
+
+  test("an unassigned lead gets an honest state, not a dead button", () => {
+    const src = read(HEADER_CTA);
+    assert.match(src, /crm-header-next-action-needs-assignment/);
+    assert.match(src, /Assign an owner to schedule one/);
+    // The message is not a button, because pressing it could not work.
+    // Just the unassigned branch body, up to its closing brace.
+    const start = src.indexOf("if (!isAssigned) {");
+    const block = src.slice(start, src.indexOf("\n  }", start));
+    assert.match(block, /<span/);
+    assert.doesNotMatch(block, /<button/);
+    assert.doesNotMatch(block, /dispatchIntent/);
+  });
+
+  test("the header receives the canonical gating props", () => {
+    const header = read(HEADER);
+    assert.match(header, /readonly isAssigned: boolean;/);
+    assert.match(header, /readonly canManageLeadFollowUps: boolean;/);
+    assert.match(header, /isTerminal=\{isTerminalLeadStage\(status\)\}/);
+    assert.match(header, /isOnHold=\{status === "on_hold"\}/);
+
+    const page = read(DETAIL_PAGE);
+    assert.match(page, /isAssigned=\{lead\.assignment\.currentAssigneeId !== null\}/);
+    assert.match(page, /canManageLeadFollowUps=\{context\?\.canManageLeadFollowUps \?\? false\}/);
+  });
+
+  test("the CTA meets the mobile touch target and wraps", () => {
+    const src = read(HEADER_CTA);
+    assert.match(src, /min-h-11/);
+    assert.match(read(HEADER), /flex flex-wrap items-center gap-2\.5/);
   });
 });
 

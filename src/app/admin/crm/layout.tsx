@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { resolveCrmAccess } from "@/features/crm/server/crm-auth";
 import { CrmAccessDenied } from "@/features/crm/components/states/CrmAccessDenied";
 import { CrmNav } from "@/features/crm/components/shell/CrmNav";
+import { CrmWorkspaceShell } from "@/features/crm/components/shell/CrmWorkspaceShell";
 
 export const dynamic = "force-dynamic";
 
@@ -19,15 +20,15 @@ export default async function CrmLayout({ children }: { children: ReactNode }) {
 
   if (resolution.kind === "denied") {
     return (
-      <div className="od-crm space-y-5">
+      <CrmWorkspaceShell>
         <CrmNav currentPath="/admin/crm" />
         <CrmAccessDenied />
-      </div>
+      </CrmWorkspaceShell>
     );
   }
 
   return (
-    <div className="od-crm space-y-5">
+    <CrmWorkspaceShell>
       <a
         href="#crm-main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-[var(--crm-surface)] focus:px-3 focus:py-2 focus:text-sm focus:text-[var(--crm-text)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--crm-primary)]"
@@ -54,6 +55,6 @@ export default async function CrmLayout({ children }: { children: ReactNode }) {
       <div id="crm-main-content" className="crm-enter">
         {children}
       </div>
-    </div>
+    </CrmWorkspaceShell>
   );
 }
