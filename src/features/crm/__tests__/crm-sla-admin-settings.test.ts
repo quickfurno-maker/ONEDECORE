@@ -136,7 +136,7 @@ describe("SLA settings authorization probe", () => {
     );
     const auth = stripComments(readSrc(CRM_AUTH));
     assert.match(access, /readonly canManageSlaPolicy: boolean;/);
-    assert.match(auth, /probeSlaPolicyPermissions\(\),/);
+    assert.match(auth, /probeSlaPolicyPermissions\((?:db)?\),/);
     assert.match(
       auth,
       /canManageSlaPolicy:\s*slaPolicyPermissions\.canManageSlaPolicy,/
