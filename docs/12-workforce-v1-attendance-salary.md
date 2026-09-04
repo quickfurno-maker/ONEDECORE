@@ -86,7 +86,7 @@ Each row shows employee, date, In/Out time, elapsed duration, submitted category
 
 Every meaningful mutation preserves **previous value, new value, changed by, changed at** and a reason where relevant, in the append-only `attendance_submission_events`. **Approved historical attendance is never silently overwritten.**
 
-## 9. Salary *(model locked; implemented in PR C)*
+## 9. Salary *(model locked; schema merged and applied to managed)*
 
 - Salary is decided and controlled by **Super Admin**.
 - **Effective-dated versioned salary profile**: employee, monthly base salary, `effective_from`, `effective_to` (or open-ended current version), `set_by`, `created_at`.
@@ -103,7 +103,7 @@ Additions and deductions are **admin-controlled line items**: bonus, incentive, 
 
 Super Admin reviews and **finalizes**. Once finalized, historical integrity is preserved; correction uses a **controlled amendment/reopen workflow with audit evidence**, never a silent overwrite.
 
-## 10. Payment ledger *(model locked; implemented in PR C)*
+## 10. Payment ledger *(model locked; schema merged and applied to managed)*
 
 Salary **payable** and **payment** are separate. State is **derived**: `unpaid` / `partially paid` / `paid` — never a single `salary_paid` boolean.
 
@@ -132,13 +132,51 @@ Tax engine · statutory payroll compliance · PF/ESI · payslip tax calculations
 | Piece | Status |
 | :--- | :--- |
 | Staff create form value preservation | **MERGED** (PR #123) |
-| Attendance lifecycle migration `20260902160000` | **MERGED** (PR #124) — repository only, **not applied to managed** |
+| Attendance lifecycle migration `20260902160000` | **MERGED and APPLIED to managed** |
 | Attendance lifecycle pgTAP (59 assertions) | **MERGED** (PR #124) |
 | Workforce domain contracts + server actions | **MERGED** (PR #124) |
 | Admin approval inbox UI / staff submission UI | **MERGED** (PR #125) |
-| Salary profile, statement, payment ledger | **In PR C** — migration `20260902170000`, repository only |
-| Managed migration apply | **Pending owner authorization + backup/PITR gate** |
-| Production deployment | **Pending** |
+| Salary profile, statement, payment ledger `20260902170000` | **MERGED and APPLIED to managed** — schema only, **no rows** |
+| Staff phone login credentials `20260903160000` | **MERGED and APPLIED to managed** |
+| Attendance policy | **PUBLISHED on managed** — `workforce_v1`, Asia/Kolkata, 09:00 start, 18:00 expected checkout, 15-min grace, 240-min half-day threshold, 23:59 missing-checkout cutoff, `weekly_off_days = []`, `location_required = false` |
+| Launch leave catalogue `20260904170000` (M57) | **THIS PR** — seeds casual / sick / unpaid only |
+| Holiday calendar | **Intentionally EMPTY** — real company dates are entered manually by a Super Admin |
+| Salary / statement / payment rows | **Intentionally EMPTY** — no real money values have been supplied |
+| M57 managed apply | **Pending owner authorization** |
+| Staff attendance eligibility, credential issue, first login | **Operational** — audited UI actions, never migration content |
+
+### 13.1 P5 owner launch decisions
+
+Recorded in **DEC-0099**. These are business decisions, not implementation
+details, and the repository encodes only the one that is configuration:
+
+| # | Decision | Value | Where it lives |
+| :--- | :--- | :--- | :--- |
+| 1 | Sales Manager attendance tracked | **YES** | Operational — Super Admin sets `attendance_eligible` on SM001 through the audited staff detail UI |
+| 2 | Sales Manager corrects direct-report attendance | **NO** | `attendance.correct.team` remains **Super-Admin-only**; no grant in any migration |
+| 3 | Launch leave types | `casual` Casual Leave, `sick` Sick Leave, `unpaid` Unpaid Leave | **M57** |
+| 4 | Half-day **leave** capability | **NOT approved at launch** — all three `allows_half_day = false` | **M57**. Unrelated to the attendance category `HALF_DAY_4H`, which is derived from worked minutes and is unchanged |
+| 5 | Approved leave cancellation | **NO** — `cancel_leave_request` still raises `LEAVE_NOT_CANCELLABLE` | Existing RPC, untouched |
+| 6 | Holiday calendar | Starts **EMPTY**; Super Admin enters real company holidays | Holiday admin UI |
+| 7 | Location capture | **Optional** — `location_required = false` | Published policy |
+| 8 | Fixed weekly-off weekday | **NONE** — the DEC-0098 rule stands: chosen day-by-day, capped at 4 active per calendar month | Existing lifecycle |
+| 9 | Salary / statements / deductions / additions / payments | **NOT seeded** — no real values supplied | Deliberately empty |
+
+### 13.2 What is configuration and what is operation
+
+M57 seeds the leave catalogue because a leave type is a **configuration**
+value with no personal or monetary content. Everything else in P5 is an
+**operation** and is deliberately absent from the migration:
+
+- **Holidays** are real company dates. Seeding invented ones would put fake
+  non-working days on a payroll calendar.
+- **Salary and payments** carry real money. An invented figure is worse than an
+  empty table.
+- **Attendance eligibility** changes a named person's employment record, and the
+  canonical path captures an actor and a reason. A migration would produce that
+  change with neither.
+- **Credentials** are owner-private. No password is generated, logged, committed
+  or transmitted by tooling at any point.
 
 ---
 

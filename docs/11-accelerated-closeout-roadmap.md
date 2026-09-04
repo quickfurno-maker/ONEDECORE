@@ -146,7 +146,7 @@ Every production capability is **fail-closed by default**. Deploy ≠ activate. 
 | Landing Lab + campaign foundations (9A/9B/9C) | **Built** — production activation **PENDING P6**; live spend **OFF** |
 | Commerce / e-commerce foundation (9D-A…9D-F, COD) | **Built** — public Shop gate **OFF**; activation **PENDING P8** |
 | Meta WhatsApp foundation (6A/6B) + n8n boundary | **Built** — live callback/token/outbound **OFF**; n8n **DEFERRED**; activation **PENDING P9** |
-| Staff administration / attendance / leave (6D) | **Built** — operational activation **PENDING P5** (OD-1–OD-10 owner values unresolved) |
+| Staff administration / attendance / leave (6D) | **Built**; schema applied to managed; P5 owner values **RESOLVED** (DEC-0099). Remaining: M57 apply, deploy, owner-private credential issuance, first real login, production attendance E2E |
 | Online payments / **M38** | **DEFERRED** — not on `main`, not managed |
 
 ---
@@ -182,9 +182,12 @@ Every production capability is **fail-closed by default**. Deploy ≠ activate. 
 
 ### P5 — Staff administration, attendance & leave activation
 
-- **Objective:** Resolve the outstanding owner-value gaps (OD-1–OD-10) and activate attendance/leave operationally.
-- **Scope:** attendance policy catalogue values, holiday calendar, leave types, `attendance.correct.team` grant decision; idempotent check-in/check-out verified in production. Workforce V1 attendance lifecycle, salary and payment rules are locked in [docs/12](12-workforce-v1-attendance-salary.md) (**DEC-0098**).
-- **Exit gate:** owner-supplied policy values recorded in governance; correction authority explicitly granted or explicitly withheld; attendance E2E PASS; no fabricated schedules.
+- **Objective:** Resolve the outstanding owner-value gaps and activate attendance/leave operationally.
+- **Scope:** attendance policy values, holiday calendar, leave types, `attendance.correct.team` grant decision; idempotent check-in/check-out verified in production. Workforce V1 attendance lifecycle, salary and payment rules are locked in [docs/12](12-workforce-v1-attendance-salary.md) (**DEC-0098**).
+- **Owner values RESOLVED** and recorded in **DEC-0099** / [docs/12 §13.1](12-workforce-v1-attendance-salary.md): Sales Manager attendance tracked **YES**; Sales Manager direct-report correction **NO** (`attendance.correct.team` stays Super-Admin-only); launch leave types **casual / sick / unpaid**; half-day **leave** **not approved** at launch; approved leave cancellation **NO**; holidays start **EMPTY** and manual; location **optional**; **no** fixed weekly-off weekday; salary/payment values **not supplied**.
+- **Repository state:** attendance lifecycle, salary/payment ledger and staff phone-login schema are **merged and already applied to managed**. The attendance policy is **published on managed**. M57 `20260904170000` adds the launch leave catalogue and nothing else.
+- **Remaining gate is OWNER-ONLY and LIVE**, in this order: apply M57 to managed → deploy → Super Admin sets SM001 attendance eligibility with a reason → Super Admin issues credentials against the staff member's **own** mobile with an owner-chosen private password → staff performs a **first real login** → **real attendance E2E** on production.
+- **Exit gate:** owner values recorded in governance (**done**); correction authority explicitly withheld (**done**); M57 applied; real attendance E2E **PASS** on production with no fabricated schedules, no invented salary values and no seeded holidays. **The E2E is NOT complete and must not be reported as such until a real staff member has checked in, checked out, submitted and been approved on production.**
 
 ### P6 — Landing Lab + campaign production activation
 

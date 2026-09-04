@@ -195,7 +195,7 @@ CRM through Phase 7B (quotation acceptance → Closed-Won) is applied on managed
 - M23 Git blob `785325143dae0e81b918f8371325785ce061d57a`; canonical UTF-8/LF SHA-256 `64f4f15a9501fcf6bda954e021812b0b826022304654dbc49699f0cab7051634`.
 - M24 Git blob `790db51dc7761c4d1ced3c38db07d974849e6fdb`; normalized UTF-8/LF SHA-256 `029a88db95bafe5cfd8791baf77fb94695da7febed41b5251898cfede5a860b2`.
 - Managed foundation (M23–M24): staff employment profiles, attendance policies/events/days/corrections, leave types/requests, holidays; invite saga RPCs; repaired check-in/check-out idempotency-first function ordering verified on managed DB.
-- **OD-1–OD-10 unresolved** — no policy catalogue seeds; `attendance.correct.team` not granted; attendance production activation blocked until owner values.
+- **P5 owner values RESOLVED** (DEC-0099): attendance policy published on managed; launch leave catalogue `casual`/`sick`/`unpaid` seeded by M57 with half-day leave **not approved**; holidays intentionally **empty** and entered manually; salary/payment values intentionally **unset**; `attendance.correct.team` **still not granted** to sales_manager (Super-Admin-only, deliberate). Remaining gate is owner-only and live: M57 managed apply, deploy, SM001 eligibility, owner-private credential issuance, first real login, production attendance E2E.
 - **No production deployment**; **public intake inactive**; **Phase 7A ACTIVE** (Entry Audit & Architecture Freeze).
 - Phase 6D repository implementation M1–M24 complete; **managed repair closeout COMPLETE / CLOSED** (PR #51 merged). **Phase 7A CURRENT FORMAL PHASE**.
 

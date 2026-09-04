@@ -793,11 +793,11 @@ describe("status block", () => {
 /* ========================================================================== */
 
 describe("containment", () => {
-  test("migration ledger is 56 after the P4 interior quotation and CRM manual sales temperature migrations", () => {
+  test("migration ledger is 57 after the P4 interior quotation, CRM manual sales temperature and workforce P5 catalogue migrations", () => {
     const migrations = readdirSync(join(root, "supabase/migrations")).filter(
       (name) => name.endsWith(".sql")
     );
-    assert.equal(migrations.length, 56);
+    assert.equal(migrations.length, 57);
     // CRM SLA admin settings itself added no migration; the 50th is
     // Workforce V1 attendance lifecycle.
     assert.ok(
