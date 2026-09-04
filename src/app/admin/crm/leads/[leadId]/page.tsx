@@ -144,7 +144,12 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
     <LeadActionsProvider>
     <div className="space-y-5">
       <LeadCommandHeader
+        leadId={lead.id}
         overview={lead.overview}
+        manualSalesTemperature={lead.overview.manualSalesTemperature}
+        canSetTemperature={context?.canTransitionLeads ?? false}
+        isAssigned={lead.assignment.currentAssigneeId !== null}
+        canManageLeadFollowUps={context?.canManageLeadFollowUps ?? false}
         ownerLabel={lead.assignment.currentAssigneeLabel}
         primaryNextAction={primaryNextAction}
         score={leadScore}

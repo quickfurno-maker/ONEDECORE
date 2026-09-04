@@ -12,6 +12,8 @@ import {
   type CrmPipelineStageColumn,
 } from "../contracts/pipeline-contracts.ts";
 import { deriveLeadScore } from "../contracts/lead-score-contracts.ts";
+import { resolveEffectiveSalesBucket } from "../contracts/lead-sales-bucket.ts";
+import { parseManualSalesTemperature } from "../contracts/lead-sales-temperature.ts";
 import { latestIso } from "./crm-lead-score-signals.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
@@ -31,7 +33,7 @@ import {
 } from "./crm-lead-score-batch.ts";
 
 const PIPELINE_LEAD_SELECT =
-  "id, status, submitted_name, service_code, locality, assigned_to, created_at, lead_sources!leads_primary_source_id_fkey(display_name)";
+  "id, status, submitted_name, service_code, locality, assigned_to, manual_sales_temperature, created_at, lead_sources!leads_primary_source_id_fkey(display_name)";
 
 interface PipelineLeadRow {
   readonly id: string;
@@ -40,6 +42,7 @@ interface PipelineLeadRow {
   readonly service_code: string;
   readonly locality: string | null;
   readonly assigned_to: string | null;
+  readonly manual_sales_temperature: string | null;
   readonly created_at: string;
   readonly lead_sources: { readonly display_name: string } | null;
 }
@@ -156,9 +159,24 @@ export async function fetchCrmPipelineBoard(
         now
       );
 
+      // The SAME canonical resolver the list and the detail page call. A
+      // second implementation here is exactly how the board and the list would
+      // start disagreeing about a lead the salesperson has classified.
+      const manualSalesTemperature = parseManualSalesTemperature(
+        row.manual_sales_temperature
+      );
+      const effective = resolveEffectiveSalesBucket(
+        entry.stage as LeadStageCode,
+        score.band,
+        manualSalesTemperature
+      );
+
       return {
         leadId: row.id,
         displayName: row.submitted_name,
+        salesBucket: effective.bucket,
+        salesBucketSource: effective.source,
+        manualSalesTemperature,
         status: entry.stage as CrmPipelineBoardStage,
         serviceCode: row.service_code,
         locality: row.locality,

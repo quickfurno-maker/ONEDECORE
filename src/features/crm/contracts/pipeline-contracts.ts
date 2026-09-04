@@ -9,6 +9,11 @@
  */
 
 import { calendarLocalDate } from "./calendar-contracts.ts";
+import type { CrmLeadSalesBucket } from "./lead-sales-bucket.ts";
+import type {
+  CrmManualSalesTemperature,
+  CrmSalesBucketSource,
+} from "./lead-sales-temperature.ts";
 import type {
   CrmCommercialState,
   CrmPipelineValueSummary,
@@ -120,6 +125,16 @@ export interface CrmPipelineCard {
   /** `event` when derived from a stage-entry event, `created` when falling back. */
   readonly stageEnteredSource: "event" | "created";
   readonly createdAt: string;
+  /**
+   * The EFFECTIVE owner-facing bucket: lifecycle > manual temperature > score.
+   *
+   * The board is a major selling surface, so the salesperson's own
+   * classification has to be visible here too — resolved by the same canonical
+   * function the list and the detail page use, never a second copy.
+   */
+  readonly salesBucket: CrmLeadSalesBucket;
+  readonly salesBucketSource: CrmSalesBucketSource;
+  readonly manualSalesTemperature: CrmManualSalesTemperature | null;
   /**
    * CRM 2D deterministic priority score. Derived, never persisted, and
    * identical to the value the lead detail page computes for the same lead.

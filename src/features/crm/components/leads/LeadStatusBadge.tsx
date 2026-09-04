@@ -3,12 +3,14 @@ import { formatCrmCodeLabel } from "../../contracts/crm-labels.ts";
 
 const STATUS_STYLES: Readonly<Record<LeadStageCode, string>> = {
   new: "bg-[var(--crm-info-soft)] text-[var(--crm-info)] border-[var(--crm-info)]/20",
-  assigned: "bg-[#eef2ff] text-[#4338ca] border-[#c7d2fe]",
+  assigned:
+    "bg-[var(--crm-info-soft)] text-[var(--crm-info)] border-[var(--crm-info)]/25",
   contacted: "bg-[var(--crm-primary-soft)] text-[var(--crm-primary)] border-[var(--crm-primary)]/15",
   qualified: "bg-[var(--crm-success-soft)] text-[var(--crm-success)] border-[var(--crm-success)]/20",
   consultation_scheduled:
-    "bg-[#ecfeff] text-[#0e7490] border-[#a5f3fc]",
-  proposal_sent: "bg-[#f5f3ff] text-[#6d28d9] border-[#ddd6fe]",
+    "bg-[var(--crm-info-soft)] text-[var(--crm-info)] border-[var(--crm-info)]/25",
+  proposal_sent:
+    "bg-[var(--crm-primary-soft)] text-[var(--crm-primary)] border-[var(--crm-primary)]/25",
   negotiation: "bg-[var(--crm-warning-soft)] text-[var(--crm-warning)] border-[var(--crm-warning)]/25",
   closed_won: "bg-[var(--crm-success-soft)] text-[var(--crm-success)] border-[var(--crm-success)]/25",
   closed_lost: "bg-[var(--crm-danger-soft)] text-[var(--crm-danger)] border-[var(--crm-danger)]/20",

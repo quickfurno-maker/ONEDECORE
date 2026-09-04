@@ -15,8 +15,15 @@ import {
   type CrmLeadCommercialState,
 } from "../../contracts/deal-value-contracts.ts";
 import type { CrmLeadScore } from "../../contracts/lead-score-contracts.ts";
-import { resolveLeadSalesBucket } from "../../contracts/lead-sales-bucket.ts";
-import type { LeadStageCode } from "../../contracts/lead-stages.ts";
+import { resolveEffectiveSalesBucket } from "../../contracts/lead-sales-bucket.ts";
+import {
+  isLifecycleControlledBucket,
+  type CrmManualSalesTemperature,
+} from "../../contracts/lead-sales-temperature.ts";
+import {
+  isTerminalLeadStage,
+  type LeadStageCode,
+} from "../../contracts/lead-stages.ts";
 import {
   activityDueStateClassName,
   activityDueStateLabel,
@@ -27,6 +34,8 @@ import {
 import { LeadRiskFlagChips } from "./LeadRiskFlagChips.tsx";
 import { LeadScoreChip } from "./LeadScoreChip.tsx";
 import { LeadSalesBucketBadge } from "./LeadSalesBucketBadge.tsx";
+import { LeadHeaderNextActionCta } from "./LeadHeaderNextActionCta.tsx";
+import { LeadSalesTemperatureControl } from "./LeadSalesTemperatureControl.tsx";
 import { LeadStatusBadge } from "./LeadStatusBadge.tsx";
 
 /**
@@ -39,10 +48,18 @@ import { LeadStatusBadge } from "./LeadStatusBadge.tsx";
  */
 
 interface LeadCommandHeaderProps {
+  readonly leadId: string;
   readonly overview: CrmLeadDetailOverview;
   readonly ownerLabel: string;
   readonly primaryNextAction: CrmLeadDetailFollowUp | null;
   readonly score: CrmLeadScore;
+  /** The stored human judgement. NULL means nobody has classified this lead. */
+  readonly manualSalesTemperature: CrmManualSalesTemperature | null;
+  /** False without `leads.transition`; the control renders read-only. */
+  readonly canSetTemperature: boolean;
+  /** Canonical prerequisites for creating a primary next action. */
+  readonly isAssigned: boolean;
+  readonly canManageLeadFollowUps: boolean;
   readonly commercial: CrmLeadCommercialState;
   readonly cadence: CrmLeadCadenceState | null;
   /** Latest consent state per channel, already permission-filtered. */
@@ -77,10 +94,15 @@ function FactItem({
 }
 
 export function LeadCommandHeader({
+  leadId,
   overview,
   ownerLabel,
   primaryNextAction,
   score,
+  manualSalesTemperature,
+  canSetTemperature,
+  isAssigned,
+  canManageLeadFollowUps,
   commercial,
   cadence,
   consentBlocked,
@@ -88,6 +110,14 @@ export function LeadCommandHeader({
   quickActions,
 }: LeadCommandHeaderProps) {
   const status = overview.status as LeadStageCode;
+
+  // ONE canonical resolution, shared with the list and the pipeline.
+  const effective = resolveEffectiveSalesBucket(
+    status,
+    score.band,
+    manualSalesTemperature
+  );
+  const lifecycleControlled = isLifecycleControlledBucket(effective.bucket);
   const probabilityBp = stageProbabilityBasisPoints(status);
   const weightedPaise = computeWeightedValuePaise(
     commercial.taxableBasePaise,
@@ -125,15 +155,32 @@ export function LeadCommandHeader({
           {overview.submittedName}
         </h1>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Bucket, stage and score side by side. The bucket is derived HERE
-              from the score this header already holds — never recomputed — so
-              the value can never disagree with the Leads list or the pipeline
-              for the same capturedAt. */}
-          <LeadSalesBucketBadge
-            bucket={resolveLeadSalesBucket(status, score.band)}
-          />
-          <LeadStatusBadge status={status} />
-          <LeadScoreChip score={score} showBreakdown />
+          {/* EVERY indicator is labelled. Three unlabelled chips that all read
+              "COLD" — the effective bucket, the score band and the stage — were
+              impossible to tell apart, so each now says what it is. */}
+          <span className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-2 py-1">
+            {/* Spelled out where there is room; the short form only appears
+                on the narrowest screens. An unexplained "Temp" beside "Score"
+                and "Stage" was the ambiguity this panel exists to remove. */}
+            <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--crm-muted)]">
+              <span className="hidden sm:inline">Sales temperature</span>
+              <span className="sm:hidden">Temp</span>
+            </span>
+            <LeadSalesBucketBadge bucket={effective.bucket} />
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-2 py-1">
+            <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--crm-muted)]">
+              <span className="hidden sm:inline">System score</span>
+              <span className="sm:hidden">Score</span>
+            </span>
+            <LeadScoreChip score={score} showBreakdown />
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--crm-border)] bg-[var(--crm-surface-subtle)] px-2 py-1">
+            <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--crm-muted)]">
+              Stage
+            </span>
+            <LeadStatusBadge status={status} />
+          </span>
         </div>
       </div>
 
@@ -144,6 +191,23 @@ export function LeadCommandHeader({
 
       <div className="mt-2">
         <LeadRiskFlagChips flags={score.riskFlags} />
+      </div>
+
+      {/* The human control sits BELOW the read-only summary so the glanceable
+          facts stay at the top and the action is a deliberate second step. */}
+      <div className="mt-3">
+        <LeadSalesTemperatureControl
+          leadId={leadId}
+          effectiveBucket={effective.bucket}
+          source={effective.source}
+          manualTemperature={manualSalesTemperature}
+          canEdit={canSetTemperature && !lifecycleControlled}
+          lifecycleReason={
+            lifecycleControlled
+              ? "Lifecycle decides this lead's bucket. Resume or reopen it to set a temperature again."
+              : "You do not have permission to change this lead's temperature."
+          }
+        />
       </div>
 
       {/* Next action — the single most important fact on the page. */}
@@ -169,9 +233,21 @@ export function LeadCommandHeader({
             </span>
           </div>
         ) : (
-          <p className="text-[13px] font-medium text-[var(--crm-danger)]">
-            No primary next action
-          </p>
+          // The operational CTA belongs in the command area, not only in the
+          // workspace further down the page. It dispatches the SAME intent the
+          // quick actions use, so the activity workspace stays the single
+          // mutation authority.
+          <div className="flex flex-wrap items-center gap-2.5">
+            <p className="text-[13px] font-medium text-[var(--crm-danger)]">
+              No primary next action
+            </p>
+            <LeadHeaderNextActionCta
+              isAssigned={isAssigned}
+              canManageLeadFollowUps={canManageLeadFollowUps}
+              isTerminal={isTerminalLeadStage(status)}
+              isOnHold={status === "on_hold"}
+            />
+          </div>
         )}
       </div>
 

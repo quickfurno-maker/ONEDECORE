@@ -112,6 +112,12 @@
 
   --crm-brand-gold: #c89d3c;
 
+  /* Ink ON a filled accent. A token, not a literal, because the dark theme
+     switches the accent to gold, where white text drops to ~2:1. */
+  --crm-on-primary: #ffffff;
+  --crm-on-danger: #ffffff;
+  --crm-border-hover: #c5cad3;
+
   --crm-danger: #dc3f45;
   --crm-danger-soft: #fff1f2;
 
@@ -227,7 +233,7 @@
 
 .od-crm .crm-btn-primary {
   background: var(--crm-primary);
-  color: #ffffff;
+  color: var(--crm-on-primary);
   border: 1px solid transparent;
 }
 
@@ -248,7 +254,7 @@
 
 .od-crm .crm-btn-secondary:hover {
   background: var(--crm-surface-subtle);
-  border-color: #c5cad3;
+  border-color: var(--crm-border-hover);
 }
 
 .od-crm .crm-btn-secondary:active {
@@ -268,7 +274,7 @@
 
 .od-crm .crm-btn-danger {
   background: var(--crm-danger);
-  color: #ffffff;
+  color: var(--crm-on-danger);
   border: 1px solid transparent;
 }
 
@@ -343,4 +349,124 @@
   .od-crm .crm-btn-danger:hover {
     transform: none;
   }
+}
+
+/* ===========================================================================
+   PREMIUM DARK — Leads workspace only
+   ===========================================================================
+
+   Scoped to /admin/crm/leads and /admin/crm/leads/[leadId] by an extra class on
+   the page, NOT applied CRM-wide: My Day, Pipeline, Calendar and Reports were
+   built and reviewed against the light palette, and flipping them unreviewed
+   would be a bigger, riskier change than this PR asks for.
+
+   It redefines ONLY the existing `--crm-*` tokens. Every CRM component already
+   reads them, so the whole surface re-themes without a single component edit —
+   and there is exactly one place to adjust the palette.
+
+   Contrast, MEASURED (WCAG AA needs 4.5:1 body text, 3:1 large/UI):
+     text        #eef2f6 on #0b1017   16.96:1
+     text        #eef2f6 on #141b24   15.40:1
+     secondary   #a9b7c7 on #141b24    8.49:1
+     muted       #8494a6 on #141b24    5.58:1
+     gold        #c89d3c on #141b24    6.88:1
+     on-primary  #14100a on #c89d3c    7.53:1
+     on-danger   #1a0d0f on #f0808a    7.36:1
+     danger      #f0808a on #141b24    6.73:1
+     warning     #e3a94a on #141b24    8.28:1
+     success     #5cc79b on #141b24    8.33:1
+     info        #7fa9e0 on #141b24    7.14:1
+   Every pair clears AA; none relies on colour alone.
+   =========================================================================== */
+
+.od-crm-dark {
+  --crm-bg: #0b1017;
+  --crm-surface: #141b24;
+  --crm-surface-subtle: #1b232e;
+  --crm-sidebar-compatible: #070b10;
+
+  --crm-text: #eef2f6;
+  --crm-text-secondary: #a9b7c7;
+  --crm-muted: #8494a6;
+
+  /* Subtle 1px separation — visible, never a hard line. */
+  --crm-border: #232e3b;
+  --crm-border-strong: #33414f;
+  --crm-border-hover: #3f4e5e;
+
+  /* Warm ONEDECORE gold is the primary accent in this theme. */
+  --crm-primary: #c89d3c;
+  --crm-primary-hover: #d9b256;
+  --crm-primary-soft: rgba(200, 157, 60, 0.14);
+  --crm-on-primary: #14100a;
+
+  /* Red is reserved for destructive and SLA alerts. */
+  --crm-danger: #f0808a;
+  --crm-danger-soft: rgba(240, 128, 138, 0.14);
+  --crm-on-danger: #1a0d0f;
+
+  /* Amber for warning and hold. */
+  --crm-warning: #e3a94a;
+  --crm-warning-soft: rgba(227, 169, 74, 0.14);
+
+  /* Green for won. */
+  --crm-success: #5cc79b;
+  --crm-success-soft: rgba(92, 199, 155, 0.14);
+
+  /* Cool blue for system information. */
+  --crm-info: #7fa9e0;
+  --crm-info-soft: rgba(127, 169, 224, 0.14);
+
+  --crm-radius: 12px;
+  --crm-radius-sm: 10px;
+
+  /* Shared ops tokens follow, so nested children inherit the dark theme. */
+  --od-bg: var(--crm-bg);
+  --od-sidebar: var(--crm-sidebar-compatible);
+  --od-surface: var(--crm-surface);
+  --od-elevated: var(--crm-surface-subtle);
+  --od-hover: var(--crm-surface-subtle);
+  --od-border: var(--crm-border);
+  --od-border-strong: var(--crm-border-strong);
+  --od-text: var(--crm-text);
+  --od-text-2: var(--crm-text-secondary);
+  --od-muted: var(--crm-muted);
+  --od-gold: var(--crm-primary);
+  --od-gold-hover: var(--crm-primary-hover);
+  --od-positive: var(--crm-success);
+  --od-warning: var(--crm-warning);
+  --od-danger: var(--crm-danger);
+  --od-blue: var(--crm-info);
+  --od-teal: var(--crm-success);
+}
+
+/* Restrained elevation: a hairline highlight and a soft drop, no glow. */
+.od-crm-dark .crm-surface {
+  background: var(--crm-surface);
+  border: 1px solid var(--crm-border);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.od-crm-dark .crm-row:hover {
+  background: var(--crm-surface-subtle);
+}
+
+/* Inputs read as recessed wells rather than raised cards. */
+.od-crm-dark .crm-input,
+.od-crm-dark .crm-select {
+  background: var(--crm-bg);
+  border-color: var(--crm-border-strong);
+  color: var(--crm-text);
+}
+
+.od-crm-dark .crm-input::placeholder {
+  color: var(--crm-muted);
+}
+
+/* The table head is the one place a slightly lifted ground helps scanning. */
+.od-crm-dark thead {
+  background: var(--crm-surface-subtle);
 }

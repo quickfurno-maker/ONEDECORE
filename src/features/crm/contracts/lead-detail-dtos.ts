@@ -1,4 +1,5 @@
 import type { LeadStageCode } from "./lead-stages.ts";
+import type { CrmManualSalesTemperature } from "./lead-sales-temperature.ts";
 import type { CrmLeadTimelinePage } from "./lead-timeline-contracts.ts";
 
 export interface CrmAssigneeDirectoryEntry {
@@ -24,6 +25,11 @@ export interface CrmLeadDetailOverview {
   readonly locality: string | null;
   readonly message: string | null;
   readonly status: LeadStageCode;
+  /**
+   * The stored human sales judgement (hot/warm/cold), or NULL when nobody has
+   * classified this lead and the system suggestion applies.
+   */
+  readonly manualSalesTemperature: CrmManualSalesTemperature | null;
   readonly entryMethod: string;
   readonly createdAt: string;
   readonly updatedAt: string;

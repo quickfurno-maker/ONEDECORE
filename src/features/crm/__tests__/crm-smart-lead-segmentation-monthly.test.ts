@@ -806,7 +806,7 @@ describe("the workspace shows bucket and stage as separate facts", () => {
 
   test("the mobile card carries the bucket and keeps the stage", () => {
     const src = read(CARDS);
-    assert.match(src, /<LeadSalesBucketBadge bucket=\{item\.salesBucket\} \/>/);
+    assert.match(src, /<LeadSalesBucketBadge\s+bucket=\{item\.salesBucket\}/);
     assert.match(src, /<LeadStatusBadge status=\{item\.status\} \/>/);
   });
 
@@ -854,7 +854,9 @@ describe("the workspace shows bucket and stage as separate facts", () => {
 
   test("the lead detail derives the bucket from the score it already holds", () => {
     const src = read(HEADER);
-    assert.match(src, /resolveLeadSalesBucket\(status, score\.band\)/);
+    // Now the EFFECTIVE resolver: same score, plus the human override.
+    assert.match(src, /resolveEffectiveSalesBucket\(/);
+    assert.match(src, /score\.band/);
     // No second derivation, no second score computation on this surface.
     assert.doesNotMatch(src, /deriveLeadScore/);
   });
@@ -1185,7 +1187,7 @@ describe("the workspace shows bucket, stage and both milestones", () => {
 
   test("the mobile card carries the same core facts", () => {
     const src = read(CARDS);
-    assert.match(src, /<LeadSalesBucketBadge bucket=\{item\.salesBucket\} \/>/);
+    assert.match(src, /<LeadSalesBucketBadge\s+bucket=\{item\.salesBucket\}/);
     assert.match(src, /<LeadStatusBadge status=\{item\.status\} \/>/);
     assert.match(src, /Site visit: \{CRM_SITE_VISIT_STATE_LABELS\[item\.siteVisitState\]\}/);
     assert.match(src, /Quotation: \{formatLeadQuotationState\(item\.quotationState\)\}/);

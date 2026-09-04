@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { CrmLeadDetail } from "../contracts/lead-detail-dtos.ts";
 import type { CrmLeadListItem } from "../contracts/lead-dtos.ts";
 import { resolveOnHoldResumeStage } from "../contracts/lifecycle-contracts.ts";
+import { parseManualSalesTemperature } from "../contracts/lead-sales-temperature.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 import { LEAD_MONTH_ALL_COHORT } from "../contracts/lead-month-cohort.ts";
 import type { LeadListQuery } from "../contracts/lead-list-query.ts";
@@ -122,6 +123,7 @@ export async function getLeadDetailForCurrentUser(
       planner_version,
       attribution,
       assigned_to,
+      manual_sales_temperature,
       on_hold_reason,
       on_hold_since,
       on_hold_previous_status,
@@ -249,6 +251,9 @@ export async function getLeadDetailForCurrentUser(
       locality: lead.locality,
       message: lead.message,
       status: lead.status as LeadStageCode,
+      manualSalesTemperature: parseManualSalesTemperature(
+        lead.manual_sales_temperature
+      ),
       entryMethod: lead.entry_method,
       createdAt: lead.created_at,
       updatedAt: lead.updated_at,

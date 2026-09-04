@@ -32,6 +32,7 @@ function sampleLeadRow(overrides: Partial<CrmLeadListRow> = {}): CrmLeadListRow 
     service_code: "complete-home-interiors",
     locality: "Koregaon Park",
     assigned_to: null,
+  manual_sales_temperature: null,
     entry_method: "public_form",
     primary_source_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     lead_sources: { display_name: "Website" },
@@ -282,6 +283,8 @@ describe("Phase 5C1 lead list DTO safety", () => {
         primaryNextActionTitle: null,
         siteVisitState: "none",
         quotationState: "unknown",
+        salesBucketSource: "system",
+        manualSalesTemperature: null,
       });
     assert.deepEqual(Object.keys(item).sort(), [...CRM_LEAD_LIST_ITEM_PUBLIC_KEYS].sort());
   });
@@ -300,6 +303,8 @@ describe("Phase 5C1 lead list DTO safety", () => {
         primaryNextActionTitle: null,
         siteVisitState: "none",
         quotationState: "unknown",
+        salesBucketSource: "system",
+        manualSalesTemperature: null,
       })
     );
     for (const field of CRM_LEAD_LIST_FORBIDDEN_FIELDS) {

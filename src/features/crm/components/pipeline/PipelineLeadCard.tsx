@@ -14,6 +14,7 @@ import {
 import { formatCalendarTimestampLabel } from "../../contracts/calendar-contracts.ts";
 import { formatCompactInrFromPaise } from "../../contracts/deal-value-contracts.ts";
 import { formatActivityTypeLabel } from "../activities/activity-ui-utils.ts";
+import { LeadSalesBucketBadge } from "../leads/LeadSalesBucketBadge.tsx";
 import { LeadScoreChip } from "../leads/LeadScoreChip.tsx";
 
 interface PipelineLeadCardProps {
@@ -97,7 +98,15 @@ export function PipelineLeadCard({
         </span>
       </div>
 
-      <div className="mt-1 flex items-center gap-1.5">
+      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+        {/* The EFFECTIVE bucket, from the same canonical resolver the list and
+            the detail page use — the board is a selling surface, so the
+            salesperson's own classification belongs here too. An on-hold card
+            reads HOLD, because lifecycle outranks temperature. */}
+        <LeadSalesBucketBadge
+          bucket={card.salesBucket}
+          source={card.salesBucketSource}
+        />
         {/* Priority is derived, never persisted; breakdown stays off on a dense
             card, where the lead detail header is one tap away. */}
         <LeadScoreChip score={card.score} />

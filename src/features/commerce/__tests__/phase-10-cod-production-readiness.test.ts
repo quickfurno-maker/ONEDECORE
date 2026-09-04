@@ -95,7 +95,7 @@ describe("Phase 10 COD production readiness", () => {
     assert.equal(existsSync(join(root, "src/app/api/webhooks/commerce")), false);
     assert.equal(
       readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length,
-      55
+      56
     );
   });
 

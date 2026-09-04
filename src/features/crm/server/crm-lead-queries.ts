@@ -22,9 +22,10 @@ import { deriveLeadScore } from "../contracts/lead-score-contracts.ts";
 import {
   countSalesBuckets,
   emptySalesBucketCounts,
-  resolveLeadSalesBucket,
+  resolveEffectiveSalesBucket,
   type CrmLeadSalesBucketCounts,
 } from "../contracts/lead-sales-bucket.ts";
+import { parseManualSalesTemperature } from "../contracts/lead-sales-temperature.ts";
 import { sortSegmentedLeads } from "../contracts/lead-segmentation-order.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
@@ -43,7 +44,7 @@ import {
 import { latestIso } from "./crm-lead-score-signals.ts";
 
 const CRM_LEAD_LIST_SELECT =
-  "id, status, submitted_name, service_code, locality, assigned_to, entry_method, primary_source_id, created_at, updated_at, lead_sources!leads_primary_source_id_fkey(display_name)";
+  "id, status, submitted_name, service_code, locality, assigned_to, manual_sales_temperature, entry_method, primary_source_id, created_at, updated_at, lead_sources!leads_primary_source_id_fkey(display_name)";
 
 function startOfTodayIso(): string {
   const now = new Date();
@@ -666,6 +667,9 @@ export async function queryLeadListPage(
     const deal = batch.dealValues[row.id] ?? null;
     const touch = batch.salesTouches[row.id] ?? null;
     const status = row.status as LeadStageCode;
+    const manualSalesTemperature = parseManualSalesTemperature(
+      row.manual_sales_temperature
+    );
 
     // The SAME pure derivation the pipeline board and the lead detail use, from
     // the same signal shape. A lead cannot score differently on two surfaces.
@@ -702,7 +706,19 @@ export async function queryLeadListPage(
       // Milestones, kept separate from bucket and stage.
       siteVisitState: batch.siteVisits[row.id] ?? "none",
       quotationState: deal?.state ?? "unknown",
-      salesBucket: resolveLeadSalesBucket(status, score.band),
+      ...(() => {
+        // ONE canonical resolver: lifecycle > manual temperature > score band.
+        const effective = resolveEffectiveSalesBucket(
+          status,
+          score.band,
+          manualSalesTemperature
+        );
+        return {
+          salesBucket: effective.bucket,
+          salesBucketSource: effective.source,
+        };
+      })(),
+      manualSalesTemperature,
       priorityScore: score.priorityScore,
       scoreBand: score.band,
       riskFlags: score.riskFlags,

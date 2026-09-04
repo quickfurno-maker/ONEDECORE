@@ -1,10 +1,19 @@
 /**
  * CRM — the owner-facing SALES BUCKET.
  *
- * One presentation concept, derived and never stored. There is deliberately no
- * manual temperature column: a rep-controlled HOT/WARM/COLD goes stale, can be
- * gamed, and would contradict the deterministic score. A future owner-authorized
- * override needs actor + reason + timestamp + expiry + audit and is out of scope.
+ * One presentation concept, DERIVED and never stored. What IS stored is the
+ * human's manual temperature (hot/warm/cold) and its audit trail; the effective
+ * bucket is resolved from it on every read. Storing the effective bucket would
+ * let it drift from the lifecycle the instant a lead was closed or parked.
+ *
+ * Precedence, in order:
+ *
+ *   1. lifecycle override   closed_lost / closed_won / on_hold
+ *   2. manual temperature   the salesperson's own judgement
+ *   3. system score band    the advisory fallback
+ *
+ * The fallback matters: without it every unjudged lead would land in a seventh
+ * "unclassified" bucket, and the monthly counts would stop describing the month.
  *
  * SALES BUCKET IS NOT PIPELINE STAGE. Stage is where the work has reached
  * (new -> assigned -> contacted -> qualified -> consultation -> proposal ->
@@ -22,6 +31,10 @@
  */
 
 import type { CrmLeadScoreBand } from "./lead-score-contracts.ts";
+import type {
+  CrmManualSalesTemperature,
+  CrmSalesBucketSource,
+} from "./lead-sales-temperature.ts";
 import type { LeadStageCode } from "./lead-stages.ts";
 
 export const CRM_LEAD_SALES_BUCKETS = [
@@ -109,38 +122,67 @@ export function leadSalesBucketParam(bucket: CrmLeadSalesBucket): string {
   return CRM_LEAD_SALES_BUCKET_PARAMS[bucket];
 }
 
+export interface CrmEffectiveSalesBucket {
+  readonly bucket: CrmLeadSalesBucket;
+  readonly source: CrmSalesBucketSource;
+}
+
 /**
  * THE canonical resolver. Every surface — lead list, pipeline, lead detail —
- * calls this one function, so the same (status, band) can never render as two
- * different buckets on two different pages.
+ * calls this one function, so the same inputs can never render as two different
+ * buckets on two different pages.
  *
- * Lifecycle outcome beats temperature: a lost lead is LOST no matter how hot it
- * once scored. Ranking it as HOT would put dead work at the top of a queue that
- * exists to tell a salesperson who to call next.
+ * Lifecycle outcome beats human judgement, and human judgement beats the
+ * machine:
+ *
+ * - A lost lead is LOST no matter how hot anyone marked it. Ranking it HOT would
+ *   put dead work at the top of a queue that exists to say who to call next.
+ * - A salesperson who marks a lead WARM outranks a score that says COLD. The
+ *   score is advisory intelligence, not authority.
+ * - With no human judgement, the score band decides, so nothing is ever
+ *   unclassified.
+ *
+ * The manual temperature is NOT erased by a lifecycle override — it is only
+ * outranked, so a lead resumed from hold returns to the temperature its owner
+ * chose.
  */
-export function resolveLeadSalesBucket(
+export function resolveEffectiveSalesBucket(
   status: LeadStageCode,
-  band: CrmLeadScoreBand
-): CrmLeadSalesBucket {
+  band: CrmLeadScoreBand,
+  manualTemperature: CrmManualSalesTemperature | null = null
+): CrmEffectiveSalesBucket {
   if (status === "closed_lost") {
-    return "LOST";
+    return { bucket: "LOST", source: "lifecycle" };
   }
   if (status === "closed_won") {
-    return "WON";
+    return { bucket: "WON", source: "lifecycle" };
   }
   if (status === "on_hold") {
-    return "ON_HOLD";
+    return { bucket: "ON_HOLD", source: "lifecycle" };
+  }
+
+  if (manualTemperature !== null) {
+    return { bucket: manualTemperature, source: "manual" };
   }
 
   if (band === "HOT") {
-    return "HOT";
+    return { bucket: "HOT", source: "system" };
   }
   if (band === "WARM") {
-    return "WARM";
+    return { bucket: "WARM", source: "system" };
   }
   // NURTURE and COLD both present as COLD. The distinction is preserved in the
   // score engine and remains visible in the score band chip.
-  return "COLD";
+  return { bucket: "COLD", source: "system" };
+}
+
+/** The bucket alone, for callers that do not need to show its provenance. */
+export function resolveLeadSalesBucket(
+  status: LeadStageCode,
+  band: CrmLeadScoreBand,
+  manualTemperature: CrmManualSalesTemperature | null = null
+): CrmLeadSalesBucket {
+  return resolveEffectiveSalesBucket(status, band, manualTemperature).bucket;
 }
 
 /** True for the three buckets that carry live selling work. */
