@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import type { CrmAccessContext } from "../contracts/crm-access.ts";
 import type {
   CrmReportingSnapshot,
@@ -192,9 +193,10 @@ function buildSummary(leads: readonly LeadRow[]): ReportSummaryMetrics {
 
 async function fetchFollowUpMetrics(
   filters: ReportFilters,
-  context: CrmAccessContext
+  context: CrmAccessContext,
+  db?: CrmDb
 ): Promise<ReportFollowUpMetrics> {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const { data: followUps, error } = await supabase
     .from("lead_follow_ups")
     .select("id, status, due_at, owner_id, leads!inner(id, assigned_to, created_at)")
@@ -243,20 +245,28 @@ async function fetchFollowUpMetrics(
   return { open, overdue, completed, cancelled, dueSoon };
 }
 
-export async function fetchCrmReportingSnapshot(
-  filters: ReportFilters
+/**
+ * The reporting snapshot, for a caller whose access context is already known.
+ *
+ * The seven aggregations below `buildSummary`, `buildTrend`, `buildSourceMix`,
+ * `buildAssigneeWorkload`, `fetchFollowUpMetrics`, `buildClosedLostReasons` and
+ * `buildAgingBuckets` are the canonical definitions of trends, source mix,
+ * workload, follow-up performance, lost reasons and the aging bands. They stay
+ * here, in server TypeScript, and are never handed to a client to recompute.
+ *
+ * This function exists so the mobile read endpoint can run them for a bearer
+ * caller: the context is passed in rather than resolved from cookies, and the
+ * caller-scoped client is threaded into BOTH reads. `crm.reporting.read` is
+ * still asserted here — the assertion is the gate, not the caller.
+ */
+export async function fetchCrmReportingSnapshotForContext(
+  context: CrmAccessContext,
+  filters: ReportFilters,
+  db?: CrmDb
 ): Promise<CrmReportingSnapshot> {
-  const context = await getCrmAccessContext();
-  if (!context) {
-    throw new CrmError({
-      code: "CRM_REPORTING_AUTH_REQUIRED",
-      message: "Authentication required",
-      httpStatus: 401,
-    });
-  }
   assertReportingPermission(context);
 
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   let query = supabase
     .from("leads")
     .select(
@@ -274,7 +284,7 @@ export async function fetchCrmReportingSnapshot(
   const now = new Date();
 
   const [followUps] = await Promise.all([
-    fetchFollowUpMetrics(filters, context),
+    fetchFollowUpMetrics(filters, context, db),
   ]);
 
   return {
@@ -286,4 +296,26 @@ export async function fetchCrmReportingSnapshot(
     closedLostReasons: buildClosedLostReasons(leads),
     agingBuckets: buildAgingBuckets(leads, now),
   };
+}
+
+/**
+ * The browser workspace's entry point, unchanged in behaviour.
+ *
+ * It resolves the cookie-scoped context, passes no client, and therefore keeps
+ * the cookie-scoped default exactly as before.
+ */
+export async function fetchCrmReportingSnapshot(
+  filters: ReportFilters
+): Promise<CrmReportingSnapshot> {
+  const context = await getCrmAccessContext();
+
+  if (!context) {
+    throw new CrmError({
+      code: "CRM_REPORTING_AUTH_REQUIRED",
+      message: "Authentication required",
+      httpStatus: 401,
+    });
+  }
+
+  return fetchCrmReportingSnapshotForContext(context, filters);
 }
