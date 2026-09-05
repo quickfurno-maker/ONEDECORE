@@ -8,15 +8,24 @@
  *   shown to staff : 7447863402
  *   canonical      : +917447863402
  *
- * Verified against GoTrue v2.193.1 on a live stack: `auth.users.phone` holds
- * the E.164 digits WITHOUT the leading "+" (917447863402), and a sign-in with
- * the bare 10 digits is rejected outright. Canonicalization is therefore not a
- * formatting nicety — it is the difference between logging in and not.
- *
  * Input sanitising is delegated to the existing CRM E.164 helper so the two
  * phone surfaces cannot drift apart. This module adds only what the login
- * contract needs on top: the real Indian MOBILE range, since a login identifier
- * must be reachable by SMS for the future OTP reset flow.
+ * contract needs on top: the real Indian MOBILE range.
+ *
+ * TRANSPORT NOTE — the Supabase Phone provider is DISABLED and stays disabled.
+ * Hosted Supabase password auth accepts only an email or a phone identifier, so
+ * the phone transport is unavailable: a live stack answered a staff sign-in with
+ * `422 phone_provider_disabled`. Staff still have exactly one identifier they
+ * ever see or type — their 10-digit mobile — and the server derives a
+ * deterministic, non-deliverable auth alias from it for the email/password
+ * transport. There is no OTP and no SMS anywhere in this system.
+ *
+ * That alias deliberately does NOT live here. This module is imported by Client
+ * Components (the credential panel needs the password minimum and the display
+ * username), and tree-shaking is an optimisation rather than a containment
+ * boundary — so the transport detail lives in `server/staff-login-auth-alias.ts`
+ * behind `import "server-only"`, where a client import fails the build instead
+ * of relying on a bundler to drop it.
  */
 
 import { sanitizeManualLeadPhoneInput } from "../../crm/lib/phone-e164.ts";
@@ -92,7 +101,7 @@ export function staffLoginUsername(e164: string | null | undefined): string | nu
 /**
  * True when the login form input is a staff mobile rather than an email.
  *
- * Deliberately narrow: only a bare 10-digit mobile routes to the phone path, so
+ * Deliberately narrow: only a bare 10-digit mobile routes to the staff path, so
  * an email address can never be misread as a phone number and the Super Admin's
  * existing email/password login is untouched.
  */
