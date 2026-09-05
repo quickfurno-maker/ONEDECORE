@@ -280,6 +280,28 @@ export const cryptoRandomInts: RandomInts = (count, bound) => {
 export function generateStrongStaffPassword(
   randomInts: RandomInts = cryptoRandomInts
 ): string {
+  /*
+   * Re-roll if the draw trips our own weak-pattern heuristic.
+   *
+   * A random 16-20 character string contains a run like "nnnn" or "vwxy" about
+   * twice in every ten thousand draws. Rare, but a generated password that the
+   * form itself would flag as "easily guessed" is indefensible — the operator
+   * would be handed something the checklist marks down.
+   *
+   * Bounded, and the last attempt is returned regardless: a caller must always
+   * get a password back, and every candidate already satisfies the length and
+   * character-class rules that actually gate submission.
+   */
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const candidate = generateCandidate(randomInts);
+    if (!looksEasilyGuessed(candidate)) {
+      return candidate;
+    }
+  }
+  return generateCandidate(randomInts);
+}
+
+function generateCandidate(randomInts: RandomInts): string {
   const [lengthPick] = randomInts(
     1,
     GENERATED_PASSWORD_MAX_LENGTH - GENERATED_PASSWORD_MIN_LENGTH + 1

@@ -18,8 +18,16 @@ export interface CrmLeadDetailOverview {
   readonly submittedName: string;
   readonly submittedEmail: string | null;
   readonly serviceCode: string;
-  readonly propertyCode: string;
-  readonly timelineCode: string;
+  /**
+   * Null when the customer was never asked. The public consultation form asks
+   * ONE service-relevant question instead of a whole-home questionnaire, so a
+   * kitchen or wardrobe enquiry legitimately carries neither.
+   */
+  readonly propertyCode: string | null;
+  readonly timelineCode: string | null;
+  /** The service-specific answer the public form did collect. */
+  readonly qualifierKind: string | null;
+  readonly qualifierCode: string | null;
   readonly roomCodes: readonly string[];
   readonly budgetComfortCode: string | null;
   readonly locality: string | null;

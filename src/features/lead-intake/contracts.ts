@@ -19,9 +19,27 @@ import {
   type LeadRoomCode,
   type LeadServiceCode,
   type LeadTimelineCode,
+  LEAD_QUALIFIER_KINDS,
+  LEAD_HOME_SIZE_CODES,
+  LEAD_KITCHEN_SCOPE_CODES,
+  LEAD_WARDROBE_COUNT_CODES,
+  LEAD_QUALIFIER_KIND_BY_SERVICE,
+  LEAD_QUALIFIER_CODES_BY_KIND,
+  isAllowedLeadQualifier,
+  propertyCodeFromQualifier,
+  type LeadQualifierKind,
+  type LeadQualifierCode,
 } from "./planner-allowlist.ts";
 
 export {
+  LEAD_QUALIFIER_KINDS,
+  LEAD_HOME_SIZE_CODES,
+  LEAD_KITCHEN_SCOPE_CODES,
+  LEAD_WARDROBE_COUNT_CODES,
+  LEAD_QUALIFIER_KIND_BY_SERVICE,
+  LEAD_QUALIFIER_CODES_BY_KIND,
+  isAllowedLeadQualifier,
+  propertyCodeFromQualifier,
   LEAD_BUDGET_COMFORT_CODES,
   LEAD_PROPERTY_CODES,
   LEAD_ROOM_CODES,
@@ -29,6 +47,8 @@ export {
   LEAD_TIMELINE_CODES,
 };
 export type {
+  LeadQualifierKind,
+  LeadQualifierCode,
   LeadBudgetComfortCode,
   LeadPropertyCode,
   LeadRoomCode,
@@ -37,6 +57,29 @@ export type {
 };
 
 export const LEAD_INTAKE_PLANNER_VERSION = "home-r4-v1" as const;
+
+/**
+ * The simplified public consultation form.
+ *
+ * A DISCRIMINATOR, not a loosening. `home-r4-v1` still requires property,
+ * timeline and rooms exactly as before — the legacy planner collects all three,
+ * and relaxing them globally would let any caller omit answers it did ask for.
+ *
+ * `public-consult-v1` asks ONE service-relevant qualifier and nothing else, so
+ * under this version property and timeline are absent because they were never
+ * asked. That is the whole point: the database records what the customer said,
+ * not a default the UI invented to satisfy a column.
+ */
+export const PUBLIC_CONSULT_PLANNER_VERSION = "public-consult-v1" as const;
+
+/** Every planner version the intake endpoint accepts. */
+export const LEAD_INTAKE_PLANNER_VERSIONS = [
+  LEAD_INTAKE_PLANNER_VERSION,
+  PUBLIC_CONSULT_PLANNER_VERSION,
+] as const;
+
+export type LeadIntakePlannerVersion =
+  (typeof LEAD_INTAKE_PLANNER_VERSIONS)[number];
 export const LEAD_INTAKE_NOTICE_VERSION = PRIVACY_NOTICE_VERSION;
 
 function requireCurrentConsentVersion(purpose: ConsentPurposeCode): string {
@@ -61,9 +104,19 @@ export interface LeadIntakeRequestBody {
   };
   readonly requirements: {
     readonly service: LeadServiceCode;
-    readonly property: LeadPropertyCode;
-    readonly timeline: LeadTimelineCode;
-    readonly rooms: readonly LeadRoomCode[];
+    /**
+     * Required for `home-r4-v1`; absent for `public-consult-v1` unless the
+     * customer's own home-size answer names one. Never defaulted.
+     */
+    readonly property?: LeadPropertyCode;
+    /** Required for `home-r4-v1`; never collected by the public form. */
+    readonly timeline?: LeadTimelineCode;
+    /** The single service-relevant answer the public form collects. */
+    readonly qualifier?: {
+      readonly kind: LeadQualifierKind;
+      readonly code: LeadQualifierCode;
+    };
+    readonly rooms?: readonly LeadRoomCode[];
     readonly budgetComfort?: LeadBudgetComfortCode;
     readonly estimate?: Record<string, unknown> | null;
     readonly locality?: string;
@@ -126,8 +179,15 @@ export interface ValidatedLeadIntake {
   readonly phoneE164: string;
   readonly email: string | null;
   readonly service: LeadServiceCode;
-  readonly property: LeadPropertyCode;
-  readonly timeline: LeadTimelineCode;
+  /** Null when the customer was never asked (public consultation form). */
+  readonly property: LeadPropertyCode | null;
+  /** Null when the customer was never asked. Never defaulted. */
+  readonly timeline: LeadTimelineCode | null;
+  /** The one service-relevant answer, when the public form collected it. */
+  readonly qualifier: {
+    readonly kind: LeadQualifierKind;
+    readonly code: LeadQualifierCode;
+  } | null;
   readonly rooms: readonly LeadRoomCode[];
   readonly budgetComfort: LeadBudgetComfortCode | null;
   readonly estimateSnapshot: Record<string, unknown> | null;

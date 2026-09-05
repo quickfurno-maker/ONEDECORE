@@ -47,6 +47,10 @@ export async function callSubmitLeadIntakeRpc(
     p_copy_service_communication: args.validated.copyServiceCommunication,
     p_copy_whatsapp: (args.validated.copyWhatsapp ?? null) as string | null,
     p_notice_version: args.validated.noticeVersion,
+    // Null when the customer was never asked, which is the whole point:
+    // the row records the answer given, not a default to fill a column.
+    p_qualifier_kind: (args.validated.qualifier?.kind ?? null) as string | null,
+    p_qualifier_code: (args.validated.qualifier?.code ?? null) as string | null,
   } as Database["public"]["Functions"]["submit_lead_intake"]["Args"]);
 
   if (error) {

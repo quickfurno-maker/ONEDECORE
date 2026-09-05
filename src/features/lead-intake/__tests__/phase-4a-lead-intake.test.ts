@@ -103,6 +103,9 @@ function validatedFixture(
     service: "complete-home-interiors",
     property: "apartment-2bhk",
     timeline: "within-1-month",
+    // The legacy planner collects property and timeline directly, so it carries
+    // no service-specific qualifier.
+    qualifier: null,
     rooms: ["living", "kitchen"],
     budgetComfort: "6-12l",
     estimateSnapshot: null,

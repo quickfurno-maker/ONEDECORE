@@ -98,6 +98,9 @@ export function HomeLeadCapture({ mode: modeProp }: HomeLeadCaptureProps) {
     mobile: mobileRef,
     service: serviceRef,
     property: propertyRef,
+    // The legacy planner has no qualifier control; it collects property and
+    // timeline directly. The key exists so the shared vocabulary stays total.
+    qualifier: propertyRef,
     timeline: timelineRef,
     serviceEnquiryConsent: serviceEnquiryConsentRef,
     servicePhoneConsent: servicePhoneConsentRef,

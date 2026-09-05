@@ -124,6 +124,13 @@ export const DISCOVERY_PROOF_PILLARS = [
   },
 ] as const;
 
+/**
+ * Hero slides carry NO call to action.
+ *
+ * The hero's job is brand and service storytelling; the persistent sticky
+ * dock is the page's one conversion action. Two more buttons per slide only
+ * competed with it, and on mobile they cost a large share of the first screen.
+ */
 export const DISCOVERY_HERO_SLIDES = [
   {
     id: "complete-home",
@@ -132,8 +139,6 @@ export const DISCOVERY_HERO_SLIDES = [
     lede:
       "From concept and modular manufacturing to installation, ONEDECORE brings your home together through one coordinated team.",
     assetKey: "hero" as const satisfies DiscoveryAssetKey,
-    primaryCta: { label: PUBLIC_CONSULTATION.label, href: PUBLIC_CONSULTATION.href },
-    secondaryCta: { label: "View Portfolio", href: "/portfolio" },
     badge: null,
   },
   {
@@ -143,11 +148,6 @@ export const DISCOVERY_HERO_SLIDES = [
     lede:
       "Precision-made modular kitchens and custom wardrobes designed for your layout, storage needs and finish preferences.",
     assetKey: "modularKitchens" as const satisfies DiscoveryAssetKey,
-    primaryCta: {
-      label: "Plan My Kitchen",
-      href: PUBLIC_CONSULTATION_BY_SERVICE["modular-kitchens"],
-    },
-    secondaryCta: { label: "Explore Interiors", href: "/interiors" },
     badge: null,
   },
   {
@@ -157,11 +157,6 @@ export const DISCOVERY_HERO_SLIDES = [
     lede:
       "ONEDECORE is expanding from interiors into coordinated furniture and décor — so every room can share the same considered direction.",
     assetKey: "completeHomeInteriors" as const satisfies DiscoveryAssetKey,
-    primaryCta: {
-      label: "Plan My Home",
-      href: PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"],
-    },
-    secondaryCta: { label: "View Our Work", href: "/portfolio" },
     badge: "Furniture & Décor — coming soon",
   },
 ] as const;

@@ -3970,8 +3970,10 @@ export type Database = {
           on_hold_reason: string | null
           on_hold_since: string | null
           planner_version: string | null
+          qualifier_code: string | null
+          qualifier_kind: string | null
           primary_source_id: string
-          property_code: string
+          property_code: string | null
           room_codes: string[]
           service_code: string
           source: string
@@ -3979,7 +3981,7 @@ export type Database = {
           submission_reference: string
           submitted_email: string | null
           submitted_name: string
-          timeline_code: string
+          timeline_code: string | null
           updated_at: string
         }
         Insert: {
@@ -4004,8 +4006,10 @@ export type Database = {
           on_hold_reason?: string | null
           on_hold_since?: string | null
           planner_version?: string | null
+          qualifier_code?: string | null
+          qualifier_kind?: string | null
           primary_source_id: string
-          property_code: string
+          property_code?: string | null
           room_codes?: string[]
           service_code: string
           source?: string
@@ -4013,7 +4017,7 @@ export type Database = {
           submission_reference?: string
           submitted_email?: string | null
           submitted_name: string
-          timeline_code: string
+          timeline_code?: string | null
           updated_at?: string
         }
         Update: {
@@ -4038,8 +4042,10 @@ export type Database = {
           on_hold_reason?: string | null
           on_hold_since?: string | null
           planner_version?: string | null
+          qualifier_code?: string | null
+          qualifier_kind?: string | null
           primary_source_id?: string
-          property_code?: string
+          property_code?: string | null
           room_codes?: string[]
           service_code?: string
           source?: string
@@ -4047,7 +4053,7 @@ export type Database = {
           submission_reference?: string
           submitted_email?: string | null
           submitted_name?: string
-          timeline_code?: string
+          timeline_code?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -8940,6 +8946,8 @@ export type Database = {
           p_message: string
           p_network_fingerprint_hash: string
           p_notice_version: string
+          p_qualifier_code?: string
+          p_qualifier_kind?: string
           p_phone_e164: string
           p_phone_fingerprint_hash: string
           p_planner_version: string
