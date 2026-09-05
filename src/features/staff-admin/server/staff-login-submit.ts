@@ -97,12 +97,28 @@ const AUTH_RESPONSE_CACHE_HEADERS: Readonly<Record<string, string>> = {
 /**
  * The request's own origin, as the public internet sees it.
  *
+ * TWO JOBS, AND THE SECOND ONE IS EASY TO FORGET
+ *
+ * 1. The origin the CSRF check compares `Origin` against.
+ * 2. The base for EVERY redirect this endpoint emits.
+ *
+ * `request.nextUrl.origin` cannot serve either purpose in production. Next.js
+ * runs behind Nginx and sees the internal upstream origin, so it reports
+ * `https://localhost:3000`. Building a redirect on that shipped a `Location`
+ * pointing at the visitor's OWN machine:
+ *
+ *     location: https://localhost:3000/auth/login?error=invalid
+ *
+ * which is where a real staff login attempt ended up. Every `new URL(...)` in
+ * this module must therefore be based on this helper, never on `nextUrl`.
+ *
  * TRUST BOUNDARY: `X-Forwarded-*` is only meaningful because the app is reached
  * exclusively through the ONEDECORE Nginx reverse proxy, which sets them. A
  * client can forge those headers, but forging them here changes only what this
  * request compares ITSELF against — it cannot make a cross-site Origin match,
  * because the attacker's `Origin` is set by the victim's browser and is not
- * under the attacker's control.
+ * under the attacker's control. A forged value likewise only redirects the
+ * forger to a destination they already chose.
  */
 function effectiveRequestOrigin(request: NextRequest): string {
   const first = (raw: string | null): string | null =>
@@ -192,7 +208,7 @@ function readField(form: FormData, name: string): string {
  * mobile numbers.
  */
 function failureUrl(request: NextRequest, safeNext: string): URL {
-  const url = new URL("/auth/login", request.nextUrl.origin);
+  const url = new URL("/auth/login", effectiveRequestOrigin(request));
   url.searchParams.set("error", LOGIN_ERROR_CODE);
   if (safeNext !== "/admin") {
     url.searchParams.set("next", safeNext);
@@ -385,11 +401,14 @@ export async function handleStaffLoginSubmit(
     // applied, so /auth/forbidden renders for a known user rather than bouncing
     // them back to a login form they just satisfied.
     return applyCookies(
-      NextResponse.redirect(new URL("/auth/forbidden", request.nextUrl.origin), 303)
+      NextResponse.redirect(
+        new URL("/auth/forbidden", effectiveRequestOrigin(request)),
+        303
+      )
     );
   }
 
   return applyCookies(
-    NextResponse.redirect(new URL(safeNext, request.nextUrl.origin), 303)
+    NextResponse.redirect(new URL(safeNext, effectiveRequestOrigin(request)), 303)
   );
 }
