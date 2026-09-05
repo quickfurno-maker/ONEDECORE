@@ -4,31 +4,131 @@ import { getPublicSupabaseEnv } from "@/config/env";
 import type { Database } from "@/types/database.generated";
 
 /**
- * Updates session cookies and enforces authentication checks for Next.js 16 Proxy / Middleware.
+ * Session cookie refresh and admin authentication for the Next.js 16 Proxy.
+ *
+ * THE RESPONSE HEADERS MATTER AS MUCH AS THE COOKIES
+ *
+ * `@supabase/ssr` 0.12.3 calls `setAll(cookiesToSet, headers)`, and documents
+ * the second argument as part of the contract, not decoration:
+ *
+ *   "Responses that set auth cookies must not be cached by CDNs or reverse
+ *    proxies, otherwise one user's session token can be served to a different
+ *    user."
+ *
+ * It supplies `Cache-Control: private, no-cache, no-store, must-revalidate,
+ * max-age=0`, `Expires: 0` and `Pragma: no-cache`. Declaring only the first
+ * parameter made JavaScript discard them silently — and this module refreshes
+ * tokens on EVERY /admin request, so it is the highest-volume producer of
+ * session-bearing responses in the app.
+ *
+ * Both are therefore tracked together and re-applied on every return path: the
+ * ordinary `next()` response and both redirect branches. A refreshed token that
+ * reaches the browser without its no-store policy is exactly the cacheable
+ * session response the library warns about.
  */
-export async function updateSession(request: NextRequest): Promise<NextResponse> {
+
+/** The Supabase surface this module uses, so tests can supply a double. */
+export interface ProxyCookieAdapter {
+  getAll(): { name: string; value: string }[];
+  setAll(
+    cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[],
+    headers: Record<string, string>
+  ): void;
+}
+
+export interface ProxySupabaseClient {
+  readonly auth: {
+    getClaims(): Promise<{
+      data: { claims?: { sub?: string | null } | null } | null;
+      error: unknown;
+    }>;
+  };
+}
+
+export type ProxyClientFactory = (
+  adapter: ProxyCookieAdapter
+) => ProxySupabaseClient;
+
+function defaultProxyClient(adapter: ProxyCookieAdapter): ProxySupabaseClient {
+  const { url, publishableKey } = getPublicSupabaseEnv();
+
+  // The publishable key, as everywhere else. No service role here: the Proxy
+  // resolves the caller's own claims and grants nothing on its own.
+  const client = createServerClient<Database>(url, publishableKey, {
+    cookies: {
+      getAll: () => adapter.getAll(),
+      // BOTH arguments forwarded — see the module docblock.
+      setAll: (cookiesToSet, headers) => adapter.setAll(cookiesToSet, headers),
+    },
+  });
+
+  return client as unknown as ProxySupabaseClient;
+}
+
+/**
+ * Updates session cookies and enforces authentication for /admin routes.
+ *
+ * The client factory is injectable so the cookie AND header propagation can be
+ * exercised in tests without a live GoTrue; production passes nothing.
+ */
+export async function updateSession(
+  request: NextRequest,
+  createClientWithCookies: ProxyClientFactory = defaultProxyClient
+): Promise<NextResponse> {
   let supabaseResponse = NextResponse.next({
     request,
   });
 
-  const { url, publishableKey } = getPublicSupabaseEnv();
+  /*
+   * The headers Supabase supplied alongside the refreshed cookies.
+   *
+   * Held outside `setAll` because `supabaseResponse` is REPLACED in there — a
+   * header set on the old object would be discarded with it — and because both
+   * redirect branches below build responses of their own that must carry the
+   * same auth state.
+   */
+  const authResponseHeaders: Record<string, string> = {};
 
-  const supabase = createServerClient<Database>(url, publishableKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
-        );
-        supabaseResponse = NextResponse.next({
-          request,
-        });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
-        );
-      },
+  const applyAuthHeaders = (response: NextResponse): NextResponse => {
+    for (const [name, value] of Object.entries(authResponseHeaders)) {
+      // Verbatim: the library's values are never normalised or weakened.
+      response.headers.set(name, value);
+    }
+    return response;
+  };
+
+  /**
+   * Carries the refreshed session onto a response built separately.
+   *
+   * Copies exactly two things — the auth cookies and the headers Supabase
+   * supplied — rather than cloning the whole header set, so no internal Next
+   * transport header is dragged onto a redirect.
+   */
+  const copySupabaseResponseState = (target: NextResponse): NextResponse => {
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      target.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return applyAuthHeaders(target);
+  };
+
+  const supabase = createClientWithCookies({
+    getAll() {
+      return request.cookies.getAll();
+    },
+    setAll(cookiesToSet, headers) {
+      // Downstream Server Components read the refreshed values from the request.
+      cookiesToSet.forEach(({ name, value }) =>
+        request.cookies.set(name, value)
+      );
+      supabaseResponse = NextResponse.next({
+        request,
+      });
+      cookiesToSet.forEach(({ name, value, options }) =>
+        supabaseResponse.cookies.set(name, value, options)
+      );
+
+      Object.assign(authResponseHeaders, headers ?? {});
+      applyAuthHeaders(supabaseResponse);
     },
   });
 
@@ -44,14 +144,9 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
       if (pathname !== "/admin") {
         loginUrl.searchParams.set("next", pathname);
       }
-      const redirectResponse = NextResponse.redirect(loginUrl);
 
-      // Preserve refreshed cookies on redirect response
-      supabaseResponse.cookies.getAll().forEach((cookie) => {
-        redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
-      });
-
-      return redirectResponse;
+      // Preserve refreshed cookies AND their no-store headers on the redirect.
+      return copySupabaseResponseState(NextResponse.redirect(loginUrl));
     }
   }
 
@@ -62,12 +157,9 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
       ? nextParam
       : "/admin";
 
-    const redirectResponse = NextResponse.redirect(new URL(safeTarget, request.url));
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
-    });
-
-    return redirectResponse;
+    return copySupabaseResponseState(
+      NextResponse.redirect(new URL(safeTarget, request.url))
+    );
   }
 
   return supabaseResponse;
