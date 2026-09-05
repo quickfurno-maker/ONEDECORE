@@ -9,7 +9,11 @@ import {
 import {
   LEAD_BUDGET_COMFORT_CODES,
   LEAD_INTAKE_NOTICE_VERSION,
-  LEAD_INTAKE_PLANNER_VERSION,
+  LEAD_INTAKE_PLANNER_VERSIONS,
+  PUBLIC_CONSULT_PLANNER_VERSION,
+  LEAD_QUALIFIER_KIND_BY_SERVICE,
+  isAllowedLeadQualifier,
+  propertyCodeFromQualifier,
   LEAD_PROPERTY_CODES,
   LEAD_ROOM_CODES,
   LEAD_SERVICE_CODES,
@@ -315,11 +319,17 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
   const plannerVersion = asString(input.plannerVersion);
   if (
     !plannerVersion ||
-    plannerVersion !== LEAD_INTAKE_PLANNER_VERSION ||
+    !(LEAD_INTAKE_PLANNER_VERSIONS as readonly string[]).includes(plannerVersion) ||
     plannerVersion.length > 80
   ) {
     fields.push("plannerVersion");
   }
+  /*
+   * The version decides WHICH requirements are mandatory. It is not a way to
+   * opt out of validation: each version is strict about exactly the answers its
+   * form actually collects.
+   */
+  const isPublicConsult = plannerVersion === PUBLIC_CONSULT_PLANNER_VERSION;
 
   if (!isPlainObject(input.contact)) {
     fields.push("contact");
@@ -377,6 +387,7 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
       "service",
       "property",
       "timeline",
+      "qualifier",
       "rooms",
       "budgetComfort",
       "estimate",
@@ -395,24 +406,112 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     fields.push("requirements.service");
   }
 
-  const property = asString(input.requirements.property);
-  if (
-    !property ||
-    !(LEAD_PROPERTY_CODES as readonly string[]).includes(property)
-  ) {
-    fields.push("requirements.property");
-  }
+  /*
+   * PROPERTY, TIMELINE AND THE QUALIFIER
+   *
+   * `home-r4-v1` collects property, timeline and rooms, so all three stay
+   * required for it — unchanged.
+   *
+   * `public-consult-v1` asks one service-relevant question instead. Under that
+   * version property and timeline must be ABSENT rather than merely optional:
+   * accepting them would let a client send a value its form never asked for,
+   * which is the fabricated data this contract exists to keep out of CRM.
+   */
+  let property: string | null = null;
+  let timeline: string | null = null;
+  let qualifier: { kind: string; code: string } | null = null;
 
-  const timeline = asString(input.requirements.timeline);
-  if (
-    !timeline ||
-    !(LEAD_TIMELINE_CODES as readonly string[]).includes(timeline)
-  ) {
-    fields.push("requirements.timeline");
+  if (isPublicConsult) {
+    /*
+     * UNASKED FIELDS ARE REJECTED, NOT IGNORED.
+     *
+     * The public form collects a service, one qualifier and contact details.
+     * Anything else in the body was never on screen, so accepting it would let a
+     * tampered or stale client put an answer in CRM that no customer gave —
+     * which is the exact failure this variant exists to prevent. Silently
+     * dropping them would be almost as bad: the caller would believe it was
+     * stored.
+     */
+    for (const unasked of [
+      "property",
+      "timeline",
+      "rooms",
+      "budgetComfort",
+      "estimate",
+    ] as const) {
+      if (input.requirements[unasked] != null) {
+        fields.push(`requirements.${unasked}`);
+      }
+    }
+
+    // The public form has no email field, so neither the address nor its
+    // consent may arrive under this version.
+    if (isPlainObject(input.contact) && input.contact.email != null) {
+      fields.push("contact.email");
+    }
+
+    if (!isPlainObject(input.requirements.qualifier)) {
+      fields.push("requirements.qualifier");
+    } else {
+      rejectUnknownKeys(
+        input.requirements.qualifier,
+        new Set(["kind", "code"]),
+        "requirements.qualifier",
+        fields
+      );
+      const kind = asString(input.requirements.qualifier.kind);
+      const code = asString(input.requirements.qualifier.code);
+
+      // The pair is checked together, and the KIND must be the one this service
+      // implies — so `custom-wardrobes` can never arrive carrying a BHK.
+      if (
+        !kind ||
+        !code ||
+        !isAllowedLeadQualifier(kind, code) ||
+        (service &&
+          (LEAD_SERVICE_CODES as readonly string[]).includes(service) &&
+          LEAD_QUALIFIER_KIND_BY_SERVICE[service as LeadServiceCode] !== kind)
+      ) {
+        fields.push("requirements.qualifier");
+      } else {
+        qualifier = { kind, code };
+        // Only a real home-size answer names a property. Everything else — a
+        // kitchen scope, a wardrobe count, any "unsure" — stays null.
+        property = propertyCodeFromQualifier(kind, code);
+      }
+    }
+  } else {
+    if (input.requirements.qualifier != null) {
+      fields.push("requirements.qualifier");
+    }
+
+    const legacyProperty = asString(input.requirements.property);
+    if (
+      !legacyProperty ||
+      !(LEAD_PROPERTY_CODES as readonly string[]).includes(legacyProperty)
+    ) {
+      fields.push("requirements.property");
+    } else {
+      property = legacyProperty;
+    }
+
+    const legacyTimeline = asString(input.requirements.timeline);
+    if (
+      !legacyTimeline ||
+      !(LEAD_TIMELINE_CODES as readonly string[]).includes(legacyTimeline)
+    ) {
+      fields.push("requirements.timeline");
+    } else {
+      timeline = legacyTimeline;
+    }
   }
 
   let rooms: LeadRoomCode[] = [];
-  if (!Array.isArray(input.requirements.rooms)) {
+  if (isPublicConsult) {
+    // Absence is required and already enforced above; the stored value is an
+    // empty list because no room question was ever asked.
+    rooms = [];
+  } else if (!Array.isArray(input.requirements.rooms)) {
     fields.push("requirements.rooms");
   } else {
     const seen = new Set<string>();
@@ -528,6 +627,10 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     );
     if (input.consent.serviceChannels.phone !== true) {
       fields.push("consent.serviceChannels.phone");
+    }
+    // The public form collects no email, so it may not consent to one either.
+    if (isPublicConsult && input.consent.serviceChannels.email != null) {
+      fields.push("consent.serviceChannels.email");
     }
   }
 
@@ -694,8 +797,11 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
       phoneE164: phoneE164!,
       email,
       service: service as LeadServiceCode,
-      property: property as LeadPropertyCode,
-      timeline: timeline as LeadTimelineCode,
+      // Null stays null. The previous cast would have laundered a missing
+      // answer into a typed code the customer never gave.
+      property: property as LeadPropertyCode | null,
+      timeline: timeline as LeadTimelineCode | null,
+      qualifier: qualifier as ValidatedLeadIntake["qualifier"],
       rooms,
       budgetComfort,
       estimateSnapshot,

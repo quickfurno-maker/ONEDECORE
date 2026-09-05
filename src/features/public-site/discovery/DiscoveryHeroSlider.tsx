@@ -2,7 +2,6 @@
 
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, TouchEvent } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { DISCOVERY_HERO_SLIDES } from "./discovery-copy";
 import { DiscoveryHeroTrustBar } from "./DiscoveryHeroTrustBar";
@@ -174,14 +173,6 @@ export function DiscoveryHeroSlider() {
                   ) : null}
                   <p className="od-disc-hero__lede">{slide.lede}</p>
                 </header>
-                <div className="od-disc-hero__ctas">
-                  <Link href={slide.primaryCta.href} className="od-disc-btn od-disc-btn--primary od-disc-btn--sheen">
-                    {slide.primaryCta.label}
-                  </Link>
-                  <Link href={slide.secondaryCta.href} className="od-disc-btn od-disc-btn--ghost">
-                    {slide.secondaryCta.label}
-                  </Link>
-                </div>
               </div>
             );
           })}

@@ -133,8 +133,20 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(discovery, /id="consultation"/);
     assert.match(discovery, /<HomeConsultationCapture mode=\{leadFormMode\} \/>/);
     assert.equal((discovery.match(/<HomeConsultationCapture\b/g) ?? []).length, 1);
-    assert.match(wrap, /PlanProvider/);
-    assert.match(wrap, /HomeLeadCapture/);
+    /*
+      * The consultation section now mounts the ADAPTIVE form, which owns its own
+      * two-field state. The legacy `PlanProvider` existed to drive the
+      * multi-step planner and its estimator; keeping it here only invited the
+      * property/timeline questionnaire back into a form that no longer asks
+      * them. The single-canonical-path invariant is unchanged.
+      */
+    assert.match(wrap, /ConsultationLeadForm/);
+    // Comments EXPLAIN why the provider was dropped; assert against code.
+    const wrapCode = wrap
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*/g, "");
+    assert.doesNotMatch(wrapCode, /PlanProvider/);
+    assert.doesNotMatch(wrapCode, /HomeLeadCapture/);
     assert.doesNotMatch(wrap, /HomePlannerSheet|HomeBudgetEstimator|HomePlannerInline/);
     assert.doesNotMatch(discovery, /HomePlannerSheet|HomeBudgetEstimator|estimator/);
   });
