@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { INITIAL_CRM_ACTIVITY_ACTION_STATE } from "../../contracts/activity-contracts.ts";
 import type { CrmLeadDetailFollowUp } from "../../contracts/lead-detail-dtos.ts";
 import {
+  conversationNoteHeadingForActivityType,
   formatConversationActivityType,
   formatConversationOutcome,
   formatConversationStatus,
-  isClientFacingActivityType,
   resolveActivityActorLabel,
   resolveActivityOccurredAt,
   sortActivityHistory,
@@ -171,9 +171,14 @@ export function ActivityHistoryList({ activities }: ActivityHistoryListProps) {
           const actorLabel = resolveActivityActorLabel(activity);
           const outcome = formatConversationOutcome(activity);
           const isCancelled = activity.status === "cancelled";
-          const noteHeading = isClientFacingActivityType(activity.activityType)
-            ? "Client response"
-            : "Completion note";
+          /*
+            The heading comes from the SAME client-facing predicate the
+            completion dialog and the mobile log use, so the three surfaces
+            cannot disagree about which activities involve a client.
+          */
+          const noteHeading = conversationNoteHeadingForActivityType(
+            activity.activityType
+          );
 
           return (
             <li
