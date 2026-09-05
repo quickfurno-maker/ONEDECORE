@@ -12,7 +12,7 @@ export default async function AdminLandingPageDetailPage({ params }: AdminLandin
   const { pageId } = await params;
   const session = await getStaffClaims();
   if (!session) {
-    redirect("/auth/login?next=%2Fadmin%2Flanding-pages");
+    redirect("/auth/login?portal=admin&next=%2Fadmin%2Flanding-pages");
   }
   const permissions = await probeLandingLabPermissions();
   if (!permissions.canRead) notFound();

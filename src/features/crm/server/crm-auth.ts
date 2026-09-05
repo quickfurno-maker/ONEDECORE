@@ -18,6 +18,10 @@ import {
   probeSalesTargetPermissions,
   probeSlaPolicyPermissions,
 } from "./crm-permissions.ts";
+import {
+  DEFAULT_LOGIN_PORTAL,
+  loginPortalHref,
+} from "@/features/staff-admin/contracts/login-portal";
 
 export type CrmAccessResolution =
   | { readonly kind: "granted"; readonly context: CrmAccessContext }
@@ -121,10 +125,8 @@ export async function requireCrmReadAccess(
 
   if (resolution.kind === "unauthenticated") {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl =
-      safeNext !== "/admin"
-        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
-        : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 
@@ -146,10 +148,8 @@ export async function requireCrmCreateAccess(
 
   if (resolution.kind === "unauthenticated") {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl =
-      safeNext !== "/admin"
-        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
-        : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 
@@ -171,10 +171,8 @@ export async function requireCrmBulkImportAccess(
 
   if (resolution.kind === "unauthenticated") {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl =
-      safeNext !== "/admin"
-        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
-        : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 
@@ -202,10 +200,8 @@ export async function requireCrmAssignmentRuleAccess(
 
   if (resolution.kind === "unauthenticated") {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl =
-      safeNext !== "/admin"
-        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
-        : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 
@@ -230,10 +226,8 @@ export async function requireCrmSlaPolicyAccess(
 
   if (resolution.kind === "unauthenticated") {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl =
-      safeNext !== "/admin"
-        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
-        : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 
@@ -255,10 +249,8 @@ export async function requireCrmSalesTargetsAccess(
 
   if (resolution.kind === "unauthenticated") {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl =
-      safeNext !== "/admin"
-        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
-        : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 
@@ -280,10 +272,8 @@ export async function requireCrmCadenceAccess(
 
   if (resolution.kind === "unauthenticated") {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl =
-      safeNext !== "/admin"
-        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
-        : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 
@@ -305,10 +295,8 @@ export async function requireCrmReportingAccess(
 
   if (resolution.kind === "unauthenticated") {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl =
-      safeNext !== "/admin"
-        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
-        : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 

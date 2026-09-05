@@ -4,6 +4,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSafeAdminRedirect } from "@/server/auth/authorize";
 import { looksLikeStaffLoginPhone } from "../contracts/staff-login-phone.ts";
 import {
+  looksLikeAdminEmail,
+  loginPortalHref,
+  resolveSubmittedPortal,
+  type LoginPortal,
+} from "../contracts/login-portal.ts";
+import {
   isStaffLoginAuthAlias,
   staffLoginAuthAlias,
 } from "./staff-login-auth-alias.ts";
@@ -202,17 +208,26 @@ function readField(form: FormData, name: string): string {
 /**
  * The login page URL for a failed attempt.
  *
- * Carries a single opaque code and the already-validated `next`, and nothing
- * else — never the identifier, never the password, never a reason. A distinct
- * code per failure would turn the form into an oracle for enumerating staff
- * mobile numbers.
+ * Carries a single opaque code, the already-validated `next`, and the portal the
+ * attempt was made against — and nothing else. Never the identifier, never the
+ * password, never a reason. A distinct code per failure would turn the form into
+ * an oracle for enumerating staff mobile numbers.
+ *
+ * The portal is carried so the retry lands on the SAME form the visitor just
+ * used. Without it, a failed Super Admin attempt bounced back to a page asking
+ * for a 10-digit mobile, which is how the original incident read to the owner as
+ * "my password is broken" rather than "you are on the wrong portal".
  */
-function failureUrl(request: NextRequest, safeNext: string): URL {
-  const url = new URL("/auth/login", effectiveRequestOrigin(request));
+function failureUrl(
+  request: NextRequest,
+  safeNext: string,
+  portal: LoginPortal
+): URL {
+  const url = new URL(
+    loginPortalHref(portal, safeNext),
+    effectiveRequestOrigin(request)
+  );
   url.searchParams.set("error", LOGIN_ERROR_CODE);
-  if (safeNext !== "/admin") {
-    url.searchParams.set("next", safeNext);
-  }
   return url;
 }
 
@@ -271,6 +286,23 @@ export async function handleStaffLoginSubmit(
   const safeNext = getSafeAdminRedirect(readField(form, "next"));
 
   /*
+   * Which identity contract this submission is claiming.
+   *
+   * ABSENT AND BLANK ARE NOT THE SAME THING
+   *
+   * `readField` would flatten both to "", and that distinction is the whole
+   * guarantee: a form cached before the split posts NO portal field and may
+   * fall back to the identifier's shape, while a field that is present and
+   * unrecognised is a crafted value and is refused outright. So the raw entry
+   * is read here, and absence is passed along as `null`.
+   *
+   * A non-string entry (a file part) counts as present-and-unrecognised.
+   */
+  const rawPortal = form.has("portal") ? String(form.get("portal") ?? "") : null;
+  const portalResolution = resolveSubmittedPortal(rawPortal, identifier);
+  const portal = portalResolution.portal;
+
+  /*
    * Every captured cookie, in the order @supabase/ssr asked for it.
    *
    * This is the heart of the fix. The cookies are NOT written to a throwaway
@@ -314,7 +346,20 @@ export async function handleStaffLoginSubmit(
     // 303 so the browser re-issues a GET; a 302 would let some agents repost.
     // Cookies are applied even here: a revoked sign-out emits DELETION cookies
     // that must reach the browser, or a dead session would linger.
-    applyCookies(NextResponse.redirect(failureUrl(request, safeNext), 303));
+    applyCookies(
+      NextResponse.redirect(failureUrl(request, safeNext, portal), 303)
+    );
+
+  /*
+   * An unrecognised portal is refused before anything else happens.
+   *
+   * No inference, no Supabase client, no credential test — and the invalid
+   * value is never echoed. The failure renders on the safe default portal,
+   * which is all `portalResolution.portal` is carrying here.
+   */
+  if (portalResolution.kind === "invalid") {
+    return fail();
+  }
 
   if (!identifier || !password) {
     return fail();
@@ -333,10 +378,42 @@ export async function handleStaffLoginSubmit(
    * second login the owner never authorised.
    *
    * Refused before any client is built, so no credential is tested and the form
-   * cannot be used to probe which aliases exist.
+   * cannot be used to probe which aliases exist. It applies to BOTH portals: the
+   * alias is an internal transport detail on either one.
    */
   if (isStaffLoginAuthAlias(identifier)) {
     return fail();
+  }
+
+  /*
+   * THE IDENTIFIER MUST MATCH THE PORTAL IT WAS POSTED TO.
+   *
+   * This is the security half of the split. Before it, one endpoint accepted
+   * either shape and quietly decided for itself which namespace to try, so the
+   * page branding and the credential actually tested could disagree. Now each
+   * portal states what it accepts and refuses everything else BEFORE a client
+   * exists — no credential is tested, and neither form can be used to probe the
+   * other namespace for which identities exist.
+   *
+   * Both rejections use the same generic failure as a wrong password: the
+   * response never distinguishes "wrong portal" from "wrong credential".
+   */
+  if (portal === "staff") {
+    // Canonical bare 10 digits only. An email, a +91 prefix, spaces, dashes and
+    // a leading 0 are all refused here rather than normalised — the staff
+    // contract has exactly one accepted written form.
+    if (!looksLikeStaffLoginPhone(identifier)) {
+      return fail();
+    }
+  } else {
+    // A staff mobile is never a Super Admin identity, even though the admin
+    // branch would otherwise happily hand it to GoTrue as an "email".
+    if (looksLikeStaffLoginPhone(identifier)) {
+      return fail();
+    }
+    if (!looksLikeAdminEmail(identifier)) {
+      return fail();
+    }
   }
 
   const supabase = createClientWithCookies({
@@ -347,30 +424,77 @@ export async function handleStaffLoginSubmit(
     },
   });
 
-  let signInFailed: boolean;
-
-  if (looksLikeStaffLoginPhone(identifier)) {
-    // Derived here, used here, never returned. A null alias means the value was
-    // not a valid staff number after all — a credential failure like any other.
-    const alias = staffLoginAuthAlias(identifier);
-    if (!alias) {
-      return fail();
-    }
-
+  if (portal === "admin") {
+    /*
+     * SUPER ADMIN: an email identity, and nothing about staff onboarding.
+     *
+     * `record_staff_first_login` is deliberately NOT called. It promotes a
+     * staff credential from credentials_ready to active and reports revocation;
+     * the Super Admin is not a staff credential, and running it here would
+     * write staff lifecycle state for an account that has none.
+     */
     const { error } = await supabase.auth.signInWithPassword({
-      email: alias,
-      password,
-    });
-    signInFailed = Boolean(error);
-  } else {
-    const { error } = await supabase.auth.signInWithPassword({
+      // Lowercased so the address is matched the way it was stored, exactly as
+      // the pre-split flow did.
       email: identifier.toLowerCase(),
       password,
     });
-    signInFailed = Boolean(error);
+
+    if (error) {
+      return fail();
+    }
+
+    /*
+     * Entitlement, checked against the Super Admin-only permission.
+     *
+     * `admin.access` is far too wide for this portal — every staff role that can
+     * open the admin panel holds it, so a staff member with an email identity
+     * could sign in HERE and be treated as an owner. `staff.credentials.manage`
+     * is granted to super_admin alone.
+     */
+    const { data: hasAdminAccess, error: adminRpcError } = await supabase.rpc(
+      "authorize",
+      { requested_permission: "staff.credentials.manage" }
+    );
+
+    if (adminRpcError || hasAdminAccess !== true) {
+      /*
+       * Authenticated but not a Super Admin: sign the session back out and
+       * answer with the ordinary failure.
+       *
+       * Unlike the staff branch there is no /auth/forbidden here. Landing on a
+       * "you are signed in but not permitted" page would confirm that the
+       * address and password were both correct, which is precisely the fact
+       * this portal must not disclose. signOut() emits deletion cookies through
+       * the same capture, so `fail()` actively clears the session it just
+       * created rather than leaving a usable one in the browser.
+       */
+      await supabase.auth.signOut();
+      return fail();
+    }
+
+    return applyCookies(
+      NextResponse.redirect(new URL(safeNext, effectiveRequestOrigin(request)), 303)
+    );
   }
 
-  if (signInFailed) {
+  /*
+   * STAFF: the 10-digit mobile, exchanged for the server-only transport alias.
+   *
+   * Derived here, used here, never returned. A null alias means the value was
+   * not a valid staff number after all — a credential failure like any other.
+   */
+  const alias = staffLoginAuthAlias(identifier);
+  if (!alias) {
+    return fail();
+  }
+
+  const { error: staffSignInError } = await supabase.auth.signInWithPassword({
+    email: alias,
+    password,
+  });
+
+  if (staffSignInError) {
     return fail();
   }
 

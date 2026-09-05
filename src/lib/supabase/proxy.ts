@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getPublicSupabaseEnv } from "@/config/env";
+import { DEFAULT_LOGIN_PORTAL } from "@/features/staff-admin/contracts/login-portal";
 import type { Database } from "@/types/database.generated";
 
 /**
@@ -140,7 +141,16 @@ export async function updateSession(
   // Authentication check for /admin routes
   if (pathname.startsWith("/admin")) {
     if (!isAuthenticated) {
+      /*
+       * Name the portal.
+       *
+       * `/admin` is the Super Admin entry point, and sending the owner to a page
+       * branded "Staff Portal" — which then asks for a 10-digit mobile — is the
+       * whole incident this fixes. The redirect now says which identity contract
+       * the visitor is being asked for.
+       */
       const loginUrl = new URL("/auth/login", request.url);
+      loginUrl.searchParams.set("portal", DEFAULT_LOGIN_PORTAL);
       if (pathname !== "/admin") {
         loginUrl.searchParams.set("next", pathname);
       }

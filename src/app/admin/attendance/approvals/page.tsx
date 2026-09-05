@@ -16,7 +16,7 @@ export default async function AttendanceApprovalsPage() {
   const context = await getAttendanceAccessContext();
 
   if (!context) {
-    redirect("/auth/login?next=%2Fadmin%2Fattendance%2Fapprovals");
+    redirect("/auth/login?portal=admin&next=%2Fadmin%2Fattendance%2Fapprovals");
   }
 
   // Approval authority is Super Admin only. The RPC enforces this again, so a

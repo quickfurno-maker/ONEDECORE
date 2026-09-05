@@ -24,7 +24,7 @@ export const metadata = {
 export default async function AdminCommercePage() {
   const session = await getStaffClaims();
   if (!session) {
-    redirect("/auth/login?next=%2Fadmin%2Fcommerce");
+    redirect("/auth/login?portal=admin&next=%2Fadmin%2Fcommerce");
   }
   const permissions = await probeCommercePermissions();
   if (!permissions.canRead) {

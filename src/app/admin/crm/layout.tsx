@@ -11,7 +11,7 @@ export default async function CrmLayout({ children }: { children: ReactNode }) {
   const resolution = await resolveCrmAccess();
 
   if (resolution.kind === "unauthenticated") {
-    redirect("/auth/login?next=%2Fadmin%2Fcrm");
+    redirect("/auth/login?portal=admin&next=%2Fadmin%2Fcrm");
   }
 
   if (resolution.kind === "inactive") {

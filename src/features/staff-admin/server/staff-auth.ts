@@ -8,6 +8,10 @@ import {
   probeCanManageStaff,
   probeCanReadStaff,
 } from "./staff-permissions.ts";
+import {
+  DEFAULT_LOGIN_PORTAL,
+  loginPortalHref,
+} from "@/features/staff-admin/contracts/login-portal";
 
 export interface StaffAdminAccessContext {
   readonly userId: string;
@@ -85,10 +89,8 @@ export async function requireStaffAdminAccess(
 
   if (resolution.kind === "unauthenticated") {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl =
-      safeNext !== "/admin"
-        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
-        : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 
@@ -110,10 +112,8 @@ export async function requireStaffReadAccess(
 
   if (resolution.kind === "unauthenticated") {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl =
-      safeNext !== "/admin"
-        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
-        : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 

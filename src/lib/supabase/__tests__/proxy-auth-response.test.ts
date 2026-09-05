@@ -418,3 +418,59 @@ describe("nothing else changed", () => {
     );
   });
 });
+
+/* ========================================================================== */
+/* /admin is the Super Admin entry point, and the redirect must say so         */
+/* ========================================================================== */
+
+describe("the unauthenticated /admin redirect names its portal", () => {
+  test("GET /admin redirects to the ADMIN portal", async () => {
+    const { factory } = makeClient({ authenticated: false });
+    const response = await updateSession(proxyRequest("/admin"), factory);
+
+    const location = new URL(
+      response.headers.get("location") ?? "",
+      ORIGIN
+    );
+    assert.equal(response.status, 307);
+    assert.equal(location.pathname, "/auth/login");
+    assert.equal(location.searchParams.get("portal"), "admin");
+    // Nothing to come back to: /admin is the default destination already.
+    assert.equal(location.searchParams.get("next"), null);
+  });
+
+  test("a deep /admin path keeps BOTH the portal and its safe next", async () => {
+    const { factory } = makeClient({ authenticated: false });
+    const response = await updateSession(
+      proxyRequest("/admin/crm/leads"),
+      factory
+    );
+
+    const location = new URL(
+      response.headers.get("location") ?? "",
+      ORIGIN
+    );
+    assert.equal(location.searchParams.get("portal"), "admin");
+    assert.equal(location.searchParams.get("next"), "/admin/crm/leads");
+    assert.match(
+      response.headers.get("location") ?? "",
+      /next=%2Fadmin%2Fcrm%2Fleads/
+    );
+  });
+
+  test("the portal is a constant, never a value read off the request", () => {
+    const src = read(PROXY);
+    // The portal named here is the module-level default. Deriving it from the
+    // URL would let a crafted /admin link brand the page as the staff portal.
+    assert.match(src, /searchParams\.set\("portal", DEFAULT_LOGIN_PORTAL\)/);
+    assert.doesNotMatch(src, /searchParams\.set\("portal", [a-z]/);
+  });
+
+  test("the portal redirect still carries the refreshed session", async () => {
+    const { factory } = makeClient({ authenticated: false });
+    const response = await updateSession(proxyRequest("/admin"), factory);
+    // The whole point of the surrounding suite: naming the portal must not have
+    // cost the redirect its cookies or its no-store policy.
+    assertAuthHeaders(response, "portal redirect");
+  });
+});

@@ -13,7 +13,7 @@ export default async function WhatsappLayout({
   const resolution = await resolveWhatsappInboxAccess();
 
   if (resolution.kind === "unauthenticated") {
-    redirect("/auth/login?next=%2Fadmin%2Fwhatsapp%2Finbox");
+    redirect("/auth/login?portal=admin&next=%2Fadmin%2Fwhatsapp%2Finbox");
   }
 
   if (resolution.kind === "inactive") {
