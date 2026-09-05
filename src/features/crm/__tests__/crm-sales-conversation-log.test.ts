@@ -294,8 +294,13 @@ describe("the caller can always be named", () => {
 
     // The directory is still fetched exactly once, still scope-gated by the
     // existing RPC. Nothing new is read to name the caller.
+    //
+    // The call now threads the OPTIONAL caller-scoped client the mobile lead
+    // detail read supplies (`fetchCrmAssigneeDirectory(context, db)`), so the
+    // count is taken on the callee and its context argument rather than on a
+    // literal argument list. Once, either way.
     assert.equal(
-      repo.split("fetchCrmAssigneeDirectory(context)").length - 1,
+      repo.split("fetchCrmAssigneeDirectory(context").length - 1,
       1,
       "the assignee directory must still be fetched exactly once"
     );
@@ -308,9 +313,11 @@ describe("the caller can always be named", () => {
     const repo = readSrc(REPOSITORY);
     // One resolver instance is handed to the timeline, so the log and the
     // timeline can never disagree about who someone is.
+    // The trailing `db` is the optional caller-scoped client threaded for the
+    // mobile bearer path; the resolver argument is unchanged and still shared.
     assert.match(
       repo,
-      /fetchLeadTimelinePage\(leadId, context, labelForUser\)/
+      /fetchLeadTimelinePage\(leadId, context, labelForUser(?:, db)?\)/
     );
 
     const timeline = readSrc(TIMELINE_QUERIES);

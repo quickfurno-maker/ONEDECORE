@@ -40,6 +40,7 @@ import {
 import {
   CRM_EMPTY_ENGAGEMENT,
   fetchLeadScoreBatch,
+  type CrmLeadScoreBatch,
 } from "./crm-lead-score-batch.ts";
 import { latestIso } from "./crm-lead-score-signals.ts";
 
@@ -627,6 +628,96 @@ function emptySegmentationPage(
 }
 
 /**
+ * ONE lead row plus its batched signals, turned into the canonical list item.
+ *
+ * Extracted so the Leads cohort read and the single-lead mobile detail read run
+ * the IDENTICAL derivation. Parity is structural rather than reviewed: a lead
+ * cannot score one way in a list and another way when opened directly, because
+ * there is only one function that can answer.
+ *
+ * Every derived value comes from a shared pure helper — `deriveLeadScore` for
+ * the score, its band and the risk flags, `resolveEffectiveSalesBucket` for the
+ * owner-facing bucket and its provenance. Nothing is recomputed inline, and the
+ * milestones come from canonical evidence rather than from the stage.
+ */
+export function enrichLeadRow(
+  row: CrmLeadListRow,
+  batch: CrmLeadScoreBatch,
+  assigneeLabels: Record<string, string>,
+  now: number
+): CrmLeadListItem {
+  const primary = batch.primaryActions[row.id] ?? null;
+  const sla = batch.slaClocks.signals[row.id] ?? null;
+  const engagement = batch.engagement[row.id] ?? CRM_EMPTY_ENGAGEMENT;
+  const deal = batch.dealValues[row.id] ?? null;
+  const touch = batch.salesTouches[row.id] ?? null;
+  const status = row.status as LeadStageCode;
+  const manualSalesTemperature = parseManualSalesTemperature(
+    row.manual_sales_temperature
+  );
+
+  // The SAME pure derivation the pipeline board and the lead detail use, from
+  // the same signal shape. A lead cannot score differently on two surfaces.
+  const score = deriveLeadScore(
+    {
+      status,
+      isAssigned: row.assigned_to !== null,
+      hasFirstContactAttempt: (sla?.firstContactAttemptAt ?? null) !== null,
+      hasMeaningfulOutcome: engagement.hasMeaningfulOutcome,
+      hasConsultationOrSiteVisit: engagement.hasConsultationOrSiteVisit,
+      commercialState: deal?.state ?? "unknown",
+      lastMeaningfulActivityAt: engagement.lastMeaningfulActivityAt,
+      latestMeaningfulSalesTouchAt: latestIso([
+        engagement.lastMeaningfulActivityAt,
+        touch?.latestNoteAt ?? null,
+        touch?.latestQuotationEventAt ?? null,
+      ]),
+      receivedAt: row.created_at,
+      hasOpenPrimaryNextAction: primary !== null,
+      primaryNextActionDueAt: primary?.dueAt ?? null,
+      slaDueAt: sla?.slaDueAt ?? null,
+    },
+    now
+  );
+
+  return mapLeadRowToListItem(row, {
+    assigneeLabel: row.assigned_to
+      ? assigneeLabels[row.assigned_to] ?? "Assigned staff"
+      : "Unassigned",
+    // The CANONICAL primary next action, not any open follow-up. The generic
+    // one let a lead with no primary action dodge the `no_next_action` rank.
+    primaryNextActionDueAt: primary?.dueAt ?? null,
+    primaryNextActionTitle: primary?.title ?? null,
+    // Milestones, kept separate from bucket and stage.
+    siteVisitState: batch.siteVisits[row.id] ?? "none",
+    quotationState: deal?.state ?? "unknown",
+    ...(() => {
+      // ONE canonical resolver: lifecycle > manual temperature > score band.
+      const effective = resolveEffectiveSalesBucket(
+        status,
+        score.band,
+        manualSalesTemperature
+      );
+      return {
+        salesBucket: effective.bucket,
+        salesBucketSource: effective.source,
+      };
+    })(),
+    manualSalesTemperature,
+    priorityScore: score.priorityScore,
+    scoreBand: score.band,
+    riskFlags: score.riskFlags,
+    stageEnteredAt: batch.stageEntries[row.id] ?? row.created_at,
+    slaBreached:
+      sla?.slaDueAt != null &&
+      sla.firstContactAttemptAt == null &&
+      Date.parse(sla.slaDueAt) < now,
+    newUncontacted:
+      row.assigned_to != null && (sla?.firstContactAttemptAt ?? null) == null,
+  });
+}
+
+/**
  * The segmented Leads read model.
  *
  * ORDER OF OPERATIONS MATTERS. The bucket is resolved for the WHOLE cohort
@@ -667,77 +758,9 @@ export async function queryLeadListPage(
   // Bounded and free of per-lead reads — not a constant number of requests.
   const batch = await fetchLeadScoreBatch(leadIds, db);
 
-  const scored = cohort.rows.map((row) => {
-    const primary = batch.primaryActions[row.id] ?? null;
-    const sla = batch.slaClocks.signals[row.id] ?? null;
-    const engagement = batch.engagement[row.id] ?? CRM_EMPTY_ENGAGEMENT;
-    const deal = batch.dealValues[row.id] ?? null;
-    const touch = batch.salesTouches[row.id] ?? null;
-    const status = row.status as LeadStageCode;
-    const manualSalesTemperature = parseManualSalesTemperature(
-      row.manual_sales_temperature
-    );
-
-    // The SAME pure derivation the pipeline board and the lead detail use, from
-    // the same signal shape. A lead cannot score differently on two surfaces.
-    const score = deriveLeadScore(
-      {
-        status,
-        isAssigned: row.assigned_to !== null,
-        hasFirstContactAttempt: (sla?.firstContactAttemptAt ?? null) !== null,
-        hasMeaningfulOutcome: engagement.hasMeaningfulOutcome,
-        hasConsultationOrSiteVisit: engagement.hasConsultationOrSiteVisit,
-        commercialState: deal?.state ?? "unknown",
-        lastMeaningfulActivityAt: engagement.lastMeaningfulActivityAt,
-        latestMeaningfulSalesTouchAt: latestIso([
-          engagement.lastMeaningfulActivityAt,
-          touch?.latestNoteAt ?? null,
-          touch?.latestQuotationEventAt ?? null,
-        ]),
-        receivedAt: row.created_at,
-        hasOpenPrimaryNextAction: primary !== null,
-        primaryNextActionDueAt: primary?.dueAt ?? null,
-        slaDueAt: sla?.slaDueAt ?? null,
-      },
-      now
-    );
-
-    return mapLeadRowToListItem(row, {
-      assigneeLabel: row.assigned_to
-        ? assigneeLabels[row.assigned_to] ?? "Assigned staff"
-        : "Unassigned",
-      // The CANONICAL primary next action, not any open follow-up. The generic
-      // one let a lead with no primary action dodge the `no_next_action` rank.
-      primaryNextActionDueAt: primary?.dueAt ?? null,
-      primaryNextActionTitle: primary?.title ?? null,
-      // Milestones, kept separate from bucket and stage.
-      siteVisitState: batch.siteVisits[row.id] ?? "none",
-      quotationState: deal?.state ?? "unknown",
-      ...(() => {
-        // ONE canonical resolver: lifecycle > manual temperature > score band.
-        const effective = resolveEffectiveSalesBucket(
-          status,
-          score.band,
-          manualSalesTemperature
-        );
-        return {
-          salesBucket: effective.bucket,
-          salesBucketSource: effective.source,
-        };
-      })(),
-      manualSalesTemperature,
-      priorityScore: score.priorityScore,
-      scoreBand: score.band,
-      riskFlags: score.riskFlags,
-      stageEnteredAt: batch.stageEntries[row.id] ?? row.created_at,
-      slaBreached:
-        sla?.slaDueAt != null &&
-        sla.firstContactAttemptAt == null &&
-        Date.parse(sla.slaDueAt) < now,
-      newUncontacted:
-        row.assigned_to != null && (sla?.firstContactAttemptAt ?? null) == null,
-    });
-  });
+  const scored = cohort.rows.map((row) =>
+    enrichLeadRow(row, batch, assigneeLabels, now)
+  );
 
   // Counts describe the whole cohort, so the strip keeps showing where the rest
   // of the month's leads are even while one bucket is selected. They are only
@@ -769,4 +792,66 @@ export async function queryLeadListPage(
     capturedAt,
     cohortTruncated: cohort.truncated,
   };
+}
+
+
+/**
+ * ONE lead's canonical intelligence, for a direct Lead Detail open.
+ *
+ * WHY THIS EXISTS. The score, its band, the effective sales bucket, the risk
+ * flags and the site-visit milestone are derived in server TypeScript over
+ * batched signals. They are not columns, so PostgREST cannot return them, and
+ * the two mobile list endpoints that carry them cannot be asked about a single
+ * lead. A phone opening a lead from Today, from a notification or from a cold
+ * deep link therefore had no way to obtain them at all.
+ *
+ * IT IS BOUNDED. One row read by primary key, then `fetchLeadScoreBatch` over a
+ * ONE-ELEMENT id list — the same batch helper the cohort read uses, given one
+ * id instead of thousands. No cohort is scanned, no month is inferred, no list
+ * endpoint is called, and there is no per-signal loop.
+ *
+ * IT DUPLICATES NOTHING. The derivation is `enrichLeadRow`, the exact function
+ * `queryLeadListPage` maps its cohort through. A lead cannot score one way in
+ * the list and another way when opened, because one function answers both.
+ *
+ * RLS DOES THE SCOPING. `db` is the caller's own client, so a lead outside the
+ * caller's visibility simply yields no row — indistinguishable from a lead that
+ * does not exist, which is the intended behaviour. Returning `null` for both is
+ * what stops this being an existence oracle.
+ */
+export async function queryLeadIntelligence(
+  context: CrmAccessContext,
+  leadId: string,
+  db?: CrmDb
+): Promise<CrmLeadListItem | null> {
+  const supabase = await resolveCrmDb(db);
+
+  const { data, error } = await supabase
+    .from("leads")
+    .select(CRM_LEAD_LIST_SELECT)
+    .eq("id", leadId)
+    .maybeSingle();
+
+  if (error) {
+    throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const row = data as unknown as CrmLeadListRow;
+
+  const now = Date.now();
+
+  // The assignee label needs the same directory the list uses, so an owner's
+  // name reads identically on both surfaces.
+  const assigneeLabels = buildAssigneeLabelMap(
+    await fetchCrmAssigneeDirectory(context, db)
+  );
+
+  // One id in, one id's signals out. Same helper, same shape, same weights.
+  const batch = await fetchLeadScoreBatch([row.id], db);
+
+  return enrichLeadRow(row, batch, assigneeLabels, now);
 }
