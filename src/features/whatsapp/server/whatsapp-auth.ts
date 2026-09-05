@@ -9,6 +9,10 @@ import {
   type WhatsappInboxAccessContext,
 } from "../contracts/inbox-access.ts";
 import { probeWhatsappInboxPermissions } from "./whatsapp-permissions.ts";
+import {
+  DEFAULT_LOGIN_PORTAL,
+  loginPortalHref,
+} from "@/features/staff-admin/contracts/login-portal";
 
 export type WhatsappInboxAccessResolution =
   | { readonly kind: "granted"; readonly context: WhatsappInboxAccessContext }
@@ -65,10 +69,8 @@ export async function requireWhatsappInboxReadAccess(
 
   if (resolution.kind === "unauthenticated") {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl =
-      safeNext !== "/admin"
-        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
-        : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 

@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSafeAdminRedirect } from "@/server/auth/authorize";
 import { getStaffClaims } from "@/server/auth/session";
+import {
+  DEFAULT_LOGIN_PORTAL,
+  loginPortalHref,
+} from "@/features/staff-admin/contracts/login-portal";
 
 const LEAVE_PERMISSION_PROBE_CODES = [
   "leave.self",
@@ -102,10 +106,8 @@ function redirectLeaveAuthFailure(
 ): never {
   if (resolution.kind === "unauthenticated") {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl =
-      safeNext !== "/admin"
-        ? `/auth/login?next=${encodeURIComponent(safeNext)}`
-        : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 

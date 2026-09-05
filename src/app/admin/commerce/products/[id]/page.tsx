@@ -17,6 +17,10 @@ import { VariantSummaryTable } from "@/features/commerce/components/VariantSumma
 import { ProductMediaGallery } from "@/features/commerce/components/ProductMediaGallery";
 import { CommerceDataUnavailable } from "@/features/commerce/components/CommerceDataUnavailable";
 import { isCommerceReadError } from "@/features/commerce/domain/commerce-read";
+import {
+  DEFAULT_LOGIN_PORTAL,
+  loginPortalHref,
+} from "@/features/staff-admin/contracts/login-portal";
 
 interface AdminCommerceProductDetailPageProps {
   readonly params: Promise<{ id: string }>;
@@ -28,7 +32,9 @@ export default async function AdminCommerceProductDetailPage({ params }: AdminCo
   const { id } = await params;
   const session = await getStaffClaims();
   if (!session) {
-    redirect(`/auth/login?next=${encodeURIComponent(`/admin/commerce/products/${id}`)}`);
+    redirect(
+      loginPortalHref(DEFAULT_LOGIN_PORTAL, `/admin/commerce/products/${id}`)
+    );
   }
   const permissions = await probeCommercePermissions();
   if (!permissions.canRead) {

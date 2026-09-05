@@ -3,6 +3,10 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getStaffClaims } from "@/server/auth/session";
+import {
+  DEFAULT_LOGIN_PORTAL,
+  loginPortalHref,
+} from "@/features/staff-admin/contracts/login-portal";
 
 /** Permission codes probed for the salary surfaces. */
 export type SalaryPermissionCode = "salary.manage" | "salary.self";
@@ -56,7 +60,8 @@ export async function requireSalaryAccess(
   const context = await getSalaryAccessContext();
 
   if (!context) {
-    redirect(`/auth/login?next=${encodeURIComponent(currentPath)}`);
+    // The Super Admin portal: this guard only ever protects /admin.
+    redirect(loginPortalHref(DEFAULT_LOGIN_PORTAL, currentPath));
   }
 
   if (!context.canManageSalary && !context.canViewOwnSalary) {

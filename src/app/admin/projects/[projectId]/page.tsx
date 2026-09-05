@@ -23,6 +23,10 @@ import {
   LiveProjectExecutionWorkspace,
   ProjectExecutionHighLevelCard,
 } from "@/features/projects/components/execution/LiveProjectExecutionWorkspace";
+import {
+  DEFAULT_LOGIN_PORTAL,
+  loginPortalHref,
+} from "@/features/staff-admin/contracts/login-portal";
 
 interface AdminProjectDetailPageProps {
   params: Promise<{ projectId: string }>;
@@ -34,7 +38,9 @@ export default async function AdminProjectDetailPage({
   const { projectId } = await params;
   const session = await getStaffClaims();
   if (!session) {
-    redirect(`/auth/login?next=${encodeURIComponent(`/admin/projects/${projectId}`)}`);
+    redirect(
+      loginPortalHref(DEFAULT_LOGIN_PORTAL, `/admin/projects/${projectId}`)
+    );
   }
   const [permissions, detail] = await Promise.all([
     probeProjectPermissions(),

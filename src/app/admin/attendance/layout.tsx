@@ -10,7 +10,7 @@ export default async function AttendanceLayout({ children }: { children: ReactNo
   const resolution = await resolveAttendanceAccess();
 
   if (resolution.kind === "unauthenticated") {
-    redirect("/auth/login?next=%2Fadmin%2Fattendance");
+    redirect("/auth/login?portal=admin&next=%2Fadmin%2Fattendance");
   }
 
   if (resolution.kind === "inactive") {

@@ -18,7 +18,7 @@ export const metadata = {
 export default async function AdminProjectsPage() {
   const session = await getStaffClaims();
   if (!session) {
-    redirect("/auth/login?next=%2Fadmin%2Fprojects");
+    redirect("/auth/login?portal=admin&next=%2Fadmin%2Fprojects");
   }
   const permissions = await probeProjectPermissions();
   if (!permissions.canReadProjects && !permissions.canReadDesign) {

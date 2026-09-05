@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getStaffClaims, type StaffUserSession } from "./session";
+import {
+  DEFAULT_LOGIN_PORTAL,
+  loginPortalHref,
+} from "@/features/staff-admin/contracts/login-portal";
 
 /**
  * Sanitizes return path parameter to ensure redirect target is strictly within /admin boundaries.
@@ -40,7 +44,8 @@ export async function requireStaffPermission(
 
   if (!session) {
     const safeNext = getSafeAdminRedirect(currentPath);
-    const loginUrl = safeNext !== "/admin" ? `/auth/login?next=${encodeURIComponent(safeNext)}` : "/auth/login";
+    // The Super Admin portal: this guard only ever protects /admin.
+    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
     redirect(loginUrl);
   }
 
