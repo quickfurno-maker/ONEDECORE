@@ -1,30 +1,46 @@
 "use client";
 
-import { useActionState } from "react";
-import { loginAction, type LoginState } from "./actions";
+import { useState } from "react";
 
 interface LoginFormProps {
   nextParam?: string;
+  /** Set when the previous attempt failed. The reason is never disclosed. */
+  hasError?: boolean;
 }
 
-const initialState: LoginState = {
-  error: null,
-};
-
-export function LoginForm({ nextParam }: LoginFormProps) {
-  const [state, formAction, isPending] = useActionState(loginAction, initialState);
+/**
+ * An ordinary HTML form posting to an ordinary Route Handler.
+ *
+ * This deliberately does NOT use `useActionState`/a Server Action. In production
+ * the Server Action authenticated successfully and the browser still received no
+ * session cookie — the `Set-Cookie` was written during an RSC mutation that the
+ * navigation aborted ("The destination stream closed early"), so it never
+ * applied. A plain POST answered with a plain 303 makes cookie delivery an
+ * ordinary HTTP response property instead.
+ *
+ * The component stays a Client Component only for the pending affordance, which
+ * is presentation. If its JavaScript never loads, the form still submits and
+ * login still works.
+ */
+export function LoginForm({ nextParam, hasError = false }: LoginFormProps) {
+  const [isPending, setIsPending] = useState(false);
 
   return (
-    <form action={formAction} className="space-y-6" noValidate>
+    <form
+      method="post"
+      action="/auth/login/submit"
+      className="space-y-6"
+      onSubmit={() => setIsPending(true)}
+    >
       {nextParam && <input type="hidden" name="next" value={nextParam} />}
 
-      {state?.error && (
+      {hasError && (
         <div
           role="alert"
           aria-live="polite"
           className="rounded-md border border-red-500/40 bg-red-950/30 p-3.5 text-xs font-medium text-red-200"
         >
-          {state.error}
+          Invalid staff credentials.
         </div>
       )}
 

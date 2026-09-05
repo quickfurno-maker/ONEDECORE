@@ -49,7 +49,8 @@ const executableSql = (rel: string) =>
     .join("\n");
 
 const MIGRATION = "supabase/migrations/20260903160000_staff_phone_login_credentials.sql";
-const LOGIN_ACTION = "src/app/auth/login/actions.ts";
+/** The login mutation authority — now a Route Handler flow, not a Server Action. */
+const LOGIN_ACTION = "src/features/staff-admin/server/staff-login-submit.ts";
 const LOGIN_FORM = "src/app/auth/login/login-form.tsx";
 const PANEL = "src/features/staff-admin/components/StaffLoginAccessPanel.tsx";
 const CREDENTIAL_ACTIONS = "src/features/staff-admin/server/staff-credential-actions.ts";
@@ -177,25 +178,20 @@ describe("login routing — one field, two credential paths", () => {
     assert.match(source, /signInWithPassword\(\{\s*email: identifier\.toLowerCase\(\)/);
   });
 
-  test("every authentication failure returns the same generic message", () => {
+  test("every authentication failure returns the same generic result", () => {
     const source = read(LOGIN_ACTION);
-    assert.match(source, /const GENERIC_ERROR = "Invalid staff credentials\.";/);
-    // Wrong phone, wrong password and revoked all funnel into GENERIC_ERROR.
-    const returns = source.match(/return \{ error: [^}]+\}/g) ?? [];
-    const distinct = new Set(returns.map((line) => line.trim()));
-    assert.ok(
-      [...distinct].every(
-        (line) =>
-          line.includes("GENERIC_ERROR") ||
-          line.includes("Enter your staff login and password.")
-      ),
-      `unexpected error text: ${[...distinct].join(" | ")}`
-    );
+    // Wrong phone, wrong password and revoked all funnel through one helper
+    // carrying one opaque code.
+    assert.match(source, /export const LOGIN_ERROR_CODE = "invalid";/);
+    assert.ok((source.match(/return fail\(\);/g) ?? []).length >= 4);
+
+    // The message itself lives in the form, so the URL never carries a reason.
+    assert.match(read(LOGIN_FORM), /Invalid staff credentials\./);
   });
 
   test("a revoked account is signed out even with a correct password", () => {
     const source = read(LOGIN_ACTION);
-    assert.match(source, /loginRecord\?\.accessState === "revoked"/);
+    assert.match(source, /accessState === "revoked"/);
     assert.match(source, /await supabase\.auth\.signOut\(\)/);
   });
 
