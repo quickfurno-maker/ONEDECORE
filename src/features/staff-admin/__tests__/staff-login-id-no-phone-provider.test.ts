@@ -1018,13 +1018,72 @@ describe("the login portal contract", () => {
     assert.equal(inferLoginPortalFromIdentifier(`+91${DIGITS}`), "admin");
   });
 
-  test("an explicitly posted portal wins; only a missing one is inferred", () => {
-    assert.equal(resolveSubmittedPortal("admin", DIGITS), "admin");
-    assert.equal(resolveSubmittedPortal("staff", "owner@onedecore.in"), "staff");
-    assert.equal(resolveSubmittedPortal("", DIGITS), "staff");
-    assert.equal(resolveSubmittedPortal(null, "owner@onedecore.in"), "admin");
-    // A crafted value cannot select a contract, and cannot suppress inference.
-    assert.equal(resolveSubmittedPortal("nonsense", DIGITS), "staff");
+  test("an explicitly posted portal wins", () => {
+    assert.deepEqual(resolveSubmittedPortal("admin", DIGITS), {
+      kind: "resolved",
+      portal: "admin",
+      source: "explicit",
+    });
+    assert.deepEqual(resolveSubmittedPortal("staff", "owner@onedecore.in"), {
+      kind: "resolved",
+      portal: "staff",
+      source: "explicit",
+    });
+    /*
+     * Case and SURROUNDING WHITESPACE are normalised — a trailing newline from
+     * a hand-built request is padding around a value the caller clearly meant.
+     * Nothing else is: the normalisation never reaches inside the value.
+     */
+    for (const raw of [" STAFF ", "Staff", "staff\n", "\tstaff"]) {
+      assert.deepEqual(
+        resolveSubmittedPortal(raw, "owner@onedecore.in"),
+        { kind: "resolved", portal: "staff", source: "explicit" },
+        JSON.stringify(raw)
+      );
+    }
+  });
+
+  test("ONLY an absent field may be inferred from the identifier", () => {
+    // `null` means the field was not in the FormData at all — a form cached
+    // before the split. This is the sole legacy path.
+    assert.deepEqual(resolveSubmittedPortal(null, DIGITS), {
+      kind: "resolved",
+      portal: "staff",
+      source: "legacy",
+    });
+    assert.deepEqual(resolveSubmittedPortal(null, "owner@onedecore.in"), {
+      kind: "resolved",
+      portal: "admin",
+      source: "legacy",
+    });
+  });
+
+  test("a present-but-unrecognised portal is INVALID, never inferred", () => {
+    /*
+     * The bug this replaces: a crafted `portal` fell through to inference, so
+     * `portal=../../etc/passwd` with a 10-digit identifier still reached the
+     * STAFF credential contract. Present-and-unrecognised now fails closed.
+     */
+    for (const raw of [
+      "",
+      "   ",
+      "owner",
+      "staff-admin",
+      "superadmin",
+      "../../etc/passwd",
+      "%00staff",
+      "\u0000staff",
+      "admin;staff",
+      "<script>",
+    ]) {
+      for (const identifier of [DIGITS, "owner@onedecore.in"]) {
+        assert.deepEqual(
+          resolveSubmittedPortal(raw, identifier),
+          { kind: "invalid", portal: "admin" },
+          `${JSON.stringify(raw)} / ${identifier}`
+        );
+      }
+    }
   });
 
   test("the portal link carries the portal and a safe next, never an error", () => {
@@ -1101,8 +1160,75 @@ describe("the login page presents one portal at a time, without JavaScript", () 
     assert.match(form, /type=\{isStaff \? "tel" : "email"\}/);
     assert.match(form, /inputMode=\{isStaff \? "numeric" : "email"\}/);
     assert.match(form, /maxLength=\{isStaff \? 10 : 254\}/);
+    assert.match(form, /pattern=\{isStaff \? "\[0-9\]\{10\}" : undefined\}/);
     // No keystroke filtering: that is what breaks Backspace, paste and IME input.
     assert.doesNotMatch(form, /onKeyDown|preventDefault/);
+  });
+
+  test("BOTH portals label the identifier as a username for password managers", () => {
+    const form = read(LOGIN_FORM);
+    /*
+     * `username` on both, not `email` on the admin one. This is a login
+     * identifier, not a contact field: password managers pair `username` with
+     * `current-password`, and labelling it `email` makes some of them treat it
+     * as a profile detail and offer the wrong entry, or none.
+     */
+    assert.match(form, /autoComplete="username"/);
+    assert.doesNotMatch(code(form), /autoComplete=\{isStaff/);
+    assert.doesNotMatch(code(form), /autoComplete="email"/);
+    // The keyboard is still chosen by type/inputMode, so this changes nothing
+    // about what a phone raises.
+    assert.match(form, /type=\{isStaff \? "tel" : "email"\}/);
+  });
+
+  test("every primary target on the card is at least 44px tall", () => {
+    /*
+     * `min-h-11` is Tailwind's 2.75rem = 44px, the minimum comfortable touch
+     * target. It is asserted in the SOURCE rather than measured in a browser
+     * because padding plus an 11px uppercase label only reaches 44px by font
+     * metrics — a floor should not depend on those.
+     */
+    const form = read(LOGIN_FORM);
+    const page = read(LOGIN_PAGE);
+
+    // Identifier and password inputs.
+    assert.equal(
+      (form.match(/min-h-11/g) ?? []).length,
+      3,
+      "identifier, password and submit each need their own floor"
+    );
+    for (const field of ['id="identifier"', 'id="password"']) {
+      const start = form.indexOf(field);
+      assert.ok(start > 0, `${field} must exist`);
+      const element = form.slice(start, form.indexOf("/>", start));
+      assert.match(element, /min-h-11/, `${field} must be at least 44px tall`);
+    }
+
+    // Submit button, centred inside its floor rather than padded out.
+    const button = form.slice(form.indexOf('type="submit"'));
+    assert.match(button, /min-h-11/);
+    assert.match(button, /items-center/);
+
+    // Both selector tabs, active and inactive.
+    const selector = page.slice(page.indexOf("data-portal-option"));
+    const tabClasses = selector.match(/min-h-11/g) ?? [];
+    assert.ok(
+      tabClasses.length >= 2,
+      `both selector states need a 44px floor, saw ${tabClasses.length}`
+    );
+
+    // The retained secondary switch link is a real target too.
+    const switchLink = page.slice(page.indexOf("copy.switchLabel") - 600);
+    assert.match(switchLink, /min-h-11/);
+  });
+
+  test("mobile inputs stay at text-base so iOS does not zoom on focus", () => {
+    const form = read(LOGIN_FORM);
+    for (const match of form.match(/className="mt-2 block[^"]*"/g) ?? []) {
+      assert.match(match, /text-base/);
+      assert.match(match, /sm:text-sm/);
+      assert.match(match, /w-full/);
+    }
   });
 });
 

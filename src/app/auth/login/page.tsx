@@ -87,10 +87,16 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 href={loginPortalHref(candidate, nextParam)}
                 aria-current={isActive ? "page" : undefined}
                 data-portal-option={candidate}
+                /*
+                 * `min-h-11` is 44px: the minimum comfortable touch target, and
+                 * a floor that does not depend on the font metrics of an 11px
+                 * uppercase label. The content is centred inside it rather than
+                 * padded out, so the card does not grow bulky on a small phone.
+                 */
                 className={
                   isActive
-                    ? "rounded-md border border-amber-400/70 bg-amber-500/10 px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-amber-300 sm:text-xs"
-                    : "rounded-md border border-neutral-700 bg-neutral-900/60 px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider text-neutral-400 transition-colors hover:border-neutral-600 hover:text-neutral-200 sm:text-xs"
+                    ? "flex min-h-11 items-center justify-center rounded-md border border-amber-400/70 bg-amber-500/10 px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-amber-300 sm:text-xs"
+                    : "flex min-h-11 items-center justify-center rounded-md border border-neutral-700 bg-neutral-900/60 px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider text-neutral-400 transition-colors hover:border-neutral-600 hover:text-neutral-200 sm:text-xs"
                 }
               >
                 {LOGIN_PORTAL_COPY[candidate].selectorLabel}
@@ -101,11 +107,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         <LoginForm portal={portal} nextParam={nextParam} hasError={hasError} />
 
-        {/* The same escape hatch in words, for anyone who read past the tabs. */}
+        {/*
+         * The same escape hatch in words, for anyone who read past the tabs.
+         * It is a real tap target too, not a hairline of text: 44px tall, with
+         * the link filling the row rather than only its own glyphs.
+         */}
         <p className="text-center">
           <Link
             href={loginPortalHref(otherPortal, nextParam)}
-            className="text-[11px] font-medium text-neutral-400 underline decoration-neutral-700 underline-offset-4 transition-colors hover:text-amber-300"
+            className="inline-flex min-h-11 items-center justify-center px-3 text-[11px] font-medium text-neutral-400 underline decoration-neutral-700 underline-offset-4 transition-colors hover:text-amber-300"
           >
             {copy.switchLabel}
           </Link>

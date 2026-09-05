@@ -92,14 +92,23 @@ export function LoginForm({ portal, nextParam, hasError = false }: LoginFormProp
            */
           type={isStaff ? "tel" : "email"}
           inputMode={isStaff ? "numeric" : "email"}
-          autoComplete={isStaff ? "username" : "email"}
+          /*
+           * `username`, on BOTH portals.
+           *
+           * This is a login identifier, not a contact field. Password managers
+           * pair `username` with `current-password`; labelling the admin field
+           * `email` makes some of them treat it as a profile detail and offer
+           * the wrong entry, or none. The keyboard is still chosen by
+           * type/inputMode above, so the mobile keypad is unaffected.
+           */
+          autoComplete="username"
           required
           maxLength={isStaff ? 10 : 254}
           pattern={isStaff ? "[0-9]{10}" : undefined}
           disabled={isPending}
           placeholder={copy.identifierPlaceholder}
           aria-describedby={copy.identifierHelp ? "identifier-hint" : undefined}
-          className="mt-2 block w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3.5 py-2.5 text-base text-neutral-100 placeholder-neutral-500 transition-colors focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 disabled:opacity-50 sm:text-sm"
+          className="mt-2 block min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3.5 py-2.5 text-base text-neutral-100 placeholder-neutral-500 transition-colors focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 disabled:opacity-50 sm:text-sm"
         />
         {copy.identifierHelp && (
           <p id="identifier-hint" className="mt-2 text-[11px] leading-relaxed text-neutral-400">
@@ -124,7 +133,7 @@ export function LoginForm({ portal, nextParam, hasError = false }: LoginFormProp
           maxLength={128}
           disabled={isPending}
           placeholder="••••••••••••"
-          className="mt-2 block w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3.5 py-2.5 text-base text-neutral-100 placeholder-neutral-500 transition-colors focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 disabled:opacity-50 sm:text-sm"
+          className="mt-2 block min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3.5 py-2.5 text-base text-neutral-100 placeholder-neutral-500 transition-colors focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 disabled:opacity-50 sm:text-sm"
         />
       </div>
 
@@ -132,7 +141,7 @@ export function LoginForm({ portal, nextParam, hasError = false }: LoginFormProp
         <button
           type="submit"
           disabled={isPending}
-          className="w-full rounded-md bg-gradient-to-r from-amber-600 to-amber-500 px-4 py-3 text-xs font-bold uppercase tracking-widest text-neutral-950 transition-all hover:from-amber-500 hover:to-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-11 w-full items-center justify-center rounded-md bg-gradient-to-r from-amber-600 to-amber-500 px-4 py-3 text-xs font-bold uppercase tracking-widest text-neutral-950 transition-all hover:from-amber-500 hover:to-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? "Authenticating..." : copy.submitLabel}
         </button>

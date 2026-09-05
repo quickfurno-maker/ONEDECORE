@@ -31,7 +31,7 @@ export type LoginPortal = (typeof LOGIN_PORTALS)[number];
  * `/admin` is the Super Admin entry point, so an unqualified visit defaults
  * there. Staff reach their portal by choosing it, or by a link that names it.
  */
-export const DEFAULT_LOGIN_PORTAL: LoginPortal = "admin";
+export const DEFAULT_LOGIN_PORTAL = "admin" as const satisfies LoginPortal;
 
 /**
  * Normalises a portal value from a URL or a form field.
@@ -83,21 +83,61 @@ export function inferLoginPortalFromIdentifier(identifier: string): LoginPortal 
 }
 
 /**
+ * What a submission's `portal` field resolved to.
+ *
+ * `invalid` is a real outcome, not a variant of the default. It carries the
+ * safe default portal ONLY so the failure has something to render, and the
+ * caller must refuse the submission outright rather than run that contract.
+ */
+export type SubmittedPortalResolution =
+  | {
+      readonly kind: "resolved";
+      readonly portal: LoginPortal;
+      /** `legacy` means the field was absent and the identifier decided. */
+      readonly source: "explicit" | "legacy";
+    }
+  | { readonly kind: "invalid"; readonly portal: typeof DEFAULT_LOGIN_PORTAL };
+
+/**
  * The portal a submission runs under.
  *
- * An explicitly posted, recognised portal always wins. Only a MISSING field
- * falls back to inference, so a stale cached form keeps working without letting
- * a crafted value pick a contract.
+ * THREE CASES, AND THE THIRD ONE FAILS CLOSED
+ *
+ * 1. The field is ABSENT (`rawPortal === null`). This is the only case that may
+ *    infer, and it exists solely for a form cached before the split, which
+ *    posts no such field. The identifier decides, exactly as the server did
+ *    before the split existed.
+ *
+ * 2. The field is present and recognised. It is used.
+ *
+ * 3. The field is present and is anything else — empty, whitespace, "owner",
+ *    "../../etc/passwd". It is INVALID, and inference is not a fallback for it.
+ *    Letting a crafted value drop through to inference would mean an attacker
+ *    who sends `portal=<garbage>` with a 10-digit identifier still reaches the
+ *    staff credential contract, which is precisely the "explicit portal wins"
+ *    guarantee this type exists to make true.
+ *
+ * Only ABSENT may infer. Present-but-unrecognised is refused.
  */
 export function resolveSubmittedPortal(
-  rawPortal: string | null | undefined,
+  /** `null` means the field was ABSENT. An empty string means it was blank. */
+  rawPortal: string | null,
   identifier: string
-): LoginPortal {
-  const value = rawPortal?.trim().toLowerCase();
-  if (value && (LOGIN_PORTALS as readonly string[]).includes(value)) {
-    return value as LoginPortal;
+): SubmittedPortalResolution {
+  if (rawPortal === null) {
+    return {
+      kind: "resolved",
+      portal: inferLoginPortalFromIdentifier(identifier),
+      source: "legacy",
+    };
   }
-  return inferLoginPortalFromIdentifier(identifier);
+
+  const value = rawPortal.trim().toLowerCase();
+  if ((LOGIN_PORTALS as readonly string[]).includes(value)) {
+    return { kind: "resolved", portal: value as LoginPortal, source: "explicit" };
+  }
+
+  return { kind: "invalid", portal: DEFAULT_LOGIN_PORTAL };
 }
 
 export interface LoginPortalCopy {

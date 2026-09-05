@@ -39,6 +39,7 @@ import {
   LOGIN_ERROR_CODE,
   MAX_LOGIN_BODY_BYTES,
   handleStaffLoginSubmit,
+  type LoginClientFactory,
   type LoginCookieAdapter,
   type LoginSupabaseClient,
   type PendingAuthCookie,
@@ -257,11 +258,30 @@ async function submit(
   requestOptions: RequestOptions = {}
 ) {
   const { factory, recorded } = makeClient(options);
+
+  /*
+   * How many times a Supabase client was CONSTRUCTED.
+   *
+   * Counting sign-ins is not enough for the fail-closed cases: the contract is
+   * that a refused submission never reaches Supabase at all, and building the
+   * client is the first step that would.
+   */
+  let built = 0;
+  const countingFactory: LoginClientFactory = (adapter) => {
+    built += 1;
+    return factory(adapter);
+  };
+
   const response = await handleStaffLoginSubmit(
     loginRequest(fields, requestOptions),
-    factory
+    countingFactory
   );
-  return { response, recorded, location: response.headers.get("location") ?? "" };
+  return {
+    response,
+    recorded,
+    clientsBuilt: () => built,
+    location: response.headers.get("location") ?? "",
+  };
 }
 
 /* ========================================================================== */
@@ -1431,19 +1451,71 @@ describe("the portal survives the round trip", () => {
     assert.ok(!admin.recorded.rpcs.includes("record_staff_first_login"));
   });
 
-  test("a crafted portal value cannot invent a third contract", async () => {
-    // An unrecognised portal is not honoured, echoed, or half-applied: the
-    // submission falls back to reading the identifier, and the reply names a
-    // real portal.
-    const { location, recorded } = await submit({
+  test("a crafted portal FAILS CLOSED instead of falling back to inference", async () => {
+    /*
+     * The identifier here is a perfectly good staff mobile. Before this fix an
+     * unrecognised `portal` fell through to inference, so the submission still
+     * reached the staff credential contract — the "explicit portal wins"
+     * guarantee held only for values that were already valid. Now a present
+     * but unrecognised value is refused outright.
+     */
+    for (const portal of [
+      "../../etc/passwd",
+      "owner",
+      "staff-admin",
+      "%00staff",
+      "",
+      "   ",
+    ]) {
+      const { response, location, recorded, clientsBuilt } = await submit({
+        identifier: DIGITS,
+        password: PASSWORD,
+        portal,
+      });
+
+      assert.equal(clientsBuilt(), 0, `${portal}: no Supabase client may be built`);
+      assert.equal(recorded.signIns.length, 0, `${portal}: no credential tested`);
+      assert.equal(response.status, 303);
+
+      const url = new URL(location);
+      // The failure renders on the SAFE DEFAULT portal, never the staff one it
+      // would have been inferred into.
+      assert.equal(url.searchParams.get("portal"), "admin");
+      assert.equal(url.searchParams.get("error"), LOGIN_ERROR_CODE);
+      assert.ok(!location.includes(DIGITS), "the identifier must not be echoed");
+      assert.ok(!location.includes(PASSWORD));
+    }
+  });
+
+  test("an invalid portal never echoes the value it was sent", async () => {
+    const { location } = await submit({
       identifier: DIGITS,
       password: PASSWORD,
       portal: "../../etc/passwd",
+      next: "/admin/crm",
     });
 
-    assert.equal(recorded.signIns[0]!.email, ALIAS);
-    const portal = new URL(location).searchParams.get("portal");
-    assert.ok(portal === null || portal === "staff", `unexpected portal ${portal}`);
     assert.ok(!location.includes("passwd"));
+    assert.ok(!location.includes(".."));
+    // A safe next still survives, so the retry keeps its destination.
+    assert.deepEqual(
+      [...new URL(location).searchParams.keys()].sort(),
+      ["error", "next", "portal"]
+    );
+    assert.equal(new URL(location).searchParams.get("next"), "/admin/crm");
+  });
+
+  test("a submission with a blank portal FIELD is not the same as none", async () => {
+    // Absent -> legacy inference (staff). Present-and-blank -> invalid.
+    const absent = await submit({ identifier: DIGITS, password: PASSWORD });
+    assert.equal(absent.recorded.signIns.length, 1);
+
+    const blank = await submit({
+      identifier: DIGITS,
+      password: PASSWORD,
+      portal: "",
+    });
+    assert.equal(blank.recorded.signIns.length, 0);
+    assert.equal(new URL(blank.location).searchParams.get("portal"), "admin");
   });
 });

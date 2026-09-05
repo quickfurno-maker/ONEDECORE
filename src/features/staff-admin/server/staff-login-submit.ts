@@ -288,12 +288,19 @@ export async function handleStaffLoginSubmit(
   /*
    * Which identity contract this submission is claiming.
    *
-   * The posted field wins. Only a MISSING field falls back to reading the
-   * identifier's shape, which is what a form cached before this change posts —
-   * and is exactly the behaviour that existed before the split, so no staff
-   * member is locked out by a stale page.
+   * ABSENT AND BLANK ARE NOT THE SAME THING
+   *
+   * `readField` would flatten both to "", and that distinction is the whole
+   * guarantee: a form cached before the split posts NO portal field and may
+   * fall back to the identifier's shape, while a field that is present and
+   * unrecognised is a crafted value and is refused outright. So the raw entry
+   * is read here, and absence is passed along as `null`.
+   *
+   * A non-string entry (a file part) counts as present-and-unrecognised.
    */
-  const portal = resolveSubmittedPortal(readField(form, "portal"), identifier);
+  const rawPortal = form.has("portal") ? String(form.get("portal") ?? "") : null;
+  const portalResolution = resolveSubmittedPortal(rawPortal, identifier);
+  const portal = portalResolution.portal;
 
   /*
    * Every captured cookie, in the order @supabase/ssr asked for it.
@@ -342,6 +349,17 @@ export async function handleStaffLoginSubmit(
     applyCookies(
       NextResponse.redirect(failureUrl(request, safeNext, portal), 303)
     );
+
+  /*
+   * An unrecognised portal is refused before anything else happens.
+   *
+   * No inference, no Supabase client, no credential test — and the invalid
+   * value is never echoed. The failure renders on the safe default portal,
+   * which is all `portalResolution.portal` is carrying here.
+   */
+  if (portalResolution.kind === "invalid") {
+    return fail();
+  }
 
   if (!identifier || !password) {
     return fail();
