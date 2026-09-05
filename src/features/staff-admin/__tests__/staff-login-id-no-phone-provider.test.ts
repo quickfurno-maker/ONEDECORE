@@ -50,7 +50,8 @@ import {
 const root = process.cwd();
 const read = (rel: string) => readFileSync(join(root, rel), "utf8");
 
-const LOGIN_ACTION = "src/app/auth/login/actions.ts";
+/** The login mutation authority — now a Route Handler flow, not a Server Action. */
+const LOGIN_ACTION = "src/features/staff-admin/server/staff-login-submit.ts";
 const LOGIN_FORM = "src/app/auth/login/login-form.tsx";
 const CONTRACT = "src/features/staff-admin/contracts/staff-login-phone.ts";
 const PROVISIONING =
@@ -223,24 +224,31 @@ describe("the login action", () => {
     assert.match(source, /signInWithPassword\(\{\s*email: identifier\.toLowerCase\(\)/);
   });
 
-  test("every failure is the same generic message", () => {
+  test("every failure funnels through ONE generic path", () => {
     const source = read(LOGIN_ACTION);
-    assert.match(source, /const GENERIC_ERROR = "Invalid staff credentials\.";/);
-    const returns = source.match(/return \{ error: [^}]+\}/g) ?? [];
-    for (const line of returns) {
-      assert.ok(
-        line.includes("GENERIC_ERROR") ||
-          line.includes("Enter your staff login and password."),
-        `unexpected error text: ${line}`
-      );
-    }
+
+    // A single opaque code, and a single helper that builds every failure
+    // response. Wrong password, unknown login, revoked and a submitted alias are
+    // therefore indistinguishable to the caller by construction.
+    assert.match(source, /export const LOGIN_ERROR_CODE = "invalid";/);
+    assert.match(source, /url\.searchParams\.set\("error", LOGIN_ERROR_CODE\)/);
+
+    const failures = source.match(/return fail\(\);/g) ?? [];
+    assert.ok(failures.length >= 4, `expected several failures to share fail(): ${failures.length}`);
+
+    // Exactly one place sets the error param, and it sets only that code.
+    // (The literal "revoked" DOES appear in this module, as the access-state
+    // comparison — it is never emitted to the browser.)
+    const errorSets = source.match(/searchParams\.set\("error",[^)]*\)/g) ?? [];
+    assert.equal(errorSets.length, 1, "only one error code may ever be emitted");
+    assert.match(errorSets[0]!, /LOGIN_ERROR_CODE/);
   });
 
   test("the first-login and authorize flow is preserved", () => {
     const source = read(LOGIN_ACTION);
     assert.match(source, /record_staff_first_login/);
     assert.match(source, /requested_permission: "admin\.access"/);
-    assert.match(source, /getSafeAdminRedirect\(nextRaw\)/);
+    assert.match(source, /getSafeAdminRedirect\(readField\(form, "next"\)\)/);
 
     // The revoked check still runs after a genuine sign-in.
     assert.match(source, /accessState === "revoked"/);
@@ -299,14 +307,15 @@ describe("the alias is refused when typed into the login form", () => {
     // The guard returns immediately, with the shared message — indistinguishable
     // from a wrong password, so the form cannot be used to probe for aliases.
     const guardBody = source.slice(guardAt, guardAt + 120);
-    assert.match(guardBody, /return \{ error: GENERIC_ERROR \}/);
+    assert.match(guardBody, /return fail\(\);/);
   });
 
   test("no authentication is attempted for a submitted alias", () => {
     const source = read(LOGIN_ACTION);
     const guardAt = source.indexOf("isStaffLoginAuthAlias(identifier)");
-    const clientAt = source.indexOf("await createClient()");
-    const firstSignIn = source.indexOf("signInWithPassword");
+    const clientAt = source.indexOf("createClientWithCookies({");
+    // The CALL, not the interface declaration that also names it.
+    const firstSignIn = source.indexOf("await supabase.auth.signInWithPassword(");
 
     // The guard runs before the Supabase client even exists, so a submitted
     // alias produces no credential test of any kind.
