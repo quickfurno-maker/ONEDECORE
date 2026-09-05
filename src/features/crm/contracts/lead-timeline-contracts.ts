@@ -11,6 +11,7 @@
  */
 
 import { formatCrmCodeLabel } from "./crm-labels.ts";
+import { humanizeCrmUnderscoreCode } from "./lead-activity-history.ts";
 
 /* -------------------------------------------------------------------------- */
 /* Categories                                                                  */
@@ -345,6 +346,96 @@ export function formatTimelineTemperatureDetail(
   };
 
   return `${label(data.from)} \u2192 ${label(data.to)}`;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Activity detail — outcome and conversation note from existing metadata      */
+/* -------------------------------------------------------------------------- */
+
+/** Bounded second line. A 1000-char note must not run away with the timeline. */
+export const CRM_TIMELINE_ACTIVITY_DETAIL_MAX = 200;
+
+const FINISHED_ACTIVITY_TYPES = [
+  "follow_up.completed",
+  "follow_up.cancelled",
+] as const;
+
+/** Only strings are usable as display text; anything else is ignored. */
+function readTextField(source: Record<string, unknown>, key: string): string | null {
+  const value = source[key];
+  if (typeof value !== "string") {
+    return null;
+  }
+  // Newlines are collapsed because this is a single-line timeline detail; the
+  // full multi-line note stays visible in the activity log.
+  const flattened = value.replace(/\s+/g, " ").trim();
+  return flattened.length > 0 ? flattened : null;
+}
+
+function clampDetail(value: string): string {
+  if (value.length <= CRM_TIMELINE_ACTIVITY_DETAIL_MAX) {
+    return value;
+  }
+  return `${value.slice(0, CRM_TIMELINE_ACTIVITY_DETAIL_MAX - 1).trimEnd()}…`;
+}
+
+/**
+ * The detail line for a timeline activity entry.
+ *
+ * `lead_activities.summary` for a finished follow-up is the fixed string
+ * "Follow-up completed", which merely restates the "Activity completed" title
+ * while the outcome and the client's own words sit unused in `metadata`. This
+ * reads them instead — no new persistence, no backfill, no schema change.
+ *
+ * Metadata shape has varied across migrations, so every field is optional and
+ * every read fails soft:
+ *
+ *   current  { outcomeCode, outcomeDisplay, note, wasPrimary, resolution }
+ *   legacy   { outcome }
+ *   on-hold  { reason }
+ *
+ * Returns null when nothing better than the generic summary is available, so a
+ * finished activity shows one clean line rather than a duplicated one.
+ */
+export function formatTimelineActivityDetail(
+  activityType: string,
+  summary: string | null,
+  metadata: unknown
+): string | null {
+  const isFinished = (FINISHED_ACTIVITY_TYPES as readonly string[]).includes(
+    activityType
+  );
+
+  if (!isFinished) {
+    const fallback = summary?.trim();
+    return fallback ? clampDetail(fallback) : null;
+  }
+
+  const data =
+    metadata && typeof metadata === "object" && !Array.isArray(metadata)
+      ? (metadata as Record<string, unknown>)
+      : {};
+
+  // `outcomeDisplay` and the legacy `outcome` are already human text. The raw
+  // `outcomeCode` is a machine code and is only ever shown humanized.
+  const outcome =
+    readTextField(data, "outcomeDisplay") ??
+    readTextField(data, "outcome") ??
+    humanizeCrmUnderscoreCode(readTextField(data, "outcomeCode"));
+
+  const note = readTextField(data, "note");
+
+  if (outcome && note) {
+    return clampDetail(`${outcome} · “${note}”`);
+  }
+  if (outcome) {
+    return clampDetail(outcome);
+  }
+  if (note) {
+    return clampDetail(`“${note}”`);
+  }
+
+  return null;
 }
 
 /** Asia/Kolkata display, matching every other CRM timestamp surface. */
