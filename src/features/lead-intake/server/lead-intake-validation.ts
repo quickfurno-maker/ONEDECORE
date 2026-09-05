@@ -422,11 +422,32 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
   let qualifier: { kind: string; code: string } | null = null;
 
   if (isPublicConsult) {
-    if (input.requirements.property != null) {
-      fields.push("requirements.property");
+    /*
+     * UNASKED FIELDS ARE REJECTED, NOT IGNORED.
+     *
+     * The public form collects a service, one qualifier and contact details.
+     * Anything else in the body was never on screen, so accepting it would let a
+     * tampered or stale client put an answer in CRM that no customer gave —
+     * which is the exact failure this variant exists to prevent. Silently
+     * dropping them would be almost as bad: the caller would believe it was
+     * stored.
+     */
+    for (const unasked of [
+      "property",
+      "timeline",
+      "rooms",
+      "budgetComfort",
+      "estimate",
+    ] as const) {
+      if (input.requirements[unasked] != null) {
+        fields.push(`requirements.${unasked}`);
+      }
     }
-    if (input.requirements.timeline != null) {
-      fields.push("requirements.timeline");
+
+    // The public form has no email field, so neither the address nor its
+    // consent may arrive under this version.
+    if (isPlainObject(input.contact) && input.contact.email != null) {
+      fields.push("contact.email");
     }
 
     if (!isPlainObject(input.requirements.qualifier)) {
@@ -486,9 +507,9 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
   }
 
   let rooms: LeadRoomCode[] = [];
-  if (input.requirements.rooms == null && isPublicConsult) {
-    // The public form has no room checklist, so an absent list is correct
-    // rather than an empty answer to a question that was asked.
+  if (isPublicConsult) {
+    // Absence is required and already enforced above; the stored value is an
+    // empty list because no room question was ever asked.
     rooms = [];
   } else if (!Array.isArray(input.requirements.rooms)) {
     fields.push("requirements.rooms");
@@ -606,6 +627,10 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     );
     if (input.consent.serviceChannels.phone !== true) {
       fields.push("consent.serviceChannels.phone");
+    }
+    // The public form collects no email, so it may not consent to one either.
+    if (isPublicConsult && input.consent.serviceChannels.email != null) {
+      fields.push("consent.serviceChannels.email");
     }
   }
 

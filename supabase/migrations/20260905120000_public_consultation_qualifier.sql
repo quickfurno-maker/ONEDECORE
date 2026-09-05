@@ -131,7 +131,12 @@ begin
   if p_phone_fingerprint_hash is null or p_phone_fingerprint_hash !~ '^[a-f0-9]{64}$' then
     raise exception 'validation: phone_fingerprint_hash' using errcode = '22023';
   end if;
-  if p_planner_version is null or length(p_planner_version) < 1 or length(p_planner_version) > 80 then
+  -- EXACT allowlist. This function is SECURITY DEFINER and is therefore its own
+  -- trust boundary: it must enforce the discriminator itself rather than rely on
+  -- the TypeScript route that normally calls it.
+  if p_planner_version is null or p_planner_version not in (
+    'home-r4-v1', 'public-consult-v1'
+  ) then
     raise exception 'validation: planner_version' using errcode = '22023';
   end if;
   if p_submitted_name is null or length(trim(p_submitted_name)) < 2 or length(trim(p_submitted_name)) > 120 then
@@ -150,9 +155,8 @@ begin
   if p_service_code not in ('complete-home-interiors', 'modular-kitchens', 'custom-wardrobes') then
     raise exception 'validation: service_code' using errcode = '22023';
   end if;
-  -- Optional, NOT loosened: still allowlisted whenever a value is supplied.
-  -- Null means the customer was never asked (public consultation form), which
-  -- is a truthful absence rather than a default the UI invented.
+  -- Shape checks first: any supplied value must be canonical, whichever version
+  -- is in play.
   if p_property_code is not null and p_property_code not in (
     'apartment-1bhk', 'apartment-2bhk', 'apartment-3bhk',
     'apartment-4bhk-plus', 'villa-rowhouse', 'single-room'
@@ -165,8 +169,8 @@ begin
     raise exception 'validation: timeline_code' using errcode = '22023';
   end if;
 
-  -- The service-specific qualifier. Kind and code are validated as a PAIR, so a
-  -- wardrobe enquiry can never arrive carrying a BHK.
+  -- The qualifier is a PAIR, and its kind must be the one the service implies,
+  -- so a wardrobe enquiry can never arrive carrying a BHK.
   if (p_qualifier_kind is null) <> (p_qualifier_code is null) then
     raise exception 'validation: qualifier_pair' using errcode = '22023';
   end if;
@@ -194,12 +198,63 @@ begin
       raise exception 'validation: qualifier_kind' using errcode = '22023';
     end if;
 
-    -- The kind must be the one the chosen service implies.
     if (p_service_code = 'complete-home-interiors' and p_qualifier_kind <> 'home-size')
       or (p_service_code = 'modular-kitchens' and p_qualifier_kind <> 'kitchen-scope')
       or (p_service_code = 'custom-wardrobes' and p_qualifier_kind <> 'wardrobe-count')
     then
       raise exception 'validation: qualifier_service_mismatch' using errcode = '22023';
+    end if;
+  end if;
+
+  -- ---------------------------------------------------------------------
+  -- Planner-version discriminator.
+  --
+  -- Making property/timeline nullable is what the public form needs; leaving
+  -- them optional for EVERY caller would have quietly let the legacy planner
+  -- omit answers it really does collect. Each version is strict about exactly
+  -- the fields its own form asks for.
+  -- ---------------------------------------------------------------------
+  if p_planner_version = 'home-r4-v1' then
+    if p_property_code is null then
+      raise exception 'validation: property_code' using errcode = '22023';
+    end if;
+    if p_timeline_code is null then
+      raise exception 'validation: timeline_code' using errcode = '22023';
+    end if;
+    if p_qualifier_kind is not null or p_qualifier_code is not null then
+      raise exception 'validation: qualifier_not_allowed' using errcode = '22023';
+    end if;
+
+  elsif p_planner_version = 'public-consult-v1' then
+    if p_qualifier_kind is null then
+      raise exception 'validation: qualifier_required' using errcode = '22023';
+    end if;
+
+    -- Nothing this form never asked for.
+    if p_timeline_code is not null then
+      raise exception 'validation: timeline_not_asked' using errcode = '22023';
+    end if;
+    if p_room_codes is not null and cardinality(p_room_codes) > 0 then
+      raise exception 'validation: rooms_not_asked' using errcode = '22023';
+    end if;
+    if p_budget_comfort_code is not null then
+      raise exception 'validation: budget_not_asked' using errcode = '22023';
+    end if;
+    if p_estimate_snapshot is not null then
+      raise exception 'validation: estimate_not_asked' using errcode = '22023';
+    end if;
+
+    -- property_code must be exactly what the qualifier implies: the customer's
+    -- own home-size answer, or nothing at all. `is distinct from` so a NULL on
+    -- either side still fails closed.
+    if p_property_code is distinct from (
+      case
+        when p_qualifier_kind = 'home-size' and p_qualifier_code <> 'unsure'
+          then p_qualifier_code
+        else null
+      end
+    ) then
+      raise exception 'validation: property_qualifier_mismatch' using errcode = '22023';
     end if;
   end if;
 

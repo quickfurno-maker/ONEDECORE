@@ -38,6 +38,10 @@ import {
   PUBLIC_CONSULT_PLANNER_VERSION,
 } from "../contracts.ts";
 import { validateLeadFormFields } from "../public/lead-form-errors.ts";
+import {
+  acceptIndianMobileInput,
+  acceptIndianMobileKeystroke,
+} from "../public/indian-mobile.ts";
 
 const root = process.cwd();
 const read = (rel: string) => readFileSync(join(root, rel), "utf8");
@@ -283,6 +287,38 @@ describe("no fabricated property or timeline", () => {
     }
   });
 
+  test("the public variant refuses every unasked field", () => {
+    const src = code(read("src/features/lead-intake/server/lead-intake-validation.ts"));
+    // Rejected, not ignored: silently dropping them would let the caller
+    // believe an answer was stored.
+    for (const unasked of ["property", "timeline", "rooms", "budgetComfort", "estimate"]) {
+      assert.ok(src.includes(`"${unasked}"`), `must name ${unasked} as unasked`);
+    }
+    assert.match(src, /isPublicConsult[\s\S]{0,600}contact\.email/);
+    assert.match(src, /isPublicConsult && input\.consent\.serviceChannels\.email/);
+  });
+
+  test("the SQL RPC enforces the same discriminator", () => {
+    const sql = read(MIGRATION);
+    // Exact planner-version allowlist.
+    assert.match(sql, /p_planner_version not in \(\s*'home-r4-v1', 'public-consult-v1'/);
+    // Legacy stays strict.
+    assert.match(sql, /validation: qualifier_not_allowed/);
+    // Public refuses unasked data.
+    for (const rule of [
+      "timeline_not_asked",
+      "rooms_not_asked",
+      "budget_not_asked",
+      "estimate_not_asked",
+      "qualifier_required",
+      "property_qualifier_mismatch",
+    ]) {
+      assert.match(sql, new RegExp(`validation: ${rule}`), `SQL must enforce ${rule}`);
+    }
+    // Null-safe comparison so a mismatch fails closed.
+    assert.match(sql, /p_property_code is distinct from/);
+  });
+
   test("the adapter never writes a default anywhere", () => {
     const src = code(read(ADAPTER));
     for (const forbidden of [
@@ -393,12 +429,114 @@ describe("the visible form is short", () => {
 
   test("a preselected service skips straight to its own question", () => {
     const src = read(FORM);
-    assert.match(src, /searchParams.*get\("service"\)|URLSearchParams/);
-    assert.match(src, /qualifierForService\(candidate\)/);
+    // Handled after mount, never in the state initializer — see the hydration
+    // test below.
+    assert.match(src, /new URLSearchParams\(window\.location\.search\)\.get\("service"\)/);
+    assert.match(src, /qualifierForService\(raw\)/);
     // And the wrapper mounts the adaptive form, not the legacy planner one.
     const wrapper = read(WRAPPER);
     assert.match(wrapper, /ConsultationLeadForm/);
     assert.doesNotMatch(code(wrapper), /HomeLeadCapture|PlanProvider/);
+  });
+
+  test("the deep link is hydration-safe", () => {
+    /*
+     * Reading `window.location.search` in the useState initializer renders ""
+     * on the server and a chosen service on hydration — a first-render mismatch
+     * on exactly the URLs the deep link exists for. The initial value comes
+     * only from the prop; the URL is read after mount.
+     */
+    const src = code(read(FORM));
+    const initializer = src.slice(
+      src.indexOf("const [service, setService]"),
+      src.indexOf("const [qualifierCode")
+    );
+    assert.doesNotMatch(initializer, /window|URLSearchParams|location/);
+    assert.match(initializer, /initialService/);
+
+    // The URL read happens inside an effect.
+    assert.match(src, /useEffect\(\(\) => \{[\s\S]{0,400}URLSearchParams/);
+  });
+
+  test("a kitchen deep link never yields a BHK question", () => {
+    // Whatever the URL says, the qualifier is derived from the service.
+    const q = qualifierForService("modular-kitchens");
+    assert.ok(q);
+    assert.equal(q.kind, "kitchen-scope");
+    assert.notEqual(q.kind, "home-size");
+  });
+
+  /* ---------------------------------------------------------------------- */
+  /* Mobile input                                                            */
+  /* ---------------------------------------------------------------------- */
+
+  test("the mobile handler passes the VALUE, never a keystroke", () => {
+    /*
+     * `acceptIndianMobileKeystroke` takes the whole candidate value. Passing
+     * `event.key` to it blocked Backspace, Delete, Tab and the arrow keys — an
+     * accessibility and conversion regression.
+     */
+    const src = code(read(FORM));
+    assert.doesNotMatch(src, /acceptIndianMobileKeystroke\(\s*event\.key/);
+    assert.doesNotMatch(src, /onKeyDown/);
+    assert.match(src, /onChange=\{\(event\) => applyMobileRaw\(event\.target\.value\)\}/);
+    assert.match(src, /acceptIndianMobileKeystroke\(raw\)/);
+  });
+
+  test("it reuses the legacy paste normalisation", () => {
+    const src = code(read(FORM));
+    assert.match(src, /onPaste=/);
+    assert.match(src, /clipboardData\.getData\("text"\)/);
+    assert.match(src, /acceptIndianMobileInput\(text\)/);
+    // maxLength stays, so the paste must be normalised BEFORE the browser
+    // truncates a "+91..." value.
+    assert.match(src, /maxLength=\{10\}/);
+    assert.match(src, /inputMode="numeric"/);
+    assert.match(src, /autoComplete="tel-national"/);
+  });
+
+  test("the canonical helper accepts progressive and pasted forms", () => {
+    // Progressive national entry.
+    for (const partial of ["", "7", "74", "744786", "7447863402"]) {
+      assert.equal(
+        acceptIndianMobileKeystroke(partial).ok,
+        true,
+        `progressive "${partial}" must be accepted`
+      );
+    }
+    // Pasted E.164 / 91-prefixed forms normalise to the national 10.
+    for (const pasted of ["+917447863402", "917447863402"]) {
+      const result = acceptIndianMobileInput(pasted);
+      assert.equal(result.ok, true, pasted);
+      if (result.ok) assert.equal(result.national, "7447863402");
+    }
+    // An overlong digit run is NOT silently truncated.
+    assert.equal(acceptIndianMobileKeystroke("74478634021234").ok, false);
+  });
+
+  test("field errors clear as the visitor corrects them", () => {
+    const src = code(read(FORM));
+    assert.match(src, /const clearFieldError = /);
+    for (const key of [
+      "service",
+      "qualifier",
+      "name",
+      "mobile",
+      "serviceEnquiryConsent",
+      "servicePhoneConsent",
+    ]) {
+      assert.ok(
+        src.includes(`clearFieldError("${key}")`),
+        `${key} error must clear on correction`
+      );
+    }
+  });
+
+  test("submit appears only once the Contact stage is reached", () => {
+    const src = code(read(FORM));
+    // Offering "submit" while the contact fields are still hidden reads as a
+    // broken step counter.
+    assert.match(src, /\{qualifierCode \? \([\s\S]{0,200}type="submit"/);
   });
 });
 

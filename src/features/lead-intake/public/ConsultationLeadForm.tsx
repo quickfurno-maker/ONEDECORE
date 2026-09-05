@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { collectLeadFormAttribution } from "./lead-form-attribution.ts";
 import {
   CONSULTATION_CONTACT_LABEL,
@@ -32,12 +32,14 @@ import {
   mapClientResultToUxState,
   validateLeadFormFields,
   type LeadFormFieldErrors,
+  type LeadFormFieldKey,
   type LeadFormUxState,
 } from "./lead-form-errors.ts";
 import {
   acceptIndianMobileInput,
   acceptIndianMobileKeystroke,
   INDIAN_MOBILE_HELPER,
+  INDIAN_MOBILE_INVALID_MESSAGE,
 } from "./indian-mobile.ts";
 import {
   fingerprintLeadPayload,
@@ -78,20 +80,15 @@ export function ConsultationLeadForm({
   const mode = modeProp ?? getLeadFormMode();
 
   /*
-   * A service link (`/?service=modular-kitchens#consultation`) lands here with
-   * its service already chosen, so the visitor is not asked again — and the
-   * KITCHEN question appears immediately rather than a home-type question.
-   *
-   * Read once, lazily, and only for a service this form actually offers.
+   * The first render must be identical on the server and in the browser, so the
+   * initial value comes ONLY from the explicit prop. Reading
+   * `window.location.search` in the initializer would render "" on the server
+   * and a chosen service on hydration — a mismatch on exactly the URLs the deep
+   * link exists for.
    */
-  const [service, setService] = useState<string>(() => {
-    const candidate =
-      initialService ??
-      (typeof window === "undefined"
-        ? null
-        : new URLSearchParams(window.location.search).get("service"));
-    return candidate && qualifierForService(candidate) ? candidate : "";
-  });
+  const [service, setService] = useState<string>(() =>
+    initialService && qualifierForService(initialService) ? initialService : ""
+  );
   const [qualifierCode, setQualifierCode] = useState("");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -116,6 +113,68 @@ export function ConsultationLeadForm({
 
   const qualifier = useMemo(() => qualifierForService(service), [service]);
 
+  const clearFieldError = (key: LeadFormFieldKey) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  /*
+   * A service link (`/?service=modular-kitchens#consultation`) selects that
+   * service AFTER mount, so the kitchen question appears immediately instead of
+   * a home-type question — without affecting the server-rendered markup.
+   */
+  useEffect(() => {
+    if (initialService) return;
+    /*
+     * Deferred to a frame callback rather than set synchronously, matching the
+     * legacy planner form. Two reasons: the rule against cascading renders from
+     * an effect body, and — more importantly — the first paint stays byte-identical
+     * to the server render, so hydration cannot mismatch.
+     */
+    const frame = window.requestAnimationFrame(() => {
+      const raw = new URLSearchParams(window.location.search).get("service");
+      if (raw && qualifierForService(raw)) {
+        setService(raw);
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+    // The deep link is read once, on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * The canonical national-mobile handling, identical to the legacy form.
+   *
+   * `acceptIndianMobileKeystroke` takes the WHOLE candidate value, not a
+   * keystroke. Passing `event.key` to it (as this form first did) blocked
+   * Backspace, Delete, Tab and the arrow keys — an accessibility and conversion
+   * regression. There is no keydown filter here at all.
+   */
+  const applyMobileRaw = (raw: string) => {
+    const accepted = acceptIndianMobileKeystroke(raw);
+    if (!accepted.ok) {
+      const paste = acceptIndianMobileInput(raw);
+      if (paste.ok) {
+        setMobile(paste.national);
+        clearFieldError("mobile");
+        return;
+      }
+      setFieldErrors((prev) => ({
+        ...prev,
+        mobile: INDIAN_MOBILE_INVALID_MESSAGE,
+      }));
+      return;
+    }
+    setMobile(accepted.national);
+    if (accepted.national.length === 0 || accepted.national.length === 10) {
+      clearFieldError("mobile");
+    }
+  };
+
   const isSubmitting = uxState === "submitting" || uxState === "validating";
   const isSuccess =
     uxState === "success-created" || uxState === "success-duplicate";
@@ -134,6 +193,7 @@ export function ConsultationLeadForm({
   const onServiceChange = (next: string) => {
     setService(next);
     setQualifierCode("");
+    clearFieldError("service");
     setFieldErrors((current) => {
       if (!current.qualifier) {
         return current;
@@ -342,7 +402,10 @@ export function ConsultationLeadForm({
             id="od-consult-qualifier"
             name="qualifier"
             value={qualifierCode}
-            onChange={(event) => setQualifierCode(event.target.value)}
+            onChange={(event) => {
+              setQualifierCode(event.target.value);
+              if (event.target.value) clearFieldError("qualifier");
+            }}
             aria-invalid={fieldErrors.qualifier ? true : undefined}
             data-od-qualifier-kind={qualifier.kind}
           >
@@ -373,7 +436,10 @@ export function ConsultationLeadForm({
               autoComplete="name"
               maxLength={LEAD_FORM_FIELD_LIMITS.nameMax}
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                if (event.target.value.trim().length >= 2) clearFieldError("name");
+              }}
               aria-invalid={fieldErrors.name ? true : undefined}
             />
             {fieldErrors.name ? (
@@ -391,14 +457,29 @@ export function ConsultationLeadForm({
               autoComplete="tel-national"
               maxLength={10}
               value={mobile}
-              onKeyDown={(event) => {
-                if (!acceptIndianMobileKeystroke(event.key)) {
+              onChange={(event) => applyMobileRaw(event.target.value)}
+              onPaste={(event) => {
+                // `maxLength={10}` would truncate a pasted "+919812345678" to
+                // "+919812345", so a full E.164 paste is normalised BEFORE the
+                // browser applies the limit.
+                const text = event.clipboardData.getData("text");
+                const accepted = acceptIndianMobileInput(text);
+                if (accepted.ok) {
                   event.preventDefault();
+                  setMobile(accepted.national);
+                  clearFieldError("mobile");
+                  return;
                 }
-              }}
-              onChange={(event) => {
-                const accepted = acceptIndianMobileInput(event.target.value);
-                setMobile(accepted.ok ? accepted.national : event.target.value);
+                // Digit-only pastes fall through to onChange; an ambiguous or
+                // overlong paste is refused rather than silently truncated.
+                const compacted = text.replace(/[\s\-().]/g, "");
+                if (/\D/.test(compacted) || compacted.length > 10) {
+                  event.preventDefault();
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    mobile: INDIAN_MOBILE_INVALID_MESSAGE,
+                  }));
+                }
               }}
               aria-describedby="od-consult-mobile-help"
               aria-invalid={fieldErrors.mobile ? true : undefined}
@@ -461,7 +542,10 @@ export function ConsultationLeadForm({
                 type="checkbox"
                 name="serviceEnquiryConsent"
                 checked={serviceEnquiryConsent}
-                onChange={(event) => setServiceEnquiryConsent(event.target.checked)}
+                onChange={(event) => {
+                  setServiceEnquiryConsent(event.target.checked);
+                  if (event.target.checked) clearFieldError("serviceEnquiryConsent");
+                }}
                 aria-invalid={fieldErrors.serviceEnquiryConsent ? true : undefined}
               />
               <span>{getServiceEnquiryConsentCopy()}</span>
@@ -477,7 +561,10 @@ export function ConsultationLeadForm({
                 type="checkbox"
                 name="servicePhoneConsent"
                 checked={servicePhoneConsent}
-                onChange={(event) => setServicePhoneConsent(event.target.checked)}
+                onChange={(event) => {
+                  setServicePhoneConsent(event.target.checked);
+                  if (event.target.checked) clearFieldError("servicePhoneConsent");
+                }}
                 aria-invalid={fieldErrors.servicePhoneConsent ? true : undefined}
               />
               <span>{getServiceCommunicationConsentCopy()}</span>
@@ -521,13 +608,20 @@ export function ConsultationLeadForm({
         />
       </div>
 
-      <button
-        type="submit"
-        className="od-consult-form__submit"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? "Sending…" : "Get Free Design Consultation"}
-      </button>
+      {/*
+        The submit action belongs to the Contact stage.
+        Showing it during Project/Requirement offers to send a form whose contact
+        fields have not been revealed yet, which reads as a broken step counter.
+      */}
+      {qualifierCode ? (
+        <button
+          type="submit"
+          className="od-consult-form__submit"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Sending…" : "Get Free Design Consultation"}
+        </button>
+      ) : null}
 
       {status && !isSuccess ? (
         <p className="od-consult-form__status" role="status" aria-live="polite">
