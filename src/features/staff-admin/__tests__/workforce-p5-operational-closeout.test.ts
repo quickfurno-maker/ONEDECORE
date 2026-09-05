@@ -38,6 +38,9 @@ const DEC = "docs/10-decision-register.md";
 const AUDIT = "docs/audits/p5-workforce-operational-closeout.md";
 const STAFF_PANEL = "src/features/staff-admin/components/StaffDetailPanel.tsx";
 const LOGIN_PANEL = "src/features/staff-admin/components/StaffLoginAccessPanel.tsx";
+/** The password fields now live here, with the live checklist and status. */
+const PASSWORD_SECTION =
+  "src/features/staff-admin/components/StaffPasswordSection.tsx";
 const LEAVE_ADMIN = "src/features/staff-leave/components/LeaveTypeAdmin.tsx";
 
 /* ========================================================================== */
@@ -301,14 +304,38 @@ describe("the activation paths are UI actions, not migration content", () => {
     assert.match(actions, /update_staff_employment/);
   });
 
-  test("the credential panel never reveals a password", () => {
-    const panel = read(LOGIN_PANEL);
-    // Password inputs are write-only: no value, no defaultValue.
-    assert.match(panel, /type="password"/);
-    assert.doesNotMatch(panel, /type="password"[\s\S]{0,200}defaultValue=/);
-    assert.doesNotMatch(panel, /type="text"[\s\S]{0,80}name="password"/);
-    // No generated or displayed secret anywhere.
-    assert.doesNotMatch(panel, /generatePassword|randomPassword|temporaryPassword/i);
+  test("the credential panel never reveals a STORED password", () => {
+    /*
+     * The password fields moved into `StaffPasswordSection`, which added a
+     * "Show" toggle and a locally generated password — both operating on a
+     * value the operator just entered in this form.
+     *
+     * The invariant that matters is unchanged and is asserted here against the
+     * component that now owns the fields: an EXISTING password can never be read
+     * back, and nothing from server state is ever placed into a password input.
+     */
+    const section = read(PASSWORD_SECTION);
+
+    // Never seeded from anywhere: no defaultValue at all, and the only value
+    // bound is the component's own local state.
+    assert.doesNotMatch(section, /defaultValue=/);
+    assert.match(section, /value=\{password\}/);
+    assert.match(section, /value=\{confirmation\}/);
+
+    // The server result object is never used to populate a field. `state.*` may
+    // only be read for messages and the username.
+    assert.doesNotMatch(section, /value=\{state\./);
+    assert.doesNotMatch(section, /password=\{state\./);
+
+    // A generated password is produced locally and never sent back or stored.
+    assert.match(section, /generateStrongStaffPassword\(\)/);
+    const stateShape = read(
+      "src/features/staff-admin/contracts/staff-credential-form-state.ts"
+    );
+    assert.doesNotMatch(stateShape, /readonly password/);
+
+    // And it is cleared once the server accepts, so it is never left on screen.
+    assert.match(section, /state\.success[\s\S]{0,160}setPassword\(""\)/);
   });
 
   test("login uses the staff member's own mobile", () => {

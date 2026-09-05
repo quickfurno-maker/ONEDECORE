@@ -3,7 +3,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.generated";
-import { StaffError, staffErrorFromPostgresMessage } from "../contracts/errors.ts";
+import {
+  StaffError,
+  staffErrorFromPostgresMessage,
+  staffPasswordRejectionFromAuthDetail,
+} from "../contracts/errors.ts";
 import {
   staffLoginUsername,
   validateStaffPassword,
@@ -187,6 +191,20 @@ async function runCredentialOperation(input: {
         httpStatus: 502,
         details: detail,
       });
+    }
+
+    /*
+     * A refused PASSWORD is not an outage, and telling the operator to "retry"
+     * would send them round the same loop with the same password. When the
+     * provider says weak_password — especially with a `pwned` reason — say so,
+     * so the operator knows to pick a different password rather than wait.
+     *
+     * The failure is still recorded and access is still fail-closed above; only
+     * the message the operator reads changes.
+     */
+    const passwordRejection = staffPasswordRejectionFromAuthDetail(detail);
+    if (passwordRejection) {
+      throw passwordRejection;
     }
 
     throw new StaffError({

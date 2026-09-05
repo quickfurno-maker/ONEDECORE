@@ -10,10 +10,8 @@ import {
   INITIAL_STAFF_CREDENTIAL_FORM_STATE,
   type StaffCredentialFormState,
 } from "../contracts/staff-credential-form-state.ts";
-import {
-  STAFF_PASSWORD_MIN_LENGTH,
-  staffLoginUsername,
-} from "../contracts/staff-login-phone.ts";
+import { staffLoginUsername } from "../contracts/staff-login-phone.ts";
+import { StaffPasswordSection } from "./StaffPasswordSection.tsx";
 import {
   changeStaffLoginPhoneAction,
   issueStaffCredentialsAction,
@@ -54,48 +52,6 @@ function Feedback({ state }: { readonly state: StaffCredentialFormState }) {
         </>
       ) : null}
     </p>
-  );
-}
-
-/** Password + confirmation. Never pre-filled, never echoed back. */
-function PasswordFields({ idPrefix }: { readonly idPrefix: string }) {
-  return (
-    <>
-      <div>
-        <label htmlFor={`${idPrefix}-password`} className="text-sm font-medium text-neutral-200">
-          Password
-        </label>
-        <input
-          id={`${idPrefix}-password`}
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={STAFF_PASSWORD_MIN_LENGTH}
-          maxLength={72}
-          className={fieldClassName}
-        />
-        <p className="mt-1 text-xs text-neutral-500">
-          At least {STAFF_PASSWORD_MIN_LENGTH} characters. Give it to the staff member
-          directly — it is stored only by Supabase Auth and cannot be viewed again.
-        </p>
-      </div>
-      <div>
-        <label htmlFor={`${idPrefix}-confirm`} className="text-sm font-medium text-neutral-200">
-          Confirm password
-        </label>
-        <input
-          id={`${idPrefix}-confirm`}
-          name="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={STAFF_PASSWORD_MIN_LENGTH}
-          maxLength={72}
-          className={fieldClassName}
-        />
-      </div>
-    </>
   );
 }
 
@@ -264,11 +220,14 @@ export function StaffLoginAccessPanel({
                   exist, use Change login phone.
                 </p>
               </div>
-              <PasswordFields idPrefix="issue" />
-              <button type="submit" disabled={issuePending} className={buttonClassName}>
-                {issuePending ? "Issuing…" : "Issue credentials"}
-              </button>
-              <Feedback state={issueState} />
+              <StaffPasswordSection
+                idPrefix="issue"
+                operation="issue"
+                state={issueState}
+                pending={issuePending}
+                submitLabel="Issue credentials"
+                pendingLabel="Issuing…"
+              />
             </form>
           ) : null}
 
@@ -319,11 +278,14 @@ export function StaffLoginAccessPanel({
                 <h4 className="text-sm font-semibold text-neutral-200">
                   Set / reset password
                 </h4>
-                <PasswordFields idPrefix="reset" />
-                <button type="submit" disabled={resetPending} className={buttonClassName}>
-                  {resetPending ? "Updating…" : "Set / reset password"}
-                </button>
-                <Feedback state={resetState} />
+                <StaffPasswordSection
+                  idPrefix="reset"
+                  operation="reset"
+                  state={resetState}
+                  pending={resetPending}
+                  submitLabel="Set / reset password"
+                  pendingLabel="Updating…"
+                />
               </form>
 
               <form action={changePhone} className="space-y-4">
