@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import type { CrmAccessContext } from "../contracts/crm-access.ts";
 import type { ReportFilters } from "../contracts/reporting-contracts.ts";
 import {
@@ -57,10 +57,26 @@ export function resolveAnalyticsScopeOwnerId(
  *   2. `get_crm_pipeline_value_summary` — the CRM 2D weighted forecast,
  *      unchanged. CRM 2E deliberately does not re-derive stage probabilities.
  */
-export async function fetchCrmManagementAnalytics(
+/**
+ * `get_crm_management_analytics` alone — SLA, velocity, conversion and targets.
+ *
+ * Split out of the bundle below so the mobile read endpoint can run this source
+ * INDEPENDENTLY of the forecast: one failing must not erase the other, and a
+ * combined read cannot express that.
+ *
+ * Every number in the payload is the RPC's. The window comes from the canonical
+ * report range and the target month from `resolveTargetPeriodFromRangeStart`;
+ * nothing here computes a rate, a median, a funnel step or an attainment.
+ */
+export async function fetchCrmManagementAnalyticsSnapshot(
   context: CrmAccessContext,
-  filters: ReportFilters
-): Promise<CrmManagementAnalyticsBundle> {
+  filters: ReportFilters,
+  db?: CrmDb
+): Promise<{
+  readonly analytics: CrmManagementAnalyticsSnapshot;
+  readonly scopeOwnerId: string | null;
+  readonly targetPeriod: string;
+}> {
   assertReportingPermission(context);
 
   const scopeOwnerId = resolveAnalyticsScopeOwnerId(context, filters.assigneeId);
@@ -68,18 +84,15 @@ export async function fetchCrmManagementAnalytics(
     filters.dateRange.startIso
   );
 
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
 
-  const [analyticsResult, forecast] = await Promise.all([
-    supabase.rpc("get_crm_management_analytics", {
-      p_start: filters.dateRange.startIso,
-      p_end: filters.dateRange.endIso,
-      p_target_month: targetMonth,
-      p_owner_id: scopeOwnerId,
-      p_source_id: filters.sourceId,
-    }),
-    fetchCrmPipelineValueSummary(scopeOwnerId),
-  ]);
+  const analyticsResult = await supabase.rpc("get_crm_management_analytics", {
+    p_start: filters.dateRange.startIso,
+    p_end: filters.dateRange.endIso,
+    p_target_month: targetMonth,
+    p_owner_id: scopeOwnerId,
+    p_source_id: filters.sourceId,
+  });
 
   if (analyticsResult.error) {
     throw crmErrorFromPostgresMessage(analyticsResult.error.message, "RPC_FAILED");
@@ -94,10 +107,35 @@ export async function fetchCrmManagementAnalytics(
 
   return {
     analytics,
-    forecast,
     scopeOwnerId,
-    isTeamScope: scopeOwnerId === null,
     targetPeriod: analytics.targets.period || period,
+  };
+}
+
+export async function fetchCrmManagementAnalytics(
+  context: CrmAccessContext,
+  filters: ReportFilters
+): Promise<CrmManagementAnalyticsBundle> {
+  /*
+   * Asserted here as well as inside the analytics read, so a caller without
+   * reporting permission is refused BEFORE the forecast RPC is issued — the
+   * ordering this function has always had.
+   */
+  assertReportingPermission(context);
+
+  const scopeOwnerId = resolveAnalyticsScopeOwnerId(context, filters.assigneeId);
+
+  const [snapshot, forecast] = await Promise.all([
+    fetchCrmManagementAnalyticsSnapshot(context, filters),
+    fetchCrmPipelineValueSummary(scopeOwnerId),
+  ]);
+
+  return {
+    analytics: snapshot.analytics,
+    forecast,
+    scopeOwnerId: snapshot.scopeOwnerId,
+    isTeamScope: snapshot.scopeOwnerId === null,
+    targetPeriod: snapshot.targetPeriod,
   };
 }
 
