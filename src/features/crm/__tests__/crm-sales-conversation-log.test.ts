@@ -35,6 +35,11 @@ import {
   CRM_TIMELINE_ACTIVITY_DETAIL_MAX,
   formatTimelineActivityDetail,
 } from "../contracts/lead-timeline-contracts.ts";
+import {
+  CRM_SELF_STAFF_LABEL,
+  CRM_UNKNOWN_STAFF_LABEL,
+  resolveCrmStaffLabel,
+} from "../contracts/crm-staff-label.ts";
 import { parseCompleteLeadActivityForm } from "../contracts/activity-contracts.ts";
 import type { CrmLeadDetailFollowUp } from "../contracts/lead-detail-dtos.ts";
 
@@ -52,6 +57,7 @@ const REPOSITORY = "src/features/crm/server/crm-lead-repository.ts";
 const TIMELINE_CONTRACT = "src/features/crm/contracts/lead-timeline-contracts.ts";
 const TIMELINE_QUERIES = "src/features/crm/server/crm-lead-timeline-queries.ts";
 const DETAIL_DTOS = "src/features/crm/contracts/lead-detail-dtos.ts";
+const STAFF_LABEL = "src/features/crm/contracts/crm-staff-label.ts";
 
 const OWNER_LABEL = "Scheduled Owner";
 const ACTOR_LABEL = "Sales Executive A";
@@ -183,14 +189,134 @@ describe("the actor is the person who acted", () => {
 
   test("an unresolvable actor never renders as a raw UUID", () => {
     const repo = readSrc(REPOSITORY);
-    // labelForUser maps an unknown id to a safe label and null to null; it can
-    // never return the id it was given.
-    assert.match(repo, /return assigneeLabels\[userId\] \?\? "Staff member";/);
+    // labelForUser delegates to the shared resolver, which maps an unknown id
+    // to a safe label and an absent id to null; it can never return the id.
+    assert.match(
+      repo,
+      /resolveCrmStaffLabel\(userId, context\.userId, assigneeLabels\)/
+    );
 
     const rawUuid = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
     const activity = followUp({ completedByLabel: "Staff member" });
     assert.equal(resolveActivityActorLabel(activity), "Staff member");
     assert.notEqual(resolveActivityActorLabel(activity), rawUuid);
+  });
+});
+
+/* ========================================================================== */
+/* 2b. Actor labels resolve for scoped callers, not just broad readers         */
+/* ========================================================================== */
+
+describe("the caller can always be named", () => {
+  const SELF = "5e1f0000-0000-4000-8000-000000000001";
+  const OTHER = "0abe0000-0000-4000-8000-000000000002";
+  const TEAMMATE = "7ea70000-0000-4000-8000-000000000003";
+
+  /**
+   * An assignment-scoped executive gets NO directory rows: the underlying RPC
+   * only answers broad readers. This is the exact condition that made a
+   * salesperson's own completed call read "· Staff member".
+   */
+  const SCOPED_DIRECTORY: Readonly<Record<string, string>> = {};
+
+  const BROAD_DIRECTORY: Readonly<Record<string, string>> = {
+    [TEAMMATE]: "Sales Executive A",
+    [SELF]: "Owner Account",
+  };
+
+  test("the caller resolves to \"You\" with an EMPTY directory", () => {
+    assert.equal(
+      resolveCrmStaffLabel(SELF, SELF, SCOPED_DIRECTORY),
+      CRM_SELF_STAFF_LABEL
+    );
+    assert.equal(resolveCrmStaffLabel(SELF, SELF, SCOPED_DIRECTORY), "You");
+  });
+
+  test("a broad reader's teammate still resolves to the directory name", () => {
+    assert.equal(
+      resolveCrmStaffLabel(TEAMMATE, SELF, BROAD_DIRECTORY),
+      "Sales Executive A"
+    );
+  });
+
+  test("self wins over the directory, so own history reads as \"You\"", () => {
+    // SELF is present in the broad directory as "Owner Account", but a person
+    // reading their own activity expects "You".
+    assert.equal(
+      resolveCrmStaffLabel(SELF, SELF, BROAD_DIRECTORY),
+      CRM_SELF_STAFF_LABEL
+    );
+  });
+
+  test("an unnameable other staff member stays anonymous", () => {
+    assert.equal(
+      resolveCrmStaffLabel(OTHER, SELF, SCOPED_DIRECTORY),
+      CRM_UNKNOWN_STAFF_LABEL
+    );
+    assert.equal(
+      resolveCrmStaffLabel(OTHER, SELF, BROAD_DIRECTORY),
+      "Staff member"
+    );
+  });
+
+  test("an absent actor stays null, distinct from anonymous", () => {
+    for (const missing of [null, undefined, ""]) {
+      assert.equal(resolveCrmStaffLabel(missing, SELF, BROAD_DIRECTORY), null);
+    }
+  });
+
+  test("no branch can ever return the raw id", () => {
+    for (const currentUserId of [SELF, null, undefined]) {
+      for (const directory of [SCOPED_DIRECTORY, BROAD_DIRECTORY]) {
+        for (const candidate of [SELF, OTHER, TEAMMATE]) {
+          const label = resolveCrmStaffLabel(
+            candidate,
+            currentUserId,
+            directory
+          );
+          assert.notEqual(label, candidate);
+          if (label !== null) {
+            assert.doesNotMatch(
+              label,
+              /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/i,
+              `leaked a uuid-shaped label: ${label}`
+            );
+          }
+        }
+      }
+    }
+  });
+
+  test("resolution needs no extra query and no wider permission", () => {
+    const repo = readSrc(REPOSITORY);
+    // The caller id comes from the access context that was already resolved.
+    assert.match(repo, /resolveCrmStaffLabel\(userId, context\.userId/);
+
+    // The directory is still fetched exactly once, still scope-gated by the
+    // existing RPC. Nothing new is read to name the caller.
+    assert.equal(
+      repo.split("fetchCrmAssigneeDirectory(context)").length - 1,
+      1,
+      "the assignee directory must still be fetched exactly once"
+    );
+    const resolverModule = readSrc(STAFF_LABEL);
+    assert.ok(!resolverModule.includes("supabase"), "the resolver must be pure");
+    assert.ok(!resolverModule.includes("await"), "the resolver must be pure");
+  });
+
+  test("the unified timeline shares the corrected resolver", () => {
+    const repo = readSrc(REPOSITORY);
+    // One resolver instance is handed to the timeline, so the log and the
+    // timeline can never disagree about who someone is.
+    assert.match(
+      repo,
+      /fetchLeadTimelinePage\(leadId, context, labelForUser\)/
+    );
+
+    const timeline = readSrc(TIMELINE_QUERIES);
+    assert.match(timeline, /labelForUser\(row\.actor_id\)/);
+    // The timeline never builds its own label from an id.
+    assert.doesNotMatch(timeline, /actorLabel: row\.actor_id/);
   });
 });
 
@@ -591,6 +717,7 @@ describe("the unified timeline uses metadata it already reads", () => {
 describe("no new persistence, privilege or schema", () => {
   const TOUCHED = [
     HISTORY_CONTRACT,
+    STAFF_LABEL,
     HISTORY_UI,
     COMPLETE_DIALOG,
     REPOSITORY,

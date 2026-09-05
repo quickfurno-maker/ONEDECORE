@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveCrmStaffLabel } from "../contracts/crm-staff-label.ts";
 import type { CrmLeadDetail } from "../contracts/lead-detail-dtos.ts";
 import type { CrmLeadListItem } from "../contracts/lead-dtos.ts";
 import { resolveOnHoldResumeStage } from "../contracts/lifecycle-contracts.ts";
@@ -153,12 +154,17 @@ export async function getLeadDetailForCurrentUser(
     assigneeDirectory.map((entry) => [entry.userId, entry.displayName])
   );
 
-  const labelForUser = (userId: string | null | undefined): string | null => {
-    if (!userId) {
-      return null;
-    }
-    return assigneeLabels[userId] ?? "Staff member";
-  };
+  /*
+   * The directory is empty for an assignment-scoped caller, so every id used to
+   * resolve to "Staff member" — including the caller's own. Their own completed
+   * call therefore read "· Staff member", which is exactly the attribution the
+   * conversation log exists to provide.
+   *
+   * `context.userId` is already resolved, so naming the caller costs no query
+   * and widens no permission: nobody learns a name they could not already see.
+   */
+  const labelForUser = (userId: string | null | undefined): string | null =>
+    resolveCrmStaffLabel(userId, context.userId, assigneeLabels);
 
   const [
     contactResult,
