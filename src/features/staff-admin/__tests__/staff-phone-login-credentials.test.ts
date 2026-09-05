@@ -56,6 +56,8 @@ const CREDENTIAL_ACTIONS = "src/features/staff-admin/server/staff-credential-act
 
 const STAFF_ID = "11111111-1111-4111-8111-111111111111";
 const E164 = "+917447863402";
+/** The 10 digits staff actually type — their only login identifier. */
+const DIGITS = "7447863402";
 
 // -----------------------------------------------------------------------------
 // Auth Admin transport double
@@ -158,10 +160,19 @@ describe("login routing — one field, two credential paths", () => {
     }
   });
 
-  test("the action normalizes before calling Supabase Auth", () => {
+  test("the action signs in with the derived alias, never the phone", () => {
     const source = read(LOGIN_ACTION);
     assert.match(source, /looksLikeStaffLoginPhone\(identifier\)/);
-    assert.match(source, /signInWithPassword\(\{\s*phone: phone\.e164/);
+
+    // The Phone provider is disabled, so the staff path authenticates against
+    // the alias derived from the number the staff member typed.
+    assert.match(source, /staffLoginAuthAlias\(identifier\)/);
+    assert.match(source, /signInWithPassword\(\{\s*email: alias/);
+
+    // And never against the phone: that is the call that returned
+    // `422 phone_provider_disabled` on the live stack.
+    assert.doesNotMatch(source, /signInWithPassword\(\{\s*phone:/);
+
     // The existing email path is preserved for the Super Admin.
     assert.match(source, /signInWithPassword\(\{\s*email: identifier\.toLowerCase\(\)/);
   });
@@ -195,10 +206,12 @@ describe("login routing — one field, two credential paths", () => {
   test("the form offers ONE identifier field, not a second username", () => {
     const form = read(LOGIN_FORM);
     assert.match(form, /name="identifier"/);
-    assert.match(form, /Mobile Number or Email/);
-    assert.match(form, /10-digit mobile number/);
+    assert.match(form, /Staff Login ID or Email/);
+    assert.match(form, /unique 10-digit mobile number/);
     // A dedicated email input would be the second username field the owner ruled out.
     assert.doesNotMatch(form, /type="email"/);
+    // The transport is never named to the person signing in.
+    assert.doesNotMatch(form, /alias|staff-login\.onedecore|OTP|SMS/i);
   });
 });
 
@@ -248,11 +261,19 @@ describe("Auth Admin transport — issuance", () => {
     assert.equal(result.identityCreated, true);
     const create = calls.find((c) => c.method === "POST");
     assert.equal(create?.body?.id, STAFF_ID, "the employment UUID must be reused");
-    assert.equal(create?.body?.phone, E164);
-    assert.equal(create?.body?.phone_confirm, true, "admin-issued numbers are confirmed");
+
+    // The transport identifier is the alias derived from the login number.
+    assert.equal(create?.body?.email, `${DIGITS}@staff-login.onedecore.invalid`);
+    assert.equal(
+      create?.body?.email_confirm,
+      true,
+      "confirmed on creation so no mail is ever sent or awaited"
+    );
     assert.equal(create?.body?.password, "LongEnough1");
-    // No email alias is ever fabricated for a phone login.
-    assert.equal("email" in (create?.body ?? {}), false);
+
+    // The Phone provider is disabled: no phone credential is created.
+    assert.equal("phone" in (create?.body ?? {}), false);
+    assert.equal("phone_confirm" in (create?.body ?? {}), false);
   });
 
   test("an existing matching identity is reused, never duplicated", async () => {
@@ -367,8 +388,14 @@ describe("Auth Admin transport — reset, revoke, phone change", () => {
     );
 
     const puts = calls.filter((c) => c.method === "PUT");
-    assert.equal(puts[0]?.body?.phone, "+919812345678");
-    assert.equal(puts[0]?.body?.phone_confirm, true);
+    // Moving the alias is what makes the OLD 10-digit login stop resolving.
+    assert.equal(
+      puts[0]?.body?.email,
+      "9812345678@staff-login.onedecore.invalid"
+    );
+    assert.equal(puts[0]?.body?.email_confirm, true);
+    // The password is never re-sent, so the employee keeps their own.
+    assert.equal("password" in (puts[0]?.body ?? {}), false);
     // Ban then unban: a session opened under the old number cannot be refreshed.
     assert.equal(typeof puts[1]?.body?.ban_duration, "string");
     assert.equal(puts[2]?.body?.ban_duration, "none");
@@ -568,13 +595,15 @@ describe("no secret ever reaches storage, audit, or logs", () => {
   });
 });
 
-describe("the future OTP reset needs no schema replacement", () => {
-  test("the confirmed canonical phone is already the identity", () => {
+describe("the OTP reset path is cancelled, not deferred", () => {
+  test("no phone credential is created anywhere", () => {
     const provisioning = read(
       "src/features/staff-admin/server/staff-credential-provisioning.ts"
     );
-    // phone_confirm is what a later signInWithOtp({ phone }) requires.
-    assert.match(provisioning, /phone_confirm: true/);
+    // `phone_confirm` existed only to enable a later signInWithOtp({ phone }).
+    // The owner cancelled that path and the provider stays disabled, so writing
+    // a confirmed phone credential would provision an unusable login.
+    assert.doesNotMatch(provisioning, /phone_confirm: true/);
   });
 
   test("there is no second username field to migrate away from", () => {
@@ -679,8 +708,8 @@ describe("session invalidation is checked, not assumed", () => {
       if (call.method === "GET") {
         return { status: 200, body: { id: STAFF_ID, phone: "917447863402" } };
       }
-      if (call.body && "phone" in call.body) {
-        return { status: 200, body: { id: STAFF_ID, phone: "919812345678" } };
+      if (call.body && "email" in call.body) {
+        return { status: 200, body: { id: STAFF_ID } };
       }
       if (call.body && call.body.ban_duration !== "none") {
         return { status: 500, body: { msg: "ban refused" } };

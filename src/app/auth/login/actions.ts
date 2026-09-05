@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSafeAdminRedirect } from "@/server/auth/authorize";
 import {
   looksLikeStaffLoginPhone,
-  normalizeStaffLoginPhone,
+  staffLoginAuthAlias,
 } from "@/features/staff-admin/contracts/staff-login-phone";
 
 export interface LoginState {
@@ -24,14 +24,19 @@ const GENERIC_ERROR = "Invalid staff credentials.";
 /**
  * One identifier field, two credential paths.
  *
- * A bare 10-digit Indian mobile is a WORKFORCE STAFF login and is normalized to
- * +91XXXXXXXXXX before it reaches Supabase Auth — verified on a live GoTrue
- * stack, where the un-normalized 10-digit value is rejected outright.
+ * A bare 10-digit Indian mobile is a WORKFORCE STAFF login. It is the ONLY
+ * identifier those staff ever see or type.
+ *
+ * It is not, however, what Supabase authenticates against. The Phone provider is
+ * disabled and stays disabled, and a live stack answered the phone transport
+ * with `422 phone_provider_disabled`, so the sign-in below uses the server-side
+ * alias derived from that same number. The alias is a transport detail: it is
+ * never displayed, never typed, and never treated as an email address.
  *
  * Anything else takes the existing email/password path unchanged, so the Super
  * Admin login keeps working exactly as before. There is deliberately no second
- * username field: the future self-service OTP reset uses this same canonical
- * phone identity.
+ * username field, no OTP, and no self-service reset — a Super Admin sets every
+ * staff password.
  */
 export async function loginAction(
   _prevState: LoginState,
@@ -59,13 +64,16 @@ export async function loginAction(
   let signInFailed: boolean;
 
   if (looksLikeStaffLoginPhone(identifier)) {
-    const phone = normalizeStaffLoginPhone(identifier);
-    if (!phone.ok) {
+    // Derived here, used here, and never returned to the caller. A null alias
+    // means the value was not a valid staff login number after all, which is a
+    // credential failure like any other — never a distinguishable error.
+    const alias = staffLoginAuthAlias(identifier);
+    if (!alias) {
       return { error: GENERIC_ERROR };
     }
 
     const { error } = await supabase.auth.signInWithPassword({
-      phone: phone.e164,
+      email: alias,
       password,
     });
     signInFailed = Boolean(error);
