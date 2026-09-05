@@ -35,7 +35,11 @@ export const STAFF_ERROR_CODES = [
   "STAFF_ACCESS_REVOKED",
   "STAFF_ACCESS_NOT_REVOKED",
   "STAFF_ACCESS_ALREADY_ACTIVE",
+  // Local, deterministic validation: too short, confirmation mismatch.
   "STAFF_PASSWORD_REJECTED",
+  // The PROVIDER refused the password (weak / breached). A different
+  // trust stage entirely, so it carries its own code.
+  "STAFF_PASSWORD_WEAK",
   "STAFF_REASON_REQUIRED",
   "STAFF_RPC_FAILED",
 ] as const;
@@ -386,7 +390,11 @@ export function staffPasswordRejectionFromAuthDetail(
     normalised.includes("data leak");
 
   return new StaffError({
-    code: "STAFF_PASSWORD_REJECTED",
+    // NOT `STAFF_PASSWORD_REJECTED`: that is the LOCAL validator's code. A
+    // mismatch the operator can see and fix is a different thing from a
+    // password the provider refuses, and collapsing them would tell an operator
+    // who mistyped a confirmation that their password was breached.
+    code: "STAFF_PASSWORD_WEAK",
     message: isBreached
       ? "This password was rejected because it is known to be weak or has appeared in breach data. Choose a stronger, unique password and try again."
       : "This password was rejected by the authentication provider as too weak. Choose a stronger, more unique password and try again.",

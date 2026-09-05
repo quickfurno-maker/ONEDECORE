@@ -119,8 +119,13 @@ export function categoriseStaffCredentialFailure(
   code: string | undefined
 ): StaffCredentialFailureCategory {
   switch (code) {
-    case "STAFF_PASSWORD_REJECTED":
+    // Stage 2 — the provider refused the password itself.
+    case "STAFF_PASSWORD_WEAK":
       return "weak_password";
+    // Stage 1 — local, deterministic validation the operator can see and fix.
+    // Reaching the server at all means a tampered or stale client, since the
+    // form disables submit until these pass.
+    case "STAFF_PASSWORD_REJECTED":
     case "STAFF_VALIDATION_FAILED":
     case "STAFF_LOGIN_PHONE_INVALID":
       return "validation_failed";

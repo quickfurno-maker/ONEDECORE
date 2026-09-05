@@ -199,7 +199,8 @@ describe("a rejected password is reported as a rejected password", () => {
   test("weak_password with a pwned reason names the breach", () => {
     const error = staffPasswordRejectionFromAuthDetail(pwnedDetail);
     assert.ok(error);
-    assert.equal(error.code, "STAFF_PASSWORD_REJECTED");
+    // The PROVIDER code, distinct from the local validator's.
+    assert.equal(error.code, "STAFF_PASSWORD_WEAK");
     assert.equal(error.message, STAFF_PASSWORD_REJECTED_BREACHED);
     assert.match(error.message, /appeared in breach data/);
   });
@@ -251,7 +252,9 @@ describe("a rejected password is reported as a rejected password", () => {
 
 describe("failure categories", () => {
   test("each cause maps to its own category", () => {
-    assert.equal(categoriseStaffCredentialFailure("STAFF_PASSWORD_REJECTED"), "weak_password");
+    assert.equal(categoriseStaffCredentialFailure("STAFF_PASSWORD_WEAK"), "weak_password");
+    // The LOCAL validator's code must never read as a provider verdict.
+    assert.equal(categoriseStaffCredentialFailure("STAFF_PASSWORD_REJECTED"), "validation_failed");
     assert.equal(categoriseStaffCredentialFailure("STAFF_CREDENTIALS_UNAUTHORIZED"), "unauthorized");
     assert.equal(categoriseStaffCredentialFailure("STAFF_CREDENTIALS_NOT_ISSUED"), "missing_identity");
     assert.equal(categoriseStaffCredentialFailure("STAFF_VALIDATION_FAILED"), "validation_failed");
@@ -436,6 +439,139 @@ describe("the password section behaves as specified", () => {
     // The old bare fields are gone, so there is one password UX, not two.
     assert.doesNotMatch(panel, /function PasswordFields/);
     assert.doesNotMatch(panel, /name="password"/);
+  });
+
+  /* ------------------------------------------------------------------------ */
+  /* A server verdict expires when the candidate changes                       */
+  /* ------------------------------------------------------------------------ */
+
+  /*
+   * The bug this guards: `result` was computed from `state` alone, so a verdict
+   * outlived the password it described.
+   *
+   * After a rejection it kept saying "rejected" while the operator typed a
+   * better password. Far worse, after a SUCCESS it kept saying "Password updated
+   * successfully" over a brand-new, unsaved password — a false claim of
+   * acceptance, which is the exact failure this whole feature exists to prevent.
+   */
+
+  test("a verdict is gated on not having been dismissed", () => {
+    const src = code(read(SECTION));
+
+    // The displayed result depends on dismissal, not on `state` alone.
+    assert.match(
+      src,
+      /const result =\s*state\.operation === operation &&\s*state\.message &&\s*dismissedResult !== state/,
+      "the verdict must be gated on dismissal"
+    );
+
+    // Dismissal is by state IDENTITY, so a fresh submission is shown again
+    // without any manual reset.
+    assert.match(src, /useState<StaffCredentialFormState \| null>\(null\)/);
+    assert.match(src, /setDismissedResult\(state\)/);
+  });
+
+  test("editing EITHER field dismisses the standing verdict", () => {
+    const src = code(read(SECTION));
+
+    const passwordField = src.slice(
+      src.indexOf('name="password"'),
+      src.indexOf('name="confirmPassword"')
+    );
+    assert.match(
+      passwordField,
+      /setPassword\(event\.target\.value\)[\s\S]{0,200}dismissCurrentVerdict\(\)/,
+      "typing a password must retire the previous verdict"
+    );
+
+    const confirmField = src.slice(src.indexOf('name="confirmPassword"'));
+    assert.match(
+      confirmField,
+      /setConfirmation\(event\.target\.value\)[\s\S]{0,200}dismissCurrentVerdict\(\)/,
+      "typing a confirmation must retire the previous verdict"
+    );
+  });
+
+  test("generating a new password dismisses the standing verdict", () => {
+    const src = code(read(SECTION));
+    const generate = src.slice(
+      src.indexOf("const onGenerate"),
+      src.indexOf("const onCopy")
+    );
+
+    assert.match(generate, /dismissCurrentVerdict\(\)/);
+    // Dismissed BEFORE the new candidate is installed, so no render can pair a
+    // stale verdict with the generated value.
+    assert.ok(
+      generate.indexOf("dismissCurrentVerdict()") <
+        generate.indexOf("setPassword(next)"),
+      "the verdict must be retired before the new candidate is set"
+    );
+  });
+
+  test("a generated password is presented as LOCAL guidance only", () => {
+    /*
+     * The helper text may reference a save that has NOT happened — "After a
+     * successful save, it will not be shown again" is conditional and future.
+     * What it must never do is state that this password HAS been accepted.
+     */
+    assert.match(
+      STAFF_PASSWORD_GENERATED_HELP,
+      /After a successful save/,
+      "acceptance must be framed as still to come"
+    );
+    assert.doesNotMatch(
+      STAFF_PASSWORD_GENERATED_HELP,
+      /\b(is|was|has been)\s+(accepted|approved|saved|updated)\b/i,
+      "generation must not claim the password was accepted"
+    );
+
+    // And it still has to clear every ordinary local check, nothing more.
+    const generated = generateStrongStaffPassword();
+    assert.equal(analyseStaffPassword(generated, generated).canSubmit, true);
+  });
+
+  test("non-mutating controls do NOT dismiss the verdict", () => {
+    const src = code(read(SECTION));
+
+    // Copying changes nothing about what would be submitted.
+    const copy = src.slice(src.indexOf("const onCopy"), src.indexOf("return ("));
+    assert.doesNotMatch(copy, /dismissCurrentVerdict/);
+
+    // Nor does revealing.
+    const reveal = src.slice(src.indexOf("setRevealed((current)"));
+    assert.doesNotMatch(
+      reveal.slice(0, 200),
+      /dismissCurrentVerdict/,
+      "toggling visibility must not discard a verdict"
+    );
+  });
+
+  test("success is cleared from the FIELDS but stays on screen until an edit", () => {
+    const src = code(read(SECTION));
+
+    // Clearing happens in the render-time adjustment, which does NOT dismiss —
+    // so the accepted message is still visible on the very next paint.
+    const adjust = src.slice(
+      src.indexOf("if (handledState !== state)"),
+      src.indexOf("const status =")
+    );
+    assert.match(adjust, /setPassword\(""\)/);
+    assert.doesNotMatch(
+      adjust,
+      /dismissCurrentVerdict/,
+      "acceptance must remain visible immediately after it is reported"
+    );
+  });
+
+  test("only a candidate change can retire a verdict", () => {
+    const src = code(read(SECTION));
+    // Exactly three call sites: password, confirmation, generate.
+    assert.equal(
+      (src.match(/dismissCurrentVerdict\(\);/g) ?? []).length,
+      3,
+      "dismissal belongs only to the three candidate-changing controls"
+    );
   });
 
   test("generation uses a CSPRNG, never Math.random", () => {

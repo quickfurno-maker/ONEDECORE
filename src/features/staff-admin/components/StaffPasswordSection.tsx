@@ -116,8 +116,40 @@ export function StaffPasswordSection({
     [password, confirmation]
   );
 
-  /** Only this form's own result. Another form's message must not appear here. */
-  const result = state.operation === operation && state.message ? state : null;
+  /*
+   * A server verdict describes ONE submitted password, and stops being true the
+   * moment the operator changes the candidate.
+   *
+   * Without this the status card lied in both directions. After a rejection it
+   * kept showing "rejected" while the operator typed a better password, so the
+   * local checklist never regained the floor. Far worse, after a SUCCESS it kept
+   * showing "Password updated successfully" over a brand-new, unsaved password —
+   * which is exactly the false claim of acceptance this whole change exists to
+   * prevent.
+   *
+   * Dismissal is by state IDENTITY, not a boolean, so a later submission produces
+   * a fresh object and is shown again without any reset bookkeeping.
+   */
+  const [dismissedResult, setDismissedResult] =
+    useState<StaffCredentialFormState | null>(null);
+
+  const result =
+    state.operation === operation && state.message && dismissedResult !== state
+      ? state
+      : null;
+
+  /**
+   * Retires the current verdict.
+   *
+   * Called only where the CANDIDATE CHANGES — typing in either field, or
+   * generating. Revealing or copying does not change what would be submitted, so
+   * those deliberately leave the verdict standing.
+   */
+  const dismissCurrentVerdict = () => {
+    if (state.operation === operation && state.message) {
+      setDismissedResult(state);
+    }
+  };
 
   /*
    * Clear the fields once the SERVER has accepted — never on submit, and never
@@ -148,6 +180,9 @@ export function StaffPasswordSection({
 
   const onGenerate = () => {
     const next = generateStrongStaffPassword();
+    // A generated password is a NEW unsaved candidate, so any earlier verdict —
+    // success or rejection — stops applying to it.
+    dismissCurrentVerdict();
     setPassword(next);
     setConfirmation(next);
     setGenerated(true);
@@ -211,6 +246,9 @@ export function StaffPasswordSection({
               setPassword(event.target.value);
               setGenerated(false);
               setCopied(false);
+              // The candidate changed, so the previous verdict no longer
+              // describes what is in the box.
+              dismissCurrentVerdict();
             }}
             className={fieldClassName}
             aria-describedby={`${idPrefix}-password-checks`}
@@ -245,6 +283,7 @@ export function StaffPasswordSection({
           onChange={(event) => {
             setConfirmation(event.target.value);
             setCopied(false);
+            dismissCurrentVerdict();
           }}
           className={`mt-1 ${fieldClassName}`}
         />
