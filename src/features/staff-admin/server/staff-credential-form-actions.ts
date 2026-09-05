@@ -2,6 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { StaffError } from "../contracts/errors.ts";
+import {
+  STAFF_PASSWORD_SUCCESS_ISSUE,
+  STAFF_PASSWORD_SUCCESS_RESET,
+  categoriseStaffCredentialFailure,
+} from "../contracts/staff-password-messages.ts";
 import type {
   StaffCredentialFormState,
   StaffCredentialOperation,
@@ -53,17 +58,21 @@ async function run(
     };
   } catch (error) {
     if (error instanceof StaffError) {
+      // `error.details` deliberately does NOT travel: the category is all the
+      // UI needs, and the provider payload stops at the server boundary.
       return {
         success: false,
         message: error.message,
         code: error.code,
         operation,
+        category: categoriseStaffCredentialFailure(error.code),
       };
     }
     return {
       success: false,
       message: "The request could not be completed.",
       operation,
+      category: "provider_failed",
     };
   }
 }
@@ -86,7 +95,7 @@ export async function issueStaffCredentialsAction(
         confirmPassword: read(formData, "confirmPassword"),
         displayName: read(formData, "displayName"),
       }),
-    "Credentials issued. Give the staff member their 10-digit mobile number as the username and the password you just set."
+    STAFF_PASSWORD_SUCCESS_ISSUE
   );
 }
 
@@ -104,7 +113,7 @@ export async function resetStaffPasswordAction(
         password: read(formData, "password"),
         confirmPassword: read(formData, "confirmPassword"),
       }),
-    "Password updated. The login number and staff record are unchanged."
+    STAFF_PASSWORD_SUCCESS_RESET
   );
 }
 

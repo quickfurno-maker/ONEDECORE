@@ -35,7 +35,11 @@ export const STAFF_ERROR_CODES = [
   "STAFF_ACCESS_REVOKED",
   "STAFF_ACCESS_NOT_REVOKED",
   "STAFF_ACCESS_ALREADY_ACTIVE",
+  // Local, deterministic validation: too short, confirmation mismatch.
   "STAFF_PASSWORD_REJECTED",
+  // The PROVIDER refused the password (weak / breached). A different
+  // trust stage entirely, so it carries its own code.
+  "STAFF_PASSWORD_WEAK",
   "STAFF_REASON_REQUIRED",
   "STAFF_RPC_FAILED",
 ] as const;
@@ -332,5 +336,69 @@ export function staffErrorFromPostgresMessage(
     message: "Staff administration operation failed",
     httpStatus: 500,
     details: message,
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Auth provider failures                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Recognises a password rejection inside a Supabase Auth Admin failure.
+ *
+ * GoTrue answers a refused password with a structured body, e.g.
+ *
+ *   {"code":422,"error_code":"weak_password","msg":"...",
+ *    "weak_password":{"reasons":["pwned"]}}
+ *
+ * which reaches us embedded in the thrown transport message. Without this the
+ * whole class collapsed into "Supabase Auth did not accept the change" — true,
+ * but useless: the operator could not tell a breached password from an outage,
+ * and had no idea that picking a different password would fix it.
+ *
+ * Returns null when the failure is anything else, so the existing generic
+ * handling stays in charge of everything this does not positively identify.
+ *
+ * The raw payload is NEVER returned to the browser. Only the friendly message
+ * and the stable code cross that boundary.
+ */
+export function staffPasswordRejectionFromAuthDetail(
+  detail: string | null | undefined
+): StaffError | null {
+  if (!detail) {
+    return null;
+  }
+
+  const normalised = detail.toLowerCase();
+
+  // Both the structured `error_code` and the prose form GoTrue uses in some
+  // versions, so a wording change does not silently drop us back to generic.
+  const isWeak =
+    normalised.includes("weak_password") ||
+    normalised.includes("password is too weak") ||
+    normalised.includes("password is known to be weak");
+
+  if (!isWeak) {
+    return null;
+  }
+
+  // `pwned` is GoTrue's marker for "found in breach data". It is the difference
+  // between "make it longer" and "this exact password is public".
+  const isBreached =
+    normalised.includes("pwned") ||
+    normalised.includes("breach") ||
+    normalised.includes("data leak");
+
+  return new StaffError({
+    // NOT `STAFF_PASSWORD_REJECTED`: that is the LOCAL validator's code. A
+    // mismatch the operator can see and fix is a different thing from a
+    // password the provider refuses, and collapsing them would tell an operator
+    // who mistyped a confirmation that their password was breached.
+    code: "STAFF_PASSWORD_WEAK",
+    message: isBreached
+      ? "This password was rejected because it is known to be weak or has appeared in breach data. Choose a stronger, unique password and try again."
+      : "This password was rejected by the authentication provider as too weak. Choose a stronger, more unique password and try again.",
+    httpStatus: 422,
+    // Deliberately no `details`: the provider payload stops here.
   });
 }
