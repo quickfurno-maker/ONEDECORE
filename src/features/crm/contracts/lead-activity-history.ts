@@ -232,3 +232,97 @@ export function sortActivityHistory(
 ): readonly CrmLeadDetailFollowUp[] {
   return [...activities].sort(compareActivityHistoryEntries);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Note heading — one wording authority for the log card                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The heading above a finished activity's note.
+ *
+ * The dialog wording (`completionNoteLabelForActivityType`) asks the question;
+ * these answer it back in the log. They are separate strings because one is a
+ * form label with "(optional)" and the other is a card heading, but the
+ * client-facing SPLIT is the same predicate, so the two surfaces cannot
+ * disagree about which activities involve a client.
+ */
+export const CRM_CLIENT_RESPONSE_HEADING = "Client response";
+
+export const CRM_COMPLETION_NOTE_HEADING = "Completion note";
+
+export function conversationNoteHeadingForActivityType(
+  activityType: string
+): string {
+  return isClientFacingActivityType(activityType)
+    ? CRM_CLIENT_RESPONSE_HEADING
+    : CRM_COMPLETION_NOTE_HEADING;
+}
+
+/* -------------------------------------------------------------------------- */
+/* The ordered log — one composition, shared by every client                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One finished interaction, already interpreted.
+ *
+ * Every derived value here is produced by the helpers above, so a client that
+ * renders this shape gets the canonical answer without owning any of the
+ * semantics. The raw `activityType` and `status` codes are carried alongside
+ * their labels only so a client can branch on them (an icon, a filter) — never
+ * so it can re-derive a label, an actor or an occurrence time of its own.
+ */
+export interface CrmConversationActivityEntry {
+  readonly id: string;
+  readonly activityType: string;
+  readonly activityTypeLabel: string;
+  readonly title: string;
+  readonly status: string;
+  readonly statusLabel: string;
+  /** Human outcome text, already resolved from `outcome` / `outcomeCode`. */
+  readonly outcome: string | null;
+  /** When it ACTUALLY happened. Never `dueAt`. Null when unrecorded. */
+  readonly occurredAt: string | null;
+  /** Who ACTUALLY did it. Never the scheduled owner. Null when unknown. */
+  readonly actorLabel: string | null;
+  readonly completionNote: string | null;
+  readonly isClientFacing: boolean;
+  /** "Client response" or "Completion note", per the shared predicate. */
+  readonly noteHeading: string;
+}
+
+/**
+ * The sales conversation & activity log for one lead, ordered and interpreted.
+ *
+ * WHY IT IS COMPOSED HERE. The repository reads `lead_follow_ups` ordered
+ * `due_at asc`, which is right for the OPEN queue and wrong for history, so the
+ * order has to be corrected somewhere. The web workspace does it at render time
+ * inside `ActivityHistoryList`. A native client cannot reach that component, and
+ * reimplementing the comparator, the occurrence rule and the actor rule on the
+ * phone would fork exactly the semantics this module exists to own.
+ *
+ * So the same helpers compose the finished shape once, server-side, and the
+ * phone formats dates and nothing else.
+ *
+ * OPEN ACTIVITIES ARE EXCLUDED. They are a plan, not a record; they belong to
+ * the open-activity list, which reads the untouched `followUps` array.
+ */
+export function buildConversationActivityHistory(
+  followUps: readonly CrmLeadDetailFollowUp[]
+): readonly CrmConversationActivityEntry[] {
+  const finished = followUps.filter((entry) => entry.status !== "open");
+
+  return sortActivityHistory(finished).map((activity) => ({
+    id: activity.id,
+    activityType: activity.activityType,
+    activityTypeLabel: formatConversationActivityType(activity.activityType),
+    title: activity.title,
+    status: activity.status,
+    statusLabel: formatConversationStatus(activity.status),
+    outcome: formatConversationOutcome(activity),
+    occurredAt: resolveActivityOccurredAt(activity),
+    actorLabel: resolveActivityActorLabel(activity),
+    completionNote: activity.completionNote,
+    isClientFacing: isClientFacingActivityType(activity.activityType),
+    noteHeading: conversationNoteHeadingForActivityType(activity.activityType),
+  }));
+}

@@ -69,6 +69,23 @@ export async function resolveCrmMobileAuth(
 }
 
 /**
+ * Whether a path segment is shaped like a lead id, checked BEFORE any query.
+ *
+ * Postgres rejects a malformed uuid with `22P02`, which would surface as an
+ * opaque 503 and turn a client mistake into a server error. More importantly, a
+ * probe with a junk id never reaches a query at all.
+ *
+ * ONE regex, shared by every per-lead mobile route. Two copies of a guard like
+ * this drift, and the looser copy becomes the way in.
+ */
+const CRM_LEAD_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isCrmLeadIdShape(value: string | null | undefined): boolean {
+  return typeof value === "string" && CRM_LEAD_ID_RE.test(value.trim());
+}
+
+/**
  * The stable error envelope every mobile CRM endpoint answers with.
  *
  * Categories, not messages: the mobile client branches on `error`, and nothing

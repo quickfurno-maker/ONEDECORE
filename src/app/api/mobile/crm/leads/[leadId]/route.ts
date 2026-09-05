@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   crmMobileAuthError,
   crmMobileError,
+  isCrmLeadIdShape,
   resolveCrmMobileAuth,
 } from "@/features/crm/server/crm-mobile-auth.ts";
 import { queryLeadIntelligence } from "@/features/crm/server/crm-lead-queries.ts";
@@ -35,15 +36,6 @@ import { queryLeadIntelligence } from "@/features/crm/server/crm-lead-queries.ts
 
 export const dynamic = "force-dynamic";
 
-/**
- * Postgres rejects a malformed uuid with `22P02`, which would surface as an
- * opaque 503. Checking the shape first turns a client mistake into a client
- * error, and — more importantly — means a probe with a junk id never reaches a
- * query at all.
- */
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ leadId: string }> }
@@ -56,7 +48,8 @@ export async function GET(
 
   const { leadId } = await params;
 
-  if (!leadId || !UUID_RE.test(leadId.trim())) {
+  /* The SHARED shape guard, so a junk id never reaches a query. */
+  if (!isCrmLeadIdShape(leadId)) {
     return crmMobileError(
       "invalid_request",
       "That lead reference is not valid."

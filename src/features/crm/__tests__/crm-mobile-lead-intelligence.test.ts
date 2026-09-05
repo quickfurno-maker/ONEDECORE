@@ -41,6 +41,10 @@ const DETAIL_ROUTE = read(
   "src", "app", "api", "mobile", "crm", "leads", "[leadId]", "route.ts"
 );
 
+const DETAIL_DETAIL_ROUTE = read(
+  "src", "app", "api", "mobile", "crm", "leads", "[leadId]", "detail", "route.ts"
+);
+
 const LEADS_ROUTE = read(
   "src", "app", "api", "mobile", "crm", "leads", "route.ts"
 );
@@ -108,7 +112,7 @@ describe("the endpoint is narrow and authenticated", () => {
   test("a malformed lead id is refused before any query", () => {
     const body = code(DETAIL_ROUTE);
 
-    const validateAt = body.indexOf("UUID_RE.test");
+    const validateAt = body.indexOf("isCrmLeadIdShape(leadId)");
     const queryAt = body.indexOf("await queryLeadIntelligence(");
 
     assert.ok(validateAt >= 0, "must validate the id shape");
@@ -118,6 +122,31 @@ describe("the endpoint is narrow and authenticated", () => {
     );
 
     assert.match(body, /invalid_request/);
+  });
+
+  /**
+   * ONE guard, shared by every per-lead mobile route. Two copies of a regex
+   * like this drift, and the looser copy becomes the way in.
+   */
+  test("the id guard lives in one place and rejects what it should", () => {
+    assert.match(
+      code(MOBILE_AUTH),
+      /export function isCrmLeadIdShape\(/
+    );
+
+    for (const [name, source] of [
+      ["intelligence route", DETAIL_ROUTE],
+      ["detail route", DETAIL_DETAIL_ROUTE],
+    ] as const) {
+      assert.ok(
+        code(source).includes("isCrmLeadIdShape(leadId)"),
+        `${name} must use the shared id guard`
+      );
+      assert.ok(
+        !/\[0-9a-f\]\{8\}/.test(code(source)),
+        `${name} must not carry its own uuid regex`
+      );
+    }
   });
 
   test("it exposes GET only", () => {

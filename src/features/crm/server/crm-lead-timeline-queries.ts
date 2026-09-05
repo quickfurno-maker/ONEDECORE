@@ -1,6 +1,5 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
 import type { CrmAccessContext } from "../contracts/crm-access.ts";
 import {
   CRM_TIMELINE_INCLUDED_EVENT_TYPES,
@@ -20,6 +19,7 @@ import {
   type CrmTimelineEntry,
 } from "../contracts/lead-timeline-contracts.ts";
 import { formatCrmCodeLabel } from "../contracts/crm-labels.ts";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
 
 /** Resolves a staff display name; never leaks an id when unknown. */
@@ -51,13 +51,19 @@ function truncate(value: string, max: number): string {
  *
  * No source row is ever deleted or mutated. Dedupe is presentation-only, and
  * only where a twin can be PROVEN by reference key or entry-method pairing.
+ *
+ * `db` is OPTIONAL and, when given, is the caller's own bearer-scoped client —
+ * never a privileged one. The cookie-scoped web path passes nothing and is
+ * unchanged; the mobile lead-detail read passes its bearer client so the SAME
+ * assembly answers both UIs. Either way RLS resolves against the real user.
  */
 export async function fetchLeadTimelinePage(
   leadId: string,
   context: CrmAccessContext,
-  labelForUser: ActorLabelResolver
+  labelForUser: ActorLabelResolver,
+  db?: CrmDb
 ): Promise<CrmLeadTimelinePage> {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
 
   const [
     activitiesResult,

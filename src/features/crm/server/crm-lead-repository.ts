@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import type { CrmAccessContext } from "../contracts/crm-access.ts";
 import { resolveCrmStaffLabel } from "../contracts/crm-staff-label.ts";
 import type { CrmLeadDetail } from "../contracts/lead-detail-dtos.ts";
 import type { CrmLeadListItem } from "../contracts/lead-dtos.ts";
@@ -9,6 +9,7 @@ import { parseManualSalesTemperature } from "../contracts/lead-sales-temperature
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 import { LEAD_MONTH_ALL_COHORT } from "../contracts/lead-month-cohort.ts";
 import type { LeadListQuery } from "../contracts/lead-list-query.ts";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import { CrmError, crmErrorFromPostgresMessage } from "./crm-errors.ts";
 import { getCrmAccessContext } from "./crm-auth.ts";
 import { formatMarketingTouchSummary } from "./crm-attribution-summary.ts";
@@ -91,19 +92,37 @@ export async function getRecentLeadsForCurrentUser(
   return queryRecentLeads(context, limit);
 }
 
-export async function getLeadDetailForCurrentUser(
-  leadId: string
+/**
+ * The canonical Lead Detail read model, for a caller that is ALREADY resolved.
+ *
+ * WHY THE SIGNATURE IS SHAPED THIS WAY. This assembly — the overview, the
+ * contact channels, the source touchpoints, the assignment history, the notes,
+ * the follow-ups with their real completion actors, the consent summary, the
+ * SLA clock and the unified timeline — is what the web lead page renders. The
+ * Owner app needs exactly the same facts, and the only thing that differed was
+ * where the caller came from: cookies on the web, a bearer token on a phone.
+ *
+ * So the caller is now a PARAMETER rather than an ambient lookup:
+ *
+ *   queryLeadDetail(context, leadId, db?)
+ *          ^                          ^
+ *   web cookie page            mobile bearer route
+ *
+ * There is deliberately no second lead-detail implementation. `db` is optional
+ * and, when supplied, is the caller's own bearer client — never service-role —
+ * so RLS and `authorize(...)` resolve against the real user on both paths and
+ * neither UI can see more than that person sees on the other.
+ *
+ * RLS DOES THE SCOPING. A lead outside the caller's visibility simply yields no
+ * row, indistinguishable from a lead that does not exist. Returning `null` for
+ * both is what stops a single-lead endpoint becoming an existence oracle.
+ */
+export async function queryLeadDetail(
+  context: CrmAccessContext,
+  leadId: string,
+  db?: CrmDb
 ): Promise<CrmLeadDetail | null> {
-  const context = await getCrmAccessContext();
-  if (!context) {
-    throw new CrmError({
-      code: "AUTH_REQUIRED",
-      message: "Authentication required",
-      httpStatus: 401,
-    });
-  }
-
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   const { data: lead, error: leadError } = await supabase
     .from("leads")
     .select(
@@ -149,7 +168,7 @@ export async function getLeadDetailForCurrentUser(
     return null;
   }
 
-  const assigneeDirectory = await fetchCrmAssigneeDirectory(context);
+  const assigneeDirectory = await fetchCrmAssigneeDirectory(context, db);
   const assigneeLabels = Object.fromEntries(
     assigneeDirectory.map((entry) => [entry.userId, entry.displayName])
   );
@@ -230,7 +249,7 @@ export async function getLeadDetailForCurrentUser(
     // CRM 2D-1: the unified timeline is assembled from canonical, RLS-scoped
     // audit rows. It replaces the previous lead_activities + lead_events concat,
     // which rendered raw event codes and duplicated every twin write.
-    fetchLeadTimelinePage(leadId, context, labelForUser),
+    fetchLeadTimelinePage(leadId, context, labelForUser, db),
   ]);
 
   for (const result of [
@@ -383,4 +402,26 @@ export async function getLeadDetailForCurrentUser(
       breachedAt: slaClockResult.data?.breached_at ?? null,
     },
   };
+}
+
+/**
+ * The cookie-scoped web entry point, unchanged in behaviour.
+ *
+ * It resolves the browser caller and then runs the ONE shared assembly above.
+ * Nothing about the page's read moved: the same rows, the same labels, the same
+ * timeline, the same null-for-hidden-lead answer.
+ */
+export async function getLeadDetailForCurrentUser(
+  leadId: string
+): Promise<CrmLeadDetail | null> {
+  const context = await getCrmAccessContext();
+  if (!context) {
+    throw new CrmError({
+      code: "AUTH_REQUIRED",
+      message: "Authentication required",
+      httpStatus: 401,
+    });
+  }
+
+  return queryLeadDetail(context, leadId);
 }
