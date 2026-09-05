@@ -78,6 +78,7 @@ export type CrmMobileErrorCode =
   | "unauthenticated"
   | "forbidden"
   | "invalid_request"
+  | "not_found"
   | "conflict"
   | "unavailable";
 
@@ -85,6 +86,12 @@ const STATUS_BY_CODE: Record<CrmMobileErrorCode, number> = {
   unauthenticated: 401,
   forbidden: 403,
   invalid_request: 400,
+  /*
+   * Used by the single-lead reads, where an RLS-hidden lead and a lead that
+   * does not exist MUST answer identically. Distinguishing them would let a
+   * caller enumerate leads they cannot see.
+   */
+  not_found: 404,
   conflict: 409,
   unavailable: 503,
 };

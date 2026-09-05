@@ -230,7 +230,8 @@ describe("the refactor is additive", () => {
    */
   const THREADED = [
     ["crm-permissions.ts", 8],
-    ["crm-lead-queries.ts", 7],
+    /* 8 since queryLeadIntelligence: the cohort read's 7, plus one. */
+    ["crm-lead-queries.ts", 8],
     ["crm-lead-score-batch.ts", 7],
     ["crm-lead-commercial-queries.ts", 2],
     ["crm-pipeline-queries.ts", 1],
