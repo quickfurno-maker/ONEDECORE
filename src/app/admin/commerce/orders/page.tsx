@@ -25,7 +25,7 @@ const STATUSES = ["all", "confirmed", "processing", "shipped", "delivered", "can
 export default async function AdminCommerceOrdersPage({ searchParams }: AdminCommerceOrdersPageProps) {
   const session = await getStaffClaims();
   if (!session) {
-    redirect("/auth/login?next=%2Fadmin%2Fcommerce%2Forders");
+    redirect("/auth/login?portal=admin&next=%2Fadmin%2Fcommerce%2Forders");
   }
   const permissions = await probeCommercePermissions();
   if (!permissions.canRead) {

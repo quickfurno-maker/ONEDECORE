@@ -13,7 +13,7 @@ export const metadata = {
 export default async function AdminLandingPagesPage() {
   const session = await getStaffClaims();
   if (!session) {
-    redirect("/auth/login?next=%2Fadmin%2Flanding-pages");
+    redirect("/auth/login?portal=admin&next=%2Fadmin%2Flanding-pages");
   }
   const permissions = await probeLandingLabPermissions();
   if (!permissions.canRead) {

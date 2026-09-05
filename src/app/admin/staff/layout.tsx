@@ -10,7 +10,7 @@ export default async function StaffLayout({ children }: { children: ReactNode })
   const resolution = await resolveStaffAdminAccess();
 
   if (resolution.kind === "unauthenticated") {
-    redirect("/auth/login?next=%2Fadmin%2Fstaff");
+    redirect("/auth/login?portal=admin&next=%2Fadmin%2Fstaff");
   }
 
   if (resolution.kind === "inactive") {

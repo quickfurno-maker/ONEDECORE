@@ -56,6 +56,7 @@ const LOGIN_FORM = "src/app/auth/login/login-form.tsx";
 const LOGIN_PAGE = "src/app/auth/login/page.tsx";
 const ROUTE = "src/app/auth/login/submit/route.ts";
 const SUBMIT = "src/features/staff-admin/server/staff-login-submit.ts";
+const PORTAL_CONTRACT = "src/features/staff-admin/contracts/login-portal.ts";
 
 const ORIGIN = "https://onedecore.in";
 const DIGITS = "7447863402";
@@ -110,6 +111,8 @@ interface Recorded {
   readonly signIns: SignInCall[];
   readonly rpcs: string[];
   readonly signOuts: number[];
+  /** The permission each `authorize` call asked for, in order. */
+  readonly permissions: string[];
 }
 
 interface ClientOptions {
@@ -125,7 +128,12 @@ interface ClientOptions {
  * `@supabase/ssr` does — on sign-in, and again (as deletions) on sign-out.
  */
 function makeClient(options: ClientOptions = {}) {
-  const recorded: Recorded = { signIns: [], rpcs: [], signOuts: [] };
+  const recorded: Recorded = {
+    signIns: [],
+    rpcs: [],
+    signOuts: [],
+    permissions: [],
+  };
 
   const factory = (adapter: LoginCookieAdapter): LoginSupabaseClient => ({
     auth: {
@@ -155,8 +163,11 @@ function makeClient(options: ClientOptions = {}) {
         return null;
       },
     },
-    async rpc(fn: string) {
+    async rpc(fn: string, args?: Record<string, unknown>) {
       recorded.rpcs.push(fn);
+      if (fn === "authorize") {
+        recorded.permissions.push(String(args?.requested_permission ?? ""));
+      }
       if (fn === "record_staff_first_login") {
         return {
           data: { accessState: options.accessState ?? "active" },
@@ -333,11 +344,24 @@ describe("login is a normal POST, not a Server Action", () => {
     assert.match(form, /name="identifier"/);
     assert.match(form, /name="password"/);
     assert.match(form, /name="next"/);
-    assert.match(form, /Staff Login ID or Email/);
+    // The portal now travels WITH the credentials rather than being guessed
+    // from their shape.
+    assert.match(form, /name="portal"/);
+
+    /*
+     * The staff wording moved into the shared portal contract so both portals
+     * render from one source. Both halves are asserted — that the words still
+     * exist, and that the form actually renders them instead of hard-coding a
+     * second copy that could drift.
+     */
+    const contract = read(PORTAL_CONTRACT);
+    assert.match(contract, /10-digit Mobile Number/);
     assert.match(
-      form,
+      contract,
       /Staff sign in with their unique 10-digit mobile number\. Do not add \+91\./
     );
+    assert.match(form, /copy\.identifierLabel/);
+    assert.match(form, /copy\.identifierHelp/);
   });
 });
 
@@ -944,16 +968,43 @@ describe("failures disclose nothing", () => {
   });
 
   test("an unknown login and a wrong password are indistinguishable", async () => {
-    const a = await submit(
-      { identifier: DIGITS, password: "x".repeat(12) },
+    /*
+     * Compared WITHIN a portal, which is the only comparison that carries
+     * information. The portal itself is chosen by the visitor and is already in
+     * the URL they arrived from, so it discloses nothing about who exists.
+     */
+    for (const [portal, unknown, known] of [
+      ["staff", "9000000001", DIGITS],
+      ["admin", "nobody@onedecore.in", "owner@onedecore.in"],
+    ] as const) {
+      const a = await submit(
+        { identifier: unknown, password: "x".repeat(12), portal },
+        { signInFails: true }
+      );
+      const b = await submit(
+        { identifier: known, password: "y".repeat(12), portal },
+        { signInFails: true }
+      );
+      assert.equal(a.location, b.location, `${portal}: failures must be identical`);
+      assert.equal(a.response.status, b.response.status);
+    }
+  });
+
+  test("the failure URL names only the portal that was submitted", async () => {
+    /*
+     * A staff-shaped identifier posted to the ADMIN portal comes back to the
+     * admin form. The response never says "that looked like a staff number",
+     * and never bounces the attempt across into the other namespace.
+     */
+    const { location, recorded } = await submit(
+      { identifier: DIGITS, password: PASSWORD, portal: "admin" },
       { signInFails: true }
     );
-    const b = await submit(
-      { identifier: "nobody@onedecore.in", password: "y".repeat(12) },
-      { signInFails: true }
-    );
-    assert.equal(a.location, b.location);
-    assert.equal(a.response.status, b.response.status);
+    const url = new URL(location);
+    assert.equal(url.searchParams.get("portal"), "admin");
+    assert.equal(url.searchParams.get("error"), LOGIN_ERROR_CODE);
+    assert.ok(!location.includes(DIGITS), "the identifier must not be echoed");
+    assert.equal(recorded.signIns.length, 0, "no credential may be tested");
   });
 
   test("missing fields produce the same generic failure", async () => {
@@ -1069,10 +1120,19 @@ describe("the redirect target is always safe", () => {
     assert.match(page, /resolvedParams\.error === LOGIN_ERROR_CODE/);
 
     const form = read(LOGIN_FORM);
-    assert.match(form, /Invalid staff credentials\./);
+    const contract = read(PORTAL_CONTRACT);
+    // ONE fixed message per portal, both rendered from the contract rather than
+    // assembled from anything the request supplied.
+    assert.match(form, /copy\.errorMessage/);
+    assert.match(contract, /Invalid staff credentials\./);
+    assert.match(contract, /Invalid admin credentials\./);
+
     // No enumerating variants anywhere in the rendered surface.
     for (const leak of ["invalid_user", "wrong_password", "revoked", "alias_exists"]) {
-      assert.ok(!page.includes(leak) && !form.includes(leak), `must not render ${leak}`);
+      assert.ok(
+        !page.includes(leak) && !form.includes(leak) && !contract.includes(leak),
+        `must not render ${leak}`
+      );
     }
   });
 });
@@ -1161,5 +1221,229 @@ describe("the owner locks still hold", () => {
       /queryLeadListPage\(auth\.context, query, auth\.db\)/
     );
     assert.match(read("src/lib/supabase/bearer.ts"), /publishableKey/);
+  });
+});
+
+/* ========================================================================== */
+/* 7. Two portals, two identity contracts                                      */
+/* ========================================================================== */
+
+const ADMIN_EMAIL = "owner@onedecore.in";
+
+describe("the ADMIN portal accepts a Super Admin email and nothing else", () => {
+  test("a 10-digit mobile is refused before any credential is tested", async () => {
+    const { response, location, recorded } = await submit({
+      identifier: DIGITS,
+      password: PASSWORD,
+      portal: "admin",
+    });
+
+    assert.equal(recorded.signIns.length, 0, "no credential may be tested");
+    assert.equal(response.status, 303);
+    assert.match(location, new RegExp(`error=${LOGIN_ERROR_CODE}`));
+  });
+
+  test("the internal alias is refused on the admin portal too", async () => {
+    const { recorded, location } = await submit({
+      identifier: ALIAS,
+      password: PASSWORD,
+      portal: "admin",
+    });
+
+    assert.equal(recorded.signIns.length, 0);
+    assert.ok(!location.includes(STAFF_LOGIN_AUTH_ALIAS_DOMAIN));
+  });
+
+  test("a value that is not an email shape is refused", async () => {
+    for (const identifier of ["owner", "owner@", "@onedecore.in", "own er@x.in", "a@b"]) {
+      const { recorded } = await submit({
+        identifier,
+        password: PASSWORD,
+        portal: "admin",
+      });
+      assert.equal(recorded.signIns.length, 0, identifier);
+    }
+  });
+
+  test("a Super Admin email signs in, lowercased", async () => {
+    const { response, recorded } = await submit({
+      identifier: "Owner@OneDecore.IN",
+      password: PASSWORD,
+      portal: "admin",
+    });
+
+    assert.equal(response.status, 303);
+    assert.equal(recorded.signIns.length, 1);
+    assert.equal(recorded.signIns[0]!.email, ADMIN_EMAIL);
+  });
+
+  test("the admin portal never runs the staff first-login promotion", async () => {
+    const { recorded } = await submit({
+      identifier: ADMIN_EMAIL,
+      password: PASSWORD,
+      portal: "admin",
+    });
+
+    assert.ok(
+      !recorded.rpcs.includes("record_staff_first_login"),
+      "the Super Admin is not a staff credential and has no lifecycle to promote"
+    );
+  });
+
+  test("entitlement is the Super Admin-only permission", async () => {
+    const { recorded } = await submit({
+      identifier: ADMIN_EMAIL,
+      password: PASSWORD,
+      portal: "admin",
+    });
+
+    assert.deepEqual(recorded.permissions, ["staff.credentials.manage"]);
+    assert.ok(
+      !recorded.permissions.includes("admin.access"),
+      "admin.access is held by ordinary staff roles and is too wide here"
+    );
+  });
+
+  test("an authenticated non-owner is signed back out, not forbidden-paged", async () => {
+    const { response, location, recorded } = await submit(
+      { identifier: ADMIN_EMAIL, password: PASSWORD, portal: "admin" },
+      { hasAdminAccess: false }
+    );
+
+    // Landing on /auth/forbidden would confirm the password was correct.
+    assert.ok(!location.includes("/auth/forbidden"));
+    assert.match(location, new RegExp(`error=${LOGIN_ERROR_CODE}`));
+    assert.equal(recorded.signOuts.length, 1, "the session must be cleared");
+
+    // And the deletion cookies must actually reach the browser.
+    const cleared = response.cookies.get(SESSION_COOKIES[0]!.name);
+    assert.equal(cleared?.value, "");
+  });
+
+  test("a successful owner login lands on the requested admin path", async () => {
+    const { response, location } = await submit({
+      identifier: ADMIN_EMAIL,
+      password: PASSWORD,
+      portal: "admin",
+      next: "/admin/staff",
+    });
+
+    assert.equal(response.status, 303);
+    assert.equal(new URL(location).pathname, "/admin/staff");
+  });
+});
+
+describe("the STAFF portal accepts a bare 10-digit mobile and nothing else", () => {
+  test("an email is refused before any credential is tested", async () => {
+    const { recorded } = await submit({
+      identifier: ADMIN_EMAIL,
+      password: PASSWORD,
+      portal: "staff",
+    });
+    assert.equal(recorded.signIns.length, 0);
+  });
+
+  test("a +91 or 91-prefixed number is refused, never normalised", async () => {
+    for (const identifier of [`+91${DIGITS}`, `91${DIGITS}`, `0${DIGITS}`, "744 786 3402"]) {
+      const { recorded } = await submit({
+        identifier,
+        password: PASSWORD,
+        portal: "staff",
+      });
+      assert.equal(recorded.signIns.length, 0, identifier);
+    }
+  });
+
+  test("the alias is refused on the staff portal", async () => {
+    const { recorded } = await submit({
+      identifier: ALIAS,
+      password: PASSWORD,
+      portal: "staff",
+    });
+    assert.equal(recorded.signIns.length, 0);
+  });
+
+  test("the canonical number signs in through the derived alias", async () => {
+    const { response, recorded } = await submit({
+      identifier: DIGITS,
+      password: PASSWORD,
+      portal: "staff",
+    });
+
+    assert.equal(response.status, 303);
+    assert.equal(recorded.signIns[0]!.email, ALIAS);
+    assert.ok(recorded.rpcs.includes("record_staff_first_login"));
+    assert.deepEqual(recorded.permissions, ["admin.access"]);
+  });
+
+  test("a revoked staff account is still signed out", async () => {
+    const { recorded, location } = await submit(
+      { identifier: DIGITS, password: PASSWORD, portal: "staff" },
+      { accessState: "revoked" }
+    );
+
+    assert.equal(recorded.signOuts.length, 1);
+    assert.match(location, /portal=staff/);
+  });
+});
+
+describe("the portal survives the round trip", () => {
+  test("a failed attempt comes back to the SAME portal", async () => {
+    for (const portal of ["admin", "staff"] as const) {
+      const { location } = await submit(
+        { identifier: "definitely-wrong", password: PASSWORD, portal },
+        { signInFails: true }
+      );
+      assert.equal(new URL(location).searchParams.get("portal"), portal);
+    }
+  });
+
+  test("the failure URL carries the portal, next and error — and nothing else", async () => {
+    const { location } = await submit(
+      {
+        identifier: DIGITS,
+        password: "wrong-password",
+        portal: "staff",
+        next: "/admin/crm",
+      },
+      { signInFails: true }
+    );
+
+    const url = new URL(location);
+    assert.deepEqual(
+      [...url.searchParams.keys()].sort(),
+      ["error", "next", "portal"]
+    );
+    assert.equal(url.searchParams.get("next"), "/admin/crm");
+    assert.ok(!location.includes(DIGITS));
+    assert.ok(!location.includes("wrong-password"));
+  });
+
+  test("a submission with NO portal field still works, as it did before", async () => {
+    // A form cached before the split posts no portal. The identifier's shape
+    // decides, which is exactly the pre-split behaviour.
+    const staff = await submit({ identifier: DIGITS, password: PASSWORD });
+    assert.equal(staff.recorded.signIns[0]!.email, ALIAS);
+    assert.ok(staff.recorded.rpcs.includes("record_staff_first_login"));
+
+    const admin = await submit({ identifier: ADMIN_EMAIL, password: PASSWORD });
+    assert.equal(admin.recorded.signIns[0]!.email, ADMIN_EMAIL);
+    assert.ok(!admin.recorded.rpcs.includes("record_staff_first_login"));
+  });
+
+  test("a crafted portal value cannot invent a third contract", async () => {
+    // An unrecognised portal is not honoured, echoed, or half-applied: the
+    // submission falls back to reading the identifier, and the reply names a
+    // real portal.
+    const { location, recorded } = await submit({
+      identifier: DIGITS,
+      password: PASSWORD,
+      portal: "../../etc/passwd",
+    });
+
+    assert.equal(recorded.signIns[0]!.email, ALIAS);
+    const portal = new URL(location).searchParams.get("portal");
+    assert.ok(portal === null || portal === "staff", `unexpected portal ${portal}`);
+    assert.ok(!location.includes("passwd"));
   });
 });

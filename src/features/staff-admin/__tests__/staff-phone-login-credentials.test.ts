@@ -52,6 +52,11 @@ const MIGRATION = "supabase/migrations/20260903160000_staff_phone_login_credenti
 /** The login mutation authority — now a Route Handler flow, not a Server Action. */
 const LOGIN_ACTION = "src/features/staff-admin/server/staff-login-submit.ts";
 const LOGIN_FORM = "src/app/auth/login/login-form.tsx";
+const PORTAL_CONTRACT = "src/features/staff-admin/contracts/login-portal.ts";
+
+/** Strips comments: these files DESCRIBE what they refuse to do. */
+const code = (source: string) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
 const PANEL = "src/features/staff-admin/components/StaffLoginAccessPanel.tsx";
 const CREDENTIAL_ACTIONS = "src/features/staff-admin/server/staff-credential-actions.ts";
 
@@ -162,7 +167,8 @@ describe("login routing — one field, two credential paths", () => {
   });
 
   test("the action signs in with the derived alias, never the phone", () => {
-    const source = read(LOGIN_ACTION);
+    // Comments stripped: this module explains at length what it will not do.
+    const source = code(read(LOGIN_ACTION));
     assert.match(source, /looksLikeStaffLoginPhone\(identifier\)/);
 
     // The Phone provider is disabled, so the staff path authenticates against
@@ -179,14 +185,15 @@ describe("login routing — one field, two credential paths", () => {
   });
 
   test("every authentication failure returns the same generic result", () => {
-    const source = read(LOGIN_ACTION);
+    const source = code(read(LOGIN_ACTION));
     // Wrong phone, wrong password and revoked all funnel through one helper
     // carrying one opaque code.
     assert.match(source, /export const LOGIN_ERROR_CODE = "invalid";/);
     assert.ok((source.match(/return fail\(\);/g) ?? []).length >= 4);
 
-    // The message itself lives in the form, so the URL never carries a reason.
-    assert.match(read(LOGIN_FORM), /Invalid staff credentials\./);
+    // The message itself is rendered copy, so the URL never carries a reason.
+    assert.match(read(PORTAL_CONTRACT), /Invalid staff credentials\./);
+    assert.match(read(LOGIN_FORM), /copy\.errorMessage/);
   });
 
   test("a revoked account is signed out even with a correct password", () => {
@@ -202,12 +209,27 @@ describe("login routing — one field, two credential paths", () => {
   test("the form offers ONE identifier field, not a second username", () => {
     const form = read(LOGIN_FORM);
     assert.match(form, /name="identifier"/);
-    assert.match(form, /Staff Login ID or Email/);
-    assert.match(form, /unique 10-digit mobile number/);
-    // A dedicated email input would be the second username field the owner ruled out.
-    assert.doesNotMatch(form, /type="email"/);
+
+    /*
+     * The owner ruled out a SECOND username field, and that is what is asserted
+     * here directly: exactly one credential-name input exists, and it is never
+     * accompanied by an email or username field of its own. The portal changes
+     * that single field's type and label — the admin form is legitimately an
+     * `email` input — but it never adds another one beside it.
+     */
+    assert.equal(
+      (form.match(/name="identifier"/g) ?? []).length,
+      1,
+      "exactly one identifier input"
+    );
+    assert.doesNotMatch(form, /name="email"/);
+    assert.doesNotMatch(form, /name="username"/);
+
+    // The staff wording still exists, in the shared portal contract.
+    assert.match(read(PORTAL_CONTRACT), /unique 10-digit mobile number/);
+
     // The transport is never named to the person signing in.
-    assert.doesNotMatch(form, /alias|staff-login\.onedecore|OTP|SMS/i);
+    assert.doesNotMatch(code(form), /alias|staff-login\.onedecore|OTP|SMS/i);
   });
 });
 

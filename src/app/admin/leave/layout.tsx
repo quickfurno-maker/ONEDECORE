@@ -10,7 +10,7 @@ export default async function LeaveLayout({ children }: { children: ReactNode })
   const resolution = await resolveLeaveAccess();
 
   if (resolution.kind === "unauthenticated") {
-    redirect("/auth/login?next=%2Fadmin%2Fleave");
+    redirect("/auth/login?portal=admin&next=%2Fadmin%2Fleave");
   }
 
   if (resolution.kind === "inactive") {

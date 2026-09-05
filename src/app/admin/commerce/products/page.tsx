@@ -31,7 +31,7 @@ interface AdminCommerceProductsPageProps {
 export default async function AdminCommerceProductsPage({ searchParams }: AdminCommerceProductsPageProps) {
   const session = await getStaffClaims();
   if (!session) {
-    redirect("/auth/login?next=%2Fadmin%2Fcommerce%2Fproducts");
+    redirect("/auth/login?portal=admin&next=%2Fadmin%2Fcommerce%2Fproducts");
   }
   const permissions = await probeCommercePermissions();
   if (!permissions.canRead) {

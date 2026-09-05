@@ -37,6 +37,16 @@ import {
   STAFF_ROLE_PERMISSIONS,
 } from "../contracts/permissions.ts";
 import {
+  DEFAULT_LOGIN_PORTAL,
+  LOGIN_PORTALS,
+  LOGIN_PORTAL_COPY,
+  inferLoginPortalFromIdentifier,
+  loginPortalHref,
+  looksLikeAdminEmail,
+  normaliseLoginPortal,
+  resolveSubmittedPortal,
+} from "../contracts/login-portal.ts";
+import {
   StaffIdentityConflictError,
   changeStaffAuthLoginPhone,
   convertStaffAuthLoginToAlias,
@@ -54,6 +64,13 @@ const read = (rel: string) => readFileSync(join(root, rel), "utf8");
 const LOGIN_ACTION = "src/features/staff-admin/server/staff-login-submit.ts";
 const LOGIN_FORM = "src/app/auth/login/login-form.tsx";
 const CONTRACT = "src/features/staff-admin/contracts/staff-login-phone.ts";
+const PORTAL_CONTRACT = "src/features/staff-admin/contracts/login-portal.ts";
+const LOGIN_PAGE = "src/app/auth/login/page.tsx";
+const SIGNOUT = "src/app/auth/signout/route.ts";
+
+/** Strips comments: these files DESCRIBE what they refuse to do. */
+const code = (source: string) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
 const PROVISIONING =
   "src/features/staff-admin/server/staff-credential-provisioning.ts";
 const ADAPTER = "src/features/staff-admin/server/staff-invite-adapter.ts";
@@ -137,11 +154,27 @@ describe("the 10-digit mobile is the only staff-visible login ID", () => {
 
   test("the form asks for the login ID without naming any transport", () => {
     const form = read(LOGIN_FORM);
-    assert.match(form, /Staff Login ID or Email/);
-    assert.match(form, /Staff sign in with their unique 10-digit mobile number/);
-    assert.doesNotMatch(form, /OTP|SMS|one-time|verification code/i);
-    assert.doesNotMatch(form, /alias|staff-login\.onedecore/i);
-    assert.doesNotMatch(form, /forgot|reset your password/i);
+    const portalContract = read(PORTAL_CONTRACT);
+
+    // The staff wording lives in the shared portal contract now; the form
+    // renders it. Both halves are checked so neither can drift alone.
+    assert.match(portalContract, /10-digit Mobile Number/);
+    assert.match(
+      portalContract,
+      /Staff sign in with their unique 10-digit mobile number/
+    );
+    assert.match(form, /copy\.identifierLabel/);
+
+    /*
+     * Comments are stripped before these refusals: both modules DESCRIBE the
+     * alias they refuse to show anyone, and a docblock is never rendered. What
+     * matters is that no such word reaches the page.
+     */
+    for (const source of [code(form), code(portalContract)]) {
+      assert.doesNotMatch(source, /OTP|SMS|one-time|verification code/i);
+      assert.doesNotMatch(source, /alias|staff-login\.onedecore/i);
+      assert.doesNotMatch(source, /forgot|reset your password/i);
+    }
   });
 });
 
@@ -220,7 +253,7 @@ describe("the login action", () => {
   });
 
   test("the Super Admin email/password path is unchanged", () => {
-    const source = read(LOGIN_ACTION);
+    const source = code(read(LOGIN_ACTION));
     assert.match(source, /signInWithPassword\(\{\s*email: identifier\.toLowerCase\(\)/);
   });
 
@@ -924,5 +957,188 @@ describe("no schema, no migration, no collateral", () => {
     const provisioning = read(PROVISIONING);
     assert.doesNotMatch(provisioning, /serviceRoleKey|createAdminClient/);
     assert.match(read(ADAPTER), /serviceRoleKey/);
+  });
+});
+
+/* ========================================================================== */
+/* The two portals are separate identity contracts, stated once               */
+/* ========================================================================== */
+
+describe("the login portal contract", () => {
+  test("there are exactly two portals, and admin is the default", () => {
+    assert.deepEqual([...LOGIN_PORTALS], ["admin", "staff"]);
+    assert.equal(DEFAULT_LOGIN_PORTAL, "admin");
+  });
+
+  test("a recognised portal is honoured, case and padding tolerated", () => {
+    assert.equal(normaliseLoginPortal("staff"), "staff");
+    assert.equal(normaliseLoginPortal(" STAFF "), "staff");
+    assert.equal(normaliseLoginPortal("admin"), "admin");
+  });
+
+  test("anything else collapses to the default rather than being carried", () => {
+    for (const value of [
+      null,
+      undefined,
+      "",
+      "owner",
+      "superadmin",
+      "staff2",
+      "../../etc/passwd",
+      "<script>",
+    ]) {
+      assert.equal(normaliseLoginPortal(value), "admin", String(value));
+    }
+  });
+
+  test("the admin identifier test accepts an address and refuses the rest", () => {
+    assert.equal(looksLikeAdminEmail("owner@onedecore.in"), true);
+    assert.equal(looksLikeAdminEmail("  owner@onedecore.in  "), true);
+    for (const value of [
+      "7447863402",
+      "owner",
+      "owner@",
+      "@onedecore.in",
+      "owner@@onedecore.in",
+      "owner@onedecore",
+      "own er@onedecore.in",
+      "owner@.in",
+      "owner@onedecore.",
+      "",
+    ]) {
+      assert.equal(looksLikeAdminEmail(value), false, value);
+    }
+  });
+
+  test("a legacy submission is routed by the identifier's own shape", () => {
+    assert.equal(inferLoginPortalFromIdentifier(DIGITS), "staff");
+    assert.equal(inferLoginPortalFromIdentifier("owner@onedecore.in"), "admin");
+    // A non-canonical number is NOT a staff login, so it takes the admin path
+    // and is refused there by the email test — never silently normalised.
+    assert.equal(inferLoginPortalFromIdentifier(`+91${DIGITS}`), "admin");
+  });
+
+  test("an explicitly posted portal wins; only a missing one is inferred", () => {
+    assert.equal(resolveSubmittedPortal("admin", DIGITS), "admin");
+    assert.equal(resolveSubmittedPortal("staff", "owner@onedecore.in"), "staff");
+    assert.equal(resolveSubmittedPortal("", DIGITS), "staff");
+    assert.equal(resolveSubmittedPortal(null, "owner@onedecore.in"), "admin");
+    // A crafted value cannot select a contract, and cannot suppress inference.
+    assert.equal(resolveSubmittedPortal("nonsense", DIGITS), "staff");
+  });
+
+  test("the portal link carries the portal and a safe next, never an error", () => {
+    assert.equal(loginPortalHref("staff"), "/auth/login?portal=staff");
+    assert.equal(
+      loginPortalHref("admin", "/admin/crm/leads"),
+      "/auth/login?portal=admin&next=%2Fadmin%2Fcrm%2Fleads"
+    );
+    // /admin is the default destination, so it is never spelled out.
+    assert.equal(loginPortalHref("admin", "/admin"), "/auth/login?portal=admin");
+    // A failure belongs to the portal that produced it.
+    assert.doesNotMatch(loginPortalHref("staff", "/admin/crm"), /error/);
+  });
+
+  test("each portal states its own wording, and the admin one names no mobile", () => {
+    const admin = LOGIN_PORTAL_COPY.admin;
+    const staff = LOGIN_PORTAL_COPY.staff;
+
+    assert.match(admin.brand, /Admin Portal/);
+    assert.match(admin.heading, /Super Admin/);
+    assert.equal(admin.identifierLabel, "Super Admin Email");
+    /*
+     * The admin form must not mention the staff contract at all. Telling the
+     * owner to "enter your unique 10-digit mobile number" is the exact wording
+     * that made a working Super Admin password look broken.
+     */
+    assert.equal(admin.identifierHelp, null);
+    assert.doesNotMatch(admin.submitLabel, /staff/i);
+    assert.doesNotMatch(admin.errorMessage, /staff/i);
+
+    assert.match(staff.brand, /Staff Portal/);
+    assert.equal(staff.identifierLabel, "10-digit Mobile Number");
+    assert.match(staff.identifierHelp ?? "", /Do not add \+91/);
+    assert.equal(staff.errorMessage, "Invalid staff credentials.");
+
+    // Two distinct messages, each fixed, neither naming a reason.
+    assert.notEqual(admin.errorMessage, staff.errorMessage);
+    for (const message of [admin.errorMessage, staff.errorMessage]) {
+      assert.doesNotMatch(message, /password|email|exists|revoked|permission/i);
+    }
+  });
+});
+
+describe("the login page presents one portal at a time, without JavaScript", () => {
+  test("the page resolves the portal on the server", () => {
+    const page = read(LOGIN_PAGE);
+    assert.match(page, /normaliseLoginPortal\(/);
+    assert.match(page, /LOGIN_PORTAL_COPY\[portal\]/);
+    // Every visible string comes from the contract, not a second hard-coded copy.
+    for (const field of ["brand", "heading", "description"]) {
+      assert.match(page, new RegExp(`copy\\.${field}`));
+    }
+  });
+
+  test("the selector is ordinary links, so it works with JS disabled", () => {
+    const page = code(read(LOGIN_PAGE));
+    assert.match(page, /loginPortalHref\(candidate, nextParam\)/);
+    // No client-side toggle: a <Link> is a real navigation to a page the server
+    // rendered for that portal, so the labels and the posted field always agree.
+    assert.doesNotMatch(page, /useState|onClick|"use client"/);
+
+    const form = code(read(LOGIN_FORM));
+    assert.doesNotMatch(form, /setPortal|useState<[^>]*Portal/);
+  });
+
+  test("the form posts the portal it is showing", () => {
+    const form = read(LOGIN_FORM);
+    assert.match(form, /<input type="hidden" name="portal" value=\{portal\} \/>/);
+  });
+
+  test("each portal gets the right keyboard and the right ceiling", () => {
+    const form = read(LOGIN_FORM);
+    // Staff: a phone keypad and the canonical 10-digit ceiling.
+    assert.match(form, /type=\{isStaff \? "tel" : "email"\}/);
+    assert.match(form, /inputMode=\{isStaff \? "numeric" : "email"\}/);
+    assert.match(form, /maxLength=\{isStaff \? 10 : 254\}/);
+    // No keystroke filtering: that is what breaks Backspace, paste and IME input.
+    assert.doesNotMatch(form, /onKeyDown|preventDefault/);
+  });
+});
+
+describe("every unauthenticated /admin entry names the Admin portal", () => {
+  test("sign-out returns to the admin portal", () => {
+    const source = read(SIGNOUT);
+    assert.match(source, /loginPortalHref\(\s*DEFAULT_LOGIN_PORTAL/);
+  });
+
+  test("no admin guard sends anyone to an unqualified login page", () => {
+    /*
+     * The incident was a redirect that did not say which portal it wanted. A
+     * bare `/auth/login?next=...` anywhere under src would reintroduce exactly
+     * that, so the whole tree is swept rather than a list of known files.
+     */
+    const offenders: string[] = [];
+
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {
+        const rel = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) {
+          if (entry.name !== "__tests__") {
+            walk(rel);
+          }
+          continue;
+        }
+        if (!/\.tsx?$/.test(entry.name)) {
+          continue;
+        }
+        if (read(rel).includes("/auth/login?next=")) {
+          offenders.push(rel);
+        }
+      }
+    };
+
+    walk("src");
+    assert.deepEqual(offenders, [], `login redirects missing a portal: ${offenders}`);
   });
 });
