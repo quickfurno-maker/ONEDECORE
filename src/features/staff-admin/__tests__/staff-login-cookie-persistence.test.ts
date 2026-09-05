@@ -108,12 +108,28 @@ interface SignInCall {
   readonly password: string;
 }
 
+/** The cookie state a call could see, captured at the moment it ran. */
+interface CookieView {
+  readonly at: string;
+  readonly cookies: { name: string; value: string }[];
+}
+
 interface Recorded {
   readonly signIns: SignInCall[];
   readonly rpcs: string[];
   readonly signOuts: number[];
   /** The permission each `authorize` call asked for, in order. */
   readonly permissions: string[];
+  /**
+   * `adapter.getAll()` at each step of the flow.
+   *
+   * The old double treated sign-in and the RPCs that follow it as independent
+   * successes, which is exactly why it could not see the production defect:
+   * in reality the RPC's authenticated identity comes from the session state
+   * `signInWithPassword` just wrote. Recording the view makes that dependency
+   * observable.
+   */
+  readonly views: CookieView[];
 }
 
 interface ClientOptions {
@@ -134,11 +150,19 @@ function makeClient(options: ClientOptions = {}) {
     rpcs: [],
     signOuts: [],
     permissions: [],
+    views: [],
   };
 
-  const factory = (adapter: LoginCookieAdapter): LoginSupabaseClient => ({
+  const factory = (adapter: LoginCookieAdapter): LoginSupabaseClient => {
+    // What the real library does before every operation: read its storage.
+    const look = (at: string) => {
+      recorded.views.push({ at, cookies: adapter.getAll() });
+    };
+
+    return {
     auth: {
       async signInWithPassword(credentials) {
+        look("signIn");
         recorded.signIns.push(credentials);
         if (options.signInFails) {
           return { error: { message: "Invalid login credentials" } };
@@ -150,6 +174,7 @@ function makeClient(options: ClientOptions = {}) {
         return { error: null };
       },
       async signOut() {
+        look("signOut");
         recorded.signOuts.push(1);
         // Real deletion cookies: same names, empty value, maxAge 0 — and the
         // same cache headers, because this response carries auth cookies too.
@@ -165,6 +190,7 @@ function makeClient(options: ClientOptions = {}) {
       },
     },
     async rpc(fn: string, args?: Record<string, unknown>) {
+      look(`rpc:${fn}`);
       recorded.rpcs.push(fn);
       if (fn === "authorize") {
         recorded.permissions.push(String(args?.requested_permission ?? ""));
@@ -180,9 +206,28 @@ function makeClient(options: ClientOptions = {}) {
       }
       return { data: options.hasAdminAccess ?? true, error: null };
     },
-  });
+    };
+  };
 
   return { factory, recorded };
+}
+
+/** The view a named step saw, or undefined if that step never ran. */
+function viewAt(recorded: Recorded, at: string): CookieView | undefined {
+  return recorded.views.find((view) => view.at === at);
+}
+
+/** Whether a view carries a live (non-empty) value for every given name. */
+function seesLiveCookies(
+  view: CookieView | undefined,
+  names: readonly string[]
+): boolean {
+  if (!view) {
+    return false;
+  }
+  return names.every((name) =>
+    view.cookies.some((cookie) => cookie.name === name && cookie.value !== "")
+  );
 }
 
 interface RequestOptions {
@@ -1517,5 +1562,214 @@ describe("the portal survives the round trip", () => {
     });
     assert.equal(blank.recorded.signIns.length, 0);
     assert.equal(new URL(blank.location).searchParams.get("portal"), "admin");
+  });
+});
+
+/* ========================================================================== */
+/* 8. The session must be visible to the REST OF THIS REQUEST                  */
+/* ========================================================================== */
+
+/*
+ * PRODUCTION EVIDENCE
+ *
+ * After the portal split shipped, the owner still could not sign in through the
+ * browser form. Run directly on the production VPS — same project URL, same
+ * publishable key, same credential — `signInWithPassword` returned a real
+ * session and `authorize("staff.credentials.manage")` on that session returned
+ * true. Credential and database entitlement were healthy; only this Route
+ * Handler failed.
+ *
+ * The cause: `getAll` read the cookies the BROWSER sent, and a login request by
+ * definition carries no session. The fresh cookies `setAll` produced were kept
+ * for the response and were invisible to the `authorize` / `record_staff_first_login`
+ * calls that run immediately afterwards on the same client, so those could
+ * resolve as an unauthenticated caller. The admin branch read that as "not
+ * entitled", signed the new session back out, and reported invalid credentials
+ * for a credential that had just worked.
+ *
+ * These tests fail against that old adapter and pass against the fixed one.
+ */
+
+const SESSION_COOKIE_NAMES = SESSION_COOKIES.map((cookie) => cookie.name);
+
+describe("a fresh session is visible to the same request that created it", () => {
+  test("the admin entitlement check runs WITH the new session", async () => {
+    const { recorded } = await submit({
+      identifier: "owner@onedecore.in",
+      password: PASSWORD,
+      portal: "admin",
+    });
+
+    // The request genuinely started with no session, as a login request does.
+    assert.deepEqual(viewAt(recorded, "signIn")?.cookies, []);
+
+    // And the permission check that decides the whole outcome can see it.
+    assert.ok(
+      seesLiveCookies(viewAt(recorded, "rpc:authorize"), SESSION_COOKIE_NAMES),
+      "authorize() must see the session signInWithPassword just established"
+    );
+    assert.deepEqual(recorded.permissions, ["staff.credentials.manage"]);
+  });
+
+  test("BOTH staff RPCs run with the new session", async () => {
+    const { recorded } = await submit({
+      identifier: DIGITS,
+      password: PASSWORD,
+      portal: "staff",
+    });
+
+    assert.deepEqual(viewAt(recorded, "signIn")?.cookies, []);
+    for (const step of ["rpc:record_staff_first_login", "rpc:authorize"]) {
+      assert.ok(
+        seesLiveCookies(viewAt(recorded, step), SESSION_COOKIE_NAMES),
+        `${step} must see the session signInWithPassword just established`
+      );
+    }
+  });
+
+  test("every chunk of a chunked auth cookie is visible, with its value", async () => {
+    const { recorded } = await submit({
+      identifier: DIGITS,
+      password: PASSWORD,
+      portal: "staff",
+    });
+
+    const view = viewAt(recorded, "rpc:authorize");
+    for (const cookie of SESSION_COOKIES) {
+      const seen = view?.cookies.find((entry) => entry.name === cookie.name);
+      assert.equal(seen?.value, cookie.value, `${cookie.name} value`);
+    }
+  });
+
+  test("cookies the browser DID send are still visible alongside the new ones", async () => {
+    const { recorded } = await submit(
+      { identifier: DIGITS, password: PASSWORD, portal: "staff" },
+      {},
+      { headers: { cookie: "theme=dark; consent=1" } }
+    );
+
+    const view = viewAt(recorded, "rpc:authorize");
+    assert.ok(
+      view?.cookies.some((c) => c.name === "theme" && c.value === "dark"),
+      "the working view must extend the request, not replace it"
+    );
+    assert.ok(seesLiveCookies(view, SESSION_COOKIE_NAMES));
+  });
+
+  test("a failed sign-in leaves the view exactly as the browser sent it", async () => {
+    const { recorded } = await submit(
+      { identifier: DIGITS, password: PASSWORD, portal: "staff" },
+      { signInFails: true },
+      { headers: { cookie: "theme=dark" } }
+    );
+
+    assert.deepEqual(viewAt(recorded, "signIn")?.cookies, [
+      { name: "theme", value: "dark" },
+    ]);
+  });
+});
+
+describe("signing out clears the session for the rest of the request too", () => {
+  test("a revoked staff account leaves no live token in the working view", async () => {
+    const { response, recorded } = await submit(
+      { identifier: DIGITS, password: PASSWORD, portal: "staff" },
+      { accessState: "revoked" }
+    );
+
+    // signOut() ran with the session live — it has to, or it could not revoke it.
+    assert.ok(seesLiveCookies(viewAt(recorded, "signOut"), SESSION_COOKIE_NAMES));
+
+    // The browser still receives the deletion cookies on the exact response.
+    for (const name of SESSION_COOKIE_NAMES) {
+      const cookie = response.cookies.get(name);
+      assert.equal(cookie?.value, "", `${name} must be cleared in the browser`);
+      assert.equal(cookie?.maxAge, 0);
+    }
+  });
+
+  test("an admin who is not a Super Admin is signed out the same way", async () => {
+    const { response, recorded, location } = await submit(
+      { identifier: "owner@onedecore.in", password: PASSWORD, portal: "admin" },
+      { hasAdminAccess: false }
+    );
+
+    assert.ok(seesLiveCookies(viewAt(recorded, "rpc:authorize"), SESSION_COOKIE_NAMES));
+    assert.equal(recorded.signOuts.length, 1);
+    assert.match(location, new RegExp(`error=${LOGIN_ERROR_CODE}`));
+    assert.equal(response.cookies.get(SESSION_COOKIE_NAMES[0]!)?.value, "");
+  });
+
+  test("a deletion cookie is treated as GONE, not as an empty session", async () => {
+    /*
+     * The adapter is exercised directly here. A sign-out writes each cookie
+     * back empty with an immediate expiry; the response needs those verbatim,
+     * but a request-side read must not then see a present-but-empty auth
+     * cookie, which is not the same thing as no cookie at all.
+     */
+    const views: { name: string; value: string }[][] = [];
+    const probe = (adapter: LoginCookieAdapter): LoginSupabaseClient => ({
+      auth: {
+        async signInWithPassword() {
+          adapter.setAll([...SESSION_COOKIES], { ...SUPABASE_AUTH_HEADERS });
+          views.push(adapter.getAll());
+          // Every shape a deletion arrives in.
+          adapter.setAll(
+            [
+              { name: SESSION_COOKIES[0]!.name, value: "", options: { maxAge: 0 } },
+              {
+                name: SESSION_COOKIES[1]!.name,
+                value: "still-here",
+                options: { expires: new Date(0) },
+              },
+            ],
+            { ...SUPABASE_AUTH_HEADERS }
+          );
+          views.push(adapter.getAll());
+          return { error: null };
+        },
+        async signOut() {
+          return null;
+        },
+      },
+      async rpc() {
+        return { data: true, error: null };
+      },
+    });
+
+    await handleStaffLoginSubmit(
+      loginRequest({ identifier: DIGITS, password: PASSWORD, portal: "staff" }),
+      probe
+    );
+
+    assert.equal(views[0]!.length, 2, "both chunks visible after sign-in");
+    assert.deepEqual(views[1], [], "an expired cookie is gone from the view");
+  });
+});
+
+describe("the route's own adapter wiring", () => {
+  test("the real factory forwards getAll AND both setAll arguments", () => {
+    const route = read(ROUTE);
+    assert.match(route, /getAll: \(\) => adapter\.getAll\(\)/);
+    assert.match(
+      route,
+      /setAll: \(cookiesToSet, headers\) => adapter\.setAll\(cookiesToSet, headers\)/
+    );
+    // A one-argument setAll would silently discard the no-store headers.
+    assert.doesNotMatch(code(route), /setAll: \(cookiesToSet\) =>/);
+  });
+
+  test("the flow, not the route, owns the working cookie view", () => {
+    // The route stays thin: it hands the adapter through untouched, so the
+    // same-request semantics are exercised by every test above rather than
+    // living in a file that can only be tested against a live GoTrue.
+    const route = code(read(ROUTE));
+    assert.doesNotMatch(route, /workingCookies|request\.cookies/);
+
+    const submitSource = read(SUBMIT);
+    assert.match(submitSource, /const workingCookies = new Map<string, string>/);
+    assert.match(submitSource, /workingCookies\.set\(cookie\.name, cookie\.value\)/);
+    assert.match(submitSource, /workingCookies\.delete\(cookie\.name\)/);
+    // The response capture is still there, unchanged.
+    assert.match(submitSource, /pendingCookies\.push\(\.\.\.cookiesToSet\)/);
   });
 });

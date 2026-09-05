@@ -200,6 +200,45 @@ export type LoginClientFactory = (
   adapter: LoginCookieAdapter
 ) => LoginSupabaseClient;
 
+/**
+ * Whether a cookie `@supabase/ssr` asked us to write is a DELETION.
+ *
+ * Sign-out does not remove cookies; it writes each one back empty with an
+ * immediate expiry. The response must carry those verbatim — that is how the
+ * browser drops them — but the request-side view has to treat them as gone,
+ * not as an auth cookie whose value happens to be "". Otherwise a signed-out
+ * client could still read a truthy-looking entry for the rest of the request.
+ *
+ * `maxAge`/`expires` are read defensively: they are the library's to shape, and
+ * this only ever decides how the WORKING VIEW is updated. The response cookie
+ * is never altered by this.
+ */
+function isDeletionCookie(cookie: PendingAuthCookie): boolean {
+  if (cookie.value === "") {
+    return true;
+  }
+
+  const options = cookie.options ?? {};
+
+  const maxAge = options.maxAge;
+  if (typeof maxAge === "number" && maxAge <= 0) {
+    return true;
+  }
+
+  const expires = options.expires;
+  if (expires !== undefined && expires !== null) {
+    const at =
+      expires instanceof Date
+        ? expires.getTime()
+        : new Date(expires as string | number).getTime();
+    if (Number.isFinite(at) && at <= Date.now()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function readField(form: FormData, name: string): string {
   const value = form.get(name);
   return typeof value === "string" ? value : "";
@@ -416,9 +455,60 @@ export async function handleStaffLoginSubmit(
     }
   }
 
+  /*
+   * The cookie state AS THIS REQUEST NOW SEES IT.
+   *
+   * PRODUCTION EVIDENCE FOR THIS
+   *
+   * After the portal split shipped, the owner still could not sign in through
+   * the browser form, while a direct `signInWithPassword` run on the production
+   * VPS — same project URL, same publishable key, same credential — returned a
+   * real session, and `authorize("staff.credentials.manage")` on that session
+   * returned true. The credential and the database entitlement were healthy.
+   * The failure existed only inside this Route Handler.
+   *
+   * The cause was here. `getAll` read `request.cookies`, which is the state the
+   * BROWSER sent — and the browser sent no session, because signing in is what
+   * this request is for. When `signInWithPassword` succeeded, `@supabase/ssr`
+   * handed the fresh cookies to `setAll`, and they were captured for the
+   * response and nowhere else. The very next call on the same client —
+   * `authorize(...)`, or `record_staff_first_login()` for staff — could still
+   * resolve its cookie state from that stale, session-less request view and so
+   * behaved as an unauthenticated caller. The admin branch read the resulting
+   * `false` as "not entitled", signed the new session back out, and answered
+   * "Invalid admin credentials" for a credential that had just worked.
+   *
+   * So the writes are now reflected back into the request's own view, which is
+   * what Supabase's SSR guidance asks for and what this repository's Proxy
+   * (`src/lib/supabase/proxy.ts`) already did. A Map is the source of truth for
+   * `getAll` so the semantics are explicit and testable; `request.cookies` is
+   * mirrored alongside it so anything else reading the request in this same
+   * pass sees the same thing.
+   *
+   * This is ADDITIONAL to the response capture below, never a replacement for
+   * it: the browser still receives every cookie on the exact 303 returned.
+   */
+  const workingCookies = new Map<string, string>(
+    request.cookies.getAll().map(({ name, value }) => [name, value])
+  );
+
   const supabase = createClientWithCookies({
-    getAll: () => request.cookies.getAll(),
+    getAll: () =>
+      [...workingCookies].map(([name, value]) => ({ name, value })),
     setAll: (cookiesToSet, headers) => {
+      for (const cookie of cookiesToSet) {
+        if (isDeletionCookie(cookie)) {
+          // Gone for the rest of this request, not present-and-empty.
+          workingCookies.delete(cookie.name);
+          request.cookies.delete(cookie.name);
+        } else {
+          // Name and value only: the working view is a READ model. Every option
+          // the library chose travels untouched on `pendingCookies`.
+          workingCookies.set(cookie.name, cookie.value);
+          request.cookies.set(cookie.name, cookie.value);
+        }
+      }
+
       pendingCookies.push(...cookiesToSet);
       Object.assign(pendingHeaders, headers ?? {});
     },
