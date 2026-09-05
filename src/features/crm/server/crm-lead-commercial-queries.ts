@@ -1,6 +1,7 @@
 import "server-only";
 
 import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
+import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
 import {
   CRM_COMMERCIAL_STATES,
   EMPTY_PIPELINE_VALUE_SUMMARY,
@@ -100,24 +101,31 @@ interface SummaryPayload {
   readonly parkedDealValuePaise?: unknown;
 }
 
-/**
- * Weighted pipeline aggregate over the FULL RLS-scoped lead set.
- *
- * The board fetches at most 30 cards per column, so totals must never be
- * derived from loaded cards. Probabilities come from the RPC payload — the
- * locked table is encoded once, in the migration, and echoed here.
- */
-export async function fetchCrmPipelineValueSummary(
+/** The single RPC call site, shared by both readers below. */
+async function readPipelineValueSummary(
   ownerId: string | null,
   db?: CrmDb
-): Promise<CrmPipelineValueSummary> {
+): Promise<{ data: unknown; error: { message: string } | null }> {
   const supabase = await resolveCrmDb(db);
   const { data, error } = await supabase.rpc("get_crm_pipeline_value_summary", {
     p_owner_id: ownerId,
   });
 
-  if (error || data === null || typeof data !== "object") {
-    return EMPTY_PIPELINE_VALUE_SUMMARY;
+  return { data, error };
+}
+
+/**
+ * The RPC payload, mapped. Returns null when there is no payload to map.
+ *
+ * Extracted so the tolerant and the strict readers below share ONE mapping.
+ * Stage probabilities and weighted values are echoed from the payload; the
+ * locked probability table is encoded once, in the migration.
+ */
+export function mapPipelineValueSummaryPayload(
+  data: unknown
+): CrmPipelineValueSummary | null {
+  if (data === null || typeof data !== "object") {
+    return null;
   }
 
   const payload = data as SummaryPayload;
@@ -150,4 +158,61 @@ export async function fetchCrmPipelineValueSummary(
     parkedValuedLeadCount: asNullableNumber(payload.parkedValuedLeadCount) ?? 0,
     parkedDealValuePaise: asNullableNumber(payload.parkedDealValuePaise) ?? 0,
   };
+}
+
+/**
+ * Weighted pipeline aggregate over the FULL RLS-scoped lead set.
+ *
+ * The board fetches at most 30 cards per column, so totals must never be
+ * derived from loaded cards. Probabilities come from the RPC payload — the
+ * locked table is encoded once, in the migration, and echoed here.
+ *
+ * A failed read answers EMPTY. That is long-standing behaviour the browser
+ * board depends on, and it is preserved exactly; a caller that must tell an
+ * empty pipeline from an unavailable one uses the strict reader below.
+ */
+export async function fetchCrmPipelineValueSummary(
+  ownerId: string | null,
+  db?: CrmDb
+): Promise<CrmPipelineValueSummary> {
+  const { data, error } = await readPipelineValueSummary(ownerId, db);
+
+  if (error) {
+    return EMPTY_PIPELINE_VALUE_SUMMARY;
+  }
+
+  return (
+    mapPipelineValueSummaryPayload(data) ?? EMPTY_PIPELINE_VALUE_SUMMARY
+  );
+}
+
+/**
+ * The same read, refusing to answer zero when it does not know.
+ *
+ * `EMPTY_PIPELINE_VALUE_SUMMARY` is all zeros, and a genuinely empty pipeline
+ * looks identical to a transport failure once it is serialised. On a surface
+ * that reports money to an owner, "no forecast" and "zero forecast" are
+ * different facts, so this reader throws instead and lets the caller say which
+ * one happened.
+ */
+export async function fetchCrmPipelineValueSummaryStrict(
+  ownerId: string | null,
+  db?: CrmDb
+): Promise<CrmPipelineValueSummary> {
+  const { data, error } = await readPipelineValueSummary(ownerId, db);
+
+  if (error) {
+    throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+  }
+
+  const mapped = mapPipelineValueSummaryPayload(data);
+
+  if (!mapped) {
+    throw crmErrorFromPostgresMessage(
+      "empty pipeline value payload",
+      "RPC_FAILED"
+    );
+  }
+
+  return mapped;
 }
