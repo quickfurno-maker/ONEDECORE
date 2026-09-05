@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveCrmStaffLabel } from "../contracts/crm-staff-label.ts";
 import type { CrmLeadDetail } from "../contracts/lead-detail-dtos.ts";
 import type { CrmLeadListItem } from "../contracts/lead-dtos.ts";
 import { resolveOnHoldResumeStage } from "../contracts/lifecycle-contracts.ts";
@@ -153,12 +154,17 @@ export async function getLeadDetailForCurrentUser(
     assigneeDirectory.map((entry) => [entry.userId, entry.displayName])
   );
 
-  const labelForUser = (userId: string | null | undefined): string | null => {
-    if (!userId) {
-      return null;
-    }
-    return assigneeLabels[userId] ?? "Staff member";
-  };
+  /*
+   * The directory is empty for an assignment-scoped caller, so every id used to
+   * resolve to "Staff member" — including the caller's own. Their own completed
+   * call therefore read "· Staff member", which is exactly the attribution the
+   * conversation log exists to provide.
+   *
+   * `context.userId` is already resolved, so naming the caller costs no query
+   * and widens no permission: nobody learns a name they could not already see.
+   */
+  const labelForUser = (userId: string | null | undefined): string | null =>
+    resolveCrmStaffLabel(userId, context.userId, assigneeLabels);
 
   const [
     contactResult,
@@ -197,7 +203,11 @@ export async function getLeadDetailForCurrentUser(
     supabase
       .from("lead_follow_ups")
       .select(
-        "id, owner_id, due_at, status, outcome, completed_at, cancelled_at, activity_type, title, priority, is_primary_next_action, duration_minutes, reminder_at, outcome_code, completion_note, quotation_id, source, cadence_enrollment_id, cadence_step_id, created_at, updated_at"
+        // `completed_by` / `cancelled_by` are the ACTOR columns the governed
+        // completion and cancellation RPCs stamp. Without them the conversation
+        // log had to fall back to the scheduled owner, which is a different
+        // person whenever an activity was transferred.
+        "id, owner_id, due_at, status, outcome, completed_at, completed_by, cancelled_at, cancelled_by, activity_type, title, priority, is_primary_next_action, duration_minutes, reminder_at, outcome_code, completion_note, quotation_id, source, cadence_enrollment_id, cadence_step_id, created_at, updated_at"
       )
       .eq("lead_id", leadId)
       .order("due_at", { ascending: true }),
@@ -315,6 +325,12 @@ export async function getLeadDetailForCurrentUser(
       outcome: followUp.outcome,
       completedAt: followUp.completed_at,
       cancelledAt: followUp.cancelled_at,
+      // `labelForUser` resolves through the RLS-scoped assignee directory and
+      // falls back to "Staff member", so an unresolvable actor is never shown
+      // as a raw UUID. Null stays null: an unknown actor is omitted rather
+      // than attributed to the scheduled owner.
+      completedByLabel: labelForUser(followUp.completed_by),
+      cancelledByLabel: labelForUser(followUp.cancelled_by),
       activityType: followUp.activity_type,
       title: followUp.title,
       priority: followUp.priority,

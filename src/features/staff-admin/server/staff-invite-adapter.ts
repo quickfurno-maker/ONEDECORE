@@ -5,10 +5,12 @@ import { getLeadIntakeServerEnv } from "@/config/server-env";
 import { provisionLoginIdentityViaRest } from "./staff-login-provisioning.ts";
 import {
   changeStaffAuthLoginPhone,
+  convertStaffAuthLoginToAlias,
   issueStaffPhoneCredentials,
   reactivateStaffAuthAccess,
   resetStaffPhonePassword,
   revokeStaffAuthAccess,
+  type ConvertStaffAuthLoginResult,
   type IssueStaffCredentialsInput,
   type IssueStaffCredentialsResult,
   type StaffCredentialDeps,
@@ -170,4 +172,18 @@ export async function changeStaffAuthLoginPhoneInAuth(input: {
   readonly loginPhoneE164: string;
 }): Promise<{ readonly userId: string; readonly loginPhoneE164: string }> {
   return changeStaffAuthLoginPhone(input, credentialDeps());
+}
+
+/**
+ * One-time transport repair for a login issued under the old phone provider.
+ *
+ * Exposed as an explicit, separately-invoked operation. It is deliberately NOT
+ * called from the login action or from any automatic path: repairing on a failed
+ * sign-in would let an unauthenticated request trigger an Auth write.
+ */
+export async function convertStaffAuthLoginToAliasInAuth(input: {
+  readonly staffId: string;
+  readonly loginPhoneE164: string;
+}): Promise<ConvertStaffAuthLoginResult> {
+  return convertStaffAuthLoginToAlias(input, credentialDeps());
 }

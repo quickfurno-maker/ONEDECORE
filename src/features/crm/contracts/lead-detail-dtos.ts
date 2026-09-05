@@ -111,12 +111,25 @@ export interface CrmLeadClosureReasonOption {
 export interface CrmLeadDetailFollowUp {
   readonly id: string;
   readonly ownerId: string;
+  /**
+   * Who the activity is ASSIGNED to. This is a plan, not a record — it must
+   * never be presented as the person who completed or cancelled the activity.
+   */
   readonly ownerLabel: string;
   readonly dueAt: string;
   readonly status: string;
   readonly outcome: string | null;
   readonly completedAt: string | null;
   readonly cancelledAt: string | null;
+  /**
+   * Who ACTUALLY completed / cancelled it, resolved to a display name.
+   *
+   * Null when the row predates the governed RPCs that stamp the actor, or when
+   * the caller's directory scope cannot name them. Never a raw UUID, and never
+   * silently substituted with `ownerLabel`.
+   */
+  readonly completedByLabel: string | null;
+  readonly cancelledByLabel: string | null;
   readonly activityType: string;
   readonly title: string;
   readonly priority: string;

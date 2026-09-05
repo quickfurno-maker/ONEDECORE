@@ -8,6 +8,7 @@ import {
   CRM_TIMELINE_MAX_ENTRIES,
   CRM_TIMELINE_ORIGIN_ACTIVITY_TYPES,
   CRM_TIMELINE_SOURCE_FETCH_LIMIT,
+  formatTimelineActivityDetail,
   formatTimelineActivityLabel,
   formatTimelineEventLabel,
   formatTimelineTemperatureDetail,
@@ -193,7 +194,15 @@ export async function fetchLeadTimelinePage(
       source: "activity",
       category: timelineCategoryForActivity(row.activity_type),
       title: formatTimelineActivityLabel(row.activity_type),
-      detail: row.summary ? truncate(row.summary, NOTE_EXCERPT_MAX) : null,
+      // A completed follow-up carries its outcome and the client's own words in
+      // `metadata`, which was already selected but unused — the detail line
+      // repeated the title instead. The formatter is pure and fails soft across
+      // every historical metadata shape.
+      detail: formatTimelineActivityDetail(
+        row.activity_type,
+        row.summary,
+        row.metadata
+      ),
       occurredAt: row.occurred_at,
       actorLabel: labelForUser(row.actor_id),
       referenceId: row.reference_id,

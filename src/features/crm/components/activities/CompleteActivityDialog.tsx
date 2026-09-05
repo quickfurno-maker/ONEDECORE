@@ -18,6 +18,12 @@ import type {
   CrmLeadClosureReasonOption,
   CrmLeadDetailFollowUp,
 } from "../../contracts/lead-detail-dtos.ts";
+import {
+  CRM_CLIENT_CONVERSATION_NOTE_HELP,
+  completionNoteLabelForActivityType,
+  formatConversationActivityType,
+  isClientFacingActivityType,
+} from "../../contracts/lead-activity-history.ts";
 import type { LeadStageCode } from "../../contracts/lead-stages.ts";
 import type { CrmWhatsappSendIntentOption } from "../../server/crm-whatsapp-evidence-queries.ts";
 import {
@@ -238,15 +244,36 @@ function CompleteActivityForm({
         ) : null}
       </div>
 
+      {/*
+        Same `completionNote` field and same 1000-char bound for every activity
+        type — only the WORDING changes. A call, a site visit or a WhatsApp
+        follow-up is a conversation, so asking "what did the client say?" gets a
+        useful sales record where "Completion note" got an empty box. The note
+        stays OPTIONAL: no mandatory-note policy is locked, and nothing here
+        blocks submission when it is blank.
+      */}
       <div>
         <label htmlFor={`${titleId}-note`} className="text-sm text-[var(--crm-text-secondary)]">
-          Completion note (optional)
+          {completionNoteLabelForActivityType(activity.activityType)}
         </label>
+        {isClientFacingActivityType(activity.activityType) ? (
+          <p
+            id={`${titleId}-note-help`}
+            className="mt-0.5 text-xs text-[var(--crm-muted)]"
+          >
+            {CRM_CLIENT_CONVERSATION_NOTE_HELP}
+          </p>
+        ) : null}
         <textarea
           id={`${titleId}-note`}
           name="completionNote"
           rows={3}
           maxLength={1000}
+          aria-describedby={
+            isClientFacingActivityType(activity.activityType)
+              ? `${titleId}-note-help`
+              : undefined
+          }
           className={inputClassName(Boolean(fieldErrors.completionNote))}
           data-testid="crm-complete-note"
         />
@@ -563,7 +590,7 @@ export function CompleteActivityDialog({
       open={open}
       title="Complete activity"
       titleId={titleId}
-      description={`${activity.title} · ${activity.activityType.replace(/_/g, " ")}`}
+      description={`${activity.title} · ${formatConversationActivityType(activity.activityType)}`}
       onClose={onClose}
       testId="crm-complete-activity-dialog"
     >

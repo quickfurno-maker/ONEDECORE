@@ -33,7 +33,7 @@ export function LoginForm({ nextParam }: LoginFormProps) {
           htmlFor="identifier"
           className="block text-xs font-semibold uppercase tracking-wider text-amber-200/80"
         >
-          Mobile Number or Email
+          Staff Login ID or Email
         </label>
         <input
           id="identifier"
@@ -49,7 +49,7 @@ export function LoginForm({ nextParam }: LoginFormProps) {
           className="mt-2 block w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-neutral-100 placeholder-neutral-500 transition-colors focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 disabled:opacity-50"
         />
         <p id="identifier-hint" className="mt-2 text-[11px] leading-relaxed text-neutral-400">
-          Staff sign in with their 10-digit mobile number. Do not add +91.
+          Staff sign in with their unique 10-digit mobile number. Do not add +91.
         </p>
       </div>
 
