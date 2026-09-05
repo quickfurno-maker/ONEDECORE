@@ -15,10 +15,18 @@
  * inside a Server Action / RSC mutation whose stream the navigation aborted
  * ("The destination stream closed early").
  *
- * So the flow moved to an ordinary POST answered with an ordinary 303. These
- * tests EXECUTE that handler with a Supabase double, so what is proven is the
- * actual response object — its status, its Location, and every `Set-Cookie` on
- * it — rather than the shape of the source.
+ * So the flow moved to an ordinary POST answered with an ordinary 303.
+ *
+ * WHAT THESE TESTS ACTUALLY EXECUTE
+ *
+ * They execute the login FLOW HELPER (`handleStaffLoginSubmit`) with a Supabase
+ * double, and assert the real `NextResponse` it produces — status, Location,
+ * every `Set-Cookie`, and every response header.
+ *
+ * They do NOT execute the exported `POST` route with a real `createServerClient`
+ * against a live GoTrue. The production route wiring is deliberately thin, and
+ * is asserted separately ("the route forwards BOTH setAll arguments"), because
+ * that one line is exactly where Supabase's cache headers were being dropped.
  */
 
 import assert from "node:assert/strict";
@@ -29,6 +37,7 @@ import { NextRequest } from "next/server";
 
 import {
   LOGIN_ERROR_CODE,
+  MAX_LOGIN_BODY_BYTES,
   handleStaffLoginSubmit,
   type LoginCookieAdapter,
   type LoginSupabaseClient,
@@ -79,6 +88,19 @@ const SESSION_COOKIES: readonly PendingAuthCookie[] = [
   },
 ];
 
+/**
+ * The exact headers @supabase/ssr v0.12.3 passes as `setAll`'s second argument.
+ *
+ * The library documents WHY: a response that sets auth cookies must not be
+ * cached by a CDN or reverse proxy, "otherwise one user's session token can be
+ * served to a different user."
+ */
+const SUPABASE_AUTH_HEADERS: Readonly<Record<string, string>> = {
+  "Cache-Control": "private, no-cache, no-store, must-revalidate, max-age=0",
+  Expires: "0",
+  Pragma: "no-cache",
+};
+
 interface SignInCall {
   readonly email: string;
   readonly password: string;
@@ -112,18 +134,23 @@ function makeClient(options: ClientOptions = {}) {
         if (options.signInFails) {
           return { error: { message: "Invalid login credentials" } };
         }
-        adapter.setAll([...(options.cookies ?? SESSION_COOKIES)]);
+        // Exactly as the library calls it: cookies AND the no-store headers.
+        adapter.setAll([...(options.cookies ?? SESSION_COOKIES)], {
+          ...SUPABASE_AUTH_HEADERS,
+        });
         return { error: null };
       },
       async signOut() {
         recorded.signOuts.push(1);
-        // Real deletion cookies: same names, empty value, maxAge 0.
+        // Real deletion cookies: same names, empty value, maxAge 0 — and the
+        // same cache headers, because this response carries auth cookies too.
         adapter.setAll(
           (options.cookies ?? SESSION_COOKIES).map((cookie) => ({
             name: cookie.name,
             value: "",
             options: { path: "/", maxAge: 0 },
-          }))
+          })),
+          { ...SUPABASE_AUTH_HEADERS }
         );
         return null;
       },
@@ -146,23 +173,53 @@ function makeClient(options: ClientOptions = {}) {
   return { factory, recorded };
 }
 
-function loginRequest(fields: Record<string, string>): NextRequest {
+interface RequestOptions {
+  /** Omit to send the genuine same-origin value a browser would. */
+  readonly origin?: string | null;
+  readonly headers?: Record<string, string>;
+}
+
+function loginRequest(
+  fields: Record<string, string>,
+  requestOptions: RequestOptions = {}
+): NextRequest {
   const form = new FormData();
   for (const [key, value] of Object.entries(fields)) {
     form.set(key, value);
   }
+
+  const headers = new Headers({
+    // What Nginx forwards in production.
+    host: "onedecore.in",
+    "x-forwarded-host": "onedecore.in",
+    "x-forwarded-proto": "https",
+    ...(requestOptions.headers ?? {}),
+  });
+
+  // `origin: null` models a request that sends no Origin at all.
+  const origin =
+    "origin" in requestOptions ? requestOptions.origin : ORIGIN;
+  if (origin) {
+    headers.set("origin", origin);
+  }
+
   return new NextRequest(`${ORIGIN}/auth/login/submit`, {
     method: "POST",
     body: form,
+    headers,
   });
 }
 
 async function submit(
   fields: Record<string, string>,
-  options: ClientOptions = {}
+  options: ClientOptions = {},
+  requestOptions: RequestOptions = {}
 ) {
   const { factory, recorded } = makeClient(options);
-  const response = await handleStaffLoginSubmit(loginRequest(fields), factory);
+  const response = await handleStaffLoginSubmit(
+    loginRequest(fields, requestOptions),
+    factory
+  );
   return { response, recorded, location: response.headers.get("location") ?? "" };
 }
 
@@ -212,6 +269,33 @@ describe("login is a normal POST, not a Server Action", () => {
     assert.ok(authLogin.includes("page.tsx"));
     assert.ok(!authLogin.includes("route.ts"), "no route.ts may sit beside page.tsx");
     assert.ok(authLogin.includes("submit"));
+  });
+
+  test("the route forwards BOTH setAll arguments", () => {
+    /*
+     * These tests execute the FLOW HELPER, not this file. The production wiring
+     * is thin, so it is asserted here directly — and this particular line is the
+     * one that silently discarded Supabase's cache headers before.
+     */
+    const route = code(read(ROUTE));
+    assert.match(
+      route,
+      /setAll:\s*\(cookiesToSet,\s*headers\)\s*=>\s*adapter\.setAll\(cookiesToSet,\s*headers\)/,
+      "the route must forward (cookiesToSet, headers), not cookies alone"
+    );
+    assert.match(route, /getAll:\s*\(\)\s*=>\s*adapter\.getAll\(\)/);
+  });
+
+  test("the route uses the publishable key and no custom token handling", () => {
+    const route = code(read(ROUTE));
+    assert.match(route, /publishableKey/);
+    assert.match(route, /createServerClient/);
+    // No hand-rolled session format, no manual cookie serialisation.
+    assert.doesNotMatch(route, /JSON\.stringify|access_token|refresh_token/);
+    assert.doesNotMatch(route, /localStorage|sessionStorage/);
+    for (const forbidden of ["service_role", "SERVICE_ROLE", "createAdminClient"]) {
+      assert.ok(!route.includes(forbidden));
+    }
   });
 
   test("the form still keeps its fields and staff copy", () => {
@@ -308,6 +392,261 @@ describe("session cookies ride the redirect", () => {
     }
     // Tokens travel ONLY as httpOnly cookies.
     assert.doesNotMatch(location, /access_token|refresh_token/);
+  });
+});
+
+/* ========================================================================== */
+/* 2b. The no-store headers ride with the cookies                              */
+/* ========================================================================== */
+
+describe("an auth-cookie response is never cacheable", () => {
+  test("every header @supabase/ssr supplied reaches the response", async () => {
+    const { response } = await submit({ identifier: DIGITS, password: PASSWORD });
+
+    for (const [name, expected] of Object.entries(SUPABASE_AUTH_HEADERS)) {
+      assert.equal(
+        response.headers.get(name),
+        expected,
+        `${name} must be preserved exactly as supplied`
+      );
+    }
+  });
+
+  test("Cache-Control, Expires and Pragma are the library's exact values", async () => {
+    const { response } = await submit({ identifier: DIGITS, password: PASSWORD });
+
+    assert.equal(
+      response.headers.get("cache-control"),
+      "private, no-cache, no-store, must-revalidate, max-age=0"
+    );
+    assert.equal(response.headers.get("expires"), "0");
+    assert.equal(response.headers.get("pragma"), "no-cache");
+  });
+
+  test("NO response carrying an auth cookie may omit them", async () => {
+    // Every outcome that emits a Set-Cookie: success, and revoked deletion.
+    const cases = [
+      await submit({ identifier: DIGITS, password: PASSWORD }),
+      await submit(
+        { identifier: DIGITS, password: PASSWORD },
+        { accessState: "revoked" }
+      ),
+    ];
+
+    for (const { response } of cases) {
+      assert.ok(
+        response.cookies.getAll().length > 0,
+        "precondition: this response sets cookies"
+      );
+      for (const name of Object.keys(SUPABASE_AUTH_HEADERS)) {
+        assert.ok(
+          response.headers.get(name),
+          `a session-bearing response is missing ${name}`
+        );
+      }
+    }
+  });
+
+  test("a revoked redirect carries deletion cookies AND no-cache headers", async () => {
+    const { response } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      { accessState: "revoked" }
+    );
+
+    for (const cookie of SESSION_COOKIES) {
+      const returned = response.cookies.get(cookie.name);
+      assert.ok(returned);
+      assert.equal(returned.value, "");
+      assert.equal(returned.maxAge, 0);
+    }
+    assert.equal(
+      response.headers.get("cache-control"),
+      SUPABASE_AUTH_HEADERS["Cache-Control"]
+    );
+  });
+
+  test("responses Supabase never touched are still no-store", async () => {
+    // A validation failure returns before any client exists, so no library
+    // headers arrive — the endpoint applies its own conservative baseline.
+    const { response } = await submit({ identifier: "", password: "" });
+
+    assert.equal(response.cookies.getAll().length, 0);
+    assert.match(response.headers.get("cache-control") ?? "", /no-store/);
+    assert.equal(response.headers.get("pragma"), "no-cache");
+  });
+
+  test("a library-supplied header is never weakened by the baseline", async () => {
+    // If Supabase ever sends something stricter, that value must survive.
+    const stricter = {
+      ...SESSION_COOKIES[0]!,
+    };
+    const { factory } = (() => {
+      const recorded = { signIns: [], rpcs: [], signOuts: [] };
+      return {
+        factory: (adapter: LoginCookieAdapter): LoginSupabaseClient => ({
+          auth: {
+            async signInWithPassword() {
+              adapter.setAll([stricter], {
+                "Cache-Control": "no-store, max-age=0, s-maxage=0",
+                "X-Supabase-Test": "kept",
+              });
+              return { error: null };
+            },
+            async signOut() {
+              return null;
+            },
+          },
+          async rpc(fn: string) {
+            recorded.rpcs.push(fn as never);
+            return fn === "record_staff_first_login"
+              ? { data: { accessState: "active" }, error: null }
+              : { data: true, error: null };
+          },
+        }),
+      };
+    })();
+
+    const response = await handleStaffLoginSubmit(
+      loginRequest({ identifier: DIGITS, password: PASSWORD }),
+      factory
+    );
+
+    assert.equal(
+      response.headers.get("cache-control"),
+      "no-store, max-age=0, s-maxage=0",
+      "the library's value must win over our baseline"
+    );
+    assert.equal(response.headers.get("x-supabase-test"), "kept");
+  });
+});
+
+/* ========================================================================== */
+/* 2c. CSRF — the protection the Server Action used to provide                 */
+/* ========================================================================== */
+
+describe("cross-site login POSTs are refused", () => {
+  /*
+   * Server Actions compare Origin against Host automatically. Moving to a custom
+   * Route Handler dropped that, and this endpoint's whole job is to mint an
+   * administrative session — so a cross-site POST could plant an attacker's
+   * session in a victim's browser.
+   */
+
+  test("a genuine same-origin browser POST is accepted", async () => {
+    const { response, recorded } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      {},
+      { origin: "https://onedecore.in" }
+    );
+
+    assert.equal(response.status, 303);
+    assert.equal(recorded.signIns.length, 1);
+  });
+
+  test("a hostile Origin is rejected with NO auth side effects", async () => {
+    const { response, recorded } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      {},
+      { origin: "https://evil.example" }
+    );
+
+    assert.equal(response.status, 403);
+    // The decisive assertions: nothing happened.
+    assert.equal(recorded.signIns.length, 0, "no credential may be tested");
+    assert.equal(recorded.rpcs.length, 0, "no RPC may run");
+    assert.equal(recorded.signOuts.length, 0);
+    assert.equal(response.cookies.getAll().length, 0, "no session may be issued");
+    assert.equal(response.headers.get("set-cookie"), null);
+  });
+
+  test("the hostile Origin is never reflected back", async () => {
+    const hostile = "https://evil.example";
+    const { response } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      {},
+      { origin: hostile }
+    );
+
+    const body = await response.text();
+    assert.ok(!body.includes("evil.example"));
+    for (const [, value] of response.headers) {
+      assert.ok(!value.includes("evil.example"), "no header may echo the origin");
+    }
+  });
+
+  test("malformed and absent Origin fail closed", async () => {
+    for (const origin of ["not-a-url", "null", "://broken", null]) {
+      const { response, recorded } = await submit(
+        { identifier: DIGITS, password: PASSWORD },
+        {},
+        { origin }
+      );
+      assert.equal(response.status, 403, `origin ${String(origin)} must be refused`);
+      assert.equal(recorded.signIns.length, 0);
+    }
+  });
+
+  test("a matching host on a different scheme is still cross-origin", async () => {
+    const { response } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      {},
+      { origin: "http://onedecore.in" }
+    );
+    assert.equal(response.status, 403);
+  });
+
+  test("a subdomain of the real host is not the same origin", async () => {
+    const { response } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      {},
+      { origin: "https://evil.onedecore.in" }
+    );
+    assert.equal(response.status, 403);
+  });
+
+  test("the rejection is refused before the body is even parsed", () => {
+    const src = read(SUBMIT);
+    const guardAt = src.indexOf("if (!isSameOrigin(request))");
+    const formAt = src.indexOf("await request.formData()");
+    const clientAt = src.indexOf("createClientWithCookies({");
+
+    assert.ok(guardAt > 0, "the origin guard must exist");
+    assert.ok(guardAt < formAt, "the guard must precede form parsing");
+    assert.ok(guardAt < clientAt, "the guard must precede client creation");
+  });
+
+  test("an oversized body is refused before parsing", async () => {
+    const { response, recorded } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      {},
+      { headers: { "content-length": String(MAX_LOGIN_BODY_BYTES + 1) } }
+    );
+
+    assert.equal(response.status, 413);
+    assert.equal(recorded.signIns.length, 0);
+    assert.equal(response.cookies.getAll().length, 0);
+    // A real login post is nowhere near the ceiling.
+    assert.ok(MAX_LOGIN_BODY_BYTES >= 254 + 128 + 512);
+  });
+
+  test("a normal-sized body is unaffected", async () => {
+    const { response } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      {},
+      { headers: { "content-length": "700" } }
+    );
+    assert.equal(response.status, 303);
+  });
+
+  test("the 403 carries no credential detail", async () => {
+    const { response } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      {},
+      { origin: "https://evil.example" }
+    );
+    const body = await response.text();
+    assert.equal(body, "");
+    assert.ok(!body.includes(DIGITS));
   });
 });
 

@@ -32,9 +32,18 @@ export async function POST(request: NextRequest) {
     const client = createServerClient<Database>(url, publishableKey, {
       cookies: {
         getAll: () => adapter.getAll(),
-        // Captured, not written to a throwaway response. The flow applies them
-        // to the response it actually returns.
-        setAll: (cookiesToSet) => adapter.setAll(cookiesToSet),
+        /*
+         * BOTH arguments are forwarded, deliberately.
+         *
+         * @supabase/ssr v0.12.3 calls `setAll(cookiesToSet, headers)`, where
+         * `headers` carries the no-store policy an auth response must have —
+         * omitting the parameter here would let JavaScript discard it silently
+         * and leave a session-bearing response cacheable by a CDN.
+         *
+         * Captured rather than written to a throwaway response: the flow applies
+         * cookies AND headers to the response it actually returns.
+         */
+        setAll: (cookiesToSet, headers) => adapter.setAll(cookiesToSet, headers),
       },
     });
 

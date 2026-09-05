@@ -43,6 +43,14 @@ import {
 /** The ONLY failure signal. Never says which part was wrong. */
 export const LOGIN_ERROR_CODE = "invalid";
 
+/**
+ * Ceiling on the login request body, in bytes.
+ *
+ * The real form is a few hundred bytes; this leaves generous headroom while
+ * still refusing anything sent purely to make the server buffer it.
+ */
+export const MAX_LOGIN_BODY_BYTES = 8 * 1024;
+
 /** Cookie exactly as `@supabase/ssr` asks us to write it. */
 export interface PendingAuthCookie {
   readonly name: string;
@@ -52,7 +60,103 @@ export interface PendingAuthCookie {
 
 export interface LoginCookieAdapter {
   getAll(): { name: string; value: string }[];
-  setAll(cookiesToSet: PendingAuthCookie[]): void;
+  /**
+   * `@supabase/ssr` v0.12.3 calls `setAll(cookiesToSet, headers)`.
+   *
+   * The second argument is NOT decoration. The library documents it as required
+   * alongside the cookies:
+   *
+   *   "Responses that set auth cookies must not be cached by CDNs or reverse
+   *    proxies, otherwise one user's session token can be served to a different
+   *    user."
+   *
+   * It supplies `Cache-Control: private, no-cache, no-store, must-revalidate,
+   * max-age=0`, `Expires: 0` and `Pragma: no-cache`. Declaring the parameter
+   * here is what stops JavaScript silently discarding it at the call site.
+   */
+  setAll(
+    cookiesToSet: PendingAuthCookie[],
+    headers: Record<string, string>
+  ): void;
+}
+
+/**
+ * The cache policy applied to EVERY response from this endpoint.
+ *
+ * Supabase supplies these whenever it writes auth cookies, and those values win.
+ * This baseline covers the responses it never gets to touch — a validation
+ * failure, a rejected origin — because an authentication endpoint should not be
+ * cacheable regardless of whether a session was issued.
+ */
+const AUTH_RESPONSE_CACHE_HEADERS: Readonly<Record<string, string>> = {
+  "Cache-Control": "private, no-cache, no-store, must-revalidate, max-age=0",
+  Expires: "0",
+  Pragma: "no-cache",
+};
+
+/**
+ * The request's own origin, as the public internet sees it.
+ *
+ * TRUST BOUNDARY: `X-Forwarded-*` is only meaningful because the app is reached
+ * exclusively through the ONEDECORE Nginx reverse proxy, which sets them. A
+ * client can forge those headers, but forging them here changes only what this
+ * request compares ITSELF against — it cannot make a cross-site Origin match,
+ * because the attacker's `Origin` is set by the victim's browser and is not
+ * under the attacker's control.
+ */
+function effectiveRequestOrigin(request: NextRequest): string {
+  const first = (raw: string | null): string | null =>
+    raw ? (raw.split(",")[0] ?? "").trim() || null : null;
+
+  const host =
+    first(request.headers.get("x-forwarded-host")) ??
+    first(request.headers.get("host")) ??
+    request.nextUrl.host;
+
+  const proto =
+    first(request.headers.get("x-forwarded-proto")) ??
+    request.nextUrl.protocol.replace(/:$/, "");
+
+  return `${proto}://${host}`.toLowerCase();
+}
+
+/**
+ * Same-origin check for the login POST.
+ *
+ * WHY THIS IS HERE
+ *
+ * The previous login was a Next.js Server Action, and Server Actions compare
+ * Origin against Host/X-Forwarded-Host automatically. Moving authentication to a
+ * custom Route Handler dropped that protection — Next's own documentation says
+ * custom Route Handlers must be audited for CSRF separately.
+ *
+ * Without it, an attacker-controlled page could cross-site POST credentials of
+ * the attacker's choosing and land the resulting session cookies in the victim's
+ * browser — a login-CSRF / session-fixation path into an administrative session,
+ * which is precisely what this endpoint exists to create.
+ *
+ * A missing Origin fails closed. Every browser sends Origin on a POST, so a
+ * genuine form submission always has one; treating absent as trusted would make
+ * the check trivial to skip.
+ */
+function isSameOrigin(request: NextRequest): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) {
+    return false;
+  }
+
+  let candidate: URL;
+  try {
+    candidate = new URL(origin);
+  } catch {
+    // Malformed, "null", or otherwise unparseable — fail closed.
+    return false;
+  }
+
+  return (
+    `${candidate.protocol.replace(/:$/, "")}://${candidate.host}`.toLowerCase() ===
+    effectiveRequestOrigin(request)
+  );
 }
 
 /** Only the surface this flow actually uses, so tests can supply a double. */
@@ -107,6 +211,40 @@ export async function handleStaffLoginSubmit(
   request: NextRequest,
   createClientWithCookies: LoginClientFactory
 ): Promise<NextResponse> {
+  /*
+   * CSRF gate, before the body is even read.
+   *
+   * Nothing downstream runs for a cross-site POST: no form parsing, no Supabase
+   * client, no credential test, no cookie. 403 with an empty body is the whole
+   * response — the rejected Origin is never reflected, and no credential detail
+   * is disclosed either way.
+   */
+  if (!isSameOrigin(request)) {
+    return new NextResponse(null, {
+      status: 403,
+      headers: { ...AUTH_RESPONSE_CACHE_HEADERS },
+    });
+  }
+
+  /*
+   * A bound on the body before it is parsed.
+   *
+   * The Server Action this replaced inherited a framework body limit; a custom
+   * Route Handler inherits none, and the repository carries no Nginx config to
+   * confirm an upstream one. A genuine login post is a few hundred bytes —
+   * identifier <= 254, password <= 128, next a couple of hundred — so this
+   * ceiling is orders of magnitude above any real submission while refusing to
+   * buffer a body sent to waste memory. A missing Content-Length is left to the
+   * runtime rather than rejected, since only the oversized case is the risk.
+   */
+  const declaredLength = Number(request.headers.get("content-length") ?? "");
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_LOGIN_BODY_BYTES) {
+    return new NextResponse(null, {
+      status: 413,
+      headers: { ...AUTH_RESPONSE_CACHE_HEADERS },
+    });
+  }
+
   const form = await request.formData();
 
   // `email` stays accepted so an older cached form post keeps working.
@@ -125,6 +263,17 @@ export async function handleStaffLoginSubmit(
    */
   const pendingCookies: PendingAuthCookie[] = [];
 
+  /*
+   * The response headers @supabase/ssr hands us alongside those cookies.
+   *
+   * Dropping these was the second half of the same bug: a response that carries
+   * an auth Set-Cookie but no no-store policy can be cached by a CDN or reverse
+   * proxy, and then one staff member's session token is served to whoever asks
+   * next. The library is explicit about this, which is why its `setAll` takes
+   * them as a second argument.
+   */
+  const pendingHeaders: Record<string, string> = {};
+
   const applyCookies = (response: NextResponse): NextResponse => {
     for (const cookie of pendingCookies) {
       // Options are passed through verbatim: path, sameSite, secure, httpOnly,
@@ -132,6 +281,16 @@ export async function handleStaffLoginSubmit(
       // decisions to make, not ours to normalise.
       response.cookies.set(cookie.name, cookie.value, cookie.options);
     }
+
+    // Our conservative baseline first, then Supabase's values, so a header the
+    // library supplied always wins and is never weakened by ours.
+    for (const [name, value] of Object.entries(AUTH_RESPONSE_CACHE_HEADERS)) {
+      response.headers.set(name, value);
+    }
+    for (const [name, value] of Object.entries(pendingHeaders)) {
+      response.headers.set(name, value);
+    }
+
     return response;
   };
 
@@ -166,8 +325,9 @@ export async function handleStaffLoginSubmit(
 
   const supabase = createClientWithCookies({
     getAll: () => request.cookies.getAll(),
-    setAll: (cookiesToSet) => {
+    setAll: (cookiesToSet, headers) => {
       pendingCookies.push(...cookiesToSet);
+      Object.assign(pendingHeaders, headers ?? {});
     },
   });
 
