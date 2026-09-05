@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import type { CrmAccessContext } from "../contracts/crm-access.ts";
 import {
   calendarLocalDate,
@@ -22,6 +22,14 @@ import { fetchCrmAssigneeDirectory } from "./crm-lead-queries.ts";
  * RLS (`lead_follow_ups_select` → `private.crm_can_view_lead`). One embedded
  * lead join and one directory lookup keep this at two round-trips — no per-event
  * lead or owner queries.
+ *
+ * The Supabase client is an OPTIONAL parameter, exactly as the leads, pipeline
+ * and dashboard reads already take one. The browser workspace passes nothing and
+ * keeps its cookie-scoped client; the mobile route passes the caller's own
+ * bearer client. Either way the SAME range resolution, the SAME
+ * `canReadBroad` scoping and the SAME owner-label gating run once, so a phone
+ * and a browser showing the same week cannot disagree about what is in it.
+ * Neither path is service-role: RLS resolves against the real user in both.
  */
 const CALENDAR_SELECT =
   "id, lead_id, owner_id, activity_type, title, priority, due_at, duration_minutes, is_primary_next_action, leads!lead_follow_ups_lead_id_fkey(submitted_name, status)";
@@ -47,7 +55,8 @@ export interface FetchCrmCalendarOptions {
 
 export async function fetchCrmCalendarSnapshot(
   context: CrmAccessContext,
-  options: FetchCrmCalendarOptions
+  options: FetchCrmCalendarOptions,
+  db?: CrmDb
 ): Promise<CrmCalendarSnapshot> {
   const range: CrmCalendarRange = resolveCalendarRange(
     options.view,
@@ -59,7 +68,7 @@ export async function fetchCrmCalendarSnapshot(
     ? options.ownerId ?? null
     : context.userId;
 
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
   let request = supabase
     .from("lead_follow_ups")
     .select(CALENDAR_SELECT)
@@ -77,7 +86,7 @@ export async function fetchCrmCalendarSnapshot(
       .order("id", { ascending: true })
       .limit(CRM_CALENDAR_EVENT_LIMIT + 1),
     context.canReadBroad
-      ? fetchCrmAssigneeDirectory(context)
+      ? fetchCrmAssigneeDirectory(context, db)
       : Promise.resolve([]),
   ]);
 

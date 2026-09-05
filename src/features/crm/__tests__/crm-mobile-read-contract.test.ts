@@ -235,6 +235,8 @@ describe("the refactor is additive", () => {
     ["crm-lead-score-batch.ts", 7],
     ["crm-lead-commercial-queries.ts", 2],
     ["crm-pipeline-queries.ts", 1],
+    /* CRM-M7A: the calendar snapshot now runs for a bearer caller too. */
+    ["crm-calendar-queries.ts", 1],
   ] as const;
 
   test("every injected client parameter is optional", () => {
