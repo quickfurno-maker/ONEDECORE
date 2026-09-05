@@ -177,7 +177,19 @@ interface RequestOptions {
   /** Omit to send the genuine same-origin value a browser would. */
   readonly origin?: string | null;
   readonly headers?: Record<string, string>;
+  /**
+   * The URL Next.js itself sees.
+   *
+   * In production this is NOT the public URL: Next runs behind Nginx and sees
+   * the internal upstream, so `request.nextUrl.origin` is
+   * `https://localhost:3000`. Defaulting this to the public origin is precisely
+   * why the original suite could not reproduce the production redirect bug.
+   */
+  readonly internalUrl?: string;
 }
+
+/** What Next.js sees behind the ONEDECORE reverse proxy. */
+const INTERNAL_ORIGIN = "https://localhost:3000";
 
 function loginRequest(
   fields: Record<string, string>,
@@ -203,11 +215,29 @@ function loginRequest(
     headers.set("origin", origin);
   }
 
-  return new NextRequest(`${ORIGIN}/auth/login/submit`, {
-    method: "POST",
-    body: form,
-    headers,
-  });
+  return new NextRequest(
+    requestOptions.internalUrl ?? `${ORIGIN}/auth/login/submit`,
+    {
+      method: "POST",
+      body: form,
+      headers,
+    }
+  );
+}
+
+/** A request shaped exactly like production: internal URL, public forwarded headers. */
+function behindProxy(extra: RequestOptions = {}): RequestOptions {
+  return {
+    internalUrl: `${INTERNAL_ORIGIN}/auth/login/submit`,
+    origin: ORIGIN,
+    ...extra,
+    headers: {
+      host: "onedecore.in",
+      "x-forwarded-host": "onedecore.in",
+      "x-forwarded-proto": "https",
+      ...(extra.headers ?? {}),
+    },
+  };
 }
 
 async function submit(
@@ -647,6 +677,193 @@ describe("cross-site login POSTs are refused", () => {
     const body = await response.text();
     assert.equal(body, "");
     assert.ok(!body.includes(DIGITS));
+  });
+});
+
+/* ========================================================================== */
+/* 2d. Behind the real reverse proxy — the public origin must survive          */
+/* ========================================================================== */
+
+describe("redirects keep the PUBLIC origin behind the proxy", () => {
+  /*
+   * PRODUCTION EVIDENCE THIS EXISTS FOR
+   *
+   *   curl -X POST https://onedecore.in/auth/login/submit ...
+   *
+   *   HTTP/1.1 303 See Other
+   *   location: https://localhost:3000/auth/login?error=invalid
+   *
+   * Next.js runs behind Nginx and sees the internal upstream, so
+   * `request.nextUrl.origin` is `https://localhost:3000`. Redirects built on it
+   * sent the browser to the VISITOR'S OWN machine.
+   *
+   * The original suite could not catch this: it constructed the NextRequest at
+   * the public origin, which made `nextUrl.origin` accidentally correct. These
+   * tests model the real topology — internal request URL, public forwarded
+   * headers — so the two can never be conflated again.
+   */
+
+  const assertPublicOrigin = (location: string, pathname: string) => {
+    const url = new URL(location);
+    assert.equal(url.origin, ORIGIN, `expected the public origin, got ${url.origin}`);
+    assert.equal(url.pathname, pathname);
+    // The exact production symptom.
+    assert.ok(!location.includes("localhost"), `Location leaked localhost: ${location}`);
+    assert.ok(!location.includes("127.0.0.1"), `Location leaked a loopback address`);
+    assert.ok(!location.includes(":3000"), `Location leaked the upstream port`);
+  };
+
+  test("A. a FAILURE redirect keeps the public origin", async () => {
+    const { response, location } = await submit(
+      { identifier: "", password: "" },
+      {},
+      behindProxy()
+    );
+
+    assert.equal(response.status, 303);
+    assertPublicOrigin(location, "/auth/login");
+    assert.equal(new URL(location).searchParams.get("error"), LOGIN_ERROR_CODE);
+  });
+
+  test("A2. a bad-credential failure keeps the public origin", async () => {
+    const { response, location } = await submit(
+      { identifier: DIGITS, password: "wrong" },
+      { signInFails: true },
+      behindProxy()
+    );
+
+    assert.equal(response.status, 303);
+    assertPublicOrigin(location, "/auth/login");
+  });
+
+  test("B. a SUCCESS redirect keeps the public origin", async () => {
+    const { response, location } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      {},
+      behindProxy()
+    );
+
+    assert.equal(response.status, 303);
+    assertPublicOrigin(location, "/admin");
+  });
+
+  test("B2. a safe next keeps the public origin", async () => {
+    const { location } = await submit(
+      { identifier: DIGITS, password: PASSWORD, next: "/admin/attendance" },
+      {},
+      behindProxy()
+    );
+
+    assertPublicOrigin(location, "/admin/attendance");
+    assert.equal(location, `${ORIGIN}/admin/attendance`);
+  });
+
+  test("C. a FORBIDDEN redirect keeps the public origin", async () => {
+    for (const options of [{ hasAdminAccess: false }, { authorizeErrors: true }] as const) {
+      const { response, location } = await submit(
+        { identifier: DIGITS, password: PASSWORD },
+        options,
+        behindProxy()
+      );
+
+      assert.equal(response.status, 303);
+      assertPublicOrigin(location, "/auth/forbidden");
+    }
+  });
+
+  test("a revoked redirect keeps the public origin too", async () => {
+    const { location } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      { accessState: "revoked" },
+      behindProxy()
+    );
+    assertPublicOrigin(location, "/auth/login");
+  });
+
+  test("NO redirect from this endpoint can carry the upstream origin", async () => {
+    // Every reachable redirect outcome, in one sweep.
+    const outcomes = [
+      await submit({ identifier: "", password: "" }, {}, behindProxy()),
+      await submit({ identifier: ALIAS, password: PASSWORD }, {}, behindProxy()),
+      await submit({ identifier: DIGITS, password: "x" }, { signInFails: true }, behindProxy()),
+      await submit({ identifier: DIGITS, password: PASSWORD }, { accessState: "revoked" }, behindProxy()),
+      await submit({ identifier: DIGITS, password: PASSWORD }, { hasAdminAccess: false }, behindProxy()),
+      await submit({ identifier: DIGITS, password: PASSWORD }, {}, behindProxy()),
+    ];
+
+    for (const { location } of outcomes) {
+      assert.ok(location, "every outcome must redirect");
+      assert.equal(new URL(location).origin, ORIGIN);
+      assert.ok(!location.includes("localhost"));
+    }
+  });
+
+  test("the session-bearing redirect still carries cookies AND no-store headers", async () => {
+    // The PR #139 guarantees must survive the origin correction.
+    const { response } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      {},
+      behindProxy()
+    );
+
+    for (const expected of SESSION_COOKIES) {
+      assert.equal(response.cookies.get(expected.name)?.value, expected.value);
+    }
+    for (const [name, expected] of Object.entries(SUPABASE_AUTH_HEADERS)) {
+      assert.equal(response.headers.get(name), expected);
+    }
+  });
+
+  test("CSRF still accepts the genuine browser Origin behind the proxy", async () => {
+    // The check compares against the FORWARDED origin, not nextUrl — so a real
+    // browser POST passes even though Next itself sees localhost.
+    const { response, recorded } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      {},
+      behindProxy({ origin: "https://onedecore.in" })
+    );
+
+    assert.equal(response.status, 303);
+    assert.equal(recorded.signIns.length, 1);
+  });
+
+  test("CSRF still refuses hostile origins behind the proxy", async () => {
+    for (const hostile of [
+      "https://evil.example",
+      "http://onedecore.in",
+      "https://evil.onedecore.in",
+      "not-a-url",
+      null,
+    ]) {
+      const { response, recorded } = await submit(
+        { identifier: DIGITS, password: PASSWORD },
+        {},
+        behindProxy({ origin: hostile })
+      );
+
+      assert.equal(response.status, 403, `origin ${String(hostile)} must be refused`);
+      assert.equal(recorded.signIns.length, 0);
+    }
+
+    // And the internal origin is NOT a free pass: a request claiming to come
+    // from the upstream itself is still cross-origin to the public site.
+    const { response } = await submit(
+      { identifier: DIGITS, password: PASSWORD },
+      {},
+      behindProxy({ origin: INTERNAL_ORIGIN })
+    );
+    assert.equal(response.status, 403);
+  });
+
+  test("redirect construction never reads nextUrl", () => {
+    const src = code(read(SUBMIT));
+    assert.ok(
+      !src.includes("nextUrl.origin"),
+      "every redirect must be based on effectiveRequestOrigin"
+    );
+    // And the helper is what they use.
+    const redirects = src.match(/new URL\([^)]*effectiveRequestOrigin\(request\)\)/g) ?? [];
+    assert.ok(redirects.length >= 3, `expected 3 redirect bases, found ${redirects.length}`);
   });
 });
 
