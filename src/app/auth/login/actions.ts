@@ -3,10 +3,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSafeAdminRedirect } from "@/server/auth/authorize";
+import { looksLikeStaffLoginPhone } from "@/features/staff-admin/contracts/staff-login-phone";
 import {
-  looksLikeStaffLoginPhone,
+  isStaffLoginAuthAlias,
   staffLoginAuthAlias,
-} from "@/features/staff-admin/contracts/staff-login-phone";
+} from "@/features/staff-admin/server/staff-login-auth-alias";
 
 export interface LoginState {
   error?: string | null;
@@ -56,6 +57,23 @@ export async function loginAction(
   }
 
   if (identifier.length > 254 || password.length > 128) {
+    return { error: GENERIC_ERROR };
+  }
+
+  /*
+   * The internal transport alias is NOT a login identifier.
+   *
+   * It is derived from a staff mobile, so it is guessable by anyone who knows
+   * the number — and without this check it would sail past the 10-digit test and
+   * authenticate down the generic email path, giving every staff member a second
+   * login the owner never authorised.
+   *
+   * Rejected BEFORE the Supabase client is built, so a submitted alias produces
+   * no authentication attempt at all: no credential is tested, and the form
+   * cannot be used to probe which aliases exist. The message is the same generic
+   * one, so this refusal is indistinguishable from a wrong password.
+   */
+  if (isStaffLoginAuthAlias(identifier)) {
     return { error: GENERIC_ERROR };
   }
 

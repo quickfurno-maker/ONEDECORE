@@ -39,7 +39,7 @@
  * logged, or included in any error message.
  */
 
-import { staffLoginAuthAlias } from "../contracts/staff-login-phone.ts";
+import { staffLoginAuthAlias } from "./staff-login-auth-alias.ts";
 import {
   StaffIdentityConflictError,
   type AuthorizedRequest,

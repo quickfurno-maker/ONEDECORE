@@ -18,8 +18,14 @@
  * `422 phone_provider_disabled`. Staff still have exactly one identifier they
  * ever see or type — their 10-digit mobile — and the server derives a
  * deterministic, non-deliverable auth alias from it for the email/password
- * transport. See `staffLoginAuthAlias`. There is no OTP and no SMS anywhere in
- * this system.
+ * transport. There is no OTP and no SMS anywhere in this system.
+ *
+ * That alias deliberately does NOT live here. This module is imported by Client
+ * Components (the credential panel needs the password minimum and the display
+ * username), and tree-shaking is an optimisation rather than a containment
+ * boundary — so the transport detail lives in `server/staff-login-auth-alias.ts`
+ * behind `import "server-only"`, where a client import fails the build instead
+ * of relying on a bundler to drop it.
  */
 
 import { sanitizeManualLeadPhoneInput } from "../../crm/lib/phone-e164.ts";
@@ -101,75 +107,6 @@ export function staffLoginUsername(e164: string | null | undefined): string | nu
  */
 export function looksLikeStaffLoginPhone(identifier: string): boolean {
   return STAFF_LOGIN_PHONE_PATTERN.test(identifier.trim());
-}
-
-/* -------------------------------------------------------------------------- */
-/* Internal auth alias — a transport detail, never an identity                 */
-/* -------------------------------------------------------------------------- */
-
-/**
- * RFC 2606 reserves `.invalid`, so this domain can never resolve and no message
- * can ever be delivered to it. That is the point: the alias exists only to
- * satisfy Supabase's email/password transport, and must be impossible to
- * mistake for a way to contact anyone.
- */
-export const STAFF_LOGIN_AUTH_ALIAS_DOMAIN = "staff-login.onedecore.invalid";
-
-/**
- * The server-only Supabase Auth identifier derived from a staff login number.
- *
- *   7447863402 -> 7447863402@staff-login.onedecore.invalid
- *
- * WHY THIS EXISTS
- *
- * The owner's decision is that a staff member's 10-digit mobile is their only
- * login ID, with no OTP and no SMS. Hosted Supabase password auth accepts only
- * an email or a phone identifier, and the Phone provider is disabled — a live
- * stack rejects staff sign-in with `422 phone_provider_disabled`. So the phone
- * cannot be the transport identifier even though it is the only identifier the
- * business recognises.
- *
- * The alias closes that gap without inventing a second staff-visible identity:
- * it is derived, never chosen; server-only, never typed; and it carries no
- * information the 10-digit number does not already carry.
- *
- * WHAT IT IS NOT
- *
- * It is not a staff email address. Nothing is ever sent to it, it is never
- * stored as contact information, never shown in the UI, and never accepted FROM
- * the UI — `normalizeStaffLoginPhone` rejects any input containing an "@", so an
- * address pasted into the login field can never be re-derived into an alias and
- * take the staff path.
- *
- * Returns null for anything that is not a valid canonical staff login number,
- * so a caller cannot accidentally mint an alias from arbitrary input.
- */
-export function staffLoginAuthAlias(
-  loginPhone: string | null | undefined
-): string | null {
-  const normalized = normalizeStaffLoginPhone(loginPhone);
-  if (!normalized.ok) {
-    return null;
-  }
-  return `${normalized.digits}@${STAFF_LOGIN_AUTH_ALIAS_DOMAIN}`;
-}
-
-/**
- * True for a value that is one of our internal aliases.
- *
- * Used to keep the alias out of places it must never reach — it is not a
- * credential check and grants nothing.
- */
-export function isStaffLoginAuthAlias(value: string | null | undefined): boolean {
-  if (!value) {
-    return false;
-  }
-  const [local, domain, ...rest] = value.trim().toLowerCase().split("@");
-  return (
-    rest.length === 0 &&
-    domain === STAFF_LOGIN_AUTH_ALIAS_DOMAIN &&
-    STAFF_LOGIN_PHONE_PATTERN.test(local ?? "")
-  );
 }
 
 export type StaffPasswordResult =

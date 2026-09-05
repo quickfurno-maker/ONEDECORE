@@ -23,13 +23,15 @@ import { join } from "node:path";
 import { describe, test } from "node:test";
 
 import {
-  STAFF_LOGIN_AUTH_ALIAS_DOMAIN,
-  isStaffLoginAuthAlias,
   looksLikeStaffLoginPhone,
   normalizeStaffLoginPhone,
-  staffLoginAuthAlias,
   staffLoginUsername,
 } from "../contracts/staff-login-phone.ts";
+import {
+  STAFF_LOGIN_AUTH_ALIAS_DOMAIN,
+  isStaffLoginAuthAlias,
+  staffLoginAuthAlias,
+} from "../server/staff-login-auth-alias.ts";
 import {
   STAFF_PERMISSION_CODES,
   STAFF_ROLE_PERMISSIONS,
@@ -57,6 +59,7 @@ const ADAPTER = "src/features/staff-admin/server/staff-invite-adapter.ts";
 const PANEL = "src/features/staff-admin/components/StaffLoginAccessPanel.tsx";
 const CREDENTIAL_ACTIONS =
   "src/features/staff-admin/server/staff-credential-actions.ts";
+const ALIAS_MODULE = "src/features/staff-admin/server/staff-login-auth-alias.ts";
 const PHONE_MIGRATION =
   "supabase/migrations/20260903160000_staff_phone_login_credentials.sql";
 
@@ -250,6 +253,183 @@ describe("the login action", () => {
     assert.doesNotMatch(source, /console\.(log|error|warn)/);
     assert.doesNotMatch(source, /error: alias|error: `[^`]*alias/);
     assert.doesNotMatch(source, /return \{ error: [^}]*alias/);
+  });
+});
+
+/* ========================================================================== */
+/* 3b. A submitted alias is not a login identifier                             */
+/* ========================================================================== */
+
+describe("the alias is refused when typed into the login form", () => {
+  /*
+   * Without this guard the alias sails past the 10-digit test and lands on the
+   * generic email path, where a correct password authenticates it — handing
+   * every staff member a second login the owner never authorised, guessable by
+   * anyone who knows their mobile number.
+   */
+
+  test("an alias submitted as the identifier is detected", () => {
+    assert.ok(isStaffLoginAuthAlias(ALIAS));
+    assert.ok(isStaffLoginAuthAlias(`  ${ALIAS.toUpperCase()}  `), "trimmed, case-insensitive");
+    assert.ok(isStaffLoginAuthAlias(NEW_ALIAS));
+  });
+
+  test("a real address is NOT caught by the guard", () => {
+    // The Super Admin must still be able to sign in.
+    for (const value of [
+      "owner@onedecore.com",
+      "admin@staff-login.onedecore.com",
+      "7447863402@gmail.com",
+      "staff-login.onedecore.invalid",
+      "a@b@staff-login.onedecore.invalid",
+    ]) {
+      assert.equal(
+        isStaffLoginAuthAlias(value),
+        false,
+        `${value} must not be treated as an internal alias`
+      );
+    }
+  });
+
+  test("the action refuses it with the SAME generic error", () => {
+    const source = read(LOGIN_ACTION);
+    const guardAt = source.indexOf("isStaffLoginAuthAlias(identifier)");
+    assert.ok(guardAt > 0, "the login action must check for a submitted alias");
+
+    // The guard returns immediately, with the shared message — indistinguishable
+    // from a wrong password, so the form cannot be used to probe for aliases.
+    const guardBody = source.slice(guardAt, guardAt + 120);
+    assert.match(guardBody, /return \{ error: GENERIC_ERROR \}/);
+  });
+
+  test("no authentication is attempted for a submitted alias", () => {
+    const source = read(LOGIN_ACTION);
+    const guardAt = source.indexOf("isStaffLoginAuthAlias(identifier)");
+    const clientAt = source.indexOf("await createClient()");
+    const firstSignIn = source.indexOf("signInWithPassword");
+
+    // The guard runs before the Supabase client even exists, so a submitted
+    // alias produces no credential test of any kind.
+    assert.ok(guardAt > 0 && clientAt > 0 && firstSignIn > 0);
+    assert.ok(guardAt < clientAt, "the alias guard must precede client creation");
+    assert.ok(guardAt < firstSignIn, "the alias guard must precede any sign-in");
+  });
+
+  test("the staff account is reachable ONLY through the 10-digit route", () => {
+    // The number routes to the staff path; its alias does not route anywhere.
+    assert.ok(looksLikeStaffLoginPhone(DIGITS));
+    assert.equal(looksLikeStaffLoginPhone(ALIAS), false);
+    assert.equal(isStaffLoginAuthAlias(DIGITS), false);
+
+    // And the alias cannot be re-derived from the submitted alias text, so
+    // there is no second way in even if the guard order were changed.
+    assert.equal(staffLoginAuthAlias(ALIAS), null);
+  });
+});
+
+/* ========================================================================== */
+/* 3c. The alias module is server-only, not merely tree-shaken                 */
+/* ========================================================================== */
+
+describe("the alias module cannot be reached from the client", () => {
+  /** Every "use client" file in the app. */
+  function clientComponents(): readonly string[] {
+    const out: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {
+        const rel = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) {
+          if (entry.name === "__tests__") continue;
+          walk(rel);
+        } else if (/\.(ts|tsx)$/.test(entry.name)) {
+          const src = read(rel);
+          if (/^\s*["']use client["']/m.test(src)) {
+            out.push(rel);
+          }
+        }
+      }
+    };
+    walk("src");
+    return out;
+  }
+
+  test("the module declares the server-only guard", () => {
+    const src = read(ALIAS_MODULE);
+    // Not a comment — the import itself, which fails the build if a client
+    // module pulls it in. Tree-shaking is an optimisation, not a boundary.
+    assert.match(src, /^import "server-only";/m);
+  });
+
+  test("the shared contract no longer carries the transport detail", () => {
+    const contract = read(CONTRACT);
+    assert.doesNotMatch(contract, /export function staffLoginAuthAlias/);
+    assert.doesNotMatch(contract, /export function isStaffLoginAuthAlias/);
+    assert.doesNotMatch(contract, /STAFF_LOGIN_AUTH_ALIAS_DOMAIN\s*=/);
+    assert.doesNotMatch(contract, /staff-login\.onedecore\.invalid/);
+
+    // What Client Components legitimately need stayed put.
+    assert.match(contract, /export const STAFF_PASSWORD_MIN_LENGTH/);
+    assert.match(contract, /export function staffLoginUsername/);
+    assert.match(contract, /export function normalizeStaffLoginPhone/);
+  });
+
+  test("no client component imports it or names the domain", () => {
+    const clients = clientComponents();
+    assert.ok(clients.length > 0, "expected to find client components to scan");
+
+    for (const rel of clients) {
+      const src = read(rel);
+      assert.ok(
+        !src.includes("staff-login-auth-alias"),
+        `${rel} must not import the server-only alias module`
+      );
+      assert.ok(
+        !src.includes("staff-login.onedecore.invalid"),
+        `${rel} must not contain the alias domain`
+      );
+      for (const name of [
+        "staffLoginAuthAlias",
+        "isStaffLoginAuthAlias",
+        "STAFF_LOGIN_AUTH_ALIAS_DOMAIN",
+      ]) {
+        assert.ok(!src.includes(name), `${rel} must not reference ${name}`);
+      }
+    }
+  });
+
+  test("the credential panel still gets what it actually needs", () => {
+    // The panel is the client component that forced the split: it imports the
+    // shared contract, which must keep working.
+    const panel = read(PANEL);
+    assert.match(panel, /staff-login-phone/);
+    assert.doesNotMatch(panel, /staff-login-auth-alias/);
+  });
+
+  test("only server modules import the alias", () => {
+    // An actual import statement — a comment NAMING the module is fine and is
+    // exactly how the shared contract documents where the detail moved to.
+    const IMPORTS_ALIAS = /^\s*import[\s\S]{0,200}?["'][^"']*staff-login-auth-alias/m;
+
+    const importers: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {
+        const rel = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) {
+          walk(rel);
+        } else if (/\.(ts|tsx)$/.test(entry.name) && IMPORTS_ALIAS.test(read(rel))) {
+          importers.push(rel);
+        }
+      }
+    };
+    walk("src");
+
+    assert.ok(importers.length > 0, "expected the alias module to be used");
+    for (const rel of importers) {
+      assert.ok(
+        rel.includes("/server/") || rel.includes("/__tests__/") || rel === LOGIN_ACTION,
+        `unexpected importer of the server-only alias module: ${rel}`
+      );
+    }
   });
 });
 
@@ -570,7 +750,7 @@ describe("no OTP, no SMS, no self-service reset, no signup", () => {
     }
   });
 
-  test("there is no forgot-password or self-reset route", () => {
+  test("ONEDECORE exposes no forgot-password, self-reset or signup route", () => {
     const routes = readdirSync(join(root, "src/app/auth"), {
       withFileTypes: true,
     })
@@ -587,6 +767,39 @@ describe("no OTP, no SMS, no self-service reset, no signup", () => {
     ]) {
       assert.ok(!routes.includes(forbidden), `/auth/${forbidden} must not exist`);
     }
+  });
+
+  test("the app-level signup claim is scoped honestly", () => {
+    /*
+     * WHAT THE TESTS ABOVE PROVE:
+     *   "No ONEDECORE public signup path exists in application source."
+     *
+     * WHAT THEY DO NOT PROVE:
+     *   "Project-level Supabase public signup is disabled."
+     *
+     * This distinction matters BECAUSE the alias is deterministic. If the
+     * Supabase project still allows new users to sign up, an external caller
+     * holding only the public project URL and publishable key could attempt to
+     * register `<10digits>@staff-login.onedecore.invalid` before the owner
+     * issues that employee's credentials. Such a user gains no application
+     * permission — `authorize("admin.access")` and every RLS policy still deny
+     * them — but the collision would block staff onboarding, which is a
+     * denial-of-service on the credential workflow rather than a breach.
+     *
+     * Disabling `Allow new users to sign up` in the Supabase dashboard is
+     * therefore a PRODUCTION DEPLOYMENT GATE, not something this repository can
+     * assert. Admin-created users must stay allowed — that is how every staff
+     * credential is issued.
+     *
+     * This test exists to keep that caveat next to the code it qualifies, so a
+     * later reader does not mistake the source scan for proof of the external
+     * setting.
+     */
+    const aliasModule = read(ALIAS_MODULE);
+    // The alias is derived from a public fact (the staff mobile), so its
+    // secrecy is never load-bearing — the guarantees rest on RLS and authorize.
+    assert.match(aliasModule, /deterministic|derived/);
+    assert.ok(true, "documented deployment gate, not an in-repo assertion");
   });
 
   test("password control stays exclusively with the Super Admin", () => {
