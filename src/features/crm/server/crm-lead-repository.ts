@@ -197,7 +197,11 @@ export async function getLeadDetailForCurrentUser(
     supabase
       .from("lead_follow_ups")
       .select(
-        "id, owner_id, due_at, status, outcome, completed_at, cancelled_at, activity_type, title, priority, is_primary_next_action, duration_minutes, reminder_at, outcome_code, completion_note, quotation_id, source, cadence_enrollment_id, cadence_step_id, created_at, updated_at"
+        // `completed_by` / `cancelled_by` are the ACTOR columns the governed
+        // completion and cancellation RPCs stamp. Without them the conversation
+        // log had to fall back to the scheduled owner, which is a different
+        // person whenever an activity was transferred.
+        "id, owner_id, due_at, status, outcome, completed_at, completed_by, cancelled_at, cancelled_by, activity_type, title, priority, is_primary_next_action, duration_minutes, reminder_at, outcome_code, completion_note, quotation_id, source, cadence_enrollment_id, cadence_step_id, created_at, updated_at"
       )
       .eq("lead_id", leadId)
       .order("due_at", { ascending: true }),
@@ -315,6 +319,12 @@ export async function getLeadDetailForCurrentUser(
       outcome: followUp.outcome,
       completedAt: followUp.completed_at,
       cancelledAt: followUp.cancelled_at,
+      // `labelForUser` resolves through the RLS-scoped assignee directory and
+      // falls back to "Staff member", so an unresolvable actor is never shown
+      // as a raw UUID. Null stays null: an unknown actor is omitted rather
+      // than attributed to the scheduled owner.
+      completedByLabel: labelForUser(followUp.completed_by),
+      cancelledByLabel: labelForUser(followUp.cancelled_by),
       activityType: followUp.activity_type,
       title: followUp.title,
       priority: followUp.priority,
