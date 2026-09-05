@@ -242,7 +242,7 @@ export function DiscoveryHomePage({
                 <li>Own manufacturing for custom work</li>
               </ul>
               {!showLeadForm ? (
-                <div className="od-disc-hero__ctas">
+                <div className="od-disc-cta-row">
                   <Link href={PUBLIC_CONSULTATION.href} className="od-disc-btn od-disc-btn--primary od-disc-btn--sheen">
                     {PUBLIC_CONSULTATION.label}
                   </Link>

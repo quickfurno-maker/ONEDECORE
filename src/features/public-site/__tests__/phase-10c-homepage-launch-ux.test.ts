@@ -54,7 +54,8 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.equal(PUBLIC_CONSULTATION.mobileLabel, "Get Free Design");
   });
 
-  test("hero slides define approved copy and CTA targets without shop links", () => {
+  test("hero slides keep their approved copy and carry NO call to action", () => {
+    // The three slide narratives are unchanged; only the action clutter is gone.
     assert.equal(DISCOVERY_HERO_SLIDES.length, 3);
     assert.equal(DISCOVERY_HERO_SLIDES[0]!.kicker, "Premium interiors for Pune homes");
     assert.equal(
@@ -65,21 +66,17 @@ describe("Phase 10C — homepage launch UX", () => {
       DISCOVERY_HERO_SLIDES[0]!.lede,
       /From concept and modular manufacturing to installation/
     );
-    assert.equal(DISCOVERY_HERO_SLIDES[0]!.primaryCta.label, PUBLIC_CONSULTATION.label);
-    assert.equal(DISCOVERY_HERO_SLIDES[0]!.primaryCta.href, "/#consultation");
-    assert.equal(DISCOVERY_HERO_SLIDES[0]!.secondaryCta.label, "View Portfolio");
-    assert.equal(DISCOVERY_HERO_SLIDES[0]!.secondaryCta.href, "/portfolio");
-    assert.equal(
-      DISCOVERY_HERO_SLIDES[1]!.primaryCta.href,
-      PUBLIC_CONSULTATION_BY_SERVICE["modular-kitchens"]
-    );
-    assert.equal(DISCOVERY_HERO_SLIDES[1]!.secondaryCta.href, "/interiors");
-    assert.equal(
-      DISCOVERY_HERO_SLIDES[2]!.primaryCta.href,
-      PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"]
-    );
-    assert.equal(DISCOVERY_HERO_SLIDES[2]!.secondaryCta.href, "/portfolio");
     assert.equal(DISCOVERY_HERO_SLIDES[2]!.badge, "Furniture & Décor — coming soon");
+
+    /*
+     * The hero is storytelling only. Its CTAs duplicated the persistent sticky
+     * dock and, on mobile, spent a large share of the first screen competing
+     * with it — so the slide data no longer carries any action at all.
+     */
+    for (const slide of DISCOVERY_HERO_SLIDES) {
+      assert.ok(!("primaryCta" in slide), `${slide.id} must not define a primaryCta`);
+      assert.ok(!("secondaryCta" in slide), `${slide.id} must not define a secondaryCta`);
+    }
 
     const heroSrc = read("src/features/public-site/discovery/DiscoveryHeroSlider.tsx");
     const copySrc = read("src/features/public-site/discovery/discovery-copy.ts");
@@ -90,9 +87,11 @@ describe("Phase 10C — homepage launch UX", () => {
 
   test("service cards deep-link to consultation with service preselection", () => {
     assert.equal(DISCOVERY_SERVICE_CARDS.length, 3);
+    // The canonical map, so a service link and its consultation target cannot
+    // drift apart.
     assert.equal(
       DISCOVERY_SERVICE_CARDS[0]!.href,
-      "/?service=complete-home-interiors#consultation"
+      PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"]
     );
     assert.equal(
       DISCOVERY_SERVICE_CARDS[1]!.href,

@@ -27,6 +27,8 @@ export type LeadFormFieldKey =
   | "service"
   | "property"
   | "timeline"
+  /** The public consultation form's single service-relevant question. */
+  | "qualifier"
   | "serviceEnquiryConsent"
   | "servicePhoneConsent";
 
@@ -38,6 +40,7 @@ export const LEAD_FORM_FIELD_ORDER: readonly LeadFormFieldKey[] = [
   "service",
   "property",
   "timeline",
+  "qualifier",
   "serviceEnquiryConsent",
   "servicePhoneConsent",
 ] as const;
@@ -69,6 +72,7 @@ const FIELD_LABELS: Record<string, string> = {
   "requirements.service": "Service",
   "requirements.property": "Property type",
   "requirements.timeline": "Timeline",
+  "requirements.qualifier": "Project requirement",
   "requirements.rooms": "Rooms",
   "requirements.locality": "Locality",
   "requirements.message": "Message",
@@ -202,6 +206,16 @@ export function validateLeadFormFields(input: {
   readonly service?: string | null;
   readonly property?: string | null;
   readonly timeline?: string | null;
+  /**
+   * Which form is validating.
+   *
+   * `planner` (default) is the legacy multi-step planner, which really does
+   * collect property and timeline. `consultation` is the simplified public form,
+   * which asks ONE service-relevant question instead — so requiring property and
+   * timeline there would demand answers the customer was never shown.
+   */
+  readonly variant?: "planner" | "consultation";
+  readonly qualifier?: string | null;
   /** @deprecated Public form no longer collects email. Kept for API-compat tests. */
   readonly email?: string;
   /** @deprecated Public form no longer collects email consent. */
@@ -225,10 +239,15 @@ export function validateLeadFormFields(input: {
   if (!input.service) {
     fields.service = "Choose a service.";
   }
-  if (!input.property) {
+  const isConsultation = input.variant === "consultation";
+  if (isConsultation) {
+    if (!input.qualifier) {
+      fields.qualifier = "Choose an option.";
+    }
+  } else if (!input.property) {
     fields.property = "Choose your property type.";
   }
-  if (!input.timeline) {
+  if (!isConsultation && !input.timeline) {
     fields.timeline = "Choose your timeline.";
   }
 

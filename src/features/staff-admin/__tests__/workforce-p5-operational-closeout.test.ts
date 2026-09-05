@@ -95,10 +95,16 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
       n.endsWith(".sql")
     );
     const sorted = [...files].sort();
+    // M57 is no longer the newest migration — the public consultation
+    // qualifier follows it — but it must still be present and forward-only.
+    assert.ok(
+      sorted.includes("20260904170000_workforce_p5_launch_catalogue.sql"),
+      "M57 must still be present"
+    );
     assert.equal(
       sorted[sorted.length - 1],
-      "20260904170000_workforce_p5_launch_catalogue.sql",
-      "M57 must sort last"
+      "20260905120000_public_consultation_qualifier.sql",
+      "the newest migration is the public consultation qualifier"
     );
     // M55 and M56 are still present and untouched by name.
     assert.ok(files.includes("20260904140000_interior_room_wise_quotation.sql"));
