@@ -19,6 +19,52 @@ symbols appear anywhere in that module graph.
 It is also **read only**. Nothing on the page mutates anything. Every link leads
 to a route that re-checks its own permissions when opened.
 
+## Navigation
+
+The workspace has its own grouped navigation contract
+(`src/features/manager-workspace/contracts/manager-nav.ts`). It is not
+`resolveOpsNavFlags`: the owner's sidebar is assembled from permission flags
+across the whole product, and a boundary that depends on which flags happened to
+be `false` is a boundary that opens when one flips.
+
+Every entry is a workspace the role already holds. The list decides what is
+**offered**; the route's own guard decides what is **allowed**.
+
+| Group | Entry | Route | Admitted by |
+| --- | --- | --- | --- |
+| Overview | Dashboard | `/manager` | `requireSalesManager` |
+| Sales | My Day | `/admin/crm/my-day` | `requireCrmReadAccess` |
+| Sales | Enquiries | `/admin/crm/leads` | `requireCrmReadAccess` |
+| Sales | Pipeline | `/admin/crm/pipeline` | `requireCrmReadAccess` |
+| Sales | Calendar | `/admin/crm/calendar` | `requireCrmReadAccess` |
+| Sales | Quotations | `/admin/quotations` | the quotations workspace guard |
+| Sales | Sales Targets | `/admin/crm/targets` | `requireCrmSalesTargetsAccess` |
+| Sales | Reports | `/admin/crm/reports` | `crm.reporting.read` |
+| Communication | WhatsApp | `/admin/whatsapp/inbox` | the inbox guard |
+| Projects | Project Status | `/admin/projects` | `projects.read_high_level` |
+| Team | Attendance | `/admin/attendance` | `attendance.self`, `attendance.team.read` |
+| Team | Leave | `/admin/leave` | `leave.self`, `leave.team.approve` |
+| My account | My Salary | `/admin/salary` | `requireSalaryAccess` |
+
+**New Enquiry** (`/admin/crm/leads/new`, `requireCrmCreateAccess`) is a dashboard
+quick action rather than a sidebar entry: it is something the manager does
+occasionally, not a place they live. It is a link to a route that carries its own
+form and its own guard — the dashboard itself stays a read surface.
+
+**Sales Targets is read-only for this role.** It holds `sales_targets.read` and
+not `sales_targets.manage`; setting a target remains the owner's.
+
+**My Salary is self-only.** The role holds `salary.self` and not
+`salary.manage`, so the entry is the manager's own statements and payment
+history. No payroll administration is offered anywhere in the workspace, and the
+tests assert that neither the nav contract nor the dashboard reaches for
+`salary.manage` or `requireSalaryManageAccess`.
+
+Not offered, in the navigation or the quick actions: Campaigns, Landing Lab,
+Commerce, Portfolio, Imports, Assignment Rules, SLA Settings, staff
+credentials/administration, Attendance Policies, Holidays, salary management, and
+enquiry deletion.
+
 ## Where the numbers come from
 
 Every value is produced by a canonical read model that already enforces its own
@@ -80,11 +126,27 @@ assert each case explicitly, including that a genuine zero rate still renders
 unassigned enquiries, new this month, won rate. The first four come from the
 primary read and are always known; the last two carry their own availability.
 
-**Needs attention** — one queue, priority ordered: SLA breach → overdue
-follow-up → unassigned → no next action → new/uncontacted. Oldest first within a
-reason. A lead that qualifies twice appears once, at its worst reason. The list
-is bounded (8 rows); the count above it is not, because it comes from the read
-model's own counters rather than from a capped list.
+**Needs attention** — captioned "Team priorities for today", with **Open My Day**
+(`/admin/crm/my-day`) as the panel's call to action. Individual rows still link
+straight to the lead they are about.
+
+Above the queue sit the read model's own **per-reason counts**, reported one by
+one: SLA breached, follow-up overdue, unassigned, no next action, new/uncontacted.
+
+The queue below them is priority ordered — SLA breach → overdue follow-up →
+unassigned → no next action → new/uncontacted, oldest first within a reason — and
+**de-duplicated by lead**, keeping the worst reason. It is bounded at 8 rows.
+
+Those two facts do not add up, and the panel does not pretend they do. A lead
+that is both unassigned and uncontacted is **one enquiry with two signals**. So:
+
+- the sum of the per-reason counters is reported as `N attention signals`,
+  never as `N enquiries`;
+- the only count described as enquiries is the displayed, bounded one —
+  `Showing 8 highest-priority enquiries`;
+- no unique-enquiry total is offered at all. The upstream row arrays are bounded
+  independently, so a union over them would silently under-count, and a number
+  that might be wrong is worse than a number that is absent.
 
 No email address, no phone number, no message body. The panel answers "which
 enquiry, whose, how late" and hands off to the lead itself.
@@ -101,13 +163,27 @@ than a zero.
 rate, median first contact, and target attainment. The two halves fail
 independently.
 
-**Project status** — up to 8 rows from the dedicated high-level read model,
-most recently updated first, with the total count reported. Status only: the
-stage a project has reached and who is running it. No raw project rows, no
-commercial detail, no evidence, no task lists. Execution belongs to the assigned
-Project Manager.
+**Project status** — up to 8 rows from the dedicated high-level read model, most
+recently updated first, with the total count reported. Each row carries the
+project number, the client, the **status**, the **design state**, the
+**execution state**, the **current Project Manager** and the **current Lead
+Designer** — every one of them a field the read model enumerates in its own SQL.
+A collapsed one-line "furthest stage" summary is kept as a secondary field; it
+does not stand in for the explicit ones.
 
-**Quick actions** — the workspaces the role holds, one click away.
+`Not assigned` is used for an unheld PM or Lead Designer, `Not started` for a
+phase that has not begun. Nothing infers a business state beyond what the read
+model reported.
+
+Rows link to `/admin/projects/[projectId]`, which already branches to the
+high-level-only detail for this role. On narrow screens the table becomes stacked
+cards; on wider screens it scrolls inside its own container, never the page.
+
+No raw project rows, no quotation number, no commercial value, no evidence, no
+events, no assignment history, no deliverables, no execution logs, no snags — and
+no controls. Execution belongs to the assigned Project Manager.
+
+**Quick actions** — New Enquiry first, then the workspaces the role holds.
 
 ## Deliberate omissions
 

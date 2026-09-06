@@ -10,12 +10,13 @@ import type { ReactNode } from "react";
 export function ManagerPanel({
   title,
   caption,
-  action,
+  headerLink,
   children,
 }: {
   readonly title: string;
   readonly caption?: string;
-  readonly action?: ReactNode;
+  /** A link, never a control: panels on this dashboard do not mutate. */
+  readonly headerLink?: ReactNode;
   readonly children: ReactNode;
 }) {
   return (
@@ -27,7 +28,7 @@ export function ManagerPanel({
             <p className="mt-0.5 text-xs text-neutral-500">{caption}</p>
           ) : null}
         </div>
-        {action}
+        {headerLink}
       </header>
       <div className="px-4 py-4">{children}</div>
     </section>

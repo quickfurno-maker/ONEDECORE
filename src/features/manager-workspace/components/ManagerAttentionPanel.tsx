@@ -7,40 +7,59 @@ import { ManagerPanel, ManagerPanelEmpty } from "./ManagerPanel.tsx";
 /**
  * What is slipping, worst first.
  *
+ * COUNTING HONESTLY
+ *
+ * The chips carry the read model's own per-reason counters, one by one. The
+ * queue below them is de-duplicated by lead, because one enquiry that is both
+ * unassigned AND uncontacted is one enquiry with two problems — listing it
+ * twice would make the backlog look bigger than it is.
+ *
+ * Those two facts do not add up, and the panel does not pretend they do. The
+ * sum of the counters is described as SIGNALS, never as a number of enquiries,
+ * and the list is described as what it is: the highest-priority rows, bounded.
+ * A unique-enquiry total is not offered at all — the upstream row arrays are
+ * bounded independently, so any union over them would under-count.
+ *
  * WHAT IS NOT HERE: no email address, no phone number, no message body, no
  * quotation value. The panel answers "which enquiry, whose, how late" and then
- * hands off to the lead itself, which enforces its own permissions. A dashboard
- * that renders contact details is a dashboard that leaks them to every screen
- * left open in an office.
- *
- * The list is bounded. The count above it is not — it comes from the read
- * model's own counters, so a manager sees the size of the backlog even when
- * only the first few rows are drawn.
+ * hands off to the lead itself, which enforces its own permissions.
  */
 export function ManagerAttentionPanel({
   execution,
 }: {
   readonly execution: ManagerExecutionSection;
 }) {
-  const { attention, attentionTotal } = execution;
+  const { attention, attentionCategories, attentionSignalTotal } = execution;
 
   return (
     <ManagerPanel
       title="Needs attention"
-      caption={
-        attentionTotal === 0
-          ? "Nothing is overdue or unowned."
-          : `${attentionTotal} enquir${attentionTotal === 1 ? "y" : "ies"} need a decision`
-      }
-      action={
+      caption="Team priorities for today"
+      headerLink={
         <Link
-          href="/admin/crm/leads"
+          href="/admin/crm/my-day"
           className="inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-wider text-amber-300 hover:text-amber-200"
         >
-          Open enquiries
+          Open My Day
         </Link>
       }
     >
+      <ul className="mb-4 flex flex-wrap gap-2">
+        {attentionCategories.map((category) => (
+          <li
+            key={category.reason}
+            className="flex items-baseline gap-2 rounded-md border border-neutral-800 bg-neutral-900/60 px-2.5 py-1.5"
+          >
+            <span className="font-serif text-sm font-bold tabular-nums text-neutral-100">
+              {category.count}
+            </span>
+            <span className="text-[11px] uppercase tracking-wider text-neutral-500">
+              {category.label}
+            </span>
+          </li>
+        ))}
+      </ul>
+
       {attention.length === 0 ? (
         <ManagerPanelEmpty message="Nothing needs attention right now." />
       ) : (
@@ -69,9 +88,16 @@ export function ManagerAttentionPanel({
         </ul>
       )}
 
-      {attentionTotal > attention.length ? (
+      {attentionSignalTotal > 0 ? (
         <p className="mt-3 text-xs text-neutral-500">
-          Showing {attention.length} of {attentionTotal}.
+          {attention.length > 0
+            ? `Showing ${attention.length} highest-priority ${
+                attention.length === 1 ? "enquiry" : "enquiries"
+              }. `
+            : ""}
+          {attentionSignalTotal} attention{" "}
+          {attentionSignalTotal === 1 ? "signal" : "signals"} across the team —
+          one enquiry can raise more than one.
         </p>
       ) : null}
     </ManagerPanel>

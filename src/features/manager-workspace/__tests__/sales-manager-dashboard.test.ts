@@ -28,8 +28,10 @@ import {
   MANAGER_ATTENTION_PRIORITY,
   MANAGER_ATTENTION_REASONS,
   MANAGER_NOT_CONFIGURED_LABEL,
+  MANAGER_NOT_STARTED_LABEL,
   MANAGER_NO_DATA_LABEL,
   MANAGER_PROJECT_ROW_LIMIT,
+  MANAGER_UNASSIGNED_LABEL,
   MANAGER_UNAVAILABLE_LABEL,
   buildManagerAttentionQueue,
   buildManagerKpiStrip,
@@ -46,7 +48,9 @@ import {
   type ManagerManagementSection,
 } from "../contracts/manager-dashboard.ts";
 import {
+  MANAGER_NAV_GROUPS,
   MANAGER_NAV_ITEMS,
+  MANAGER_NEW_ENQUIRY,
   MANAGER_QUICK_ACTIONS,
   isManagerNavItemActive,
 } from "../contracts/manager-nav.ts";
@@ -82,6 +86,7 @@ const MANAGER_TARGET_CARD =
   "src/features/manager-workspace/components/ManagerTargetCard.tsx";
 const MANAGER_PROJECTS =
   "src/features/manager-workspace/components/ManagerProjectStatus.tsx";
+const MANAGER_NAV = "src/features/manager-workspace/contracts/manager-nav.ts";
 
 /**
  * Whole-identifier match.
@@ -117,7 +122,15 @@ const OWNER_SURFACES = [
   "CommandPalette",
 ] as const;
 
-/** Routes the Sales Manager role does not hold. */
+/**
+ * Routes the Sales Manager role does not hold.
+ *
+ * `/admin/salary` is deliberately NOT here. The role holds `salary.self` and
+ * not `salary.manage`, so its own salary is the manager's to read — see
+ * `49_sales_manager_control_plane_test.sql`, "sales_manager keeps own salary".
+ * Payroll ADMINISTRATION is what it must not reach, and that is asserted by
+ * the absence of the manage guard rather than by hiding a route.
+ */
 const FORBIDDEN_ROUTES = [
   "/admin/campaigns",
   "/admin/landing-pages",
@@ -125,7 +138,6 @@ const FORBIDDEN_ROUTES = [
   "/admin/commerce",
   "/admin/crm/imports",
   "/admin/staff",
-  "/admin/salary",
   "/admin/attendance-policies",
   "/admin/holidays",
   "/admin/crm/settings",
@@ -240,7 +252,8 @@ function snapshot(
       isTeamScope: true,
       summary: day.summary,
       attention: [],
-      attentionTotal: 0,
+      attentionCategories: [],
+      attentionSignalTotal: 0,
     },
     crm: managerPanelReady(CRM_SECTION),
     management: managerPanelReady(MANAGEMENT_SECTION),
@@ -699,8 +712,9 @@ describe("the needs-attention queue is ordered, bounded and de-duplicated", () =
       5
     );
     assert.equal(queue.items.length, 5);
-    // The total is the read model's counter, not the length of a capped list.
-    assert.equal(queue.total, 40);
+    // The signal total is the read model's counter, not the length of a
+    // capped list — and it is signals, not enquiries.
+    assert.equal(queue.signalTotal, 40);
   });
 
   test("an unassigned row says so rather than rendering an empty owner", () => {
@@ -756,6 +770,147 @@ describe("the needs-attention queue is ordered, bounded and de-duplicated", () =
         `an attention row must not carry ${forbidden}`
       );
     }
+  });
+
+  test("per-reason counts are reported one by one, in priority order", () => {
+    const queue = buildManagerAttentionQueue(
+      myDay({
+        summary: {
+          overdue: 3,
+          dueToday: 0,
+          upcoming: 0,
+          noNextAction: 4,
+          newUncontacted: 5,
+          unassigned: 2,
+          slaBreaches: 1,
+        },
+      })
+    );
+    assert.deepEqual(
+      queue.categories.map((category) => [category.reason, category.count]),
+      [
+        ["sla_breach", 1],
+        ["overdue_follow_up", 3],
+        ["unassigned", 2],
+        ["no_next_action", 4],
+        ["new_uncontacted", 5],
+      ]
+    );
+    assert.equal(queue.signalTotal, 15);
+  });
+
+  test("ONE lead with TWO signals is one enquiry and two signals", () => {
+    /*
+     * The bug this pins: summing the per-reason counters and calling the sum a
+     * number of enquiries. A lead that is both unassigned and uncontacted is
+     * counted under both reasons — correctly — but it is still one enquiry.
+     */
+    const queue = buildManagerAttentionQueue(
+      myDay({
+        summary: {
+          overdue: 0,
+          dueToday: 0,
+          upcoming: 0,
+          noNextAction: 0,
+          newUncontacted: 1,
+          unassigned: 1,
+          slaBreaches: 0,
+        },
+        attention: {
+          newUncontacted: [attentionRow("lead-1", "new_uncontacted")],
+          unassigned: [
+            attentionRow("lead-1", "unassigned", { assigneeLabel: null }),
+          ],
+          noNextAction: [],
+          slaBreaches: [],
+        },
+      })
+    );
+
+    // One enquiry in the queue.
+    assert.equal(queue.items.length, 1);
+    assert.equal(queue.items[0]?.leadId, "lead-1");
+    // Worst reason wins the row.
+    assert.equal(queue.items[0]?.reason, "unassigned");
+    // Two signals, and the categories keep them apart at 1 and 1.
+    assert.equal(queue.signalTotal, 2);
+    const byReason = new Map(
+      queue.categories.map((category) => [category.reason, category.count])
+    );
+    assert.equal(byReason.get("unassigned"), 1);
+    assert.equal(byReason.get("new_uncontacted"), 1);
+    // And the number the queue can honestly call "enquiries" is 1, not 2.
+    assert.notEqual(queue.items.length, queue.signalTotal);
+  });
+
+  test("a lead qualifying under FOUR reasons is still one enquiry", () => {
+    const queue = buildManagerAttentionQueue(
+      myDay({
+        summary: {
+          overdue: 1,
+          dueToday: 0,
+          upcoming: 0,
+          noNextAction: 1,
+          newUncontacted: 1,
+          unassigned: 1,
+          slaBreaches: 1,
+        },
+        tasks: {
+          overdue: [taskRow("a1", "lead-1", "2026-09-05T04:00:00.000Z")],
+          dueToday: [],
+          upcoming: [],
+        },
+        attention: {
+          newUncontacted: [attentionRow("lead-1", "new_uncontacted")],
+          noNextAction: [attentionRow("lead-1", "no_next_action")],
+          unassigned: [
+            attentionRow("lead-1", "unassigned", { assigneeLabel: null }),
+          ],
+          slaBreaches: [
+            attentionRow("lead-1", "sla_breach", {
+              slaDueAt: "2026-09-04T04:00:00.000Z",
+            }),
+          ],
+        },
+      })
+    );
+    assert.equal(queue.items.length, 1);
+    assert.equal(queue.items[0]?.reason, "sla_breach");
+    assert.equal(queue.signalTotal, 5);
+  });
+
+  test("the panel never calls the signal sum a number of enquiries", () => {
+    const panel = read(MANAGER_ATTENTION);
+    // The sum is rendered next to the word "signal".
+    assert.match(panel, /\{attentionSignalTotal\}\s*attention/);
+    assert.match(panel, /attentionSignalTotal === 1 \? "signal" : "signals"/);
+    // And never next to the word "enquiry"/"enquiries".
+    assert.doesNotMatch(panel, /\{attentionSignalTotal\}[^<]{0,60}enquir/i);
+    // The only count described as enquiries is the DISPLAYED, bounded one.
+    assert.match(panel, /Showing \$\{attention\.length\} highest-priority/);
+    // The old wording is gone for good.
+    assert.ok(!panel.includes("attentionTotal"));
+    assert.doesNotMatch(panel, /need a decision/);
+  });
+
+  test("the caption states priority, not a total", () => {
+    assert.match(read(MANAGER_ATTENTION), /caption="Team priorities for today"/);
+  });
+
+  test("the panel's own call to action is Open My Day", () => {
+    const panel = read(MANAGER_ATTENTION);
+    assert.match(panel, /href="\/admin\/crm\/my-day"/);
+    assert.match(panel, /Open My Day/);
+    // Rows still go straight to the lead they are about.
+    assert.match(panel, /href=\{item\.href\}/);
+    assert.ok(!panel.includes("Open enquiries"));
+  });
+
+  test("the per-reason chips are rendered from the canonical categories", () => {
+    const panel = read(MANAGER_ATTENTION);
+    assert.match(panel, /attentionCategories\.map/);
+    assert.match(panel, /\{category\.count\}/);
+    assert.match(panel, /\{category\.label\}/);
   });
 
   test("the panel renders no contact detail either", () => {
@@ -877,6 +1032,86 @@ describe("the project panel shows status, not the project workspace", () => {
     );
   });
 
+  test("a row carries every high-level field the manager was promised", () => {
+    const section = buildManagerProjectRows([
+      project("p1", {
+        status: "in_progress",
+        currentProjectManager: "Ravi",
+        currentLeadDesigner: "Nita",
+        designState: "in_progress",
+        executionState: "site_work",
+      }),
+    ]);
+    const row = section.rows[0]!;
+    assert.equal(row.projectNumber, "PRJ-p1");
+    assert.equal(row.clientLabel, "Client");
+    assert.equal(row.statusLabel, "In Progress");
+    assert.equal(row.projectManagerLabel, "Ravi");
+    assert.equal(row.leadDesignerLabel, "Nita");
+    assert.equal(row.designStateLabel, "In Progress");
+    assert.equal(row.executionStateLabel, "Site Work");
+    assert.equal(row.href, "/admin/projects/p1");
+  });
+
+  test("an unheld role and an unstarted phase read as themselves", () => {
+    const row = buildManagerProjectRows([
+      project("p2", {
+        currentProjectManager: null,
+        currentLeadDesigner: null,
+        designState: null,
+        executionState: null,
+      }),
+    ]).rows[0]!;
+    assert.equal(row.projectManagerLabel, MANAGER_UNASSIGNED_LABEL);
+    assert.equal(row.leadDesignerLabel, MANAGER_UNASSIGNED_LABEL);
+    assert.equal(row.designStateLabel, MANAGER_NOT_STARTED_LABEL);
+    assert.equal(row.executionStateLabel, MANAGER_NOT_STARTED_LABEL);
+    assert.equal(MANAGER_UNASSIGNED_LABEL, "Not assigned");
+    assert.equal(MANAGER_NOT_STARTED_LABEL, "Not started");
+  });
+
+  test("the collapsed stage line is a secondary summary, not a replacement", () => {
+    const row = buildManagerProjectRows([
+      project("p3", { executionState: "site_work" }),
+    ]).rows[0]!;
+    assert.match(row.stageLabel, /^Execution — /);
+    // It sits alongside the explicit fields rather than standing in for them.
+    assert.equal(row.executionStateLabel, "Site Work");
+    assert.equal(row.designStateLabel, MANAGER_NOT_STARTED_LABEL);
+  });
+
+  test("the panel renders status, both phases and both roles", () => {
+    const panel = read(MANAGER_PROJECTS);
+    for (const field of [
+      "row.statusLabel",
+      "row.designStateLabel",
+      "row.executionStateLabel",
+      "row.projectManagerLabel",
+      "row.leadDesignerLabel",
+    ]) {
+      assert.ok(panel.includes(`{${field}}`), `the panel must render ${field}`);
+    }
+    for (const heading of [
+      ">\n                    Status",
+      ">\n                    Design",
+      ">\n                    Execution",
+      ">\n                    Project manager",
+      ">\n                    Lead designer",
+    ]) {
+      assert.ok(panel.includes(heading), `the table needs a ${heading.trim()} column`);
+    }
+    // Wide content scrolls inside its own container, never the page.
+    assert.match(panel, /overflow-x-auto/);
+  });
+
+  test("the panel offers no control, only links to the high-level detail", () => {
+    const panel = code(read(MANAGER_PROJECTS));
+    for (const control of ["<button", "<form", "onClick", "useState", "action="]) {
+      assert.ok(!panel.includes(control), `the panel must not contain ${control}`);
+    }
+    assert.match(panel, /href=\{row\.href\}/);
+  });
+
   test("no commercial or operational detail leaks into a row", () => {
     const section = buildManagerProjectRows([
       project("p1", { commercialGrandTotalPaise: 5_000_000 }),
@@ -891,7 +1126,11 @@ describe("the project panel shows status, not the project workspace", () => {
   });
 
   test("a project with no manager says so rather than showing a blank", () => {
-    assert.match(read(MANAGER_PROJECTS), /row\.ownerLabel \?\? "Not assigned"/);
+    const row = buildManagerProjectRows([
+      project("p4", { currentProjectManager: null }),
+    ]).rows[0]!;
+    assert.equal(row.projectManagerLabel, "Not assigned");
+    assert.ok(read(MANAGER_PROJECTS).includes("{row.projectManagerLabel}"));
   });
 
   test("the read distinguishes an empty list from a failed read", () => {
@@ -907,19 +1146,170 @@ describe("the project panel shows status, not the project workspace", () => {
 /* 7. Navigation offers only what the role holds                               */
 /* ========================================================================== */
 
-describe("the manager's navigation is its own list", () => {
+/**
+ * Every workspace the Sales Manager role is authorised for.
+ *
+ * Each one is named with the guard that actually admits them, because the nav
+ * list is an OFFER and the guard is the permission. A link missing from here
+ * is a workspace the role holds and cannot find.
+ */
+const REQUIRED_NAV_HREFS = [
+  "/admin/crm/my-day",       // requireCrmReadAccess
+  "/admin/crm/leads",        // requireCrmReadAccess
+  "/admin/crm/pipeline",     // requireCrmReadAccess
+  "/admin/crm/calendar",     // requireCrmReadAccess
+  "/admin/quotations",       // quotations workspace guard
+  "/admin/crm/targets",      // requireCrmSalesTargetsAccess (sales_targets.read)
+  "/admin/crm/reports",      // crm.reporting.read
+  "/admin/whatsapp/inbox",   // inbox guard
+  "/admin/projects",         // projects.read_high_level
+  "/admin/attendance",       // attendance.self + attendance.team.read
+  "/admin/leave",            // leave.self + leave.team.approve
+  "/admin/salary",           // requireSalaryAccess (salary.self, NOT manage)
+] as const;
+
+describe("the manager's navigation offers every workspace the role holds", () => {
+  const hrefs = MANAGER_NAV_ITEMS.map((item) => item.href);
+
+  for (const href of REQUIRED_NAV_HREFS) {
+    test(`it offers ${href}`, () => {
+      assert.ok(
+        hrefs.includes(href),
+        `the manager navigation must offer ${href}`
+      );
+    });
+  }
+
+  test("the dashboard is the first entry and links to /manager", () => {
+    assert.equal(MANAGER_NAV_ITEMS[0]?.href, "/manager");
+  });
+
+  test("the grouped model and the flat list are the same list", () => {
+    assert.deepEqual(
+      MANAGER_NAV_GROUPS.flatMap((group) => group.items.map((item) => item.href)),
+      hrefs
+    );
+    assert.deepEqual(
+      MANAGER_NAV_GROUPS.map((group) => group.id),
+      ["overview", "sales", "communication", "projects", "team", "account"]
+    );
+    // Every group is labelled and non-empty: an empty group is a group that
+    // used to hold something the role has since lost.
+    for (const group of MANAGER_NAV_GROUPS) {
+      assert.ok(group.label.length > 0, `${group.id} needs a label`);
+      assert.ok(group.items.length > 0, `${group.id} must not be empty`);
+    }
+  });
+
+  test("the sidebar renders the grouped model, not the owner's", () => {
+    const sidebar = code(read(MANAGER_SIDEBAR));
+    assert.match(sidebar, /MANAGER_NAV_GROUPS/);
+    assert.match(sidebar, /group\.items\.map/);
+    assert.ok(!usesIdentifier(sidebar, "AdminSidebar"));
+    assert.ok(!usesIdentifier(sidebar, "resolveOpsNavFlags"));
+    assert.ok(!usesIdentifier(sidebar, "OpsNavFlags"));
+  });
+
   test("it offers nothing the role has lost", () => {
     for (const item of MANAGER_NAV_ITEMS) {
       for (const forbidden of FORBIDDEN_ROUTES) {
         assert.notEqual(item.href, forbidden);
-        assert.ok(!item.href.startsWith(`${forbidden}/`));
+        assert.ok(
+          !item.href.startsWith(`${forbidden}/`),
+          `the manager navigation must not offer ${item.href}`
+        );
       }
     }
   });
 
-  test("the dashboard itself is not offered as a quick action", () => {
+  test("no owner-only workspace appears in the nav contract at all", () => {
+    const nav = read(MANAGER_NAV);
+    for (const forbidden of FORBIDDEN_ROUTES) {
+      assert.ok(
+        !nav.includes(`"${forbidden}"`),
+        `the nav contract must not name ${forbidden}`
+      );
+    }
+    for (const forbidden of [
+      "/admin/campaigns",
+      "/admin/landing-pages",
+      "/admin/commerce",
+      "/admin/portfolio",
+      "/admin/crm/imports",
+      "/admin/crm/assignment-rules",
+      "/admin/crm/settings",
+      "/admin/holidays",
+      "/admin/attendance-policies",
+      "/admin/staff",
+    ]) {
+      assert.ok(
+        !nav.includes(forbidden),
+        `the nav contract must not name ${forbidden}`
+      );
+    }
+  });
+
+  test("New Enquiry is a quick action, not a sidebar entry", () => {
+    assert.equal(MANAGER_NEW_ENQUIRY.href, "/admin/crm/leads/new");
+    assert.ok(
+      MANAGER_QUICK_ACTIONS.some((item) => item.href === "/admin/crm/leads/new"),
+      "New Enquiry must be offered as a quick action"
+    );
+    assert.ok(
+      !hrefs.includes("/admin/crm/leads/new"),
+      "New Enquiry is an action, not a place the manager lives"
+    );
+    assert.ok(read(MANAGER_PAGE).includes("<ManagerQuickActions"));
+  });
+
+  test("the quick actions are the one action plus the workspaces", () => {
+    assert.equal(MANAGER_QUICK_ACTIONS[0]?.href, "/admin/crm/leads/new");
     assert.ok(MANAGER_QUICK_ACTIONS.every((item) => item.href !== "/manager"));
-    assert.equal(MANAGER_QUICK_ACTIONS.length, MANAGER_NAV_ITEMS.length - 1);
+    assert.equal(MANAGER_QUICK_ACTIONS.length, MANAGER_NAV_ITEMS.length);
+  });
+
+  test("My Salary is self-only, and payroll administration is nowhere", () => {
+    const salary = MANAGER_NAV_ITEMS.find(
+      (item) => item.href === "/admin/salary"
+    )!;
+    assert.equal(salary.label, "My Salary");
+    assert.match(salary.detail, /your own/i);
+
+    /*
+     * The role holds `salary.self` and not `salary.manage` — asserted in
+     * `49_sales_manager_control_plane_test.sql`. Nothing in the manager
+     * workspace may reach for the manage guard or the manage code, and the
+     * only salary destination offered is the self surface itself.
+     */
+    // Comment-stripped: this contract EXPLAINS that `salary.manage` is the
+    // thing the role does not hold, and a refusal that trips on prose is a
+    // refusal that teaches you to write less prose.
+    const nav = code(read(MANAGER_NAV));
+    for (const forbidden of [
+      "salary.manage",
+      "requireSalaryManageAccess",
+      "/admin/salary/new",
+      "/admin/salary/manage",
+      "salary_profiles",
+      "salary_statements",
+    ]) {
+      assert.ok(
+        !nav.includes(forbidden),
+        `the nav contract must not reach for ${forbidden}`
+      );
+    }
+    for (const rel of [MANAGER_PAGE, DASHBOARD_SERVICE, DASHBOARD_CONTRACT]) {
+      const source = code(read(rel));
+      assert.ok(
+        !source.includes("salary.manage") &&
+          !source.includes("requireSalaryManageAccess"),
+        `${rel} must not reach for salary management`
+      );
+    }
+    assert.deepEqual(
+      hrefs.filter((href) => href.startsWith("/admin/salary")),
+      ["/admin/salary"]
+    );
   });
 
   test("/manager is active only on /manager, and subtrees match their own root", () => {
@@ -933,6 +1323,12 @@ describe("the manager's navigation is its own list", () => {
     )!;
     assert.ok(isManagerNavItemActive(enquiries, "/admin/crm/leads/abc"));
     assert.ok(!isManagerNavItemActive(enquiries, "/admin/crm/reports"));
+
+    const myDay = MANAGER_NAV_ITEMS.find(
+      (item) => item.href === "/admin/crm/my-day"
+    )!;
+    assert.ok(isManagerNavItemActive(myDay, "/admin/crm/my-day"));
+    assert.ok(!isManagerNavItemActive(myDay, "/admin/crm/leads"));
   });
 });
 

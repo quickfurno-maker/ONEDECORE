@@ -221,7 +221,8 @@ export async function loadManagerDashboardSnapshot(
       isTeamScope: myDay.isTeamScope,
       summary: myDay.summary,
       attention: attention.items,
-      attentionTotal: attention.total,
+      attentionCategories: attention.categories,
+      attentionSignalTotal: attention.signalTotal,
     },
     crm:
       reporting && filters

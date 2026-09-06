@@ -143,13 +143,36 @@ export interface ManagerExecutionSummary {
   readonly slaBreaches: number;
 }
 
+/**
+ * One reason, with the read model's own count for it.
+ *
+ * These are the canonical per-reason counters. They are rendered as they are
+ * and never added together into anything described as a number of enquiries —
+ * see `attentionSignalTotal` below.
+ */
+export interface ManagerAttentionCategory {
+  readonly reason: ManagerAttentionReason;
+  readonly label: string;
+  readonly count: number;
+}
+
 export interface ManagerExecutionSection {
   readonly localDate: string;
   readonly isTeamScope: boolean;
   readonly summary: ManagerExecutionSummary;
+  /** De-duplicated by lead, worst reason first, bounded. */
   readonly attention: readonly ManagerAttentionItem[];
-  /** Every row that qualifies, not only the bounded ones rendered. */
-  readonly attentionTotal: number;
+  readonly attentionCategories: readonly ManagerAttentionCategory[];
+  /**
+   * The sum of the per-reason counters — SIGNALS, not enquiries.
+   *
+   * One lead can legitimately be unassigned AND uncontacted, which is two
+   * signals from one enquiry. Calling this "enquiries" would state something
+   * false, and the unique-lead count cannot be recovered honestly either: the
+   * upstream row arrays are bounded independently, so a union over them would
+   * under-count. The number is therefore reported as what it actually is.
+   */
+  readonly attentionSignalTotal: number;
 }
 
 /** How many attention rows the panel renders. Bounded on purpose. */
@@ -170,14 +193,20 @@ function leadHref(leadId: string): string {
  * de-duplicated by lead, keeping the most urgent reason. Showing the same
  * enquiry three times would make the queue look longer than the problem is.
  *
- * `total` comes from the RPC's summary counters rather than from the returned
- * rows, because the rows are themselves capped upstream: counting them would
- * quietly under-report the backlog.
+ * `categories` are the RPC's own per-reason counters, reported one by one.
+ * `signalTotal` is their sum, and it is a count of SIGNALS: the same lead
+ * counted under two reasons is two signals and one enquiry. Nothing here
+ * produces a unique-enquiry total, because the upstream row arrays are bounded
+ * independently and a union over them would silently under-count.
  */
 export function buildManagerAttentionQueue(
   myDay: MyDaySnapshot,
   limit: number = MANAGER_ATTENTION_LIMIT
-): { readonly items: readonly ManagerAttentionItem[]; readonly total: number } {
+): {
+  readonly items: readonly ManagerAttentionItem[];
+  readonly categories: readonly ManagerAttentionCategory[];
+  readonly signalTotal: number;
+} {
   const candidates: ManagerAttentionItem[] = [];
 
   for (const row of myDay.attention.slaBreaches) {
@@ -281,14 +310,40 @@ export function buildManagerAttentionQueue(
   }
 
   const summary = myDay.summary;
-  const total =
-    summary.slaBreaches +
-    summary.overdue +
-    summary.unassigned +
-    summary.noNextAction +
-    summary.newUncontacted;
+  const categories: readonly ManagerAttentionCategory[] = [
+    {
+      reason: "sla_breach",
+      label: ATTENTION_REASON_LABELS.sla_breach,
+      count: summary.slaBreaches,
+    },
+    {
+      reason: "overdue_follow_up",
+      label: ATTENTION_REASON_LABELS.overdue_follow_up,
+      count: summary.overdue,
+    },
+    {
+      reason: "unassigned",
+      label: ATTENTION_REASON_LABELS.unassigned,
+      count: summary.unassigned,
+    },
+    {
+      reason: "no_next_action",
+      label: ATTENTION_REASON_LABELS.no_next_action,
+      count: summary.noNextAction,
+    },
+    {
+      reason: "new_uncontacted",
+      label: ATTENTION_REASON_LABELS.new_uncontacted,
+      count: summary.newUncontacted,
+    },
+  ];
 
-  return { items, total };
+  const signalTotal = categories.reduce(
+    (sum, category) => sum + category.count,
+    0
+  );
+
+  return { items, categories, signalTotal };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -396,13 +451,32 @@ export interface ManagerManagementSection {
 
 export const MANAGER_PROJECT_ROW_LIMIT = 8;
 
+/** Nobody holds the role yet. Not the same as "we did not read it". */
+export const MANAGER_UNASSIGNED_LABEL = "Not assigned";
+/** The phase has not begun. Not the same as an unknown phase. */
+export const MANAGER_NOT_STARTED_LABEL = "Not started";
+
+/**
+ * One project, as a status line.
+ *
+ * Every field here is enumerated by the dedicated high-level read model, whose
+ * own SQL lists exactly which columns it will return. What is deliberately NOT
+ * carried across: the quotation number, the commercial currency and grand
+ * total, and anything operational — evidence, events, assignment history,
+ * deliverables, execution logs, snags. A sales dashboard showing per-project
+ * money is a commercial surface, and this is a status panel.
+ */
 export interface ManagerProjectRow {
   readonly projectId: string;
   readonly projectNumber: string;
   readonly clientLabel: string;
   readonly statusLabel: string;
+  readonly projectManagerLabel: string;
+  readonly leadDesignerLabel: string;
+  readonly designStateLabel: string;
+  readonly executionStateLabel: string;
+  /** A secondary one-line summary. It does not replace the fields above. */
   readonly stageLabel: string;
-  readonly ownerLabel: string | null;
   readonly updatedAt: string;
   readonly href: string;
 }
@@ -459,10 +533,21 @@ export function buildManagerProjectRows(
       projectNumber: project.projectNumber,
       clientLabel: project.clientDisplayName ?? "—",
       statusLabel: stageLabel(project.status),
+      projectManagerLabel:
+        project.currentProjectManager ?? MANAGER_UNASSIGNED_LABEL,
+      leadDesignerLabel: project.currentLeadDesigner ?? MANAGER_UNASSIGNED_LABEL,
+      // A null phase state means the phase has not begun. Nothing here infers
+      // a business state that the read model did not report.
+      designStateLabel: project.designState
+        ? stageLabel(project.designState)
+        : MANAGER_NOT_STARTED_LABEL,
+      executionStateLabel: project.executionState
+        ? stageLabel(project.executionState)
+        : MANAGER_NOT_STARTED_LABEL,
       stageLabel: managerProjectStageLabel(project),
-      ownerLabel: project.currentProjectManager,
       updatedAt: projectUpdatedAt(project),
-      href: "/admin/projects",
+      // The detail route branches to the high-level-only view for this role.
+      href: `/admin/projects/${project.projectId}`,
     }))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, limit);
