@@ -86,7 +86,7 @@ insert into public.leads (
 );
 
 -- History that must survive the delete.
-insert into public.lead_notes (lead_id, author_id, body)
+insert into public.lead_notes (lead_id, created_by, body)
 values (
   'e0aaaaaa-0000-4000-8000-000000000001',
   'e1111111-1111-1111-1111-111111111111',
