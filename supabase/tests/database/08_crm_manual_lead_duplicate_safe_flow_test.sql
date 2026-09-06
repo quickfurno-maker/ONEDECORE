@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 5C2B CRM manual lead duplicate-safe flow pgTAP tests
 
 begin;
-select plan(61);
+select plan(62);
 
 -- =============================================================================
 -- Synthetic staff users (unique to this file)
@@ -811,7 +811,31 @@ select throws_ok(
   'sales executive cannot override recent similar duplicate'
 );
 
+-- NARROWED: forcing a lead past duplicate protection is the owner's act, so
+-- the override cases below run as the owner. The manager's own refusal is
+-- asserted right here.
 select set_config('request.jwt.claim.sub', 'c2222222-2222-2222-2222-222222222222', true);
+select throws_ok(
+  $$select public.create_manual_lead(
+    '5C2B Manager Override Denied',
+    '+919500000016',
+    null,
+    'complete-home-interiors',
+    'apartment-2bhk',
+    'within-1-month',
+    current_setting('test.phase5c2b_phone_call_source')::uuid,
+    'Whitefield',
+    null, '{}'::text[], null, null,
+    null,
+    true,
+    'Manager override attempt for a returning client'
+  )$$,
+  '42501',
+  'CRM_MANUAL_LEAD_DUPLICATE_OVERRIDE_DENIED',
+  'sales manager cannot override a recent similar duplicate'
+);
+
+select set_config('request.jwt.claim.sub', 'c1111111-1111-1111-1111-111111111111', true);
 
 select throws_ok(
   $$select public.create_manual_lead(
@@ -830,9 +854,10 @@ select throws_ok(
   )$$,
   '22023',
   'CRM_MANUAL_LEAD_DUPLICATE_OVERRIDE_REASON_INVALID',
-  'override reason shorter than ten characters rejected'
+  'override reason shorter than ten characters rejected (owner)'
 );
 
+select set_config('request.jwt.claim.sub', 'c1111111-1111-1111-1111-111111111111', true);
 select set_config(
   'test.phase5c2b_recent_override_lead',
   (select id::text from public.create_manual_lead(

@@ -666,34 +666,44 @@ select lives_ok(
   'SM can request approval on own draft'
 );
 
-select throws_ok(
+/*
+ * The self-approval guard is explicitly skipped for super_admin:
+ *
+ *   if not private.has_role('super_admin') then ... CAMPAIGN_SELF_APPROVAL_DENIED
+ *
+ * Campaign authority is now the owner's alone, so that exemption is the
+ * behaviour rather than an edge case, and it is asserted as such. No non-owner
+ * holds campaigns.approve any more, which is what suite 49 pins.
+ */
+select lives_ok(
   $$select public.decide_campaign_version(
     (select id from public.campaign_versions where created_by = '9a222222-2222-2222-2222-222222222222' order by created_at desc limit 1),
     'approved',
     null,
     '9a000000-0000-0000-0000-0000000000ad'
   )$$,
-  '42501',
-  NULL,
-  'SM creator/requester self-approval denied'
+  'the owner may approve their own draft'
 );
 
 select set_config('request.jwt.claims', '{"sub":"9a222222-2222-2222-2222-222222222221","role":"authenticated"}', true);
 
-select lives_ok(
+-- And the decision is terminal: a second one is refused whoever makes it.
+select throws_ok(
   $$select public.decide_campaign_version(
     (select id from public.campaign_versions where created_by = '9a222222-2222-2222-2222-222222222222' order by created_at desc limit 1),
     'approved',
     null,
     '9a000000-0000-0000-0000-0000000000ae'
   )$$,
-  'other SM may approve'
+  '22023',
+  NULL,
+  'a second decision on an approved version is refused'
 );
 
 select is(
   (select status from public.campaign_versions where created_by = '9a222222-2222-2222-2222-222222222222' order by created_at desc limit 1),
   'approved',
-  'other SM approval is terminal approved'
+  'the approval is terminal approved'
 );
 
 select is(

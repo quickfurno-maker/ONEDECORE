@@ -241,11 +241,14 @@ select results_eq(
 );
 
 -- =============================================================================
+-- NARROWED: bulk enquiry import is the owner's, so every actor in the
+-- import journey below is the owner. The permission probes above already
+-- assert that the Sales Manager and the legacy management role are refused.
 -- Batch create + idempotency
 -- =============================================================================
 
 set local role authenticated;
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_mgr_batch',
@@ -329,7 +332,7 @@ select throws_ok(
 -- Mapping + rows staging
 -- =============================================================================
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select lives_ok(
   $$select public.replace_lead_import_mapping(
@@ -466,7 +469,7 @@ select set_config(
   true
 );
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select public.replace_lead_import_rows(
   current_setting('test.phase5d_validated_batch')::uuid,
@@ -540,7 +543,7 @@ select throws_ok(
 -- Duplicate evaluation — bulk import never grants override
 -- =============================================================================
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_active_seed',
@@ -566,7 +569,7 @@ update public.crm_sla_clocks
 set first_contact_attempt_at = clock_timestamp()
 where lead_id = current_setting('test.phase5d_active_seed')::uuid;
 set local role authenticated;
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
 
 select public.transition_lead_status(
@@ -667,7 +670,7 @@ select results_eq(
 -- Batch state machine — submit / approve / reject
 -- =============================================================================
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_submit_rev',
@@ -700,7 +703,7 @@ select throws_ok(
   'cannot resubmit pending batch'
 );
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select throws_ok(
   $$select public.approve_lead_import_batch(
@@ -777,7 +780,7 @@ select results_eq(
 );
 
 -- reject path on separate batch
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_reject_batch',
@@ -882,7 +885,7 @@ select results_eq(
   'super admin direct confirm approves without manager submission'
 );
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select throws_ok(
   $$select public.confirm_lead_import_batch_direct(
@@ -992,7 +995,7 @@ select results_eq(
 -- RLS visibility
 -- =============================================================================
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select results_eq(
   $$select count(*)::integer from public.lead_import_batches where id = current_setting('test.phase5d_mgr_batch')::uuid$$,
@@ -1024,7 +1027,7 @@ select results_eq(
   'sales executive cannot select import batch'
 );
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select results_eq(
   $$select count(*)::integer from public.lead_import_rows where batch_id = current_setting('test.phase5d_mgr_batch')::uuid$$,
@@ -1048,7 +1051,7 @@ select cmp_ok(
   'super admin can select assignment rules'
 );
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select results_eq(
   $$select count(*)::integer from public.lead_assignment_rules$$,
@@ -1060,7 +1063,7 @@ select results_eq(
 -- Cancel + terminal state guards
 -- =============================================================================
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_cancel_batch',
@@ -1166,7 +1169,7 @@ select results_eq(
   'super admin can deactivate assignment rule'
 );
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_reusable_seed',
@@ -1285,7 +1288,7 @@ select results_eq(
 -- Mapping edit from ready_for_review rewinds to draft
 -- =============================================================================
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_edit_batch',
