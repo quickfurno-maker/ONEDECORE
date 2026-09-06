@@ -10,8 +10,8 @@
  *   - does the NAVIGATION follow the permission, or is a link hard-coded?
  *   - does a signed-in manager land in their own workspace, or on the owner's?
  *   - can a crafted `next` put them on the Super Admin dashboard anyway?
- *   - is the manager landing page still a placeholder, or has it quietly grown
- *     the owner's KPI panels?
+ *   - is the manager landing page still the manager's own dashboard, or has it
+ *     quietly become the owner's?
  *
  * The last one matters more than it looks. The role boundary was lost the first
  * time by adding "just one more" surface to the manager, one feature at a time.
@@ -30,6 +30,7 @@ import {
   resolveLoginDestination,
   resolveStaffHome,
 } from "../contracts/manager-home.ts";
+import { MANAGER_NAV_ITEMS } from "../contracts/manager-nav.ts";
 import { CRM_ROLE_PERMISSIONS } from "../../crm/contracts/permissions.ts";
 import { STAFF_ROLE_PERMISSIONS } from "../../staff-admin/contracts/permissions.ts";
 import { buildOpsCommandRoutes } from "../../admin-ops/nav-routes.ts";
@@ -265,8 +266,16 @@ describe("/manager is gated by the Sales Manager role", () => {
   });
 });
 
-describe("the manager landing page is a foundation, not the owner dashboard", () => {
+describe("the manager landing page is a dedicated manager dashboard, not the owner dashboard", () => {
   const page = read(MANAGER_PAGE);
+
+  /**
+   * `ManagerMetricCard` contains `MetricCard`. The manager is entitled to its
+   * own card; the question here is whether the OWNER's symbol is used, so the
+   * match is anchored on identifier boundaries rather than on a substring.
+   */
+  const usesIdentifier = (source: string, name: string) =>
+    new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`).test(source);
 
   test("it names the workspace and the role", () => {
     assert.match(page, /ONEDECORE Manager Workspace/);
@@ -274,11 +283,38 @@ describe("the manager landing page is a foundation, not the owner dashboard", ()
     assert.match(page, /identity\.displayName/);
   });
 
-  test("it carries NO business metrics of any kind", () => {
+  test("it is a dashboard, built from the manager's own snapshot", () => {
+    /*
+     * The page used to be a list of links, on the argument that a dashboard
+     * would be borrowed from the owner. It is a dashboard now — and the way it
+     * avoids being the owner's is that its data comes from a manager-specific
+     * service composing canonical CRM read models, not from the owner's
+     * loader.
+     */
+    assert.match(page, /loadManagerDashboardSnapshot\(access\)/);
+    assert.match(page, /buildManagerKpiStrip\(snapshot\)/);
+    for (const component of [
+      "ManagerShell",
+      "ManagerMetricCard",
+      "ManagerAttentionPanel",
+      "ManagerSalesPerformance",
+      "ManagerTeamWorkload",
+      "ManagerProjectStatus",
+      "ManagerQuickActions",
+    ]) {
+      assert.ok(
+        page.includes(`<${component}`),
+        `the manager dashboard must render its own ${component}`
+      );
+    }
+  });
+
+  test("it borrows NO panel from the Super Admin dashboard", () => {
     /*
      * The Super Admin dashboard's panels are the owner's view of the whole
      * business. Borrowing any of them here would re-create, one panel at a
-     * time, exactly the boundary problem this change exists to fix.
+     * time, exactly the boundary problem this change exists to fix — and
+     * "hidden by a prop" is not a boundary.
      */
     for (const owned of [
       "MetricCard",
@@ -290,8 +326,12 @@ describe("the manager landing page is a foundation, not the owner dashboard", ()
       "TargetPanel",
       "loadOpsDashboardSnapshot",
       "OpsKpiItem",
+      "AdminShell",
     ]) {
-      assert.ok(!page.includes(owned), `the manager page must not render ${owned}`);
+      assert.ok(
+        !usesIdentifier(page, owned),
+        `the manager page must not render ${owned}`
+      );
     }
   });
 
@@ -312,9 +352,18 @@ describe("the manager landing page is a foundation, not the owner dashboard", ()
     }
   });
 
-  test("sign-out is the existing ordinary POST", () => {
-    assert.match(page, /method="post"/);
-    assert.match(page, /action="\/auth\/signout"/);
+  test("it stays a read surface", () => {
+    // A dashboard that grew a mutation would have grown an authority too.
+    assert.doesNotMatch(page, /"use server"/);
+    assert.doesNotMatch(page, /<form/);
+  });
+
+  test("sign-out is the existing ordinary POST, now in the manager top bar", () => {
+    const topBar = read(
+      "src/features/manager-workspace/components/ManagerTopBar.tsx"
+    );
+    assert.match(topBar, /method="post"/);
+    assert.match(topBar, /action="\/auth\/signout"/);
   });
 });
 
@@ -796,12 +845,17 @@ describe("the high-level read model carries no authority of its own", () => {
 
 describe("the manager home offers Project Status", () => {
   test("it links the status page and nothing operational", () => {
-    const page = read(MANAGER_PAGE);
-    assert.match(page, /"\/admin\/projects"/);
-    assert.match(page, /Project Status/);
-    // Only the LINKS matter here: "assign enquiries" is the manager's own job
-    // and appears in the Enquiries description.
-    const hrefs = [...page.matchAll(/href: "([^"]+)"/g)].map((match) => match[1]!);
+    /*
+     * The links used to live in an array on the page itself. They live in the
+     * navigation contract now — the dashboard, the sidebar and the quick
+     * actions all read the same list — so the question is asked of the list.
+     */
+    const hrefs = MANAGER_NAV_ITEMS.map((item) => item.href);
+    assert.ok(hrefs.includes("/admin/projects"));
+    assert.ok(
+      MANAGER_NAV_ITEMS.some((item) => item.label === "Project Status"),
+      "the manager is offered project STATUS, not the project workspace"
+    );
     assert.deepEqual(
       hrefs.filter((href) => href.startsWith("/admin/projects")),
       ["/admin/projects"],
