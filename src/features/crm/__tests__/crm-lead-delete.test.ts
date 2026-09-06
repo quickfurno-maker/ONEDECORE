@@ -285,15 +285,50 @@ describe("nothing in this feature can physically delete a lead", () => {
     assert.match(rpc, /CRM_LEAD_DELETE_CONVERTED_BLOCKED/);
   });
 
-  test("history is quiesced through its own lifecycle, never deleted", () => {
+  test("history is quiesced through the CANONICAL paths, with their audit", () => {
+    /*
+     * The first version updated the child rows directly. That reached the right
+     * final state and skipped every event those paths normally write — the
+     * follow-up cancellation, the primary_cleared, the cadence auto_stopped and
+     * the matching activities. For a feature whose whole claim is
+     * "audit-preserving", producing a silent state change was the wrong shape.
+     */
     const sql = read(MIGRATION);
     const rpc = sql.slice(sql.indexOf("function public.delete_lead_tombstone"));
-    assert.match(rpc, /update public\.lead_follow_ups/);
-    assert.match(rpc, /status = 'cancelled'/);
-    assert.match(rpc, /update public\.crm_lead_cadence_enrollments/);
-    assert.match(rpc, /status = 'stopped'/);
+
+    assert.match(rpc, /private\.cancel_lead_follow_up_impl/);
+    assert.match(rpc, /private\.stop_lead_cadence_for_system\(p_lead_id, v_actor, 'lead_deleted'\)/);
+
+    // And NOT by writing the child lifecycle columns itself.
+    assert.doesNotMatch(rpc, /update public\.lead_follow_ups/);
+    assert.doesNotMatch(rpc, /update public\.crm_lead_cadence_enrollments/);
     assert.doesNotMatch(rpc, /delete from public\.lead_/i);
     assert.doesNotMatch(rpc, /delete from public\.contacts/i);
+
+    // The quiescence runs BEFORE the tombstone: cancel_lead_follow_up_impl
+    // resolves through crm_can_view_lead_by_id, which refuses a tombstoned lead.
+    assert.ok(
+      rpc.indexOf("cancel_lead_follow_up_impl") <
+        rpc.indexOf("set deleted_at = v_deleted_at"),
+      "follow-ups must be quiesced while the lead is still operational"
+    );
+
+    // `manual_override` would have said the wrong thing in the audit.
+    assert.doesNotMatch(rpc, /'manual_override'/);
+    assert.match(sql, /'lead_deleted'/);
+  });
+
+  test("the cadence stop reason can say what actually happened", () => {
+    const sql = read(MIGRATION);
+    assert.match(sql, /add constraint chk_crm_lead_cadence_enrollments_stop_reason/);
+    assert.match(sql, /'lead_deleted'/);
+    // The canonical helper accepts it, and still refuses anything else.
+    const helper = sql.slice(
+      sql.indexOf("function private.stop_lead_cadence_for_system")
+    );
+    assert.match(helper, /CADENCE_STOP_REASON_INVALID/);
+    assert.match(helper, /'auto_stopped'/);
+    assert.match(helper, /'cadence\.stopped'/);
   });
 
   test("the tombstone columns are RPC-only, like the pipeline columns", () => {
@@ -347,6 +382,86 @@ describe("a deleted enquiry disappears from the operational surfaces", () => {
       );
     }
     assert.match(sql, /create or replace function private\.crm_lead_is_operational/);
+  });
+
+  test("a lead-scoped conversation needs an operational lead, whoever asks", () => {
+    /*
+     * The filtered LEFT JOIN alone was not enough. Both inbox predicates carry a
+     * manage-scope branch testing `c.lead_id is not null` without ever asking
+     * whether the filtered join produced a lead — so a Super Admin or Sales
+     * Manager could still act on a conversation pointing at a tombstone.
+     *
+     * The prerequisite sits outside every role branch, which is the only place
+     * it cannot be stepped around.
+     */
+    const sql = read(MIGRATION);
+    for (const fn of [
+      "private.whatsapp_inbox_can_use_conversation",
+      "private.whatsapp_inbox_actor_can_use_conversation",
+    ]) {
+      const body = sql.slice(
+        sql.indexOf(`create or replace function ${fn}`),
+        sql.indexOf("$$;", sql.indexOf(`create or replace function ${fn}`))
+      );
+      assert.match(
+        body,
+        /and \(c\.lead_id is null or l\.id is not null\)/,
+        `${fn} must require an operational lead before any role branch`
+      );
+      // The prerequisite has to precede the branches, not sit inside one.
+      assert.ok(
+        body.indexOf("c.lead_id is null or l.id is not null") <
+          body.indexOf("whatsapp_inbox_has_manage_scope") ||
+          !body.includes("whatsapp_inbox_has_manage_scope"),
+        `${fn}: the prerequisite must come before manage scope`
+      );
+    }
+  });
+
+  test("send eligibility checks the lead before it looks at the contact", () => {
+    /*
+     * The eligibility function only resolved the contact through the lead when
+     * `conversation.contact_id` was NULL. A lead-linked conversation that
+     * already had a contact never consulted the lead at all, so it stayed
+     * eligible after the enquiry was deleted.
+     */
+    const sql = read(MIGRATION);
+    const start = sql.indexOf(
+      "create or replace function private.whatsapp_evaluate_service_send_eligibility"
+    );
+    const body = sql.slice(start, sql.indexOf("$$;", start));
+    assert.match(body, /denied_lead_deleted/);
+    assert.ok(
+      body.indexOf("denied_lead_deleted") <
+        body.indexOf("v_contact_id := v_conv.contact_id"),
+      "the lead check must run before the contact is taken from the conversation"
+    );
+  });
+
+  test("the first quotation is serialized against the delete", () => {
+    const sql = read(MIGRATION);
+
+    const draftStart = sql.indexOf(
+      "create or replace function public.create_quotation_draft"
+    );
+    const draft = sql.slice(draftStart, sql.indexOf("$$;", draftStart));
+    const lockAt = draft.indexOf("quotation_root:");
+    const recheckAt = draft.indexOf("and deleted_at is null\n  for update");
+    assert.ok(lockAt > 0, "the quotation path takes the quotation_root lock");
+    assert.ok(
+      recheckAt > lockAt,
+      "and re-reads the lead under a row lock AFTER it, not before"
+    );
+
+    const rpcStart = sql.indexOf("function public.delete_lead_tombstone");
+    const rpc = sql.slice(rpcStart);
+    const deleteLockAt = rpc.indexOf("quotation_root:");
+    const deleteRowAt = rpc.indexOf("from public.leads where id = p_lead_id for update");
+    assert.ok(deleteLockAt > 0, "the delete takes the same lock");
+    assert.ok(
+      deleteLockAt < deleteRowAt,
+      "advisory lock first, lead row second — the same order in both paths"
+    );
   });
 
   test("the definer functions RLS cannot reach are filtered too", () => {

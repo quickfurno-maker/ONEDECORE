@@ -883,6 +883,23 @@ begin
     return;
   end if;
 
+  if v_conv.lead_id is not null
+     and not exists (
+       select 1 from public.leads
+       where id = v_conv.lead_id and deleted_at is null
+     )
+  then
+    return query
+      select
+        'denied_lead_deleted'::text,
+        jsonb_build_object(
+          'conversation_id', p_conversation_id,
+          'lead_id', v_conv.lead_id
+        ),
+        null::text;
+    return;
+  end if;
+
   v_contact_id := v_conv.contact_id;
 
   if v_contact_id is null and v_conv.lead_id is not null then
@@ -1002,6 +1019,10 @@ as $$
     from public.whatsapp_conversations c
     left join (select * from public.leads where deleted_at is null) l on l.id = c.lead_id
     where c.id = p_conversation_id
+      -- A conversation may be lead-scoped or not. If it IS, that lead has to
+      -- still be operational before ANY branch below is consulted: manage
+      -- scope is a wider audience, not a way past a deleted enquiry.
+      and (c.lead_id is null or l.id is not null)
       and (select public.authorize('whatsapp.inbox.use'))
       and (
         (
@@ -1043,6 +1064,10 @@ as $$
     from public.whatsapp_conversations c
     left join (select * from public.leads where deleted_at is null) l on l.id = c.lead_id
     where c.id = p_conversation_id
+      -- A conversation may be lead-scoped or not. If it IS, that lead has to
+      -- still be operational before ANY branch below is consulted: manage
+      -- scope is a wider audience, not a way past a deleted enquiry.
+      and (c.lead_id is null or l.id is not null)
       and p_actor_id is not null
       and exists (
         select 1
@@ -1142,6 +1167,16 @@ begin
   -- Transaction-scoped 64-bit advisory locks for idempotency & lead root lock
   perform pg_advisory_xact_lock(hashtextextended(v_actor_id::text || '|' || v_op_code || '|' || trim(p_idempotency_key), 0));
   perform pg_advisory_xact_lock(hashtextextended('quotation_root:' || p_lead_id::text, 0));
+
+  perform 1
+  from public.leads
+  where id = p_lead_id
+    and deleted_at is null
+  for update;
+
+  if not found then
+    raise exception 'QUOTATION_NOT_FOUND_OR_FORBIDDEN' using errcode = '42501';
+  end if;
 
   select * into v_idempotency_rec
   from private.quotation_idempotency_requests
@@ -1539,7 +1574,108 @@ end;
 $$;
 
 -- =============================================================================
--- F. The audit event
+-- F. Canonical quiescence needs a word for what happened
+-- =============================================================================
+--
+-- `private.stop_lead_cadence_for_system` is the ONE place a cadence is stopped
+-- on the system's behalf: it writes the enrollment change, the `auto_stopped`
+-- enrollment event and the `cadence.stopped` activity together. Deletion must
+-- go through it rather than updating the enrollment directly, or the tombstone
+-- silently produces a stopped cadence with no evidence of why.
+--
+-- It validates its reason against a short allowlist, and none of the existing
+-- values means "the enquiry was deleted". `manual_override` would be a lie
+-- worth avoiding: someone reading the audit later should be able to tell a
+-- deliberate override from a deletion.
+
+alter table public.crm_lead_cadence_enrollments
+  drop constraint if exists chk_crm_lead_cadence_enrollments_stop_reason;
+alter table public.crm_lead_cadence_enrollments
+  add constraint chk_crm_lead_cadence_enrollments_stop_reason check (
+    stop_reason is null
+    or stop_reason in (
+      'lead_closed_won',
+      'lead_closed_lost',
+      'owner_not_operable',
+      'manual_override',
+      'cancelled_by_user',
+      -- New: the enquiry itself was removed from operational surfaces.
+      'lead_deleted'
+    )
+  );
+
+/*
+ * The system cadence stop, unchanged except for the reason it will accept.
+ *
+ * Everything else is the existing definition: same enrollment update, same
+ * `auto_stopped` event, same `cadence.stopped` activity, same idempotent
+ * conflict handling.
+ */
+create or replace function private.stop_lead_cadence_for_system(
+  p_lead_id uuid,
+  p_actor uuid,
+  p_reason text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_enrollment public.crm_lead_cadence_enrollments%rowtype;
+  v_now timestamptz;
+begin
+  if p_reason not in (
+    'lead_closed_won', 'lead_closed_lost', 'owner_not_operable', 'lead_deleted'
+  ) then
+    raise exception 'CADENCE_STOP_REASON_INVALID' using errcode = '22023';
+  end if;
+
+  select * into v_enrollment
+  from public.crm_lead_cadence_enrollments
+  where lead_id = p_lead_id
+    and status in ('active', 'paused')
+  for update;
+  if not found then
+    return;
+  end if;
+
+  v_now := clock_timestamp();
+
+  update public.crm_lead_cadence_enrollments
+  set status = 'stopped',
+      stopped_at = v_now,
+      stop_reason = p_reason,
+      paused_at = null,
+      updated_at = v_now
+  where id = v_enrollment.id;
+
+  insert into public.crm_cadence_enrollment_events (
+    enrollment_id, lead_id, actor_id, event_type,
+    previous_values, new_values, reason_code
+  )
+  values (
+    v_enrollment.id, p_lead_id, p_actor, 'auto_stopped',
+    jsonb_build_object('status', v_enrollment.status),
+    jsonb_build_object('status', 'stopped', 'stopReason', p_reason),
+    p_reason
+  );
+
+  insert into public.lead_activities (
+    lead_id, activity_type, reference_id, actor_id, summary, metadata
+  )
+  values (
+    p_lead_id, 'cadence.stopped', v_enrollment.id, p_actor,
+    'Cadence stopped',
+    jsonb_build_object('enrollmentId', v_enrollment.id, 'stopReason', p_reason)
+  )
+  on conflict (lead_id, activity_type, reference_id)
+    where reference_id is not null do nothing;
+end;
+$$;
+
+-- =============================================================================
+-- G. The audit event
 -- =============================================================================
 
 alter table public.lead_events drop constraint if exists chk_lead_events_type;
@@ -1561,7 +1697,7 @@ alter table public.lead_events add constraint chk_lead_events_type check (
 );
 
 -- =============================================================================
--- G. The delete operation
+-- H. The delete operation
 -- =============================================================================
 
 /*
@@ -1605,6 +1741,7 @@ declare
   v_reason text;
   v_reference uuid;
   v_deleted_at timestamptz;
+  v_follow_up_id uuid;
 begin
   v_actor := auth.uid();
   if v_actor is null then
@@ -1639,6 +1776,22 @@ begin
     raise exception 'CRM_LEAD_DELETE_REASON_INVALID' using errcode = '22023';
   end if;
 
+  /*
+   * SERIALIZATION AGAINST THE FIRST QUOTATION.
+   *
+   * `create_quotation_draft` decides whether a lead may take a quotation BEFORE
+   * it takes this lock, so without sharing it the two can interleave: the
+   * quotation path passes its check, the delete commits, and the quotation is
+   * then written against a lead that is already a tombstone — the converted
+   * blocker satisfied on both sides and violated in the result.
+   *
+   * Both paths now take THIS lock first and the lead row second. Same key, same
+   * order, so whichever arrives second sees the other's committed decision.
+   */
+  perform pg_advisory_xact_lock(
+    hashtextextended('quotation_root:' || p_lead_id::text, 0)
+  );
+
   select * into v_lead from public.leads where id = p_lead_id for update;
   if v_lead.id is null then
     raise exception 'CRM_LEAD_DELETE_NOT_FOUND' using errcode = 'P0002';
@@ -1670,6 +1823,34 @@ begin
     raise exception 'CRM_LEAD_DELETE_CONVERTED_BLOCKED' using errcode = '42501';
   end if;
 
+  /*
+   * QUIESCENCE FIRST, WHILE THE LEAD IS STILL OPERATIONAL.
+   *
+   * Both canonical helpers refuse to act on a lead they cannot see —
+   * `cancel_lead_follow_up_impl` goes through `crm_can_view_lead_by_id`, which
+   * this migration teaches to reject tombstones. So the work is quiesced before
+   * the tombstone is written, not after.
+   *
+   * They are used rather than a direct UPDATE because they are where the
+   * evidence is written: the follow-up cancellation event, the primary_cleared
+   * event when the follow-up was someone's next action, the cadence
+   * auto_stopped event, and the matching lead activities. A feature whose whole
+   * claim is "audit-preserving" cannot quietly skip the audit its own children
+   * already produce.
+   */
+  for v_follow_up_id in
+    select id from public.lead_follow_ups
+    where lead_id = p_lead_id and status = 'open'
+    order by due_at
+  loop
+    perform private.cancel_lead_follow_up_impl(
+      v_follow_up_id,
+      'Enquiry deleted'
+    );
+  end loop;
+
+  perform private.stop_lead_cadence_for_system(p_lead_id, v_actor, 'lead_deleted');
+
   v_reference := gen_random_uuid();
   v_deleted_at := now();
 
@@ -1684,33 +1865,6 @@ begin
    where id = p_lead_id;
 
   perform set_config('onedecore.crm_transition', '0', true);
-
-  /*
-   * QUIESCENCE.
-   *
-   * Open follow-ups are closed through their own lifecycle column rather than
-   * deleted, and cadence enrolments are cancelled through theirs. History rows
-   * are append-only and are not touched: what changes is whether the work is
-   * still outstanding, not whether it happened.
-   */
-  -- `chk_lead_follow_ups_primary_open` allows a primary next action only while
-  -- the follow-up is open, so the flag is cleared in the same statement.
-  update public.lead_follow_ups
-     set status = 'cancelled',
-         cancelled_at = v_deleted_at,
-         cancelled_by = v_actor,
-         is_primary_next_action = false,
-         updated_at = v_deleted_at
-   where lead_id = p_lead_id
-     and status = 'open';
-
-  update public.crm_lead_cadence_enrollments
-     set status = 'stopped',
-         stopped_at = v_deleted_at,
-         stop_reason = 'manual_override',
-         updated_at = v_deleted_at
-   where lead_id = p_lead_id
-     and status in ('active', 'paused');
 
   insert into public.lead_events (lead_id, event_type, actor_type, actor_id, occurred_at, event_data)
   values (

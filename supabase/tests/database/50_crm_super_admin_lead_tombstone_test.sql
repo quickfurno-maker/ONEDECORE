@@ -15,7 +15,7 @@
 -- CLOSED LOST IS NOT DELETE, and the two never share a code path.
 
 begin;
-select plan(66);
+select plan(86);
 
 -- =============================================================================
 -- Fixtures — e-prefix, unique to this file
@@ -110,13 +110,75 @@ values (
   'A note written before the enquiry was deleted.'
 );
 
-insert into public.lead_follow_ups (lead_id, owner_id, due_at, status, created_by)
+insert into public.lead_follow_ups (
+  lead_id, owner_id, due_at, status, created_by, is_primary_next_action
+)
 values (
   'e0aaaaaa-0000-4000-8000-000000000001',
   'e3333333-3333-3333-3333-333333333333',
   now() + interval '2 days',
   'open',
+  'e1111111-1111-1111-1111-111111111111',
+  -- Primary, so the delete has to produce a `primary_cleared` event too.
+  true
+);
+
+-- An active cadence enrolment, so the delete has to stop it through the
+-- canonical system path and leave the evidence that path writes.
+insert into public.crm_cadence_templates (
+  id, name, description, status, created_by, published_at, published_by
+)
+values (
+  'e0dddddd-0000-4000-8000-000000000001',
+  'Tombstone Probe Cadence',
+  'Fixture cadence for the deletion suite.',
+  'published',
+  'e1111111-1111-1111-1111-111111111111',
+  now(),
   'e1111111-1111-1111-1111-111111111111'
+)
+on conflict (id) do nothing;
+
+insert into public.crm_lead_cadence_enrollments (
+  id, lead_id, template_id, status, enrolled_by
+)
+values (
+  'e0eeeeee-0000-4000-8000-000000000001',
+  'e0aaaaaa-0000-4000-8000-000000000001',
+  'e0dddddd-0000-4000-8000-000000000001',
+  'active',
+  'e1111111-1111-1111-1111-111111111111'
+);
+
+-- A lead-linked WhatsApp conversation. `contact_id` is populated ON PURPOSE:
+-- the first version of the eligibility filter only consulted the lead when the
+-- contact was missing, so this is the shape that stayed eligible after a delete.
+insert into public.whatsapp_business_accounts (id, waba_id, status)
+values ('e0fabbbb-0000-4000-8000-000000000001', '900000000000050', 'active')
+on conflict (id) do nothing;
+
+insert into public.whatsapp_phone_numbers (
+  id, business_account_id, phone_number_id, display_phone_number, status
+)
+values (
+  'e0fa1111-0000-4000-8000-000000000001'::uuid,
+  'e0fabbbb-0000-4000-8000-000000000001',
+  '900000000000051',
+  '+919700000099',
+  'active'
+)
+on conflict (id) do nothing;
+
+insert into public.whatsapp_conversations (
+  id, phone_number_id, customer_e164, contact_id, lead_id, last_inbound_at
+)
+values (
+  'e0fbcccc-0000-4000-8000-000000000001',
+  'e0fa1111-0000-4000-8000-000000000001'::uuid,
+  '+919700000050',
+  'e0c00000-0000-4000-8000-000000000001',
+  'e0aaaaaa-0000-4000-8000-000000000001',
+  now() - interval '1 hour'
 );
 
 -- A second enquiry that reached a quotation: never deletable.
@@ -528,7 +590,14 @@ select ok(
   'the event history survives'
 );
 
--- QUIESCENCE: the work stops, the record of it does not.
+/*
+ * QUIESCENCE — through the canonical lifecycle paths, with their evidence.
+ *
+ * The first version of this feature updated the child rows directly. That
+ * produced the right final state and none of the audit the follow-up and
+ * cadence paths normally write, which is not acceptable in a feature whose
+ * defining claim is that it preserves the audit record.
+ */
 select is(
   (select status from public.lead_follow_ups
     where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001'),
@@ -547,6 +616,73 @@ select is(
       and is_primary_next_action = true),
   0,
   'and it is no longer anyone primary next action'
+);
+select is(
+  (select cancelled_by from public.lead_follow_ups
+    where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001'),
+  'e1111111-1111-1111-1111-111111111111'::uuid,
+  'the cancellation names the owner who deleted the enquiry'
+);
+select isnt(
+  (select cancelled_at from public.lead_follow_ups
+    where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001'),
+  null,
+  'and when it happened'
+);
+
+select is(
+  (select count(*)::integer from public.lead_follow_up_events
+    where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001'
+      and event_type = 'cancelled'),
+  1,
+  'the follow-up cancellation event was appended'
+);
+select is(
+  (select count(*)::integer from public.lead_follow_up_events
+    where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001'
+      and event_type = 'primary_cleared'),
+  1,
+  'and the primary_cleared event, because it WAS the next action'
+);
+select is(
+  (select count(*)::integer from public.lead_activities
+    where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001'
+      and activity_type = 'follow_up.cancelled'),
+  1,
+  'and the follow_up.cancelled activity'
+);
+
+select is(
+  (select status from public.crm_lead_cadence_enrollments
+    where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001'),
+  'stopped',
+  'the cadence is stopped'
+);
+select is(
+  (select stop_reason from public.crm_lead_cadence_enrollments
+    where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001'),
+  'lead_deleted',
+  'with a reason that says what actually happened, not manual_override'
+);
+select is(
+  (select count(*)::integer from public.crm_lead_cadence_enrollments
+    where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001'),
+  1,
+  'and the enrolment row survives'
+);
+select is(
+  (select count(*)::integer from public.crm_cadence_enrollment_events
+    where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001'
+      and event_type = 'auto_stopped'),
+  1,
+  'the auto_stopped enrolment event was appended'
+);
+select is(
+  (select count(*)::integer from public.lead_activities
+    where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001'
+      and activity_type = 'cadence.stopped'),
+  1,
+  'and the cadence.stopped activity'
 );
 
 -- Deterministic on a second attempt: no second event, no change.
@@ -640,7 +776,102 @@ select throws_ok(
 );
 
 -- =============================================================================
--- H. Duplicate / re-entry — the tombstone must not block the customer
+-- H. WhatsApp — history stays readable, the lead stops being operable
+-- =============================================================================
+--
+-- The conversation below has BOTH `lead_id` and `contact_id` populated. That is
+-- the shape the first version of the filtering missed twice over: the inbox
+-- predicates' manage-scope branch never checked whether the filtered join found
+-- a lead, and the eligibility function only consulted the lead when the contact
+-- was absent.
+
+set local role postgres;
+select is(
+  (select count(*)::integer from public.whatsapp_conversations
+    where id = 'e0fbcccc-0000-4000-8000-000000000001'),
+  1,
+  'the conversation row survives the deletion'
+);
+select is(
+  (select lead_id from public.whatsapp_conversations
+    where id = 'e0fbcccc-0000-4000-8000-000000000001'),
+  'e0aaaaaa-0000-4000-8000-000000000001'::uuid,
+  'and still points at the deleted enquiry, as history'
+);
+select isnt(
+  (select contact_id from public.whatsapp_conversations
+    where id = 'e0fbcccc-0000-4000-8000-000000000001'),
+  null,
+  'with its contact_id populated — the case that used to slip through'
+);
+set local role authenticated;
+
+-- The owner, who has manage scope over the whole inbox.
+select set_config('request.jwt.claim.sub', 'e1111111-1111-1111-1111-111111111111', true);
+select is(
+  (select private.whatsapp_inbox_can_use_conversation(
+    'e0fbcccc-0000-4000-8000-000000000001'::uuid)),
+  false,
+  'manage scope does NOT let the owner act on a deleted enquiry conversation'
+);
+
+-- The Sales Manager, who also has manage scope.
+select set_config('request.jwt.claim.sub', 'e2222222-2222-2222-2222-222222222222', true);
+select is(
+  (select private.whatsapp_inbox_can_use_conversation(
+    'e0fbcccc-0000-4000-8000-000000000001'::uuid)),
+  false,
+  'nor the Sales Manager'
+);
+
+-- The executive the enquiry was assigned to.
+select set_config('request.jwt.claim.sub', 'e3333333-3333-3333-3333-333333333333', true);
+select is(
+  (select private.whatsapp_inbox_can_use_conversation(
+    'e0fbcccc-0000-4000-8000-000000000001'::uuid)),
+  false,
+  'nor the former assignee'
+);
+
+-- The named-actor form the provider dispatch path uses.
+select is(
+  (select private.whatsapp_inbox_actor_can_use_conversation(
+    'e1111111-1111-1111-1111-111111111111'::uuid,
+    'e0fbcccc-0000-4000-8000-000000000001'::uuid)),
+  false,
+  'the dispatch predicate refuses the owner too'
+);
+select is(
+  (select private.whatsapp_inbox_actor_can_use_conversation(
+    'e2222222-2222-2222-2222-222222222222'::uuid,
+    'e0fbcccc-0000-4000-8000-000000000001'::uuid)),
+  false,
+  'and the Sales Manager — so a pre-existing intent cannot be dispatched'
+);
+
+-- Eligibility, which is what a send is actually gated on.
+select set_config('request.jwt.claim.sub', 'e1111111-1111-1111-1111-111111111111', true);
+select results_eq(
+  $$select eligibility_code
+      from private.whatsapp_evaluate_service_send_eligibility(
+        'e0fbcccc-0000-4000-8000-000000000001'::uuid)$$,
+  $$values ('denied_lead_deleted'::text)$$,
+  'service-send eligibility is denied because the enquiry is gone'
+);
+
+select throws_ok(
+  $$select public.create_whatsapp_service_send_intent(
+    'e0fbcccc-0000-4000-8000-000000000001'::uuid,
+    'tombstone-intent-50',
+    'WHATSAPP_SERVICE',
+    'An attempted message after the enquiry was deleted.',
+    null)$$,
+  NULL, NULL,
+  'and a new lead-scoped send intent is refused'
+);
+
+-- =============================================================================
+-- I. Duplicate / re-entry — the tombstone must not block the customer
 -- =============================================================================
 --
 -- The same contact comes back with a genuine new enquiry. Its old, deleted

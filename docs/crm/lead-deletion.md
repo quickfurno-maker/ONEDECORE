@@ -72,6 +72,26 @@ SECURITY DEFINER functions can never encounter a tombstone at all.
 
 ## Concurrency
 
+### Against the first quotation
+
+`create_quotation_draft` decides whether a lead may take a quotation *before* it
+acquires the `quotation_root` advisory lock, so without a shared serialization
+point it could interleave with a delete: the quotation path passes its check,
+the delete commits, and the quotation is then written against a lead that is
+already a tombstone — the converted blocker satisfied on both sides and violated
+in the result.
+
+Both paths now take `pg_advisory_xact_lock('quotation_root:' || lead_id)`
+**first** and the lead row **second**, in that order, and the quotation path
+re-reads the lead `FOR UPDATE` with `deleted_at is null` *after* the lock. The
+loser of either ordering is refused: the quotation with
+`QUOTATION_NOT_FOUND_OR_FORBIDDEN`, the delete with
+`CRM_LEAD_DELETE_CONVERTED_BLOCKED`.
+
+`51_crm_lead_delete_quotation_race_test.sql` proves this with two real sessions.
+
+### Against ordinary edits
+
 The caller passes the `updated_at` they were looking at. The row is locked
 `FOR UPDATE` while it is checked. If the enquiry moved in the meantime the
 delete is refused (`CRM_LEAD_DELETE_STALE`) rather than applied to a lead the
@@ -131,8 +151,8 @@ migration named in the comment above it.
 | `whatsapp_inbox_can_use_conversation` | B mutate | filtered | app suite §5 |
 | `whatsapp_inbox_actor_can_use_conversation` | B mutate | filtered | app suite §5 |
 | `create_quotation_draft` | B mutate | filtered | tombstone suite §G |
-| `preview_campaign_audience` | A read | filtered | app suite §5 |
-| `get_campaign_metrics_board` | A read | filtered | app suite §5 |
+| `preview_campaign_audience` | A read | filtered — a deleted enquiry is not a marketing target | app suite §5 |
+| `get_campaign_metrics_board` | A read / D audit | **partially** filtered — see below | app suite §5 |
 | 21 callers of the central predicates | A/B | closed transitively | tombstone suite §G |
 | `whatsapp_inbox_can_view_conversation` | D audit | unchanged — conversation history stays readable; **using** it is closed above | — |
 | `create_quotation_revision`, `finalize_quotation_version`, `accept_quotation_by_capability`, `get_quotation_by_capability`, `issue_quotation_access_grant_internal`, `mark_quotation_pdf_document_ready`, `reserve_quotation_pdf_document`, `revoke_quotation_access_grant`, `create_quotation_whatsapp_service_send_intent` | D audit | unreachable — each needs an existing quotation, and a lead with one cannot be deleted | converted blocker |
@@ -145,19 +165,59 @@ migration named in the comment above it.
 cannot reach that function. If the converted blocker is ever relaxed, every
 Category D entry has to be re-audited, and this table is where to start.
 
+### Campaign metrics: what is filtered and what is not
+
+`get_campaign_metrics_board` has two kinds of number in it, and they are treated
+differently on purpose.
+
+- The **lead-derived** counts read `public.leads` and now read the filtered set,
+  so a deleted enquiry stops counting as an active lead.
+- The **conversion-feedback** counts read `campaign_conversion_feedback_events`
+  directly. Those rows are immutable campaign evidence: they record that a
+  campaign produced a conversion at a point in time. They are **retained
+  deliberately** and are not filtered by the tombstone.
+
+So: operational audience and active-lead metrics exclude deleted enquiries;
+historical campaign attribution does not disappear because an enquiry was later
+removed from the CRM workspace. Do not read this feature as "every campaign
+conversion count drops when a lead is deleted" — it does not, and that is the
+intended behaviour for an audit-preserving tombstone.
+
 ## Quiescence
 
 A deleted enquiry stops generating work, without losing the record that work
 happened:
 
-- open follow-ups move to `cancelled` with `cancelled_at` / `cancelled_by`, and
-  lose `is_primary_next_action` — the row stays;
-- active or paused cadence enrolments move to `stopped` with
-  `stop_reason = 'manual_override'` — the enrolment and its events stay;
+Quiescence runs through the **canonical lifecycle paths**, not by writing the
+child lifecycle columns directly, because those paths are where the evidence is
+written. It happens *before* the tombstone, while the lead is still operational:
+`cancel_lead_follow_up_impl` resolves through `crm_can_view_lead_by_id`, which
+refuses a tombstoned lead.
+
+- open follow-ups are cancelled through `private.cancel_lead_follow_up_impl`,
+  which sets `cancelled_at` / `cancelled_by`, clears `is_primary_next_action`,
+  and appends the `cancelled` follow-up event, the `primary_cleared` event when
+  the follow-up was someone's next action, and the `follow_up.cancelled`
+  activity — the row stays;
+- active or paused cadence enrolments are stopped through
+  `private.stop_lead_cadence_for_system` with `stop_reason = 'lead_deleted'`,
+  which appends the `auto_stopped` enrolment event and the `cadence.stopped`
+  activity. `lead_deleted` is a new value on that constraint: `manual_override`
+  would have told a later reader the wrong story;
 - SLA clocks are no longer created or advanced for the lead; existing SLA
   history is untouched;
-- WhatsApp conversation and message history is preserved in full. What stops is
-  using the deleted enquiry as the target of a **new** lead-scoped send.
+- WhatsApp conversation and message history is preserved in full and stays
+  **readable**. What stops is every **use / send / dispatch** path: a
+  lead-scoped conversation requires its linked lead to still be operational
+  before any of them proceeds.
+
+  Both inbox predicates take that as a prerequisite ahead of every role branch,
+  so `whatsapp.inbox.manage` is a wider audience rather than a way past a
+  deleted enquiry, and the named-actor form the provider dispatch uses answers
+  the same way — a send intent created before the deletion cannot be dispatched
+  after it. Send eligibility checks the lead **before** it resolves the contact,
+  so a conversation that already carries a `contact_id` cannot bypass the check
+  either; it returns `denied_lead_deleted`.
 
 ## Duplicate and re-entry
 
