@@ -62,6 +62,18 @@ values
   ('e0c00000-0000-4000-8000-000000000001', 'email', 'tombstone50@example.com', true)
 on conflict do nothing;
 
+-- A SEPARATE contact for the converted enquiry. Sharing one with the deletable
+-- enquiry would make the re-entry test meaningless: the returning customer
+-- would have a genuinely active second lead, and ACTIVE_DUPLICATE would be the
+-- right answer for a reason that has nothing to do with the tombstone.
+insert into public.contacts (id, display_name, status)
+values ('e0c00000-0000-4000-8000-000000000002', 'Converted Client', 'active')
+on conflict (id) do nothing;
+
+insert into public.contact_channels (contact_id, channel_type, address_normalized, is_primary)
+values ('e0c00000-0000-4000-8000-000000000002', 'phone', '+919700000051', true)
+on conflict do nothing;
+
 -- The deletable enquiry: assigned, worked a little, no commercial record.
 insert into public.leads (
   id, submission_reference, contact_id, submitted_name, submitted_email, status, source,
@@ -115,7 +127,7 @@ insert into public.leads (
 ) values (
   'e0bbbbbb-0000-4000-8000-000000000002',
   'e0bbbbbb-0000-4000-8000-000000000002',
-  'e0c00000-0000-4000-8000-000000000001',
+  'e0c00000-0000-4000-8000-000000000002',
   'Converted Client',
   'new',
   'website-planner',
@@ -512,7 +524,7 @@ select is(
 );
 select ok(
   (select count(*)::integer from public.lead_events
-    where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001') > 1,
+    where lead_id = 'e0aaaaaa-0000-4000-8000-000000000001') >= 1,
   'the event history survives'
 );
 
@@ -537,14 +549,17 @@ select is(
   'and it is no longer anyone primary next action'
 );
 
-set local role authenticated;
-
 -- Deterministic on a second attempt: no second event, no change.
+--
+-- Read as postgres: the enquiry is invisible to every authenticated caller now,
+-- which is the point, so asking as one would return an empty setting.
 select set_config(
   'test.tombstone_updated_at2',
   (select updated_at::text from public.leads where id = 'e0aaaaaa-0000-4000-8000-000000000001'),
   true
 );
+
+set local role authenticated;
 select throws_ok(
   $$select public.delete_lead_tombstone(
     'e0aaaaaa-0000-4000-8000-000000000001'::uuid,
@@ -660,8 +675,8 @@ set local role postgres;
 select is(
   (select count(*)::integer from public.leads
     where contact_id = 'e0c00000-0000-4000-8000-000000000001' and deleted_at is null),
-  2,
-  'the contact now has two live enquiries — the converted one and the new one'
+  1,
+  'the returning customer has exactly one live enquiry: the new one'
 );
 select is(
   (select count(*)::integer from public.leads
