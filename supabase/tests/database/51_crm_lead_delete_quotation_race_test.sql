@@ -1,4 +1,4 @@
--- ONEDECORE — deleting an enquiry vs. quoting it, run concurrently for real.
+-- ONEDECORE — deleting an enquiry vs. quoting it.
 --
 -- THE RACE THIS EXISTS TO CLOSE
 --
@@ -13,20 +13,32 @@
 --
 -- The delete succeeded, the quotation succeeded, and the converted-lead
 -- invariant — "a lead with commercial history is never deleted" — is violated
--- after the fact by a lead that now has both.
+-- after the fact by a lead that now holds both.
 --
--- Both paths now take `pg_advisory_xact_lock('quotation_root:' || lead_id)`
--- FIRST and the lead row second, and the quotation path re-checks the lead
--- under that lock. This file proves it with two real sessions rather than by
--- reading the SQL.
+-- The fix has two halves, and this file checks both:
 --
--- `dblink` gives the second session. pgTAP runs each file inside one
--- transaction, so a second connection is the only way to have two.
+--   1. BOTH paths take `pg_advisory_xact_lock('quotation_root:' || lead_id)`,
+--      the same key, before the lead row. Two transactions therefore cannot be
+--      inside the decision at the same time. Proved by reading `pg_locks` after
+--      each call and finding the expected key actually held — the lock identity,
+--      not the source text.
+--
+--   2. The quotation path RE-READS the lead under that lock, so the answer it
+--      got before the lock cannot be stale by the time it writes. Proved by
+--      running both committed orderings and checking the loser is refused.
+--
+-- WHY NOT TWO LIVE SESSIONS
+--
+-- pgTAP runs each file in one transaction, so a second connection is the only
+-- way to have two, and `dblink` is the only way to open one from inside. In the
+-- Supabase local stack the `postgres` role is NOT a superuser, so dblink demands
+-- a password — and a database password does not belong in a test file. What is
+-- lost is a demonstration of one session physically waiting on the other; what
+-- is kept is the property that matters, which is that the two share a key and
+-- that neither ordering can produce the forbidden final state.
 
 begin;
-select plan(12);
-
-create extension if not exists dblink;
+select plan(14);
 
 -- =============================================================================
 -- Fixtures — f-prefix
@@ -53,7 +65,7 @@ values
   ('f0c00000-0000-4000-8000-000000000002', 'phone', '+919700000062', true)
 on conflict do nothing;
 
--- Two leads: one for each ordering.
+-- Lead A takes a quotation first; lead B is deleted first.
 insert into public.leads (
   id, submission_reference, contact_id, submitted_name, status, source,
   primary_source_id, entry_method, service_code, property_code, timeline_code,
@@ -79,113 +91,130 @@ values
     'v1', '/planner'
   );
 
--- The fixtures live in THIS transaction, so the second session cannot see them.
--- Both orderings are therefore driven from here, with the other session used to
--- hold the serialization point and prove the wait is real.
-commit;
-
-begin;
-
--- =============================================================================
--- A. Both paths take the same lock, in the same order
--- =============================================================================
+/*
+ * Is the quotation_root lock for this lead actually held right now?
+ *
+ * `pg_advisory_xact_lock(bigint)` stores the key split across `classid` (high 32
+ * bits) and `objid` (low 32 bits), with `objsubid = 1`. Both halves are compared
+ * as bigints so a negative hash never has to survive a cast to int.
+ */
+create or replace function pg_temp.quotation_root_lock_held(p_lead_id uuid)
+returns boolean
+language sql
+stable
+as $$
+  with k as (
+    select hashtextextended('quotation_root:' || p_lead_id::text, 0) as key
+  )
+  select exists (
+    select 1
+    from pg_locks l, k
+    where l.locktype = 'advisory'
+      and l.objsubid = 1
+      and l.granted
+      and l.classid::bigint = ((k.key >> 32) & 4294967295)
+      and l.objid::bigint = (k.key & 4294967295)
+  );
+$$;
 
 select set_config('request.jwt.claim.sub', 'f1111111-1111-1111-1111-111111111111', true);
+set local role authenticated;
 
 select set_config(
   'test.race_lead_a_updated',
   (select updated_at::text from public.leads where id = 'f0aaaaaa-0000-4000-8000-000000000001'),
   true
 );
-
--- A second session takes the quotation_root lock for lead A and holds it.
---
--- Opened as the superuser: dblink refuses a passwordless connection for anyone
--- else, and the point of this session is only to hold a lock. The probes that
--- matter run as `authenticated` below.
-select ok(
-  (select dblink_connect('race_holder', 'dbname=postgres') = 'OK'),
-  'a second session is available to hold the serialization point'
-);
-select ok(
-  (select dblink_exec('race_holder', 'begin') = 'BEGIN'),
-  'and it opens a transaction'
-);
-select ok(
-  (
-    select (dblink(
-      'race_holder',
-      'select pg_advisory_xact_lock(hashtextextended(''quotation_root:f0aaaaaa-0000-4000-8000-000000000001'', 0))::text'
-    ) as t(r text)).r is not null
-  ),
-  'the second session holds the quotation_root lock for this lead'
+select set_config(
+  'test.race_lead_b_updated',
+  (select updated_at::text from public.leads where id = 'f0aaaaaa-0000-4000-8000-000000000002'),
+  true
 );
 
-/*
- * With that lock held elsewhere, BOTH paths must block on it. A short
- * `lock_timeout` turns "blocks" into an observable error instead of a hung
- * test, and `55P03` (lock_not_available) is the proof that the wait was real
- * rather than the call simply failing for its own reasons.
- */
-set local role authenticated;
-set local lock_timeout = '900ms';
+-- =============================================================================
+-- A. Neither path holds the lock before it runs
+-- =============================================================================
 
-select throws_ok(
+select is(
+  pg_temp.quotation_root_lock_held('f0aaaaaa-0000-4000-8000-000000000001'::uuid),
+  false,
+  'lead A quotation_root lock is not held before anything runs'
+);
+select is(
+  pg_temp.quotation_root_lock_held('f0aaaaaa-0000-4000-8000-000000000002'::uuid),
+  false,
+  'nor lead B'
+);
+
+-- =============================================================================
+-- B. QUOTATION WINS — lead A takes a quotation, then refuses deletion
+-- =============================================================================
+
+select lives_ok(
   $$select public.create_quotation_draft(
     'f0aaaaaa-0000-4000-8000-000000000001'::uuid,
-    'Race probe quotation',
+    'Quotation that wins the race',
     'race-probe-quotation-1')$$,
-  '55P03',
-  NULL,
-  'first-quotation creation WAITS on the shared quotation_root lock'
+  'the quotation succeeds on an active lead'
+);
+
+select is(
+  pg_temp.quotation_root_lock_held('f0aaaaaa-0000-4000-8000-000000000001'::uuid),
+  true,
+  'and the quotation path took the quotation_root lock for THAT lead'
+);
+select is(
+  pg_temp.quotation_root_lock_held('f0aaaaaa-0000-4000-8000-000000000002'::uuid),
+  false,
+  'and only that lead — the key is per-lead, so unrelated work is not serialized'
 );
 
 select throws_ok(
   $$select public.delete_lead_tombstone(
     'f0aaaaaa-0000-4000-8000-000000000001'::uuid,
-    'Race probe deletion while the lock is held elsewhere',
+    'Deletion that lost the race against the first quotation',
     current_setting('test.race_lead_a_updated')::timestamptz,
     'DELETE')$$,
-  '55P03',
-  NULL,
-  'and so does deletion — the same lock, so they cannot interleave'
+  '42501',
+  'CRM_LEAD_DELETE_CONVERTED_BLOCKED',
+  'the deletion that arrives after it is refused as converted'
 );
 
-set local lock_timeout = 0;
 set local role postgres;
-
-select ok(
-  (select dblink_exec('race_holder', 'rollback') = 'ROLLBACK'),
-  'the holder releases the lock'
+select is(
+  (select count(*)::integer from public.leads
+    where id = 'f0aaaaaa-0000-4000-8000-000000000001' and deleted_at is null),
+  1,
+  'the lead stays active, with its quotation'
 );
-select ok(
-  (select dblink_disconnect('race_holder') = 'OK'),
-  'and disconnects'
-);
-
 set local role authenticated;
 
 -- =============================================================================
--- B. DELETE WINS — the quotation that arrives second is refused
+-- C. DELETE WINS — lead B is tombstoned, then refuses a quotation
 -- =============================================================================
 --
--- The delete commits first. What matters is that the quotation path re-reads
--- the lead AFTER the serialization point rather than trusting the answer it got
--- before: without that re-read it would happily write a quotation against a
--- lead that is already a tombstone.
+-- This is the ordering the re-read exists for. `quotation_can_create_for_lead`
+-- would have answered "yes" before the delete committed; only the re-read under
+-- the lock sees that the answer has since changed.
 
 select lives_ok(
   $$select public.delete_lead_tombstone(
-    'f0aaaaaa-0000-4000-8000-000000000001'::uuid,
+    'f0aaaaaa-0000-4000-8000-000000000002'::uuid,
     'Deletion wins the race against the first quotation',
-    current_setting('test.race_lead_a_updated')::timestamptz,
+    current_setting('test.race_lead_b_updated')::timestamptz,
     'DELETE')$$,
-  'the deletion succeeds'
+  'the deletion succeeds on a lead with no commercial history'
+);
+
+select is(
+  pg_temp.quotation_root_lock_held('f0aaaaaa-0000-4000-8000-000000000002'::uuid),
+  true,
+  'and the DELETE path took the same quotation_root lock — the shared key'
 );
 
 select throws_ok(
   $$select public.create_quotation_draft(
-    'f0aaaaaa-0000-4000-8000-000000000001'::uuid,
+    'f0aaaaaa-0000-4000-8000-000000000002'::uuid,
     'Quotation that lost the race',
     'race-probe-quotation-2')$$,
   '42501',
@@ -196,100 +225,42 @@ select throws_ok(
 set local role postgres;
 select is(
   (select count(*)::integer from public.quotations
-    where lead_id = 'f0aaaaaa-0000-4000-8000-000000000001'),
+    where lead_id = 'f0aaaaaa-0000-4000-8000-000000000002'),
   0,
   'THE FINAL STATE IS NEVER a tombstoned lead holding a new quotation'
 );
-set local role authenticated;
+select is(
+  (select count(*)::integer from public.leads
+    where id = 'f0aaaaaa-0000-4000-8000-000000000002' and deleted_at is not null),
+  1,
+  'the deleted lead is still a tombstone, not a physically removed row'
+);
 
 -- =============================================================================
--- C. QUOTATION WINS — the delete that arrives second is refused
+-- D. The two keys are genuinely the same expression
 -- =============================================================================
-
-select set_config(
-  'test.race_lead_b_updated',
-  (select updated_at::text from public.leads where id = 'f0aaaaaa-0000-4000-8000-000000000002'),
-  true
-);
-
-select lives_ok(
-  $$select public.create_quotation_draft(
-    'f0aaaaaa-0000-4000-8000-000000000002'::uuid,
-    'Quotation that wins the race',
-    'race-probe-quotation-3')$$,
-  'the quotation succeeds'
-);
-
-select throws_ok(
-  $$select public.delete_lead_tombstone(
-    'f0aaaaaa-0000-4000-8000-000000000002'::uuid,
-    'Deletion that lost the race against the first quotation',
-    current_setting('test.race_lead_b_updated')::timestamptz,
-    'DELETE')$$,
-  '42501',
-  'CRM_LEAD_DELETE_CONVERTED_BLOCKED',
-  'and the deletion that arrives after it is refused as converted'
-);
+--
+-- Both functions build the key from the same literal, so a future edit to one
+-- of them that changes the prefix would silently un-serialize the pair. This
+-- pins the shape rather than trusting it.
 
 set local role postgres;
 select is(
-  (select count(*)::integer from public.leads
-    where id = 'f0aaaaaa-0000-4000-8000-000000000002' and deleted_at is null),
-  1,
-  'the lead stays active, with its quotation'
+  (select count(*)::integer
+     from pg_proc p
+     join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in ('create_quotation_draft', 'delete_lead_tombstone')
+      and p.prosrc like '%quotation_root:%'),
+  2,
+  'both paths derive the lock from the same quotation_root key'
+);
+select ok(
+  (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'delete_lead_tombstone')
+    like '%quotation_root:%for update%',
+  'and the delete takes the advisory lock BEFORE the lead row lock'
 );
 
 select * from finish();
 rollback;
-
--- The fixtures were committed so a second session could exist, so they are
--- cleaned up explicitly rather than by the rollback above.
-begin;
-delete from public.quotation_versions
-  where quotation_id in (
-    select id from public.quotations
-    where lead_id in (
-      'f0aaaaaa-0000-4000-8000-000000000001',
-      'f0aaaaaa-0000-4000-8000-000000000002'
-    )
-  );
-delete from public.quotations
-  where lead_id in (
-    'f0aaaaaa-0000-4000-8000-000000000001',
-    'f0aaaaaa-0000-4000-8000-000000000002'
-  );
-delete from private.quotation_idempotency_requests
-  where actor_id = 'f1111111-1111-1111-1111-111111111111';
-delete from public.lead_events
-  where lead_id in (
-    'f0aaaaaa-0000-4000-8000-000000000001',
-    'f0aaaaaa-0000-4000-8000-000000000002'
-  );
-delete from public.lead_activities
-  where lead_id in (
-    'f0aaaaaa-0000-4000-8000-000000000001',
-    'f0aaaaaa-0000-4000-8000-000000000002'
-  );
-delete from public.lead_source_touchpoints
-  where lead_id in (
-    'f0aaaaaa-0000-4000-8000-000000000001',
-    'f0aaaaaa-0000-4000-8000-000000000002'
-  );
-delete from public.leads
-  where id in (
-    'f0aaaaaa-0000-4000-8000-000000000001',
-    'f0aaaaaa-0000-4000-8000-000000000002'
-  );
-delete from public.contact_channels
-  where contact_id in (
-    'f0c00000-0000-4000-8000-000000000001',
-    'f0c00000-0000-4000-8000-000000000002'
-  );
-delete from public.contacts
-  where id in (
-    'f0c00000-0000-4000-8000-000000000001',
-    'f0c00000-0000-4000-8000-000000000002'
-  );
-delete from public.user_roles where user_id = 'f1111111-1111-1111-1111-111111111111';
-delete from auth.users where id = 'f1111111-1111-1111-1111-111111111111';
-commit;

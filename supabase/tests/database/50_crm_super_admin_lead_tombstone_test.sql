@@ -855,8 +855,11 @@ select is(
 );
 set local role authenticated;
 
--- Eligibility, which is what a send is actually gated on.
+-- Eligibility, which is what a send is actually gated on. Like the dispatch
+-- predicate it is revoked from `authenticated`: only the intent RPC calls it,
+-- as its definer. Asked here the same way.
 select set_config('request.jwt.claim.sub', 'e1111111-1111-1111-1111-111111111111', true);
+set local role postgres;
 select results_eq(
   $$select eligibility_code
       from private.whatsapp_evaluate_service_send_eligibility(
@@ -864,6 +867,7 @@ select results_eq(
   $$values ('denied_lead_deleted'::text)$$,
   'service-send eligibility is denied because the enquiry is gone'
 );
+set local role authenticated;
 
 select throws_ok(
   $$select public.create_whatsapp_service_send_intent(
