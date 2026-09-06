@@ -1,6 +1,5 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
 import type {
   CrmActivityPriority,
   CrmActivityType,
@@ -14,6 +13,7 @@ import type {
   CrmCadenceTemplateSummary,
   CrmLeadCadenceState,
 } from "../contracts/cadence-contracts.ts";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
 
 /** Bounded read model: the cadence catalogue is an admin list, not a dashboard. */
@@ -48,10 +48,10 @@ function mapStep(row: StepRow): CrmCadenceStep {
  * Lists cadence templates with a light usage count. RLS scopes visibility; the
  * caller must still hold `crm.cadences.manage` to mutate anything.
  */
-export async function fetchCadenceTemplates(): Promise<
-  readonly CrmCadenceTemplateSummary[]
-> {
-  const supabase = await createClient();
+export async function fetchCadenceTemplates(
+  db?: CrmDb
+): Promise<readonly CrmCadenceTemplateSummary[]> {
+  const supabase = await resolveCrmDb(db);
 
   const [templatesResult, stepsResult, enrollmentsResult] = await Promise.all([
     supabase
@@ -98,9 +98,10 @@ export async function fetchCadenceTemplates(): Promise<
 }
 
 export async function fetchCadenceTemplateDetail(
-  templateId: string
+  templateId: string,
+  db?: CrmDb
 ): Promise<CrmCadenceTemplateDetail | null> {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
 
   const { data: template, error } = await supabase
     .from("crm_cadence_templates")
@@ -153,10 +154,10 @@ export async function fetchCadenceTemplateDetail(
 }
 
 /** Published templates available for manual enrollment on lead detail. */
-export async function fetchEnrollableCadenceTemplates(): Promise<
-  readonly CrmCadenceTemplateSummary[]
-> {
-  const templates = await fetchCadenceTemplates();
+export async function fetchEnrollableCadenceTemplates(
+  db?: CrmDb
+): Promise<readonly CrmCadenceTemplateSummary[]> {
+  const templates = await fetchCadenceTemplates(db);
   return templates.filter(
     (template) => template.status === "published" && template.stepCount > 0
   );
@@ -167,9 +168,10 @@ export async function fetchEnrollableCadenceTemplates(): Promise<
  * enrollment rows, so this never widens lead visibility.
  */
 export async function fetchLeadCadenceState(
-  leadId: string
+  leadId: string,
+  db?: CrmDb
 ): Promise<CrmLeadCadenceState | null> {
-  const supabase = await createClient();
+  const supabase = await resolveCrmDb(db);
 
   const { data: enrollment, error } = await supabase
     .from("crm_lead_cadence_enrollments")

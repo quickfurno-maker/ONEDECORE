@@ -51,6 +51,7 @@ const ACTIONS = "src/features/crm/server/crm-sla-policy-actions.ts";
 const PANEL = "src/features/crm/components/settings/SlaSettingsPanel.tsx";
 const PAGE = "src/app/admin/crm/settings/sla/page.tsx";
 const CRM_AUTH = "src/features/crm/server/crm-auth.ts";
+const CRM_DB = "src/features/crm/server/crm-db.ts";
 const CRM_PERMISSIONS = "src/features/crm/server/crm-permissions.ts";
 const SIDEBAR = "src/features/admin-ops/components/AdminSidebar.tsx";
 const NAV_FLAGS = "src/features/admin-ops/server/resolve-ops-nav-flags.ts";
@@ -197,10 +198,34 @@ describe("SLA settings page guard", () => {
     assert.match(serviceSrc, /if \(!context\.canManageSlaPolicy\)/);
     assert.match(serviceSrc, /CRM_SLA_PERMISSION_DENIED/);
     assert.match(serviceSrc, /CRM_SLA_AUTH_REQUIRED/);
-    assert.match(serviceSrc, /await requireSlaManageContext\(\);[\s\S]*?from\("crm_sla_policies"\)/);
+
+    /*
+     * The gate takes a CONTEXT rather than resolving one, so the cookie
+     * workspace and the bearer-authenticated mobile boundary run the identical
+     * assertion. It must still come before the read and before the write.
+     */
     assert.match(
       serviceSrc,
-      /await requireSlaManageContext\(\);[\s\S]*?rpc\("update_crm_sla_policy"/
+      /assertSlaManagePermission\(context\);[\s\S]*?from\("crm_sla_policies"\)/
+    );
+    assert.match(
+      serviceSrc,
+      /assertSlaManagePermission\(context\);[\s\S]*?rpc\("update_crm_sla_policy"/
+    );
+
+    /* The browser wrappers still resolve their context from cookies, and that
+     * resolver still passes through the same gate. */
+    assert.match(
+      serviceSrc,
+      /async function requireSlaManageContext\(\)[\s\S]*?assertSlaManagePermission\(context\);/
+    );
+    assert.match(
+      serviceSrc,
+      /export async function fetchFirstContactSlaPolicy\(\)[\s\S]*?requireSlaManageContext\(\)/
+    );
+    assert.match(
+      serviceSrc,
+      /export async function updateFirstContactSlaPolicy\([\s\S]*?requireSlaManageContext\(\)/
     );
   });
 });
@@ -380,7 +405,24 @@ describe("SLA policy write containment", () => {
         `${name} must not build a privileged client`
       );
     }
-    assert.match(serviceSrc, /from "@\/lib\/supabase\/server"/);
+    /*
+     * The slice resolves its client through the shared CRM resolver, which
+     * defaults to the cookie-scoped server client and accepts an injected
+     * caller-scoped one. That indirection is what lets a bearer caller run this
+     * service as themselves, so the resolver is held to the same rule: it must
+     * reach `@/lib/supabase/server` and never a privileged client.
+     */
+    assert.match(serviceSrc, /resolveCrmDb\(db\)/);
+    assert.match(serviceSrc, /from "\.\/crm-db\.ts"/);
+
+    const dbSrc = readSrc(CRM_DB);
+    assert.match(dbSrc, /from "@\/lib\/supabase\/server"/);
+    assert.doesNotMatch(dbSrc, /service_role/i);
+    assert.doesNotMatch(dbSrc, /SUPABASE_SERVICE_ROLE_KEY/);
+    assert.doesNotMatch(
+      dbSrc,
+      /createServiceClient|createAdminClient|serviceClient/
+    );
   });
 
   test("the app never supplies effective_from, activated_at or updated_by", () => {

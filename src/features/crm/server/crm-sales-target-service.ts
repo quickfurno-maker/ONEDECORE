@@ -1,6 +1,5 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CrmAccessContext } from "../contracts/crm-access.ts";
 import type {
@@ -16,6 +15,7 @@ import {
   validateSalesTargetReason,
 } from "../contracts/sales-target-contracts.ts";
 import { getCrmAccessContext } from "./crm-auth.ts";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import { CrmError, crmErrorFromPostgresMessage } from "./crm-errors.ts";
 
 interface SalesTargetRow {
@@ -96,13 +96,22 @@ function assertReadPermission(context: CrmAccessContext): void {
   }
 }
 
-async function phase5eClient(): Promise<SupabaseClient> {
-  return (await createClient()) as unknown as SupabaseClient;
+/**
+ * The client a sales-target call runs against: the injected one when a caller
+ * supplied it, otherwise the cookie-scoped default. Never service-role — the
+ * `sales_targets` RLS policies and the RPC's own `authorize(...)` probes are
+ * the read and write authority either way.
+ */
+async function phase5eClient(db?: CrmDb): Promise<SupabaseClient> {
+  return (await resolveCrmDb(db)) as unknown as SupabaseClient;
 }
 
-export async function fetchSalesTargetsForCurrentUser(): Promise<
-  readonly SalesTargetSummary[]
-> {
+/**
+ * Resolves a cookie context for the browser wrappers. The mobile boundary never
+ * reaches this: it hands its own bearer-resolved context to a `...ForContext`
+ * function directly, so no cookie is read on that path.
+ */
+async function requireSalesTargetContext(): Promise<CrmAccessContext> {
   const context = await getCrmAccessContext();
   if (!context) {
     throw new CrmError({
@@ -111,9 +120,35 @@ export async function fetchSalesTargetsForCurrentUser(): Promise<
       httpStatus: 401,
     });
   }
+  return context;
+}
+
+/*
+ * ============================================================================
+ * Context/db-safe implementations
+ * ============================================================================
+ *
+ * Reads assert `crm.sales_targets.read`; writes assert
+ * `crm.sales_targets.manage`. That split is stated once, here, and both the
+ * browser workspace and the mobile boundary reach it — the read/manage
+ * distinction is never re-decided at a transport edge.
+ *
+ * `expectedRevision` is passed to the RPC untouched. It is the optimistic
+ * concurrency token, and the DB answers a mismatch with
+ * `crm_sales_target_revision_mismatch`, which the canonical error mapper
+ * already turns into a 409. Nothing here compares, defaults or recomputes it.
+ *
+ * No attainment is calculated anywhere in this file. Targets are configuration;
+ * achievement stays Phase 7B gated.
+ */
+
+export async function fetchSalesTargetsForContext(
+  context: CrmAccessContext,
+  db?: CrmDb
+): Promise<readonly SalesTargetSummary[]> {
   assertReadPermission(context);
 
-  const supabase = await phase5eClient();
+  const supabase = await phase5eClient(db);
   const { data, error } = await supabase
     .from("sales_targets")
     .select(
@@ -129,20 +164,14 @@ export async function fetchSalesTargetsForCurrentUser(): Promise<
   return (data ?? []).map((row) => mapTarget(row as unknown as SalesTargetRow));
 }
 
-export async function fetchSalesTargetEvents(
-  targetId: string
+export async function fetchSalesTargetEventsForContext(
+  context: CrmAccessContext,
+  targetId: string,
+  db?: CrmDb
 ): Promise<readonly SalesTargetEventSummary[]> {
-  const context = await getCrmAccessContext();
-  if (!context) {
-    throw new CrmError({
-      code: "SALES_TARGET_AUTH_REQUIRED",
-      message: "Authentication required",
-      httpStatus: 401,
-    });
-  }
   assertReadPermission(context);
 
-  const supabase = await phase5eClient();
+  const supabase = await phase5eClient(db);
   const { data, error } = await supabase
     .from("sales_target_events")
     .select(
@@ -158,17 +187,11 @@ export async function fetchSalesTargetEvents(
   return (data ?? []).map((row) => mapEvent(row as unknown as SalesTargetEventRow));
 }
 
-export async function createSalesTargetForCurrentUser(
-  input: CreateSalesTargetInput
+export async function createSalesTargetForContext(
+  context: CrmAccessContext,
+  input: CreateSalesTargetInput,
+  db?: CrmDb
 ): Promise<SalesTargetSummary> {
-  const context = await getCrmAccessContext();
-  if (!context) {
-    throw new CrmError({
-      code: "SALES_TARGET_AUTH_REQUIRED",
-      message: "Authentication required",
-      httpStatus: 401,
-    });
-  }
   assertManagePermission(context);
 
   const fieldErrors = validateCreateSalesTargetInput(input);
@@ -180,7 +203,7 @@ export async function createSalesTargetForCurrentUser(
     });
   }
 
-  const supabase = await phase5eClient();
+  const supabase = await phase5eClient(db);
   const { data, error } = await supabase.rpc("create_sales_target", {
     p_target_scope: input.targetScope,
     p_target_month: input.targetMonth,
@@ -197,17 +220,11 @@ export async function createSalesTargetForCurrentUser(
   return mapTarget(data as unknown as SalesTargetRow);
 }
 
-export async function reviseSalesTargetForCurrentUser(
-  input: ReviseSalesTargetInput
+export async function reviseSalesTargetForContext(
+  context: CrmAccessContext,
+  input: ReviseSalesTargetInput,
+  db?: CrmDb
 ): Promise<SalesTargetSummary> {
-  const context = await getCrmAccessContext();
-  if (!context) {
-    throw new CrmError({
-      code: "SALES_TARGET_AUTH_REQUIRED",
-      message: "Authentication required",
-      httpStatus: 401,
-    });
-  }
   assertManagePermission(context);
 
   if (validateSalesTargetReason(input.reason)) {
@@ -218,7 +235,7 @@ export async function reviseSalesTargetForCurrentUser(
     });
   }
 
-  const supabase = await phase5eClient();
+  const supabase = await phase5eClient(db);
   const { data, error } = await supabase.rpc("revise_sales_target", {
     p_target_id: input.targetId,
     p_expected_revision: input.expectedRevision,
@@ -234,17 +251,11 @@ export async function reviseSalesTargetForCurrentUser(
   return mapTarget(data as unknown as SalesTargetRow);
 }
 
-export async function lockSalesTargetForCurrentUser(
-  input: LockSalesTargetInput
+export async function lockSalesTargetForContext(
+  context: CrmAccessContext,
+  input: LockSalesTargetInput,
+  db?: CrmDb
 ): Promise<SalesTargetSummary> {
-  const context = await getCrmAccessContext();
-  if (!context) {
-    throw new CrmError({
-      code: "SALES_TARGET_AUTH_REQUIRED",
-      message: "Authentication required",
-      httpStatus: 401,
-    });
-  }
   assertManagePermission(context);
 
   if (validateSalesTargetReason(input.reason)) {
@@ -255,7 +266,7 @@ export async function lockSalesTargetForCurrentUser(
     });
   }
 
-  const supabase = await phase5eClient();
+  const supabase = await phase5eClient(db);
   const { data, error } = await supabase.rpc("lock_sales_target", {
     p_target_id: input.targetId,
     p_expected_revision: input.expectedRevision,
@@ -269,17 +280,11 @@ export async function lockSalesTargetForCurrentUser(
   return mapTarget(data as unknown as SalesTargetRow);
 }
 
-export async function reopenSalesTargetForCurrentUser(
-  input: ReopenSalesTargetInput
+export async function reopenSalesTargetForContext(
+  context: CrmAccessContext,
+  input: ReopenSalesTargetInput,
+  db?: CrmDb
 ): Promise<SalesTargetSummary> {
-  const context = await getCrmAccessContext();
-  if (!context) {
-    throw new CrmError({
-      code: "SALES_TARGET_AUTH_REQUIRED",
-      message: "Authentication required",
-      httpStatus: 401,
-    });
-  }
   assertManagePermission(context);
 
   if (validateSalesTargetReason(input.reason)) {
@@ -290,7 +295,7 @@ export async function reopenSalesTargetForCurrentUser(
     });
   }
 
-  const supabase = await phase5eClient();
+  const supabase = await phase5eClient(db);
   const { data, error } = await supabase.rpc("reopen_sales_target", {
     p_target_id: input.targetId,
     p_expected_revision: input.expectedRevision,
@@ -302,4 +307,46 @@ export async function reopenSalesTargetForCurrentUser(
   }
 
   return mapTarget(data as unknown as SalesTargetRow);
+}
+
+
+/* ---- browser wrappers: cookie context, cookie client, unchanged ---------- */
+
+export async function fetchSalesTargetsForCurrentUser(): Promise<
+  readonly SalesTargetSummary[]
+> {
+  return fetchSalesTargetsForContext(await requireSalesTargetContext());
+}
+
+export async function fetchSalesTargetEvents(
+  targetId: string
+): Promise<readonly SalesTargetEventSummary[]> {
+  return fetchSalesTargetEventsForContext(
+    await requireSalesTargetContext(),
+    targetId
+  );
+}
+
+export async function createSalesTargetForCurrentUser(
+  input: CreateSalesTargetInput
+): Promise<SalesTargetSummary> {
+  return createSalesTargetForContext(await requireSalesTargetContext(), input);
+}
+
+export async function reviseSalesTargetForCurrentUser(
+  input: ReviseSalesTargetInput
+): Promise<SalesTargetSummary> {
+  return reviseSalesTargetForContext(await requireSalesTargetContext(), input);
+}
+
+export async function lockSalesTargetForCurrentUser(
+  input: LockSalesTargetInput
+): Promise<SalesTargetSummary> {
+  return lockSalesTargetForContext(await requireSalesTargetContext(), input);
+}
+
+export async function reopenSalesTargetForCurrentUser(
+  input: ReopenSalesTargetInput
+): Promise<SalesTargetSummary> {
+  return reopenSalesTargetForContext(await requireSalesTargetContext(), input);
 }
