@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 9D-D1 COD order engine pgTAP
 
 begin;
-select plan(90);
+select plan(91);
 
 select has_table('public', 'commerce_orders', 'commerce_orders exists');
 select has_table('public', 'commerce_order_items', 'commerce_order_items exists');
