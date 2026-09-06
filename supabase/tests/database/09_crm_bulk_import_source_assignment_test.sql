@@ -898,7 +898,8 @@ select results_eq(
   'super admin direct confirm approves without manager submission'
 );
 
-select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
+-- The refusal belongs to the manager: restored after the blanket owner switch.
+select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
 
 select throws_ok(
   $$select public.confirm_lead_import_batch_direct(
@@ -1064,7 +1065,7 @@ select cmp_ok(
   'super admin can select assignment rules'
 );
 
-select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
+select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
 
 select results_eq(
   $$select count(*)::integer from public.lead_assignment_rules$$,
@@ -1136,7 +1137,10 @@ set local role authenticated;
 
 select set_config('request.jwt.claim.sub', 'd7777777-7777-7777-7777-777777777777', true);
 
-select lives_ok(
+-- NARROWED: the legacy management role lost leads.bulk_import, so this path
+-- is refused. Leaving it open would put bulk import one role assignment away
+-- from the owner-only restriction.
+select throws_ok(
   $$select public.create_lead_import_batch(
     'd7777777-0001-4000-8000-000000000001'::uuid,
     'mgmt.csv',
@@ -1144,7 +1148,9 @@ select lives_ok(
     'csv',
     450
   )$$,
-  'legacy management may create import batch'
+  '42501',
+  'CRM_IMPORT_PERMISSION_DENIED',
+  'legacy management may NOT create an import batch'
 );
 
 reset role;
