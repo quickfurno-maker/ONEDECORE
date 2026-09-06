@@ -28,6 +28,29 @@ interface LoginFormProps {
  * is presentation. If its JavaScript never loads, the form still submits and
  * login still works.
  *
+ * WHY THE CREDENTIAL FIELDS ARE NEVER `disabled`
+ *
+ * They were, while `isPending` was true, and that silently ate the login.
+ *
+ * A disabled control is not a SUCCESSFUL control: the HTML form-submission
+ * algorithm skips it when building the entry list. `onSubmit` sets `isPending`,
+ * React flushes that state synchronously for a discrete event, and the browser
+ * then serialises a form whose identifier and password inputs are disabled. What
+ * left the browser was `portal=admin` and nothing else.
+ *
+ * The server did exactly what it should with that: no identifier, no password,
+ * fail closed, "Invalid admin credentials." — so the message named the
+ * credential, and the credential was never sent.
+ *
+ * Production evidence: a direct POST to the deployed route with the same
+ * credential returned 303 to /admin, and after a browser attempt with the same
+ * credential `auth.users.last_sign_in_at` did not advance. The browser attempt
+ * was failing BEFORE Supabase was ever asked.
+ *
+ * `readOnly` gives the same "hands off, this is in flight" behaviour and keeps
+ * the field successful, so the values still travel. Only the submit button is
+ * disabled, which is what actually prevents a double submission.
+ *
  * TWO PORTALS, ONE FORM
  *
  * `portal` arrives already resolved from the server component, so the field
@@ -105,10 +128,15 @@ export function LoginForm({ portal, nextParam, hasError = false }: LoginFormProp
           required
           maxLength={isStaff ? 10 : 254}
           pattern={isStaff ? "[0-9]{10}" : undefined}
-          disabled={isPending}
+          /*
+           * `readOnly`, NEVER `disabled` — see the docblock. A disabled input is
+           * omitted from the native submission entirely, which is how a correct
+           * password came to be reported as invalid.
+           */
+          readOnly={isPending}
           placeholder={copy.identifierPlaceholder}
           aria-describedby={copy.identifierHelp ? "identifier-hint" : undefined}
-          className="mt-2 block min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3.5 py-2.5 text-base text-neutral-100 placeholder-neutral-500 transition-colors focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 disabled:opacity-50 sm:text-sm"
+          className="mt-2 block min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3.5 py-2.5 text-base text-neutral-100 placeholder-neutral-500 transition-colors focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 read-only:opacity-50 sm:text-sm"
         />
         {copy.identifierHelp && (
           <p id="identifier-hint" className="mt-2 text-[11px] leading-relaxed text-neutral-400">
@@ -131,15 +159,21 @@ export function LoginForm({ portal, nextParam, hasError = false }: LoginFormProp
           autoComplete="current-password"
           required
           maxLength={128}
-          disabled={isPending}
+          // Read-only while in flight, never disabled: a disabled password field
+          // is not submitted at all.
+          readOnly={isPending}
           placeholder="••••••••••••"
-          className="mt-2 block min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3.5 py-2.5 text-base text-neutral-100 placeholder-neutral-500 transition-colors focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 disabled:opacity-50 sm:text-sm"
+          className="mt-2 block min-h-11 w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3.5 py-2.5 text-base text-neutral-100 placeholder-neutral-500 transition-colors focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 read-only:opacity-50 sm:text-sm"
         />
       </div>
 
       <div>
         <button
           type="submit"
+          /*
+           * The button may safely be disabled: it submits no value of its own,
+           * and disabling it is what actually prevents a double submission.
+           */
           disabled={isPending}
           className="flex min-h-11 w-full items-center justify-center rounded-md bg-gradient-to-r from-amber-600 to-amber-500 px-4 py-3 text-xs font-bold uppercase tracking-widest text-neutral-950 transition-all hover:from-amber-500 hover:to-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
         >
