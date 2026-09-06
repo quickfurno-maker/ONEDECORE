@@ -357,6 +357,51 @@ grant execute on function public.get_project_high_level_status(uuid) to authenti
 -- Bodies are otherwise unchanged, and `create or replace` keeps the existing
 -- signature, ownership and grants.
 
+/*
+ * The Closed-Won repair queue, which was gated on role alone as well.
+ *
+ * Repairing a stuck materialisation creates a project. It is the same authority
+ * as assigning the Project Manager who will run it, so it is gated by the same
+ * permission — and the Sales Manager, who is not a project repair operator,
+ * loses it with the rest of the project control plane.
+ */
+create or replace function public.list_pending_closed_won_project_materializations()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid;
+begin
+  v_actor := auth.uid();
+  if v_actor is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  if not (select public.authorize('projects.assign_pm')) then
+    raise exception 'FORBIDDEN' using errcode = '42501';
+  end if;
+
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'quotation_version_id', qa.quotation_version_id,
+      'quotation_id', qa.quotation_id,
+      'quotation_acceptance_id', qa.id,
+      'lead_id', qa.lead_id,
+      'quotation_number', q.quotation_number,
+      'accepted_at', qa.accepted_at
+    ) order by qa.accepted_at desc)
+    from public.quotation_acceptances qa
+    join public.quotations q on q.id = qa.quotation_id
+    where not exists (
+      select 1 from public.projects p where p.quotation_acceptance_id = qa.id
+    )
+  ), '[]'::jsonb);
+end;
+$$;
+
 create or replace function public.list_assignable_project_managers()
 returns jsonb
 language plpgsql

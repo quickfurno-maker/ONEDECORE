@@ -1820,6 +1820,21 @@ select is(
 -- 8c222222 is the sales_manager, 8c111111 the owner, 8c666666 the assigned PM,
 -- 8c333333 a sales executive.
 
+-- The manager cannot read `projects`, so the expected values are resolved as
+-- postgres BEFORE the manager's session starts. Comparing the read model
+-- against a query the manager cannot run would compare it against null.
+select set_config('role', 'postgres', true);
+select set_config(
+  'test.phase8c_project_number',
+  (select project_number from public.projects where id = current_setting('test.phase8c_project')::uuid),
+  true
+);
+select set_config(
+  'test.phase8c_primary_pm',
+  (select primary_pm_id::text from public.projects where id = current_setting('test.phase8c_project')::uuid),
+  true
+);
+
 set local role authenticated;
 
 -- --- the grants themselves, from the manager's own session -------------------
@@ -1920,7 +1935,7 @@ select set_eq(
 select is(
   (public.get_project_high_level_status(current_setting('test.phase8c_project')::uuid)
      ->> 'project_number'),
-  (select project_number from public.projects where id = current_setting('test.phase8c_project')::uuid),
+  current_setting('test.phase8c_project_number'),
   'the project number is the real one'
 );
 select isnt(
@@ -2038,7 +2053,9 @@ select is(
   true,
   'the owner still reads the project event log'
 );
-select set_config('request.jwt.claim.sub', '8c666666-6666-6666-6666-666666666666', true);
+-- Whoever is CURRENTLY the primary PM, resolved above rather than assumed:
+-- this suite reassigns the project more than once.
+select set_config('request.jwt.claim.sub', current_setting('test.phase8c_primary_pm'), true);
 select is(
   (select count(*)::integer from public.projects
     where id = current_setting('test.phase8c_project')::uuid),

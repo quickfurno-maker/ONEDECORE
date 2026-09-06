@@ -17,7 +17,7 @@
 -- owner, and both halves are pinned below.
 
 begin;
-select plan(137);
+select plan(139);
 
 -- -----------------------------------------------------------------------------
 -- A reusable grant probe. Reads the real grant graph, including is_active, so a
@@ -202,29 +202,39 @@ select is(pg_temp.role_has('sales_executive', 'projects.read'), true, 'sales_exe
 
 -- The predicate rewrite: the manager branch is keyed to the NEW permission, and
 -- the operational predicate has no manager branch at all.
+/*
+ * HIGH-LEVEL STATUS IS A READ MODEL, NOT A WIDER ROW POLICY.
+ *
+ * `private.project_can_view` is deliberately untouched: every branch of it is
+ * keyed on `projects.read`, which the manager no longer holds, so they lose
+ * `projects`, `project_manager_assignments` and `project_events` by the
+ * revocation alone. Adding a `projects.read_high_level` branch there would have
+ * granted the whole ROW — RLS has no column half.
+ */
+select ok(
+  (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'private' and p.proname = 'project_can_view') not like '%read_high_level%',
+  'the row policy predicate was NOT widened to carry high-level status'
+);
 select is(
   (select count(*)::integer from pg_proc p
      join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'private' and p.proname = 'project_can_view_operational'),
-  1,
-  'private.project_can_view_operational exists'
+    where n.nspname = 'public'
+      and p.proname in ('list_project_high_level_status', 'get_project_high_level_status')),
+  2,
+  'the high-level read model exists as its own functions'
 );
 select ok(
   (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'private' and p.proname = 'project_can_view') like '%projects.read_high_level%',
-  'project_can_view keys the manager branch to projects.read_high_level'
+    where n.nspname = 'public' and p.proname = 'list_project_high_level_status')
+    like '%projects.read_high_level%',
+  'the high-level list checks the permission itself'
 );
 select ok(
   (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'private' and p.proname = 'project_can_view_operational') not like '%sales_manager%',
-  'the operational project predicate has no sales_manager branch'
-);
-select is(
-  (select count(*)::integer from pg_policies
-    where schemaname = 'public' and tablename = 'project_events'
-      and qual like '%project_can_view_operational%'),
-  1,
-  'project_events reads through the operational predicate'
+    where n.nspname = 'private' and p.proname = 'project_high_level_status_row')
+    not like '%project_events%',
+  'the read model never reaches the project event log'
 );
 
 -- The two staff directories that were gated on role alone.
@@ -247,6 +257,20 @@ select ok(
   (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.proname = 'list_assignable_designers') like '%project_design.staff%',
   'the assignable-designer directory requires the permission its operation requires'
+);
+select ok(
+  (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'list_pending_closed_won_project_materializations')
+    not like '%sales_manager%',
+  'the repair queue is no longer role-gated to sales_manager'
+);
+select ok(
+  (select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'list_pending_closed_won_project_materializations')
+    like '%projects.assign_pm%',
+  'the repair queue requires the authority it actually exercises'
 );
 
 -- =============================================================================

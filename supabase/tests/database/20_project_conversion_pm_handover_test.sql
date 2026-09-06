@@ -546,10 +546,13 @@ select is(
 );
 
 select set_config('request.jwt.claim.sub', '8a222222-2222-2222-2222-222222222222', true);
+-- NARROWED: the manager's project visibility is the high-level read model, not
+-- a row in `projects`. Every branch of private.project_can_view is keyed on
+-- projects.read, which the Sales Manager no longer holds.
 select is(
   (select count(*)::integer from public.projects where lead_id = '8abbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid),
-  1,
-  'SM can read project'
+  0,
+  'SM can NOT raw-read the project row'
 );
 
 select set_config('request.jwt.claim.sub', '8a333333-3333-3333-3333-333333333333', true);
