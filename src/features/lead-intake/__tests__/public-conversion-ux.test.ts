@@ -655,8 +655,8 @@ describe("the migration only enables truth", () => {
     );
     assert.equal(
       sorted.pop(),
-      "20260906120000_sales_manager_control_plane_hardening.sql",
-      "the newest migration is the Sales Manager control plane hardening"
+      "20260906180000_crm_super_admin_lead_tombstone.sql",
+      "the newest migration is the Super Admin enquiry tombstone"
     );
   });
 });

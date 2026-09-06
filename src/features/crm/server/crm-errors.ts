@@ -4,6 +4,17 @@ export type CrmErrorCode =
   | "AUTH_REQUIRED"
   | "PERMISSION_DENIED"
   | "LEAD_NOT_FOUND"
+  // Deleting an enquiry. Distinct codes so the UI can say what to do next
+  // without the caller ever seeing a table, a policy or a grant.
+  | "LEAD_DELETE_AUTH_REQUIRED"
+  | "LEAD_DELETE_PERMISSION_DENIED"
+  | "LEAD_DELETE_INVALID_INPUT"
+  | "LEAD_DELETE_CONFIRMATION_REQUIRED"
+  | "LEAD_DELETE_REASON_INVALID"
+  | "LEAD_DELETE_NOT_FOUND"
+  | "LEAD_DELETE_STALE"
+  | "LEAD_DELETE_CONVERTED_BLOCKED"
+  | "LEAD_ALREADY_DELETED"
   | "INVALID_TRANSITION"
   | "INVALID_ASSIGNMENT"
   | "ASSIGNMENT_CONFLICT"
@@ -182,6 +193,96 @@ export function crmErrorFromPostgresMessage(
       httpStatus: 404,
     },
   ];
+
+  /*
+   * ENQUIRY DELETION — matched FIRST.
+   *
+   * `CRM_LEAD_DELETE_NOT_FOUND` contains "not found" and
+   * `CRM_LEAD_DELETE_PERMISSION_DENIED` contains "denied", so without this
+   * running ahead of the generic branches below both would be flattened into
+   * LEAD_NOT_FOUND / PERMISSION_DENIED and the owner would be told the wrong
+   * thing about a destructive action.
+   */
+  const crmLeadDeleteTokenMap: ReadonlyArray<{
+    readonly token: string;
+    readonly code: CrmErrorCode;
+    readonly message: string;
+    readonly httpStatus: number;
+  }> = [
+    {
+      token: "crm_lead_delete_converted_blocked",
+      code: "LEAD_DELETE_CONVERTED_BLOCKED",
+      message:
+        "This enquiry has quotation or project history and cannot be deleted. Keep it in the CRM record and use the appropriate lifecycle status instead.",
+      httpStatus: 409,
+    },
+    {
+      token: "crm_lead_already_deleted",
+      code: "LEAD_ALREADY_DELETED",
+      message: "This enquiry has already been deleted.",
+      httpStatus: 409,
+    },
+    {
+      token: "crm_lead_delete_stale",
+      code: "LEAD_DELETE_STALE",
+      message:
+        "This enquiry changed while you were reading it. Reload and check it again before deleting.",
+      httpStatus: 409,
+    },
+    {
+      token: "crm_lead_delete_super_admin_required",
+      code: "LEAD_DELETE_PERMISSION_DENIED",
+      message: "You are not allowed to delete enquiries.",
+      httpStatus: 403,
+    },
+    {
+      token: "crm_lead_delete_permission_denied",
+      code: "LEAD_DELETE_PERMISSION_DENIED",
+      message: "You are not allowed to delete enquiries.",
+      httpStatus: 403,
+    },
+    {
+      token: "crm_lead_delete_auth_required",
+      code: "LEAD_DELETE_AUTH_REQUIRED",
+      message: "Sign in to continue.",
+      httpStatus: 401,
+    },
+    {
+      token: "crm_lead_delete_confirmation_required",
+      code: "LEAD_DELETE_CONFIRMATION_REQUIRED",
+      message: "Type DELETE exactly to confirm.",
+      httpStatus: 422,
+    },
+    {
+      token: "crm_lead_delete_reason_invalid",
+      code: "LEAD_DELETE_REASON_INVALID",
+      message: "Give a reason between 10 and 500 characters.",
+      httpStatus: 422,
+    },
+    {
+      token: "crm_lead_delete_not_found",
+      code: "LEAD_DELETE_NOT_FOUND",
+      message: "This enquiry is no longer available.",
+      httpStatus: 404,
+    },
+    {
+      token: "crm_lead_delete_invalid_input",
+      code: "LEAD_DELETE_INVALID_INPUT",
+      message: "Reload the enquiry and try again.",
+      httpStatus: 422,
+    },
+  ];
+
+  for (const entry of crmLeadDeleteTokenMap) {
+    if (normalised.includes(entry.token)) {
+      return new CrmError({
+        code: entry.code,
+        message: entry.message,
+        httpStatus: entry.httpStatus,
+        details: message,
+      });
+    }
+  }
 
   for (const entry of crmSlaTokenMap) {
     if (normalised.includes(entry.token)) {
