@@ -17,6 +17,7 @@ import { LeadDetailSourcePanel } from "@/features/crm/components/leads/LeadDetai
 import { LeadDetailTimeline } from "@/features/crm/components/leads/LeadDetailTimeline";
 import { LeadDetailQuotationPanel } from "@/features/crm/components/leads/LeadDetailQuotationPanel";
 import { LeadStatusTransitionPanel } from "@/features/crm/components/leads/LeadStatusTransitionPanel";
+import { LeadDeleteDangerZone } from "@/features/crm/components/leads/LeadDeleteDangerZone";
 import type { LeadStageCode } from "@/features/crm/contracts/lead-stages";
 import { isTerminalLeadStage } from "@/features/crm/contracts/lead-stages";
 import { deriveLeadScore } from "@/features/crm/contracts/lead-score-contracts";
@@ -267,6 +268,24 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
           />
         </aside>
       </div>
+
+      {/*
+        * Last on the page, and only for the owner.
+        *
+        * `canDeleteLeads` comes from `leads.delete`, which `super_admin` alone
+        * holds — never `admin.access`, `leads.manage` or `leads.transition`.
+        * Hiding it is presentation; the server action re-checks the flag and the
+        * database RPC checks the permission AND the role again.
+        */}
+      {context?.canDeleteLeads ? (
+        <LeadDeleteDangerZone
+          leadId={lead.id}
+          leadReference={lead.id}
+          clientName={lead.overview.submittedName}
+          currentStage={leadStatus.replaceAll("_", " ")}
+          expectedUpdatedAt={lead.overview.updatedAt}
+        />
+      ) : null}
     </div>
     </LeadActionsProvider>
   );

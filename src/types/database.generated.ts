@@ -3956,6 +3956,10 @@ export type Database = {
           closed_lost_reason_id: string | null
           contact_id: string
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          delete_reason: string | null
+          deletion_reference: string | null
           entry_method: string
           estimate_snapshot: Json | null
           id: string
@@ -3992,6 +3996,10 @@ export type Database = {
           closed_lost_reason_id?: string | null
           contact_id: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          delete_reason?: string | null
+          deletion_reference?: string | null
           entry_method: string
           estimate_snapshot?: Json | null
           id?: string
@@ -4028,6 +4036,10 @@ export type Database = {
           closed_lost_reason_id?: string | null
           contact_id?: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          delete_reason?: string | null
+          deletion_reference?: string | null
           entry_method?: string
           estimate_snapshot?: Json | null
           id?: string
@@ -7757,6 +7769,15 @@ export type Database = {
           p_campaign_version_id: string
           p_decision: string
           p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      delete_lead_tombstone: {
+        Args: {
+          p_confirmation: string
+          p_expected_updated_at: string
+          p_lead_id: string
           p_reason: string
         }
         Returns: Json
