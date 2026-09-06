@@ -769,8 +769,12 @@ select results_eq(
     from public.check_manual_lead_duplicate(
       '+919500000016', null, 'complete-home-interiors', 'apartment-2bhk', 'Whitefield'
     )$$,
-  $$values ('RECENT_SIMILAR'::text, false, true)$$,
-  'recent closed similar lead preview returns RECENT_SIMILAR with manager override'
+  -- NARROWED: `can_override` reflects the CALLER's authority, and this caller
+  -- is the Sales Manager. They still SEE the recent similar enquiry — which is
+  -- what lets them open the one that already exists — but the preview no longer
+  -- offers them a way past it.
+  $$values ('RECENT_SIMILAR'::text, false, false)$$,
+  'the manager sees RECENT_SIMILAR and is offered NO override'
 );
 
 select throws_ok(

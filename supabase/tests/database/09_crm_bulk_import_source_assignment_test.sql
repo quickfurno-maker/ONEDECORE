@@ -9,6 +9,9 @@ select plan(84);
 
 insert into auth.users (id, instance_id, email, aud, role) values
   ('d1111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', '5d-sa@example.test', 'authenticated', 'authenticated'),
+  -- A SECOND owner. Bulk import is owner-only now, and the approver may not
+  -- be the creator, so the separation of duties needs two of them.
+  ('d1111111-1111-1111-1111-111111111112', '00000000-0000-0000-0000-000000000000', '5d-sa2@example.test', 'authenticated', 'authenticated'),
   ('d2222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', '5d-mgr@example.test', 'authenticated', 'authenticated'),
   ('d3333333-3333-3333-3333-333333333333', '00000000-0000-0000-0000-000000000000', '5d-execa@example.test', 'authenticated', 'authenticated'),
   ('d4444444-4444-4444-4444-444444444444', '00000000-0000-0000-0000-000000000000', '5d-execb@example.test', 'authenticated', 'authenticated'),
@@ -20,6 +23,7 @@ insert into auth.users (id, instance_id, email, aud, role) values
 update public.profiles set status = 'active'
 where id in (
   'd1111111-1111-1111-1111-111111111111',
+  'd1111111-1111-1111-1111-111111111112',
   'd2222222-2222-2222-2222-222222222222',
   'd3333333-3333-3333-3333-333333333333',
   'd4444444-4444-4444-4444-444444444444',
@@ -31,6 +35,8 @@ where id in (
 
 insert into public.user_roles (user_id, role_id)
 select 'd1111111-1111-1111-1111-111111111111', id from public.roles where code = 'super_admin';
+insert into public.user_roles (user_id, role_id)
+select 'd1111111-1111-1111-1111-111111111112', id from public.roles where code = 'super_admin';
 insert into public.user_roles (user_id, role_id)
 select 'd2222222-2222-2222-2222-222222222222', id from public.roles where code = 'sales_manager';
 insert into public.user_roles (user_id, role_id)
@@ -268,8 +274,8 @@ select set_config(
 select results_eq(
   $$select status::text, created_by::text, file_type::text
     from public.lead_import_batches where id = current_setting('test.phase5d_mgr_batch')::uuid$$,
-  $$values ('draft'::text, 'd2222222-2222-2222-2222-222222222222'::text, 'csv'::text)$$,
-  'manager creates csv import batch in draft'
+  $$values ('draft'::text, 'd1111111-1111-1111-1111-111111111111'::text, 'csv'::text)$$,
+  'the owner creates a csv import batch in draft'
 );
 
 select results_eq(
@@ -703,7 +709,8 @@ select throws_ok(
   'cannot resubmit pending batch'
 );
 
-select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
+-- The Sales Manager is refused, which is the point of the assertion.
+select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
 
 select throws_ok(
   $$select public.approve_lead_import_batch(
@@ -714,6 +721,8 @@ select throws_ok(
   'CRM_IMPORT_APPROVE_DENIED',
   'manager cannot approve import batch'
 );
+
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 -- SA self-approve guard (creator cannot approve own submission)
 select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
@@ -761,7 +770,9 @@ select throws_ok(
   'batch creator cannot approve own submission'
 );
 
-select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
+-- A DIFFERENT owner approves: the batch's creator may never be its approver,
+-- and with bulk import owner-only both sides of that rule are owners now.
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111112', true);
 
 select set_config(
   'test.phase5d_approved_batch',
@@ -775,9 +786,11 @@ select set_config(
 select results_eq(
   $$select status::text, approval_kind::text, approved_by::text
     from public.lead_import_batches where id = current_setting('test.phase5d_approved_batch')::uuid$$,
-  $$values ('approved'::text, 'manager_submission'::text, 'd1111111-1111-1111-1111-111111111111'::text)$$,
-  'super admin approves manager batch with manager_submission kind'
+  $$values ('approved'::text, 'manager_submission'::text, 'd1111111-1111-1111-1111-111111111112'::text)$$,
+  'a second owner approves the batch with manager_submission kind'
 );
+
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 -- reject path on separate batch
 select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
