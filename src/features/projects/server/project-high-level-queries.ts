@@ -107,21 +107,42 @@ function toStatus(row: HighLevelRow): ProjectHighLevelStatus | null {
   };
 }
 
-/** Every project this caller may see the status of. Empty when refused. */
-export async function listProjectHighLevelStatus(): Promise<
-  readonly ProjectHighLevelStatus[]
-> {
+/**
+ * The read, with its failure kept distinct from its emptiness.
+ *
+ * `listProjectHighLevelStatus` below collapses both into `[]`, which is right
+ * for a page that renders a list and an empty state. It is wrong for a
+ * dashboard panel, where "no live projects" and "we could not read the
+ * projects" must not print the same thing. Callers that need to tell them
+ * apart use this; callers that do not keep the simpler signature.
+ */
+export type ProjectHighLevelStatusRead =
+  | { readonly status: "ok"; readonly rows: readonly ProjectHighLevelStatus[] }
+  | { readonly status: "unavailable" };
+
+export async function readProjectHighLevelStatus(): Promise<ProjectHighLevelStatusRead> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("list_project_high_level_status");
 
   if (error || !Array.isArray(data)) {
-    return [];
+    return { status: "unavailable" };
   }
 
-  return data.flatMap((row) => {
-    const status = toStatus((row ?? {}) as HighLevelRow);
-    return status ? [status] : [];
-  });
+  return {
+    status: "ok",
+    rows: data.flatMap((row) => {
+      const status = toStatus((row ?? {}) as HighLevelRow);
+      return status ? [status] : [];
+    }),
+  };
+}
+
+/** Every project this caller may see the status of. Empty when refused. */
+export async function listProjectHighLevelStatus(): Promise<
+  readonly ProjectHighLevelStatus[]
+> {
+  const result = await readProjectHighLevelStatus();
+  return result.status === "ok" ? result.rows : [];
 }
 
 /** One project's status. `null` when it does not exist or is refused. */
