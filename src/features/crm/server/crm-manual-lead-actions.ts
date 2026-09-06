@@ -93,10 +93,25 @@ function parseManualLeadFormInput(
     .map((entry) => String(entry))
     .filter((entry) => isAllowed(entry, LEAD_ROOM_CODES));
 
+  /*
+   * `executive_self` sends NULL, and that is not an omission.
+   *
+   * This branch used to overwrite the parsed value with `actorUserId`, which
+   * `validateManualLeadFormInput` then rejected with "Sales executives cannot
+   * choose another assignee" — so an executive could never create a manual lead
+   * at all. The three layers already agree without it:
+   *
+   *   parseAssigneeId   returns null for executive_self
+   *   the validator     requires null for executive_self
+   *   create_manual_lead_impl  self-assigns `v_final_assignee := v_actor` from
+   *                     auth.uid() whenever the caller is a sales executive,
+   *                     and refuses a p_assignee_id distinct from the actor
+   *
+   * The database is the assignment authority; the client states no identity.
+   * `"self"` for a manager or admin is a deliberate choice and still resolves.
+   */
   let assigneeId = parseAssigneeId(formData.get("assigneeId"), assigneeMode);
-  if (assigneeMode === "executive_self") {
-    assigneeId = actorUserId;
-  } else if (assigneeId === "self") {
+  if (assigneeMode !== "executive_self" && assigneeId === "self") {
     assigneeId = actorUserId;
   }
 
