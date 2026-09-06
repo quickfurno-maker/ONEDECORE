@@ -208,7 +208,9 @@ as $$
     'status', p.status,
     'client_display_name', coalesce(l.submitted_name, qa.accepted_by_name),
     'quotation_number', q.quotation_number,
-    'commercial_currency', qv.currency,
+    -- ONEDECORE quotes in INR only: there is no currency column to read,
+    -- and the handover display model already assumes the same constant.
+    'commercial_currency', 'INR',
     'commercial_grand_total_paise', qv.grand_total_paise,
     'current_project_manager', pm.display_name,
     'current_lead_designer', (
