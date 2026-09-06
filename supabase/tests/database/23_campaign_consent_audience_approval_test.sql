@@ -177,9 +177,19 @@ where id in (
 insert into public.user_roles (user_id, role_id)
 select '9a111111-1111-1111-1111-111111111111', id from public.roles where code = 'super_admin' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
--- Campaign authority moved to the owner, so the two campaign actors below
--- are owners. The separation-of-duties assertions they carry (a creator may
--- not approve their own draft) hold for any role and are unchanged.
+-- Campaign authority moved to the owner, so the two campaign actors below are
+-- owners.
+--
+-- BE PRECISE ABOUT WHAT CHANGED. `decide_campaign_version` has ALWAYS exempted
+-- super_admin from the self-approval guard:
+--
+--   if not private.has_role('super_admin') then ... CAMPAIGN_SELF_APPROVAL_DENIED
+--
+-- That exemption predates this PR and is not introduced by it. What this PR
+-- changed is who else can approve at all: no non-owner holds campaigns.approve
+-- any more. So the assertions below now pin the EXISTING owner behaviour rather
+-- than a separation-of-duties rule between two managers, because there are no
+-- longer two managers who could approve.
 select '9a222222-2222-2222-2222-222222222222', id from public.roles where code = 'super_admin' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
 select '9a222222-2222-2222-2222-222222222221', id from public.roles where code = 'super_admin' on conflict do nothing;
@@ -667,13 +677,16 @@ select lives_ok(
 );
 
 /*
- * The self-approval guard is explicitly skipped for super_admin:
+ * PRE-EXISTING BEHAVIOUR, NEWLY VISIBLE.
+ *
+ * The self-approval guard has always been skipped for super_admin:
  *
  *   if not private.has_role('super_admin') then ... CAMPAIGN_SELF_APPROVAL_DENIED
  *
- * Campaign authority is now the owner's alone, so that exemption is the
- * behaviour rather than an edge case, and it is asserted as such. No non-owner
- * holds campaigns.approve any more, which is what suite 49 pins.
+ * This PR did not introduce that exemption and does not change campaign product
+ * policy. It removed non-owner campaign approval authority, which is what makes
+ * the exemption the only path this test can now exercise. Suite 49 pins the
+ * grant side: no role but super_admin holds campaigns.approve.
  */
 select lives_ok(
   $$select public.decide_campaign_version(

@@ -161,120 +161,178 @@ where rp.role_id = r.id
   and p.code = 'leads.bulk_import';
 
 -- -----------------------------------------------------------------------------
--- E. Project visibility — high level for the manager, workspace for the rest
+-- E. Project visibility — a READ MODEL, not a wider row policy
 -- -----------------------------------------------------------------------------
 --
--- `private.project_can_view` gates three tables: `projects`,
--- `project_manager_assignments` and `project_events`. Its sales_manager branch
--- was keyed on `projects.read`, which this migration removes from the role — so
--- without the rewrite below a manager would simply lose project visibility
--- entirely rather than keep the sales-status read the owner asked for.
+-- WHY THE RLS PREDICATES ARE LEFT ALONE
 --
--- The branch is therefore re-keyed to `projects.read_high_level`. The other
--- branches are untouched: Super Admin, the crediting Sales Executive, the
--- primary Project Manager and the currently assigned Designer keep exactly the
--- access they have today.
+-- `private.project_can_view` gates `public.projects`, `project_manager_assignments`
+-- and `project_events`, and its branches are keyed on `projects.read`. Section C
+-- revokes that permission from sales_manager, so the manager loses raw access to
+-- all three tables by that revocation alone. Nothing here needs to change for
+-- the containment to hold, and the predicate is deliberately NOT touched.
 --
--- `create or replace` rather than drop/create: dropping a function silently
--- drops its grants, and these are called from RLS policies by `authenticated`.
-
-create or replace function private.project_can_view(p_project_id uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select exists (
-    select 1
-    from public.projects p
-    join public.quotation_acceptances qa on qa.id = p.quotation_acceptance_id
-    where p.id = p_project_id
-      and (
-        (
-          (select public.authorize('projects.read'))
-          and (
-            (select private.has_role('super_admin'))
-            or (
-              (select private.has_role('sales_executive'))
-              and qa.credited_sales_executive_id = auth.uid()
-            )
-            or (
-              (select private.has_role('project_manager'))
-              and p.primary_pm_id = auth.uid()
-            )
-          )
-        )
-        or (
-          -- Sales-status visibility. Deliberately its own permission: it must
-          -- not widen if `projects.read` is granted somewhere else later.
-          (select public.authorize('projects.read_high_level'))
-          and (select private.has_role('sales_manager'))
-        )
-        or (
-          (select public.authorize('project_design.read'))
-          and (select private.has_role('designer'))
-          and private.project_design_is_current_assigned_designer(p_project_id, auth.uid())
-        )
-      )
-  );
-$$;
+-- An earlier draft of this migration added a `projects.read_high_level` branch
+-- to that predicate instead. That was wrong, and worth recording why: RLS is
+-- ROW-level. A branch named "high level" inside a full-table policy grants the
+-- whole row — every column of `projects`, and the entire assignment history in
+-- `project_manager_assignments`. It would have read as a narrow grant while
+-- being a broad one.
+--
+-- So high-level status is a READ MODEL instead: two SECURITY DEFINER functions
+-- that return an explicit, enumerated set of fields and nothing else. What the
+-- Sales Manager can see is the list of keys below — not "whatever is in the
+-- table today, plus whatever a later migration adds to it".
 
 /*
- * The operational view of a project, which is NOT the manager's.
+ * The fields a Sales Manager may see about a project.
  *
- * `project_events` is the project's operational timeline — handover, design and
- * execution activity. High-level sales visibility means the project's identity,
- * client, stage, PM and dates; it does not mean reading the execution log. So
- * the events table moves to its own predicate, which is `project_can_view`
- * without the sales_manager branch.
+ * Enumerated one by one on purpose. `select *` or a row type would silently
+ * widen this the next time a column is added to `projects`, and the whole point
+ * of this function is that widening it must be a decision someone makes.
  *
- * Everyone else keeps exactly what they had.
+ * Names are resolved here because the function is SECURITY DEFINER: the manager
+ * gets the CURRENT Project Manager and lead Designer as status fields without
+ * `profiles` RLS being loosened and without any assignment history.
  */
-create or replace function private.project_can_view_operational(p_project_id uuid)
-returns boolean
+create or replace function private.project_high_level_status_row(p_project_id uuid)
+returns jsonb
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select exists (
-    select 1
-    from public.projects p
-    join public.quotation_acceptances qa on qa.id = p.quotation_acceptance_id
-    where p.id = p_project_id
-      and (
-        (
-          (select public.authorize('projects.read'))
-          and (
-            (select private.has_role('super_admin'))
-            or (
-              (select private.has_role('sales_executive'))
-              and qa.credited_sales_executive_id = auth.uid()
-            )
-            or (
-              (select private.has_role('project_manager'))
-              and p.primary_pm_id = auth.uid()
-            )
-          )
-        )
-        or (
-          (select public.authorize('project_design.read'))
-          and (select private.has_role('designer'))
-          and private.project_design_is_current_assigned_designer(p_project_id, auth.uid())
-        )
-      )
-  );
+  select jsonb_build_object(
+    'project_id', p.id,
+    'project_number', p.project_number,
+    'status', p.status,
+    'client_display_name', coalesce(l.submitted_name, qa.accepted_by_name),
+    'quotation_number', q.quotation_number,
+    'commercial_currency', qv.currency,
+    'commercial_grand_total_paise', qv.grand_total_paise,
+    'current_project_manager', pm.display_name,
+    'current_lead_designer', (
+      select d.display_name
+      from public.project_designer_assignments pda
+      join public.profiles d on d.id = pda.designer_id
+      where pda.project_id = p.id
+        and pda.assignment_role = 'lead_designer'
+        and pda.ended_at is null
+      order by pda.assigned_at desc
+      limit 1
+    ),
+    'created_at', p.created_at,
+    'handover_accepted_at', p.handover_accepted_at,
+    'design_state', dw.state,
+    'design_started_at', dw.started_at,
+    'design_completed_at', dw.completed_at,
+    'execution_state', ew.state,
+    'execution_initialization_status',
+      case
+        when not private.project_execution_entry_eligible(p.id) then 'not_eligible'
+        when ew.project_id is null then 'pending_initialization'
+        when ew.state = 'cancelled' then 'cancelled'
+        when ew.state = 'completed' then 'completed'
+        when ew.state = 'on_hold' then 'on_hold'
+        else 'active'
+      end,
+    'execution_updated_at', ew.updated_at,
+    'execution_completed_at', ew.completed_at
+  )
+  from public.projects p
+  join public.quotation_acceptances qa on qa.id = p.quotation_acceptance_id
+  left join public.leads l on l.id = p.lead_id
+  left join public.quotations q on q.id = p.accepted_quotation_id
+  left join public.quotation_versions qv on qv.id = p.accepted_quotation_version_id
+  left join public.profiles pm on pm.id = p.primary_pm_id
+  left join public.project_design_workflows dw on dw.project_id = p.id
+  left join public.project_execution_workflows ew on ew.project_id = p.id
+  where p.id = p_project_id;
 $$;
 
-alter function private.project_can_view_operational(uuid) owner to postgres;
-revoke all on function private.project_can_view_operational(uuid) from public, anon;
-grant execute on function private.project_can_view_operational(uuid) to authenticated;
+alter function private.project_high_level_status_row(uuid) owner to postgres;
+revoke all on function private.project_high_level_status_row(uuid) from public, anon, authenticated;
 
-drop policy if exists project_events_staff_read on public.project_events;
-create policy project_events_staff_read
-  on public.project_events for select to authenticated
-  using (private.project_can_view_operational(project_id));
+/*
+ * The high-level project list.
+ *
+ * Authority is the permission, checked here and nowhere else that matters:
+ * `projects.read_high_level` is held by super_admin and sales_manager and by no
+ * one else, so a role that loses it loses this function in the same breath.
+ * There is no role branch — a role list next to a permission check is how the
+ * two drift apart.
+ */
+create or replace function public.list_project_high_level_status()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_rows jsonb;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  if not (select public.authorize('projects.read_high_level')) then
+    raise exception 'FORBIDDEN' using errcode = '42501';
+  end if;
+
+  select coalesce(jsonb_agg(row_json order by created_at desc), '[]'::jsonb)
+    into v_rows
+  from (
+    select
+      private.project_high_level_status_row(p.id) as row_json,
+      p.created_at
+    from public.projects p
+  ) ordered;
+
+  return v_rows;
+end;
+$$;
+
+alter function public.list_project_high_level_status() owner to postgres;
+revoke all on function public.list_project_high_level_status() from public, anon;
+grant execute on function public.list_project_high_level_status() to authenticated;
+
+/* One project, same field set, same authority. */
+create or replace function public.get_project_high_level_status(p_project_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_row jsonb;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  if p_project_id is null then
+    raise exception 'INVALID_INPUT' using errcode = '22023';
+  end if;
+
+  if not (select public.authorize('projects.read_high_level')) then
+    raise exception 'FORBIDDEN' using errcode = '42501';
+  end if;
+
+  select private.project_high_level_status_row(p_project_id) into v_row;
+
+  if v_row is null then
+    raise exception 'PROJECT_NOT_FOUND' using errcode = 'P0002';
+  end if;
+
+  return v_row;
+end;
+$$;
+
+alter function public.get_project_high_level_status(uuid) owner to postgres;
+revoke all on function public.get_project_high_level_status(uuid) from public, anon;
+grant execute on function public.get_project_high_level_status(uuid) to authenticated;
 
 -- -----------------------------------------------------------------------------
 -- F. Staff directories that were gated on ROLE alone

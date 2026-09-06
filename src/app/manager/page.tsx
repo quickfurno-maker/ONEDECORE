@@ -47,6 +47,14 @@ const WORKSPACES: readonly { href: string; label: string; detail: string }[] = [
     detail: "Sales reporting and targets for your team.",
   },
   {
+    // Status only. Execution is the assigned Project Manager's, and the page
+    // this points at serves the manager a dedicated read model rather than the
+    // project workspace.
+    href: "/admin/projects",
+    label: "Project Status",
+    detail: "Where each live project has reached, and who is running it.",
+  },
+  {
     href: "/admin/attendance",
     label: "Attendance",
     detail: "Your own attendance and your team's.",

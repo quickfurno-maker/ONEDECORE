@@ -1808,5 +1808,252 @@ select is(
   'Denied completed resolve does not create additional snag evidence'
 );
 
+
+-- =============================================================================
+-- SALES MANAGER — high-level project status, and nothing else
+-- =============================================================================
+--
+-- These run as the REAL manager against the REAL predicates. Asserting that a
+-- grant exists proves the migration ran; asserting that a manager selecting
+-- `project_manager_assignments` gets zero rows proves the boundary holds.
+--
+-- 8c222222 is the sales_manager, 8c111111 the owner, 8c666666 the assigned PM,
+-- 8c333333 a sales executive.
+
+set local role authenticated;
+
+-- --- the grants themselves, from the manager's own session -------------------
+select set_config('request.jwt.claim.sub', '8c222222-2222-2222-2222-222222222222', true);
+
+select results_eq(
+  $$select (select public.authorize('projects.read_high_level'))$$,
+  array[true],
+  'SM holds projects.read_high_level'
+);
+select results_eq(
+  $$select (select public.authorize('projects.read'))$$,
+  array[false],
+  'SM does NOT hold projects.read'
+);
+select results_eq(
+  $$select (select public.authorize('projects.assign_pm'))$$,
+  array[false],
+  'SM does NOT hold projects.assign_pm'
+);
+select results_eq(
+  $$select (select public.authorize('project_design.read'))$$,
+  array[false],
+  'SM does NOT hold project_design.read'
+);
+select results_eq(
+  $$select (select public.authorize('project_design.staff'))$$,
+  array[false],
+  'SM does NOT hold project_design.staff'
+);
+select results_eq(
+  $$select (select public.authorize('project_execution.read'))$$,
+  array[false],
+  'SM does NOT hold project_execution.read'
+);
+select results_eq(
+  $$select (select public.authorize('project_execution.cancel'))$$,
+  array[false],
+  'SM does NOT hold project_execution.cancel'
+);
+
+-- --- containment: no raw operational rows, by RLS ----------------------------
+select is(
+  (select count(*)::integer from public.projects
+    where id = current_setting('test.phase8c_project')::uuid),
+  0,
+  'SM cannot raw-read the projects table'
+);
+select is(
+  (select count(*)::integer from public.project_manager_assignments
+    where project_id = current_setting('test.phase8c_project')::uuid),
+  0,
+  'SM cannot raw-read PM assignment history'
+);
+select is(
+  (select count(*)::integer from public.project_events
+    where project_id = current_setting('test.phase8c_project')::uuid),
+  0,
+  'SM cannot raw-read the project event log'
+);
+select is(
+  (select count(*)::integer from public.project_designer_assignments
+    where project_id = current_setting('test.phase8c_project')::uuid),
+  0,
+  'SM cannot raw-read designer assignment history'
+);
+
+-- --- the read model is what the manager actually gets ------------------------
+select lives_ok(
+  $$select public.list_project_high_level_status()$$,
+  'SM can call the high-level list'
+);
+select ok(
+  jsonb_array_length(public.list_project_high_level_status()) >= 1,
+  'the high-level list returns the project'
+);
+select lives_ok(
+  $$select public.get_project_high_level_status(current_setting('test.phase8c_project')::uuid)$$,
+  'SM can call the high-level detail'
+);
+
+-- Exactly the approved keys. A column added to `projects` later does not
+-- appear here unless somebody adds it here, which is the whole point.
+select set_eq(
+  $$select jsonb_object_keys(
+      public.get_project_high_level_status(current_setting('test.phase8c_project')::uuid)
+    )$$,
+  $$values ('project_id'), ('project_number'), ('status'), ('client_display_name'),
+           ('quotation_number'), ('commercial_currency'), ('commercial_grand_total_paise'),
+           ('current_project_manager'), ('current_lead_designer'), ('created_at'),
+           ('handover_accepted_at'), ('design_state'), ('design_started_at'),
+           ('design_completed_at'), ('execution_state'),
+           ('execution_initialization_status'), ('execution_updated_at'),
+           ('execution_completed_at')$$,
+  'the high-level detail exposes ONLY the approved keys'
+);
+
+select is(
+  (public.get_project_high_level_status(current_setting('test.phase8c_project')::uuid)
+     ->> 'project_number'),
+  (select project_number from public.projects where id = current_setting('test.phase8c_project')::uuid),
+  'the project number is the real one'
+);
+select isnt(
+  (public.get_project_high_level_status(current_setting('test.phase8c_project')::uuid)
+     ->> 'current_project_manager'),
+  null,
+  'the CURRENT project manager is shown safely, without users.read'
+);
+select isnt(
+  (public.get_project_high_level_status(current_setting('test.phase8c_project')::uuid)
+     ->> 'execution_initialization_status'),
+  null,
+  'execution high-level status is shown safely'
+);
+select ok(
+  (public.get_project_high_level_status(current_setting('test.phase8c_project')::uuid))
+    ? 'design_state',
+  'design high-level status is shown safely'
+);
+
+-- --- the control plane stays closed ------------------------------------------
+select throws_ok(
+  $$select public.list_pending_closed_won_project_materializations()$$,
+  '42501',
+  NULL,
+  'SM cannot list pending materializations'
+);
+select throws_ok(
+  $$select public.list_assignable_project_managers()$$,
+  '42501',
+  'FORBIDDEN',
+  'SM cannot list assignable Project Managers'
+);
+select throws_ok(
+  $$select public.list_assignable_designers()$$,
+  '42501',
+  'FORBIDDEN',
+  'SM cannot list assignable Designers'
+);
+select throws_ok(
+  $$select public.assign_project_manager(
+    current_setting('test.phase8c_project')::uuid,
+    '8c777777-7777-7777-7777-777777777777'::uuid,
+    'sm-assign-denied-highlevel'
+  )$$,
+  '42501',
+  'FORBIDDEN',
+  'SM cannot assign a Project Manager'
+);
+select throws_ok(
+  $$select public.set_project_lead_designer(
+    current_setting('test.phase8c_project')::uuid,
+    '8c555555-5555-5555-5555-555555555555'::uuid,
+    'sm-staff-denied-highlevel'
+  )$$,
+  '42501',
+  'FORBIDDEN',
+  'SM cannot staff a lead Designer'
+);
+select throws_ok(
+  $$select public.cancel_project_execution(
+    current_setting('test.phase8c_project')::uuid,
+    'Manager attempted cancellation after hardening',
+    'sm-cancel-denied-highlevel'
+  )$$,
+  '42501',
+  'FORBIDDEN',
+  'SM cannot cancel execution'
+);
+select throws_ok(
+  $$select public.get_project_design_high_level_status(
+    current_setting('test.phase8c_project')::uuid
+  )$$,
+  '42501',
+  'FORBIDDEN',
+  'SM cannot reach the full design status RPC'
+);
+select throws_ok(
+  $$select public.get_project_execution_high_level_status(
+    current_setting('test.phase8c_project')::uuid
+  )$$,
+  '42501',
+  'FORBIDDEN',
+  'SM cannot reach the full execution status RPC'
+);
+
+-- --- a role without the permission is refused --------------------------------
+select set_config('request.jwt.claim.sub', '8c333333-3333-3333-3333-333333333333', true);
+select throws_ok(
+  $$select public.list_project_high_level_status()$$,
+  '42501',
+  'FORBIDDEN',
+  'a role without projects.read_high_level is refused the list'
+);
+select throws_ok(
+  $$select public.get_project_high_level_status(
+    current_setting('test.phase8c_project')::uuid
+  )$$,
+  '42501',
+  'FORBIDDEN',
+  'a role without projects.read_high_level is refused the detail'
+);
+
+-- --- the roles that were NOT narrowed still see what they saw ----------------
+select set_config('request.jwt.claim.sub', '8c111111-1111-1111-1111-111111111111', true);
+select is(
+  (select count(*)::integer from public.projects
+    where id = current_setting('test.phase8c_project')::uuid),
+  1,
+  'the owner still reads the project row'
+);
+select is(
+  (select count(*)::integer from public.project_events
+    where project_id = current_setting('test.phase8c_project')::uuid) > 0,
+  true,
+  'the owner still reads the project event log'
+);
+select set_config('request.jwt.claim.sub', '8c666666-6666-6666-6666-666666666666', true);
+select is(
+  (select count(*)::integer from public.projects
+    where id = current_setting('test.phase8c_project')::uuid),
+  1,
+  'the assigned Project Manager still reads the project row'
+);
+select set_config('request.jwt.claim.sub', '8c333333-3333-3333-3333-333333333333', true);
+select is(
+  (select count(*)::integer from public.projects
+    where id = current_setting('test.phase8c_project')::uuid),
+  1,
+  'the credited Sales Executive still reads the project row'
+);
+
+reset role;
+
 select finish();
 rollback;

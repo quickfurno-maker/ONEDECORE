@@ -7945,6 +7945,10 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: Json
       }
+      get_project_high_level_status: {
+        Args: { p_project_id: string }
+        Returns: Json
+      }
       get_public_commerce_order_tracking_snapshot: {
         Args: { p_order_reference: string }
         Returns: Json
@@ -8044,6 +8048,10 @@ export type Database = {
       }
       list_pending_closed_won_project_materializations: {
         Args: never
+        Returns: Json
+      }
+      list_project_high_level_status: {
+        Args: Record<PropertyKey, never>
         Returns: Json
       }
       list_public_commerce_categories: { Args: never; Returns: Json }

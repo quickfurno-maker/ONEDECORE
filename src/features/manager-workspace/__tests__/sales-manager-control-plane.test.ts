@@ -42,8 +42,15 @@ const read = (rel: string) => readFileSync(join(root, rel), "utf8");
 const code = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
 
-/** The same idea for SQL, whose comments quote the branches they removed. */
-const sqlCode = (source: string) => source.replace(/--.*/g, "");
+/**
+ * The same idea for SQL, whose comments quote the branches they removed.
+ *
+ * Both comment forms: the migration explains its design in `/* ... *\/` blocks
+ * as well as `--` lines, and a refusal that trips on prose is a refusal that
+ * teaches you to write less prose.
+ */
+const sqlCode = (source: string) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--.*/g, "");
 
 const MIGRATION =
   "supabase/migrations/20260906120000_sales_manager_control_plane_hardening.sql";
@@ -491,8 +498,27 @@ describe("the migration removes what it says it removes", () => {
     assert.match(sql, /^-- ONEDECORE — Sales Manager control plane hardening/);
     assert.doesNotMatch(sql, /drop table/i);
     assert.doesNotMatch(sql, /drop function/i);
-    // `create or replace` keeps the grants a `drop` would silently take away.
-    assert.match(sql, /create or replace function private\.project_can_view\(/);
+    // `create or replace` throughout, so no grant is silently taken away.
+    assert.match(sql, /create or replace function/);
+  });
+
+  test("it does NOT widen any row policy to carry high-level status", () => {
+    /*
+     * An earlier draft added a `projects.read_high_level` branch to
+     * `private.project_can_view`. RLS is ROW-level: a branch named "high level"
+     * inside a full-table policy grants the whole row — every column of
+     * `projects`, and the entire history in `project_manager_assignments`.
+     *
+     * The manager loses those tables by losing `projects.read`, which every
+     * branch of that predicate is keyed on, and the predicate is left alone.
+     */
+    // Comments stripped: this section EXPLAINS the predicate it deliberately
+    // leaves alone, and naming a table in prose is not touching it.
+    const executable = sqlCode(sql);
+    assert.doesNotMatch(executable, /create or replace function private\.project_can_view\b/);
+    assert.doesNotMatch(executable, /create policy/i);
+    assert.doesNotMatch(executable, /project_events/);
+    assert.doesNotMatch(executable, /project_manager_assignments/);
   });
 
   test("every revoked code is named", () => {
@@ -558,22 +584,234 @@ describe("the migration removes what it says it removes", () => {
     assert.match(directories, /authorize\('project_design\.staff'\)/);
   });
 
-  test("project events move to the operational predicate", () => {
-    assert.match(sql, /create or replace function private\.project_can_view_operational/);
-    assert.match(sql, /using \(private\.project_can_view_operational\(project_id\)\)/);
-    const operational = sql.slice(
-      sql.indexOf("function private.project_can_view_operational"),
-      sql.indexOf("-- F. Staff directories")
+  test("high-level status is a read model with an ENUMERATED field set", () => {
+    assert.match(sql, /create or replace function public\.list_project_high_level_status\(\)/);
+    assert.match(sql, /create or replace function public\.get_project_high_level_status\(p_project_id uuid\)/);
+
+    const model = sqlCode(
+      sql.slice(sql.indexOf("-- E. Project visibility"), sql.indexOf("-- F. Staff"))
+    );
+
+    // Authority is the permission, checked in both entry points, with no role
+    // list beside it to drift out of step.
+    assert.equal(
+      (model.match(/authorize\('projects\.read_high_level'\)/g) ?? []).length,
+      2,
+      "both entry points must check the permission"
     );
     assert.ok(
-      !sqlCode(operational).includes("has_role('sales_manager')"),
-      "the operational predicate must have no manager branch"
+      !sqlCode(model).includes("has_role("),
+      "the read model must not carry a role list next to the permission"
     );
+
+    // Every field the manager may see, named one at a time. `select *` or a row
+    // type would widen this silently the next time a column is added.
+    for (const field of [
+      "project_id",
+      "project_number",
+      "status",
+      "client_display_name",
+      "quotation_number",
+      "commercial_grand_total_paise",
+      "current_project_manager",
+      "current_lead_designer",
+      "handover_accepted_at",
+      "design_state",
+      "execution_state",
+      "execution_initialization_status",
+    ]) {
+      assert.match(model, new RegExp(`'${field}'`), field);
+    }
+    assert.doesNotMatch(model, /select \*/);
+    assert.doesNotMatch(model, /%rowtype/);
+
+    // And what it must never reach.
+    for (const forbidden of [
+      "project_events",
+      "project_manager_assignments",
+      "project_design_evidence",
+      "project_design_deliverable_versions",
+      "project_execution_evidence",
+      "snag",
+    ]) {
+      assert.ok(
+        !model.includes(forbidden),
+        `the high-level read model must not touch ${forbidden}`
+      );
+    }
   });
 
   test("it applies no managed write and adds no delete path", () => {
     assert.doesNotMatch(sql, /delete from public\.leads/i);
     assert.doesNotMatch(sql, /deleted_at/i);
     assert.doesNotMatch(sql, /service_role/i);
+  });
+});
+
+/* ========================================================================== */
+/* 5. The project routes, which are where the boundary is actually felt        */
+/* ========================================================================== */
+
+const PROJECT_LIST_PAGE = "src/app/admin/projects/page.tsx";
+const PROJECT_DETAIL_PAGE = "src/app/admin/projects/[projectId]/page.tsx";
+const HIGH_LEVEL_QUERIES = "src/features/projects/server/project-high-level-queries.ts";
+const HIGH_LEVEL_CARD =
+  "src/features/projects/components/high-level/ProjectHighLevelStatusCard.tsx";
+
+describe("the project list page serves the manager its own read model", () => {
+  const page = read(PROJECT_LIST_PAGE);
+
+  test("a high-level-only caller is allowed in", () => {
+    /*
+     * Both routes previously denied unless `canReadProjects || canReadDesign`,
+     * so a Sales Manager who followed the Projects link — which the nav now
+     * shows them — landed on /auth/forbidden.
+     */
+    assert.match(page, /permissions\.canReadProjectsHighLevel/);
+    const branch = page.slice(page.indexOf("const highLevelOnly"));
+    assert.match(branch, /!permissions\.canReadProjects/);
+    assert.match(branch, /!permissions\.canReadDesign/);
+  });
+
+  test("the manager branch returns BEFORE any operational query runs", () => {
+    const branchAt = page.indexOf("if (highLevelOnly)");
+    const listProjectsAt = page.indexOf("await listProjects()");
+    const pendingAt = page.indexOf("listPendingProjectMaterializations()");
+    assert.ok(branchAt > 0, "the manager branch must exist");
+    assert.ok(branchAt < listProjectsAt, "the branch must precede listProjects");
+    assert.ok(branchAt < pendingAt, "the branch must precede the repair queue");
+    assert.match(page, /await listProjectHighLevelStatus\(\)/);
+  });
+
+  test("the manager is not a project repair operator", () => {
+    /*
+     * Repairing a stuck Closed-Won materialisation was gated on
+     * `isSuperAdmin || isSalesManager`. That made the manager a repair
+     * operator, which was never the role.
+     */
+    assert.doesNotMatch(code(page), /isSuperAdmin \|\| permissions\.isSalesManager/);
+    assert.doesNotMatch(code(page), /permissions\.isSalesManager/);
+    const managerBranch = page.slice(
+      page.indexOf("if (highLevelOnly)"),
+      page.indexOf("if (!permissions.canReadProjects")
+    );
+    for (const forbidden of [
+      "ProjectMaterializationRepairQueue",
+      "listPendingProjectMaterializations",
+      "listProjects(",
+    ]) {
+      assert.ok(
+        !managerBranch.includes(forbidden),
+        `the manager branch must not use ${forbidden}`
+      );
+    }
+  });
+
+  test("the owner keeps the repair queue", () => {
+    assert.match(page, /permissions\.isSuperAdmin\s*\?\s*\n?\s*await listPendingProjectMaterializations/);
+    assert.match(page, /<ProjectMaterializationRepairQueue/);
+  });
+});
+
+describe("the project detail page branches before the workspace is built", () => {
+  const page = read(PROJECT_DETAIL_PAGE);
+
+  test("the manager branch is explicit and comes first", () => {
+    const branchAt = page.indexOf("if (managerHighLevelOnly)");
+    assert.ok(branchAt > 0, "an explicit manager branch must exist");
+    assert.match(page, /await getProjectHighLevelStatus\(projectId\)/);
+    assert.match(page, /<ProjectHighLevelStatusCard/);
+
+    for (const operational of [
+      "getProjectHandoverDetail(projectId)",
+      "listAssignableProjectManagers()",
+      "getProjectDesignWorkspace(",
+      "getProjectExecutionWorkspace(",
+      "buildHandoverDisplayModel(",
+    ]) {
+      const at = page.indexOf(operational);
+      assert.ok(at > branchAt, `${operational} must run AFTER the manager branch`);
+    }
+  });
+
+  test("the manager branch reads nothing operational", () => {
+    const managerBranch = page.slice(
+      page.indexOf("if (managerHighLevelOnly)"),
+      page.indexOf("if (!permissions.canReadProjects")
+    );
+    for (const forbidden of [
+      "getProjectHandoverDetail",
+      "listAssignableProjectManagers",
+      "getProjectDesignWorkspace",
+      "getProjectExecutionWorkspace",
+      "ProjectHandoverWorkspace",
+      "ProjectDesignWorkspace",
+      "LiveProjectExecutionWorkspace",
+      "detail.assignments",
+      "detail.events",
+    ]) {
+      assert.ok(
+        !managerBranch.includes(forbidden),
+        `the manager branch must not touch ${forbidden}`
+      );
+    }
+  });
+
+  test("the broad roles keep the workspace they have today", () => {
+    // Unchanged below the branch: the owner, the assigned PM, the assigned
+    // designer and the credited sales executive all render exactly as before.
+    assert.match(page, /<ProjectHandoverWorkspace/);
+    assert.match(page, /<ProjectDesignWorkspace/);
+    assert.match(page, /<LiveProjectExecutionWorkspace/);
+    assert.match(page, /const highLevelOnly = role === "sales_executive"/);
+  });
+});
+
+describe("the high-level read model carries no authority of its own", () => {
+  test("it calls the RPC and maps an explicit field list", () => {
+    const src = read(HIGH_LEVEL_QUERIES);
+    assert.match(src, /rpc\("list_project_high_level_status"\)/);
+    assert.match(src, /rpc\("get_project_high_level_status"/);
+    // No service role, and no second permission check to drift from the RPC's.
+    assert.doesNotMatch(src, /service_role|createAdminClient/);
+    assert.doesNotMatch(code(src), /authorize\(/);
+  });
+
+  test("the status card renders no control at all", () => {
+    const card = code(read(HIGH_LEVEL_CARD));
+    for (const control of [
+      "<button",
+      "<form",
+      "onClick",
+      "action=",
+      "canAssign",
+      "canCancel",
+      "canStaff",
+      "useState",
+    ]) {
+      assert.ok(!card.includes(control), `the status card must not contain ${control}`);
+    }
+  });
+});
+
+describe("the manager home offers Project Status", () => {
+  test("it links the status page and nothing operational", () => {
+    const page = read(MANAGER_PAGE);
+    assert.match(page, /"\/admin\/projects"/);
+    assert.match(page, /Project Status/);
+    // Only the LINKS matter here: "assign enquiries" is the manager's own job
+    // and appears in the Enquiries description.
+    const hrefs = [...page.matchAll(/href: "([^"]+)"/g)].map((match) => match[1]!);
+    assert.deepEqual(
+      hrefs.filter((href) => href.startsWith("/admin/projects")),
+      ["/admin/projects"],
+      "the only project link is the status list"
+    );
+    for (const href of hrefs) {
+      assert.ok(
+        !/repair|assign|cancel|staff|execution/i.test(href),
+        `the manager home must not link ${href}`
+      );
+    }
   });
 });

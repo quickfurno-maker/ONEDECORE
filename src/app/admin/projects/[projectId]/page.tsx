@@ -16,6 +16,8 @@ import {
   getProjectExecutionHighLevelStatus,
   getProjectExecutionWorkspace,
 } from "@/features/projects/server/project-execution-queries";
+import { getProjectHighLevelStatus } from "@/features/projects/server/project-high-level-queries";
+import { ProjectHighLevelStatusCard } from "@/features/projects/components/high-level/ProjectHighLevelStatusCard";
 import { buildHandoverDisplayModel } from "@/features/projects/handover/ui/build-handover-display-model";
 import { ProjectHandoverWorkspace } from "@/features/projects/components/handover/ProjectHandoverWorkspace";
 import { ProjectDesignWorkspace } from "@/features/projects/components/design/ProjectDesignWorkspace";
@@ -42,14 +44,55 @@ export default async function AdminProjectDetailPage({
       loginPortalHref(DEFAULT_LOGIN_PORTAL, `/admin/projects/${projectId}`)
     );
   }
-  const [permissions, detail] = await Promise.all([
-    probeProjectPermissions(),
-    getProjectHandoverDetail(projectId),
-  ]);
+  const permissions = await probeProjectPermissions();
+
+  /*
+   * THE SALES MANAGER BRANCH, TAKEN BEFORE THE WORKSPACE IS BUILT AT ALL.
+   *
+   * Everything below this point reads the operational project: the handover
+   * detail with its assignment and event history, the assignable-PM directory,
+   * the design and execution workspaces. A Sales Manager holds none of the
+   * permissions those need, so the queries would return nothing — but the
+   * important part is that they are never asked. The manager's page is built
+   * from one narrow read model and returns here.
+   *
+   * `getProjectHandoverDetail` in particular is NOT called: it carries the
+   * assignment history and the project event log, and the fact that the old
+   * high-level mode fetched them and then discarded them in the markup is
+   * exactly the kind of "narrow in the UI, broad underneath" this change is
+   * removing.
+   */
+  const managerHighLevelOnly =
+    !permissions.canReadProjects &&
+    !permissions.canReadDesign &&
+    permissions.canReadProjectsHighLevel;
+
+  if (managerHighLevelOnly) {
+    const status = await getProjectHighLevelStatus(projectId);
+    if (!status) {
+      notFound();
+    }
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-100">
+            {status.projectNumber}
+          </h1>
+          <p className="mt-1 text-xs text-neutral-400">
+            Project status for sales. Read only.
+          </p>
+        </div>
+        <ProjectHighLevelStatusCard project={status} />
+      </div>
+    );
+  }
 
   if (!permissions.canReadProjects && !permissions.canReadDesign) {
     redirect("/auth/forbidden");
   }
+
+  const detail = await getProjectHandoverDetail(projectId);
 
   if (!detail) {
     notFound();
