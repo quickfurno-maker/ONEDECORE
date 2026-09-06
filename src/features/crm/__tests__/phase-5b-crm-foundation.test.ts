@@ -112,13 +112,23 @@ describe("Phase 5B CRM permission constants", () => {
       ),
       "utf8"
     );
-    const migrationSql = `${migration11}\n${migration14}\n${migration15}\n${migration16}\n${migration45}`;
+    // `leads.delete` is declared by the Sales Manager control plane hardening,
+    // not by a CRM foundation migration: deleting an enquiry is an owner
+    // authority that arrived with the role boundary, not with the CRM itself.
+    const migration59 = readFileSync(
+      join(
+        root,
+        "supabase/migrations/20260906120000_sales_manager_control_plane_hardening.sql"
+      ),
+      "utf8"
+    );
+    const migrationSql = `${migration11}\n${migration14}\n${migration15}\n${migration16}\n${migration45}\n${migration59}`;
 
     for (const code of CRM_PERMISSION_CODES) {
       assert.match(migrationSql, new RegExp(`'${code}'`));
     }
 
-    assert.equal(CRM_PERMISSION_CODES.length, 22);
+    assert.equal(CRM_PERMISSION_CODES.length, 23);
   });
 
   test("canonical and legacy role codes are declared", () => {

@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 9D-D1 COD order engine pgTAP
 
 begin;
-select plan(90);
+select plan(91);
 
 select has_table('public', 'commerce_orders', 'commerce_orders exists');
 select has_table('public', 'commerce_order_items', 'commerce_order_items exists');
@@ -583,9 +583,16 @@ set local role authenticated;
 select is((select count(*)::integer from public.commerce_orders), 0, 'sales_executive sees zero orders');
 reset role;
 
-select set_config('request.jwt.claims', '{"sub":"9d222222-2222-2222-2222-222222222222","role":"authenticated"}', true);
+-- NARROWED: the Sales Manager lost commerce.read, so the reader here is the
+-- owner. The manager's own denial is asserted immediately after.
+select set_config('request.jwt.claims', '{"sub":"9d111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 set local role authenticated;
 select ok((select count(*)::integer from public.commerce_orders) >= 1, 'commerce.read staff can select orders');
+reset role;
+
+select set_config('request.jwt.claims', '{"sub":"9d222222-2222-2222-2222-222222222222","role":"authenticated"}', true);
+set local role authenticated;
+select is((select count(*)::integer from public.commerce_orders), 0, 'sales_manager sees zero orders');
 reset role;
 
 set local role anon;

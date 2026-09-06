@@ -13,10 +13,11 @@ select is(
     join public.roles r on r.id = rp.role_id
     join public.permissions p on p.id = rp.permission_id
     where p.code in ('campaigns.execute', 'campaigns.pause', 'campaigns.metrics.read')
+      -- NARROWED: campaign execution is the owner's.
       and r.code in ('super_admin', 'sales_manager')
   ),
-  6,
-  'SA/SM receive three 9C-B permissions'
+  3,
+  'the owner alone receives the three 9C-B permissions'
 );
 
 select is(
@@ -126,7 +127,9 @@ where id in (
 insert into public.user_roles (user_id, role_id)
 select '9c111111-1111-1111-1111-111111111111', id from public.roles where code = 'super_admin' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
-select '9c222222-2222-2222-2222-222222222222', id from public.roles where code = 'sales_manager' on conflict do nothing;
+-- Campaign execution moved to the owner, so this actor is an owner. The
+-- state-machine assertions it carries are role-independent.
+select '9c222222-2222-2222-2222-222222222222', id from public.roles where code = 'super_admin' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
 select '9c333333-3333-3333-3333-333333333333', id from public.roles where code = 'sales_executive' on conflict do nothing;
 
@@ -330,9 +333,12 @@ select lives_ok(
     (select id from public.campaign_versions where title = 'Meta Diwali v1' and status = 'approved' limit 1),
     '9c000000-0000-0000-0000-000000000051'
   )$$,
-  'SM can execute approved version'
+  'the owner can execute an approved version'
 );
 
+-- The refusal needs a NON-OWNER actor now that campaign execution is the
+-- owner's: the sales executive is the one who must be turned away.
+select set_config('request.jwt.claims', '{"sub":"9c333333-3333-3333-3333-333333333333","role":"authenticated"}', true);
 select throws_ok(
   $$select public.cancel_campaign_run(
     (select id from public.campaign_runs where requested_by = '9c222222-2222-2222-2222-222222222222' order by created_at desc limit 1),
@@ -340,8 +346,9 @@ select throws_ok(
   )$$,
   '42501',
   NULL,
-  'SM cannot cancel'
+  'a non-owner cannot cancel a campaign run'
 );
+select set_config('request.jwt.claims', '{"sub":"9c222222-2222-2222-2222-222222222222","role":"authenticated"}', true);
 
 select set_config('request.jwt.claims', '{"sub":"9c111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 

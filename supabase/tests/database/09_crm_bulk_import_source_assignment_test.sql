@@ -9,6 +9,9 @@ select plan(84);
 
 insert into auth.users (id, instance_id, email, aud, role) values
   ('d1111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', '5d-sa@example.test', 'authenticated', 'authenticated'),
+  -- A SECOND owner. Bulk import is owner-only now, and the approver may not
+  -- be the creator, so the separation of duties needs two of them.
+  ('d1111111-1111-1111-1111-111111111112', '00000000-0000-0000-0000-000000000000', '5d-sa2@example.test', 'authenticated', 'authenticated'),
   ('d2222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', '5d-mgr@example.test', 'authenticated', 'authenticated'),
   ('d3333333-3333-3333-3333-333333333333', '00000000-0000-0000-0000-000000000000', '5d-execa@example.test', 'authenticated', 'authenticated'),
   ('d4444444-4444-4444-4444-444444444444', '00000000-0000-0000-0000-000000000000', '5d-execb@example.test', 'authenticated', 'authenticated'),
@@ -20,6 +23,7 @@ insert into auth.users (id, instance_id, email, aud, role) values
 update public.profiles set status = 'active'
 where id in (
   'd1111111-1111-1111-1111-111111111111',
+  'd1111111-1111-1111-1111-111111111112',
   'd2222222-2222-2222-2222-222222222222',
   'd3333333-3333-3333-3333-333333333333',
   'd4444444-4444-4444-4444-444444444444',
@@ -31,6 +35,8 @@ where id in (
 
 insert into public.user_roles (user_id, role_id)
 select 'd1111111-1111-1111-1111-111111111111', id from public.roles where code = 'super_admin';
+insert into public.user_roles (user_id, role_id)
+select 'd1111111-1111-1111-1111-111111111112', id from public.roles where code = 'super_admin';
 insert into public.user_roles (user_id, role_id)
 select 'd2222222-2222-2222-2222-222222222222', id from public.roles where code = 'sales_manager';
 insert into public.user_roles (user_id, role_id)
@@ -67,18 +73,21 @@ select results_eq(
   'super_admin has leads.bulk_import'
 );
 
+-- NARROWED: only the owner may load enquiries in bulk.
 select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
 select results_eq(
   $$select (select private.has_permission('leads.bulk_import'))$$,
-  array[true],
-  'sales_manager has leads.bulk_import'
+  array[false],
+  'sales_manager does NOT have leads.bulk_import'
 );
 
+-- NARROWED: the legacy management role mirrors Sales Manager breadth, so
+-- leaving it here would put bulk import one role assignment away.
 select set_config('request.jwt.claim.sub', 'd7777777-7777-7777-7777-777777777777', true);
 select results_eq(
   $$select (select private.has_permission('leads.bulk_import'))$$,
-  array[true],
-  'legacy management has leads.bulk_import'
+  array[false],
+  'legacy management does NOT have leads.bulk_import'
 );
 
 select set_config('request.jwt.claim.sub', 'd3333333-3333-3333-3333-333333333333', true);
@@ -238,11 +247,14 @@ select results_eq(
 );
 
 -- =============================================================================
+-- NARROWED: bulk enquiry import is the owner's, so every actor in the
+-- import journey below is the owner. The permission probes above already
+-- assert that the Sales Manager and the legacy management role are refused.
 -- Batch create + idempotency
 -- =============================================================================
 
 set local role authenticated;
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_mgr_batch',
@@ -262,8 +274,8 @@ select set_config(
 select results_eq(
   $$select status::text, created_by::text, file_type::text
     from public.lead_import_batches where id = current_setting('test.phase5d_mgr_batch')::uuid$$,
-  $$values ('draft'::text, 'd2222222-2222-2222-2222-222222222222'::text, 'csv'::text)$$,
-  'manager creates csv import batch in draft'
+  $$values ('draft'::text, 'd1111111-1111-1111-1111-111111111111'::text, 'csv'::text)$$,
+  'the owner creates a csv import batch in draft'
 );
 
 select results_eq(
@@ -326,7 +338,7 @@ select throws_ok(
 -- Mapping + rows staging
 -- =============================================================================
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select lives_ok(
   $$select public.replace_lead_import_mapping(
@@ -463,7 +475,7 @@ select set_config(
   true
 );
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select public.replace_lead_import_rows(
   current_setting('test.phase5d_validated_batch')::uuid,
@@ -537,7 +549,7 @@ select throws_ok(
 -- Duplicate evaluation — bulk import never grants override
 -- =============================================================================
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_active_seed',
@@ -563,7 +575,7 @@ update public.crm_sla_clocks
 set first_contact_attempt_at = clock_timestamp()
 where lead_id = current_setting('test.phase5d_active_seed')::uuid;
 set local role authenticated;
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
 
 select public.transition_lead_status(
@@ -664,7 +676,7 @@ select results_eq(
 -- Batch state machine — submit / approve / reject
 -- =============================================================================
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_submit_rev',
@@ -697,6 +709,7 @@ select throws_ok(
   'cannot resubmit pending batch'
 );
 
+-- The Sales Manager is refused, which is the point of the assertion.
 select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
 
 select throws_ok(
@@ -708,6 +721,8 @@ select throws_ok(
   'CRM_IMPORT_APPROVE_DENIED',
   'manager cannot approve import batch'
 );
+
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 -- SA self-approve guard (creator cannot approve own submission)
 select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
@@ -755,7 +770,9 @@ select throws_ok(
   'batch creator cannot approve own submission'
 );
 
-select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
+-- A DIFFERENT owner approves: the batch's creator may never be its approver,
+-- and with bulk import owner-only both sides of that rule are owners now.
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111112', true);
 
 select set_config(
   'test.phase5d_approved_batch',
@@ -769,12 +786,14 @@ select set_config(
 select results_eq(
   $$select status::text, approval_kind::text, approved_by::text
     from public.lead_import_batches where id = current_setting('test.phase5d_approved_batch')::uuid$$,
-  $$values ('approved'::text, 'manager_submission'::text, 'd1111111-1111-1111-1111-111111111111'::text)$$,
-  'super admin approves manager batch with manager_submission kind'
+  $$values ('approved'::text, 'manager_submission'::text, 'd1111111-1111-1111-1111-111111111112'::text)$$,
+  'a second owner approves the batch with manager_submission kind'
 );
 
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
+
 -- reject path on separate batch
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_reject_batch',
@@ -879,6 +898,7 @@ select results_eq(
   'super admin direct confirm approves without manager submission'
 );
 
+-- The refusal belongs to the manager: restored after the blanket owner switch.
 select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
 
 select throws_ok(
@@ -887,7 +907,10 @@ select throws_ok(
     current_setting('test.phase5d_direct_rev')::integer
   )$$,
   '42501',
-  'CRM_IMPORT_DIRECT_CONFIRM_SA_ONLY',
+  -- The manager is now stopped EARLIER, at the bulk-import permission gate, so
+  -- they never reach the Super-Admin-only check inside the function. A refusal
+  -- before the operation is a stronger refusal than one inside it.
+  'CRM_IMPORT_PERMISSION_DENIED',
   'manager cannot direct-confirm import batch'
 );
 
@@ -989,7 +1012,7 @@ select results_eq(
 -- RLS visibility
 -- =============================================================================
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select results_eq(
   $$select count(*)::integer from public.lead_import_batches where id = current_setting('test.phase5d_mgr_batch')::uuid$$,
@@ -1021,7 +1044,7 @@ select results_eq(
   'sales executive cannot select import batch'
 );
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select results_eq(
   $$select count(*)::integer from public.lead_import_rows where batch_id = current_setting('test.phase5d_mgr_batch')::uuid$$,
@@ -1057,7 +1080,7 @@ select results_eq(
 -- Cancel + terminal state guards
 -- =============================================================================
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_cancel_batch',
@@ -1117,7 +1140,10 @@ set local role authenticated;
 
 select set_config('request.jwt.claim.sub', 'd7777777-7777-7777-7777-777777777777', true);
 
-select lives_ok(
+-- NARROWED: the legacy management role lost leads.bulk_import, so this path
+-- is refused. Leaving it open would put bulk import one role assignment away
+-- from the owner-only restriction.
+select throws_ok(
   $$select public.create_lead_import_batch(
     'd7777777-0001-4000-8000-000000000001'::uuid,
     'mgmt.csv',
@@ -1125,7 +1151,9 @@ select lives_ok(
     'csv',
     450
   )$$,
-  'legacy management may create import batch'
+  '42501',
+  'CRM_IMPORT_PERMISSION_DENIED',
+  'legacy management may NOT create an import batch'
 );
 
 reset role;
@@ -1163,7 +1191,7 @@ select results_eq(
   'super admin can deactivate assignment rule'
 );
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_reusable_seed',
@@ -1282,7 +1310,7 @@ select results_eq(
 -- Mapping edit from ready_for_review rewinds to draft
 -- =============================================================================
 
-select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', 'd1111111-1111-1111-1111-111111111111', true);
 
 select set_config(
   'test.phase5d_edit_batch',

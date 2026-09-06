@@ -2,6 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getPublicSupabaseEnv } from "@/config/env";
 import { DEFAULT_LOGIN_PORTAL } from "@/features/staff-admin/contracts/login-portal";
+import {
+  ADMIN_HOME,
+  isSafeStaffRedirect,
+} from "@/features/manager-workspace/contracts/manager-home";
 import type { Database } from "@/types/database.generated";
 
 /**
@@ -163,9 +167,10 @@ export async function updateSession(
   // Redirect authenticated staff away from login form to admin portal
   if (pathname === "/auth/login" && isAuthenticated) {
     const nextParam = request.nextUrl.searchParams.get("next");
-    const safeTarget = nextParam && nextParam.startsWith("/admin") && !nextParam.startsWith("/admin//")
-      ? nextParam
-      : "/admin";
+    // The same allowlist the server helper uses, imported rather than repeated:
+    // `/manager` is a real staff destination now, and a second copy of this rule
+    // is how one of them ends up looser than the other.
+    const safeTarget = isSafeStaffRedirect(nextParam) ? nextParam! : ADMIN_HOME;
 
     return copySupabaseResponseState(
       NextResponse.redirect(new URL(safeTarget, request.url))

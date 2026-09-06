@@ -905,9 +905,21 @@ describe("redirects keep the PUBLIC origin behind the proxy", () => {
       !src.includes("nextUrl.origin"),
       "every redirect must be based on effectiveRequestOrigin"
     );
-    // And the helper is what they use.
-    const redirects = src.match(/new URL\([^)]*effectiveRequestOrigin\(request\)\)/g) ?? [];
-    assert.ok(redirects.length >= 3, `expected 3 redirect bases, found ${redirects.length}`);
+    /*
+     * And the helper is what they use. Matched across newlines: a redirect
+     * whose destination is computed by a call of its own is still a redirect,
+     * and the previous single-line pattern silently stopped counting one the
+     * moment that happened.
+     */
+    const urlCalls = src.match(/new URL\(/g) ?? [];
+    const basedOnHelper =
+      src.match(/new URL\([\s\S]{0,160}?effectiveRequestOrigin\(request\)/g) ?? [];
+    assert.ok(urlCalls.length >= 4, `expected the redirects, found ${urlCalls.length}`);
+    assert.equal(
+      basedOnHelper.length,
+      urlCalls.length,
+      "every URL this module builds must be based on the public origin helper"
+    );
   });
 });
 

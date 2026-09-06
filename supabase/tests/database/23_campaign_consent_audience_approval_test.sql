@@ -23,10 +23,11 @@ select is(
     where p.code in (
       'campaigns.read', 'campaigns.draft', 'campaigns.request_approval', 'campaigns.approve', 'marketing_consents.manage'
     )
+    -- NARROWED: campaigns are the owner's control plane.
     and r.code in ('super_admin', 'sales_manager')
   ),
-  10,
-  'SA/SM receive all five Phase 9A permissions'
+  5,
+  'the owner alone receives all five Phase 9A permissions'
 );
 
 select is(
@@ -176,9 +177,22 @@ where id in (
 insert into public.user_roles (user_id, role_id)
 select '9a111111-1111-1111-1111-111111111111', id from public.roles where code = 'super_admin' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
-select '9a222222-2222-2222-2222-222222222222', id from public.roles where code = 'sales_manager' on conflict do nothing;
+-- Campaign authority moved to the owner, so the two campaign actors below are
+-- owners.
+--
+-- BE PRECISE ABOUT WHAT CHANGED. `decide_campaign_version` has ALWAYS exempted
+-- super_admin from the self-approval guard:
+--
+--   if not private.has_role('super_admin') then ... CAMPAIGN_SELF_APPROVAL_DENIED
+--
+-- That exemption predates this PR and is not introduced by it. What this PR
+-- changed is who else can approve at all: no non-owner holds campaigns.approve
+-- any more. So the assertions below now pin the EXISTING owner behaviour rather
+-- than a separation-of-duties rule between two managers, because there are no
+-- longer two managers who could approve.
+select '9a222222-2222-2222-2222-222222222222', id from public.roles where code = 'super_admin' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
-select '9a222222-2222-2222-2222-222222222221', id from public.roles where code = 'sales_manager' on conflict do nothing;
+select '9a222222-2222-2222-2222-222222222221', id from public.roles where code = 'super_admin' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
 select '9a333333-3333-3333-3333-333333333333', id from public.roles where code = 'sales_executive' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
@@ -631,14 +645,14 @@ select is(
 );
 
 -- ----------------------------------------------------------------------------
--- SM self-approval denied; other SM and SA may approve
+-- Existing owner self-approval behaviour; a second decision is refused
 -- ----------------------------------------------------------------------------
 select set_config('request.jwt.claims', '{"sub":"9a222222-2222-2222-2222-222222222222","role":"authenticated"}', true);
 
 select lives_ok(
   $$select public.create_campaign_draft(
-    'SM own campaign',
-    'SM own v1',
+    'Owner own campaign',
+    'Owner own v1',
     'broad_public',
     array['meta_ads'],
     null,
@@ -650,7 +664,7 @@ select lives_ok(
     )),
     '9a000000-0000-0000-0000-0000000000ab'
   )$$,
-  'SM can create draft'
+  'Owner can create draft'
 );
 
 select lives_ok(
@@ -659,37 +673,50 @@ select lives_ok(
     1,
     '9a000000-0000-0000-0000-0000000000ac'
   )$$,
-  'SM can request approval on own draft'
+  'Owner can request approval on own draft'
 );
 
-select throws_ok(
+/*
+ * PRE-EXISTING BEHAVIOUR, NEWLY VISIBLE.
+ *
+ * The self-approval guard has always been skipped for super_admin:
+ *
+ *   if not private.has_role('super_admin') then ... CAMPAIGN_SELF_APPROVAL_DENIED
+ *
+ * This PR did not introduce that exemption and does not change campaign product
+ * policy. It removed non-owner campaign approval authority, which is what makes
+ * the exemption the only path this test can now exercise. Suite 49 pins the
+ * grant side: no role but super_admin holds campaigns.approve.
+ */
+select lives_ok(
   $$select public.decide_campaign_version(
     (select id from public.campaign_versions where created_by = '9a222222-2222-2222-2222-222222222222' order by created_at desc limit 1),
     'approved',
     null,
     '9a000000-0000-0000-0000-0000000000ad'
   )$$,
-  '42501',
-  NULL,
-  'SM creator/requester self-approval denied'
+  'the owner may approve their own draft'
 );
 
 select set_config('request.jwt.claims', '{"sub":"9a222222-2222-2222-2222-222222222221","role":"authenticated"}', true);
 
-select lives_ok(
+-- And the decision is terminal: a second one is refused whoever makes it.
+select throws_ok(
   $$select public.decide_campaign_version(
     (select id from public.campaign_versions where created_by = '9a222222-2222-2222-2222-222222222222' order by created_at desc limit 1),
     'approved',
     null,
     '9a000000-0000-0000-0000-0000000000ae'
   )$$,
-  'other SM may approve'
+  '22023',
+  NULL,
+  'a second decision on an approved version is refused'
 );
 
 select is(
   (select status from public.campaign_versions where created_by = '9a222222-2222-2222-2222-222222222222' order by created_at desc limit 1),
   'approved',
-  'other SM approval is terminal approved'
+  'the approval is terminal approved'
 );
 
 select is(
@@ -870,7 +897,7 @@ select lives_ok(
     null,
     '9a000000-0000-0000-0000-0000000000c2'
   )$$,
-  'SM can record MARKETING grant'
+  'Owner can record MARKETING grant'
 );
 
 select is(
@@ -895,7 +922,7 @@ select is(
     )
   )->>'event_type',
   'withdrawn',
-  'SM can withdraw MARKETING'
+  'Owner can withdraw MARKETING'
 );
 
 set local role postgres;

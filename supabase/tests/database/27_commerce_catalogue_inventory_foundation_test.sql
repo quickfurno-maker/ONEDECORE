@@ -54,8 +54,10 @@ select is(
    join public.roles r on r.id = rp.role_id
    join public.permissions p on p.id = rp.permission_id
    where r.code = 'sales_manager' and p.code like 'commerce.%'),
-  array['commerce.orders.manage','commerce.payments.read','commerce.read']::text[],
-  'sales_manager has exactly commerce.read, orders.manage, payments.read'
+  -- NARROWED: the Sales Manager has NO commerce control plane in the final
+  -- role. `array_agg` over an empty set is null, not an empty array.
+  null::text[],
+  'sales_manager has no commerce permission at all'
 );
 
 select is(

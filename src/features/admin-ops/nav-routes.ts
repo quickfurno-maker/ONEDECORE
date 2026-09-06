@@ -3,8 +3,13 @@ import type { OpsCommandRoute, OpsNavFlags } from "./types.ts";
 export function buildOpsCommandRoutes(flags: OpsNavFlags): readonly OpsCommandRoute[] {
   const routes: OpsCommandRoute[] = [
     { href: "/admin", label: "Dashboard", group: "Overview" },
-    { href: "/admin/portfolio", label: "Portfolio CMS", group: "Content" },
   ];
+
+  // The command palette is a navigation surface like any other: it must offer
+  // exactly what the sidebar does, or it becomes the way around it.
+  if (flags.portfolio) {
+    routes.push({ href: "/admin/portfolio", label: "Portfolio CMS", group: "Content" });
+  }
 
   if (flags.crm) {
     routes.push({ href: "/admin/crm", label: "CRM Overview", group: "Sales & CRM" });

@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 5C2B CRM manual lead duplicate-safe flow pgTAP tests
 
 begin;
-select plan(61);
+select plan(62);
 
 -- =============================================================================
 -- Synthetic staff users (unique to this file)
@@ -119,11 +119,14 @@ select results_eq(
   'super_admin has leads.duplicate_override'
 );
 
+-- NARROWED: duplicate override is the owner's alone. A Sales Manager may see
+-- that an apparent duplicate exists and open the enquiry that already exists;
+-- forcing a second one past the protection is the owner's call.
 select set_config('request.jwt.claim.sub', 'c2222222-2222-2222-2222-222222222222', true);
 select results_eq(
   $$select (select private.has_permission('leads.duplicate_override'))$$,
-  array[true],
-  'sales_manager has leads.duplicate_override'
+  array[false],
+  'sales_manager does NOT have leads.duplicate_override'
 );
 
 select set_config('request.jwt.claim.sub', 'c7777777-7777-7777-7777-777777777777', true);
@@ -766,8 +769,12 @@ select results_eq(
     from public.check_manual_lead_duplicate(
       '+919500000016', null, 'complete-home-interiors', 'apartment-2bhk', 'Whitefield'
     )$$,
-  $$values ('RECENT_SIMILAR'::text, false, true)$$,
-  'recent closed similar lead preview returns RECENT_SIMILAR with manager override'
+  -- NARROWED: `can_override` reflects the CALLER's authority, and this caller
+  -- is the Sales Manager. They still SEE the recent similar enquiry — which is
+  -- what lets them open the one that already exists — but the preview no longer
+  -- offers them a way past it.
+  $$values ('RECENT_SIMILAR'::text, false, false)$$,
+  'the manager sees RECENT_SIMILAR and is offered NO override'
 );
 
 select throws_ok(
@@ -808,7 +815,31 @@ select throws_ok(
   'sales executive cannot override recent similar duplicate'
 );
 
+-- NARROWED: forcing a lead past duplicate protection is the owner's act, so
+-- the override cases below run as the owner. The manager's own refusal is
+-- asserted right here.
 select set_config('request.jwt.claim.sub', 'c2222222-2222-2222-2222-222222222222', true);
+select throws_ok(
+  $$select public.create_manual_lead(
+    '5C2B Manager Override Denied',
+    '+919500000016',
+    null,
+    'complete-home-interiors',
+    'apartment-2bhk',
+    'within-1-month',
+    current_setting('test.phase5c2b_phone_call_source')::uuid,
+    'Whitefield',
+    null, '{}'::text[], null, null,
+    null,
+    true,
+    'Manager override attempt for a returning client'
+  )$$,
+  '42501',
+  'CRM_MANUAL_LEAD_DUPLICATE_OVERRIDE_DENIED',
+  'sales manager cannot override a recent similar duplicate'
+);
+
+select set_config('request.jwt.claim.sub', 'c1111111-1111-1111-1111-111111111111', true);
 
 select throws_ok(
   $$select public.create_manual_lead(
@@ -827,9 +858,10 @@ select throws_ok(
   )$$,
   '22023',
   'CRM_MANUAL_LEAD_DUPLICATE_OVERRIDE_REASON_INVALID',
-  'override reason shorter than ten characters rejected'
+  'override reason shorter than ten characters rejected (owner)'
 );
 
+select set_config('request.jwt.claim.sub', 'c1111111-1111-1111-1111-111111111111', true);
 select set_config(
   'test.phase5c2b_recent_override_lead',
   (select id::text from public.create_manual_lead(

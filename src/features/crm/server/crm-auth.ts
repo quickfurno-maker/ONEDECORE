@@ -17,6 +17,7 @@ import {
   probeManualLeadPermissions,
   probeSalesTargetPermissions,
   probeSlaPolicyPermissions,
+  probeLeadDeletionPermissions,
 } from "./crm-permissions.ts";
 import {
   DEFAULT_LOGIN_PORTAL,
@@ -72,6 +73,7 @@ export async function resolveCrmAccess(
     salesTargetPermissions,
     cadencePermissions,
     slaPolicyPermissions,
+    deletionPermissions,
   ] = await Promise.all([
       probeManualLeadPermissions(db),
       probeLifecycleMutationPermissions(db),
@@ -79,6 +81,7 @@ export async function resolveCrmAccess(
       probeSalesTargetPermissions(db),
       probeCadencePermissions(db),
       probeSlaPolicyPermissions(db),
+      probeLeadDeletionPermissions(db),
     ]);
   const context: CrmAccessContext = {
     userId: staff.userId,
@@ -104,6 +107,7 @@ export async function resolveCrmAccess(
     canReadCrmReporting: salesTargetPermissions.canReadCrmReporting,
     canManageCadences: cadencePermissions.canManageCadences,
     canManageSlaPolicy: slaPolicyPermissions.canManageSlaPolicy,
+    canDeleteLeads: deletionPermissions.canDeleteLeads,
   };
 
   if (!hasCrmLeadReadAccess(context)) {

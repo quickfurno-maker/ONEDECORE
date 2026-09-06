@@ -18,10 +18,12 @@ select is(
       'landing_pages.read', 'landing_pages.manage', 'landing_pages.publish',
       'landing_experiments.manage', 'landing_analytics.read'
     )
+    -- NARROWED: Landing Lab publishes public pages. That is an owner act, so
+    -- the Sales Manager grants were revoked and only the owner's five remain.
     and r.code in ('super_admin', 'sales_manager')
   ),
-  10,
-  'SA/SM receive all five Landing Lab permissions'
+  5,
+  'the owner alone receives all five Landing Lab permissions'
 );
 
 select is(

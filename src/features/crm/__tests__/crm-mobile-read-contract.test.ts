@@ -229,7 +229,8 @@ describe("the refactor is additive", () => {
    * parameters were ever made required the browser workspace would break.
    */
   const THREADED = [
-    ["crm-permissions.ts", 8],
+    /* 9 since probeLeadDeletionPermissions: leads.delete is its own probe. */
+    ["crm-permissions.ts", 9],
     /* 8 since queryLeadIntelligence: the cohort read's 7, plus one. */
     ["crm-lead-queries.ts", 8],
     ["crm-lead-score-batch.ts", 7],

@@ -97,7 +97,7 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 58, "Migration count must be exactly 58");
+    assert.equal(files.length, 59, "Migration count must be exactly 59");
 
     // Workforce V1 attendance lifecycle. Still no payment M38.
     const workforce = files.filter((f) => f.startsWith("20260902160000"));
@@ -203,6 +203,9 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
         "20260904150000_crm_manual_sales_temperature.sql",
         "20260904170000_workforce_p5_launch_catalogue.sql",
         "20260905120000_public_consultation_qualifier.sql",
+        // The Sales Manager control plane hardening: RBAC only, no COD
+        // or payment surface of any kind.
+        "20260906120000_sales_manager_control_plane_hardening.sql",
       ],
       "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, CRM 2A-7, CRM 2C cadences, CRM 2D commercial read models, the lead_notes INSERT privilege redrift repair, CRM 2E management analytics, the WhatsApp lead-link repair, and the Workforce V1 attendance lifecycle may follow 9D-D1 COD order foundation"
     );
