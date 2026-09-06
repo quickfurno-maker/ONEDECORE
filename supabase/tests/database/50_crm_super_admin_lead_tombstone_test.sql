@@ -86,6 +86,11 @@ insert into public.leads (
 );
 
 -- History that must survive the delete.
+--
+-- `trg_lead_notes_set_creator` resolves the author from auth.uid(), so the
+-- fixture has to say who it is even though it runs as the test owner.
+select set_config('request.jwt.claim.sub', 'e1111111-1111-1111-1111-111111111111', true);
+
 insert into public.lead_notes (lead_id, created_by, body)
 values (
   'e0aaaaaa-0000-4000-8000-000000000001',
