@@ -1,6 +1,5 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   LeadImportBatchDetail,
@@ -10,6 +9,7 @@ import type {
   LeadImportRowDetail,
   LeadImportValidationError,
 } from "../contracts/lead-import-contracts.ts";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
 
 interface ImportBatchRow {
@@ -144,14 +144,20 @@ function mapImportRow(row: ImportRowRecord): LeadImportRowDetail {
   };
 }
 
-async function phase5dClient(): Promise<SupabaseClient> {
-  return (await createClient()) as unknown as SupabaseClient;
+/**
+ * The client an import read runs against: the injected one when a caller
+ * supplied it, otherwise the cookie-scoped default. Never service-role — RLS on
+ * `lead_import_batches` and `lead_import_rows` stays the read authority, and a
+ * read after a write must be given the SAME client that performed the write.
+ */
+async function phase5dClient(db?: CrmDb): Promise<SupabaseClient> {
+  return (await resolveCrmDb(db)) as unknown as SupabaseClient;
 }
 
-export async function fetchLeadImportBatchList(): Promise<
-  readonly LeadImportBatchSummary[]
-> {
-  const supabase = await phase5dClient();
+export async function fetchLeadImportBatchList(
+  db?: CrmDb
+): Promise<readonly LeadImportBatchSummary[]> {
+  const supabase = await phase5dClient(db);
   const { data, error } = await supabase
     .from("lead_import_batches")
     .select(
@@ -168,9 +174,10 @@ export async function fetchLeadImportBatchList(): Promise<
 }
 
 export async function fetchLeadImportBatchDetail(
-  batchId: string
+  batchId: string,
+  db?: CrmDb
 ): Promise<LeadImportBatchDetail | null> {
-  const supabase = await phase5dClient();
+  const supabase = await phase5dClient(db);
   const { data, error } = await supabase
     .from("lead_import_batches")
     .select(
@@ -187,9 +194,10 @@ export async function fetchLeadImportBatchDetail(
 }
 
 export async function fetchLeadImportBatchRows(
-  batchId: string
+  batchId: string,
+  db?: CrmDb
 ): Promise<readonly LeadImportRowDetail[]> {
-  const supabase = await phase5dClient();
+  const supabase = await phase5dClient(db);
   const { data, error } = await supabase
     .from("lead_import_rows")
     .select(

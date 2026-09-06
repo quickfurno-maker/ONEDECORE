@@ -27,12 +27,29 @@ import {
   type CadenceTemplateMutationResult,
 } from "./crm-cadence-adapters.ts";
 import { getCrmAccessContext } from "./crm-auth.ts";
+import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import { CrmError } from "./crm-errors.ts";
 
 /**
  * Template lifecycle requires `crm.cadences.manage` (owner lock D3). The RPC
  * re-checks server-side; this only fails fast with a typed error.
+ *
+ * The assertion takes a context rather than resolving one, so the browser
+ * workspace and the bearer-authenticated mobile boundary run the IDENTICAL
+ * permission check. There is one definition of "may manage cadences" and both
+ * callers reach it — a second gate written at a transport edge is exactly how
+ * two surfaces drift apart.
  */
+function assertCadenceManagePermission(context: CrmAccessContext): void {
+  if (!context.canManageCadences) {
+    throw new CrmError({
+      code: "CADENCE_PERMISSION_DENIED",
+      message: "You are not allowed to manage cadences.",
+      httpStatus: 403,
+    });
+  }
+}
+
 async function requireCadenceManagerContext(): Promise<CrmAccessContext> {
   const context = await getCrmAccessContext();
   if (!context) {
@@ -42,13 +59,7 @@ async function requireCadenceManagerContext(): Promise<CrmAccessContext> {
       httpStatus: 401,
     });
   }
-  if (!context.canManageCadences) {
-    throw new CrmError({
-      code: "CADENCE_PERMISSION_DENIED",
-      message: "You are not allowed to manage cadences.",
-      httpStatus: 403,
-    });
-  }
+  assertCadenceManagePermission(context);
   return context;
 }
 
@@ -87,25 +98,45 @@ function throwValidation(
   });
 }
 
-export async function createCadenceTemplateForCurrentUser(
-  input: CadenceTemplateInput
+/*
+ * ============================================================================
+ * Template lifecycle — context/db-safe implementations
+ * ============================================================================
+ *
+ * Each `...ForContext` holds the whole rule: assert the permission, run the
+ * canonical validator, call the canonical RPC. The `...ForCurrentUser` wrappers
+ * below resolve a cookie context and delegate, so the browser workspace keeps
+ * its exact previous behaviour while the mobile boundary reaches the same code
+ * with a bearer context and a bearer client.
+ *
+ * No step limit, delay bound or reminder bound is restated here: those live in
+ * `validateCadenceStepInputs`, which is the only definition of them.
+ */
+
+export async function createCadenceTemplateForContext(
+  context: CrmAccessContext,
+  input: CadenceTemplateInput,
+  db?: CrmDb
 ): Promise<CadenceTemplateMutationResult> {
-  await requireCadenceManagerContext();
+  assertCadenceManagePermission(context);
   const errors = validateCadenceTemplateInput(input);
   if (errors.length > 0) {
     throwValidation(errors, "CADENCE_TEMPLATE_INVALID");
   }
 
-  const supabase = await createClient();
-  return callCreateCadenceTemplate(supabase, input);
+  return callCreateCadenceTemplate(await resolveCrmDb(db), input);
 }
 
-export async function updateCadenceTemplateForCurrentUser(input: {
-  readonly templateId: string;
-  readonly name: string;
-  readonly description: string | null;
-}): Promise<CadenceTemplateMutationResult> {
-  await requireCadenceManagerContext();
+export async function updateCadenceTemplateForContext(
+  context: CrmAccessContext,
+  input: {
+    readonly templateId: string;
+    readonly name: string;
+    readonly description: string | null;
+  },
+  db?: CrmDb
+): Promise<CadenceTemplateMutationResult> {
+  assertCadenceManagePermission(context);
   const errors = validateCadenceTemplateInput({
     name: input.name,
     description: input.description,
@@ -114,45 +145,50 @@ export async function updateCadenceTemplateForCurrentUser(input: {
     throwValidation(errors, "CADENCE_TEMPLATE_INVALID");
   }
 
-  const supabase = await createClient();
-  return callUpdateCadenceTemplate(supabase, input);
+  return callUpdateCadenceTemplate(await resolveCrmDb(db), input);
 }
 
-export async function replaceCadenceTemplateStepsForCurrentUser(input: {
-  readonly templateId: string;
-  readonly steps: readonly CrmCadenceStepInput[];
-}): Promise<CadenceTemplateMutationResult> {
-  await requireCadenceManagerContext();
+export async function replaceCadenceTemplateStepsForContext(
+  context: CrmAccessContext,
+  input: {
+    readonly templateId: string;
+    readonly steps: readonly CrmCadenceStepInput[];
+  },
+  db?: CrmDb
+): Promise<CadenceTemplateMutationResult> {
+  assertCadenceManagePermission(context);
   const errors = validateCadenceStepInputs(input.steps);
   if (errors.length > 0) {
     throwValidation(errors, "CADENCE_STEP_INVALID");
   }
 
-  const supabase = await createClient();
-  return callReplaceCadenceTemplateSteps(supabase, input);
+  return callReplaceCadenceTemplateSteps(await resolveCrmDb(db), input);
 }
 
-export async function publishCadenceTemplateForCurrentUser(
-  templateId: string
+export async function publishCadenceTemplateForContext(
+  context: CrmAccessContext,
+  templateId: string,
+  db?: CrmDb
 ): Promise<CadenceTemplateMutationResult> {
-  await requireCadenceManagerContext();
-  const supabase = await createClient();
-  return callPublishCadenceTemplate(supabase, templateId);
+  assertCadenceManagePermission(context);
+  return callPublishCadenceTemplate(await resolveCrmDb(db), templateId);
 }
 
-export async function archiveCadenceTemplateForCurrentUser(
-  templateId: string
+export async function archiveCadenceTemplateForContext(
+  context: CrmAccessContext,
+  templateId: string,
+  db?: CrmDb
 ): Promise<CadenceTemplateMutationResult> {
-  await requireCadenceManagerContext();
-  const supabase = await createClient();
-  return callArchiveCadenceTemplate(supabase, templateId);
+  assertCadenceManagePermission(context);
+  return callArchiveCadenceTemplate(await resolveCrmDb(db), templateId);
 }
 
-export async function duplicateCadenceTemplateForCurrentUser(input: {
-  readonly templateId: string;
-  readonly name: string;
-}): Promise<CadenceTemplateMutationResult> {
-  await requireCadenceManagerContext();
+export async function duplicateCadenceTemplateForContext(
+  context: CrmAccessContext,
+  input: { readonly templateId: string; readonly name: string },
+  db?: CrmDb
+): Promise<CadenceTemplateMutationResult> {
+  assertCadenceManagePermission(context);
   const errors = validateCadenceTemplateInput({
     name: input.name,
     description: null,
@@ -161,8 +197,55 @@ export async function duplicateCadenceTemplateForCurrentUser(input: {
     throwValidation(errors, "CADENCE_TEMPLATE_INVALID");
   }
 
-  const supabase = await createClient();
-  return callDuplicateCadenceTemplate(supabase, input);
+  return callDuplicateCadenceTemplate(await resolveCrmDb(db), input);
+}
+
+/* ---- browser wrappers: cookie context, cookie client, unchanged ---------- */
+
+export async function createCadenceTemplateForCurrentUser(
+  input: CadenceTemplateInput
+): Promise<CadenceTemplateMutationResult> {
+  const context = await requireCadenceManagerContext();
+  return createCadenceTemplateForContext(context, input);
+}
+
+export async function updateCadenceTemplateForCurrentUser(input: {
+  readonly templateId: string;
+  readonly name: string;
+  readonly description: string | null;
+}): Promise<CadenceTemplateMutationResult> {
+  const context = await requireCadenceManagerContext();
+  return updateCadenceTemplateForContext(context, input);
+}
+
+export async function replaceCadenceTemplateStepsForCurrentUser(input: {
+  readonly templateId: string;
+  readonly steps: readonly CrmCadenceStepInput[];
+}): Promise<CadenceTemplateMutationResult> {
+  const context = await requireCadenceManagerContext();
+  return replaceCadenceTemplateStepsForContext(context, input);
+}
+
+export async function publishCadenceTemplateForCurrentUser(
+  templateId: string
+): Promise<CadenceTemplateMutationResult> {
+  const context = await requireCadenceManagerContext();
+  return publishCadenceTemplateForContext(context, templateId);
+}
+
+export async function archiveCadenceTemplateForCurrentUser(
+  templateId: string
+): Promise<CadenceTemplateMutationResult> {
+  const context = await requireCadenceManagerContext();
+  return archiveCadenceTemplateForContext(context, templateId);
+}
+
+export async function duplicateCadenceTemplateForCurrentUser(input: {
+  readonly templateId: string;
+  readonly name: string;
+}): Promise<CadenceTemplateMutationResult> {
+  const context = await requireCadenceManagerContext();
+  return duplicateCadenceTemplateForContext(context, input);
 }
 
 export async function enrollLeadInCadenceForCurrentUser(
