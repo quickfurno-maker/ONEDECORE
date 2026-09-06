@@ -645,14 +645,14 @@ select is(
 );
 
 -- ----------------------------------------------------------------------------
--- SM self-approval denied; other SM and SA may approve
+-- Existing owner self-approval behaviour; a second decision is refused
 -- ----------------------------------------------------------------------------
 select set_config('request.jwt.claims', '{"sub":"9a222222-2222-2222-2222-222222222222","role":"authenticated"}', true);
 
 select lives_ok(
   $$select public.create_campaign_draft(
-    'SM own campaign',
-    'SM own v1',
+    'Owner own campaign',
+    'Owner own v1',
     'broad_public',
     array['meta_ads'],
     null,
@@ -664,7 +664,7 @@ select lives_ok(
     )),
     '9a000000-0000-0000-0000-0000000000ab'
   )$$,
-  'SM can create draft'
+  'Owner can create draft'
 );
 
 select lives_ok(
@@ -673,7 +673,7 @@ select lives_ok(
     1,
     '9a000000-0000-0000-0000-0000000000ac'
   )$$,
-  'SM can request approval on own draft'
+  'Owner can request approval on own draft'
 );
 
 /*
@@ -897,7 +897,7 @@ select lives_ok(
     null,
     '9a000000-0000-0000-0000-0000000000c2'
   )$$,
-  'SM can record MARKETING grant'
+  'Owner can record MARKETING grant'
 );
 
 select is(
@@ -922,7 +922,7 @@ select is(
     )
   )->>'event_type',
   'withdrawn',
-  'SM can withdraw MARKETING'
+  'Owner can withdraw MARKETING'
 );
 
 set local role postgres;
