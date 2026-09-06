@@ -834,6 +834,11 @@ select is(
 );
 
 -- The named-actor form the provider dispatch path uses.
+--
+-- It is revoked from `authenticated` by design — only the dispatch path calls
+-- it — so it is asked here as the role that owns it, which is exactly how the
+-- dispatcher reaches it.
+set local role postgres;
 select is(
   (select private.whatsapp_inbox_actor_can_use_conversation(
     'e1111111-1111-1111-1111-111111111111'::uuid,
@@ -848,6 +853,7 @@ select is(
   false,
   'and the Sales Manager — so a pre-existing intent cannot be dispatched'
 );
+set local role authenticated;
 
 -- Eligibility, which is what a send is actually gated on.
 select set_config('request.jwt.claim.sub', 'e1111111-1111-1111-1111-111111111111', true);

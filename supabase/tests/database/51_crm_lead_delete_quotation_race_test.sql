@@ -91,7 +91,6 @@ begin;
 -- =============================================================================
 
 select set_config('request.jwt.claim.sub', 'f1111111-1111-1111-1111-111111111111', true);
-set local role authenticated;
 
 select set_config(
   'test.race_lead_a_updated',
@@ -100,6 +99,10 @@ select set_config(
 );
 
 -- A second session takes the quotation_root lock for lead A and holds it.
+--
+-- Opened as the superuser: dblink refuses a passwordless connection for anyone
+-- else, and the point of this session is only to hold a lock. The probes that
+-- matter run as `authenticated` below.
 select ok(
   (select dblink_connect('race_holder', 'dbname=postgres') = 'OK'),
   'a second session is available to hold the serialization point'
@@ -124,6 +127,7 @@ select ok(
  * test, and `55P03` (lock_not_available) is the proof that the wait was real
  * rather than the call simply failing for its own reasons.
  */
+set local role authenticated;
 set local lock_timeout = '900ms';
 
 select throws_ok(
@@ -148,6 +152,7 @@ select throws_ok(
 );
 
 set local lock_timeout = 0;
+set local role postgres;
 
 select ok(
   (select dblink_exec('race_holder', 'rollback') = 'ROLLBACK'),
@@ -157,6 +162,8 @@ select ok(
   (select dblink_disconnect('race_holder') = 'OK'),
   'and disconnects'
 );
+
+set local role authenticated;
 
 -- =============================================================================
 -- B. DELETE WINS — the quotation that arrives second is refused
