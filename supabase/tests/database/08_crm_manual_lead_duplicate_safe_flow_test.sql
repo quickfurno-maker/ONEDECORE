@@ -119,11 +119,14 @@ select results_eq(
   'super_admin has leads.duplicate_override'
 );
 
+-- NARROWED: duplicate override is the owner's alone. A Sales Manager may see
+-- that an apparent duplicate exists and open the enquiry that already exists;
+-- forcing a second one past the protection is the owner's call.
 select set_config('request.jwt.claim.sub', 'c2222222-2222-2222-2222-222222222222', true);
 select results_eq(
   $$select (select private.has_permission('leads.duplicate_override'))$$,
-  array[true],
-  'sales_manager has leads.duplicate_override'
+  array[false],
+  'sales_manager does NOT have leads.duplicate_override'
 );
 
 select set_config('request.jwt.claim.sub', 'c7777777-7777-7777-7777-777777777777', true);

@@ -67,18 +67,21 @@ select results_eq(
   'super_admin has leads.bulk_import'
 );
 
+-- NARROWED: only the owner may load enquiries in bulk.
 select set_config('request.jwt.claim.sub', 'd2222222-2222-2222-2222-222222222222', true);
 select results_eq(
   $$select (select private.has_permission('leads.bulk_import'))$$,
-  array[true],
-  'sales_manager has leads.bulk_import'
+  array[false],
+  'sales_manager does NOT have leads.bulk_import'
 );
 
+-- NARROWED: the legacy management role mirrors Sales Manager breadth, so
+-- leaving it here would put bulk import one role assignment away.
 select set_config('request.jwt.claim.sub', 'd7777777-7777-7777-7777-777777777777', true);
 select results_eq(
   $$select (select private.has_permission('leads.bulk_import'))$$,
-  array[true],
-  'legacy management has leads.bulk_import'
+  array[false],
+  'legacy management does NOT have leads.bulk_import'
 );
 
 select set_config('request.jwt.claim.sub', 'd3333333-3333-3333-3333-333333333333', true);

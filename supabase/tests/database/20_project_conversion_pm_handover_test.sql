@@ -51,8 +51,10 @@ select is(
     where p.code = 'projects.read'
       and r.code in ('super_admin', 'sales_manager', 'sales_executive', 'project_manager')
   ),
-  4,
-  'projects.read granted to SA/SM/SE/PM only among canonical roles'
+  -- NARROWED: the Sales Manager's broad projects.read was replaced by
+  -- projects.read_high_level, which carries no project workspace with it.
+  3,
+  'projects.read granted to SA/SE/PM only among canonical roles'
 );
 
 select is(
@@ -77,8 +79,9 @@ select is(
     where p.code = 'projects.assign_pm'
       and r.code in ('super_admin', 'sales_manager')
   ),
-  2,
-  'projects.assign_pm granted to SA/SM only'
+  -- NARROWED: assigning a Project Manager is an owner act.
+  1,
+  'projects.assign_pm granted to SA only'
 );
 
 select is(
@@ -689,15 +692,27 @@ select is(
 );
 
 -- SM reassignment before accept
+-- The Sales Manager is refused outright now: assigning a PM is an owner act.
 select set_config('request.jwt.claim.sub', '8a222222-2222-2222-2222-222222222222', true);
+select throws_ok(
+  $$select public.assign_project_manager(
+    current_setting('test.phase8a_project')::uuid,
+    '8a777777-7777-7777-7777-777777777777'::uuid,
+    'assign-sm-denied'
+  )$$,
+  'FORBIDDEN',
+  'SM may NOT assign or reassign a Project Manager'
+);
+
+select set_config('request.jwt.claim.sub', '8a111111-1111-1111-1111-111111111111', true);
 select is(
   (public.assign_project_manager(
     current_setting('test.phase8a_project')::uuid,
     '8a777777-7777-7777-7777-777777777777'::uuid,
-    'assign-sm-reassign-pre'
+    'assign-sa-reassign-pre'
   )->>'status'),
   'awaiting_project_manager_acceptance',
-  'SM may reassign before handover accept'
+  'SA may reassign before handover accept'
 );
 
 select set_config('role', 'postgres', true);

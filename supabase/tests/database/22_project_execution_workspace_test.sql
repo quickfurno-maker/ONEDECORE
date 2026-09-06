@@ -36,10 +36,11 @@ select is(
     join public.roles r on r.id = rp.role_id
     join public.permissions p on p.id = rp.permission_id
     where p.code = 'project_execution.read'
+      -- NARROWED: the Sales Manager has no execution workspace read.
       and r.code in ('super_admin', 'sales_manager', 'project_manager')
   ),
-  3,
-  'project_execution.read granted to SA/SM/PM'
+  2,
+  'project_execution.read granted to SA/PM'
 );
 
 select is(
@@ -105,10 +106,11 @@ select is(
     join public.roles r on r.id = rp.role_id
     join public.permissions p on p.id = rp.permission_id
     where p.code = 'project_execution.cancel'
+      -- NARROWED: cancelling execution is not a sales-team act.
       and r.code in ('super_admin', 'sales_manager', 'project_manager')
   ),
-  3,
-  'project_execution.cancel granted to SA/SM/PM'
+  2,
+  'project_execution.cancel granted to SA/PM'
 );
 
 select is(
@@ -1128,12 +1130,14 @@ select is(
   1,
   'SA can select execution workflows'
 );
+-- NARROWED: the execution workspace is closed to the Sales Manager, and RLS
+-- is what closes it — not a hidden button.
 select set_config('request.jwt.claim.sub', '8c222222-2222-2222-2222-222222222222', true);
 select is(
   (select count(*)::integer from public.project_execution_workflows
     where project_id = current_setting('test.phase8c_project')::uuid),
-  1,
-  'SM can select execution workflows'
+  0,
+  'SM can NOT select execution workflows'
 );
 select set_config('request.jwt.claim.sub', '8c666666-6666-6666-6666-666666666666', true);
 select is(
@@ -1477,14 +1481,14 @@ rollback to savepoint sa_sm_cancel_probe;
 
 savepoint sm_cancel_probe;
 select set_config('request.jwt.claim.sub', '8c222222-2222-2222-2222-222222222222', true);
-select is(
-  (public.cancel_project_execution(
+select throws_ok(
+  $$select public.cancel_project_execution(
     current_setting('test.phase8c_project')::uuid,
     'Manager cancelled remaining installation work',
     'cancel_sm_8c_01'
-  )->>'state'),
-  'cancelled',
-  'SM can cancel execution'
+  )$$,
+  'FORBIDDEN',
+  'SM can NOT cancel execution'
 );
 rollback to savepoint sm_cancel_probe;
 

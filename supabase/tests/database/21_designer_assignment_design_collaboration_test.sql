@@ -40,10 +40,11 @@ select is(
     join public.roles r on r.id = rp.role_id
     join public.permissions p on p.id = rp.permission_id
     where p.code = 'project_design.read'
+      -- NARROWED: the Sales Manager has no design workspace read.
       and r.code in ('super_admin', 'sales_manager', 'project_manager', 'designer')
   ),
-  4,
-  'project_design.read granted to SA/SM/PM/designer'
+  3,
+  'project_design.read granted to SA/PM/designer'
 );
 
 select is(
@@ -54,9 +55,10 @@ select is(
     join public.permissions p on p.id = rp.permission_id
     where p.code = 'project_design.staff'
       and r.code in ('super_admin', 'sales_manager')
+  -- NARROWED: staffing designers is an owner act.
   ),
-  2,
-  'project_design.staff granted to SA/SM'
+  1,
+  'project_design.staff granted to SA only'
 );
 
 select is(
@@ -591,7 +593,7 @@ select throws_ok(
 );
 
 -- Supporting before lead: no workflow row
-select set_config('request.jwt.claim.sub', '8b222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', '8b111111-1111-1111-1111-111111111111', true);
 select is(
   (public.add_project_supporting_designer(
     current_setting('test.phase8b_project')::uuid,
@@ -599,7 +601,7 @@ select is(
     'add_supp_first'
   )->>'assignment_role'),
   'supporting_designer',
-  'SM can add supporting designer before lead'
+  'SA can add supporting designer before lead'
 );
 
 select set_config('role', 'postgres', true);
@@ -610,7 +612,7 @@ select is(
   'Supporting assignment does not create workflow'
 );
 
-select set_config('request.jwt.claim.sub', '8b222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', '8b111111-1111-1111-1111-111111111111', true);
 select set_config('role', 'authenticated', true);
 select is(
   (public.add_project_supporting_designer(
@@ -729,7 +731,7 @@ select is(
   'Lead reassignment preserves workflow state'
 );
 
-select set_config('request.jwt.claim.sub', '8b222222-2222-2222-2222-222222222222', true);
+select set_config('request.jwt.claim.sub', '8b111111-1111-1111-1111-111111111111', true);
 select set_config('role', 'authenticated', true);
 select is(
   (public.add_project_supporting_designer(
@@ -1176,6 +1178,19 @@ select is(
   false,
   'SA preflight is false for client approval'
 );
+-- The Sales Manager has no designer-staffing authority at all now.
+select set_config('request.jwt.claim.sub', '8b222222-2222-2222-2222-222222222222', true);
+select set_config('role', 'authenticated', true);
+select throws_ok(
+  $$select public.add_project_supporting_designer(
+    current_setting('test.phase8b_project')::uuid,
+    '8b121212-1212-1212-1212-121212121212'::uuid,
+    'add_supp_sm_denied'
+  )$$,
+  'FORBIDDEN',
+  'SM may NOT staff designers'
+);
+
 select set_config('request.jwt.claim.sub', '8b222222-2222-2222-2222-222222222222', true);
 select is(
   public.can_record_project_client_approval(current_setting('test.phase8b_project')::uuid),

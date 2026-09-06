@@ -23,10 +23,11 @@ select is(
     where p.code in (
       'campaigns.read', 'campaigns.draft', 'campaigns.request_approval', 'campaigns.approve', 'marketing_consents.manage'
     )
+    -- NARROWED: campaigns are the owner's control plane.
     and r.code in ('super_admin', 'sales_manager')
   ),
-  10,
-  'SA/SM receive all five Phase 9A permissions'
+  5,
+  'the owner alone receives all five Phase 9A permissions'
 );
 
 select is(
@@ -176,9 +177,12 @@ where id in (
 insert into public.user_roles (user_id, role_id)
 select '9a111111-1111-1111-1111-111111111111', id from public.roles where code = 'super_admin' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
-select '9a222222-2222-2222-2222-222222222222', id from public.roles where code = 'sales_manager' on conflict do nothing;
+-- Campaign authority moved to the owner, so the two campaign actors below
+-- are owners. The separation-of-duties assertions they carry (a creator may
+-- not approve their own draft) hold for any role and are unchanged.
+select '9a222222-2222-2222-2222-222222222222', id from public.roles where code = 'super_admin' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
-select '9a222222-2222-2222-2222-222222222221', id from public.roles where code = 'sales_manager' on conflict do nothing;
+select '9a222222-2222-2222-2222-222222222221', id from public.roles where code = 'super_admin' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
 select '9a333333-3333-3333-3333-333333333333', id from public.roles where code = 'sales_executive' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)

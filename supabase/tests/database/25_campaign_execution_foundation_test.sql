@@ -13,10 +13,11 @@ select is(
     join public.roles r on r.id = rp.role_id
     join public.permissions p on p.id = rp.permission_id
     where p.code in ('campaigns.execute', 'campaigns.pause', 'campaigns.metrics.read')
+      -- NARROWED: campaign execution is the owner's.
       and r.code in ('super_admin', 'sales_manager')
   ),
-  6,
-  'SA/SM receive three 9C-B permissions'
+  3,
+  'the owner alone receives the three 9C-B permissions'
 );
 
 select is(
@@ -126,7 +127,9 @@ where id in (
 insert into public.user_roles (user_id, role_id)
 select '9c111111-1111-1111-1111-111111111111', id from public.roles where code = 'super_admin' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
-select '9c222222-2222-2222-2222-222222222222', id from public.roles where code = 'sales_manager' on conflict do nothing;
+-- Campaign execution moved to the owner, so this actor is an owner. The
+-- state-machine assertions it carries are role-independent.
+select '9c222222-2222-2222-2222-222222222222', id from public.roles where code = 'super_admin' on conflict do nothing;
 insert into public.user_roles (user_id, role_id)
 select '9c333333-3333-3333-3333-333333333333', id from public.roles where code = 'sales_executive' on conflict do nothing;
 
