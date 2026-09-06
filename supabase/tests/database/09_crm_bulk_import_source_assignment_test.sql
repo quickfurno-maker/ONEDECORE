@@ -907,7 +907,10 @@ select throws_ok(
     current_setting('test.phase5d_direct_rev')::integer
   )$$,
   '42501',
-  'CRM_IMPORT_DIRECT_CONFIRM_SA_ONLY',
+  -- The manager is now stopped EARLIER, at the bulk-import permission gate, so
+  -- they never reach the Super-Admin-only check inside the function. A refusal
+  -- before the operation is a stronger refusal than one inside it.
+  'CRM_IMPORT_PERMISSION_DENIED',
   'manager cannot direct-confirm import batch'
 );
 
