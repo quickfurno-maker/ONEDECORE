@@ -1519,3 +1519,141 @@ describe("the portal survives the round trip", () => {
     assert.equal(new URL(blank.location).searchParams.get("portal"), "admin");
   });
 });
+
+/* ========================================================================== */
+/* 8. The credentials must SURVIVE the native submission                       */
+/* ========================================================================== */
+
+/*
+ * PRODUCTION EVIDENCE
+ *
+ * A direct POST to the deployed route with the Super Admin credential returned
+ * 303 to /admin. The same credential typed into Firefox failed with "Invalid
+ * admin credentials." — and `auth.users.last_sign_in_at` did NOT advance, so
+ * Supabase was never asked. The request was already broken when it left the
+ * browser.
+ *
+ * The cause was `disabled={isPending}` on the credential inputs. A disabled
+ * control is not a SUCCESSFUL control: the HTML form-submission algorithm skips
+ * it when building the entry list. `onSubmit` set `isPending`, React flushed it
+ * synchronously for the discrete submit event, and the browser then serialised a
+ * form whose identifier and password were disabled. What left the browser was
+ * `portal=admin` and nothing else — which the server correctly refused.
+ *
+ * These assertions pin the shape of the fix. The flow-level proof that a
+ * submission WITHOUT those fields fails closed already exists above ("missing
+ * fields produce the same generic failure"); what was missing was anything
+ * stopping the form from producing exactly that submission.
+ */
+
+describe("the credential fields stay successful form controls", () => {
+  /** The JSX of one input element, by its id. */
+  const inputSource = (id: string): string => {
+    const form = read(LOGIN_FORM);
+    const start = form.indexOf(`id="${id}"`);
+    assert.ok(start > 0, `#${id} must exist`);
+    const open = form.lastIndexOf("<input", start);
+    const close = form.indexOf("/>", start);
+    assert.ok(open >= 0 && close > open, `#${id} element must be readable`);
+    return form.slice(open, close);
+  };
+
+  test("the identifier input is NEVER disabled by pending state", () => {
+    const identifier = code(inputSource("identifier"));
+    assert.doesNotMatch(
+      identifier,
+      /disabled/,
+      "a disabled identifier is omitted from the native submission entirely"
+    );
+  });
+
+  test("the password input is NEVER disabled by pending state", () => {
+    const password = code(inputSource("password"));
+    assert.doesNotMatch(
+      password,
+      /disabled/,
+      "a disabled password is omitted from the native submission entirely"
+    );
+  });
+
+  test("both credential fields are readOnly while in flight instead", () => {
+    for (const id of ["identifier", "password"]) {
+      assert.match(
+        code(inputSource(id)),
+        /readOnly=\{isPending\}/,
+        `#${id} keeps the pending affordance without dropping its value`
+      );
+    }
+  });
+
+  test("the submit button may still be disabled — it carries no value", () => {
+    const form = read(LOGIN_FORM);
+    const button = form.slice(form.indexOf('type="submit"'));
+    assert.match(button, /disabled=\{isPending\}/);
+    // And it is the ONLY disabled control left in the form.
+    assert.equal(
+      (code(form).match(/disabled=\{isPending\}/g) ?? []).length,
+      1,
+      "only the submit button may be disabled"
+    );
+  });
+
+  test("the pending state itself is still set on submit", () => {
+    const form = code(read(LOGIN_FORM));
+    assert.match(form, /onSubmit=\{\(\) => setIsPending\(true\)\}/);
+    assert.match(form, /useState\(false\)/);
+    assert.match(form, /isPending \? "Authenticating\.\.\." : copy\.submitLabel/);
+  });
+
+  test("the transport is still an ordinary native POST", () => {
+    const form = code(read(LOGIN_FORM));
+    assert.match(form, /method="post"/);
+    assert.match(form, /action="\/auth\/login\/submit"/);
+
+    // No JavaScript submission path was introduced to work around the bug: the
+    // form must keep working with its script never loading.
+    for (const workaround of [
+      /fetch\(/,
+      /axios/,
+      /XMLHttpRequest/,
+      /new FormData\(/,
+      /preventDefault/,
+      /requestSubmit/,
+      /"use server"/,
+      /useActionState/,
+      /useFormState/,
+    ]) {
+      assert.doesNotMatch(form, workaround, `must not use ${workaround}`);
+    }
+  });
+
+  test("every field the server needs is still present and named", () => {
+    const form = read(LOGIN_FORM);
+    assert.match(form, /<input type="hidden" name="portal" value=\{portal\} \/>/);
+    assert.match(form, /name="next" value=\{nextParam\}/);
+    assert.match(form, /name="identifier"/);
+    assert.match(form, /name="password"/);
+  });
+
+  test("the input contracts the portals depend on are untouched", () => {
+    const form = read(LOGIN_FORM);
+    assert.match(form, /type=\{isStaff \? "tel" : "email"\}/);
+    assert.match(form, /inputMode=\{isStaff \? "numeric" : "email"\}/);
+    assert.match(form, /maxLength=\{isStaff \? 10 : 254\}/);
+    assert.match(form, /pattern=\{isStaff \? "\[0-9\]\{10\}" : undefined\}/);
+    assert.match(form, /autoComplete="username"/);
+
+    const password = inputSource("password");
+    assert.match(password, /type="password"/);
+    assert.match(password, /autoComplete="current-password"/);
+    assert.match(password, /maxLength=\{128\}/);
+  });
+
+  test("the pending affordance is still visible on the read-only fields", () => {
+    // The look does not change: `read-only:` replaces `disabled:` for the same
+    // dimmed appearance, so the UX the owner sees mid-submit is unchanged.
+    for (const id of ["identifier", "password"]) {
+      assert.match(inputSource(id), /read-only:opacity-50/);
+    }
+  });
+});
