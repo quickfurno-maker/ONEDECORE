@@ -26,6 +26,15 @@ export const CRM_PERMISSION_CODES = [
   "sales_targets.manage",
   "crm.reporting.read",
   "crm.cadences.manage",
+  /*
+   * Deleting an enquiry, which is NOT `leads.transition`.
+   *
+   * Marking an enquiry CLOSED LOST is an ordinary lifecycle transition the
+   * sales team owns: it needs a reason and a note, and the lead stays in CRM
+   * history. Removing an enquiry from the business record is a different act
+   * with a different authority, and the two share no permission.
+   */
+  "leads.delete",
 ] as const;
 
 export type CrmPermissionCode = (typeof CRM_PERMISSION_CODES)[number];
@@ -102,6 +111,7 @@ export const CRM_ROLE_PERMISSIONS: Readonly<
     "sales_targets.manage",
     "crm.reporting.read",
     "crm.cadences.manage",
+    "leads.delete",
   ],
   management: [
     "leads.read",
@@ -117,15 +127,25 @@ export const CRM_ROLE_PERMISSIONS: Readonly<
     "crm.notes.manage",
     "crm.follow_ups.manage",
     "crm.activities.read",
-    "leads.bulk_import",
+    // No leads.bulk_import: bulk enquiry upload is Super Admin only, and this
+    // legacy role mirrors Sales Manager breadth closely enough that leaving it
+    // here would make the restriction one role assignment away from meaningless.
     "sales_targets.read",
     "crm.reporting.read",
   ],
+  /*
+   * SALES MANAGER — authority over the sales team, not a second owner.
+   *
+   * `leads.transition` stays: marking an enquiry CLOSED LOST is the sales job.
+   * What left this list is the owner control plane it had accumulated —
+   * `leads.bulk_import` and `leads.duplicate_override` — because loading
+   * enquiries in bulk and forcing one past duplicate protection are both acts
+   * the owner takes responsibility for. `leads.delete` was never here.
+   */
   sales_manager: [
     "leads.read_all",
     "leads.manage",
     "leads.create",
-    "leads.duplicate_override",
     "leads.assign",
     "leads.transition",
     "consents.read",
@@ -133,7 +153,6 @@ export const CRM_ROLE_PERMISSIONS: Readonly<
     "crm.notes.manage",
     "crm.follow_ups.manage",
     "crm.activities.read",
-    "leads.bulk_import",
     "sales_targets.read",
     "crm.reporting.read",
     "crm.cadences.manage",

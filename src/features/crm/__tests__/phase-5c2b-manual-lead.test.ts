@@ -25,12 +25,33 @@ describe("Phase 5C2B permissions", () => {
     assert.equal(CRM_ROLE_PERMISSIONS.designer.includes("leads.create"), false);
   });
 
-  test("duplicate override limited to manager/admin roles", () => {
+  test("duplicate override is the owner's alone", () => {
+    /*
+     * NARROWED FROM "manager/admin" TO THE OWNER.
+     *
+     * Duplicate protection exists so the same customer is not worked twice by
+     * two people. A Sales Manager can still SEE that an apparent duplicate
+     * exists and open the enquiry that already exists; forcing a second one
+     * past the protection is the act this permission grants, and the owner
+     * takes responsibility for it.
+     *
+     * `management` is a legacy role retained for existing assignments and is
+     * out of scope for this change; it is pinned as-is rather than quietly
+     * altered.
+     */
     assert.ok(CRM_ROLE_PERMISSIONS.super_admin.includes("leads.duplicate_override"));
-    assert.ok(CRM_ROLE_PERMISSIONS.sales_manager.includes("leads.duplicate_override"));
+    assert.equal(
+      CRM_ROLE_PERMISSIONS.sales_manager.includes("leads.duplicate_override"),
+      false,
+      "a Sales Manager may not force a duplicate enquiry"
+    );
     assert.ok(CRM_ROLE_PERMISSIONS.management.includes("leads.duplicate_override"));
     assert.equal(CRM_ROLE_PERMISSIONS.sales_executive.includes("leads.duplicate_override"), false);
     assert.equal(CRM_ROLE_PERMISSIONS.sales.includes("leads.duplicate_override"), false);
+
+    // The manager can still create an ordinary enquiry: what was removed is the
+    // override, not manual creation.
+    assert.ok(CRM_ROLE_PERMISSIONS.sales_manager.includes("leads.create"));
   });
 });
 

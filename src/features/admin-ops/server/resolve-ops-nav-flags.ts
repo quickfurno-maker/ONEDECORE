@@ -15,6 +15,7 @@ import {
   probeCommercePermissions,
 } from "@/features/commerce/server/commerce-permissions.ts";
 import { probeQuotationPermissions } from "@/features/quotations/server/quotation-permissions.ts";
+import { getClaims } from "@/server/auth/claims.ts";
 import type { OpsNavFlags } from "../types.ts";
 
 const DENIED_QUOTATION = {
@@ -35,6 +36,7 @@ export const resolveOpsNavFlags = cache(async (): Promise<OpsNavFlags> => {
     showLandingLabLink,
     showCommerceLink,
     quotationPermissions,
+    claims,
   ] = await Promise.all([
     hasAnyCrmLeadReadPermission(),
     hasAnyWhatsappInboxReadPermission(),
@@ -46,6 +48,9 @@ export const resolveOpsNavFlags = cache(async (): Promise<OpsNavFlags> => {
     hasLandingPagesReadPermission(),
     hasAnyCommerceReadPermission(),
     probeQuotationPermissions().catch(() => DENIED_QUOTATION),
+    // The same claim set the Portfolio pages themselves check, so the link and
+    // the page can never disagree about who may open it.
+    getClaims().catch(() => null),
   ]);
 
   const crmContext = showCrmLink ? await getCrmAccessContext() : null;
@@ -65,6 +70,8 @@ export const resolveOpsNavFlags = cache(async (): Promise<OpsNavFlags> => {
     campaigns: showCampaignsLink,
     landingLab: showLandingLabLink,
     commerce: showCommerceLink,
+    portfolio:
+      claims?.isActive === true && claims.permissions.includes("portfolio.manage"),
     staff: showStaffLink,
     attendance: showAttendanceLink,
     leave: showLeaveLink,

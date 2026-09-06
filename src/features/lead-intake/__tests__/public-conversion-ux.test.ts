@@ -646,9 +646,17 @@ describe("the migration only enables truth", () => {
     const files = readdirSync(join(root, "supabase/migrations")).filter((n) =>
       n.endsWith(".sql")
     );
+    // This migration is no longer the newest — the Sales Manager control plane
+    // hardening follows it — but it must still be present and untouched.
+    const sorted = [...files].sort();
+    assert.ok(
+      sorted.includes("20260905120000_public_consultation_qualifier.sql"),
+      "the public consultation qualifier must still be present"
+    );
     assert.equal(
-      [...files].sort().pop(),
-      "20260905120000_public_consultation_qualifier.sql"
+      sorted.pop(),
+      "20260906120000_sales_manager_control_plane_hardening.sql",
+      "the newest migration is the Sales Manager control plane hardening"
     );
   });
 });

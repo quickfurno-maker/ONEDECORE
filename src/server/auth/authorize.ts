@@ -5,15 +5,28 @@ import {
   DEFAULT_LOGIN_PORTAL,
   loginPortalHref,
 } from "@/features/staff-admin/contracts/login-portal";
+import {
+  ADMIN_HOME,
+  isSafeStaffRedirect,
+} from "@/features/manager-workspace/contracts/manager-home";
 
 /**
- * Sanitizes return path parameter to ensure redirect target is strictly within /admin boundaries.
+ * Sanitises a return path so a redirect can only land inside a staff workspace.
+ *
+ * TWO WORKSPACES, ONE ALLOWLIST
+ *
+ * `/admin` is the Super Admin workspace and the historical default; `/manager`
+ * is the Sales Manager one. Both are internal staff destinations, so both are
+ * allowed — and nothing else is.
+ *
+ * The `//` guard is what keeps this an allowlist rather than an open redirect:
+ * `/admin//evil.example.com` is a protocol-relative URL that a browser resolves
+ * to another ORIGIN, so a prefix test alone would happily hand it back.
+ * Anything unrecognised collapses to `/admin`, which is itself role-aware and
+ * sends a Sales Manager on to `/manager`.
  */
 export function getSafeAdminRedirect(pathname?: string | null): string {
-  if (pathname && pathname.startsWith("/admin") && !pathname.startsWith("/admin//")) {
-    return pathname;
-  }
-  return "/admin";
+  return isSafeStaffRedirect(pathname) ? (pathname as string) : ADMIN_HOME;
 }
 
 /**

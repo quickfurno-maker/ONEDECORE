@@ -6,6 +6,15 @@ export interface OpsNavFlags {
   readonly campaigns: boolean;
   readonly landingLab: boolean;
   readonly commerce: boolean;
+  /**
+   * Portfolio CMS.
+   *
+   * This flag exists because the link did not have one: the sidebar and the
+   * command palette both hard-coded Portfolio CMS for every staff member who
+   * could open the workspace, while the page itself correctly demanded
+   * `portfolio.manage`. Everyone without the permission saw a link to a wall.
+   */
+  readonly portfolio: boolean;
   readonly staff: boolean;
   readonly attendance: boolean;
   readonly leave: boolean;

@@ -25,6 +25,15 @@ export interface CrmAccessContext {
   readonly canReadCrmReporting: boolean;
   readonly canManageCadences: boolean;
   readonly canManageSlaPolicy: boolean;
+  /**
+   * Whether this caller may DELETE an enquiry — Super Admin only.
+   *
+   * Deliberately not derivable from any other flag on this context. In
+   * particular it is unrelated to `canTransitionLeads`: marking an enquiry
+   * CLOSED LOST is the sales team's ordinary lifecycle authority, and removing
+   * one from the business record is the owner's.
+   */
+  readonly canDeleteLeads: boolean;
 }
 
 export function hasCrmLeadReadAccess(context: CrmAccessContext): boolean {

@@ -10,7 +10,10 @@ import { TargetPanel } from "@/features/admin-ops/components/TargetPanel.tsx";
 import { loadOpsDashboardSnapshot } from "@/features/admin-ops/server/dashboard-snapshot.ts";
 import { fetchOpsIdentity } from "@/features/admin-ops/server/ops-identity.ts";
 import { resolveOpsNavFlags } from "@/features/admin-ops/server/resolve-ops-nav-flags.ts";
+import { redirect } from "next/navigation";
 import { requireStaffPermission } from "@/server/auth";
+import { MANAGER_HOME } from "@/features/manager-workspace/contracts/manager-home";
+import { resolveManagerAccess } from "@/features/manager-workspace/server/manager-access";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +34,26 @@ function greeting(hour: number): string {
 
 export default async function AdminPage() {
   const session = await requireStaffPermission("admin.access", "/admin");
+
+  /*
+   * A Sales Manager belongs in the Manager workspace, not on the owner's
+   * dashboard.
+   *
+   * This page is the Super Admin's view of the whole business — global KPIs,
+   * campaign and commerce panels, the attention feed. A manager reaching it
+   * through a bookmark, a stale `next=/admin` or the address bar should land
+   * where they actually work rather than on a page where most panels would
+   * refuse to load.
+   *
+   * Only THIS page redirects. `/admin/*` feature routes stay exactly as they
+   * are, permission-guarded individually, because the manager legitimately
+   * works in several of them.
+   */
+  const managerAccess = await resolveManagerAccess();
+  if (managerAccess.kind === "granted" && !managerAccess.access.isSuperAdmin) {
+    redirect(MANAGER_HOME);
+  }
+
   const flags = await resolveOpsNavFlags();
   const [identity, snapshot] = await Promise.all([
     fetchOpsIdentity(session.userId, session.email),

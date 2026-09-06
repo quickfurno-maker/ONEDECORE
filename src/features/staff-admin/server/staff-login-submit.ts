@@ -2,6 +2,7 @@ import "server-only";
 
 import { NextResponse, type NextRequest } from "next/server";
 import { getSafeAdminRedirect } from "@/server/auth/authorize";
+import { resolveLoginDestination } from "@/features/manager-workspace/contracts/manager-home.ts";
 import { looksLikeStaffLoginPhone } from "../contracts/staff-login-phone.ts";
 import {
   looksLikeAdminEmail,
@@ -199,6 +200,36 @@ export interface LoginSupabaseClient {
 export type LoginClientFactory = (
   adapter: LoginCookieAdapter
 ) => LoginSupabaseClient;
+
+/**
+ * Where a signed-in staff member should be sent.
+ *
+ * WHY THE ROLE IS RESOLVED HERE
+ *
+ * `/admin` is the Super Admin dashboard: the owner's view of the whole
+ * business. A Sales Manager landing there is wrong even though every panel
+ * would individually refuse to load, so the destination is decided at the one
+ * moment the session is established and the roles can be read.
+ *
+ * A failed probe falls back to "not that role", which sends the visitor to the
+ * ordinary `/admin` — itself role-aware, so a manager whose probe failed here
+ * is still redirected onward rather than shown the owner dashboard. Fail-safe
+ * in both directions.
+ */
+async function resolveStaffLoginDestination(
+  supabase: LoginSupabaseClient,
+  safeNext: string
+): Promise<string> {
+  const [managerRes, ownerRes] = await Promise.all([
+    supabase.rpc("has_active_role", { p_role_code: "sales_manager" }),
+    supabase.rpc("has_active_role", { p_role_code: "super_admin" }),
+  ]);
+
+  return resolveLoginDestination(safeNext, {
+    isSalesManager: !managerRes.error && managerRes.data === true,
+    isSuperAdmin: !ownerRes.error && ownerRes.data === true,
+  });
+}
 
 function readField(form: FormData, name: string): string {
   const value = form.get(name);
@@ -474,7 +505,13 @@ export async function handleStaffLoginSubmit(
     }
 
     return applyCookies(
-      NextResponse.redirect(new URL(safeNext, effectiveRequestOrigin(request)), 303)
+      NextResponse.redirect(
+        new URL(
+          await resolveStaffLoginDestination(supabase, safeNext),
+          effectiveRequestOrigin(request)
+        ),
+        303
+      )
     );
   }
 
@@ -533,6 +570,12 @@ export async function handleStaffLoginSubmit(
   }
 
   return applyCookies(
-    NextResponse.redirect(new URL(safeNext, effectiveRequestOrigin(request)), 303)
+    NextResponse.redirect(
+      new URL(
+        await resolveStaffLoginDestination(supabase, safeNext),
+        effectiveRequestOrigin(request)
+      ),
+      303
+    )
   );
 }

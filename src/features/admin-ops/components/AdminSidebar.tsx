@@ -137,11 +137,15 @@ function buildGroups(flags: OpsNavFlags, hrefs: AdminSidebarProps["hrefs"]): rea
     });
   }
 
-  groups.push({
-    id: "content",
-    label: "Content",
-    items: [{ href: "/admin/portfolio", label: "Portfolio CMS", icon: "portfolio" }],
-  });
+  // Permission-derived, like every other group. It was unconditional, so staff
+  // without `portfolio.manage` were shown a link to an Access Denied page.
+  if (flags.portfolio) {
+    groups.push({
+      id: "content",
+      label: "Content",
+      items: [{ href: "/admin/portfolio", label: "Portfolio CMS", icon: "portfolio" }],
+    });
+  }
 
   const people: NavItem[] = [];
   if (flags.staff) {

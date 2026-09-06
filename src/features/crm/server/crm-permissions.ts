@@ -155,6 +155,29 @@ export async function probeSlaPolicyPermissions(db?: CrmDb): Promise<SlaPolicyPe
   return { canManageSlaPolicy: !error && data === true };
 }
 
+export interface LeadDeletionPermissionProbeResult {
+  readonly canDeleteLeads: boolean;
+}
+
+/**
+ * Whether this caller may DELETE an enquiry.
+ *
+ * Its own probe, not a flag folded into the lifecycle one. Deleting an enquiry
+ * and marking it CLOSED LOST are different authorities held by different roles:
+ * closed lost is the sales team's ordinary lifecycle transition, delete is the
+ * owner's. Resolving them together is how they would end up sharing a check.
+ */
+export async function probeLeadDeletionPermissions(
+  db?: CrmDb
+): Promise<LeadDeletionPermissionProbeResult> {
+  const supabase = await resolveCrmDb(db);
+  const { data, error } = await supabase.rpc("authorize", {
+    requested_permission: "leads.delete",
+  });
+
+  return { canDeleteLeads: !error && data === true };
+}
+
 export interface SalesTargetPermissionProbeResult {
   readonly canReadSalesTargets: boolean;
   readonly canManageSalesTargets: boolean;

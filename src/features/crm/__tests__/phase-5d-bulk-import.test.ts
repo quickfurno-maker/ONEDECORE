@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
+import { CRM_ROLE_PERMISSIONS } from "../contracts/permissions.ts";
 
 const root = process.cwd();
 
@@ -53,17 +54,39 @@ describe("Phase 5D migration contract", () => {
 });
 
 describe("Phase 5D permissions (planned CRM_ROLE_PERMISSIONS extension)", () => {
-  test("bulk import granted to manager/admin roles only", () => {
-    const permissionsSrc = readPlanned("src/features/crm/contracts/permissions.ts");
-    assert.match(permissionsSrc, /leads\.bulk_import/);
-    assert.match(permissionsSrc, /super_admin:[\s\S]*leads\.bulk_import/);
-    assert.match(permissionsSrc, /sales_manager:[\s\S]*leads\.bulk_import/);
-    assert.match(permissionsSrc, /management:[\s\S]*leads\.bulk_import/);
-    assert.doesNotMatch(
-      permissionsSrc,
-      /sales_executive:[\s\S]*leads\.bulk_import/
-    );
-    assert.doesNotMatch(permissionsSrc, /designer:[\s\S]*leads\.bulk_import/);
+  test("bulk import is the owner's alone", () => {
+    /*
+     * NARROWED FROM "manager/admin" TO THE OWNER, and asserted against the
+     * exported object rather than a regex over the source file.
+     *
+     * The old form used `super_admin:[\s\S]*leads.bulk_import`, which matches
+     * the code appearing ANYWHERE after that key — it would have passed while
+     * the grant sat under a completely different role. Reading the real
+     * structure is both stricter and honest about what it checks.
+     */
+    assert.ok(CRM_ROLE_PERMISSIONS.super_admin.includes("leads.bulk_import"));
+    assert.ok(CRM_ROLE_PERMISSIONS.super_admin.includes("leads.bulk_import_approve"));
+
+    for (const role of [
+      "sales_manager",
+      "management",
+      "sales_executive",
+      "sales",
+      "project_manager",
+      "designer",
+      "project_operations",
+    ] as const) {
+      assert.equal(
+        CRM_ROLE_PERMISSIONS[role].includes("leads.bulk_import"),
+        false,
+        `${role} may not bulk import enquiries`
+      );
+      assert.equal(
+        CRM_ROLE_PERMISSIONS[role].includes("leads.bulk_import_approve"),
+        false,
+        `${role} may not approve a bulk import`
+      );
+    }
   });
 
   test("bulk import approve limited to super_admin", () => {

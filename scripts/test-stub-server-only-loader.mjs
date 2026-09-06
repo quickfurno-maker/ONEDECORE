@@ -26,7 +26,14 @@ function resolveSrcAlias(specifier) {
 
   // Extension-bearing candidates only, so a directory of the same name is never
   // mistaken for the module.
+  //
+  // `base` itself comes first because the repository writes `@/` imports BOTH
+  // ways — `@/features/x/y` and `@/features/x/y.ts` are both idiomatic here, and
+  // only the extensionless form resolved. A module that used the other form
+  // failed to load the moment a test reached it, which is a confusing way to
+  // learn about an import style.
   const candidates = [
+    base,
     `${base}.ts`,
     `${base}.tsx`,
     `${base}.mts`,

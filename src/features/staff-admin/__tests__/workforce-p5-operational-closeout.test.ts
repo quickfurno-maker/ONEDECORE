@@ -101,10 +101,14 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
       sorted.includes("20260904170000_workforce_p5_launch_catalogue.sql"),
       "M57 must still be present"
     );
+    assert.ok(
+      sorted.includes("20260905120000_public_consultation_qualifier.sql"),
+      "the public consultation qualifier must still be present"
+    );
     assert.equal(
       sorted[sorted.length - 1],
-      "20260905120000_public_consultation_qualifier.sql",
-      "the newest migration is the public consultation qualifier"
+      "20260906120000_sales_manager_control_plane_hardening.sql",
+      "the newest migration is the Sales Manager control plane hardening"
     );
     // M55 and M56 are still present and untouched by name.
     assert.ok(files.includes("20260904140000_interior_room_wise_quotation.sql"));

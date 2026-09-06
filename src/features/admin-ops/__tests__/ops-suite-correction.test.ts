@@ -18,6 +18,7 @@ function flags(overrides: Partial<OpsNavFlags> = {}): OpsNavFlags {
     campaigns: false,
     landingLab: false,
     commerce: false,
+    portfolio: false,
     staff: false,
     attendance: false,
     leave: false,
