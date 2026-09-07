@@ -51,6 +51,7 @@ export type PublicPortfolioPaginatedCards = {
   pageSize: number;
   hasNextPage: boolean;
   activeService: string | null;
+  activeCategory: string | null;
 };
 
 export type PublicSitemapEntry = {

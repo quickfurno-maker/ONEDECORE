@@ -21,7 +21,7 @@ export const HOME_CLAIM_COPY = {
   projectsDelivered: `${HOME_CLAIMS.projectsDelivered}+ Projects Delivered`,
   rating: `${HOME_CLAIMS.rating}/5 Average Rating`,
   reviews: `${HOME_CLAIMS.reviews}+ Client Reviews`,
-  warranty: `${HOME_CLAIMS.warrantyYears}-Year Warranty`,
+  warranty: `Up to ${HOME_CLAIMS.warrantyYears}+ Years Warranty`,
   satisfaction: `${HOME_CLAIMS.clientSatisfactionPercent}% Client Satisfaction`,
   customDesigns: `${HOME_CLAIMS.customDesignPercent}% Custom Designs`,
   manufacturing: "Own Manufacturing Unit",

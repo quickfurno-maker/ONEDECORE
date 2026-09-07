@@ -3002,3 +3002,270 @@
     transform: none;
   }
 }
+
+/* ========================================================================== */
+/* FINAL PASS — premium proof zone · areas marquee · closing panel            */
+/* ========================================================================== */
+
+/* -------------------------------------------------------------------------- */
+/* Proof zone — depth without cards                                            */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-proof {
+  position: relative;
+  isolation: isolate;
+  /* A single soft gold wash from above, so the strip reads as lit rather than
+     as a panel sitting on the page. No borders, no boxes. */
+  background:
+    radial-gradient(
+      120% 140% at 50% -20%,
+      color-mix(in srgb, var(--od-gold) 13%, transparent),
+      transparent 58%
+    ),
+    var(--od-bg-deepest);
+  overflow: hidden;
+}
+
+/* A hairline that draws itself across the top once the strip is in view. */
+.od-disc-proof::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  height: 1px;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--od-gold) 70%, transparent),
+    transparent
+  );
+  animation: od-line-draw 900ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1))
+    360ms forwards;
+}
+
+@keyframes od-line-draw {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.od-disc-proof__value {
+  /* Ivory into gold: the number is the brightest thing in the band. */
+  background: linear-gradient(
+    180deg,
+    var(--od-text-primary) 6%,
+    var(--od-gold-light, #f2cd83) 96%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-wrap: balance;
+}
+
+.od-disc-proof__label {
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font-size: clamp(0.66rem, 1.4vw, 0.74rem);
+  font-weight: 600;
+}
+
+/* The warranty is the only metric that carries terms, and the link has to read
+   as a link without competing with the label it follows. */
+.od-disc-proof__terms {
+  color: var(--od-gold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.od-disc-proof__terms:hover,
+.od-disc-proof__terms:focus-visible {
+  color: var(--od-gold-light, #f2cd83);
+}
+
+.od-disc-proof__footnote {
+  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-disc-proof::before {
+    animation: none;
+    transform: scaleX(1);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Areas served — two opposed marquees                                         */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-areas {
+  background: var(--od-bg-section);
+  padding-block: clamp(2rem, 4.5vw, 3.25rem);
+  border-block: 1px solid var(--od-line);
+  overflow: hidden;
+}
+
+.od-disc-areas__head {
+  margin-bottom: clamp(1.1rem, 3vw, 1.75rem);
+  max-width: 34rem;
+}
+
+.od-disc-areas__rails {
+  display: grid;
+  gap: 0.6rem;
+}
+
+/*
+ * The row is a real horizontally scrollable element. The drift is decoration
+ * layered on top of a list a thumb can drag and a keyboard can tab through.
+ */
+.od-disc-areas__row {
+  display: flex;
+  gap: 0.6rem;
+  width: max-content;
+  overflow-x: auto;
+  scrollbar-width: none;
+  animation: od-areas-drift 34s linear infinite;
+}
+
+.od-disc-areas__row::-webkit-scrollbar {
+  display: none;
+}
+
+.od-disc-areas__row[data-reverse] {
+  animation-direction: reverse;
+}
+
+/* A name someone is trying to read should stop moving. */
+.od-disc-areas__row:hover,
+.od-disc-areas__row:focus-within {
+  animation-play-state: paused;
+}
+
+.od-disc-areas__track {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.od-disc-areas__chip {
+  flex: 0 0 auto;
+  padding: 0.5rem 0.95rem;
+  border: 1px solid var(--od-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--od-text-primary) 3%, transparent);
+  color: var(--od-text-secondary);
+  font-size: clamp(0.78rem, 1.6vw, 0.88rem);
+  white-space: nowrap;
+}
+
+/*
+ * Exactly -50%: each row renders its chips twice, so the second set lands where
+ * the first began and the seam cannot be seen.
+ */
+@keyframes od-areas-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-disc-areas__row {
+    animation: none;
+    /* Autoplay stops; dragging does not. */
+    width: 100%;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Closing panel                                                               */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-final {
+  padding-block: clamp(2rem, 4.5vw, 3.5rem);
+  text-align: left;
+}
+
+/* A panel with its own edges: the spacing is the panel's padding, not a
+   section-height of empty band. */
+.od-disc-final__panel {
+  max-width: 52rem;
+  margin-inline: auto;
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  border: 1px solid color-mix(in srgb, var(--od-gold) 26%, var(--od-line));
+  border-radius: var(--od-radius-lg, 26px);
+  background:
+    radial-gradient(
+      100% 140% at 0% 0%,
+      color-mix(in srgb, var(--od-gold) 9%, transparent),
+      transparent 62%
+    ),
+    var(--od-bg-raised);
+}
+
+.od-disc-final__title {
+  justify-items: start;
+  margin-top: 0.15rem;
+}
+
+.od-disc-final__lede {
+  margin-top: 0.7rem;
+  margin-inline: 0;
+}
+
+.od-disc-final__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  justify-content: flex-start;
+  margin-top: clamp(1.15rem, 2.5vw, 1.6rem);
+}
+
+.od-disc-final__proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: clamp(1.1rem, 2.5vw, 1.5rem) 0 0;
+  padding-top: clamp(0.9rem, 2vw, 1.25rem);
+  border-top: 1px solid var(--od-line);
+  list-style: none;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--od-text-muted);
+}
+
+.od-disc-final__proof li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.od-disc-final__proof li + li::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--od-gold);
+}
+
+@media (max-width: 30rem) {
+  .od-disc-final__actions {
+    flex-direction: column;
+  }
+
+  .od-disc-final__actions > * {
+    width: 100%;
+  }
+}

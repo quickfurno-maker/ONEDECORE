@@ -245,4 +245,10 @@ export const NAME_PLACEHOLDER = "Enter your name";
 export const MOBILE_LABEL = "Mobile number";
 export const MOBILE_PLACEHOLDER = "Enter mobile number";
 
-export const SUBMIT_LABEL = "Get Verified Quotes";
+/*
+ * The form's own CTA. Distinct from the sticky dock's "Get Free Design
+ * Consultation" on purpose: the dock offers a conversation, this button
+ * completes a form, and giving them the same words made the dock look like a
+ * duplicate of the thing already on screen.
+ */
+export const SUBMIT_LABEL = "Get Free Quote";

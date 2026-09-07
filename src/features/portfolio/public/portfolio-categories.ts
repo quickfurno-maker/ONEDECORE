@@ -1,36 +1,24 @@
-import {
-  PORTFOLIO_SERVICE_LABELS,
-  type PortfolioServiceKey,
-} from "./constants.ts";
+
 
 /**
- * The four public portfolio categories — one definition, three consumers.
+ * The four public portfolio categories — one definition, four consumers.
  *
- * The homepage category cards, the portfolio page chips and the URL mapping all
- * read this file. Duplicating the labels across those three is how a chip ends
- * up linking to a filter nobody implemented.
+ * The homepage cards, the portfolio chips, the URL mapping and the database
+ * filter all read this file. Duplicating the labels across those is how a chip
+ * ends up linking to a filter nobody implemented.
  *
- * WHY EACH CATEGORY CARRIES A `service`, AND WHY TWO SHARE ONE
+ * A REAL TAXONOMY, NOT AN ALIAS
  *
- * The portfolio is filtered by `?service=`, and `portfolio_projects.service_code`
- * is constrained by the database to exactly three values:
+ * These are ROOM categories and they have their own column,
+ * `portfolio_projects.portfolio_category_code`. They are deliberately NOT
+ * `service_code` values: that field records the service a project was sold as
+ * and is read by CRM and lead matching, and overloading it with rooms to make a
+ * navigation control look right would corrupt it.
  *
- *   complete_home_interiors · modular_kitchens · custom_wardrobes
- *
- * "Complete Interiors" and "Kitchen" map onto that taxonomy exactly. "Hall /
- * Living Room" and "Bedroom" do NOT: they are ROOMS, and the schema records the
- * service a project was sold as, not the rooms it contains. A complete-home
- * project contains a hall and bedrooms; a "bedroom service code" does not exist.
- *
- * So both room categories point at the complete-home listing, which is the set
- * of projects that genuinely contain those rooms — and `narrowsListing: false`
- * records that the chip navigates rather than narrows. Two chips returning the
- * same projects is a known limitation, not an accident, and it is marked here so
- * the next person reads it in the config instead of discovering it in the UI.
- *
- * Giving these rooms a real filter needs a room-level taxonomy on the project
- * record. That is a schema change, and it is deliberately not smuggled into a
- * UI task.
+ * A project may be unclassified. The column is nullable, nothing was
+ * backfilled by guesswork, and an unclassified project simply does not appear
+ * under a category — which is the honest behaviour, because the alternative is
+ * showing somebody a "bedroom" nobody looked at.
  */
 
 export type PortfolioCategoryId =
@@ -40,15 +28,9 @@ export type PortfolioCategoryId =
   | "bedroom";
 
 export interface PortfolioCategory {
+  /** Also the stored `portfolio_category_code` and the `?category=` value. */
   readonly id: PortfolioCategoryId;
   readonly label: string;
-  /** The service listing this category opens. */
-  readonly service: PortfolioServiceKey;
-  /**
-   * Whether the chip actually narrows the listing to something the other
-   * categories do not show. False for the two room categories — see above.
-   */
-  readonly narrowsListing: boolean;
   /** Asset key on the homepage card. Real ONEDECORE photography only. */
   readonly assetKey: "completeHomeInteriors" | "modularKitchens" | "hero" | "oakJoinery";
   /**
@@ -62,24 +44,18 @@ export const PORTFOLIO_CATEGORIES: readonly PortfolioCategory[] = [
   {
     id: "complete-interiors",
     label: "Complete Interiors",
-    service: "complete_home_interiors",
-    narrowsListing: true,
     assetKey: "completeHomeInteriors",
     depictsCategory: true,
   },
   {
     id: "kitchen",
     label: "Kitchen",
-    service: "modular_kitchens",
-    narrowsListing: true,
     assetKey: "modularKitchens",
     depictsCategory: true,
   },
   {
     id: "hall",
     label: "Hall / Living Room",
-    service: "complete_home_interiors",
-    narrowsListing: false,
     // A living room with a media wall — the closest honest depiction available.
     assetKey: "hero",
     depictsCategory: true,
@@ -87,8 +63,6 @@ export const PORTFOLIO_CATEGORIES: readonly PortfolioCategory[] = [
   {
     id: "bedroom",
     label: "Bedroom",
-    service: "complete_home_interiors",
-    narrowsListing: false,
     // No bedroom photograph exists in the asset library. A material study is
     // used rather than a kitchen or living room standing in for a bedroom.
     assetKey: "oakJoinery",
@@ -96,42 +70,23 @@ export const PORTFOLIO_CATEGORIES: readonly PortfolioCategory[] = [
   },
 ];
 
+/** Every value the column and the query parameter accept. */
+export const PORTFOLIO_CATEGORY_IDS: readonly PortfolioCategoryId[] =
+  PORTFOLIO_CATEGORIES.map((category) => category.id);
+
+export function isPortfolioCategoryId(
+  value: unknown
+): value is PortfolioCategoryId {
+  return (
+    typeof value === "string" &&
+    (PORTFOLIO_CATEGORY_IDS as readonly string[]).includes(value)
+  );
+}
+
 /** The category the portfolio page selects when nothing is requested. */
 export const DEFAULT_PORTFOLIO_CATEGORY: PortfolioCategoryId = "complete-interiors";
 
-/**
- * The portfolio URL for a category.
- *
- * Uses the EXISTING `?service=` convention rather than inventing a second
- * filter parameter — `parseListingParams` already validates it and 404s on
- * anything unknown, and a parallel `?category=` would be a second routing model
- * for the same idea.
- */
+/** The portfolio URL for a category. */
 export function portfolioCategoryHref(category: PortfolioCategory): string {
-  return `/portfolio?service=${category.service}`;
-}
-
-/** The category a `?service=` listing should show as selected. */
-export function portfolioCategoryForService(
-  service: PortfolioServiceKey | null
-): PortfolioCategoryId | null {
-  if (service === null) {
-    return null;
-  }
-  const match = PORTFOLIO_CATEGORIES.find(
-    (category) => category.narrowsListing && category.service === service
-  );
-  return match ? match.id : null;
-}
-
-/*
- * A cheap invariant, checked at import rather than trusted: every category must
- * name a service the database actually allows.
- */
-for (const category of PORTFOLIO_CATEGORIES) {
-  if (!Object.hasOwn(PORTFOLIO_SERVICE_LABELS, category.service)) {
-    throw new Error(
-      `[ONEDECORE portfolio] Category "${category.id}" names unknown service "${category.service}".`
-    );
-  }
+  return `/portfolio?category=${category.id}`;
 }

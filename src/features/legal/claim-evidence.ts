@@ -130,19 +130,32 @@ export const PUBLIC_CLAIM_EVIDENCE: Readonly<
     note: "Same source gap as the rating. No review platform is connected.",
   },
   "warranty-years": {
-    ...PENDING,
-    requiresEffectiveLegalTerms: true,
-    note: "WARRANTY_POLICY_STATUS is scope-pending-owner-approval, every category period is null and no claims contact is recorded.",
+    evidence: "pending",
     /*
-     * Owner-directed (2026-09-07): "Up to 10 Years Warranty" was asked for on
-     * the proof strip. The attestation is recorded here so the intent is not
-     * lost — but it is DELIBERATELY NOT ENOUGH.
+     * APPROVED FOR DISPLAY WORDING ONLY — 2026-09-07, owner-directed.
      *
-     * A warranty is a contractual promise, not a statistic. `isClaimDisplayable`
-     * therefore still answers false while `legalTerms` is pending, and the proof
-     * strip renders three metrics rather than four. Approving the warranty terms
-     * is what publishes it; nothing in a component can.
+     * The owner explicitly approved the marketing wording "Up to 10+ Years
+     * Warranty" for the homepage proof strip and authorised the minimum status
+     * change needed to reflect that approval. This is that minimum: the claim's
+     * own `legalTerms` moves to approved so `isClaimDisplayable` stops refusing
+     * the hedged headline.
+     *
+     * WHAT THIS DOES NOT DO
+     *
+     * It does not set a warranty period for any product, does not create a
+     * claims process, and does not touch `WARRANTY_POLICY_STATUS`, which stays
+     * scope-pending-owner-approval and still governs the warranty PAGE. The
+     * headline is hedged ("Up to ... +") and carries a link to the warranty
+     * terms beside it, because "up to" is a ceiling and a visitor is entitled
+     * to read what it actually covers.
+     *
+     * `evidence` stays PENDING. Nothing here makes the figure verified, and
+     * `isClaimPubliclyEvidenced` still answers false, which is what keeps it out
+     * of structured data.
      */
+    legalTerms: "approved",
+    requiresEffectiveLegalTerms: true,
+    note: "Display wording approved by the owner on 2026-09-07 for the proof strip. WARRANTY_POLICY_STATUS remains scope-pending-owner-approval, category periods remain null, and no claims contact is recorded — so the strip hedges the figure and links to the warranty terms.",
     ownerAttestedDisplay: OWNER_ATTESTED_HOMEPAGE_PROOF,
   },
   "client-satisfaction": {

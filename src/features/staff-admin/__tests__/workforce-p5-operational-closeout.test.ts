@@ -111,7 +111,7 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
     );
     assert.equal(
       sorted[sorted.length - 1],
-      "20260907150000_public_requirement_form_v3.sql",
+      "20260907170000_portfolio_room_category_taxonomy.sql",
       "the newest migration is the public-consult-v3 requirement form contract"
     );
     // M55 and M56 are still present and untouched by name.

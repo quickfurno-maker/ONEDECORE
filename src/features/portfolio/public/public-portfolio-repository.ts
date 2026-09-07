@@ -45,9 +45,15 @@ export function fetchFeaturedProjects(): Promise<PublicPortfolioCard[]> {
 
 export function fetchPaginatedProjects(
   page: number,
-  serviceFilter?: string
+  serviceFilter?: string,
+  categoryFilter?: string
 ): Promise<PublicPortfolioPaginatedCards> {
-  return queryPaginatedProjects(createPublicAnonClient(), page, serviceFilter);
+  return queryPaginatedProjects(
+    createPublicAnonClient(),
+    page,
+    serviceFilter,
+    categoryFilter
+  );
 }
 
 export function fetchProjectBySlug(

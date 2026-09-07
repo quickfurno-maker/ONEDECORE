@@ -1,38 +1,41 @@
-"use client";
-
 import Link from "next/link";
-import { getPublicWhatsAppHref, PUBLIC_WHATSAPP } from "@/features/public-site/chrome/public-contact";
 import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 import {
+  DISCOVERY_FINAL_CTA_EYEBROW,
   DISCOVERY_FINAL_CTA_HEADLINE,
   DISCOVERY_FINAL_CTA_LEDE,
+  DISCOVERY_FINAL_CTA_PROOF,
 } from "./discovery-copy";
 
 /**
- * The closing decision point, immediately before the footer.
+ * The closing panel.
  *
- * The WhatsApp button follows the same rule as the sticky dock: rendered only
- * when `getPublicWhatsAppHref()` returns a URL, because a dead WhatsApp button
- * on a conversion surface is worse than none. With the number unconfigured the
- * section shows one clear primary action, which is what a closing CTA wants
- * anyway.
+ * It was a centred headline floating in a section-height of empty space, which
+ * read as the page trailing off rather than closing. It is a PANEL now: a
+ * bordered block with its own edges, so the content has something to sit
+ * against and the spacing is the panel's padding rather than the band's.
+ *
+ * The two actions are the two things a visitor can still want at this point —
+ * talk to someone, or look at more work. WhatsApp is deliberately not a third:
+ * it is already floating on the right, and offering it twice within a thumb's
+ * reach of itself is noise.
  */
 export function DiscoveryFinalCta() {
-  const whatsappHref = getPublicWhatsAppHref();
-
   return (
     <section
       className="od-disc-band od-disc-final"
       data-od-disc-section="final-cta"
       aria-labelledby="od-disc-final-title"
     >
-      <div className="od-disc-shell od-disc-final__shell">
-        <Reveal>
+      <div className="od-disc-shell">
+        <Reveal className="od-disc-final__panel">
+          <p className="od-disc-kicker">{DISCOVERY_FINAL_CTA_EYEBROW}</p>
           <h2 id="od-disc-final-title" className="od-disc-display od-disc-final__title">
-            {DISCOVERY_FINAL_CTA_HEADLINE}
+            <span>{DISCOVERY_FINAL_CTA_HEADLINE}</span>
           </h2>
           <p className="od-disc-lede od-disc-final__lede">{DISCOVERY_FINAL_CTA_LEDE}</p>
+
           <div className="od-disc-final__actions">
             <Link
               href={PUBLIC_CONSULTATION.href}
@@ -41,19 +44,20 @@ export function DiscoveryFinalCta() {
             >
               {PUBLIC_CONSULTATION.label}
             </Link>
-            {whatsappHref ? (
-              <a
-                href={whatsappHref}
-                className="od-disc-btn od-disc-btn--ghost"
-                data-conversion-action="whatsapp-final"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={PUBLIC_WHATSAPP.ariaLabel}
-              >
-                WhatsApp Us
-              </a>
-            ) : null}
+            <Link
+              href="/portfolio"
+              className="od-disc-btn od-disc-btn--ghost"
+              data-conversion-action="portfolio-final"
+            >
+              Explore Portfolio
+            </Link>
           </div>
+
+          <ul className="od-disc-final__proof">
+            {DISCOVERY_FINAL_CTA_PROOF.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
         </Reveal>
       </div>
     </section>

@@ -4384,6 +4384,7 @@ export type Database = {
           is_featured: boolean
           location_label: string | null
           property_type: string | null
+          portfolio_category_code: string | null
           published_at: string | null
           seo_description: string | null
           seo_title: string | null
@@ -4404,6 +4405,7 @@ export type Database = {
           is_featured?: boolean
           location_label?: string | null
           property_type?: string | null
+          portfolio_category_code?: string | null
           published_at?: string | null
           seo_description?: string | null
           seo_title?: string | null
@@ -4424,6 +4426,7 @@ export type Database = {
           is_featured?: boolean
           location_label?: string | null
           property_type?: string | null
+          portfolio_category_code?: string | null
           published_at?: string | null
           seo_description?: string | null
           seo_title?: string | null

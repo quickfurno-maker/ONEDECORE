@@ -38,11 +38,14 @@ export function getFeaturedProjects(): Promise<PublicPortfolioCard[]> {
 
 export function getPaginatedProjects(
   page: number,
-  serviceFilter?: string
+  serviceFilter?: string,
+  categoryFilter?: string
 ): Promise<PublicPortfolioPaginatedCards> {
   return unstable_cache(
-    () => fetchPaginatedProjects(page, serviceFilter),
-    listingCacheKeyParts(page, serviceFilter),
+    () => fetchPaginatedProjects(page, serviceFilter, categoryFilter),
+    // The category is part of the cache KEY, not just the query: two listings
+    // that differ only by category must not share a cached result.
+    [...listingCacheKeyParts(page, serviceFilter), categoryFilter ?? "all"],
     {
       tags: [PUBLIC_CACHE_TAGS.LIST],
       revalidate: false,

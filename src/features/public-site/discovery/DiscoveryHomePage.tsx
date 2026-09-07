@@ -7,6 +7,7 @@ import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 import { RevealRuntime } from "@/features/public-site/motion/RevealRuntime";
 import { HomeConsultationCapture } from "./HomeConsultationCapture";
+import { DiscoveryAreasServed } from "./DiscoveryAreasServed";
 import { DiscoveryDesignLibrary } from "./DiscoveryDesignLibrary";
 import { DiscoveryFinalCta } from "./DiscoveryFinalCta";
 import { DiscoveryHeroSlider } from "./DiscoveryHeroSlider";
@@ -99,6 +100,7 @@ export function DiscoveryHomePage({
       <main id="od-discovery-main">
         <DiscoveryHeroSlider />
         <DiscoveryProofStrip />
+        <DiscoveryAreasServed />
         <DiscoveryPortfolioCategories />
         <DiscoveryWhy />
         <DiscoveryManufacturing />

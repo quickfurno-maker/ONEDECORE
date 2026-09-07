@@ -33,6 +33,7 @@ export const DISCOVERY_SECTION_ORDER = [
   "header",
   "hero",
   "proof",
+  "areas",
   "portfolio-categories",
   "why",
   "manufacturing",
@@ -50,6 +51,7 @@ export const DISCOVERY_SECTION_ORDER = [
 export const DISCOVERY_MAJOR_SECTIONS = [
   "hero",
   "proof",
+  "areas",
   "portfolio-categories",
   "why",
   "manufacturing",
@@ -89,8 +91,14 @@ export const DISCOVERY_PROOF_METRICS = [
     claimId: "warranty-years" as const,
     prefix: "Up to ",
     value: HOME_CLAIMS.warrantyYears,
-    suffix: " Years",
+    suffix: "+ Years",
     label: "Warranty",
+    /*
+     * "Up to" is a ceiling, and a ceiling without terms beside it reads as a
+     * promise. This is the only metric that carries a link.
+     */
+    termsHref: "/warranty",
+    termsLabel: "T&C apply",
   },
   {
     claimId: "design-inspirations" as const,
@@ -119,6 +127,45 @@ export const DISCOVERY_PROOF_FOOTNOTE =
 /* -------------------------------------------------------------------------- */
 /* Why ONEDECORE                                                              */
 /* -------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------- */
+/* Areas served                                                               */
+/* -------------------------------------------------------------------------- */
+
+export const DISCOVERY_AREAS_EYEBROW = "AREAS WE SERVE";
+export const DISCOVERY_AREAS_HEADLINE =
+  "Premium interiors across Pune's key neighbourhoods.";
+
+/**
+ * The twenty neighbourhoods, owner-supplied and in the owner's order.
+ *
+ * A place list, not a claim: naming where the studio works asserts nothing
+ * measurable, so this needs no evidence gate. `HOME_PUNE_AREAS` remains the
+ * broader locality list the rest of the site uses; this is the shorter,
+ * deliberately ordered marketing set.
+ */
+export const DISCOVERY_AREAS_SERVED = [
+  "Kharadi",
+  "Koregaon Park",
+  "Kalyani Nagar",
+  "Viman Nagar",
+  "Baner",
+  "Balewadi",
+  "Aundh",
+  "Wakad",
+  "Hinjawadi",
+  "Hadapsar",
+  "Magarpatta",
+  "Kothrud",
+  "Bavdhan",
+  "Pashan",
+  "Pimple Saudagar",
+  "NIBM",
+  "Undri",
+  "Wagholi",
+  "Kondhwa",
+  "Shivajinagar",
+] as const;
 
 export const DISCOVERY_CATEGORIES_EYEBROW = "EXPLORE OUR WORK";
 export const DISCOVERY_CATEGORIES_HEADLINE = "Start where your home needs it most.";
@@ -359,10 +406,22 @@ export const DISCOVERY_CONSULT_HEADLINE = "Tell us what you're planning.";
 export const DISCOVERY_CONSULT_LEDE =
   "Share a few details about your home and budget. Our design team will help you understand the right possibilities for your space.";
 
+export const DISCOVERY_FINAL_CTA_EYEBROW = "READY TO START?";
 export const DISCOVERY_FINAL_CTA_HEADLINE =
   "Your home deserves more than a catalogue interior.";
 export const DISCOVERY_FINAL_CTA_LEDE =
-  "Start with a free design consultation and explore what can be created around your space, style and budget.";
+  "Start with a free design consultation or explore real ONEDECORE spaces before you decide.";
+
+/*
+ * Three words each, no icons. The row is a reminder of what was argued above,
+ * not a second attempt at arguing it — and the design count is interpolated so
+ * it cannot drift from the proof strip.
+ */
+export const DISCOVERY_FINAL_CTA_PROOF = [
+  "Direct Manufacturing",
+  `${HOME_CLAIMS.designInspirations}+ Designs`,
+  "Pune Execution",
+] as const;
 
 export const DISCOVERY_PROCESS_STEPS = ["Consult", "Design", "Manufacture", "Install"] as const;
 

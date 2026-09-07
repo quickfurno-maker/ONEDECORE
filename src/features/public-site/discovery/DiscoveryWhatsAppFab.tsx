@@ -40,9 +40,16 @@ function WhatsAppGlyph() {
  * reflow, so nothing on the page moves around it. `prefers-reduced-motion`
  * turns the animation off and the button keeps working.
  *
- * `navigator.vibrate` is deliberately NOT called. Haptics on page load are
- * hostile, and this component has no user gesture to hang them off — the anchor
- * navigates away on tap.
+ * HAPTICS, ON TAP AND ONLY ON TAP
+ *
+ * A single 25ms buzz fires from the click handler, which means it can only ever
+ * happen because a person touched the button. It is never called on mount, never
+ * on a timer and never repeated. Where `navigator.vibrate` does not exist —
+ * every desktop browser and iOS Safari — nothing happens and nothing breaks:
+ * the haptic is a garnish on the visual feedback, never the feedback itself.
+ *
+ * The handler does NOT preventDefault. The link must still open WhatsApp if the
+ * vibrate call throws, which it can under a permissions policy.
  */
 export function DiscoveryWhatsAppFab() {
   const href = getPublicWhatsAppHref();
@@ -51,9 +58,19 @@ export function DiscoveryWhatsAppFab() {
     return null;
   }
 
+  const onTap = () => {
+    try {
+      // Feature-detected, short, and only ever reached from a real tap.
+      navigator.vibrate?.(25);
+    } catch {
+      // A permissions policy can throw here. Never let it block the link.
+    }
+  };
+
   return (
     <a
       href={href}
+      onClick={onTap}
       className="od-disc-wa"
       data-conversion-action="whatsapp-fab"
       target="_blank"

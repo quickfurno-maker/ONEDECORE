@@ -722,7 +722,7 @@ describe("the migration only enables truth", () => {
     );
     assert.equal(
       sorted.pop(),
-      "20260907150000_public_requirement_form_v3.sql",
+      "20260907170000_portfolio_room_category_taxonomy.sql",
       "the newest migration is the premium requirement form v3 contract"
     );
   });

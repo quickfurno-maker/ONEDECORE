@@ -12,7 +12,7 @@ const LISTING_DESCRIPTION =
   "Browse ONEDECORE's portfolio of home interiors, modular kitchens, and custom wardrobes.";
 
 interface PortfolioPageProps {
-  searchParams: Promise<{ page?: string; service?: string }>;
+  searchParams: Promise<{ page?: string; service?: string; category?: string }>;
 }
 
 export async function generateMetadata({
@@ -52,7 +52,8 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
 
   const paginatedData = await getPaginatedProjects(
     parsed.page,
-    parsed.service ?? undefined
+    parsed.service ?? undefined,
+    parsed.category ?? undefined
   );
 
   return (

@@ -1,9 +1,14 @@
 import { PORTFOLIO_SERVICE_LABELS, SLUG_GRAMMAR_REGEX } from "./constants.ts";
 import type { PortfolioServiceKey } from "./constants.ts";
+import {
+  isPortfolioCategoryId,
+  type PortfolioCategoryId,
+} from "./portfolio-categories.ts";
 
 export type PortfolioListingParams = {
   page: number;
   service: PortfolioServiceKey | null;
+  category: PortfolioCategoryId | null;
 };
 
 /**
@@ -42,6 +47,15 @@ export function parseServiceParam(
     : "invalid";
 }
 
+export function parseCategoryParam(
+  raw: string | undefined
+): PortfolioCategoryId | null | "invalid" {
+  if (raw === undefined || raw.trim().length === 0) {
+    return null;
+  }
+  return isPortfolioCategoryId(raw) ? raw : "invalid";
+}
+
 export function isValidPortfolioSlug(slug: string | undefined): boolean {
   return (
     typeof slug === "string" &&
@@ -58,6 +72,7 @@ export function isValidPortfolioSlug(slug: string | undefined): boolean {
 export function parseListingParams(params: {
   page?: string;
   service?: string;
+  category?: string;
 }): PortfolioListingParams | null {
   const page = parsePageParam(params.page);
   if (page === null) {
@@ -69,5 +84,15 @@ export function parseListingParams(params: {
     return null;
   }
 
-  return { page, service };
+  /*
+   * `?category=` is the room taxonomy and `?service=` is the sold service. Both
+   * are accepted and both 404 on an unknown value; nothing stops a caller
+   * combining them, and combining them simply intersects.
+   */
+  const category = parseCategoryParam(params.category);
+  if (category === "invalid") {
+    return null;
+  }
+
+  return { page, service, category };
 }

@@ -43,9 +43,9 @@ describe("Phase 9D-F baseline and payment absence", () => {
   test("latest migration is the public consultation qualifier and deferred payment M38 is absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260907150000_public_requirement_form_v3.sql"
+      "20260907170000_portfolio_room_category_taxonomy.sql"
     );
-    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 62);
+    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 63);
     assert.equal(
       existsSync(join(root, "supabase/migrations/20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false

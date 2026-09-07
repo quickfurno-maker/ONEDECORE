@@ -289,13 +289,32 @@ describe("Public Portfolio — Route-Level Request Validation", () => {
   });
 
   test("Route validation resolves listing params without any Proxy involvement", () => {
-    assert.deepEqual(parseListingParams({}), { page: 1, service: null });
+    assert.deepEqual(parseListingParams({}), {
+      page: 1,
+      service: null,
+      category: null,
+    });
     assert.deepEqual(parseListingParams({ page: "2", service: "custom_wardrobes" }), {
       page: 2,
       service: "custom_wardrobes",
+      category: null,
+    });
+    /*
+     * `?category=` is the room taxonomy, independent of the sold service. Both
+     * are validated, and BOTH 404 on an unknown value rather than silently
+     * falling back to an unfiltered listing — a filter that quietly ignores its
+     * own parameter shows the visitor the wrong projects.
+     */
+    assert.deepEqual(parseListingParams({ category: "bedroom" }), {
+      page: 1,
+      service: null,
+      category: "bedroom",
     });
     assert.equal(parseListingParams({ page: "0" }), null);
     assert.equal(parseListingParams({ service: "unknown" }), null);
+    assert.equal(parseListingParams({ category: "kitchenette" }), null);
+    // Prototype keys must not be accepted as categories either.
+    assert.equal(parseListingParams({ category: "__proto__" }), null);
   });
 
   test("Slug validation enforces the published slug grammar", () => {

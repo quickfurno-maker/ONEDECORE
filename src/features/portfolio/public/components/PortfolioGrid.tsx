@@ -9,12 +9,19 @@ export interface PortfolioGridProps {
 }
 
 export function PortfolioGrid({ data }: PortfolioGridProps) {
-  const { cards, page, hasNextPage, activeService } = data;
+  const { cards, page, hasNextPage, activeService, activeCategory } = data;
 
-  const buildUrl = (targetPage: number, service?: string | null) => {
+  const buildUrl = (
+    targetPage: number,
+    service?: string | null,
+    category?: string | null
+  ) => {
     const params = new URLSearchParams();
     if (service) {
       params.set("service", service);
+    }
+    if (category) {
+      params.set("category", category);
     }
     if (targetPage > 1) {
       params.set("page", targetPage.toString());
@@ -27,15 +34,12 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
     <div id="portfolio-grid-container" className="space-y-8">
       {/*
         * The four owner-approved categories, from the same config the homepage
-        * cards read. "All Projects" stays first: it is the unfiltered canonical
-        * URL, the reset target of the empty state, and the only view that shows
-        * custom-wardrobe projects, which have no chip of their own.
+        * cards read, filtering on the real `portfolio_category_code` column.
         *
-        * Two of the four chips — Hall and Bedroom — resolve to the same
-        * complete-home listing, because the schema records the SERVICE a project
-        * was sold as and not the rooms it contains. `narrowsListing` in the
-        * config records that; the chips navigate honestly rather than pretending
-        * to filter something the data cannot express.
+        * "All Projects" stays first. It is the unfiltered canonical URL, the
+        * reset target of the empty state, and — until every project has been
+        * classified — the only view that shows unclassified work. Removing it
+        * would hide projects rather than organise them.
         */}
       <nav
         id="portfolio-filter-tabs"
@@ -52,18 +56,12 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
           All Projects
         </Link>
         {PORTFOLIO_CATEGORIES.map((category) => {
-          /*
-           * Only the narrowing chips can show as active. Marking Hall AND
-           * Bedroom AND Complete Interiors all current on the same listing
-           * would tell a screen reader three pages are open at once.
-           */
-          const isActive =
-            category.narrowsListing && activeService === category.service;
+          const isActive = activeCategory === category.id;
           return (
             <Link
               key={category.id}
               id={`portfolio-filter-${category.id}`}
-              href={buildUrl(1, category.service)}
+              href={buildUrl(1, null, category.id)}
               className="od-filter"
               data-active={isActive ? "" : undefined}
               aria-current={isActive ? "page" : undefined}
@@ -139,7 +137,7 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
           {page > 1 ? (
             <Link
               id="portfolio-prev-page-button"
-              href={buildUrl(page - 1, activeService)}
+              href={buildUrl(page - 1, activeService, activeCategory)}
               className="od-page-btn"
             >
               &larr; Previous Page
@@ -153,7 +151,7 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
           {hasNextPage ? (
             <Link
               id="portfolio-next-page-button"
-              href={buildUrl(page + 1, activeService)}
+              href={buildUrl(page + 1, activeService, activeCategory)}
               className="od-page-btn"
             >
               Next Page &rarr;

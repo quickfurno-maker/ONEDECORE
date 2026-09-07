@@ -184,6 +184,7 @@ describe("Phase 10C — homepage launch UX", () => {
       "header",
       "hero",
       "proof",
+      "areas",
       "portfolio-categories",
       "why",
       "manufacturing",

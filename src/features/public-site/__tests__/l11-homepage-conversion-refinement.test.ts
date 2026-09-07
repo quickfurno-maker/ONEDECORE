@@ -96,13 +96,12 @@ describe("the projects count is displayed without being called verified", () => 
      */
     assert.deepEqual([...getOwnerAttestedClaimIds()], [
       "projects-delivered",
+      "warranty-years",
       "custom-designs",
       "own-manufacturing-unit",
       "design-inspirations",
       "delivery-window",
     ]);
-    assert.ok(PUBLIC_CLAIM_EVIDENCE["warranty-years"].ownerAttestedDisplay);
-    assert.equal(isClaimDisplayable("warranty-years"), false);
 
     for (const id of getOwnerAttestedClaimIds()) {
       const record = PUBLIC_CLAIM_EVIDENCE[id];
@@ -134,45 +133,53 @@ describe("the projects count is displayed without being called verified", () => 
      * not exist, and the warranty duration is a contractual promise whose terms
      * are still pending. None of them was attested, and none may be quoted.
      */
+    /*
+     * STILL WITHHELD. A rating, a review count and a satisfaction percentage
+     * imply a source that does not exist, and none of them was attested. They
+     * are figures or they are nothing — there is no honest qualitative version
+     * of "4.9/5" — so they render nothing at all.
+     */
     for (const id of [
       "average-rating",
       "client-reviews",
       "client-satisfaction",
-      "warranty-years",
     ] as const) {
       assert.equal(canQuotePublicClaim(id), false, id);
+      assert.equal(publicClaimLabel(id), null, id);
     }
+
     /*
-     * warranty-years is ATTESTED and still not quotable, which is the point of
-     * `requiresEffectiveLegalTerms`: a warranty is a contractual promise, and an
-     * owner saying "publish it" does not put terms in force. It is the one claim
-     * the owner asked for on the proof strip that the gate still refuses.
+     * The warranty IS quotable now, and the wording is what makes that
+     * defensible: "Up to N+ Years" is a hedged ceiling, not "N-year warranty on
+     * everything". If this label ever loses its hedge, this assertion is the
+     * thing that should stop it.
      */
-    assert.ok(PUBLIC_CLAIM_EVIDENCE["warranty-years"].ownerAttestedDisplay);
-    assert.equal(isClaimDisplayable("warranty-years"), false);
-    /*
-     * A rating, a review count and a satisfaction percentage are figures or
-     * they are nothing — there is no honest qualitative version of "4.9/5", so
-     * they render nothing at all. The warranty keeps a qualitative label
-     * ("Warranty On Approved Scopes") because the SCOPE is real and only the
-     * DURATION is pending.
-     */
-    assert.equal(publicClaimLabel("average-rating"), null);
-    assert.equal(publicClaimLabel("client-reviews"), null);
-    assert.equal(publicClaimLabel("client-satisfaction"), null);
-    assert.doesNotMatch(publicClaimLabel("warranty-years") ?? "", /\d/);
+    assert.equal(canQuotePublicClaim("warranty-years"), true);
+    assert.match(publicClaimLabel("warranty-years") ?? "", /^Up to \d+\+ Years/);
   });
 
   test("an attested claim that also needs legal terms still waits for them", () => {
-    // Attestation is not a bypass for a contractual promise.
-    const attestedWarranty = {
+    /*
+     * THE RULE, not the current state. The real warranty record now carries
+     * approved terms — the owner approved the display wording on 2026-09-07 —
+     * so the hypothetical has to put them back to pending to exercise the rule
+     * this test exists for: attestation alone never publishes a contractual
+     * promise.
+     */
+    const attestedButPending = {
       ...PUBLIC_CLAIM_EVIDENCE,
       "warranty-years": {
         ...PUBLIC_CLAIM_EVIDENCE["warranty-years"],
+        legalTerms: "pending" as const,
         ownerAttestedDisplay: { attestedOn: "2026-01-01", note: "hypothetical" },
       },
     };
-    assert.equal(isClaimDisplayable("warranty-years", attestedWarranty), false);
+    assert.equal(isClaimDisplayable("warranty-years", attestedButPending), false);
+    // And requiring terms at all is what makes the rule reachable.
+    assert.equal(
+      PUBLIC_CLAIM_EVIDENCE["warranty-years"].requiresEffectiveLegalTerms,
+      true
+    );
   });
 
   test("the counters render below the hero, animated, reduced-motion safe", () => {
@@ -219,19 +226,24 @@ describe("the projects count is displayed without being called verified", () => 
       );
     }
     /*
-     * The strip FILTERS on the gate rather than assuming its own list is
-     * publishable, so a listed-but-ungated metric is correct behaviour, not a
-     * bug: the warranty sits here waiting for its terms and renders nothing.
+     * The strip FILTERS on the gate rather than trusting its own list, so a
+     * metric only renders once the register says it may. All four do now.
      */
     const rendered = DISCOVERY_PROOF_METRICS.filter((m) =>
       isClaimDisplayable(m.claimId)
     );
-    assert.equal(
-      rendered.some((m) => m.claimId === "warranty-years"),
-      false,
-      "the warranty must not render while its terms are pending"
-    );
-    assert.equal(rendered.length, 3);
+    assert.equal(rendered.length, 4);
+
+    /*
+     * The warranty is the only metric carrying a contractual promise, so it is
+     * the only one that must link to its terms. A ceiling without terms beside
+     * it reads as a guarantee.
+     */
+    const warranty = rendered.find((m) => m.claimId === "warranty-years");
+    assert.ok(warranty, "the warranty metric must render");
+    assert.equal("termsHref" in warranty!, true);
+    assert.match(warranty!.prefix, /^Up to/);
+    assert.match(warranty!.suffix, /\+/);
     for (const suppressed of [
       "average-rating",
       "client-reviews",
@@ -416,14 +428,26 @@ describe("the WhatsApp CTA is configured, validated, or absent", () => {
     // Most of the cycle is the rest state — an occasional cue, not a jiggle.
     assert.match(css, /animation: od-wa-wiggle 10s/);
     // And the whole thing is off when the visitor asked for less motion.
-    const reduced = css.slice(css.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
-    assert.match(reduced, /\.od-disc-wa \{[\s\S]{0,40}animation: none;/);
+    /*
+     * Located by RULE, not by position: several reduced-motion blocks exist and
+     * `lastIndexOf` silently started matching whichever one happened to be
+     * last.
+     */
+    const waRule = /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,600}?\.od-disc-wa \{[\s\S]{0,60}?animation: none;/;
+    assert.match(css, waRule);
     /*
      * No device haptics. Comment-stripped, because the component's docblock
      * EXPLAINS why it does not call it — a check that trips on prose is a check
      * that teaches you to write less of it.
      */
-    assert.doesNotMatch(code(read(WA_FAB)), /navigator\.vibrate/);
+    /*
+     * A haptic is allowed, but ONLY from a real tap. It must sit inside the
+     * click handler and never at module scope, on mount or on a timer.
+     */
+    const fabCode = code(read(WA_FAB));
+    assert.match(fabCode, /const onTap = \(\) => \{[\s\S]{0,220}navigator\.vibrate/);
+    assert.match(fabCode, /onClick=\{onTap\}/);
+    assert.doesNotMatch(fabCode, /useEffect|setInterval|setTimeout/);
   });
 
   test("the dock buttons clear 48px and respect the safe area", () => {

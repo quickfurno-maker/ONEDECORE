@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCountUp } from "@/features/public-site/motion/useCountUp";
 import { isClaimDisplayable } from "@/features/legal/claim-evidence";
 import { DISCOVERY_PROOF_METRICS, DISCOVERY_PROOF_FOOTNOTE } from "./discovery-copy";
@@ -29,11 +30,15 @@ function ProofMetric({
   value,
   suffix,
   label,
+  termsHref,
+  termsLabel,
 }: {
   readonly prefix: string;
   readonly value: number;
   readonly suffix: string;
   readonly label: string;
+  readonly termsHref?: string;
+  readonly termsLabel?: string;
 }) {
   const { value: shown, ref } = useCountUp(value);
 
@@ -53,6 +58,14 @@ function ProofMetric({
       </span>
       <span className="od-disc-proof__label" aria-hidden="true">
         {label}
+        {termsHref && termsLabel ? (
+          <>
+            {" "}
+            <Link className="od-disc-proof__terms" href={termsHref}>
+              {termsLabel}
+            </Link>
+          </>
+        ) : null}
       </span>
       <span className="od-sr-only">{`${prefix}${value}${suffix} ${label}`}</span>
     </li>
@@ -83,6 +96,8 @@ export function DiscoveryProofStrip() {
               value={metric.value}
               suffix={metric.suffix}
               label={metric.label}
+              termsHref={"termsHref" in metric ? metric.termsHref : undefined}
+              termsLabel={"termsLabel" in metric ? metric.termsLabel : undefined}
             />
           ))}
         </ul>

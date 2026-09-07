@@ -928,14 +928,23 @@ export const PM_FAQS = [
     id: "warranty",
     question: "Does ONEDECORE provide a warranty?",
     /*
-     * The duration is pending owner approval, every category period is null and
-     * no claims contact is recorded. The fallback therefore promises neither a
-     * term nor universal coverage — it says coverage follows the agreed written
-     * terms where it applies, and that the public category terms are not yet
-     * published. That is what `/warranty` itself says.
+     * THE FAQ IS WHERE THE DETAIL LIVES, SO IT MUST NOT OVERSTATE.
+     *
+     * The owner approved the hedged headline "Up to N+ Years Warranty" for the
+     * proof strip on 2026-09-07, which makes `canQuotePublicClaim` true. That
+     * does NOT make a flat "N-year warranty according to approved written
+     * terms" true: every category period is still null, no claims contact is
+     * recorded, and `WARRANTY_POLICY_STATUS` is still
+     * scope-pending-owner-approval — so there are no approved written terms to
+     * point at.
+     *
+     * The quotable branch therefore carries the SAME hedge as the headline —
+     * "up to", "where applicable", eligibility rather than universality — and
+     * keeps saying the detailed category terms are not yet published. The
+     * headline and the FAQ may differ in precision; they may not contradict.
      */
     answer: canQuotePublicClaim("warranty-years")
-      ? `ONEDECORE offers ${HOME_CLAIMS.warrantyYears}-year warranty support on eligible modular furniture and interior work according to approved written terms and exclusions.`
+      ? `Warranty support of up to ${HOME_CLAIMS.warrantyYears}+ years applies to eligible modular work, where applicable, following the written terms and exclusions agreed for the project. Detailed public category terms are not yet published.`
       : "Warranty coverage, where applicable, follows the written terms and exclusions agreed for the project. Detailed public category terms are not yet published.",
   },
   {
