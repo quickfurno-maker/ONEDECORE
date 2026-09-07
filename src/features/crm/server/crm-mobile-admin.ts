@@ -79,6 +79,44 @@ export function crmMobileAdminFailure(error: unknown, label: string): Response {
 }
 
 /**
+ * Answers a failed enquiry deletion.
+ *
+ * The same boundary as `crmMobileAdminFailure` — a `CrmError` below 500 carries
+ * a sentence written for a person and is forwarded; anything else is logged and
+ * replaced — with one addition: the canonical code travels too.
+ *
+ * WHY. `LEAD_DELETE_STALE`, `LEAD_DELETE_CONVERTED_BLOCKED` and
+ * `LEAD_ALREADY_DELETED` are all HTTP 409, and each one asks the owner to do
+ * something different: reload and look again, accept that the enquiry has
+ * commercial history and use a lifecycle status instead, or simply stop. A
+ * client that could only see `conflict` would have to guess, or match on the
+ * prose — and prose changes.
+ *
+ * The code is a contract token, exactly as the browser's `LeadDeleteActionState`
+ * already returns. The raw Postgres message stays on the server, where the
+ * canonical `CrmError.details` keeps it.
+ */
+export function crmMobileDeleteFailure(
+  error: unknown,
+  label: string
+): Response {
+  if (error instanceof CrmError && error.httpStatus < 500) {
+    return crmMobileError(
+      mobileCodeForHttpStatus(error.httpStatus),
+      error.message,
+      error.code
+    );
+  }
+
+  console.error(`[mobile/crm] ${label}`, error);
+
+  return crmMobileError(
+    "unavailable",
+    "This enquiry could not be deleted right now. Try again."
+  );
+}
+
+/**
  * Reads a JSON request body.
  *
  * A body that is not a JSON object is refused as `invalid_request` rather than
