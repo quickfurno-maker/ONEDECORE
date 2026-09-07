@@ -9,7 +9,7 @@
  * until public evidence URLs exist.
  */
 import { BUDGET_COMFORT_OPTIONS, type BudgetComfortId } from "./budget-config.ts";
-import { HOME_CLAIMS } from "./claims.ts";
+import { HOME_CLAIMS, canQuotePublicClaim } from "./claims.ts";
 import {
   FEATURED_PORTFOLIO_COPY,
   PROCESS_STEPS,
@@ -213,17 +213,26 @@ export const PM_HERO = {
   areasCollapseLabel: "Show fewer areas",
 } as const;
 
+/**
+ * Hero credibility cells, with unevidenced figures withheld.
+ *
+ * The projects count and the rating are dropped rather than softened — a cell
+ * reading "Many" where "500+" used to be is the same unsourced claim with worse
+ * copy. What remains states how ONEDECORE works, which needs no measurement.
+ */
 export const PM_CREDIBILITY = [
-  {
-    id: "projects",
-    stat: `${HOME_CLAIMS.projectsDelivered}+`,
-    label: "Projects Delivered",
-  },
-  {
-    id: "rating",
-    stat: `${HOME_CLAIMS.rating}/5`,
-    label: "Average Rating",
-  },
+  ...(canQuotePublicClaim("projects-delivered")
+    ? [
+        {
+          id: "projects",
+          stat: `${HOME_CLAIMS.projectsDelivered}+`,
+          label: "Projects Delivered",
+        },
+      ]
+    : []),
+  ...(canQuotePublicClaim("average-rating")
+    ? [{ id: "rating", stat: `${HOME_CLAIMS.rating}/5`, label: "Average Rating" }]
+    : []),
   {
     id: "manufacturing",
     stat: "Own",
@@ -231,8 +240,17 @@ export const PM_CREDIBILITY = [
   },
   {
     id: "warranty",
-    stat: `${HOME_CLAIMS.warrantyYears}-Year`,
-    label: "Warranty",
+    stat: canQuotePublicClaim("warranty-years")
+      ? `${HOME_CLAIMS.warrantyYears}-Year`
+      : "Covered",
+    label: canQuotePublicClaim("warranty-years")
+      ? "Warranty"
+      : "Approved Scopes",
+  },
+  {
+    id: "process",
+    stat: "End To End",
+    label: "Design To Installation",
   },
 ] as const;
 
@@ -384,19 +402,32 @@ export const PM_SERVICE_CTA = PM_CTA.open;
 
 /* ----------------------------------------------------------- proof strip */
 
+/**
+ * Proof metrics. The two performance figures are withheld; what remains counts
+ * ONEDECORE's own service structure, which is a fact about the offer rather
+ * than a claim about results.
+ */
 export const PM_PROOF_METRICS = [
-  {
-    id: "projects",
-    value: HOME_CLAIMS.projectsDelivered,
-    suffix: "+",
-    label: "Projects Delivered",
-  },
-  {
-    id: "custom",
-    value: HOME_CLAIMS.customDesignPercent,
-    suffix: "%",
-    label: "Custom Designs",
-  },
+  ...(canQuotePublicClaim("projects-delivered")
+    ? [
+        {
+          id: "projects",
+          value: HOME_CLAIMS.projectsDelivered,
+          suffix: "+",
+          label: "Projects Delivered",
+        },
+      ]
+    : []),
+  ...(canQuotePublicClaim("custom-designs")
+    ? [
+        {
+          id: "custom",
+          value: HOME_CLAIMS.customDesignPercent,
+          suffix: "%",
+          label: "Custom Designs",
+        },
+      ]
+    : []),
   {
     id: "services",
     value: 3,
@@ -576,7 +607,10 @@ export const PM_FACTORY = {
     "production reference",
     "installation check",
   ],
-  calloutTitle: "10-Year Warranty Support",
+  // The duration is what is pending, not the support itself.
+  calloutTitle: canQuotePublicClaim("warranty-years")
+    ? `${HOME_CLAIMS.warrantyYears}-Year Warranty Support`
+    : "After-Sales Support On Approved Scopes",
   calloutBody:
     "Warranty coverage applies according to ONEDECORE’s approved written terms, product categories and exclusions.",
   imageryNote:
@@ -586,10 +620,23 @@ export const PM_FACTORY = {
 
 /* ----------------------------------------------------------- reviews */
 
+/**
+ * The heading and lede switch when the rating cannot be quoted.
+ *
+ * The section still earns its place — it carries the process rail and the two
+ * conversion CTAs — but it stops calling itself "Client Reviews" and stops
+ * asserting a score. `canShowAggregateReviewSummary()` decides.
+ */
 export const PM_REVIEWS = {
-  eyebrow: "Client Reviews",
-  heading: `Rated ${HOME_CLAIMS.rating}/5 by homeowners across Pune`,
-  body: `More than ${HOME_CLAIMS.reviews} client reviews reflect the confidence homeowners place in ONEDECORE’s custom planning, manufacturing control and coordinated interior delivery.`,
+  eyebrow: canQuotePublicClaim("average-rating")
+    ? "Client Reviews"
+    : "How We Work",
+  heading: canQuotePublicClaim("average-rating")
+    ? `Rated ${HOME_CLAIMS.rating}/5 by homeowners across Pune`
+    : "Built around how homeowners across Pune actually decide",
+  body: canQuotePublicClaim("client-reviews")
+    ? `More than ${HOME_CLAIMS.reviews} client reviews reflect the confidence homeowners place in ONEDECORE’s custom planning, manufacturing control and coordinated interior delivery.`
+    : "Custom planning, manufacturing control and coordinated delivery — the parts of an interior project that decide whether it lands on time and as drawn.",
   starLabel: `${HOME_CLAIMS.rating} out of 5 average rating`,
   ratingCaption: "Average Client Rating",
   reviewsCaption: "Client Reviews",
@@ -868,8 +915,11 @@ export const PM_FAQS = [
   {
     id: "warranty",
     question: "Does ONEDECORE provide a warranty?",
-    answer:
-      "ONEDECORE offers 10-year warranty support on eligible modular furniture and interior work according to approved written terms and exclusions.",
+    // The duration is pending owner approval and the category periods are all
+    // null, so the FAQ states the support without promising a term.
+    answer: canQuotePublicClaim("warranty-years")
+      ? `ONEDECORE offers ${HOME_CLAIMS.warrantyYears}-year warranty support on eligible modular furniture and interior work according to approved written terms and exclusions.`
+      : "ONEDECORE offers warranty support on eligible modular furniture and interior work, according to the written terms and exclusions agreed for your project.",
   },
   {
     id: "consultation",

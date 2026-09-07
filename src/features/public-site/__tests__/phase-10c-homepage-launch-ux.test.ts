@@ -123,7 +123,13 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.doesNotMatch(mark, /ONE VISION · COMPLETE INTERIORS/);
   });
 
-  test("hero trust bar uses animated counters and approved claims", () => {
+  test("hero trust bar uses animated counters and EVIDENCED claims only", () => {
+    /*
+     * L1 correction: owner-approved wording is not public evidence. The
+     * counters still read HOME_CLAIMS — that remains the single source of the
+     * figures — but they only render once `canQuotePublicClaim` says the
+     * figure may be published. See `@/features/legal/claim-evidence`.
+     */
     const trust = read("src/features/public-site/discovery/DiscoveryHeroTrustBar.tsx");
     const hero = read("src/features/public-site/discovery/DiscoveryHeroSlider.tsx");
     const css = read("src/features/public-site/discovery/discovery.css");
@@ -132,6 +138,8 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.match(trust, /HOME_CLAIMS\.projectsDelivered/);
     assert.match(trust, /HOME_CLAIMS\.rating/);
     assert.match(trust, /HOME_CLAIM_COPY\.manufacturing/);
+    assert.match(trust, /canQuotePublicClaim\("projects-delivered"\)/);
+    assert.match(trust, /canQuotePublicClaim\("average-rating"\)/);
     assert.match(trust, /prefers-reduced-motion/);
     assert.match(trust, /od-sr-only/);
     assert.match(css, /od-disc-trust-bar/);

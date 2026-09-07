@@ -10,6 +10,12 @@
 L1 accepts the public UI/UX and closes the cache blocker; the measurement,
 consent and WhatsApp lanes remain open.
 
+> **Final correction applied.** Three further blockers were found in review and
+> are closed here: the warranty page was being made canonical and submitted to
+> the sitemap while its own readiness gate says draft; the launch surfaces were
+> still rendering numeric and review claims the repository itself records as
+> unevidenced; and the viewport pass had not been run. See §4A, §4B and §7.
+
 Evidence is marked:
 
 - **CODE** — read from the repository.
@@ -76,7 +82,7 @@ LIVE probes, 2026-09-07.
 | `/terms` | 200 | ✓ | ✓ | ✓ | **added in L1** | ✓ |
 | `/communication-consent` | 200 | ✓ | ✓ | ✓ | **added in L1** | ✓ |
 | `/data-rights` | 200 | ✓ | ✓ | ✓ | **added in L1** | ✓ |
-| `/warranty` | 200 | ✓ | ✓ | ✓ | **added in L1** | ✓ with RISK-06 |
+| `/warranty` | 200 | ✓ | ✓ | ✓ | **none — deliberate** | ✓ — `noindex`, not in sitemap, see §4A |
 | `/shop` | 200 | ✓ | — | — | — | Contained, `noindex` |
 | `/lp/[slug]` | — | ✓ | — | — | — | `noindex, nofollow`, campaign-bound |
 | `/q/[token]` | — | — | — | — | — | Token-gated; now `Disallow` in robots |
@@ -180,23 +186,127 @@ so it was removed rather than left in as an export that does nothing.
 | `/privacy`, `/terms` | `s-maxage=300, stale-while-revalidate=31535700` |
 | `/portfolio` | `private, no-cache, no-store, max-age=0, must-revalidate` (unchanged) |
 
-**Why this is safe.** `s-maxage=300` means a shared cache revalidates within
-five minutes. The stale-while-revalidate tail lets it serve the stale copy
-*once* while it refreshes in the background, so under ad traffic a deploy, a tag
-change or a gate flip is visible on the next request after the window. Hashed
-assets under `/_next/static` are content-addressed and keep their own immutable
-caching; this change is about HTML only. `no-store` was deliberately not used —
-`/` and `/interiors` are the paid landing pages and making them dynamic would
-trade their speed for a problem that does not exist.
+**What the header actually means.** Precisely, and without overclaiming:
 
-**How to verify after deploy:**
+- the representation is **fresh for 300 seconds**;
+- after that a shared cache **may serve the stale copy** while it revalidates in
+  the background — that is what `stale-while-revalidate` licenses, and the tail
+  is long;
+- a **successful revalidation replaces** the representation, so the next request
+  after that gets the new one.
+
+What this does **not** guarantee is that every intermediary purges exactly at
+five minutes. Behaviour depends on the cache: some revalidate on the first
+request after the fresh window, some prefetch, some ignore `stale-while-revalidate`
+entirely and simply refetch. The guarantee that matters is the one this replaces
+— a cache is no longer told the page is good for a year.
+
+Hashed assets under `/_next/static` are content-addressed and keep their own
+immutable caching; this change is about HTML only. `no-store` was deliberately
+not used: `/` and `/interiors` are the paid landing pages and making them
+dynamic would trade their speed for a problem that does not exist.
+
+**How to verify after deploy.** Probe the header *and* the content, because the
+header alone does not prove propagation:
 
 ```
+# 1. the policy is in force
 curl -sI https://onedecore.in/ | grep -i cache-control
 # expect: s-maxage=300, stale-while-revalidate=...
+
+# 2. the deployed content is actually being served — pick a string that
+#    changed in the release and confirm it appears, then re-probe after the
+#    300s window from a cold client to confirm it persists
+curl -s https://onedecore.in/ | grep -c "<marker from this release>"
 ```
 
 ---
+
+## 4A. Warranty indexability — corrected
+
+An earlier revision of this branch added all five legal paths to the sitemap and
+gave them canonicals whenever `getLegalRobots().index` was true. That gate is the
+GLOBAL legal publication mode, and it is `published`. Warranty does not belong to
+it.
+
+| Fact | Value |
+| --- | --- |
+| `LEGAL_PUBLICATION_MODE` | `published` |
+| `getLegalRobots()` | `{ index: true, follow: true }` |
+| `WARRANTY_POLICY_STATUS` | `scope-pending-owner-approval` |
+| `WARRANTY_MATRIX_STATUS` | `scope-pending-owner-approval` |
+| every category period | `null` |
+| `warrantyClaimsEmail` | `null` |
+| `canPublishWarrantyPolicy()` | **`false`** |
+
+So the branch was about to make a page that says *"detailed category coverage is
+not yet effective"* the canonical, indexed, sitemap-submitted statement of
+ONEDECORE's warranty. That is worse than not publishing it at all.
+
+**Correction.** `buildLegalPageMetadata()` gained an optional `published`
+override. Passing `published: false` forces `noindex, nofollow` and withholds the
+canonical, whatever the global mode says; omitting it keeps the global gate, so
+Privacy, Terms, Data Rights and Communication Consent are untouched. The warranty
+page passes `canPublishWarrantyPolicy()`. The sitemap's generic legal loop no
+longer contains `warranty`; it is pushed from its own `if
+(canPublishWarrantyPolicy())` block.
+
+Nothing about warranty readiness was faked. The page stays reachable to a human
+following the footer link and keeps its draft notice — what changed is only what
+is offered to a search engine.
+
+| Route | robots | canonical | sitemap |
+| --- | --- | --- | --- |
+| `/privacy`, `/terms`, `/data-rights`, `/communication-consent` | index, follow | yes | listed |
+| `/warranty` | **noindex, nofollow** | **none** | **absent** |
+
+## 4B. Unsupported public claims — suppressed
+
+The repository already recorded the truth and the site was ignoring it.
+`BUSINESS_TRUTH_REGISTRY` carries `publicEvidenceStatus: "pending"` for every
+public claim; `HOME_VERIFIED_REVIEWS` is empty; `HOME_REVIEW_SOURCE_URL` is
+`null`; `WARRANTY_POLICY_STATUS` is pending with every period `null`. The
+homepage and `/interiors` were nonetheless rendering *500+ Projects Delivered*,
+*4.9/5 Average Rating*, *200+ Client Reviews*, *98% Client Satisfaction*, *100%
+Custom Designs*, *10-Year Warranty* and a decorative five-star field.
+
+The confusion was structural: `ownerApprovalDisplayCopy` (the owner approved the
+wording) was being treated as though it were `publicEvidenceStatus` (somebody can
+point at the source). They are different things, and only the second licenses a
+number.
+
+**Correction.** `src/features/legal/claim-evidence.ts` records the status once.
+`business-truth-registry` now derives its per-claim statuses from it, so the
+register and the page cannot disagree. `claims.ts` exposes
+`canQuotePublicClaim()` and `publicClaimLabel()`, and every surface asks before
+quoting.
+
+| Claim | Before | Now |
+| --- | --- | --- |
+| Projects delivered | "500+ Projects Delivered" | "Complete Homes, Delivered End To End" |
+| Average rating | "4.9/5 Average Rating" | **withheld entirely** |
+| Client reviews | "200+ Client Reviews" | **withheld entirely** |
+| Client satisfaction | "98% Client Satisfaction" | **withheld entirely** |
+| Warranty | "10-Year Warranty" / "10-Year Warranty Support" | "Warranty On Approved Scopes" / "After-Sales Support On Approved Scopes" |
+| Custom designs | "100% Custom Designs" | "Made To Measure, Never Off The Shelf" |
+| Own manufacturing unit | "Own Manufacturing Unit" | **retained** — a factual statement about how the business operates, not a measured figure. No factory address or certificate is asserted. |
+| Free design consultation | "Free Design Consultation" | **retained** — an offer, not a metric. |
+
+A rating, a review count and a satisfaction percentage have **no qualitative
+substitute**: "highly rated" is the same unsourced claim in vaguer words. Those
+disappear rather than being softened. The aggregate review block —
+score, decorative stars and both stat cells — is gated on
+`canShowAggregateReviewSummary()`, which additionally requires a source URL a
+reader could check. The section itself remains, carrying process copy and both
+conversion CTAs, and its heading changes with it.
+
+The FAQ answer "ONEDECORE offers 10-year warranty support…" now states the
+support without the term.
+
+**Nothing was fabricated.** No evidence URL was invented, no testimonial written,
+no status flipped to `verified`, no warranty policy approved in code. Verified
+against a local production build: zero occurrences of `500+`, `4.9`, `200+`,
+`98%`, `100% Custom` or `10-Year` on `/` or `/interiors`.
 
 ## 5. SEO and indexability
 
@@ -228,11 +338,15 @@ only from inside the publication gate.
 
 | ID | Finding | Owner | Why not closed here |
 | --- | --- | --- | --- |
-| **BLOCK-L1-01** | **The portfolio is empty.** LIVE `/portfolio` renders "No projects found"; the sitemap contains zero project URLs. The only proof surface on a high-consideration purchase has nothing on it, and the homepage simultaneously advertises "500+ Projects Delivered" and "4.9/5 Average Rating". Paid traffic landing on that combination is a conversion problem and a credibility problem at once. | OWNER | Content, not code. Publishing projects is an owner action in the portfolio admin. |
-| **BLOCK-L1-02** | **Homepage trust claims have no recorded substantiation.** `HOME_CLAIMS` renders 500+ projects, 4.9/5 rating, 200+ reviews, 98% client satisfaction, 10-year warranty and "Own Manufacturing Unit". The file calls them owner-approved and already withholds JSON-LD `aggregateRating` "until evidence URLs exist" — the evidence gap is acknowledged in the code. Google Ads and Meta both restrict unsubstantiated performance and review claims; a disapproval during launch is a real cost. | OWNER | Changing live marketing claims is a business decision. Nothing was altered. Before spend, either record the substantiation or soften the review-type claims. |
+| **BLOCK-L1-01** | **The portfolio is empty.** LIVE `/portfolio` renders "No projects found"; the sitemap contains zero project URLs. The only proof surface on a high-consideration purchase has nothing on it. **OWNER CONTENT LAUNCH BLOCKER — must be resolved before paid spend / L8.** Closeout evidence: real owner-approved published projects, real imagery with truthful metadata, portfolio-media consent/evidence under existing governance, and real project detail URLs in the sitemap. **No project data was seeded and none was fabricated.** | OWNER | Content, not code. Publishing projects is an owner action in the portfolio admin. The empty-state UX fix from this PR is retained. |
 | RISK-01 | No `Strict-Transport-Security` header. | OWNER/ENG | nginx configuration, outside the application. |
-| RISK-06 | `/warranty` is published while `warrantyClaimsEmail` is unrecorded, and the homepage advertises a 10-year warranty. | OWNER | Owner input. |
+| RISK-06 | `warrantyClaimsEmail` is unrecorded and every warranty period is `null`. | OWNER | Owner input. The *indexing* consequence is closed in §4A: the page is `noindex` and absent from the sitemap. The claim itself no longer states a duration (§4B). What remains open is recording the terms. |
 | RISK-07 | Public identity is `onedecore@gmail.com`, a consumer mailbox on a verified domain. | OWNER | Owner decision. |
+
+**BLOCK-L1-02 (unsupported public claims) is CLOSED by this correction** — see
+§4B. The figures are suppressed behind an evidence gate rather than deleted, so
+recording real evidence restores them without another code change. What remains
+owner work is the evidence itself.
 
 ### 6.1 Explicit L2 blockers (unchanged, must precede L3)
 
@@ -261,28 +375,95 @@ start writing cookies or storage.
 
 ---
 
-## 7. Mobile and accessibility
+## 7. Mobile and accessibility — real viewport pass, COMPLETED
 
-Method: source and live-HTML inspection. **A device or emulated-viewport pass at
-360 / 390 / 412 / tablet / desktop was not performed** — it needs a browser, and
-that remains the outstanding L1 evidence item.
+The earlier revision stated that no viewport pass had been run. It has now.
 
-What was verified:
+**Method.** Chrome could not be driven to the target widths directly — the
+extension's window resize is clamped by the platform minimum (a request for 412
+produced a 958 CSS-px viewport). Each route was therefore loaded in a
+**same-origin iframe of exact CSS pixel dimensions**, which gives genuine
+viewport widths: media queries, `100vw`, sticky/fixed positioning, overflow and
+element geometry all evaluate against the iframe viewport. Framing required
+relaxing `X-Frame-Options` to `SAMEORIGIN` in a **throwaway local build only**;
+`next.config.ts` was reverted immediately afterwards and is unchanged in this
+branch. The local build also set `NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE=active`
+so the consultation form rendered, since the local `.env.local` is `copy-only`.
+
+Not covered by this method: touch emulation, device pixel ratio, and mobile
+browser chrome affecting `100vh`.
+
+### 7.1 Matrix — `/`, `/interiors`, `/portfolio` at six widths
+
+| Width | Horizontal overflow | Hero clipped | Controls under 44px |
+| --- | --- | --- | --- |
+| 360 x 800 | **0px** | no | none |
+| 390 x 844 | **0px** | no | none |
+| 412 x 915 | **0px** | no | none |
+| 768 x 1024 | **0px** | no | none |
+| 1280 x 800 | **0px** | no | none |
+| 1440 x 900 | **0px** | no | none |
+
+All 18 route x width combinations. "Controls under 44px" excludes inputs wrapped
+by a `<label>`, where the label is the real tap target.
+
+### 7.2 Defects found and fixed
+
+| Measured | Where | Fix |
+| --- | --- | --- |
+| `.pm-service__trigger` at **299x28** | `/interiors` service accordion — the primary interaction on the paid-search landing page. The button had no padding and no minimum, so it was exactly its text height. | `min-height: 44px`, `padding: 8px 0`, flex centring |
+| `.pm-summary__edit` at **103x34** | plan summary "Edit My Plan" | `min-height: 44px` |
+| `.od-site-header__mark` at **118x35** | header brand link — the way back to the homepage | new rule, `min-height: 44px` |
+
+Re-measured after the fix: **zero** controls under 44px on any route at any width.
+
+### 7.3 Two things that looked like defects and were not
+
+Both were verified rather than "fixed", because fixing them would have been
+churn:
+
+- **Consent checkboxes measure 20x20.** The `<input>` is 20px, but the `<label>`
+  **wraps** it and measures 279x61 at 360px and 309x61 at 390px. Clicking
+  anywhere in that 61px-tall label toggles the box, so the practical tap target
+  is comfortably above 44px.
+- **The sticky dock appeared to cover form controls.** At one scroll position it
+  intersects them — which is true of any fixed bottom bar. Scrolled to the true
+  page bottom, `submitUnderDock` is `false` at both 360 and 390: the submit
+  button clears the dock and is reachable.
+
+### 7.4 Consultation form, all three steps
+
+Driven programmatically at all six widths: select service (auto-advances to step
+2), select the qualifier (advances to step 3), then measure step 3 with its
+contact fields and three consent checkboxes.
 
 | Check | Result |
 | --- | --- |
-| Tap targets | `min-height: 44px` declared across the three public stylesheets, and applied to every footer and header anchor |
-| Phone input | `type="tel"`, `inputMode="numeric"`, `autoComplete="tel-national"` |
-| Name input | `autoComplete="name"` |
-| Page-level horizontal overflow | `overflow-x: clip` on the discovery container; wide rails scroll inside their own `overflow-x: auto` |
-| Semantic structure | `<address>` used for the studio block; footer nav labelled; skip link present |
-| Reduced motion | Hero counters honour `prefers-reduced-motion` and seed with the final value for SSR/no-JS |
-| Mobile drawer | `aria-expanded`, `aria-controls`, `aria-modal`, focus trap, scrim |
+| Reaches step 3 at every width | yes |
+| Horizontal overflow on any step | **0px** |
+| Controls under 44px (excluding label-wrapped) | none |
+| Submit reachable clear of the sticky dock | yes |
+| Step transitions jumping under fixed UI | none observed |
+| JavaScript errors during the walk | **none** |
 
-The new footer column adds no fixed or sticky element and stacks to one column
-below 560px.
+### 7.5 Navigation, empty state, console
 
----
+| Check | Result |
+| --- | --- |
+| Mobile drawer toggle | 44x44; `aria-expanded` toggles true/false; `aria-modal="true"`; fully within the viewport; 5-6 links, none under 44px |
+| Desktop 1440 | toggle correctly hidden, inline nav shown |
+| Portfolio empty-state CTA | present, **226x44**, `href="/#consultation"`, within the viewport |
+| Console errors / warnings | **none** on `/`, `/interiors`, `/portfolio` — listeners attached at load and observed for ~2.6s past hydration |
+| Hydration mismatches | none observed |
+| Reduced motion | hero counters honour `prefers-reduced-motion` and seed with the final value for SSR/no-JS |
+
+### 7.6 Static checks retained
+
+`min-height: 44px` across the public stylesheets; `type="tel"` +
+`inputMode="numeric"` + `autoComplete="tel-national"`; `autoComplete="name"`;
+`overflow-x: clip` on the discovery container with wide rails scrolling inside
+their own `overflow-x: auto`; `<address>` for the studio block; labelled footer
+nav; skip link.
 
 ## 8. Consultation form acceptance
 
@@ -307,17 +488,26 @@ open. It needs one real submission, which requires explicit owner approval.
 ## 9. Tests
 
 New: `src/features/public-site/__tests__/l1-public-launch-acceptance.test.ts` —
-36 tests across 7 suites, covering the cache policy, the tag refusal, storefront
-containment, the contact/no-funnel-leak rule, dead ends, indexability, and that
-the lead funnel was not disturbed.
+**57 tests across 11 suites**, covering the cache policy, the tag refusal,
+storefront containment, the no-funnel-leak contact rule, dead ends,
+indexability, the warranty publication gate, the claim-evidence gate, the
+rendered surfaces, the measured tap targets, and that the lead funnel was not
+disturbed.
 
-Updated: `phase-3a1-2-activation-gates` — the expired legal-sitemap assertion.
+Updated:
+
+- `phase-3a1-2-activation-gates` — the expired legal-sitemap assertion.
+- `phase-10c-homepage-launch-ux` and `phase-10e-interior-launch-closeout` — both
+  treated owner-approved wording as though it were public evidence. They now
+  assert the evidence gate alongside the claim source, which is the distinction
+  §4B exists to draw.
 
 | Gate | Result |
 | --- | --- |
-| `npm run test:public-launch` | 85/85 pass |
+| `npm run test:public-launch` | **106/106 pass** |
+| focused legal + warranty readiness tests | pass (within the above) |
 | lead-intake public tests | 52/52 pass |
-| `npm run test:app` | 3150/3152 pass — see below |
+| `npm run test:app` | **3171/3173 pass** — see below |
 | `npm run lint` | 0 errors (30 pre-existing warnings) |
 | `npm run typecheck` | clean |
 | `npm run build` | clean; all seven public pages show `5m` revalidate |
@@ -338,12 +528,14 @@ both pass in CI on Linux.
 | Criterion | State |
 | --- | --- |
 | Desktop acceptance | **MET** (source + live HTML) |
-| Mobile acceptance | **PARTIAL** — static checks pass; viewport pass outstanding (§7) |
+| Mobile acceptance | **MET** — real viewport pass at six widths across three routes, three tap-target defects fixed (§7) |
 | Form reaches CRM | **NOT MET** — L0 BLOCK-12, needs an approved production submission |
 | WhatsApp CTA destination final | **DEFERRED to L5** by design |
 | No dead linked route | **MET** — and the portfolio dead end is fixed |
 | Cache blocker closed | **MET** (§4) |
 | Launch scope frozen, `/shop` decided | **MET** (§1) |
-| UI frozen for campaign learning | **MET** for structure; §6 content items remain |
+| Unsupported public claims suppressed | **MET** (§4B) |
+| Warranty indexability correct | **MET** (§4A) |
+| UI frozen for campaign learning | **MET** for structure; the empty portfolio (BLOCK-L1-01) remains owner content work |
 
 **The website is not launch-certified.** That is L8.

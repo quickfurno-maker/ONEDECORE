@@ -34,6 +34,20 @@ import {
   getPublicNavDestinations,
 } from "../chrome/public-nav.ts";
 import { BUSINESS_IDENTITY } from "../../legal/business-identity.ts";
+import {
+  PUBLIC_CLAIM_IDS,
+  PUBLIC_CLAIM_EVIDENCE,
+  getUnevidencedClaimIds,
+  isClaimPubliclyEvidenced,
+} from "../../legal/claim-evidence.ts";
+import {
+  canPublishWarrantyPolicy,
+  getLegalRobots,
+  isWarrantyPublicationReady,
+  LEGAL_PUBLICATION_MODE,
+} from "../../legal/legal-publication.ts";
+import { canQuotePublicClaim, publicClaimLabel } from "../home-r4/claims.ts";
+import { canShowAggregateReviewSummary } from "../home-r4/reviews.ts";
 
 const root = process.cwd();
 const read = (rel: string) => readFileSync(join(root, rel), "utf8");
@@ -409,5 +423,314 @@ describe("L1 did not disturb the working lead funnel", () => {
     assert.match(attribution, /collectLeadFormAttribution/);
     // L1 must not quietly start writing cookies or storage for attribution.
     assert.doesNotMatch(code(attribution), /localStorage|sessionStorage|document\.cookie/);
+  });
+});
+
+/* ========================================================================== */
+/* 8. Warranty answers to its own gate, not the global legal one               */
+/* ========================================================================== */
+
+describe("a legal document that is not publication-ready is not indexed", () => {
+  test("the global legal gate is open and warranty's is not", () => {
+    /*
+     * The two are genuinely independent. Privacy, Terms, Data Rights and
+     * Communication Consent are published together. Warranty carries its own
+     * readiness — owner approval, category periods, a claims contact — and none
+     * of those is satisfied.
+     */
+    assert.equal(LEGAL_PUBLICATION_MODE, "published");
+    assert.equal(getLegalRobots().index, true);
+    assert.equal(canPublishWarrantyPolicy(), false);
+  });
+
+  test("an unready document is forced to noindex, nofollow", () => {
+    /*
+     * `legal-metadata.ts` imports through the `@/` alias, which plain node
+     * cannot resolve, so its decision is read rather than executed. The
+     * behaviour under test is the override itself: `published: false` must beat
+     * the global gate, not merely be considered alongside it.
+     */
+    const meta = code(read(LEGAL_METADATA));
+    assert.match(meta, /input\.published === false/);
+    assert.match(meta, /\{ index: false, follow: false \}/);
+    assert.match(meta, /const globalRobots = getLegalRobots\(\)/);
+  });
+
+  test("the canonical follows indexability, so an unready page has none", () => {
+    const meta = code(read(LEGAL_METADATA));
+    assert.match(meta, /canonical: robots\.index \?/);
+    // `robots` is the OVERRIDDEN value, not the global one.
+    const robotsAt = meta.indexOf("const robots =");
+    const canonicalAt = meta.indexOf("canonical: robots.index");
+    assert.ok(robotsAt > 0 && canonicalAt > robotsAt);
+  });
+
+  test("the warranty page passes its own readiness, not the global gate", () => {
+    const page = read("src/app/(legal)/warranty/page.tsx");
+    assert.match(page, /published: canPublishWarrantyPolicy\(\)/);
+  });
+
+  test("the four globally published documents are unaffected", () => {
+    // They pass no override, so they keep the global gate, which is open.
+    for (const rel of LEGAL_PAGES) {
+      if (rel.includes("warranty")) continue;
+      assert.doesNotMatch(
+        read(rel),
+        /published:/,
+        `${rel} must keep riding the global legal gate`
+      );
+    }
+    assert.equal(getLegalRobots().index, true);
+    // And the default path of the builder is the global gate.
+    assert.match(code(read(LEGAL_METADATA)), /readonly published\?: boolean;/);
+  });
+
+  test("warranty is absent from the sitemap while unready", () => {
+    const sitemap = code(read(SITEMAP));
+    const loopStart = sitemap.indexOf("const LEGAL_PATHS");
+    const loopEnd = sitemap.indexOf("] as const;", loopStart);
+    assert.ok(loopStart > 0);
+    assert.ok(
+      !sitemap.slice(loopStart, loopEnd).includes("warranty"),
+      "warranty must not ride the global legal gate"
+    );
+    assert.match(sitemap, /if \(canPublishWarrantyPolicy\(\)\)/);
+    const gateAt = sitemap.indexOf("if (canPublishWarrantyPolicy())");
+    const pushAt = sitemap.indexOf('absoluteUrl("warranty")');
+    assert.ok(pushAt > gateAt, "warranty must be pushed only inside its own gate");
+  });
+
+  test("a ready warranty would become indexable, canonical and listed", () => {
+    /*
+     * The gate is a real switch, not a permanent refusal. Only `published:
+     * false` forces noindex, so a ready warranty takes the global (open) gate
+     * and gains its canonical with it; and the sitemap pushes it the moment
+     * `canPublishWarrantyPolicy()` turns true.
+     */
+    const meta = code(read(LEGAL_METADATA));
+    assert.match(meta, /input\.published === false\s*\?/);
+    assert.doesNotMatch(meta, /input\.published !== true/);
+
+    assert.equal(
+      isWarrantyPublicationReady({
+        status: "owner-approved",
+        periodsPending: false,
+        matrixApproved: true,
+        legalReviewComplete: true,
+        identity: {
+          ...BUSINESS_IDENTITY,
+          warrantyClaimsEmail: "warranty@onedecore.test",
+        },
+      }),
+      true,
+      "a fully recorded warranty must be able to become ready"
+    );
+  });
+});
+
+/* ========================================================================== */
+/* 9. Unevidenced claims are not published as figures                          */
+/* ========================================================================== */
+
+describe("owner-approved wording is not the same thing as public evidence", () => {
+  test("every public claim is still recorded as unevidenced", () => {
+    /*
+     * This is the state of the world, not a preference. If somebody records
+     * real evidence and flips a status, this tells them which assertions below
+     * stop applying — it does not stop them.
+     */
+    assert.deepEqual([...getUnevidencedClaimIds()], [...PUBLIC_CLAIM_IDS]);
+    for (const id of PUBLIC_CLAIM_IDS) {
+      assert.equal(isClaimPubliclyEvidenced(id), false, id);
+    }
+  });
+
+  test("a claim needs verified evidence, and a warranty needs terms as well", () => {
+    const verifiedOnly = {
+      ...PUBLIC_CLAIM_EVIDENCE,
+      "warranty-years": {
+        ...PUBLIC_CLAIM_EVIDENCE["warranty-years"],
+        evidence: "verified" as const,
+      },
+      "projects-delivered": {
+        ...PUBLIC_CLAIM_EVIDENCE["projects-delivered"],
+        evidence: "verified" as const,
+      },
+    };
+    assert.equal(
+      isClaimPubliclyEvidenced("projects-delivered", verifiedOnly),
+      true
+    );
+    assert.equal(isClaimPubliclyEvidenced("warranty-years", verifiedOnly), false);
+    assert.equal(
+      isClaimPubliclyEvidenced("warranty-years", {
+        ...verifiedOnly,
+        "warranty-years": {
+          ...verifiedOnly["warranty-years"],
+          legalTerms: "approved" as const,
+        },
+      }),
+      true
+    );
+  });
+
+  test("no figure without a source may be quoted", () => {
+    for (const id of [
+      "projects-delivered",
+      "average-rating",
+      "client-reviews",
+      "client-satisfaction",
+      "warranty-years",
+      "custom-designs",
+    ] as const) {
+      assert.equal(canQuotePublicClaim(id), false, id);
+    }
+  });
+
+  test("a rating has no qualitative substitute — it disappears instead", () => {
+    /*
+     * "Highly rated" would be the same unsourced claim in vaguer words. A claim
+     * that can only be made as a number is withheld entirely.
+     */
+    assert.equal(publicClaimLabel("average-rating"), null);
+    assert.equal(publicClaimLabel("client-reviews"), null);
+    assert.equal(publicClaimLabel("client-satisfaction"), null);
+  });
+
+  test("claims that describe the work, rather than measure it, survive", () => {
+    for (const id of [
+      "projects-delivered",
+      "warranty-years",
+      "custom-designs",
+      "own-manufacturing-unit",
+      "free-design-consultation",
+    ] as const) {
+      const label = publicClaimLabel(id);
+      assert.ok(label && label.length > 0, `${id} needs qualitative copy`);
+      assert.doesNotMatch(label!, /\d/, `${id} must not carry a figure`);
+    }
+  });
+
+  test("the aggregate review block needs evidence AND a source to cite", () => {
+    assert.equal(canShowAggregateReviewSummary(), false);
+    // A source URL alone is not enough while the figures are unevidenced.
+    assert.equal(
+      canShowAggregateReviewSummary("https://example.test/reviews"),
+      false
+    );
+  });
+
+  test("the business truth register reports the statuses it enforces", () => {
+    /*
+     * The statuses used to be written twice — once in the register, once
+     * implicitly by whatever the page rendered. They are read from one place
+     * now, so the register cannot say "pending" while the page says 4.9/5.
+     */
+    const registry = code(read("src/features/legal/business-truth-registry.ts"));
+    assert.match(registry, /evidenceOf\(/);
+    assert.match(registry, /legalTermsOf\(/);
+    assert.doesNotMatch(registry, /publicEvidenceStatus: "pending"/);
+  });
+});
+
+/* ========================================================================== */
+/* 10. The rendered surfaces carry no unsupported figure                       */
+/* ========================================================================== */
+
+describe("the launch surfaces publish no unsupported number", () => {
+  const SURFACE_MODULES = [
+    "src/features/public-site/discovery/discovery-copy.ts",
+    "src/features/public-site/discovery/DiscoveryHomePage.tsx",
+    "src/features/public-site/discovery/DiscoveryHeroTrustBar.tsx",
+    "src/features/public-site/home-r4/content.ts",
+    "src/features/public-site/home-r4/HomeReviews.tsx",
+  ] as const;
+
+  test("no surface hard-codes a claim figure", () => {
+    for (const rel of SURFACE_MODULES) {
+      const source = code(read(rel));
+      for (const forbidden of [
+        "500+",
+        "4.9/5",
+        "200+ Client",
+        "98% Client",
+        "100% Custom",
+        "10-Year Warranty",
+        "10-year warranty",
+      ]) {
+        assert.ok(
+          !source.includes(forbidden),
+          `${rel} must not hard-code "${forbidden}"`
+        );
+      }
+    }
+  });
+
+  test("every surface that shows a figure asks the gate first", () => {
+    for (const rel of [
+      "src/features/public-site/discovery/discovery-copy.ts",
+      "src/features/public-site/discovery/DiscoveryHeroTrustBar.tsx",
+      "src/features/public-site/home-r4/content.ts",
+    ]) {
+      assert.match(
+        code(read(rel)),
+        /canQuotePublicClaim\(|publicClaimLabel\(/,
+        `${rel} must derive its claims from the evidence gate`
+      );
+    }
+  });
+
+  test("the rating block and its decorative stars are gated together", () => {
+    const reviews = code(read("src/features/public-site/home-r4/HomeReviews.tsx"));
+    assert.match(reviews, /canShowAggregateReviewSummary\(\)/);
+    assert.match(reviews, /showAggregate \?/);
+    // The star field must not survive the number it illustrates.
+    const gateAt = reviews.indexOf("{showAggregate ?");
+    const starAt = reviews.indexOf("<DecorativeStars");
+    assert.ok(gateAt > 0, "the aggregate gate must exist");
+    assert.ok(starAt > gateAt, "stars must sit inside the gate");
+  });
+
+  test("no fabricated evidence was added to make any of this pass", () => {
+    const reviews = read("src/features/public-site/home-r4/reviews.ts");
+    assert.match(
+      reviews,
+      /HOME_VERIFIED_REVIEWS: readonly VerifiedHomeReview\[\] = \[\]/
+    );
+    assert.match(reviews, /HOME_REVIEW_SOURCE_URL: string \| null = null/);
+    // And the warranty policy was not quietly approved.
+    assert.equal(canPublishWarrantyPolicy(), false);
+  });
+});
+
+/* ========================================================================== */
+/* 11. Tap targets measured in a real browser                                  */
+/* ========================================================================== */
+
+describe("the tap targets a real viewport pass found too small are fixed", () => {
+  const blockFor = (css: string, selector: string) => {
+    const at = css.indexOf(selector);
+    assert.ok(at > 0, `${selector} needs its own rule`);
+    return css.slice(at, css.indexOf("}", at));
+  };
+
+  test("the /interiors service triggers reach 44px", () => {
+    /*
+     * Measured at 299x28 in a real 390px viewport: the button had no padding
+     * and no minimum, so it was exactly its text height. It is the primary
+     * interaction on the paid-search landing page.
+     */
+    const css = read("src/features/public-site/home-r4/styles/home-r4.css");
+    assert.match(blockFor(css, ".pm-service__trigger {"), /min-height: 44px/);
+  });
+
+  test("the plan summary edit control reaches 44px", () => {
+    const css = read("src/features/public-site/home-r4/styles/home-r4.css");
+    assert.match(blockFor(css, ".pm-summary__edit {"), /min-height: 44px/);
+  });
+
+  test("the header brand link reaches 44px", () => {
+    const css = read("src/features/public-site/chrome/public-site-chrome.css");
+    assert.match(blockFor(css, ".od-site-header__mark {"), /min-height: 44px/);
   });
 });

@@ -230,6 +230,17 @@
  * tap-target height every footer anchor gets, or an address would become a
  * button-sized block. The mail link inside still does.
  */
+/*
+ * The brand link is how a visitor gets back to the homepage. The viewport pass
+ * measured its anchor box at 118x35 — the wordmark's own height. The header
+ * rule below sets a floor without changing how the mark looks.
+ */
+.od-site-header__mark {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 .od-site-footer__links--contact li {
   color: var(--od-text-secondary);
   font-size: 0.9rem;

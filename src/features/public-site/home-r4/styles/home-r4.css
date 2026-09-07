@@ -2504,7 +2504,8 @@
 }
 
 [data-public-home-r4] .pm-summary__edit {
-  min-height: 34px;
+  /* Measured at 103x34 in the viewport pass. */
+  min-height: 44px;
   font-size: 0.8rem;
 }
 
@@ -3708,10 +3709,18 @@
   border-top: 1px solid var(--pm-line);
 }
 
+/*
+ * The service accordion triggers are the primary interaction on /interiors,
+ * which is the paid-search landing page. A real 390px viewport pass measured
+ * them at 299x28 — the text height, because the button had no padding and no
+ * minimum. They are now a practical tap target.
+ */
 [data-public-home-r4] .pm-service__trigger {
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   width: 100%;
-  padding: 0;
+  padding: 8px 0;
   border: 0;
   background: none;
   text-align: left;

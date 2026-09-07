@@ -4,21 +4,24 @@ import { getPublicCommerceSitemap } from "@/features/commerce/public/public-cach
 import { isPublicCommerceReadFailure } from "@/features/commerce/public/public-errors";
 import { SITE_CONFIG, absoluteUrl } from "@/config/site";
 import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
-import { getLegalRobots } from "@/features/legal";
+import { canPublishWarrantyPolicy, getLegalRobots } from "@/features/legal";
 
 /**
- * The legal pages, listed only while they are actually indexable.
+ * The legal pages that share the global publication gate.
  *
- * `getLegalRobots()` is the same gate the pages themselves render with, so a
- * draft or owner-approved-but-not-effective document cannot be submitted to
- * Search Console by this file while the page it points at says `noindex`.
+ * `getLegalRobots()` is the same gate these pages render with, so a draft or
+ * owner-approved-but-not-effective document cannot be submitted to Search
+ * Console by this file while the page it points at says `noindex`.
+ *
+ * Warranty is deliberately NOT in this list. It has its own readiness — see
+ * `canPublishWarrantyPolicy()` below — and riding the global gate would submit
+ * a page whose own copy says its coverage is not yet effective.
  */
 const LEGAL_PATHS = [
   "privacy",
   "terms",
   "data-rights",
   "communication-consent",
-  "warranty",
 ] as const;
 
 /** Runtime gate must be readable without rebuild (DEC-0095). */
@@ -58,6 +61,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.3,
       });
     }
+  }
+
+  // Warranty answers to its own readiness, which is currently false.
+  if (canPublishWarrantyPolicy()) {
+    routes.push({
+      url: absoluteUrl("warranty"),
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    });
   }
 
   if (shopPublic) {
