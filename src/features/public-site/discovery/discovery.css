@@ -584,7 +584,9 @@
   transition: background-color 160ms ease, transform 160ms ease;
 }
 
-.od-disc-hero__dot[aria-selected="true"]::after {
+/* The dots are buttons in a group now, not tabs — `aria-pressed` marks the
+   current one, because `aria-selected` promises a panel that no longer exists. */
+.od-disc-hero__dot[aria-pressed="true"]::after {
   background: var(--od-gold-light);
   transform: translate(-50%, -50%) scale(1.15);
 }

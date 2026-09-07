@@ -5,8 +5,11 @@
 **Base `origin/main`:** `179c96215c8cd7e1453ae1880b9db50ac24025f2` (merge of PR #155)
 **Branch:** `feat/public-homepage-conversion-refinement`
 
-Four owner-directed changes to the homepage. No migration, no managed Supabase,
-no analytics or provider activation.
+Four owner-directed changes to the homepage, plus the pre-merge correction that
+gave them a database contract to land on (§4A).
+
+One forward-only migration. **Not applied to managed Supabase.** No analytics or
+provider activation.
 
 ---
 
@@ -79,7 +82,7 @@ The images are `alt=""` because they are decoration; a screen reader user gains
 nothing from hearing five photograph descriptions. The dots are labelled by
 position — "Show image 2 of 3" — rather than by the headlines that are no longer
 on screen. `role="tabpanel"`, `aria-controls` and `inert` went with the copy
-panels they described; the dots remain a `tablist` with arrow-key navigation.
+panels they described, and the dots stopped being tabs entirely — see §4B.
 
 **Measured heights** (real viewport pass, §5):
 
@@ -159,20 +162,22 @@ what the call is for.
 **Success:** *"Thank you. We received your consultation request and will follow
 up."* — confirms receipt, promises no appointment or quotation.
 
-### 4.1 The qualifier is optional, not unvalidated
+### 4.1 The qualifier is forbidden, not optional
 
-Three layers had to agree, and each keeps its strictness:
+An earlier revision of this branch made it optional. Pre-merge review found that
+this was both insufficient and wrong — see §4A. The form emits
+`public-consult-v2`, under which a qualifier is refused outright in every layer:
 
-| Layer | Before | Now |
-| --- | --- | --- |
-| `lead-form-errors` client validation | required for `consultation` | not required |
-| `consultation-to-lead-request` | required | **absent when unasked**; a supplied code must still be real and of the kind the service implies |
-| `lead-intake-validation` server | required for `public-consult-v1` | `null` accepted; anything present is checked exactly as before |
+| Layer | Under v2 |
+| --- | --- |
+| `lead-form-errors` client validation | not required |
+| `consultation-to-lead-request` | **rejects** a supplied qualifier |
+| `lead-intake-validation` server | **rejects** qualifier and property |
+| `submit_lead_intake` SQL | raises `qualifier_not_asked` / `property_not_asked` |
 
-So a wardrobe enquiry still cannot carry a BHK, and the unasked-field rejection
-for `property`, `timeline`, `rooms`, `budgetComfort` and `estimate` is
-untouched. **Nothing is invented to fill the gap** — the request simply carries
-no qualifier.
+`public-consult-v1` keeps its qualifier requirement everywhere, so a wardrobe
+enquiry under v1 still cannot carry a BHK. **Nothing is invented to fill the
+gap** — the v2 request simply carries no qualifier.
 
 Preserved unchanged: attribution collection, idempotency fingerprinting, the
 honeypot, duplicate handling, rate limits, all three consents (service enquiry /
@@ -181,6 +186,88 @@ marketing consent is fabricated. `active` submits; `preview` validates locally
 and never posts; `copy-only` renders nothing.
 
 ---
+
+## 4A. The database contract — `public-consult-v2`
+
+**Found in pre-merge review, and it would have broken every real lead.**
+
+The single-step form stopped sending a qualifier. The deployed SQL still had:
+
+```sql
+elsif p_planner_version = 'public-consult-v1' then
+  if p_qualifier_kind is null then
+    raise exception 'validation: qualifier_required';
+  end if;
+```
+
+`submit_lead_intake` is SECURITY DEFINER and enforces the discriminator itself,
+so the relaxed TypeScript would have validated a body the database then refused.
+Both CI jobs were green while the two layers disagreed: the application tests
+checked the new contract, the pgTAP checked the old one, and neither could see
+the other.
+
+### Why a new version rather than a looser v1
+
+Rows already stored under `public-consult-v1` were collected by a form that
+asked a service-specific question, and each carries the answer. Making v1's
+qualifier optional would retroactively change what those rows assert and would
+leave nothing able to tell "the customer answered" from "nobody asked". So v1 is
+untouched — including its `qualifier_required` — and v2 is added beside it.
+
+| | `home-r4-v1` | `public-consult-v1` | `public-consult-v2` |
+| --- | --- | --- | --- |
+| property | required | only if the home-size answer names one | **forbidden** |
+| timeline | required | forbidden | **forbidden** |
+| qualifier | forbidden | **required**, matched to service | **forbidden** |
+| rooms / budget / estimate | collected | forbidden | **forbidden** |
+
+Forbidden, not optional. A value the v2 form never showed came from a stale or
+tampered client; accepting it would store an answer no customer gave, and
+dropping it silently would let the caller believe it was stored.
+
+### The migration
+
+`supabase/migrations/20260907130000_public_consultation_single_step_v2.sql`,
+forward-only. `CREATE OR REPLACE` on the existing 29-argument signature, so
+privileges are preserved — and re-asserted anyway, because a definer function
+that fell back to the PUBLIC default would be callable by anon.
+
+The body was **extracted programmatically** from the 20260905 migration and
+edited in exactly two places: the planner-version allowlist gained
+`public-consult-v2`, and the discriminator chain gained the v2 branch. Everything
+else — idempotency, rate limits, contact identity, suppression and DNC, consent
+evidence, attribution, event writes — is byte-identical. A 29-argument definer
+function is not something to retype. The generator asserts each invariant
+survived.
+
+No table was altered; 20260905 already made property/timeline nullable.
+**Nothing is defaulted**: no `unsure` qualifier invented, no BHK guessed, no
+timeline filled in.
+
+### Tests
+
+`supabase/tests/database/52_public_consultation_single_step_v2_test.sql` — 26
+assertions. Suite 48 (v1) is **unchanged**. The brief suggested `49_`; that
+number and 50/51 are taken, hence 52.
+
+`src/features/lead-intake/__tests__/planner-version-contract.test.ts` asserts
+the JOIN neither suite could: that every version TypeScript accepts has an SQL
+branch, that both layers forbid the same fields under v2, that v1 still requires
+its qualifier in both, and that the adapter emits the version whose rules it
+obeys.
+
+**Run against a real local Supabase**: migrations applied cleanly and
+`supabase test db` reports 52 files / 3294 tests, all passing. `supabase db lint`
+is clean for `submit_lead_intake`.
+
+## 4B. Hero dots are no longer tabs
+
+Removing the copy panels left `role="tablist"` and `role="tab"` controlling
+nothing. `aria-selected` on a tab promises a panel to select, and there is none.
+The dots are now ordinary buttons in a `role="group"` with an accessible label,
+the current one marked with `aria-pressed`; `aria-controls` is gone. Arrow-key
+navigation, autoplay, swipe and reduced-motion behaviour are unchanged, as is
+the image-only hero itself.
 
 ## 5. Real viewport pass
 
@@ -233,20 +320,25 @@ Updated, each preserving the requirement it was written for:
 | --- | --- |
 | `npm run test:public-launch` | **152/152 pass** |
 | lead-intake public conversion tests | **44/44 pass** |
-| `npm run test:app` | **3218/3220 pass** — see below |
+| `npm run test:app` | **3265/3265 pass** |
 | `npm run lint` | 0 errors (30 pre-existing warnings) |
 | `npm run typecheck` | clean |
 | `npm run build` | clean |
 | `git diff --check` | clean |
 
-The two failures are **pre-existing on clean `main`** and Windows-only —
-source-text assertions written against LF while `core.autocrlf=true` gives the
-working tree CRLF (`crm-lead-delete.test.ts`, `sales-manager-dashboard.test.ts`).
-Neither is touched here and both pass on Linux CI.
+The two long-standing Windows-CRLF failures are gone: PR #156, merged into main
+and integrated here, normalises line endings in those source-text assertions.
+
+Local database tests now run too — Docker and the Supabase CLI were both
+available for this pass, so the new migration was actually executed rather than
+deferred to CI.
 
 ---
 
 ## 7. Boundaries
+
+**The V2 migration has NOT been applied to managed Supabase.** It is
+forward-only and reviewed first, per the correction brief.
 
 No GTM, GA4, Meta Pixel, CAPI or Google conversion upload. No attribution
 persistence — `lead-form-attribution.ts` still reads at submit and writes no

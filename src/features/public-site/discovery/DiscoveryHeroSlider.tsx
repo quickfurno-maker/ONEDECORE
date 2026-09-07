@@ -43,8 +43,18 @@ function usePrefersReducedMotion(): boolean {
  * "modern kitchen photograph", and gains by not hearing it five times.
  *
  * The dots are the only visible control. They are labelled by position rather
- * than by the old marketing headlines, because "slide 2" is what they actually
+ * than by the old marketing headlines, because "image 2" is what they actually
  * do and the headline is no longer on screen to refer to.
+ *
+ * THEY ARE NOT TABS
+ *
+ * They were, when each dot controlled a copy panel with `role="tabpanel"`. The
+ * panels went with the text, and a `tablist` whose tabs control nothing is a
+ * promise to assistive technology that the page cannot keep — `aria-selected`
+ * on a tab implies a panel to select. So the dots are ordinary buttons in a
+ * labelled group, and the current one says so with `aria-pressed`, which is
+ * true of a toggle regardless of what it reveals. Arrow-key navigation is kept
+ * because it is genuinely useful here.
  */
 export function DiscoveryHeroSlider() {
   const [active, setActive] = useState(0);
@@ -189,19 +199,21 @@ export function DiscoveryHeroSlider() {
         {focusWithin || hovered ? `Image ${active + 1} of ${slideCount}` : ""}
       </p>
 
-      <div className="od-disc-hero__dots" role="tablist" aria-label="Choose banner image">
+      <div
+        className="od-disc-hero__dots"
+        role="group"
+        aria-label="Choose banner image"
+      >
         {DISCOVERY_HERO_SLIDES.map((slide, index) => (
           <button
             key={slide.id}
             ref={(node) => {
               dotRefs.current[index] = node;
             }}
-            id={`od-disc-hero-tab-${slide.id}`}
+            id={`od-disc-hero-dot-${slide.id}`}
             type="button"
-            role="tab"
             className="od-disc-hero__dot"
-            aria-selected={index === active}
-            tabIndex={index === active ? 0 : -1}
+            aria-pressed={index === active}
             aria-label={`Show image ${index + 1} of ${slideCount}`}
             onClick={() => goTo(index)}
             onKeyDown={(event) => onDotKeyDown(event, index)}

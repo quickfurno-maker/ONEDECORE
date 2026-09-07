@@ -36,6 +36,7 @@ import {
 import {
   LEAD_INTAKE_PLANNER_VERSION,
   PUBLIC_CONSULT_PLANNER_VERSION,
+  PUBLIC_CONSULT_V1_PLANNER_VERSION,
 } from "../contracts.ts";
 import { validateLeadFormFields } from "../public/lead-form-errors.ts";
 import {
@@ -203,60 +204,75 @@ describe("the qualifier is chosen by service", () => {
 /* ========================================================================== */
 
 describe("no fabricated property or timeline", () => {
-  test("a kitchen lead carries a kitchen answer and NOTHING else", () => {
+  test("a kitchen lead carries its service and NOTHING else", () => {
+    /*
+     * These three used to prove that the form's own service-specific answer
+     * round-tripped truthfully. The v2 form asks no such question, so the
+     * surviving requirement is the stronger half of the same idea: the service
+     * reaches the request and nothing else does.
+     */
     const result = consultationToLeadRequest({
       ...BASE,
       service: "modular-kitchens",
-      qualifierCode: "renovate-existing",
+      qualifierCode: null,
     });
     assert.ok(result.ok);
 
     const req = result.body.requirements;
     assert.equal(req.service, "modular-kitchens");
-    assert.deepEqual(req.qualifier, {
-      kind: "kitchen-scope",
-      code: "renovate-existing",
-    });
-
-    // The decisive assertions.
+    assert.equal(req.qualifier, undefined, "no qualifier may be invented");
     assert.equal(req.property, undefined, "no property may be invented");
     assert.equal(req.timeline, undefined, "no timeline may be invented");
     assert.equal(req.rooms, undefined);
     assert.equal(req.budgetComfort, undefined);
     assert.equal(result.body.plannerVersion, PUBLIC_CONSULT_PLANNER_VERSION);
+    assert.equal(result.body.plannerVersion, "public-consult-v2");
   });
 
-  test("a wardrobe lead round-trips as a wardrobe count", () => {
-    const result = consultationToLeadRequest({
-      ...BASE,
-      service: "custom-wardrobes",
-      qualifierCode: "three",
-    });
-    assert.ok(result.ok);
-    assert.deepEqual(result.body.requirements.qualifier, {
-      kind: "wardrobe-count",
-      code: "three",
-    });
-    assert.equal(result.body.requirements.property, undefined);
-  });
-
-  test("a complete-home lead round-trips its real home size", () => {
+  test("a complete-home lead invents no home size", () => {
     const result = consultationToLeadRequest({
       ...BASE,
       service: "complete-home-interiors",
-      qualifierCode: "apartment-3bhk",
+      qualifierCode: null,
     });
     assert.ok(result.ok);
-    assert.deepEqual(result.body.requirements.qualifier, {
-      kind: "home-size",
-      code: "apartment-3bhk",
+    assert.equal(result.body.requirements.service, "complete-home-interiors");
+    assert.equal(result.body.requirements.property, undefined);
+    assert.equal(result.body.requirements.qualifier, undefined);
+  });
+
+  test("a wardrobe lead invents no wardrobe count", () => {
+    const result = consultationToLeadRequest({
+      ...BASE,
+      service: "custom-wardrobes",
+      qualifierCode: null,
     });
-    // The customer DID answer a property question here, so the canonical column
-    // may carry it — derived from their answer, never defaulted.
+    assert.ok(result.ok);
+    assert.equal(result.body.requirements.service, "custom-wardrobes");
+    assert.equal(result.body.requirements.qualifier, undefined);
+  });
+
+  test("a complete-home lead derives no property from a question it never asked", () => {
+    /*
+     * v1's form asked a home-size question and `propertyCodeFromQualifier`
+     * turned that answer into the canonical column. v2 asks nothing, so there
+     * is no answer to derive from — and the helper is left in place, untouched,
+     * for the v1 rows that still depend on it.
+     */
+    const result = consultationToLeadRequest({
+      ...BASE,
+      service: "complete-home-interiors",
+      qualifierCode: null,
+    });
+    assert.ok(result.ok);
+    assert.equal(result.body.requirements.qualifier, undefined);
+    assert.equal(result.body.requirements.property, undefined);
+    // The v1 derivation itself is unchanged.
     assert.equal(
       propertyCodeFromQualifier("home-size", "apartment-3bhk"),
       "apartment-3bhk"
     );
+    assert.equal(propertyCodeFromQualifier("kitchen-scope", "new-kitchen"), null);
   });
 
   test("an UNSURE answer never becomes a property", () => {
@@ -572,10 +588,16 @@ describe("the visible form is short", () => {
 /* ========================================================================== */
 
 describe("the legacy planner contract still works", () => {
-  test("both planner versions are accepted", () => {
+  test("all three planner versions are accepted", () => {
+    /*
+     * v2 was ADDED, not substituted. v1 keeps its name and its meaning because
+     * rows already stored under it were collected that way.
+     */
     assert.equal(LEAD_INTAKE_PLANNER_VERSION, "home-r4-v1");
-    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v1");
+    assert.equal(PUBLIC_CONSULT_V1_PLANNER_VERSION, "public-consult-v1");
+    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v2");
     assert.notEqual(LEAD_INTAKE_PLANNER_VERSION, PUBLIC_CONSULT_PLANNER_VERSION);
+    assert.notEqual(PUBLIC_CONSULT_V1_PLANNER_VERSION, PUBLIC_CONSULT_PLANNER_VERSION);
   });
 
   test("the planner variant still demands property and timeline", () => {
@@ -686,8 +708,8 @@ describe("the migration only enables truth", () => {
     );
     assert.equal(
       sorted.pop(),
-      "20260906180000_crm_super_admin_lead_tombstone.sql",
-      "the newest migration is the Super Admin enquiry tombstone"
+      "20260907130000_public_consultation_single_step_v2.sql",
+      "the newest migration is the single-step v2 contract"
     );
   });
 });

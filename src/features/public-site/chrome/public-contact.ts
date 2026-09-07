@@ -16,6 +16,23 @@
  *
  * Nothing here invents a number. With the variable unset — which is the state
  * today — every consumer sees exactly what it saw before.
+ *
+ * ACTIVATION IS A BUILD, NOT A RESTART
+ *
+ * `NEXT_PUBLIC_*` is INLINED AT BUILD TIME by static replacement. Setting the
+ * variable on the VPS and restarting the process does nothing: the already-built
+ * bundle still carries whatever the value was when it was compiled. Turning the
+ * button on takes:
+ *
+ *   1. set NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164 in the production BUILD
+ *      environment (not merely the runtime environment)
+ *   2. npm run build
+ *   3. systemctl restart pm2-onedecore
+ *   4. verify the rendered href:
+ *      curl -s https://onedecore.in/ | grep -o 'https://wa.me/[0-9]*'
+ *
+ * Step 4 is the one that matters. The other three can all appear to succeed
+ * while the bundle is unchanged.
  */
 
 /** The prefilled first message. Service enquiry, never marketing. */
@@ -49,9 +66,10 @@ export function normalizeWhatsAppE164(raw: string | null | undefined): string | 
 /**
  * The approved `wa.me` URL, or `null` when no valid number is configured.
  *
- * Reading `process.env` directly is required: `NEXT_PUBLIC_*` values are
- * inlined at build time by static replacement, so an indexed lookup would not
- * be substituted and the button would never appear.
+ * Reading `process.env.NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164` as a literal member
+ * expression is required, not stylistic: the inlining is a textual substitution,
+ * so `process.env[name]` would never be replaced and the button would never
+ * appear however the VPS is configured.
  */
 export function getPublicWhatsAppHref(
   configured: string | null | undefined = process.env

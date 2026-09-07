@@ -223,7 +223,11 @@ describe("the hero carries images, dots and no words", () => {
     assert.match(heroCode, /onTouchStart/);
     assert.match(heroCode, /SWIPE_THRESHOLD/);
     assert.match(heroCode, /od-disc-hero__dot/);
-    assert.match(heroCode, /role="tab"/);
+    // Buttons in a labelled group, not tabs — there are no panels to control.
+    assert.match(heroCode, /role="group"/);
+    assert.doesNotMatch(heroCode, /role="tab"/);
+    assert.doesNotMatch(heroCode, /aria-selected/);
+    assert.match(heroCode, /aria-pressed=/);
     // Dots are labelled by position; the headlines they used to name are gone.
     assert.match(heroCode, /Show image \$\{index \+ 1\} of \$\{slideCount\}/);
   });
@@ -471,30 +475,23 @@ describe("an unasked qualifier is absent, not invented", () => {
     }
   });
 
-  test("a valid qualifier is still carried when one is supplied", () => {
-    const result = consultationToLeadRequest({
-      ...base,
-      service: "modular-kitchens",
-      qualifierCode: "new-kitchen",
-    });
-    assert.equal(result.ok, true);
-    if (!result.ok) return;
-    assert.deepEqual(result.body.requirements.qualifier, {
-      kind: "kitchen-scope",
-      code: "new-kitchen",
-    });
-  });
-
-  test("a qualifier of the WRONG kind is still rejected", () => {
-    // Optional never meant unchecked: a wardrobe enquiry cannot carry a BHK.
-    const result = consultationToLeadRequest({
-      ...base,
-      service: "custom-wardrobes",
-      qualifierCode: "apartment-3bhk",
-    });
-    assert.equal(result.ok, false);
-    if (result.ok) return;
-    assert.ok(result.fields.includes("requirements.qualifier"));
+  test("a supplied qualifier is REFUSED, however valid it looks", () => {
+    /*
+     * The pre-merge correction upgraded this from optional to forbidden. The
+     * form asks no service-specific question, so a qualifier in the payload
+     * came from a stale or tampered client — and `public-consult-v2` says so in
+     * both layers rather than quietly dropping it.
+     */
+    for (const code of ["new-kitchen", "apartment-3bhk", "made-up"]) {
+      const result = consultationToLeadRequest({
+        ...base,
+        service: "modular-kitchens",
+        qualifierCode: code,
+      });
+      assert.equal(result.ok, false, `${code} must be refused`);
+      if (result.ok) continue;
+      assert.ok(result.fields.includes("requirements.qualifier"));
+    }
   });
 
   test("the service itself is still required", () => {
@@ -508,21 +505,21 @@ describe("an unasked qualifier is absent, not invented", () => {
     assert.ok(result.fields.includes("requirements.service"));
   });
 
-  test("the server agrees: absent is fine, malformed is not", () => {
+  test("the server refuses it under v2 and requires it under v1", () => {
     const server = code(read(SERVER));
-    assert.match(server, /if \(input\.requirements\.qualifier == null\) \{/);
-    // The strict branch survives underneath.
+    assert.match(server, /if \(isPublicConsultV2\) \{/);
+    // v1's strict branch survives underneath.
     assert.match(server, /isAllowedLeadQualifier\(kind, code\)/);
     assert.match(server, /LEAD_QUALIFIER_KIND_BY_SERVICE\[service as LeadServiceCode\] !== kind/);
     // Unasked fields are still rejected rather than ignored.
-    assert.match(server, /"property",\s*\n\s*"timeline",\s*\n\s*"rooms",/);
+    assert.match(server, /"timeline",\s*\n\s*"rooms",/);
   });
 
-  test("the adapter documents optional-but-validated rather than loosened", () => {
+  test("the adapter emits v2 and forbids rather than loosens", () => {
     const adapter = read(ADAPTER);
-    assert.match(adapter, /const hasQualifier = code\.length > 0/);
-    assert.match(adapter, /hasQualifier &&/);
-    assert.match(adapter, /\.\.\.\(hasQualifier/);
+    assert.match(adapter, /plannerVersion: PUBLIC_CONSULT_V2_PLANNER_VERSION/);
+    assert.match(adapter, /IT IS FORBIDDEN/);
+    assert.doesNotMatch(adapter, /hasQualifier/);
   });
 });
 

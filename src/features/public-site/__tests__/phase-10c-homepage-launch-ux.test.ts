@@ -250,7 +250,7 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.match(css, /od-disc-hero-progress/);
   });
 
-  test("hero autoplay stops for reduced motion and keyboard navigation stays inside the tablist", () => {
+  test("hero autoplay stops for reduced motion and the dots keep arrow-key navigation", () => {
     const hero = read("src/features/public-site/discovery/DiscoveryHeroSlider.tsx");
     assert.match(hero, /usePrefersReducedMotion/);
     assert.match(hero, /const paused = reducedMotion \|\|/);
@@ -258,13 +258,21 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.doesNotMatch(hero, /window\.addEventListener\("keydown"/);
     assert.match(hero, /onDotKeyDown/);
     /*
-     * The tabpanels were the copy panels. With no copy there is nothing for a
-     * dot to control, so `aria-controls`, `role="tabpanel"` and `inert` went
-     * with them — the dots are now a tablist over images alone.
+     * Pre-merge correction: with no panels left, a `tablist` whose tabs control
+     * nothing is a promise to assistive technology the page cannot keep. The
+     * dots are ordinary buttons in a labelled group, and the current one says so
+     * with `aria-pressed`.
      */
-    assert.doesNotMatch(hero, /role="tabpanel"/);
-    assert.match(hero, /role="tab"/);
-    assert.match(hero, /role="tablist"/);
+    // Comment-stripped: the component EXPLAINS why it stopped being a tablist.
+    const heroCode = hero
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*/g, "");
+    assert.doesNotMatch(heroCode, /role="tabpanel"/);
+    assert.doesNotMatch(heroCode, /role="tab"/);
+    assert.doesNotMatch(heroCode, /aria-selected/);
+    assert.doesNotMatch(heroCode, /aria-controls/);
+    assert.match(heroCode, /role="group"/);
+    assert.match(heroCode, /aria-pressed=\{index === active\}/);
   });
 
   test("drawer and sticky dock clean up responsive state without overlapping mobile controls", () => {
