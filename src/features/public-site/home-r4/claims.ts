@@ -79,13 +79,17 @@ export type HomePuneArea = (typeof HOME_PUNE_AREAS)[number];
  */
 
 import {
+  isClaimDisplayable,
   isClaimPubliclyEvidenced,
   type PublicClaimId,
 } from "../../legal/claim-evidence.ts";
 
 export interface PublicClaimDisplay {
   readonly claimId: PublicClaimId;
+  /** True only when public evidence exists. Owner attestation does not set it. */
   readonly evidenced: boolean;
+  /** True when the figure may be rendered — evidenced OR owner-attested. */
+  readonly displayable: boolean;
   /** The quantified wording. Rendered ONLY when `evidenced`. */
   readonly quantified: string;
   /** Truthful wording that asserts no figure. `null` = render nothing. */
@@ -121,14 +125,16 @@ const QUANTIFIED: Readonly<Record<PublicClaimId, string>> = {
 
 export function resolvePublicClaim(claimId: PublicClaimId): PublicClaimDisplay {
   const evidenced = isClaimPubliclyEvidenced(claimId);
+  const displayable = isClaimDisplayable(claimId);
   const quantified = QUANTIFIED[claimId];
   const qualitative = QUALITATIVE[claimId];
   return {
     claimId,
     evidenced,
+    displayable,
     quantified,
     qualitative,
-    label: evidenced ? quantified : qualitative,
+    label: displayable ? quantified : qualitative,
   };
 }
 
@@ -137,7 +143,13 @@ export function publicClaimLabel(claimId: PublicClaimId): string | null {
   return resolvePublicClaim(claimId).label;
 }
 
-/** `true` when the figure itself may be printed. */
+/**
+ * `true` when the figure itself may be printed.
+ *
+ * Evidenced, or owner-attested. Ask `isClaimPubliclyEvidenced` instead when the
+ * question is whether anybody can point at a source — the register does, and a
+ * structured-data emitter would have to.
+ */
 export function canQuotePublicClaim(claimId: PublicClaimId): boolean {
-  return resolvePublicClaim(claimId).evidenced;
+  return resolvePublicClaim(claimId).displayable;
 }

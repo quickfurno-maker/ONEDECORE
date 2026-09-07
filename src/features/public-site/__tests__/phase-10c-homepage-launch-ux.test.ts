@@ -43,7 +43,15 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.match(dock, /od-disc-dock/);
     assert.match(dock, /PUBLIC_CONSULTATION\.href/);
     assert.match(dock, /getPublicWhatsAppHref/);
-    assert.match(contact, /PUBLIC_WHATSAPP_HREF: string \| null = null/);
+    /*
+     * L1.1: the number moved from a hard-coded `null` to
+     * NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164. The requirement this line encoded —
+     * that no number is invented in source — is unchanged and asserted
+     * directly rather than through the literal that used to guarantee it.
+     */
+    assert.match(contact, /NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164/);
+    assert.doesNotMatch(contact, /wa\.me\/\d/);
+    assert.doesNotMatch(contact, /\+\d{8,}/);
     assert.doesNotMatch(page, /showConsultation=\{true\}/);
   });
 
@@ -123,27 +131,32 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.doesNotMatch(mark, /ONE VISION · COMPLETE INTERIORS/);
   });
 
-  test("hero trust bar uses animated counters and EVIDENCED claims only", () => {
+  test("the projects counter animates, below the hero, on the attested claim", () => {
     /*
-     * L1 correction: owner-approved wording is not public evidence. The
-     * counters still read HOME_CLAIMS — that remains the single source of the
-     * figures — but they only render once `canQuotePublicClaim` says the
-     * figure may be published. See `@/features/legal/claim-evidence`.
+     * L1.1 moved this out of the hero. The hero carries no text at all now, so
+     * the counter lives in the trust strip immediately below it — and it
+     * renders because the owner ATTESTED to the project count, not because the
+     * claim became evidenced. See `claim-evidence.ts`.
      */
-    const trust = read("src/features/public-site/discovery/DiscoveryHeroTrustBar.tsx");
+    const counter = read(
+      "src/features/public-site/discovery/DiscoveryProjectsCounter.tsx"
+    );
     const hero = read("src/features/public-site/discovery/DiscoveryHeroSlider.tsx");
+    const strip = read("src/features/public-site/discovery/DiscoveryTrustStrip.tsx");
     const css = read("src/features/public-site/discovery/discovery.css");
-    assert.match(hero, /DiscoveryHeroTrustBar/);
-    assert.match(trust, /IntersectionObserver/);
-    assert.match(trust, /HOME_CLAIMS\.projectsDelivered/);
-    assert.match(trust, /HOME_CLAIMS\.rating/);
-    assert.match(trust, /HOME_CLAIM_COPY\.manufacturing/);
-    assert.match(trust, /canQuotePublicClaim\("projects-delivered"\)/);
-    assert.match(trust, /canQuotePublicClaim\("average-rating"\)/);
-    assert.match(trust, /prefers-reduced-motion/);
-    assert.match(trust, /od-sr-only/);
-    assert.match(css, /od-disc-trust-bar/);
-    assert.doesNotMatch(hero, /od-disc-proof/);
+
+    assert.match(counter, /IntersectionObserver/);
+    assert.match(counter, /HOME_CLAIMS\.projectsDelivered/);
+    assert.match(counter, /canQuotePublicClaim\("projects-delivered"\)/);
+    assert.match(counter, /prefers-reduced-motion/);
+    assert.match(counter, /od-sr-only/);
+    assert.match(strip, /<DiscoveryProjectsCounter \/>/);
+    assert.match(css, /od-disc-projects/);
+
+    // The hero itself keeps neither the trust bar nor any visible copy.
+    assert.doesNotMatch(hero, /DiscoveryHeroTrustBar/);
+    assert.doesNotMatch(hero, /od-disc-hero__headline/);
+    assert.doesNotMatch(hero, /od-disc-kicker/);
   });
 
   test("homepage has no top promo strip; header leads into hero", () => {
@@ -220,9 +233,17 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.match(hero, /aria-roledescription="carousel"/);
     assert.match(hero, /aria-live="polite"/);
     assert.match(hero, /od-disc-hero__progress/);
-    assert.match(hero, /Previous slide/);
-    assert.match(hero, /Next slide/);
-    assert.match(hero, /Choose slide/);
+    /*
+     * L1.1 made the hero image-only by owner direction. The prev/next arrows
+     * and the headline-labelled dots went with the copy; autoplay, swipe and
+     * position-labelled dots remain, and the page keeps one H1 — visually
+     * hidden, since a decorative banner cannot carry the page identity.
+     */
+    assert.doesNotMatch(hero, /Previous slide/);
+    assert.doesNotMatch(hero, /Next slide/);
+    assert.match(hero, /Choose banner image/);
+    assert.match(hero, /Show image \$\{index \+ 1\}/);
+    assert.match(hero, /<h1 id="od-disc-hero-title" className="od-sr-only">/);
     assert.match(css, /od-disc-dock/);
     assert.match(css, /prefers-reduced-motion/);
     assert.match(css, /od-disc-trust-strip/);
@@ -236,9 +257,14 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.match(hero, /if \(paused\) return/);
     assert.doesNotMatch(hero, /window\.addEventListener\("keydown"/);
     assert.match(hero, /onDotKeyDown/);
-    assert.match(hero, /aria-controls=/);
-    assert.match(hero, /role="tabpanel"/);
-    assert.match(hero, /inert=/);
+    /*
+     * The tabpanels were the copy panels. With no copy there is nothing for a
+     * dot to control, so `aria-controls`, `role="tabpanel"` and `inert` went
+     * with them — the dots are now a tablist over images alone.
+     */
+    assert.doesNotMatch(hero, /role="tabpanel"/);
+    assert.match(hero, /role="tab"/);
+    assert.match(hero, /role="tablist"/);
   });
 
   test("drawer and sticky dock clean up responsive state without overlapping mobile controls", () => {

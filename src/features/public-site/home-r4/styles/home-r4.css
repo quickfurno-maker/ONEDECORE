@@ -3715,6 +3715,18 @@
  * them at 299x28 — the text height, because the button had no padding and no
  * minimum. They are now a practical tap target.
  */
+/*
+ * The Privacy and Terms links inside the consent hint measured 44x16 in a real
+ * viewport pass. They sit inline inside a sentence, so a 44px box would break
+ * the line it lives in; this takes them to the WCAG 2.5.8 AA target size of
+ * 24px without disturbing the paragraph.
+ */
+[data-public-home-r4] .od-consult-form__hint a {
+  display: inline-block;
+  min-height: 24px;
+  padding-block: 4px;
+}
+
 [data-public-home-r4] .pm-service__trigger {
   display: flex;
   align-items: center;

@@ -108,6 +108,49 @@
   min-height: clamp(30rem, 82vh, 54rem);
 }
 
+/*
+ * IMAGE-ONLY HERO (owner-directed, L1.1)
+ *
+ * The banner carries no copy, so it no longer needs to be tall enough to hold
+ * a headline, a lede and a trust bar. It is sized as a picture: about 68vh on
+ * desktop and about 56vh on a phone, both clamped so a very short or very tall
+ * viewport still gets a sensible band.
+ *
+ * The dots move out of the old controls row — which also held the prev/next
+ * arrows — and sit over the image at the bottom. They keep their 44px hit area
+ * while the visible mark stays small.
+ */
+/*
+ * Doubled class for specificity, not for style.
+ *
+ * The responsive blocks near the end of this file set `.od-disc-hero`
+ * min-height and padding for the old text hero — 40rem at =<699px, which is
+ * 80vh on a phone. A single-class rule here would lose to them on source order
+ * however correct it was, so the image-only heights are written to outrank
+ * them wherever they appear.
+ */
+.od-disc-hero.od-disc-hero--imageOnly {
+  min-height: clamp(18rem, 56vh, 34rem);
+  padding: 0;
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .od-disc-hero.od-disc-hero--imageOnly {
+    min-height: clamp(24rem, 68vh, 42rem);
+  }
+}
+
+.od-disc-hero--imageOnly .od-disc-hero__dots {
+  position: absolute;
+  inset: auto 0 clamp(0.25rem, 1.5vw, 0.75rem) 0;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  pointer-events: auto;
+}
+
 .od-disc-hero__layout {
   position: relative;
   z-index: 1;
@@ -188,7 +231,7 @@
 }
 
 .od-disc-hero__progress-seg[data-active]::after {
-  animation: od-disc-hero-progress 6s linear forwards;
+  animation: od-disc-hero-progress 5.5s linear forwards;
 }
 
 .od-disc-hero__progress-seg[data-active][data-paused]::after {
@@ -553,6 +596,39 @@
   padding-block: 0.85rem;
 }
 
+/*
+ * The attested projects figure, first thing below the image-only hero.
+ *
+ * Static rather than part of the marquee: a number that scrolls past is a
+ * number nobody reads.
+ */
+.od-disc-projects {
+  margin: 0 0 0.75rem;
+  padding-inline: clamp(1rem, 4vw, 2.5rem);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.od-disc-projects__value {
+  font-family: var(--od-font-serif, Georgia, serif);
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--od-gold-light);
+  font-variant-numeric: tabular-nums;
+}
+
+.od-disc-projects__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--od-text-secondary);
+}
+
 .od-disc-trust-strip__track {
   display: flex;
   gap: clamp(1.5rem, 4vw, 3rem);
@@ -737,6 +813,27 @@
   bottom: 0;
 }
 
+/*
+ * Desktop: a floating pill rather than a full-width bar, so the two actions sit
+ * side by side without spanning the viewport.
+ */
+@media (min-width: 1024px) {
+  .od-disc-dock {
+    inset-inline: auto 1.5rem;
+    bottom: 1.5rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--od-gold) 22%, transparent);
+    border-top-color: color-mix(in srgb, var(--od-gold) 22%, transparent);
+    padding: 0.5rem 0.6rem;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.42);
+  }
+
+  .od-disc-dock__btn {
+    flex: 0 0 auto;
+    padding-inline: 1.25rem;
+  }
+}
+
 .od-disc-dock[data-visible] {
   transform: translateY(0);
 }
@@ -746,7 +843,8 @@
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  min-height: 44px;
+  /* 48px on the primary conversion surface, above the 44px floor. */
+  min-height: 48px;
   border-radius: 999px;
   text-decoration: none;
   font-size: 0.82rem;

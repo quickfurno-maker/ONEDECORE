@@ -450,7 +450,21 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
       fields.push("contact.email");
     }
 
-    if (!isPlainObject(input.requirements.qualifier)) {
+    /*
+     * OPTIONAL SINCE L1.1, AND STILL STRICT WHEN PRESENT.
+     *
+     * The public homepage form is a single card: service, name, mobile, and an
+     * optional locality. It asks no service-specific question, so most bodies
+     * carry no qualifier at all — and a required field the form never shows
+     * would simply be a field the client had to invent.
+     *
+     * What has not changed is the checking. A qualifier that DOES arrive must
+     * be a real code, of the kind this service implies, so a wardrobe enquiry
+     * still cannot carry a BHK.
+     */
+    if (input.requirements.qualifier == null) {
+      // Nothing asked, nothing claimed.
+    } else if (!isPlainObject(input.requirements.qualifier)) {
       fields.push("requirements.qualifier");
     } else {
       rejectUnknownKeys(

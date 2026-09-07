@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { collectLeadFormAttribution } from "./lead-form-attribution.ts";
 import {
   CONSULTATION_CONTACT_LABEL,
@@ -12,7 +12,7 @@ import {
   CONSULTATION_SERVICE_LABEL,
   CONSULTATION_SERVICE_OPTIONS,
   CONSULTATION_SERVICE_PLACEHOLDER,
-  CONSULTATION_STEPS,
+  CONSULTATION_SUCCESS_MESSAGE,
   qualifierForService,
 } from "./consultation-copy.ts";
 import { consultationToLeadRequest } from "./consultation-to-lead-request.ts";
@@ -52,18 +52,26 @@ import { submitLeadIntake } from "./lead-intake-client.ts";
 import { getLeadFormMode, type LeadFormMode } from "./lead-form-mode.ts";
 
 /**
- * The public consultation form.
+ * The public consultation form — ONE compact card.
  *
- * SERVICE -> ONE RELEVANT QUALIFIER -> CONTACT -> CONSENT -> SUBMIT
+ * SERVICE -> CONTACT -> CONSENT -> SUBMIT, all visible at once.
  *
- * The previous form asked every visitor for BHK, a timeline, rooms and a budget
- * band before it would take a phone number. A kitchen enquiry was pushed through
- * a whole-home questionnaire, which is both a poor first impression and a source
- * of CRM rows full of answers nobody meant.
+ * The first version asked every visitor for BHK, a timeline, rooms and a budget
+ * band before it would take a phone number. The second cut that to one
+ * service-specific question. This one (owner-directed, L1.1) asks none: a
+ * service, a name, a number, an optional locality and an optional note.
  *
- * This asks exactly one question per service, and the question changes with the
- * service. Nothing is asked that the chosen service does not need, and nothing
- * is sent that was not asked — see `consultation-to-lead-request.ts`.
+ * WHY NO STEPS
+ *
+ * A step counter on a four-field form advertises work that is not there. It
+ * also gated the phone number behind an answer the business does not need to
+ * start a conversation — the designer asks about the home on the call, which is
+ * what the call is for.
+ *
+ * Nothing is asked that is not needed, and nothing is sent that was not asked:
+ * the request carries no qualifier, no property, no timeline, no rooms and no
+ * budget band, because none of them appeared on screen. See
+ * `consultation-to-lead-request.ts`.
  *
  * Every existing protection is reused unchanged: national 10-digit mobile
  * handling, honeypot, idempotency fingerprinting, attribution, consent copy
@@ -89,7 +97,6 @@ export function ConsultationLeadForm({
   const [service, setService] = useState<string>(() =>
     initialService && qualifierForService(initialService) ? initialService : ""
   );
-  const [qualifierCode, setQualifierCode] = useState("");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [locality, setLocality] = useState("");
@@ -111,7 +118,6 @@ export function ConsultationLeadForm({
   const summaryRef = useRef<HTMLDivElement>(null);
   const [formStartedAt] = useState(() => new Date().toISOString());
 
-  const qualifier = useMemo(() => qualifierForService(service), [service]);
 
   const clearFieldError = (key: LeadFormFieldKey) => {
     setFieldErrors((prev) => {
@@ -181,30 +187,10 @@ export function ConsultationLeadForm({
   // "active" is the live mode; "preview" validates locally and never posts.
   const canNetworkSubmit = mode === "active";
 
-  /*
-   * Changing the service RETIRES the previous answer.
-   *
-   * A 2 BHK chosen for complete-home interiors is meaningless once the visitor
-   * switches to a kitchen, and carrying it across would submit an answer to a
-   * question the customer was never asked under the new service. The stale error
-   * goes with it, so the form does not show a complaint about a control that no
-   * longer exists.
-   */
   const onServiceChange = (next: string) => {
     setService(next);
-    setQualifierCode("");
     clearFieldError("service");
-    setFieldErrors((current) => {
-      if (!current.qualifier) {
-        return current;
-      }
-      const next = { ...current };
-      delete next.qualifier;
-      return next;
-    });
   };
-
-  const currentStep = !service ? 1 : !qualifierCode ? 2 : 3;
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -224,10 +210,10 @@ export function ConsultationLeadForm({
       serviceEnquiryConsent,
       servicePhoneConsent,
       service,
-      // The consultation variant validates the qualifier instead of demanding a
-      // property type and timeline this form never shows.
+      // The consultation variant demands neither a property type nor a
+      // timeline, and since L1.1 no qualifier either — the form shows none of
+      // them.
       variant: "consultation",
-      qualifier: qualifierCode,
     });
 
     if (!validation.ok) {
@@ -251,7 +237,9 @@ export function ConsultationLeadForm({
 
     const draft = consultationToLeadRequest({
       service,
-      qualifierCode,
+      // Single-step form: no service-specific question is asked, so none is
+      // sent. The adapter still validates one if a future caller supplies it.
+      qualifierCode: null,
       name,
       mobile,
       locality,
@@ -319,7 +307,7 @@ export function ConsultationLeadForm({
     return (
       <div className="od-consult-form" data-od-consult-state="success">
         <p className="od-consult-form__status" role="status" aria-live="polite">
-          {status?.title}
+          {CONSULTATION_SUCCESS_MESSAGE}
         </p>
         {status?.body ? (
           <p className="od-consult-form__hint">{status.body}</p>
@@ -335,15 +323,11 @@ export function ConsultationLeadForm({
       aria-busy={isSubmitting}
       noValidate
       data-od-lead-phone-ux="national-10"
-      data-od-consult-step={currentStep}
+      data-od-consult-layout="single-step"
     >
       <div className="od-consult-form__head">
         <h3 className="od-consult-form__title">{CONSULTATION_INTRO_TITLE}</h3>
         <p className="od-consult-form__hint">{CONSULTATION_INTRO_HELP}</p>
-        <p className="od-consult-form__steps" aria-live="polite">
-          Step {currentStep} of {CONSULTATION_STEPS.length} —{" "}
-          {CONSULTATION_STEPS[currentStep - 1]}
-        </p>
       </div>
 
       {mode === "preview" ? (
@@ -368,7 +352,7 @@ export function ConsultationLeadForm({
         </div>
       ) : null}
 
-      {/* STEP 1 — service */}
+      {/* Service — the only choice this form asks for. */}
       <div className="od-consult-form__field">
         <label htmlFor="od-consult-service">{CONSULTATION_SERVICE_LABEL}</label>
         <select
@@ -394,38 +378,9 @@ export function ConsultationLeadForm({
         ) : null}
       </div>
 
-      {/* STEP 2 — the ONE question this service needs */}
-      {qualifier ? (
-        <div className="od-consult-form__field">
-          <label htmlFor="od-consult-qualifier">{qualifier.label}</label>
-          <select
-            id="od-consult-qualifier"
-            name="qualifier"
-            value={qualifierCode}
-            onChange={(event) => {
-              setQualifierCode(event.target.value);
-              if (event.target.value) clearFieldError("qualifier");
-            }}
-            aria-invalid={fieldErrors.qualifier ? true : undefined}
-            data-od-qualifier-kind={qualifier.kind}
-          >
-            <option value="">{qualifier.placeholder}</option>
-            {qualifier.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          {fieldErrors.qualifier ? (
-            <p className="od-consult-form__error">{fieldErrors.qualifier}</p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* STEP 3 — contact */}
-      {qualifierCode ? (
-        <fieldset className="od-consult-form__group">
-          <legend>{CONSULTATION_CONTACT_LABEL}</legend>
+      {/* Contact — always visible. Nothing gates it. */}
+      <fieldset className="od-consult-form__group">
+        <legend>{CONSULTATION_CONTACT_LABEL}</legend>
 
           <div className="od-consult-form__field">
             <label htmlFor="od-consult-name">Full name</label>
@@ -591,8 +546,7 @@ export function ConsultationLeadForm({
               <Link href={LEAD_FORM_TERMS_PATH}>Terms</Link>
             </p>
           </div>
-        </fieldset>
-      ) : null}
+      </fieldset>
 
       {/* Honeypot — visually hidden, never announced. */}
       <div className="od-consult-form__trap" aria-hidden="true">
@@ -608,20 +562,13 @@ export function ConsultationLeadForm({
         />
       </div>
 
-      {/*
-        The submit action belongs to the Contact stage.
-        Showing it during Project/Requirement offers to send a form whose contact
-        fields have not been revealed yet, which reads as a broken step counter.
-      */}
-      {qualifierCode ? (
-        <button
-          type="submit"
-          className="od-consult-form__submit"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Sending…" : "Get Free Design Consultation"}
-        </button>
-      ) : null}
+      <button
+        type="submit"
+        className="od-consult-form__submit"
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? "Sending…" : "Get Free Design Consultation"}
+      </button>
 
       {status && !isSuccess ? (
         <p className="od-consult-form__status" role="status" aria-live="polite">

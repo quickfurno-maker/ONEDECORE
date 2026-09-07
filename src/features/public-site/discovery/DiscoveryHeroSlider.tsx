@@ -3,11 +3,10 @@
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, TouchEvent } from "react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { DISCOVERY_HERO_SLIDES } from "./discovery-copy";
-import { DiscoveryHeroTrustBar } from "./DiscoveryHeroTrustBar";
+import { DISCOVERY_HERO_SLIDES, DISCOVERY_HERO_PAGE_TITLE } from "./discovery-copy";
 import { getDiscoveryAsset } from "./discovery-assets";
 
-const AUTOPLAY_MS = 6000;
+const AUTOPLAY_MS = 5500;
 const SWIPE_THRESHOLD = 48;
 
 function subscribeReducedMotion(onStoreChange: () => void) {
@@ -24,6 +23,29 @@ function usePrefersReducedMotion(): boolean {
   return useSyncExternalStore(subscribeReducedMotion, getReducedMotionSnapshot, () => false);
 }
 
+/**
+ * The homepage hero: sliding images and nothing else.
+ *
+ * WHY THERE IS NO TEXT HERE
+ *
+ * Owner-directed. The hero used to carry a kicker, a rotating headline, a lede,
+ * a badge and a trust bar layered over the photography, plus prev/next arrows.
+ * It is now the photography — the interiors are the argument, and everything
+ * that was competing with them has moved below the fold where it can be read
+ * rather than skimmed past.
+ *
+ * WHAT THAT COSTS, AND HOW IT IS PAID
+ *
+ * A page still needs one H1, and a decorative banner cannot be it. So the H1 is
+ * rendered visually hidden: present for assistive technology and for search
+ * engines, invisible on screen. The images are `alt=""` because they are
+ * decoration, not content — a screen reader user loses nothing by not hearing
+ * "modern kitchen photograph", and gains by not hearing it five times.
+ *
+ * The dots are the only visible control. They are labelled by position rather
+ * than by the old marketing headlines, because "slide 2" is what they actually
+ * do and the headline is no longer on screen to refer to.
+ */
 export function DiscoveryHeroSlider() {
   const [active, setActive] = useState(0);
   const [hovered, setHovered] = useState(false);
@@ -91,8 +113,9 @@ export function DiscoveryHeroSlider() {
 
   return (
     <section
-      className="od-disc-hero od-disc-hero--slider"
+      className="od-disc-hero od-disc-hero--slider od-disc-hero--imageOnly"
       data-od-disc-section="hero"
+      data-od-hero-image-only=""
       aria-labelledby="od-disc-hero-title"
       aria-roledescription="carousel"
       onMouseEnter={() => setHovered(true)}
@@ -107,6 +130,14 @@ export function DiscoveryHeroSlider() {
       onTouchEnd={onTouchEnd}
       onTouchCancel={() => setTouchPaused(false)}
     >
+      {/*
+        * The page's only H1. Visually hidden, semantically present: the banner
+        * itself is decoration and cannot carry the page's identity.
+        */}
+      <h1 id="od-disc-hero-title" className="od-sr-only">
+        {DISCOVERY_HERO_PAGE_TITLE}
+      </h1>
+
       <div className="od-disc-hero__slides" aria-hidden="true">
         {DISCOVERY_HERO_SLIDES.map((slide, index) => {
           const isActive = index === active;
@@ -143,46 +174,6 @@ export function DiscoveryHeroSlider() {
         })}
       </div>
 
-      <div className="od-disc-shell od-disc-hero__layout">
-        <div className="od-disc-hero__copy">
-          {DISCOVERY_HERO_SLIDES.map((slide, index) => {
-            const isActive = index === active;
-            const HeadingTag = index === 0 ? "h1" : "h2";
-            return (
-              <div
-                key={slide.id}
-                id={`od-disc-hero-panel-${slide.id}`}
-                className="od-disc-hero__panel"
-                data-active={isActive ? "" : undefined}
-                data-has-badge={slide.badge ? "" : undefined}
-                aria-hidden={isActive ? undefined : true}
-                aria-labelledby={`od-disc-hero-tab-${slide.id}`}
-                inert={isActive ? undefined : true}
-                role="tabpanel"
-              >
-                <p className="od-disc-kicker">{slide.kicker}</p>
-                <header>
-                  <HeadingTag
-                    id={index === 0 ? "od-disc-hero-title" : undefined}
-                    className="od-disc-hero__headline"
-                  >
-                    {slide.headline}
-                  </HeadingTag>
-                  {slide.badge ? (
-                    <p className="od-disc-hero__badge">{slide.badge}</p>
-                  ) : null}
-                  <p className="od-disc-hero__lede">{slide.lede}</p>
-                </header>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="od-disc-hero__bottom">
-          <DiscoveryHeroTrustBar />
-        </div>
-      </div>
-
       <div className="od-disc-hero__progress" aria-hidden="true">
         {DISCOVERY_HERO_SLIDES.map((slide, index) => (
           <span
@@ -195,48 +186,27 @@ export function DiscoveryHeroSlider() {
       </div>
 
       <p className="od-sr-only" aria-live="polite" aria-atomic="true">
-        {focusWithin || hovered
-          ? `Slide ${active + 1} of ${slideCount}: ${DISCOVERY_HERO_SLIDES[active]!.headline}`
-          : ""}
+        {focusWithin || hovered ? `Image ${active + 1} of ${slideCount}` : ""}
       </p>
 
-      <div className="od-disc-hero__controls" aria-label="Hero slideshow controls">
-        <button
-          type="button"
-          className="od-disc-hero__arrow od-disc-hero__arrow--prev"
-          onClick={goPrev}
-          aria-label="Previous slide"
-        >
-          <span aria-hidden="true">‹</span>
-        </button>
-        <button
-          type="button"
-          className="od-disc-hero__arrow od-disc-hero__arrow--next"
-          onClick={goNext}
-          aria-label="Next slide"
-        >
-          <span aria-hidden="true">›</span>
-        </button>
-        <div className="od-disc-hero__dots" role="tablist" aria-label="Choose slide">
-          {DISCOVERY_HERO_SLIDES.map((slide, index) => (
-            <button
-              key={slide.id}
-              ref={(node) => {
-                dotRefs.current[index] = node;
-              }}
-              id={`od-disc-hero-tab-${slide.id}`}
-              type="button"
-              role="tab"
-              className="od-disc-hero__dot"
-              aria-controls={`od-disc-hero-panel-${slide.id}`}
-              aria-selected={index === active}
-              tabIndex={index === active ? 0 : -1}
-              aria-label={`Slide ${index + 1}: ${slide.headline}`}
-              onClick={() => goTo(index)}
-              onKeyDown={(event) => onDotKeyDown(event, index)}
-            />
-          ))}
-        </div>
+      <div className="od-disc-hero__dots" role="tablist" aria-label="Choose banner image">
+        {DISCOVERY_HERO_SLIDES.map((slide, index) => (
+          <button
+            key={slide.id}
+            ref={(node) => {
+              dotRefs.current[index] = node;
+            }}
+            id={`od-disc-hero-tab-${slide.id}`}
+            type="button"
+            role="tab"
+            className="od-disc-hero__dot"
+            aria-selected={index === active}
+            tabIndex={index === active ? 0 : -1}
+            aria-label={`Show image ${index + 1} of ${slideCount}`}
+            onClick={() => goTo(index)}
+            onKeyDown={(event) => onDotKeyDown(event, index)}
+          />
+        ))}
       </div>
     </section>
   );

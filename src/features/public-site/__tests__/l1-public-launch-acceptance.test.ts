@@ -293,14 +293,22 @@ describe("the public site says where the business is, without leaking the funnel
     }
   });
 
-  test("no WhatsApp destination is invented before L5", () => {
+  test("no WhatsApp destination is invented in source", () => {
+    /*
+     * L1.1 replaced the hard-coded `null` with
+     * NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164, validated. The requirement is
+     * unchanged — no number is invented — and the button is absent rather than
+     * dead when nothing valid is configured.
+     */
     const contact = read("src/features/public-site/chrome/public-contact.ts");
-    assert.match(contact, /PUBLIC_WHATSAPP_HREF: string \| null = null/);
+    assert.match(contact, /NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164/);
+    assert.doesNotMatch(contact, /wa\.me\/\d/);
+    assert.doesNotMatch(contact, /\+\d{8,}/);
     for (const rel of [FOOTER, HEADER, HOME, INTERIORS]) {
       assert.doesNotMatch(
         read(rel),
         /wa\.me|api\.whatsapp\.com/,
-        `${rel} must not carry a WhatsApp link before L5`
+        `${rel} must not hard-code a WhatsApp link`
       );
     }
   });
@@ -582,9 +590,10 @@ describe("owner-approved wording is not the same thing as public evidence", () =
     );
   });
 
-  test("no figure without a source may be quoted", () => {
+  test("no figure without a source or an attestation may be quoted", () => {
+    // `projects-delivered` is owner-attested since L1.1 and is asserted in
+    // `l11-homepage-conversion-refinement`. Everything else stays withheld.
     for (const id of [
-      "projects-delivered",
       "average-rating",
       "client-reviews",
       "client-satisfaction",
@@ -607,7 +616,6 @@ describe("owner-approved wording is not the same thing as public evidence", () =
 
   test("claims that describe the work, rather than measure it, survive", () => {
     for (const id of [
-      "projects-delivered",
       "warranty-years",
       "custom-designs",
       "own-manufacturing-unit",

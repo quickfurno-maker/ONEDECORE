@@ -92,7 +92,9 @@ describe("the hero carries no call to action", () => {
   test("slider behaviour and the trust bar survive", () => {
     const src = read(HERO);
     for (const kept of [
-      "DiscoveryHeroTrustBar",
+      // "DiscoveryHeroTrustBar" was removed in L1.1: the hero is image-only
+      // by owner direction, and the projects counter moved to the trust strip
+      // below it. What the slider itself must keep is listed here.
       "aria-roledescription",
       "prefers-reduced-motion",
       "onTouchStart",
@@ -277,13 +279,32 @@ describe("no fabricated property or timeline", () => {
   });
 
   test("an unknown qualifier code is refused", () => {
-    for (const bad of ["", "made-up", "single-room"]) {
+    /*
+     * L1.1 made the qualifier OPTIONAL — the single-step form asks no
+     * service-specific question — so an empty code is now absence rather than
+     * a bad answer. A code that is present and wrong is still refused, which is
+     * the property this test was written for.
+     */
+    for (const bad of ["made-up", "single-room"]) {
       const result = consultationToLeadRequest({
         ...BASE,
         service: "modular-kitchens",
         qualifierCode: bad,
       });
       assert.equal(result.ok, false, `"${bad}" must be refused`);
+    }
+  });
+
+  test("an absent qualifier is accepted and sends nothing", () => {
+    for (const empty of ["", null]) {
+      const result = consultationToLeadRequest({
+        ...BASE,
+        service: "modular-kitchens",
+        qualifierCode: empty,
+      });
+      assert.equal(result.ok, true, `${JSON.stringify(empty)} must be accepted`);
+      if (!result.ok) continue;
+      assert.equal("qualifier" in result.body.requirements, false);
     }
   });
 
@@ -340,15 +361,17 @@ describe("no fabricated property or timeline", () => {
 /* ========================================================================== */
 
 describe("the qualifier does not survive a service change", () => {
-  test("the form clears it explicitly", () => {
+  test("there is no stale qualifier answer left to carry", () => {
+    /*
+     * This used to assert that changing the service cleared the previous
+     * qualifier. L1.1 removed the qualifier control from the form entirely, so
+     * there is no answer to go stale — the stronger version of the same
+     * guarantee.
+     */
     const src = code(read(FORM));
-    const handler = src.slice(
-      src.indexOf("const onServiceChange"),
-      src.indexOf("const currentStep")
-    );
-    assert.match(handler, /setQualifierCode\(""\)/);
-    // And the stale error goes with it.
-    assert.match(handler, /delete next\.qualifier/);
+    assert.doesNotMatch(src, /setQualifierCode/);
+    assert.doesNotMatch(src, /id="od-consult-qualifier"/);
+    assert.match(src, /qualifierCode: null,/);
   });
 
   test("a carried-over answer would be rejected anyway", () => {
@@ -369,8 +392,8 @@ describe("the visible form is short", () => {
     const src = read(FORM);
     assert.match(src, /<select/);
     assert.doesNotMatch(src, /role="radiogroup"/);
-    // One dropdown per stage: service, then the single qualifier.
-    assert.equal((src.match(/<select/g) ?? []).length, 2);
+    // L1.1: one dropdown, full stop. The service is the only choice asked.
+    assert.equal((src.match(/<select/g) ?? []).length, 1);
   });
 
   test("it never renders a timeline, rooms or budget control", () => {
@@ -387,7 +410,6 @@ describe("the visible form is short", () => {
     const src = read(FORM);
     for (const id of [
       "od-consult-service",
-      "od-consult-qualifier",
       "od-consult-name",
       "od-consult-mobile",
       "od-consult-locality",
@@ -449,7 +471,7 @@ describe("the visible form is short", () => {
     const src = code(read(FORM));
     const initializer = src.slice(
       src.indexOf("const [service, setService]"),
-      src.indexOf("const [qualifierCode")
+      src.indexOf("const [name, setName]")
     );
     assert.doesNotMatch(initializer, /window|URLSearchParams|location/);
     assert.match(initializer, /initialService/);
@@ -519,7 +541,7 @@ describe("the visible form is short", () => {
     assert.match(src, /const clearFieldError = /);
     for (const key of [
       "service",
-      "qualifier",
+      // "qualifier" removed in L1.1: the control it belonged to is gone.
       "name",
       "mobile",
       "serviceEnquiryConsent",
@@ -532,11 +554,16 @@ describe("the visible form is short", () => {
     }
   });
 
-  test("submit appears only once the Contact stage is reached", () => {
+  test("the submit is always present, because there are no stages", () => {
+    /*
+     * It used to be gated on reaching the Contact stage, so it could not offer
+     * to send a form whose fields were still hidden. L1.1 shows every field at
+     * once, so gating it would only hide the action.
+     */
     const src = code(read(FORM));
-    // Offering "submit" while the contact fields are still hidden reads as a
-    // broken step counter.
-    assert.match(src, /\{qualifierCode \? \([\s\S]{0,200}type="submit"/);
+    assert.doesNotMatch(src, /\{qualifierCode \? \(/);
+    assert.equal((src.match(/type="submit"/g) ?? []).length, 1);
+    assert.doesNotMatch(src, /currentStep/);
   });
 });
 
@@ -566,7 +593,7 @@ describe("the legacy planner contract still works", () => {
     assert.ok(planner.fields.timeline, "planner must still require timeline");
   });
 
-  test("the consultation variant demands the qualifier instead", () => {
+  test("the consultation variant asks for neither property nor qualifier", () => {
     const missing = validateLeadFormFields({
       name: "Test Person",
       mobile: "9876543210",
@@ -578,9 +605,13 @@ describe("the legacy planner contract still works", () => {
       variant: "consultation",
       qualifier: "",
     });
-    assert.equal(missing.ok, false);
-    assert.ok(missing.fields.qualifier);
-    // It must NOT ask for answers the form never showed.
+    /*
+     * L1.1: with no qualifier control on the form, a blank one is not a
+     * validation failure. Everything the form DOES show is still required, and
+     * nothing the form never showed is ever demanded.
+     */
+    assert.equal(missing.ok, true);
+    assert.equal(missing.fields.qualifier, undefined);
     assert.equal(missing.fields.property, undefined);
     assert.equal(missing.fields.timeline, undefined);
 

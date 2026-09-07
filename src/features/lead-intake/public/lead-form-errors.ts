@@ -241,9 +241,12 @@ export function validateLeadFormFields(input: {
   }
   const isConsultation = input.variant === "consultation";
   if (isConsultation) {
-    if (!input.qualifier) {
-      fields.qualifier = "Choose an option.";
-    }
+    /*
+     * The qualifier is OPTIONAL for the consultation variant as of L1.1: the
+     * public homepage form is one card with one service dropdown and asks no
+     * service-specific question. Requiring an answer the form never asks for
+     * would block every submission.
+     */
   } else if (!input.property) {
     fields.property = "Choose your property type.";
   }
