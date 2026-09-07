@@ -26,7 +26,14 @@ import {
 import { CRM_ROLE_PERMISSIONS } from "../contracts/permissions.ts";
 
 const root = process.cwd();
-const read = (rel: string) => readFileSync(join(root, rel), "utf8");
+/*
+ * Line endings are normalised because several assertions below match a literal
+ * "\n" inside a multi-line substring. Git checks these files out with CRLF on
+ * Windows, so those assertions passed on CI and failed on a developer machine —
+ * a property of the checkout, never of the code being tested.
+ */
+const read = (rel: string) =>
+  readFileSync(join(root, rel), "utf8").replace(/\r\n/g, "\n");
 
 /** Strips comments: these files DESCRIBE what they refuse to do. */
 const code = (source: string) =>

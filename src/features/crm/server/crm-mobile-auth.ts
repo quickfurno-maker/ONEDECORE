@@ -113,12 +113,29 @@ const STATUS_BY_CODE: Record<CrmMobileErrorCode, number> = {
   unavailable: 503,
 };
 
+/**
+ * Answers a failure as a category, a sentence, and — where the caller needs to
+ * tell two failures of the same category apart — a stable canonical code.
+ *
+ * WHY THE CODE EXISTS. Enquiry deletion refuses in three different ways that
+ * are all HTTP 409: the enquiry changed while it was being read, it carries
+ * quotation or project history, or it was already deleted. Those need three
+ * different sentences and three different next actions on the client, and a
+ * client cannot branch on prose. The code is a contract token — the same
+ * `CrmErrorCode` the browser action already returns in its `LeadDeleteActionState`
+ * — never a Postgres message, a SQLSTATE, or a table name.
+ *
+ * Omitted everywhere else, so every existing response body is byte-identical.
+ */
 export function crmMobileError(
   code: CrmMobileErrorCode,
-  message: string
+  message: string,
+  canonicalCode?: string
 ): Response {
   return Response.json(
-    { error: code, message },
+    canonicalCode
+      ? { error: code, message, code: canonicalCode }
+      : { error: code, message },
     { status: STATUS_BY_CODE[code] }
   );
 }
