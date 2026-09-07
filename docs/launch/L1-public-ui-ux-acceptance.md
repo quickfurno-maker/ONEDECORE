@@ -10,11 +10,13 @@
 L1 accepts the public UI/UX and closes the cache blocker; the measurement,
 consent and WhatsApp lanes remain open.
 
-> **Final correction applied.** Three further blockers were found in review and
+> **Final corrections applied.** Four further blockers were found in review and
 > are closed here: the warranty page was being made canonical and submitted to
-> the sitemap while its own readiness gate says draft; the launch surfaces were
-> still rendering numeric and review claims the repository itself records as
-> unevidenced; and the viewport pass had not been run. See §4A, §4B and §7.
+> the sitemap while its own readiness gate says draft (§4A); the launch surfaces
+> were still rendering numeric and review claims the repository itself records
+> as unevidenced (§4B); public copy described a rating the page no longer shows
+> and a form that no longer fails to submit (§4C); and the viewport pass had not
+> been run (§7).
 
 Evidence is marked:
 
@@ -78,10 +80,10 @@ LIVE probes, 2026-09-07.
 | `/interiors` | 200 | ✓ | ✓ | ✓ | `/interiors` | ✓ |
 | `/portfolio` | 200 | ✓ | ✓ | ✓ | `/portfolio` | ✓ with §6 finding |
 | `/portfolio/[slug]` | — | ✓ | ✓ | ✓ | per-slug | Not exercisable — no published projects |
-| `/privacy` | 200 | ✓ | ✓ | ✓ | **added in L1** | ✓ |
-| `/terms` | 200 | ✓ | ✓ | ✓ | **added in L1** | ✓ |
-| `/communication-consent` | 200 | ✓ | ✓ | ✓ | **added in L1** | ✓ |
-| `/data-rights` | 200 | ✓ | ✓ | ✓ | **added in L1** | ✓ |
+| `/privacy` | 200 | ✓ | ✓ | ✓ | **added in L1** | ✓ — listed in sitemap |
+| `/terms` | 200 | ✓ | ✓ | ✓ | **added in L1** | ✓ — listed in sitemap |
+| `/communication-consent` | 200 | ✓ | ✓ | ✓ | **added in L1** | ✓ — listed in sitemap |
+| `/data-rights` | 200 | ✓ | ✓ | ✓ | **added in L1** | ✓ — listed in sitemap |
 | `/warranty` | 200 | ✓ | ✓ | ✓ | **none — deliberate** | ✓ — `noindex`, not in sitemap, see §4A |
 | `/shop` | 200 | ✓ | — | — | — | Contained, `noindex` |
 | `/lp/[slug]` | — | ✓ | — | — | — | `noindex, nofollow`, campaign-bound |
@@ -157,7 +159,8 @@ drift, plus a consultation link — a trust and NAP signal, not a second funnel.
 Cache-Control: s-maxage=31536000
 ```
 
-**Root cause.** Not nginx, not a CDN. `/`, `/interiors` and the five legal pages
+**Root cause.** Not nginx, not a CDN. `/`, `/interiors` and all five legal
+pages — warranty included, since prerendering is unrelated to indexability —
 are statically prerendered (`○` in the build table). A Next.js page that is
 prerendered and declares no `revalidate` is treated as immutable and served with
 a one-year shared-cache lifetime. `/portfolio` and `/shop` were already dynamic
@@ -227,7 +230,7 @@ curl -s https://onedecore.in/ | grep -c "<marker from this release>"
 An earlier revision of this branch added all five legal paths to the sitemap and
 gave them canonicals whenever `getLegalRobots().index` was true. That gate is the
 GLOBAL legal publication mode, and it is `published`. Warranty does not belong to
-it.
+it, so **four** legal pages are listed and warranty is not.
 
 | Fact | Value |
 | --- | --- |
@@ -308,12 +311,60 @@ no status flipped to `verified`, no warranty policy approved in code. Verified
 against a local production build: zero occurrences of `500+`, `4.9`, `200+`,
 `98%`, `100% Custom` or `10-Year` on `/` or `/interiors`.
 
+## 4C. Public copy that had gone stale
+
+Suppressing the claims (§4B) and activating the lead form left three pieces of
+copy describing a page that no longer exists. Copy that contradicts the product
+is a defect whichever direction it points.
+
+| Where | Said | Now |
+| --- | --- | --- |
+| FAQ `reviews` | *"The homepage shows ONEDECORE's owner-approved aggregate rating and review count."* — describing the very block §4B suppresses | Asks how a homeowner can judge the work before committing, and answers with the consultation, the Portfolio and written scope. **The claim was not restored to match the answer.** |
+| FAQ `submitted` | *"No. … Secure lead submission will connect in a later release."* — false the moment the form went active, and `/interiors` renders the live form | Carries both forms (`questionActive` / `answerActive`) and the component picks, as `PM_CLOSE` already did. In `active`: *"Your consultation request is sent to ONEDECORE for review and follow-up. Submitting the form does not confirm an appointment or quotation."* |
+| FAQ `warranty` | Fallback still offered "warranty support on eligible modular furniture and interior work" | *"Warranty coverage, where applicable, follows the written terms and exclusions agreed for the project. Detailed public category terms are not yet published."* No duration, no universal promise. |
+
+The surrounding FAQ entries were re-read for the same failure. `budget`,
+`estimate`, `factory`, `consultation`, `areas` and `portfolio` are all still
+accurate — the portfolio answer already says photography will be added as media
+is approved, which matches §6.
+
+`PM_CLOSE` needed no change: its `briefBody` / `reassurance` "nothing is
+submitted" copy renders only when `!formPrimary`, and the `*Active` variants
+already cover the live form.
+
+**One architectural correction along the way.** The first attempt read the form
+mode inside `content.ts`. The Phase 4A guard refused it — *"homepage copy flow
+unchanged; intake fetch only in gated capture module"* asserts that nothing
+under `home-r4` references the intake feature outside the gated capture
+component, and that boundary is worth keeping. The copy module now carries both
+variants and `HomeFaq` resolves them from a `leadFormMode` prop threaded from
+`InteriorsConversionPage`, which is the pattern `PM_CLOSE` already used.
+
+Two older assertions counted `question:` occurrences in the source to check the
+FAQ had ten entries. That stopped measuring entries once one gained a
+`questionActive` variant and a typed resolver, so both now count
+`PM_FAQS.length`. The R5.4 nav assertion pinned the literal `label: "Reviews"`;
+its actual requirement — no "Work" entry, no `#projects` anchor, entry points at
+`#reviews` — is unchanged and still asserted.
+
+### 4C.1 Navigation label
+
+The section at `#reviews` renders process copy while the aggregate is
+suppressed, so `PM_NAV_ITEMS` and `PM_FOOTER.explore` labelling it **"Reviews"**
+promised something the page does not deliver. Both now read
+`PM_REVIEWS_NAV_LABEL`, which is `"Reviews"` when
+`canShowAggregateReviewSummary()` is true and **"How We Work"** otherwise. The
+section's own eyebrow and heading use the same gate, so label and content agree.
+
+**The anchor id is unchanged.** Only the label is conditional — renaming
+`#reviews` would break inbound links and the scroll-spy list for no gain.
+
 ## 5. SEO and indexability
 
 | Item | Before | After |
 | --- | --- | --- |
 | `robots.txt` disallow | `/admin/`, `/api/admin/`, `/auth/` | **+ `/manager/`, `/q/`** |
-| Sitemap | `/`, `/interiors`, `/portfolio` | **+ the five legal pages**, gated on `getLegalRobots().index` |
+| Sitemap | `/`, `/interiors`, `/portfolio` | **+ the four globally published legal pages**, gated on `getLegalRobots().index`. `/warranty` is withheld behind `canPublishWarrantyPolicy()` — see §4A |
 | Legal canonicals | none (`canonical: undefined`) | **emitted when indexable** |
 | Launch page canonical/OG | present | unchanged |
 
@@ -488,15 +539,18 @@ open. It needs one real submission, which requires explicit owner approval.
 ## 9. Tests
 
 New: `src/features/public-site/__tests__/l1-public-launch-acceptance.test.ts` —
-**57 tests across 11 suites**, covering the cache policy, the tag refusal,
+**64 tests across 12 suites**, covering the cache policy, the tag refusal,
 storefront containment, the no-funnel-leak contact rule, dead ends,
 indexability, the warranty publication gate, the claim-evidence gate, the
-rendered surfaces, the measured tap targets, and that the lead funnel was not
-disturbed.
+rendered surfaces, the measured tap targets, the public copy matching what the
+page actually does, and that the lead funnel was not disturbed.
 
 Updated:
 
 - `phase-3a1-2-activation-gates` — the expired legal-sitemap assertion.
+- `r5-4-final` and `r5-value` — both counted `question:` occurrences in source
+  rather than FAQ entries, and `r5-4-final` pinned the literal nav label. Both
+  now assert the surviving requirement.
 - `phase-10c-homepage-launch-ux` and `phase-10e-interior-launch-closeout` — both
   treated owner-approved wording as though it were public evidence. They now
   assert the evidence gate alongside the claim source, which is the distinction
@@ -504,10 +558,10 @@ Updated:
 
 | Gate | Result |
 | --- | --- |
-| `npm run test:public-launch` | **106/106 pass** |
+| `npm run test:public-launch` | **113/113 pass** |
 | focused legal + warranty readiness tests | pass (within the above) |
 | lead-intake public tests | 52/52 pass |
-| `npm run test:app` | **3171/3173 pass** — see below |
+| `npm run test:app` | **3178/3180 pass** — see below |
 | `npm run lint` | 0 errors (30 pre-existing warnings) |
 | `npm run typecheck` | clean |
 | `npm run build` | clean; all seven public pages show `5m` revalidate |
@@ -535,6 +589,7 @@ both pass in CI on Linux.
 | Cache blocker closed | **MET** (§4) |
 | Launch scope frozen, `/shop` decided | **MET** (§1) |
 | Unsupported public claims suppressed | **MET** (§4B) |
+| Public copy matches the page it describes | **MET** (§4C) |
 | Warranty indexability correct | **MET** (§4A) |
 | UI frozen for campaign learning | **MET** for structure; the empty portfolio (BLOCK-L1-01) remains owner content work |
 

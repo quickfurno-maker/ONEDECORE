@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test, { describe } from "node:test";
+import { PM_FAQS } from "../content.ts";
 import { HOME_CLAIMS } from "../claims.ts";
 import { HOME_PROJECT_PROOF_MODE } from "../project-proof.ts";
 import { computeEstimate } from "../budget-config.ts";
@@ -72,7 +73,9 @@ describe("R5.3 FAQ and composition", () => {
     assert.match(content, /How much do home interiors cost in Pune/);
     assert.match(content, /Does ONEDECORE manufacture its own furniture/);
     assert.match(content, /Is the design consultation free/);
-    assert.equal((content.match(/question:/g) ?? []).length, 10);
+    // Counting `question:` in the source stopped measuring FAQ entries once one
+    // gained a `questionActive` variant and a typed resolver. Count entries.
+    assert.equal(PM_FAQS.length, 10);
   });
 
   test("production page order matches R5.4 architecture", () => {

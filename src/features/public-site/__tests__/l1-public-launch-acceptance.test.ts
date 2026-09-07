@@ -48,6 +48,14 @@ import {
 } from "../../legal/legal-publication.ts";
 import { canQuotePublicClaim, publicClaimLabel } from "../home-r4/claims.ts";
 import { canShowAggregateReviewSummary } from "../home-r4/reviews.ts";
+import {
+  PM_FAQS,
+  PM_FOOTER,
+  PM_NAV_ITEMS,
+  PM_REVIEWS,
+  PM_REVIEWS_NAV_LABEL,
+  resolveFaqEntry,
+} from "../home-r4/content.ts";
 
 const root = process.cwd();
 const read = (rel: string) => readFileSync(join(root, rel), "utf8");
@@ -732,5 +740,144 @@ describe("the tap targets a real viewport pass found too small are fixed", () =>
   test("the header brand link reaches 44px", () => {
     const css = read("src/features/public-site/chrome/public-site-chrome.css");
     assert.match(blockFor(css, ".od-site-header__mark {"), /min-height: 44px/);
+  });
+});
+
+/* ========================================================================== */
+/* 12. The copy says what the page actually does                               */
+/* ========================================================================== */
+
+describe("public copy matches the page it describes", () => {
+  const faq = (id: string) => {
+    const entry = PM_FAQS.find((item) => item.id === id);
+    assert.ok(entry, `the ${id} FAQ must exist`);
+    return entry!;
+  };
+
+  test("the reviews FAQ no longer describes a rating the page withholds", () => {
+    /*
+     * It used to answer "the homepage shows ONEDECORE's owner-approved
+     * aggregate rating and review count" — describing a section that the
+     * evidence gate now suppresses. Restoring the claim to match the answer
+     * would have been the wrong repair.
+     */
+    assert.equal(canShowAggregateReviewSummary(), false);
+    const entry = faq("reviews");
+    for (const forbidden of [
+      "aggregate rating",
+      "review count",
+      "The homepage shows",
+    ]) {
+      assert.ok(
+        !entry.answer.includes(forbidden),
+        `the reviews FAQ must not claim "${forbidden}"`
+      );
+    }
+    assert.doesNotMatch(entry.answer, /\d+(\.\d+)?\s*\/\s*5/);
+    assert.ok(entry.answer.length > 0);
+  });
+
+  test("the submission FAQ tells the truth for the build it ships in", () => {
+    /*
+     * "No — secure lead submission will connect in a later release" stopped
+     * being true the moment the form went active, and `/interiors` renders the
+     * live form in that mode. The answer follows the build's mode, the same way
+     * PM_CLOSE already switches its copy.
+     */
+    const content = code(read("src/features/public-site/home-r4/content.ts"));
+    const faqComponent = code(read("src/features/public-site/home-r4/HomeFaq.tsx"));
+
+    // The copy module carries both forms...
+    assert.match(
+      content,
+      /Your consultation request is sent to ONEDECORE for review and follow-up\./
+    );
+    assert.match(
+      content,
+      /Submitting the form does not confirm an appointment or quotation\./
+    );
+    assert.match(content, /questionActive:/);
+    assert.match(content, /answerActive:/);
+
+    /*
+     * ...and the COMPONENT picks, because `content.ts` is a copy module that
+     * must not reach into the intake feature — a boundary the Phase 4A guard
+     * asserts. Threading the mode through the component is how PM_CLOSE
+     * already does it.
+     */
+    assert.doesNotMatch(content, /getLeadFormMode/);
+    assert.match(faqComponent, /leadFormMode === "active"/);
+    assert.match(faqComponent, /resolveFaqEntry\(entry, formActive\)/);
+
+    // Resolution is truthful in both directions.
+    const raw = PM_FAQS.find((item) => item.id === "submitted")!;
+    const copyOnly = resolveFaqEntry(raw, false);
+    const active = resolveFaqEntry(raw, true);
+    assert.match(copyOnly.answer, /^No\./);
+    assert.match(active.question, /What happens when I submit/);
+    assert.doesNotMatch(active.answer, /later release/i);
+    assert.doesNotMatch(active.answer, /^No\./);
+  });
+
+  test("the warranty FAQ promises neither a duration nor universal cover", () => {
+    assert.equal(canQuotePublicClaim("warranty-years"), false);
+    const entry = faq("warranty");
+    assert.doesNotMatch(entry.answer, /\b\d+\s*-?\s*year/i);
+    for (const forbidden of ["10-year", "10-Year", "all ", "every "]) {
+      assert.ok(
+        !entry.answer.includes(forbidden),
+        `the warranty FAQ must not say "${forbidden}"`
+      );
+    }
+    assert.match(entry.answer, /where applicable/i);
+    assert.match(entry.answer, /not yet published/i);
+  });
+
+  test("no FAQ answer carries a suppressed figure", () => {
+    for (const entry of PM_FAQS) {
+      for (const forbidden of ["500+", "4.9/5", "200+", "98%", "100% Custom"]) {
+        assert.ok(
+          !entry.answer.includes(forbidden),
+          `FAQ "${entry.id}" must not carry ${forbidden}`
+        );
+      }
+    }
+  });
+
+  test("navigation does not label the suppressed section Reviews", () => {
+    assert.equal(PM_REVIEWS_NAV_LABEL, "How We Work");
+    for (const item of PM_NAV_ITEMS) {
+      assert.notEqual(item.label, "Reviews");
+    }
+    for (const item of PM_FOOTER.explore) {
+      assert.notEqual(item.label, "Reviews");
+    }
+    // The section itself agrees with its own label.
+    assert.equal(PM_REVIEWS.eyebrow, "How We Work");
+    assert.doesNotMatch(PM_REVIEWS.heading, /\d+(\.\d+)?\s*\/\s*5/);
+  });
+
+  test("the anchor id is unchanged, so existing links still resolve", () => {
+    /*
+     * Only the LABEL is conditional. Renaming `#reviews` would break inbound
+     * links and the scroll-spy list for no gain.
+     */
+    const reviewsNav = PM_NAV_ITEMS.find(
+      (item) => item.label === PM_REVIEWS_NAV_LABEL
+    );
+    assert.equal(reviewsNav?.href, "#reviews");
+    assert.ok(
+      PM_FOOTER.explore.some((item) => item.href === "#reviews"),
+      "the footer must keep the same anchor"
+    );
+  });
+
+  test("the label follows the gate rather than being hard-coded", () => {
+    const content = code(read("src/features/public-site/home-r4/content.ts"));
+    assert.match(
+      content,
+      /PM_REVIEWS_NAV_LABEL = canShowAggregateReviewSummary\(\)/
+    );
+    assert.match(content, /label: PM_REVIEWS_NAV_LABEL/);
   });
 });
