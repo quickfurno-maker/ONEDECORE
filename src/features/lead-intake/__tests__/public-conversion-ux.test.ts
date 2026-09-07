@@ -225,7 +225,9 @@ describe("no fabricated property or timeline", () => {
     assert.equal(req.timeline, undefined, "no timeline may be invented");
     assert.equal(req.rooms, undefined);
     assert.equal(req.budgetComfort, undefined);
-    assert.equal(result.body.plannerVersion, PUBLIC_CONSULT_PLANNER_VERSION);
+    // Pinned to v2 explicitly. This adapter serves the interiors-planner
+    // surfaces and must keep emitting the version whose rules it obeys, not
+    // whatever `PUBLIC_CONSULT_PLANNER_VERSION` currently points at (v3).
     assert.equal(result.body.plannerVersion, "public-consult-v2");
   });
 
@@ -588,16 +590,22 @@ describe("the visible form is short", () => {
 /* ========================================================================== */
 
 describe("the legacy planner contract still works", () => {
-  test("all three planner versions are accepted", () => {
+  test("every planner version is ADDED, never substituted", () => {
     /*
-     * v2 was ADDED, not substituted. v1 keeps its name and its meaning because
-     * rows already stored under it were collected that way.
+     * Each version keeps its name and its meaning, because rows already stored
+     * under it were collected that way. v3 is the current public form; v1 and
+     * v2 still describe exactly what their own forms asked.
      */
     assert.equal(LEAD_INTAKE_PLANNER_VERSION, "home-r4-v1");
     assert.equal(PUBLIC_CONSULT_V1_PLANNER_VERSION, "public-consult-v1");
-    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v2");
-    assert.notEqual(LEAD_INTAKE_PLANNER_VERSION, PUBLIC_CONSULT_PLANNER_VERSION);
-    assert.notEqual(PUBLIC_CONSULT_V1_PLANNER_VERSION, PUBLIC_CONSULT_PLANNER_VERSION);
+    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v3");
+    const all = new Set([
+      LEAD_INTAKE_PLANNER_VERSION,
+      PUBLIC_CONSULT_V1_PLANNER_VERSION,
+      "public-consult-v2",
+      PUBLIC_CONSULT_PLANNER_VERSION,
+    ]);
+    assert.equal(all.size, 4, "four distinct versions, none reused");
   });
 
   test("the planner variant still demands property and timeline", () => {
@@ -708,8 +716,8 @@ describe("the migration only enables truth", () => {
     );
     assert.equal(
       sorted.pop(),
-      "20260907130000_public_consultation_single_step_v2.sql",
-      "the newest migration is the single-step v2 contract"
+      "20260908120000_public_requirement_form_v3.sql",
+      "the newest migration is the premium requirement form v3 contract"
     );
   });
 });

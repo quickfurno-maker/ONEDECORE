@@ -108,6 +108,9 @@ function validatedFixture(
     qualifier: null,
     rooms: ["living", "kitchen"],
     budgetComfort: "6-12l",
+    // The legacy planner asks for neither; v3 is the only version that does.
+    projectScope: null,
+    budgetRange: null,
     estimateSnapshot: null,
     locality: "Koregaon Park",
     message: "Synthetic local-test brief",

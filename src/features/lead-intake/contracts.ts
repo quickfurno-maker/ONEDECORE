@@ -3,9 +3,19 @@
  */
 
 import {
+  getConsentVersionById,
   getCurrentConsentVersionByPurpose,
   type ConsentPurposeCode,
 } from "../legal/consent-registry.ts";
+import {
+  LEAD_BUDGET_RANGE_CODES,
+  LEAD_PROJECT_SCOPE_CODES,
+  budgetRangesForProjectScope,
+  isBudgetRangeForScope,
+  isLeadProjectScopeCode,
+  serviceForProjectScope,
+  type LeadProjectScopeCode,
+} from "./project-scope.ts";
 import { PRIVACY_NOTICE_VERSION } from "../legal/privacy-policy-content.ts";
 import type { SignedPublicationContext } from "../landing-lab/contracts/publication-context.ts";
 import {
@@ -32,6 +42,12 @@ import {
 } from "./planner-allowlist.ts";
 
 export {
+  LEAD_BUDGET_RANGE_CODES,
+  LEAD_PROJECT_SCOPE_CODES,
+  budgetRangesForProjectScope,
+  isBudgetRangeForScope,
+  isLeadProjectScopeCode,
+  serviceForProjectScope,
   LEAD_QUALIFIER_KINDS,
   LEAD_HOME_SIZE_CODES,
   LEAD_KITCHEN_SCOPE_CODES,
@@ -47,6 +63,7 @@ export {
   LEAD_TIMELINE_CODES,
 };
 export type {
+  LeadProjectScopeCode,
   LeadQualifierKind,
   LeadQualifierCode,
   LeadBudgetComfortCode,
@@ -90,18 +107,42 @@ export const PUBLIC_CONSULT_V1_PLANNER_VERSION = "public-consult-v1" as const;
 export const PUBLIC_CONSULT_V2_PLANNER_VERSION = "public-consult-v2" as const;
 
 /**
- * What the current public consultation form emits.
+ * The premium requirement form.
  *
- * Pointed at v2. The v1 constant survives for the rows and the contract that
- * still mean v1.
+ * v3 exists because the owner-approved form asks TWO new questions that v2
+ * explicitly forbids: a project scope and a budget range. v2 forbids them for a
+ * good reason — its own form never showed them — so relaxing v2 would make it
+ * impossible to tell a v2 row that was never asked from one whose answer was
+ * dropped. v3 is added beside it instead, and asks:
+ *
+ *   projectScope   required, allowlisted
+ *   budgetRange    required, and must belong to THAT scope
+ *   service        required, and must be the one the scope implies
+ *   name/mobile    required, as always
+ *   locality       optional
+ *   qualifier, property, timeline, rooms, budgetComfort, estimate — forbidden
+ *
+ * The service is derived from the scope server-side; a body whose service
+ * disagrees with its scope is rejected rather than silently corrected, because
+ * a caller that sends a contradiction is a caller whose other fields cannot be
+ * trusted either.
  */
-export const PUBLIC_CONSULT_PLANNER_VERSION = PUBLIC_CONSULT_V2_PLANNER_VERSION;
+export const PUBLIC_CONSULT_V3_PLANNER_VERSION = "public-consult-v3" as const;
+
+/**
+ * What the current public requirement form emits.
+ *
+ * Pointed at v3. The v1 and v2 constants survive for the rows and the contracts
+ * that still mean v1 and v2.
+ */
+export const PUBLIC_CONSULT_PLANNER_VERSION = PUBLIC_CONSULT_V3_PLANNER_VERSION;
 
 /** Every planner version the intake endpoint accepts. */
 export const LEAD_INTAKE_PLANNER_VERSIONS = [
   LEAD_INTAKE_PLANNER_VERSION,
   PUBLIC_CONSULT_V1_PLANNER_VERSION,
   PUBLIC_CONSULT_V2_PLANNER_VERSION,
+  PUBLIC_CONSULT_V3_PLANNER_VERSION,
 ] as const;
 
 export type LeadIntakePlannerVersion =
@@ -119,6 +160,20 @@ export const SERVICE_COMMUNICATION_COPY_VERSION = requireCurrentConsentVersion(
 );
 export const WHATSAPP_COPY_VERSION =
   requireCurrentConsentVersion("WHATSAPP_SERVICE");
+
+/*
+ * The single-consent form records the wording it actually showed.
+ *
+ * These are resolved BY ID rather than through the current-version mapping,
+ * because the mapping still points the two-checkbox interiors planner at the
+ * separate v1.0 copies. Resolving through the registry (rather than hardcoding
+ * the string) keeps the id honest: a typo throws at module load.
+ */
+export const SINGLE_CONSENT_SERVICE_ENQUIRY_COPY_VERSION = getConsentVersionById(
+  "service-enquiry-v1.1-single-consent"
+).version;
+export const SINGLE_CONSENT_SERVICE_COMMUNICATION_COPY_VERSION =
+  getConsentVersionById("service-communication-v1.1-single-consent").version;
 
 export interface LeadIntakeRequestBody {
   readonly idempotencyKey: string;
@@ -149,6 +204,17 @@ export interface LeadIntakeRequestBody {
     readonly rooms?: readonly LeadRoomCode[];
     readonly budgetComfort?: LeadBudgetComfortCode;
     readonly estimate?: Record<string, unknown> | null;
+    /**
+     * The size of the project, for `public-consult-v3` only. Not a service:
+     * "2 BHK" describes the home, and the service it implies is derived from
+     * it rather than sent alongside it.
+     */
+    readonly projectScope?: LeadProjectScopeCode;
+    /**
+     * A budget band from THIS scope's ladder, for `public-consult-v3` only.
+     * A band belonging to another scope is rejected, not ignored.
+     */
+    readonly budgetRange?: string;
     readonly locality?: string;
     readonly message?: string;
   };
@@ -220,6 +286,10 @@ export interface ValidatedLeadIntake {
   } | null;
   readonly rooms: readonly LeadRoomCode[];
   readonly budgetComfort: LeadBudgetComfortCode | null;
+  /** Null under every version except `public-consult-v3`. Never defaulted. */
+  readonly projectScope: LeadProjectScopeCode | null;
+  /** Null under every version except `public-consult-v3`. Never defaulted. */
+  readonly budgetRange: string | null;
   readonly estimateSnapshot: Record<string, unknown> | null;
   readonly locality: string | null;
   readonly message: string | null;

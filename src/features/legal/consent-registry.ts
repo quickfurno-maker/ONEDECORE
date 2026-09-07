@@ -68,11 +68,28 @@ export interface ConsentRecordContract {
   readonly metadataVersion: string;
 }
 
+/**
+ * The single sentence the public requirement form displays.
+ *
+ * Defined once and referenced by both combined versions below, so the UI, the
+ * SERVICE_ENQUIRY record and the SERVICE_COMMUNICATION record can never quote
+ * three slightly different sentences.
+ */
+export const SINGLE_CONSENT_CONCISE_COPY =
+  "I agree to be contacted by ONEDECORE and its service partners regarding my requirement.";
+
 const OWNER_APPROVAL_PR92: ConsentApprovalRecord = {
   approvedBy: "ONEDECORE owner",
   approvedAt: "2026-08-25",
   reference:
     "PR #92 owner APPROVE of published-mode package at 2609bbca1ba661989fd0e8f468b0724a47adcd5d",
+};
+
+const OWNER_APPROVAL_SINGLE_CONSENT: ConsentApprovalRecord = {
+  approvedBy: "ONEDECORE owner",
+  approvedAt: "2026-09-07",
+  reference:
+    "Final premium lead form brief — one visible consent checkbox, wording directed by the owner",
 };
 
 /**
@@ -131,6 +148,58 @@ export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
     effectiveFrom: "2026-08-25",
     retiredAt: null,
     ownerApproval: OWNER_APPROVAL_PR92,
+    legalApproval: null,
+  },
+  /*
+   * ONE CHECKBOX, TWO PURPOSES, TWO RECORDS.
+   *
+   * The public requirement form shows a single consent line. Both purposes it
+   * covers are REQUIRED — nobody can submit without granting either — so one
+   * checkbox is honest here in a way it would not be if an optional purpose
+   * were folded in. WhatsApp stays a separate, optional consent and is simply
+   * not collected by this form; it is never inferred from this checkbox.
+   *
+   * The two versions below carry the SAME conciseCopy because that is the one
+   * sentence the visitor actually reads, and consent evidence must record the
+   * wording shown rather than a wording that would have been shown on some
+   * other layout. Each keeps its own expanded notice, so the two purposes stay
+   * separately auditable.
+   *
+   * The current-version MAPPING is deliberately left pointing at v1.0: the
+   * interiors planner still shows two separate checkboxes with the separate
+   * wording, and flipping the global default would make that form display copy
+   * that does not describe its own layout.
+   */
+  {
+    version: "service-enquiry-v1.1-single-consent",
+    title: "Service enquiry processing (single-consent form)",
+    conciseCopy: SINGLE_CONSENT_CONCISE_COPY,
+    expandedNotice:
+      "When you submit this requirement, ONEDECORE will use the personal data you provide — your name, mobile number, project scope, budget range, area and any message — to understand and respond to your enquiry, administer it, maintain the necessary CRM and consent records, and protect the service against misuse as described in the Privacy Notice. “Service partners” means the designers, contractors and installation teams ONEDECORE engages to survey, quote and deliver the work you are enquiring about; your details are shared with them only for that purpose. This consent does not cover marketing, and it does not grant WhatsApp permission.",
+    purposeCode: "SERVICE_ENQUIRY",
+    channels: ["website-form"],
+    required: true,
+    defaultChecked: false,
+    status: "approved",
+    effectiveFrom: "2026-09-07",
+    retiredAt: null,
+    ownerApproval: OWNER_APPROVAL_SINGLE_CONSENT,
+    legalApproval: null,
+  },
+  {
+    version: "service-communication-v1.1-single-consent",
+    title: "Service communication (single-consent form)",
+    conciseCopy: SINGLE_CONSENT_CONCISE_COPY,
+    expandedNotice:
+      "ONEDECORE, and the service partners it engages to deliver your requirement, may use your mobile number for operational communication about this enquiry — calling you back, arranging a site visit, discussing the design and sharing an estimate. This is separate from optional marketing consent, and separate from WhatsApp, which requires its own permission and is not requested on this form.",
+    purposeCode: "SERVICE_COMMUNICATION",
+    channels: ["website-form", "phone"],
+    required: true,
+    defaultChecked: false,
+    status: "approved",
+    effectiveFrom: "2026-09-07",
+    retiredAt: null,
+    ownerApproval: OWNER_APPROVAL_SINGLE_CONSENT,
     legalApproval: null,
   },
   {
@@ -398,6 +467,29 @@ export function getCurrentConsentVersionByPurpose(
   }
 
   return version;
+}
+
+/**
+ * Resolve a version by its exact id.
+ *
+ * Needed because a surface may deliberately use a version that is not the
+ * current default for its purpose — the single-consent form does exactly that,
+ * so that what it records is what it displayed.
+ */
+export function getConsentVersionById(
+  versionId: string,
+  versions: readonly ConsentVersion[] = CONSENT_VERSIONS
+): ConsentVersion {
+  const matches = versions.filter((version) => version.version === versionId);
+  if (matches.length === 0) {
+    throw new Error(`[ONEDECORE Consent] Unknown consent version ${versionId}.`);
+  }
+  if (matches.length > 1) {
+    throw new Error(
+      `[ONEDECORE Consent] Duplicate consent version id ${versionId}.`
+    );
+  }
+  return matches[0]!;
 }
 
 /** Owner-approved (or published) and effectiveFrom set to a real calendar date. */

@@ -51,6 +51,10 @@ export async function callSubmitLeadIntakeRpc(
     // the row records the answer given, not a default to fill a column.
     p_qualifier_kind: (args.validated.qualifier?.kind ?? null) as string | null,
     p_qualifier_code: (args.validated.qualifier?.code ?? null) as string | null,
+    // Present only for public-consult-v3; null everywhere else, for the same
+    // reason as the qualifier above.
+    p_project_scope_code: args.validated.projectScope as string | null,
+    p_budget_range_code: args.validated.budgetRange as string | null,
   } as Database["public"]["Functions"]["submit_lead_intake"]["Args"]);
 
   if (error) {

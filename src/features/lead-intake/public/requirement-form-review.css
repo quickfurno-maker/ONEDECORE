@@ -1,0 +1,138 @@
+/**
+ * Chrome for the localhost-only review page.
+ *
+ * Deliberately plain: it frames the form without competing with it, so what is
+ * being judged on this page is the form and nothing else.
+ */
+
+.od-req-review {
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 2.5rem);
+  width: min(56rem, calc(100% - clamp(1.5rem, 8vw, 4rem)));
+  margin-inline: auto;
+  padding-block: clamp(2rem, 6vw, 4rem);
+  color: var(--od-text-primary, #fff9f0);
+}
+
+.od-req-review__head {
+  display: grid;
+  gap: 0.6rem;
+  max-width: 40rem;
+}
+
+.od-req-review__kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--od-gold, #d8a24a);
+}
+
+.od-req-review__title {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  line-height: 1.2;
+}
+
+.od-req-review__note {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--od-text-muted, #b5a592);
+}
+
+/* The stage is a neutral card so the form's own surface stays legible against
+   it — the form is raised, this is the page behind it. */
+.od-req-review__stage {
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid var(--od-line, rgba(255, 249, 240, 0.1));
+  border-radius: var(--od-radius, 18px);
+  background: var(--od-bg-section, #120e0d);
+}
+
+.od-req-review__result {
+  padding: 1rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--od-gold, #d8a24a) 35%, transparent);
+  border-radius: var(--od-radius, 18px);
+  background: var(--od-bg-raised, #181311);
+}
+
+.od-req-review__result-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--od-gold, #d8a24a);
+}
+
+.od-req-review__result dl {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.od-req-review__result dl > div {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.od-req-review__result dt {
+  color: var(--od-text-muted, #b5a592);
+}
+
+.od-req-review__result dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.od-req-review__matrix h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+/* Wide content scrolls inside its own box; the page never scrolls sideways. */
+.od-req-review__matrix-scroll {
+  margin-top: 0.9rem;
+  overflow-x: auto;
+}
+
+.od-req-review__matrix table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.od-req-review__matrix th,
+.od-req-review__matrix td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--od-line, rgba(255, 249, 240, 0.1));
+  white-space: nowrap;
+}
+
+.od-req-review__matrix thead th {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--od-text-muted, #b5a592);
+}
+
+.od-req-review__matrix tbody th {
+  font-weight: 600;
+}
+
+.od-req-review__matrix tbody td {
+  color: var(--od-text-secondary, #e6d8c8);
+}
+
+@media (max-width: 34rem) {
+  .od-req-review__result dl > div {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}

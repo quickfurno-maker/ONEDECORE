@@ -30,6 +30,7 @@ import {
   LEAD_INTAKE_PLANNER_VERSIONS,
   PUBLIC_CONSULT_V1_PLANNER_VERSION,
   PUBLIC_CONSULT_V2_PLANNER_VERSION,
+  PUBLIC_CONSULT_V3_PLANNER_VERSION,
   PUBLIC_CONSULT_PLANNER_VERSION,
 } from "../contracts.ts";
 import { consultationToLeadRequest } from "../public/consultation-to-lead-request.ts";
@@ -39,6 +40,8 @@ const root = process.cwd();
 const read = (rel: string) =>
   readFileSync(join(root, rel), "utf8").replace(/\r\n/g, "\n");
 
+const V3_MIGRATION =
+  "supabase/migrations/20260908120000_public_requirement_form_v3.sql";
 const V2_MIGRATION =
   "supabase/migrations/20260907130000_public_consultation_single_step_v2.sql";
 const V1_MIGRATION =
@@ -60,16 +63,27 @@ const BASE = {
 /* ========================================================================== */
 
 describe("every version TypeScript accepts has an SQL branch", () => {
-  const sql = read(V2_MIGRATION);
+  /*
+   * The NEWEST migration is the one under test: `create or replace` means the
+   * last definition wins, so that file is what the database actually runs, and
+   * therefore what the TypeScript has to agree with.
+   */
+  const sql = read(V3_MIGRATION);
 
-  test("there are exactly three, and they are the three", () => {
+  test("there are exactly four, and they are the four", () => {
     assert.deepEqual(
       [...LEAD_INTAKE_PLANNER_VERSIONS],
-      ["home-r4-v1", "public-consult-v1", "public-consult-v2"]
+      [
+        "home-r4-v1",
+        "public-consult-v1",
+        "public-consult-v2",
+        "public-consult-v3",
+      ]
     );
     assert.equal(LEAD_INTAKE_PLANNER_VERSION, "home-r4-v1");
     assert.equal(PUBLIC_CONSULT_V1_PLANNER_VERSION, "public-consult-v1");
     assert.equal(PUBLIC_CONSULT_V2_PLANNER_VERSION, "public-consult-v2");
+    assert.equal(PUBLIC_CONSULT_V3_PLANNER_VERSION, "public-consult-v3");
   });
 
   test("the SQL allowlist is the same list", () => {
@@ -83,14 +97,17 @@ describe("every version TypeScript accepts has an SQL branch", () => {
     assert.match(sql, /if p_planner_version = 'home-r4-v1' then/);
     assert.match(sql, /elsif p_planner_version = 'public-consult-v1' then/);
     assert.match(sql, /elsif p_planner_version = 'public-consult-v2' then/);
+    assert.match(sql, /elsif p_planner_version = 'public-consult-v3' then/);
   });
 
   test("and its own branch in the TypeScript validator", () => {
     const server = read(SERVER);
     assert.match(server, /PUBLIC_CONSULT_V1_PLANNER_VERSION/);
     assert.match(server, /PUBLIC_CONSULT_V2_PLANNER_VERSION/);
+    assert.match(server, /PUBLIC_CONSULT_V3_PLANNER_VERSION/);
     assert.match(server, /const isPublicConsultV1 =/);
     assert.match(server, /const isPublicConsultV2 =/);
+    assert.match(server, /const isPublicConsultV3 =/);
   });
 });
 
@@ -98,7 +115,14 @@ describe("every version TypeScript accepts has an SQL branch", () => {
 /* 2. The homepage adapter emits the version whose rules it obeys              */
 /* ========================================================================== */
 
-describe("the homepage form speaks v2", () => {
+describe("the interiors-planner consultation form still speaks v2", () => {
+  /*
+   * `consultationToLeadRequest` is no longer what the HOMEPAGE uses — the
+   * homepage now mounts the requirement form, which speaks v3 and is covered by
+   * `premium-requirement-form.test.ts`. This adapter still serves the planner
+   * surfaces, and it must still emit the version whose rules it obeys rather
+   * than following whatever the current default happens to be.
+   */
   test("the adapter emits public-consult-v2", () => {
     const result = consultationToLeadRequest({
       ...BASE,
@@ -108,7 +132,8 @@ describe("the homepage form speaks v2", () => {
     assert.equal(result.ok, true);
     if (!result.ok) return;
     assert.equal(result.body.plannerVersion, "public-consult-v2");
-    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v2");
+    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v3");
+    assert.notEqual(result.body.plannerVersion, PUBLIC_CONSULT_PLANNER_VERSION);
   });
 
   test("and sends none of the fields v2 forbids", () => {
@@ -157,7 +182,7 @@ describe("v2 forbids the unasked fields on both sides of the boundary", () => {
   });
 
   test("the SQL v2 branch refuses each of them by name", () => {
-    const sql = read(V2_MIGRATION);
+    const sql = read(V3_MIGRATION);
     const branch = sql.slice(
       sql.indexOf("elsif p_planner_version = 'public-consult-v2' then"),
       sql.indexOf("\n  end if;", sql.indexOf("elsif p_planner_version = 'public-consult-v2' then"))
@@ -180,8 +205,13 @@ describe("v2 forbids the unasked fields on both sides of the boundary", () => {
 
   test("the TypeScript server branch refuses the same set", () => {
     const server = read(SERVER);
-    const at = server.indexOf("if (isPublicConsultV2) {");
-    assert.ok(at > 0, "the v2 branch must exist");
+    /*
+     * v2 and v3 share every prohibition, so the server states them once against
+     * a flag that both versions set. That flag IS the branch.
+     */
+    assert.match(server, /const forbidsQualifier =/);
+    const at = server.indexOf("if (forbidsQualifier) {");
+    assert.ok(at > 0, "the shared prohibition branch must exist");
     const branch = server.slice(at, at + 900);
     assert.match(branch, /fields\.push\("requirements\.qualifier"\)/);
     assert.match(branch, /fields\.push\("requirements\.property"\)/);
@@ -197,7 +227,7 @@ describe("v2 forbids the unasked fields on both sides of the boundary", () => {
 
 describe("v1 was not redefined underneath the rows that depend on it", () => {
   test("the SQL still raises qualifier_required for v1", () => {
-    for (const rel of [V1_MIGRATION, V2_MIGRATION]) {
+    for (const rel of [V1_MIGRATION, V2_MIGRATION, V3_MIGRATION]) {
       const sql = read(rel);
       const at = sql.indexOf("elsif p_planner_version = 'public-consult-v1' then");
       assert.ok(at > 0, `${rel} must carry the v1 branch`);
@@ -223,10 +253,22 @@ describe("v1 was not redefined underneath the rows that depend on it", () => {
     assert.match(server, /LEAD_QUALIFIER_KIND_BY_SERVICE\[service as LeadServiceCode\] !== kind/);
   });
 
-  test("the v2 migration replaces the function rather than dropping it", () => {
-    const sql = read(V2_MIGRATION);
+  test("the newest migration replaces the function rather than rewriting history", () => {
+    const sql = read(V3_MIGRATION);
     assert.match(sql, /create or replace function public\.submit_lead_intake\(/);
-    assert.doesNotMatch(sql, /drop function/i);
+    /*
+     * One drop is expected here, and it is not a rollback. Adding two DEFAULTED
+     * arguments creates an OVERLOAD rather than a replacement, and leaving both
+     * in place would make a 29-argument call ambiguous. The old shape is
+     * therefore retired AFTER the new one exists, so no window passes with no
+     * function present.
+     */
+    const drops = sql.match(/drop function/gi) ?? [];
+    assert.equal(drops.length, 1, "exactly one overload is retired");
+    assert.ok(
+      sql.indexOf("create or replace function") < sql.indexOf("drop function"),
+      "the replacement must exist before the old overload is dropped"
+    );
     // And the definer boundary it enforces survives verbatim.
     assert.match(sql, /security definer/);
     assert.match(sql, /set search_path = ''/);
@@ -235,7 +277,7 @@ describe("v1 was not redefined underneath the rows that depend on it", () => {
   });
 
   test("no default is invented anywhere in the v2 branch", () => {
-    const sql = read(V2_MIGRATION);
+    const sql = read(V3_MIGRATION);
     const at = sql.indexOf("elsif p_planner_version = 'public-consult-v2' then");
     /*
      * Comment-stripped: the branch DESCRIBES the defaults it refuses to invent,

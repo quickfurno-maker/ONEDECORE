@@ -28,17 +28,17 @@ select plan(26);
 -- default would be callable by anon.
 -- ---------------------------------------------------------------------------
 select results_eq(
-  $$select has_function_privilege('anon', 'public.submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text,text,text)', 'execute')$$,
+  $$select has_function_privilege('anon', 'public.submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text,text,text,text,text)', 'execute')$$,
   array[false],
   'anon cannot execute submit_lead_intake'
 );
 select results_eq(
-  $$select has_function_privilege('authenticated', 'public.submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text,text,text)', 'execute')$$,
+  $$select has_function_privilege('authenticated', 'public.submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text,text,text,text,text)', 'execute')$$,
   array[false],
   'authenticated cannot execute submit_lead_intake'
 );
 select results_eq(
-  $$select has_function_privilege('service_role', 'public.submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text,text,text)', 'execute')$$,
+  $$select has_function_privilege('service_role', 'public.submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text,text,text,text,text)', 'execute')$$,
   array[true],
   'service_role can execute submit_lead_intake'
 );
@@ -226,8 +226,11 @@ select matches(
 
 -- An unknown version is still refused, so v2 was ADDED rather than the
 -- allowlist being opened.
+-- The string used here was 'public-consult-v3' until that version became real.
+-- The assertion is about the allowlist REFUSING what is not on it, so it needs a
+-- version that is genuinely absent -- not a placeholder that has since shipped.
 select matches(
-  pg_temp.try_intake('218', 'public-consult-v3', 'modular-kitchens', null, null, null, null, null, null, null),
+  pg_temp.try_intake('218', 'public-consult-v9', 'modular-kitchens', null, null, null, null, null, null, null),
   '^REJECTED:validation: planner_version',
   'an unknown planner version is still refused'
 );

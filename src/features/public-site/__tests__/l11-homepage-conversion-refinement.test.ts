@@ -507,7 +507,10 @@ describe("an unasked qualifier is absent, not invented", () => {
 
   test("the server refuses it under v2 and requires it under v1", () => {
     const server = code(read(SERVER));
-    assert.match(server, /if \(isPublicConsultV2\) \{/);
+    // v2 and v3 share every prohibition, so the server states them once
+    // against a flag both versions set.
+    assert.match(server, /if \(forbidsQualifier\) \{/);
+    assert.match(server, /const forbidsQualifier =/);
     // v1's strict branch survives underneath.
     assert.match(server, /isAllowedLeadQualifier\(kind, code\)/);
     assert.match(server, /LEAD_QUALIFIER_KIND_BY_SERVICE\[service as LeadServiceCode\] !== kind/);

@@ -1,0 +1,359 @@
+/**
+ * Premium client requirement form.
+ *
+ * Built on the public theme tokens (`public-dark-theme.css`) so it inherits the
+ * site's palette rather than restating it. Every colour below is a token with a
+ * literal fallback, so the form still renders correctly if it is mounted
+ * somewhere the theme block has not loaded.
+ *
+ * The whole surface is driven by two data attributes the component sets —
+ * `data-state` (empty | complete | error) on each field and `data-locked` on the
+ * budget field — so the states are declared once here instead of being assembled
+ * from conditional class names in the JSX.
+ */
+
+.od-req-form {
+  --od-req-radius: 14px;
+  --od-req-field-h: 52px;
+  --od-req-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --od-req-speed: 180ms;
+
+  --od-req-surface: var(--od-bg-raised, #181311);
+  --od-req-line: var(--od-line, rgba(255, 249, 240, 0.1));
+  --od-req-line-hover: var(--od-line-strong, rgba(255, 249, 240, 0.2));
+  --od-req-accent: var(--od-gold, #d8a24a);
+  --od-req-error: var(--od-error, #c47a72);
+  --od-req-text: var(--od-text-primary, #fff9f0);
+  --od-req-muted: var(--od-text-muted, #b5a592);
+
+  display: grid;
+  gap: 1.15rem;
+  /* Compact by intent: the form is short, so it should not sprawl on desktop. */
+  width: 100%;
+  max-width: 30rem;
+  min-width: 0;
+  color: var(--od-req-text);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Fields                                                                      */
+/* -------------------------------------------------------------------------- */
+
+.od-req-form__field {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.od-req-form__label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+}
+
+/* "Optional" reads as a quiet annotation, not a second label. */
+.od-req-form__optional {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--od-req-muted);
+}
+
+.od-req-form__optional::before {
+  content: "· ";
+}
+
+.od-req-form__control {
+  position: relative;
+  min-width: 0;
+}
+
+.od-req-form__select,
+.od-req-form__input {
+  width: 100%;
+  min-height: var(--od-req-field-h);
+  padding: 0 1rem;
+  border: 1px solid var(--od-req-line);
+  border-radius: var(--od-req-radius);
+  background-color: var(--od-req-surface);
+  color: var(--od-req-text);
+  font: inherit;
+  /* 16px minimum stops iOS zooming the page on focus. */
+  font-size: max(0.98rem, 16px);
+  line-height: 1.4;
+  transition:
+    border-color var(--od-req-speed) var(--od-req-ease),
+    background-color var(--od-req-speed) var(--od-req-ease),
+    box-shadow var(--od-req-speed) var(--od-req-ease);
+}
+
+.od-req-form__input::placeholder {
+  color: var(--od-req-muted);
+}
+
+/* Premium dropdown: the native control, minus the native chrome. */
+.od-req-form__select {
+  appearance: none;
+  padding-right: 2.75rem;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23b5a592' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1.05rem center;
+}
+
+/* The placeholder option should read as placeholder text, not as an answer. */
+.od-req-form__field[data-state="empty"] .od-req-form__select {
+  color: var(--od-req-muted);
+}
+
+.od-req-form__select option {
+  /* Windows and older Android render the list against the page, not the field. */
+  background: var(--od-bg-elevated, #201916);
+  color: var(--od-req-text);
+}
+
+/* Hover — border only. A background shift on hover reads as a click target
+   changing shape, which on a form field is noise. */
+@media (hover: hover) {
+  .od-req-form__select:hover:not(:disabled),
+  .od-req-form__input:hover {
+    border-color: var(--od-req-line-hover);
+  }
+}
+
+.od-req-form__select:focus-visible,
+.od-req-form__input:focus-visible {
+  outline: none;
+  border-color: var(--od-req-accent);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--od-req-accent) 22%, transparent);
+}
+
+/* Completed — a warm hairline, no icon. The visitor already knows they answered;
+   this is confirmation, not celebration. */
+.od-req-form__field[data-state="complete"] .od-req-form__select,
+.od-req-form__field[data-state="complete"] .od-req-form__input {
+  border-color: color-mix(in srgb, var(--od-req-accent) 45%, transparent);
+}
+
+/* Error */
+.od-req-form__field[data-state="error"] .od-req-form__select,
+.od-req-form__field[data-state="error"] .od-req-form__input {
+  border-color: var(--od-req-error);
+}
+
+.od-req-form__field[data-state="error"] .od-req-form__select:focus-visible,
+.od-req-form__field[data-state="error"] .od-req-form__input:focus-visible {
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--od-req-error) 25%, transparent);
+}
+
+/* Disabled — legible, not invisible. The placeholder says WHY it is disabled,
+   so it has to stay readable. */
+.od-req-form__select:disabled {
+  cursor: not-allowed;
+  /* `background-color`, NOT the `background` shorthand: the shorthand resets
+     background-repeat and background-position, which tiles the chevron across
+     the whole field. */
+  background-color: color-mix(in srgb, var(--od-req-surface) 60%, transparent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%239b8b79' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  border-color: color-mix(in srgb, var(--od-req-line) 60%, transparent);
+  color: var(--od-req-muted);
+  /* Windows draws its own texture over a disabled select otherwise. */
+  opacity: 1;
+}
+
+.od-req-form__error {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--od-req-error);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Consent                                                                     */
+/* -------------------------------------------------------------------------- */
+
+.od-req-form__consent {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.1rem;
+}
+
+.od-req-form__consent-label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  /* Secondary in weight and size, but not below the readable floor. */
+  font-size: 0.83rem;
+  line-height: 1.55;
+  color: var(--od-req-muted);
+  cursor: pointer;
+}
+
+.od-req-form__checkbox {
+  width: 18px;
+  height: 18px;
+  /* Optical alignment with the first line of the label. */
+  margin: 0.16rem 0 0;
+  accent-color: var(--od-req-accent);
+  cursor: pointer;
+}
+
+.od-req-form__checkbox:focus-visible {
+  outline: 2px solid var(--od-req-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.od-req-form__consent[data-state="error"] .od-req-form__consent-label {
+  color: var(--od-req-text);
+}
+
+/* -------------------------------------------------------------------------- */
+/* CTA                                                                         */
+/* -------------------------------------------------------------------------- */
+
+.od-req-form__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 52px;
+  margin-top: 0.25rem;
+  padding: 0 1.5rem;
+  border: 0;
+  border-radius: var(--od-req-radius);
+  background: var(--od-req-accent);
+  color: #17110a;
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  cursor: pointer;
+  transition:
+    background-color var(--od-req-speed) var(--od-req-ease),
+    box-shadow var(--od-req-speed) var(--od-req-ease),
+    transform var(--od-req-speed) var(--od-req-ease);
+}
+
+@media (hover: hover) {
+  .od-req-form__submit:hover {
+    background: var(--od-gold-light, #f2cd83);
+    box-shadow: 0 8px 24px
+      color-mix(in srgb, var(--od-req-accent) 24%, transparent);
+  }
+
+  .od-req-form__submit:hover .od-req-form__arrow {
+    transform: translateX(3px);
+  }
+}
+
+.od-req-form__submit:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--od-bg-page, #0d0a09),
+    0 0 0 4px var(--od-req-accent);
+}
+
+.od-req-form__submit:active {
+  transform: translateY(1px);
+}
+
+.od-req-form__arrow {
+  font-size: 1.05em;
+  line-height: 1;
+  transition: transform var(--od-req-speed) var(--od-req-ease);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Mobile                                                                      */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 30rem) {
+  .od-req-form {
+    /* Tighter, not cramped: the form should end above the fold on a phone. */
+    gap: 1rem;
+    max-width: none;
+  }
+
+  .od-req-form__label {
+    font-size: 0.9rem;
+  }
+
+  .od-req-form__select,
+  .od-req-form__input,
+  .od-req-form__submit {
+    min-height: 50px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-req-form__select,
+  .od-req-form__input,
+  .od-req-form__submit,
+  .od-req-form__arrow {
+    transition: none;
+  }
+
+  .od-req-form__submit:active {
+    transform: none;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Hints, status and the honeypot                                              */
+/* -------------------------------------------------------------------------- */
+
+.od-req-form__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--od-req-muted);
+}
+
+.od-req-form__status {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.od-req-form__summary {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--od-req-error) 45%, transparent);
+  border-radius: var(--od-req-radius);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.od-req-form__summary p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.od-req-form__summary ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+/*
+ * The honeypot: removed from view AND from the accessibility tree.
+ *
+ * `display: none` would be simpler and would also stop some bots filling it,
+ * which is the opposite of what a honeypot is for. It has to remain a real,
+ * focusable-by-a-script field that no human ever sees.
+ */
+.od-req-form__trap {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
