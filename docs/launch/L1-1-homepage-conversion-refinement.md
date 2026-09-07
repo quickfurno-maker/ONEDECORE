@@ -364,12 +364,27 @@ deploy that ships the code first would take the public form down.
 1. Apply `20260907130000_public_consultation_single_step_v2.sql` to managed
    Supabase.
 2. Set the production **build** environment, including
-   `NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164` if a number has been approved.
-3. `npm run build`.
-4. `pm2 restart onedecore --update-env` on the VPS (`/var/www/onedecore`).
-5. Verify the live form submits, and that the `wa.me` href renders if a number
-   was configured:
+   `NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164` only if the approved business number is
+   ready. `NEXT_PUBLIC_*` is inlined at build time, so this must be set before
+   step 3, not after.
+3. In `/var/www/onedecore`, install and build the approved merged SHA:
+   `npm ci`
+   `npm run build`
+4. Restart the production lifecycle through systemd:
+   `systemctl restart pm2-onedecore`
+5. Verify:
+   `systemctl is-active pm2-onedecore`
+   `sudo -iu onedecore pm2 status`
+   `curl -sS http://127.0.0.1:3000/api/health`
+   then confirm a live form submission reaches CRM, and that the `wa.me` href
+   renders if a number was configured:
    `curl -s https://onedecore.in/ | grep -o 'https://wa.me/[0-9]*'`
+
+**Restart through `systemctl restart pm2-onedecore`, never `pm2 restart
+onedecore` as root.** The service runs as the `onedecore` user with its PM2 home
+at `/home/onedecore/.pm2`; root's PM2 daemon is a different process universe, and
+a restart issued there talks to a daemon that does not own the production
+process. The systemd unit `pm2-onedecore.service` owns the lifecycle.
 
 No GTM, GA4, Meta Pixel, CAPI or Google conversion upload. No attribution
 persistence — `lead-form-attribution.ts` still reads at submit and writes no

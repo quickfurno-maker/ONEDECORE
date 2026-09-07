@@ -6,6 +6,7 @@
 **Domain:** `onedecore.in`
 **Initial Market:** Pune, India
 **Deployment Target:** Hostinger VPS (`91.108.105.192`; app `/var/www/onedecore`; PM2 `onedecore`; Nginx → `127.0.0.1:3000`)
+**Production lifecycle:** runtime user `onedecore`; PM2 home `/home/onedecore/.pm2`; systemd unit **`pm2-onedecore.service`**. Restart with **`systemctl restart pm2-onedecore`** — **never `pm2 restart onedecore` as root**, whose PM2 daemon is a different process universe and does not own the production process. Verify with `systemctl is-active pm2-onedecore`, `sudo -iu onedecore pm2 status` and `curl -sS http://127.0.0.1:3000/api/health`. Full procedure: [docs/runbooks/phase-10a-production-smoke-matrix.md](runbooks/phase-10a-production-smoke-matrix.md).
 
 > **CURRENT EXECUTION AUTHORITY:** [docs/11 — Accelerated Closeout Roadmap](11-accelerated-closeout-roadmap.md) (owner-locked 2026-09-02, **DEC-0097**).
 > Sequencing instructions in [09 — Phase Implementation Roadmap](09-phase-roadmap.md) and [CRM 2.0 Product Roadmap](product/crm-2.0-roadmap.md) are **historical evidence only** and no longer schedule work.
