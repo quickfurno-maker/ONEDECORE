@@ -111,8 +111,8 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
     );
     assert.equal(
       sorted[sorted.length - 1],
-      "20260906180000_crm_super_admin_lead_tombstone.sql",
-      "the newest migration is the Super Admin enquiry tombstone"
+      "20260907130000_public_consultation_single_step_v2.sql",
+      "the newest migration is the single-step public-consult-v2 contract"
     );
     // M55 and M56 are still present and untouched by name.
     assert.ok(files.includes("20260904140000_interior_room_wise_quotation.sql"));

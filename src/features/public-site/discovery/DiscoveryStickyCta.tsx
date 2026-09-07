@@ -26,7 +26,19 @@ function WhatsAppIcon() {
   );
 }
 
-/** Premium bottom conversion dock — WhatsApp + consultation. */
+/**
+ * The bottom conversion dock — WhatsApp beside the consultation CTA.
+ *
+ * The WhatsApp button is rendered only when `getPublicWhatsAppHref()` returns a
+ * URL, which happens only when `NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164` holds a
+ * valid E.164 number. Missing or malformed configuration means the button is
+ * ABSENT, never present-and-dead: a WhatsApp button that does nothing is worse
+ * on a conversion surface than no button at all.
+ *
+ * The `data-conversion-action` hooks are stable names for a later measurement
+ * layer to bind to. Nothing reads them yet — no tag manager, no analytics — and
+ * L2 has to correct the published legal copy before anything does.
+ */
 export function DiscoveryStickyCta() {
   const whatsappHref = getPublicWhatsAppHref();
   const [visible, setVisible] = useState(true);
@@ -88,6 +100,7 @@ export function DiscoveryStickyCta() {
         <a
           href={whatsappHref}
           className="od-disc-dock__btn od-disc-dock__btn--whatsapp"
+          data-conversion-action="whatsapp-click"
           target="_blank"
           rel="noopener noreferrer"
           aria-label={PUBLIC_WHATSAPP.ariaLabel}
@@ -96,7 +109,11 @@ export function DiscoveryStickyCta() {
           <span>{PUBLIC_WHATSAPP.label}</span>
         </a>
       ) : null}
-      <Link href={PUBLIC_CONSULTATION.href} className="od-disc-dock__btn od-disc-dock__btn--primary">
+      <Link
+        href={PUBLIC_CONSULTATION.href}
+        className="od-disc-dock__btn od-disc-dock__btn--primary"
+        data-conversion-action="consultation-sticky"
+      >
         <span className="od-disc-dock__labelFull">{PUBLIC_CONSULTATION.label}</span>
         <span className="od-disc-dock__labelShort">{PUBLIC_CONSULTATION.mobileLabel}</span>
       </Link>

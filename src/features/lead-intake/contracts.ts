@@ -70,12 +70,38 @@ export const LEAD_INTAKE_PLANNER_VERSION = "home-r4-v1" as const;
  * asked. That is the whole point: the database records what the customer said,
  * not a default the UI invented to satisfy a column.
  */
-export const PUBLIC_CONSULT_PLANNER_VERSION = "public-consult-v1" as const;
+export const PUBLIC_CONSULT_V1_PLANNER_VERSION = "public-consult-v1" as const;
+
+/**
+ * The SINGLE-STEP public consultation form.
+ *
+ * A new version rather than a looser v1, and the distinction is not cosmetic.
+ * Rows already stored under `public-consult-v1` were collected by a form that
+ * asked a service-specific question, and every one of them carries the answer.
+ * Making v1's qualifier optional would retroactively change what those rows
+ * assert, and would leave nothing able to tell "the customer answered" apart
+ * from "nobody asked".
+ *
+ * v2 asks a service, a name, a mobile number and an optional locality. Under it
+ * the qualifier, property, timeline, rooms, budget and estimate must all be
+ * ABSENT — enforced in both this layer and the SQL, because a value the form
+ * never showed came from a stale or tampered client.
+ */
+export const PUBLIC_CONSULT_V2_PLANNER_VERSION = "public-consult-v2" as const;
+
+/**
+ * What the current public consultation form emits.
+ *
+ * Pointed at v2. The v1 constant survives for the rows and the contract that
+ * still mean v1.
+ */
+export const PUBLIC_CONSULT_PLANNER_VERSION = PUBLIC_CONSULT_V2_PLANNER_VERSION;
 
 /** Every planner version the intake endpoint accepts. */
 export const LEAD_INTAKE_PLANNER_VERSIONS = [
   LEAD_INTAKE_PLANNER_VERSION,
-  PUBLIC_CONSULT_PLANNER_VERSION,
+  PUBLIC_CONSULT_V1_PLANNER_VERSION,
+  PUBLIC_CONSULT_V2_PLANNER_VERSION,
 ] as const;
 
 export type LeadIntakePlannerVersion =
@@ -106,12 +132,16 @@ export interface LeadIntakeRequestBody {
     readonly service: LeadServiceCode;
     /**
      * Required for `home-r4-v1`; absent for `public-consult-v1` unless the
-     * customer's own home-size answer names one. Never defaulted.
+     * customer's own home-size answer names one; always absent for
+     * `public-consult-v2`. Never defaulted.
      */
     readonly property?: LeadPropertyCode;
-    /** Required for `home-r4-v1`; never collected by the public form. */
+    /** Required for `home-r4-v1`; never collected by either public form. */
     readonly timeline?: LeadTimelineCode;
-    /** The single service-relevant answer the public form collects. */
+    /**
+     * The single service-relevant answer `public-consult-v1` collects.
+     * Forbidden under `public-consult-v2`, which does not ask.
+     */
     readonly qualifier?: {
       readonly kind: LeadQualifierKind;
       readonly code: LeadQualifierCode;

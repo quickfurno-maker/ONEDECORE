@@ -233,8 +233,8 @@ export function DiscoveryHomePage({
               <p className="od-disc-kicker">Consultation</p>
               <h2 id="od-disc-consult-title">Get your free design consultation</h2>
               <p className="od-disc-lede">
-                Tell us what you are planning — complete interiors, a kitchen, or custom wardrobes.
-                We review every enquiry and follow up with next steps.
+                Tell us what you need and leave your number. We&rsquo;ll review your
+                enquiry and follow up.
               </p>
               <ul className="od-disc-consult__benefits">
                 <li>{PUBLIC_CONSULTATION.label}</li>

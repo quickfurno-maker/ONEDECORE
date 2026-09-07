@@ -36,6 +36,7 @@ import {
 import {
   LEAD_INTAKE_PLANNER_VERSION,
   PUBLIC_CONSULT_PLANNER_VERSION,
+  PUBLIC_CONSULT_V1_PLANNER_VERSION,
 } from "../contracts.ts";
 import { validateLeadFormFields } from "../public/lead-form-errors.ts";
 import {
@@ -92,7 +93,9 @@ describe("the hero carries no call to action", () => {
   test("slider behaviour and the trust bar survive", () => {
     const src = read(HERO);
     for (const kept of [
-      "DiscoveryHeroTrustBar",
+      // "DiscoveryHeroTrustBar" was removed in L1.1: the hero is image-only
+      // by owner direction, and the projects counter moved to the trust strip
+      // below it. What the slider itself must keep is listed here.
       "aria-roledescription",
       "prefers-reduced-motion",
       "onTouchStart",
@@ -201,60 +204,75 @@ describe("the qualifier is chosen by service", () => {
 /* ========================================================================== */
 
 describe("no fabricated property or timeline", () => {
-  test("a kitchen lead carries a kitchen answer and NOTHING else", () => {
+  test("a kitchen lead carries its service and NOTHING else", () => {
+    /*
+     * These three used to prove that the form's own service-specific answer
+     * round-tripped truthfully. The v2 form asks no such question, so the
+     * surviving requirement is the stronger half of the same idea: the service
+     * reaches the request and nothing else does.
+     */
     const result = consultationToLeadRequest({
       ...BASE,
       service: "modular-kitchens",
-      qualifierCode: "renovate-existing",
+      qualifierCode: null,
     });
     assert.ok(result.ok);
 
     const req = result.body.requirements;
     assert.equal(req.service, "modular-kitchens");
-    assert.deepEqual(req.qualifier, {
-      kind: "kitchen-scope",
-      code: "renovate-existing",
-    });
-
-    // The decisive assertions.
+    assert.equal(req.qualifier, undefined, "no qualifier may be invented");
     assert.equal(req.property, undefined, "no property may be invented");
     assert.equal(req.timeline, undefined, "no timeline may be invented");
     assert.equal(req.rooms, undefined);
     assert.equal(req.budgetComfort, undefined);
     assert.equal(result.body.plannerVersion, PUBLIC_CONSULT_PLANNER_VERSION);
+    assert.equal(result.body.plannerVersion, "public-consult-v2");
   });
 
-  test("a wardrobe lead round-trips as a wardrobe count", () => {
-    const result = consultationToLeadRequest({
-      ...BASE,
-      service: "custom-wardrobes",
-      qualifierCode: "three",
-    });
-    assert.ok(result.ok);
-    assert.deepEqual(result.body.requirements.qualifier, {
-      kind: "wardrobe-count",
-      code: "three",
-    });
-    assert.equal(result.body.requirements.property, undefined);
-  });
-
-  test("a complete-home lead round-trips its real home size", () => {
+  test("a complete-home lead invents no home size", () => {
     const result = consultationToLeadRequest({
       ...BASE,
       service: "complete-home-interiors",
-      qualifierCode: "apartment-3bhk",
+      qualifierCode: null,
     });
     assert.ok(result.ok);
-    assert.deepEqual(result.body.requirements.qualifier, {
-      kind: "home-size",
-      code: "apartment-3bhk",
+    assert.equal(result.body.requirements.service, "complete-home-interiors");
+    assert.equal(result.body.requirements.property, undefined);
+    assert.equal(result.body.requirements.qualifier, undefined);
+  });
+
+  test("a wardrobe lead invents no wardrobe count", () => {
+    const result = consultationToLeadRequest({
+      ...BASE,
+      service: "custom-wardrobes",
+      qualifierCode: null,
     });
-    // The customer DID answer a property question here, so the canonical column
-    // may carry it — derived from their answer, never defaulted.
+    assert.ok(result.ok);
+    assert.equal(result.body.requirements.service, "custom-wardrobes");
+    assert.equal(result.body.requirements.qualifier, undefined);
+  });
+
+  test("a complete-home lead derives no property from a question it never asked", () => {
+    /*
+     * v1's form asked a home-size question and `propertyCodeFromQualifier`
+     * turned that answer into the canonical column. v2 asks nothing, so there
+     * is no answer to derive from — and the helper is left in place, untouched,
+     * for the v1 rows that still depend on it.
+     */
+    const result = consultationToLeadRequest({
+      ...BASE,
+      service: "complete-home-interiors",
+      qualifierCode: null,
+    });
+    assert.ok(result.ok);
+    assert.equal(result.body.requirements.qualifier, undefined);
+    assert.equal(result.body.requirements.property, undefined);
+    // The v1 derivation itself is unchanged.
     assert.equal(
       propertyCodeFromQualifier("home-size", "apartment-3bhk"),
       "apartment-3bhk"
     );
+    assert.equal(propertyCodeFromQualifier("kitchen-scope", "new-kitchen"), null);
   });
 
   test("an UNSURE answer never becomes a property", () => {
@@ -277,13 +295,32 @@ describe("no fabricated property or timeline", () => {
   });
 
   test("an unknown qualifier code is refused", () => {
-    for (const bad of ["", "made-up", "single-room"]) {
+    /*
+     * L1.1 made the qualifier OPTIONAL — the single-step form asks no
+     * service-specific question — so an empty code is now absence rather than
+     * a bad answer. A code that is present and wrong is still refused, which is
+     * the property this test was written for.
+     */
+    for (const bad of ["made-up", "single-room"]) {
       const result = consultationToLeadRequest({
         ...BASE,
         service: "modular-kitchens",
         qualifierCode: bad,
       });
       assert.equal(result.ok, false, `"${bad}" must be refused`);
+    }
+  });
+
+  test("an absent qualifier is accepted and sends nothing", () => {
+    for (const empty of ["", null]) {
+      const result = consultationToLeadRequest({
+        ...BASE,
+        service: "modular-kitchens",
+        qualifierCode: empty,
+      });
+      assert.equal(result.ok, true, `${JSON.stringify(empty)} must be accepted`);
+      if (!result.ok) continue;
+      assert.equal("qualifier" in result.body.requirements, false);
     }
   });
 
@@ -340,15 +377,17 @@ describe("no fabricated property or timeline", () => {
 /* ========================================================================== */
 
 describe("the qualifier does not survive a service change", () => {
-  test("the form clears it explicitly", () => {
+  test("there is no stale qualifier answer left to carry", () => {
+    /*
+     * This used to assert that changing the service cleared the previous
+     * qualifier. L1.1 removed the qualifier control from the form entirely, so
+     * there is no answer to go stale — the stronger version of the same
+     * guarantee.
+     */
     const src = code(read(FORM));
-    const handler = src.slice(
-      src.indexOf("const onServiceChange"),
-      src.indexOf("const currentStep")
-    );
-    assert.match(handler, /setQualifierCode\(""\)/);
-    // And the stale error goes with it.
-    assert.match(handler, /delete next\.qualifier/);
+    assert.doesNotMatch(src, /setQualifierCode/);
+    assert.doesNotMatch(src, /id="od-consult-qualifier"/);
+    assert.match(src, /qualifierCode: null,/);
   });
 
   test("a carried-over answer would be rejected anyway", () => {
@@ -369,8 +408,8 @@ describe("the visible form is short", () => {
     const src = read(FORM);
     assert.match(src, /<select/);
     assert.doesNotMatch(src, /role="radiogroup"/);
-    // One dropdown per stage: service, then the single qualifier.
-    assert.equal((src.match(/<select/g) ?? []).length, 2);
+    // L1.1: one dropdown, full stop. The service is the only choice asked.
+    assert.equal((src.match(/<select/g) ?? []).length, 1);
   });
 
   test("it never renders a timeline, rooms or budget control", () => {
@@ -387,7 +426,6 @@ describe("the visible form is short", () => {
     const src = read(FORM);
     for (const id of [
       "od-consult-service",
-      "od-consult-qualifier",
       "od-consult-name",
       "od-consult-mobile",
       "od-consult-locality",
@@ -449,7 +487,7 @@ describe("the visible form is short", () => {
     const src = code(read(FORM));
     const initializer = src.slice(
       src.indexOf("const [service, setService]"),
-      src.indexOf("const [qualifierCode")
+      src.indexOf("const [name, setName]")
     );
     assert.doesNotMatch(initializer, /window|URLSearchParams|location/);
     assert.match(initializer, /initialService/);
@@ -519,7 +557,7 @@ describe("the visible form is short", () => {
     assert.match(src, /const clearFieldError = /);
     for (const key of [
       "service",
-      "qualifier",
+      // "qualifier" removed in L1.1: the control it belonged to is gone.
       "name",
       "mobile",
       "serviceEnquiryConsent",
@@ -532,11 +570,16 @@ describe("the visible form is short", () => {
     }
   });
 
-  test("submit appears only once the Contact stage is reached", () => {
+  test("the submit is always present, because there are no stages", () => {
+    /*
+     * It used to be gated on reaching the Contact stage, so it could not offer
+     * to send a form whose fields were still hidden. L1.1 shows every field at
+     * once, so gating it would only hide the action.
+     */
     const src = code(read(FORM));
-    // Offering "submit" while the contact fields are still hidden reads as a
-    // broken step counter.
-    assert.match(src, /\{qualifierCode \? \([\s\S]{0,200}type="submit"/);
+    assert.doesNotMatch(src, /\{qualifierCode \? \(/);
+    assert.equal((src.match(/type="submit"/g) ?? []).length, 1);
+    assert.doesNotMatch(src, /currentStep/);
   });
 });
 
@@ -545,10 +588,16 @@ describe("the visible form is short", () => {
 /* ========================================================================== */
 
 describe("the legacy planner contract still works", () => {
-  test("both planner versions are accepted", () => {
+  test("all three planner versions are accepted", () => {
+    /*
+     * v2 was ADDED, not substituted. v1 keeps its name and its meaning because
+     * rows already stored under it were collected that way.
+     */
     assert.equal(LEAD_INTAKE_PLANNER_VERSION, "home-r4-v1");
-    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v1");
+    assert.equal(PUBLIC_CONSULT_V1_PLANNER_VERSION, "public-consult-v1");
+    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v2");
     assert.notEqual(LEAD_INTAKE_PLANNER_VERSION, PUBLIC_CONSULT_PLANNER_VERSION);
+    assert.notEqual(PUBLIC_CONSULT_V1_PLANNER_VERSION, PUBLIC_CONSULT_PLANNER_VERSION);
   });
 
   test("the planner variant still demands property and timeline", () => {
@@ -566,7 +615,7 @@ describe("the legacy planner contract still works", () => {
     assert.ok(planner.fields.timeline, "planner must still require timeline");
   });
 
-  test("the consultation variant demands the qualifier instead", () => {
+  test("the consultation variant asks for neither property nor qualifier", () => {
     const missing = validateLeadFormFields({
       name: "Test Person",
       mobile: "9876543210",
@@ -578,9 +627,13 @@ describe("the legacy planner contract still works", () => {
       variant: "consultation",
       qualifier: "",
     });
-    assert.equal(missing.ok, false);
-    assert.ok(missing.fields.qualifier);
-    // It must NOT ask for answers the form never showed.
+    /*
+     * L1.1: with no qualifier control on the form, a blank one is not a
+     * validation failure. Everything the form DOES show is still required, and
+     * nothing the form never showed is ever demanded.
+     */
+    assert.equal(missing.ok, true);
+    assert.equal(missing.fields.qualifier, undefined);
     assert.equal(missing.fields.property, undefined);
     assert.equal(missing.fields.timeline, undefined);
 
@@ -655,8 +708,8 @@ describe("the migration only enables truth", () => {
     );
     assert.equal(
       sorted.pop(),
-      "20260906180000_crm_super_admin_lead_tombstone.sql",
-      "the newest migration is the Super Admin enquiry tombstone"
+      "20260907130000_public_consultation_single_step_v2.sql",
+      "the newest migration is the single-step v2 contract"
     );
   });
 });

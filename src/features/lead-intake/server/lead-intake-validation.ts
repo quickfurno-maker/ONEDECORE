@@ -10,7 +10,8 @@ import {
   LEAD_BUDGET_COMFORT_CODES,
   LEAD_INTAKE_NOTICE_VERSION,
   LEAD_INTAKE_PLANNER_VERSIONS,
-  PUBLIC_CONSULT_PLANNER_VERSION,
+  PUBLIC_CONSULT_V1_PLANNER_VERSION,
+  PUBLIC_CONSULT_V2_PLANNER_VERSION,
   LEAD_QUALIFIER_KIND_BY_SERVICE,
   isAllowedLeadQualifier,
   propertyCodeFromQualifier,
@@ -329,7 +330,23 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
    * opt out of validation: each version is strict about exactly the answers its
    * form actually collects.
    */
-  const isPublicConsult = plannerVersion === PUBLIC_CONSULT_PLANNER_VERSION;
+  /*
+   * THREE DISCRIMINATORS, THREE DIFFERENT CONTRACTS.
+   *
+   *   home-r4-v1         property + timeline required, qualifier forbidden
+   *   public-consult-v1  qualifier required and matched to the service
+   *   public-consult-v2  qualifier, property, timeline, rooms, budget and
+   *                      estimate ALL forbidden — the single-step form asks
+   *                      for none of them
+   *
+   * These mirror the SQL branch-for-branch. They have to: `submit_lead_intake`
+   * is SECURITY DEFINER and enforces the same rules itself, so a disagreement
+   * between the two layers is a route that validates a body the database will
+   * then refuse — green tests either side of a lead that never lands.
+   */
+  const isPublicConsultV1 = plannerVersion === PUBLIC_CONSULT_V1_PLANNER_VERSION;
+  const isPublicConsultV2 = plannerVersion === PUBLIC_CONSULT_V2_PLANNER_VERSION;
+  const isPublicConsult = isPublicConsultV1 || isPublicConsultV2;
 
   if (!isPlainObject(input.contact)) {
     fields.push("contact");
@@ -425,15 +442,14 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     /*
      * UNASKED FIELDS ARE REJECTED, NOT IGNORED.
      *
-     * The public form collects a service, one qualifier and contact details.
-     * Anything else in the body was never on screen, so accepting it would let a
-     * tampered or stale client put an answer in CRM that no customer gave —
-     * which is the exact failure this variant exists to prevent. Silently
-     * dropping them would be almost as bad: the caller would believe it was
-     * stored.
+     * Neither public form collects a timeline, a room list, a budget band or an
+     * estimate. v1 adds one service qualifier; v2 adds nothing. Anything else in
+     * the body was never on screen, so accepting it would let a tampered or
+     * stale client put an answer in CRM that no customer gave — the exact
+     * failure these variants exist to prevent. Silently dropping them would be
+     * almost as bad: the caller would believe it was stored.
      */
     for (const unasked of [
-      "property",
       "timeline",
       "rooms",
       "budgetComfort",
@@ -444,13 +460,43 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
       }
     }
 
-    // The public form has no email field, so neither the address nor its
-    // consent may arrive under this version.
+    /*
+     * v1 allows `property` ONLY when the customer's own home-size answer names
+     * one, which the qualifier check below enforces. v2 forbids it outright,
+     * handled with the qualifier above. Neither accepts a property nobody was
+     * asked for.
+     */
+
+    // Neither public form has an email field, so neither the address nor its
+    // consent may arrive under these versions.
     if (isPlainObject(input.contact) && input.contact.email != null) {
       fields.push("contact.email");
     }
 
-    if (!isPlainObject(input.requirements.qualifier)) {
+    /*
+     * THE QUALIFIER SPLITS THE TWO PUBLIC VERSIONS.
+     *
+     * v1's form asked one service-specific question and its rows carry the
+     * answer, so it is REQUIRED and must match the kind the service implies —
+     * a wardrobe enquiry still cannot carry a BHK. The SQL raises
+     * `qualifier_required` for exactly this.
+     *
+     * v2's form asks nothing of the sort, so a qualifier is FORBIDDEN. Not
+     * optional: optional would accept an answer that was never on screen.
+     */
+    if (isPublicConsultV2) {
+      /*
+       * v2 asks no service-specific question, so a qualifier in the body was
+       * never on screen. Rejected rather than ignored — see the unasked-field
+       * note above; the same reasoning, the same answer.
+       */
+      if (input.requirements.qualifier != null) {
+        fields.push("requirements.qualifier");
+      }
+      if (input.requirements.property != null) {
+        fields.push("requirements.property");
+      }
+    } else if (!isPlainObject(input.requirements.qualifier)) {
       fields.push("requirements.qualifier");
     } else {
       rejectUnknownKeys(

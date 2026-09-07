@@ -45,7 +45,7 @@ export const CONSULTATION_SERVICE_OPTIONS: readonly ConsultationOption[] = [
  * exists, the helper line below carries that reassurance instead — the "unsure"
  * escape hatch lives inside each QUALIFIER, where it can be recorded truthfully.
  */
-export const CONSULTATION_SERVICE_LABEL = "What are you planning?";
+export const CONSULTATION_SERVICE_LABEL = "What do you need?";
 export const CONSULTATION_SERVICE_PLACEHOLDER = "Choose a service";
 export const CONSULTATION_SERVICE_HELP =
   "Not sure which one fits? Pick the closest — you can tell our designer more on the call.";
@@ -93,12 +93,29 @@ export const CONSULTATION_QUALIFIERS: Readonly<
   },
 };
 
-export const CONSULTATION_INTRO_TITLE = "Tell us what you're planning";
+export const CONSULTATION_INTRO_TITLE = "Get your free design consultation";
 export const CONSULTATION_INTRO_HELP =
-  "Two quick choices, then your contact details.";
+  "One service, your name and number. That is all we need to call you back.";
+
+/**
+ * What the visitor reads after a successful submission.
+ *
+ * It confirms receipt and nothing more. It does not promise a call time, a
+ * quotation or an appointment, because none of those is booked by submitting a
+ * form — the shared status vocabulary still carries the reference number
+ * underneath.
+ */
+export const CONSULTATION_SUCCESS_MESSAGE =
+  "Thank you. We received your consultation request and will follow up.";
 
 export const CONSULTATION_CONTACT_LABEL = "How can we reach you?";
 export const CONSULTATION_NOTE_LABEL = "Add a note";
+/**
+ * Retained for the interiors planner, which still walks stages.
+ *
+ * The public homepage consultation form is SINGLE STEP as of L1.1 and does not
+ * use this.
+ */
 export const CONSULTATION_STEPS = ["Project", "Requirement", "Contact"] as const;
 
 /** Resolves the one qualifier a service asks for, or null before a choice. */

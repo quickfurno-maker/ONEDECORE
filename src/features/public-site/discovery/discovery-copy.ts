@@ -58,19 +58,20 @@ export const DISCOVERY_FURNITURE_PROCESS_STEPS = [
  * The warranty chip keeps its meaning without the duration, which is what is
  * actually pending.
  */
+/**
+ * The strip below the hero, in the order the owner asked for.
+ *
+ * The projects figure is rendered separately by `DiscoveryProjectsCounter` so
+ * it can animate and stay put while the rest tickers past — it is not in this
+ * list. Everything here is qualitative: how the work is done, and where.
+ */
 export const DISCOVERY_TRUST_STRIP_ITEMS = [
-  { id: "consultation", label: "Pune-wide consultation" },
   { id: "manufacturing", label: HOME_CLAIM_COPY.manufacturing },
   { id: "pipeline", label: "Design → Manufacture → Install" },
+  { id: "consultation", label: "Pune-wide consultation" },
   { id: "warranty", label: publicClaimLabel("warranty-years") },
-  ...(canQuotePublicClaim("average-rating") &&
-  canQuotePublicClaim("projects-delivered")
-    ? [
-        {
-          id: "rating",
-          label: `${publicClaimLabel("average-rating")} · ${publicClaimLabel("projects-delivered")}`,
-        },
-      ]
+  ...(canQuotePublicClaim("average-rating")
+    ? [{ id: "rating", label: publicClaimLabel("average-rating") }]
     : []),
   { id: "areas", label: "Kharadi · Baner · Wakad · Hinjewadi · Koregaon Park" },
 ].filter((item): item is { id: string; label: string } => item.label !== null);
@@ -148,6 +149,15 @@ export const DISCOVERY_PROOF_PILLARS = [
  * dock is the page's one conversion action. Two more buttons per slide only
  * competed with it, and on mobile they cost a large share of the first screen.
  */
+/**
+ * The page's H1, rendered visually hidden above the image-only hero.
+ *
+ * The banner carries no text, so the page identity has to live somewhere a
+ * screen reader and a crawler can both find it.
+ */
+export const DISCOVERY_HERO_PAGE_TITLE =
+  "ONEDECORE — complete home interiors, modular kitchens and wardrobes in Pune";
+
 export const DISCOVERY_HERO_SLIDES = [
   {
     id: "complete-home",

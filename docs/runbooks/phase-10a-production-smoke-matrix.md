@@ -69,15 +69,45 @@ Run as unauthenticated browser/curl unless noted. Admin routes expect redirect t
 
 ---
 
-## PM2 restart (production)
+## Production restart (current lifecycle)
 
-As Unix user `onedecore` on VPS:
+The production app is a systemd-managed PM2 service. The lifecycle facts that
+decide every command below:
+
+| Fact | Value |
+| :--- | :--- |
+| VPS | `91.108.105.192` |
+| App directory | `/var/www/onedecore` |
+| Runtime user | `onedecore` |
+| PM2 process | `onedecore` |
+| PM2 home | `/home/onedecore/.pm2` |
+| systemd lifecycle unit | `pm2-onedecore.service` |
+
+As root/operator on the VPS:
 
 1. `cd /var/www/onedecore`
-2. `git fetch` / checkout approved SHA
+2. `git fetch` / checkout the approved merged SHA
 3. `npm ci`
 4. `npm run build`
-5. `pm2 restart onedecore --update-env`
-6. Verify `curl -sS http://127.0.0.1:3000/api/health`
+5. `systemctl restart pm2-onedecore`
+6. `systemctl is-active pm2-onedecore`
+7. `sudo -iu onedecore pm2 status`
+8. `curl -sS http://127.0.0.1:3000/api/health`
 
-Do not run git operations as root against `/var/www/onedecore`.
+**Restart through systemd. Do NOT run `pm2 restart onedecore` as root.** Root's
+PM2 daemon and the runtime user's PM2 home (`/home/onedecore/.pm2`) are separate
+process universes: a restart issued from root's daemon talks to a daemon that
+does not own the production process, so it either does nothing visible or starts
+a second, unmanaged copy. The `pm2-onedecore.service` unit owns the lifecycle,
+and `systemctl restart` is the only command that acts on the process serving
+traffic.
+
+Step 7 is the check that catches the wrong-universe mistake: `pm2 status` run as
+the runtime user must show `onedecore` `online` with a fresh uptime. If it shows
+a stale uptime while `systemctl is-active` says `active`, the restart did not
+reach the process you think it did.
+
+Steps 2–4 run as the operator, so the checked-out tree and the build output are
+operator-owned. Confirm the runtime user can still read what it has to serve
+before declaring the deploy good — a green `systemctl is-active` with an
+unreadable `.next` is a service that is up and failing.

@@ -26,6 +26,21 @@
  * page cannot disagree, and the public copy asks `isClaimPubliclyEvidenced()`
  * before quoting a figure.
  *
+ * THE NARROW EXCEPTION
+ *
+ * `ownerAttestedDisplay` is a THIRD state, and it is deliberately not a way of
+ * saying "verified". It means the owner has taken personal responsibility for
+ * publishing a specific figure while its public evidence is still pending.
+ *
+ * OWNER-ATTESTED DISPLAY IS NOT PUBLIC EVIDENCE VERIFIED. `evidence` stays
+ * `pending`, the business-truth register still reports it as pending, and
+ * `structuredDataPermission` stays false — no `aggregateRating`, no `Review`,
+ * no schema.org claim a search engine could index as a fact. The exception
+ * changes exactly one thing: whether the figure may appear as visible copy.
+ *
+ * It is granted per claim, never in bulk, and each grant records who asked for
+ * it and when.
+ *
  * TO TURN A CLAIM ON
  *
  * Record the evidence — the source URL, the register, the signed terms — and
@@ -58,6 +73,14 @@ export interface ClaimEvidenceRecord {
   readonly evidence: PublicEvidenceStatus;
   readonly legalTerms: LegalTermsStatus;
   /**
+   * The owner has authorised publishing this figure while evidence is pending.
+   * NOT a claim of verification — see the note above. Defaults to absent.
+   */
+  readonly ownerAttestedDisplay?: {
+    readonly attestedOn: string;
+    readonly note: string;
+  };
+  /**
    * `true` when the claim promises something contractual — a warranty period —
    * so approved wording and a verified number are not enough on their own.
    */
@@ -78,6 +101,15 @@ export const PUBLIC_CLAIM_EVIDENCE: Readonly<
     ...PENDING,
     requiresEffectiveLegalTerms: false,
     note: "No published project register or evidence URL. The public portfolio is currently empty.",
+    /*
+     * Owner-directed, L1.1 (2026-09-07): display the project count and nothing
+     * else. The rating, review count, satisfaction percentage and warranty
+     * duration were explicitly NOT authorised and remain withheld.
+     */
+    ownerAttestedDisplay: {
+      attestedOn: "2026-09-07",
+      note: "Owner explicitly authorised displaying the project count in L1.1. Evidence remains pending and structured data remains forbidden.",
+    },
   },
   "average-rating": {
     ...PENDING,
@@ -139,6 +171,45 @@ export function isClaimPubliclyEvidenced(
     return false;
   }
   return true;
+}
+
+/**
+ * May this claim's figure be RENDERED?
+ *
+ * Either it is evidenced, or the owner has attested to it explicitly. This is
+ * the question the public copy asks. `isClaimPubliclyEvidenced` remains the
+ * question the register answers, and the two are not the same — which is the
+ * whole point of keeping both.
+ */
+export function isClaimDisplayable(
+  claimId: PublicClaimId,
+  records: Readonly<
+    Record<PublicClaimId, ClaimEvidenceRecord>
+  > = PUBLIC_CLAIM_EVIDENCE
+): boolean {
+  if (isClaimPubliclyEvidenced(claimId, records)) {
+    return true;
+  }
+  const record = records[claimId];
+  if (!record?.ownerAttestedDisplay) {
+    return false;
+  }
+  // An attested claim that also needs contractual terms still needs them.
+  if (record.requiresEffectiveLegalTerms && record.legalTerms !== "approved") {
+    return false;
+  }
+  return true;
+}
+
+/** Claims the owner has taken responsibility for without public evidence. */
+export function getOwnerAttestedClaimIds(
+  records: Readonly<
+    Record<PublicClaimId, ClaimEvidenceRecord>
+  > = PUBLIC_CLAIM_EVIDENCE
+): readonly PublicClaimId[] {
+  return PUBLIC_CLAIM_IDS.filter(
+    (id) => !isClaimPubliclyEvidenced(id, records) && isClaimDisplayable(id, records)
+  );
 }
 
 /** Every claim that is not yet safe to quote as a figure. */

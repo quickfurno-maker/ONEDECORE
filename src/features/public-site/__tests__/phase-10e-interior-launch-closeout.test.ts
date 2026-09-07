@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
 import { HOME_CLAIMS, canQuotePublicClaim } from "../home-r4/claims.ts";
+import { isClaimPubliclyEvidenced } from "../../legal/claim-evidence.ts";
 
 const root = process.cwd();
 
@@ -50,7 +51,13 @@ describe("Phase 10E — interior launch closeout", () => {
     // Approval keeps the numbers meaningful; it does not publish them.
     assert.ok(HOME_CLAIMS.projectsDelivered > 0);
     assert.ok(HOME_CLAIMS.rating > 0);
-    assert.equal(canQuotePublicClaim("projects-delivered"), false);
+    /*
+     * L1.1: the owner attested to the project count specifically, so that one
+     * figure may be displayed. It is still NOT evidenced — see
+     * `isClaimPubliclyEvidenced` — and no other claim was attested.
+     */
+    assert.equal(canQuotePublicClaim("projects-delivered"), true);
+    assert.equal(isClaimPubliclyEvidenced("projects-delivered"), false);
     assert.equal(canQuotePublicClaim("average-rating"), false);
   });
 
