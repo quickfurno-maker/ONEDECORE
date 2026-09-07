@@ -42,7 +42,13 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.match(page, /showConsultation=\{false\}/);
     assert.match(dock, /od-disc-dock/);
     assert.match(dock, /PUBLIC_CONSULTATION\.href/);
-    assert.match(dock, /getPublicWhatsAppHref/);
+    // WhatsApp is a floating action now; the dock owns Portfolio + consultation.
+    assert.match(dock, /portfolio-sticky/);
+    assert.match(dock, /consultation-sticky/);
+    assert.match(
+      read("src/features/public-site/discovery/DiscoveryWhatsAppFab.tsx"),
+      /getPublicWhatsAppHref/
+    );
     /*
      * L1.1: the number moved from a hard-coded `null` to
      * NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164. The requirement this line encoded —
@@ -178,6 +184,7 @@ describe("Phase 10C — homepage launch UX", () => {
       "header",
       "hero",
       "proof",
+      "portfolio-categories",
       "why",
       "manufacturing",
       "design-library",

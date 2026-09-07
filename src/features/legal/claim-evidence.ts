@@ -63,6 +63,7 @@ export const PUBLIC_CLAIM_IDS = [
   "own-manufacturing-unit",
   "free-design-consultation",
   "design-inspirations",
+  "delivery-window",
 ] as const;
 
 export type PublicClaimId = (typeof PUBLIC_CLAIM_IDS)[number];
@@ -93,7 +94,7 @@ export interface ClaimEvidenceRecord {
 
 const OWNER_ATTESTED_HOMEPAGE_PROOF = {
   attestedOn: "2026-09-07",
-  note: "Owner supplied these four proof-strip figures verbatim in the premium homepage brief and directed that they be displayed. Evidence remains pending and structured data remains forbidden.",
+  note: "Owner supplied these proof-strip figures verbatim in the premium homepage brief and directed that they be displayed. Evidence remains pending and structured data remains forbidden.",
 } as const;
 
 const PENDING = {
@@ -132,6 +133,17 @@ export const PUBLIC_CLAIM_EVIDENCE: Readonly<
     ...PENDING,
     requiresEffectiveLegalTerms: true,
     note: "WARRANTY_POLICY_STATUS is scope-pending-owner-approval, every category period is null and no claims contact is recorded.",
+    /*
+     * Owner-directed (2026-09-07): "Up to 10 Years Warranty" was asked for on
+     * the proof strip. The attestation is recorded here so the intent is not
+     * lost — but it is DELIBERATELY NOT ENOUGH.
+     *
+     * A warranty is a contractual promise, not a statistic. `isClaimDisplayable`
+     * therefore still answers false while `legalTerms` is pending, and the proof
+     * strip renders three metrics rather than four. Approving the warranty terms
+     * is what publishes it; nothing in a component can.
+     */
+    ownerAttestedDisplay: OWNER_ATTESTED_HOMEPAGE_PROOF,
   },
   "client-satisfaction": {
     ...PENDING,
@@ -170,6 +182,12 @@ export const PUBLIC_CLAIM_EVIDENCE: Readonly<
     ...PENDING,
     requiresEffectiveLegalTerms: false,
     note: "The size of the design library. No published catalogue or index backs the count; it is the owner's own statement about their library.",
+    ownerAttestedDisplay: OWNER_ATTESTED_HOMEPAGE_PROOF,
+  },
+  "delivery-window": {
+    ...PENDING,
+    requiresEffectiveLegalTerms: false,
+    note: "A stated delivery window. No delivery register or measured average backs it; it is the owner's own statement about their process, and it is presented as a headline figure rather than a contractual commitment.",
     ownerAttestedDisplay: OWNER_ATTESTED_HOMEPAGE_PROOF,
   },
 };

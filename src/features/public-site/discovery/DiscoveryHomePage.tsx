@@ -12,9 +12,11 @@ import { DiscoveryFinalCta } from "./DiscoveryFinalCta";
 import { DiscoveryHeroSlider } from "./DiscoveryHeroSlider";
 import { DiscoveryManufacturing } from "./DiscoveryManufacturing";
 import { DiscoveryProcess } from "./DiscoveryProcess";
+import { DiscoveryPortfolioCategories } from "./DiscoveryPortfolioCategories";
 import { DiscoveryProofStrip } from "./DiscoveryProofStrip";
 import { DiscoveryQuality } from "./DiscoveryQuality";
 import { DiscoveryStickyCta } from "./DiscoveryStickyCta";
+import { DiscoveryWhatsAppFab } from "./DiscoveryWhatsAppFab";
 import { DiscoveryWhy } from "./DiscoveryWhy";
 import {
   DISCOVERY_CONSULT_EYEBROW,
@@ -97,6 +99,7 @@ export function DiscoveryHomePage({
       <main id="od-discovery-main">
         <DiscoveryHeroSlider />
         <DiscoveryProofStrip />
+        <DiscoveryPortfolioCategories />
         <DiscoveryWhy />
         <DiscoveryManufacturing />
         <DiscoveryDesignLibrary />
@@ -258,6 +261,7 @@ export function DiscoveryHomePage({
 
         <DiscoveryFinalCta />
       </main>
+      <DiscoveryWhatsAppFab />
       <DiscoveryStickyCta />
       <PublicSiteFooter shopEnabled={shopLive} />
     </div>

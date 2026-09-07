@@ -4,7 +4,7 @@
  * No JSON-LD aggregateRating/Review/Warranty until evidence URLs exist.
  */
 export const HOME_CLAIMS = {
-  projectsDelivered: 500,
+  projectsDelivered: 1000,
   rating: 4.9,
   reviews: 200,
   warrantyYears: 10,
@@ -12,8 +12,9 @@ export const HOME_CLAIMS = {
   customDesignPercent: 100,
   ownsManufacturingUnit: true,
   freeDesignConsultation: true,
-  designInspirations: 800,
+  designInspirations: 500,
   manufacturingUnits: 1,
+  deliveryDays: 45,
 } as const;
 
 export const HOME_CLAIM_COPY = {
@@ -24,7 +25,8 @@ export const HOME_CLAIM_COPY = {
   satisfaction: `${HOME_CLAIMS.clientSatisfactionPercent}% Client Satisfaction`,
   customDesigns: `${HOME_CLAIMS.customDesignPercent}% Custom Designs`,
   manufacturing: "Own Manufacturing Unit",
-  designInspirations: `${800}+ Design Inspirations`,
+  designInspirations: `${500}+ Designs to Choose From`,
+  deliveryDays: `${45} Days Delivery`,
   freeConsultation: "Free Design Consultation",
 } as const;
 
@@ -115,6 +117,9 @@ const QUALITATIVE: Readonly<Record<PublicClaimId, string | null>> = {
   "free-design-consultation": HOME_CLAIM_COPY.freeConsultation,
   // The library exists whether or not the count is published.
   "design-inspirations": "A Large In-House Design Library",
+  // A delivery window is a figure or it is nothing: "fast delivery" is the same
+  // unmeasured promise in vaguer words.
+  "delivery-window": null,
 };
 
 const QUANTIFIED: Readonly<Record<PublicClaimId, string>> = {
@@ -125,6 +130,7 @@ const QUANTIFIED: Readonly<Record<PublicClaimId, string>> = {
   "warranty-years": HOME_CLAIM_COPY.warranty,
   "custom-designs": HOME_CLAIM_COPY.customDesigns,
   "design-inspirations": HOME_CLAIM_COPY.designInspirations,
+  "delivery-window": HOME_CLAIM_COPY.deliveryDays,
   "own-manufacturing-unit": HOME_CLAIM_COPY.manufacturing,
   "free-design-consultation": HOME_CLAIM_COPY.freeConsultation,
 };

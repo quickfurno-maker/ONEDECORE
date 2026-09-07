@@ -43,6 +43,7 @@ describe("Public site simplification — discovery IA", () => {
       "header",
       "hero",
       "proof",
+      "portfolio-categories",
       "why",
       "manufacturing",
       "design-library",
@@ -57,6 +58,7 @@ describe("Public site simplification — discovery IA", () => {
     assert.deepEqual([...DISCOVERY_MAJOR_SECTIONS], [
       "hero",
       "proof",
+      "portfolio-categories",
       "why",
       "manufacturing",
       "design-library",

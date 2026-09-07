@@ -19,7 +19,7 @@ function read(name: string) {
 
 describe("R5.3 proof metrics", () => {
   test("owner-approved values derive from claims config", () => {
-    assert.equal(HOME_CLAIMS.projectsDelivered, 500);
+    assert.equal(HOME_CLAIMS.projectsDelivered, 1000);
     assert.equal(HOME_CLAIMS.clientSatisfactionPercent, 98);
     assert.equal(HOME_CLAIMS.customDesignPercent, 100);
     assert.equal(HOME_CLAIMS.warrantyYears, 10);

@@ -244,7 +244,7 @@ describe("R5.3.1 no-JS price guide", () => {
 describe("R5.3.1 regression", () => {
   test("project proof remains pending and claims unchanged", () => {
     assert.equal(HOME_PROJECT_PROOF_MODE, "pending");
-    assert.equal(HOME_CLAIMS.projectsDelivered, 500);
+    assert.equal(HOME_CLAIMS.projectsDelivered, 1000);
     assert.equal(HOME_CLAIMS.warrantyYears, 10);
   });
 

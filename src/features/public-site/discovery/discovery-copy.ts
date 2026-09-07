@@ -33,6 +33,7 @@ export const DISCOVERY_SECTION_ORDER = [
   "header",
   "hero",
   "proof",
+  "portfolio-categories",
   "why",
   "manufacturing",
   "design-library",
@@ -49,6 +50,7 @@ export const DISCOVERY_SECTION_ORDER = [
 export const DISCOVERY_MAJOR_SECTIONS = [
   "hero",
   "proof",
+  "portfolio-categories",
   "why",
   "manufacturing",
   "design-library",
@@ -71,27 +73,38 @@ export const DISCOVERY_MAJOR_SECTIONS = [
 export const DISCOVERY_PROOF_METRICS = [
   {
     claimId: "projects-delivered" as const,
+    prefix: "",
     value: HOME_CLAIMS.projectsDelivered,
     suffix: "+",
     label: "Projects Delivered",
   },
   {
+    /*
+     * A warranty is a contractual promise, so `requiresEffectiveLegalTerms` is
+     * true for this claim and `isClaimDisplayable` answers false while the
+     * warranty terms are pending owner approval. It is listed here because the
+     * owner asked for it; the strip will start rendering it the moment the terms
+     * are approved, and until then it renders three metrics.
+     */
+    claimId: "warranty-years" as const,
+    prefix: "Up to ",
+    value: HOME_CLAIMS.warrantyYears,
+    suffix: " Years",
+    label: "Warranty",
+  },
+  {
     claimId: "design-inspirations" as const,
+    prefix: "",
     value: HOME_CLAIMS.designInspirations,
     suffix: "+",
-    label: "Design Inspirations",
+    label: "Designs to Choose From",
   },
   {
-    claimId: "own-manufacturing-unit" as const,
-    value: HOME_CLAIMS.manufacturingUnits,
-    suffix: "",
-    label: "Own Modular Factory",
-  },
-  {
-    claimId: "custom-designs" as const,
-    value: HOME_CLAIMS.customDesignPercent,
-    suffix: "%",
-    label: "Customised Planning",
+    claimId: "delivery-window" as const,
+    prefix: "",
+    value: HOME_CLAIMS.deliveryDays,
+    suffix: " Days",
+    label: "Delivery",
   },
 ] as const;
 
@@ -107,6 +120,9 @@ export const DISCOVERY_PROOF_FOOTNOTE =
 /* Why ONEDECORE                                                              */
 /* -------------------------------------------------------------------------- */
 
+export const DISCOVERY_CATEGORIES_EYEBROW = "EXPLORE OUR WORK";
+export const DISCOVERY_CATEGORIES_HEADLINE = "Start where your home needs it most.";
+
 export const DISCOVERY_WHY_EYEBROW = "WHY ONEDECORE";
 export const DISCOVERY_WHY_HEADLINE = [
   "Everything your interior needs.",
@@ -118,13 +134,13 @@ export const DISCOVERY_WHY_POINTS = [
     id: "direct",
     number: "01",
     title: "Direct From Manufacturer",
-    body: "No unnecessary middle layers. Your modular furniture and interior elements are manufactured through our own production setup for better control over finish, quality and value.",
+    body: "No unnecessary middle layers. Better control on finish, quality and value through direct manufacturing.",
   },
   {
     id: "factory",
     number: "02",
     title: "Own Modular Factory",
-    body: "Precision machinery, controlled production and consistent finishing for modern kitchens, wardrobes and complete-home interiors.",
+    body: "Precision machinery and controlled production for modular kitchens, wardrobes and complete-home interiors.",
   },
   {
     id: "consultation",
@@ -133,10 +149,15 @@ export const DISCOVERY_WHY_POINTS = [
     body: "Discuss your layout, style, storage needs and budget with our design team before you decide.",
   },
   {
-    id: "library",
+    /*
+     * The fourth card no longer repeats the design count. A metric already on
+     * the proof strip, restated as a benefit, reads as padding — and it tied
+     * this card's copy to a number that changes.
+     */
+    id: "customised",
     number: "04",
-    title: "800+ Designs to Choose From",
-    body: "Explore hundreds of kitchen, wardrobe, bedroom and living-space ideas, then customise them around your home.",
+    title: "Customised For Your Home",
+    body: "Every design is planned around your space, lifestyle and preferences rather than a standard catalogue fit.",
   },
 ] as const;
 
@@ -185,8 +206,13 @@ export const DISCOVERY_LIBRARY_HEADLINE = [
   "Finish with something completely yours.",
 ] as const;
 
-export const DISCOVERY_LIBRARY_LEDE =
-  "Choose from 800+ interior ideas across kitchens, wardrobes, living rooms, bedrooms and complete-home themes. Mix finishes, layouts, colours and storage concepts to create a design that works for your home — not just the showroom.";
+/*
+ * The figure is INTERPOLATED, not typed. Writing "500+" here would be a second
+ * place the design count lives, and the two would drift the first time it
+ * changed — which is exactly what happened when this section still said 800+
+ * after the proof strip had moved on.
+ */
+export const DISCOVERY_LIBRARY_LEDE = `Choose from ${HOME_CLAIMS.designInspirations}+ interior ideas across kitchens, wardrobes, living rooms, bedrooms and complete-home themes. Mix finishes, layouts, colours and storage concepts to create a design that works for your home — not just the showroom.`;
 
 /**
  * The library rail.

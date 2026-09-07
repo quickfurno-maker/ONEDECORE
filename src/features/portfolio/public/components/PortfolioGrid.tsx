@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PortfolioCard } from "./PortfolioCard";
 import { PublicPortfolioPaginatedCards } from "../types";
-import { PORTFOLIO_SERVICE_LABELS, PortfolioServiceKey } from "../constants";
+import { PORTFOLIO_CATEGORIES } from "../portfolio-categories";
 import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
 
 export interface PortfolioGridProps {
@@ -25,10 +25,22 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
 
   return (
     <div id="portfolio-grid-container" className="space-y-8">
+      {/*
+        * The four owner-approved categories, from the same config the homepage
+        * cards read. "All Projects" stays first: it is the unfiltered canonical
+        * URL, the reset target of the empty state, and the only view that shows
+        * custom-wardrobe projects, which have no chip of their own.
+        *
+        * Two of the four chips — Hall and Bedroom — resolve to the same
+        * complete-home listing, because the schema records the SERVICE a project
+        * was sold as and not the rooms it contains. `narrowsListing` in the
+        * config records that; the chips navigate honestly rather than pretending
+        * to filter something the data cannot express.
+        */}
       <nav
         id="portfolio-filter-tabs"
         className="od-portfolio-filters"
-        aria-label="Filter Portfolio by service"
+        aria-label="Filter Portfolio by category"
       >
         <Link
           id="portfolio-filter-all"
@@ -39,23 +51,27 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
         >
           All Projects
         </Link>
-        {(Object.keys(PORTFOLIO_SERVICE_LABELS) as PortfolioServiceKey[]).map(
-          (code) => {
-            const isActive = activeService === code;
-            return (
-              <Link
-                key={code}
-                id={`portfolio-filter-${code}`}
-                href={buildUrl(1, code)}
-                className="od-filter"
-                data-active={isActive ? "" : undefined}
-                aria-current={isActive ? "page" : undefined}
-              >
-                {PORTFOLIO_SERVICE_LABELS[code]}
-              </Link>
-            );
-          }
-        )}
+        {PORTFOLIO_CATEGORIES.map((category) => {
+          /*
+           * Only the narrowing chips can show as active. Marking Hall AND
+           * Bedroom AND Complete Interiors all current on the same listing
+           * would tell a screen reader three pages are open at once.
+           */
+          const isActive =
+            category.narrowsListing && activeService === category.service;
+          return (
+            <Link
+              key={category.id}
+              id={`portfolio-filter-${category.id}`}
+              href={buildUrl(1, category.service)}
+              className="od-filter"
+              data-active={isActive ? "" : undefined}
+              aria-current={isActive ? "page" : undefined}
+            >
+              {category.label}
+            </Link>
+          );
+        })}
       </nav>
 
       {cards.length > 0 ? (

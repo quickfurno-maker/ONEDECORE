@@ -25,27 +25,36 @@ import { DISCOVERY_PROOF_METRICS, DISCOVERY_PROOF_FOOTNOTE } from "./discovery-c
  * announced to a screen reader is a stream of meaningless numbers.
  */
 function ProofMetric({
+  prefix,
   value,
   suffix,
   label,
-  order,
 }: {
+  readonly prefix: string;
   readonly value: number;
   readonly suffix: string;
   readonly label: string;
-  readonly order: number;
 }) {
   const { value: shown, ref } = useCountUp(value);
 
+  /*
+   * The prefix and suffix are NOT animated — only the number is. "Up to 0 Years"
+   * counting to "Up to 10 Years" reads as a number filling in; animating the
+   * words around it would read as a glitch.
+   *
+   * The whole figure is one string rather than three spans: React separates
+   * adjacent text nodes with comment markers, which lets "45" and " Days" wrap
+   * onto different lines and breaks a plain text search of the page.
+   */
   return (
-    <li className="od-disc-proof__item" ref={ref} style={{ "--od-proof-order": order } as React.CSSProperties}>
+    <li className="od-disc-proof__item" ref={ref}>
       <span className="od-disc-proof__value" aria-hidden="true">
-        {`${shown}${suffix}`}
+        {`${prefix}${shown}${suffix}`}
       </span>
       <span className="od-disc-proof__label" aria-hidden="true">
         {label}
       </span>
-      <span className="od-sr-only">{`${value}${suffix} ${label}`}</span>
+      <span className="od-sr-only">{`${prefix}${value}${suffix} ${label}`}</span>
     </li>
   );
 }
@@ -67,13 +76,13 @@ export function DiscoveryProofStrip() {
     >
       <div className="od-disc-shell">
         <ul className="od-disc-proof__grid" data-od-proof-strip="">
-          {metrics.map((metric, index) => (
+          {metrics.map((metric) => (
             <ProofMetric
               key={metric.claimId}
+              prefix={metric.prefix}
               value={metric.value}
               suffix={metric.suffix}
               label={metric.label}
-              order={index}
             />
           ))}
         </ul>

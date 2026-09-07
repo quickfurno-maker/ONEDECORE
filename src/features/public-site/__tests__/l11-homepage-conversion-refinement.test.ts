@@ -54,6 +54,7 @@ const HERO = "src/features/public-site/discovery/DiscoveryHeroSlider.tsx";
 const COUNT_UP = "src/features/public-site/motion/useCountUp.ts";
 const STRIP = "src/features/public-site/discovery/DiscoveryProofStrip.tsx";
 const DOCK = "src/features/public-site/discovery/DiscoveryStickyCta.tsx";
+const WA_FAB = "src/features/public-site/discovery/DiscoveryWhatsAppFab.tsx";
 const CONTACT = "src/features/public-site/chrome/public-contact.ts";
 const FORM = "src/features/lead-intake/public/ConsultationLeadForm.tsx";
 const ADAPTER = "src/features/lead-intake/public/consultation-to-lead-request.ts";
@@ -88,12 +89,20 @@ describe("the projects count is displayed without being called verified", () => 
      * page without appearing here has been published by a component deciding for
      * itself, which is the failure this register exists to prevent.
      */
+    /*
+     * ATTESTED AND DISPLAYABLE. `warranty-years` is attested too and is
+     * deliberately absent: it also requires effective legal terms, so the
+     * helper excludes it. That exclusion is asserted directly below.
+     */
     assert.deepEqual([...getOwnerAttestedClaimIds()], [
       "projects-delivered",
       "custom-designs",
       "own-manufacturing-unit",
       "design-inspirations",
+      "delivery-window",
     ]);
+    assert.ok(PUBLIC_CLAIM_EVIDENCE["warranty-years"].ownerAttestedDisplay);
+    assert.equal(isClaimDisplayable("warranty-years"), false);
 
     for (const id of getOwnerAttestedClaimIds()) {
       const record = PUBLIC_CLAIM_EVIDENCE[id];
@@ -117,7 +126,7 @@ describe("the projects count is displayed without being called verified", () => 
 
   test("the four attested figures came back, and nothing else did", () => {
     assert.equal(canQuotePublicClaim("projects-delivered"), true);
-    assert.equal(publicClaimLabel("projects-delivered"), "500+ Projects Delivered");
+    assert.equal(publicClaimLabel("projects-delivered"), "1000+ Projects Delivered");
 
     /*
      * STILL WITHHELD, and these are the ones that matter most: a rating, a
@@ -133,6 +142,14 @@ describe("the projects count is displayed without being called verified", () => 
     ] as const) {
       assert.equal(canQuotePublicClaim(id), false, id);
     }
+    /*
+     * warranty-years is ATTESTED and still not quotable, which is the point of
+     * `requiresEffectiveLegalTerms`: a warranty is a contractual promise, and an
+     * owner saying "publish it" does not put terms in force. It is the one claim
+     * the owner asked for on the proof strip that the gate still refuses.
+     */
+    assert.ok(PUBLIC_CLAIM_EVIDENCE["warranty-years"].ownerAttestedDisplay);
+    assert.equal(isClaimDisplayable("warranty-years"), false);
     /*
      * A rating, a review count and a satisfaction percentage are figures or
      * they are nothing — there is no honest qualitative version of "4.9/5", so
@@ -174,7 +191,7 @@ describe("the projects count is displayed without being called verified", () => 
     // Runs once: `finished` is set and never cleared.
     assert.match(hook, /finished\.current = true/);
     assert.match(hook, /reduced \? target : value/);
-    assert.equal(HOME_CLAIMS.projectsDelivered, 500);
+    assert.equal(HOME_CLAIMS.projectsDelivered, 1000);
 
     // The strip asks the register rather than trusting its own list.
     assert.match(read(STRIP), /isClaimDisplayable\(metric\.claimId\)/);
@@ -200,18 +217,25 @@ describe("the projects count is displayed without being called verified", () => 
         (PUBLIC_CLAIM_IDS as readonly string[]).includes(metric.claimId),
         `${metric.claimId} must be a registered claim`
       );
-      assert.equal(
-        isClaimDisplayable(metric.claimId),
-        true,
-        `${metric.claimId} is on the strip but not displayable`
-      );
-      assert.doesNotMatch(metric.label, /rating|review|satisfaction|warranty/i);
     }
+    /*
+     * The strip FILTERS on the gate rather than assuming its own list is
+     * publishable, so a listed-but-ungated metric is correct behaviour, not a
+     * bug: the warranty sits here waiting for its terms and renders nothing.
+     */
+    const rendered = DISCOVERY_PROOF_METRICS.filter((m) =>
+      isClaimDisplayable(m.claimId)
+    );
+    assert.equal(
+      rendered.some((m) => m.claimId === "warranty-years"),
+      false,
+      "the warranty must not render while its terms are pending"
+    );
+    assert.equal(rendered.length, 3);
     for (const suppressed of [
       "average-rating",
       "client-reviews",
       "client-satisfaction",
-      "warranty-years",
     ]) {
       assert.equal(
         DISCOVERY_PROOF_METRICS.some((m) => m.claimId === suppressed),
@@ -355,21 +379,51 @@ describe("the WhatsApp CTA is configured, validated, or absent", () => {
     assert.doesNotMatch(PUBLIC_WHATSAPP.prefilledMessage, /offer|discount|deal/i);
   });
 
-  test("the dock renders WhatsApp only when a link exists — never dead", () => {
-    const dock = code(read(DOCK));
-    assert.match(dock, /const whatsappHref = getPublicWhatsAppHref\(\)/);
-    assert.match(dock, /\{whatsappHref \? \(/);
-    assert.match(dock, /\) : null\}/);
-    assert.match(dock, /href=\{whatsappHref\}/);
+  test("WhatsApp renders only when a link exists — never dead", () => {
+    /*
+     * WhatsApp moved out of the dock and became a floating action. The rule it
+     * carried moved with it: configured or absent, never present-and-dead.
+     */
+    const fab = code(read(WA_FAB));
+    assert.match(fab, /const href = getPublicWhatsAppHref\(\)/);
+    assert.match(fab, /if \(!href\) \{[\s\S]{0,40}return null;/);
+    assert.match(fab, /href=\{href\}/);
+    // And the dock no longer knows about WhatsApp at all.
+    assert.doesNotMatch(code(read(DOCK)), /getPublicWhatsAppHref|whatsapp/i);
   });
 
-  test("both dock actions carry stable hooks and nothing reads them yet", () => {
+  test("every conversion action carries a stable hook and nothing reads them yet", () => {
     const dock = read(DOCK);
-    assert.match(dock, /data-conversion-action="whatsapp-click"/);
+    const fab = read(WA_FAB);
+    assert.match(dock, /data-conversion-action="portfolio-sticky"/);
     assert.match(dock, /data-conversion-action="consultation-sticky"/);
-    for (const tag of ["gtag(", "fbq(", "dataLayer", "googletagmanager"]) {
-      assert.ok(!dock.includes(tag), `L1.1 must not add ${tag}`);
+    assert.match(fab, /data-conversion-action="whatsapp-fab"/);
+    for (const source of [dock, fab]) {
+      for (const tag of ["gtag(", "fbq(", "dataLayer", "googletagmanager"]) {
+        assert.ok(!source.includes(tag), `must not add ${tag}`);
+      }
     }
+  });
+
+  test("the floating WhatsApp wiggles briefly, and not at all under reduced motion", () => {
+    const css = read(DISCOVERY_CSS);
+    assert.match(css, /@keyframes od-wa-wiggle/);
+    // A transform-only keyframe: no reflow, so nothing shifts around it.
+    const at = css.indexOf("@keyframes od-wa-wiggle");
+    const frames = css.slice(at, css.indexOf("}\n}", at));
+    assert.match(frames, /transform: rotate/);
+    assert.doesNotMatch(frames, /margin|width|height|top|left/);
+    // Most of the cycle is the rest state — an occasional cue, not a jiggle.
+    assert.match(css, /animation: od-wa-wiggle 10s/);
+    // And the whole thing is off when the visitor asked for less motion.
+    const reduced = css.slice(css.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
+    assert.match(reduced, /\.od-disc-wa \{[\s\S]{0,40}animation: none;/);
+    /*
+     * No device haptics. Comment-stripped, because the component's docblock
+     * EXPLAINS why it does not call it — a check that trips on prose is a check
+     * that teaches you to write less of it.
+     */
+    assert.doesNotMatch(code(read(WA_FAB)), /navigator\.vibrate/);
   });
 
   test("the dock buttons clear 48px and respect the safe area", () => {
@@ -595,7 +649,7 @@ describe("an unasked qualifier is absent, not invented", () => {
 
 describe("no measurement layer arrived with this change", () => {
   test("no tag, pixel or container on any touched surface", () => {
-    for (const rel of [HERO, COUNT_UP, STRIP, DOCK, CONTACT, FORM]) {
+    for (const rel of [HERO, COUNT_UP, STRIP, DOCK, WA_FAB, CONTACT, FORM]) {
       const source = read(rel);
       for (const tag of [
         "googletagmanager",

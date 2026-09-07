@@ -59,11 +59,13 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
     <main id="portfolio-page-main" className="od-portfolio-main">
       <header className="od-portfolio-header">
         <p className="od-portfolio-eyebrow">ONEDECORE Portfolio</p>
-        <h1 className="od-portfolio-title">Interior Design Portfolio</h1>
+        <h1 className="od-portfolio-title">
+          Interiors we&rsquo;ve delivered across Pune.
+        </h1>
         <p className="od-portfolio-lede">
           {parsed.service
             ? `Showing projects for ${PORTFOLIO_SERVICE_LABELS[parsed.service]}`
-            : "Explore our curated showcase of completed residential interior projects."}
+            : "Complete home interiors, modular kitchens and custom wardrobes — photographed as delivered."}
         </p>
       </header>
 
