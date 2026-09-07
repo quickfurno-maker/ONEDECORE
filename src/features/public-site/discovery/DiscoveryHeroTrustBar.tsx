@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { HOME_CLAIMS, HOME_CLAIM_COPY } from "@/features/public-site/home-r4/claims";
+import {
+  HOME_CLAIMS,
+  HOME_CLAIM_COPY,
+  canQuotePublicClaim,
+} from "@/features/public-site/home-r4/claims";
 
 const DURATION_MS = 1200;
 
@@ -70,10 +74,23 @@ function formatRating(value: number): string {
   return `${value.toFixed(1)}/5`;
 }
 
-/** Premium animated trust bar — hero metrics with one-shot counter motion. */
+/**
+ * Premium animated trust bar — hero metrics with one-shot counter motion.
+ *
+ * The two counters animate a projects total and a star rating. Neither figure
+ * is publicly evidenced, so neither cell renders: a number that counts itself
+ * up to 500 is a more emphatic version of the same unsourced claim, not a
+ * softer one. The in-house manufacturing badge stays — it states how the
+ * business operates rather than measuring an outcome — and the bar keeps its
+ * place in the hero with a qualitative cell alongside it.
+ */
 export function DiscoveryHeroTrustBar() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
+  const showProjects = canQuotePublicClaim("projects-delivered");
+  const showRating = canQuotePublicClaim("average-rating");
+  // The hooks run unconditionally — React requires it — but their output is
+  // only rendered when the claim behind it may be quoted.
   const projects = useCountUp(HOME_CLAIMS.projectsDelivered, active);
   const rating = useCountUp(HOME_CLAIMS.rating, active, { decimals: 1 });
 
@@ -103,23 +120,42 @@ export function DiscoveryHeroTrustBar() {
       role="group"
       aria-label="ONEDECORE trust metrics"
     >
-      <div className="od-disc-trust-bar__cell">
-        <span className="od-disc-trust-bar__value" aria-hidden="true">
-          {formatProjects(projects)}
-        </span>
-        <span className="od-sr-only">
-          {HOME_CLAIMS.projectsDelivered}+ Projects Delivered
-        </span>
-        <span className="od-disc-trust-bar__label">Projects Delivered</span>
-      </div>
+      {showProjects ? (
+        <div className="od-disc-trust-bar__cell">
+          <span className="od-disc-trust-bar__value" aria-hidden="true">
+            {formatProjects(projects)}
+          </span>
+          <span className="od-sr-only">
+            {HOME_CLAIMS.projectsDelivered}+ Projects Delivered
+          </span>
+          <span className="od-disc-trust-bar__label">Projects Delivered</span>
+        </div>
+      ) : (
+        <div className="od-disc-trust-bar__cell od-disc-trust-bar__cell--badge">
+          <span className="od-disc-trust-bar__kicker">End to end</span>
+          <span
+            className="od-disc-trust-bar__value od-disc-trust-bar__value--text"
+            aria-hidden="true"
+          >
+            Design To Installation
+          </span>
+          <span className="od-sr-only">
+            Design to installation handled end to end
+          </span>
+        </div>
+      )}
 
-      <div className="od-disc-trust-bar__cell">
-        <span className="od-disc-trust-bar__value" aria-hidden="true">
-          {formatRating(rating)}
-        </span>
-        <span className="od-sr-only">{HOME_CLAIMS.rating}/5 Average Rating</span>
-        <span className="od-disc-trust-bar__label">Average Rating</span>
-      </div>
+      {showRating ? (
+        <div className="od-disc-trust-bar__cell">
+          <span className="od-disc-trust-bar__value" aria-hidden="true">
+            {formatRating(rating)}
+          </span>
+          <span className="od-sr-only">
+            {HOME_CLAIMS.rating}/5 Average Rating
+          </span>
+          <span className="od-disc-trust-bar__label">Average Rating</span>
+        </div>
+      ) : null}
 
       <div className="od-disc-trust-bar__cell od-disc-trust-bar__cell--badge">
         <span className="od-disc-trust-bar__kicker">In-house</span>

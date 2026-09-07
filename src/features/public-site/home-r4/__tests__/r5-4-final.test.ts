@@ -14,6 +14,7 @@ import {
   HOME_VERIFIED_REVIEWS,
 } from "../reviews.ts";
 import { HOME_PROJECT_PROOF_MODE } from "../project-proof.ts";
+import { PM_FAQS, PM_NAV_ITEMS } from "../content.ts";
 
 const root = process.cwd();
 const home = join(root, "src/features/public-site/home-r4");
@@ -125,9 +126,24 @@ describe("R5.4 navigation and FAQ", () => {
   test("Reviews replaces Work; Portfolio direct link exists", () => {
     const content = read("content.ts");
     const nav = read("HomeNavigation.tsx");
-    assert.match(content, /label: "Reviews"/);
+    /*
+     * R5.4 replaced a "Work" nav entry pointing at #projects with one pointing
+     * at #reviews, and asserted the literal `label: "Reviews"`. That literal is
+     * gone: the label now follows `canShowAggregateReviewSummary()`, because
+     * while the aggregate is suppressed the section renders process copy and
+     * calling it "Reviews" would promise something the page does not deliver.
+     *
+     * The R5.4 requirement itself is unchanged and still asserted — no "Work"
+     * entry, no #projects anchor, and the entry points at #reviews.
+     */
     assert.doesNotMatch(content, /label: "Work"/);
     assert.doesNotMatch(content, /#projects/);
+    assert.match(content, /label: PM_REVIEWS_NAV_LABEL/);
+    assert.match(content, /PM_REVIEWS_NAV_LABEL = canShowAggregateReviewSummary\(\)/);
+    assert.ok(
+      PM_NAV_ITEMS.some((item) => item.href === "#reviews"),
+      "the nav must still point at the reviews anchor"
+    );
     assert.match(nav, /href="\/portfolio"/);
     assert.match(nav, /data-conversion-action="portfolio-view"/);
     assert.match(nav, /role=\{open \? "dialog" : undefined\}/);
@@ -141,8 +157,16 @@ describe("R5.4 navigation and FAQ", () => {
 
   test("FAQ is ten questions, closed by default, with reviews + portfolio", () => {
     const content = read("content.ts");
-    assert.equal((content.match(/question:/g) ?? []).length, 10);
-    assert.match(content, /How are ONEDECORE’s ratings and review count presented/);
+    /*
+     * This counted `question:` occurrences in the source, which stopped
+     * measuring FAQ entries once one of them gained a `questionActive` variant
+     * and a resolver with typed `question` fields. Count the entries.
+     */
+    assert.equal(PM_FAQS.length, 10);
+    // The reviews entry still exists; its wording now follows the evidence
+    // gate, because the aggregate it used to describe is suppressed.
+    assert.ok(PM_FAQS.some((faq) => faq.id === "reviews"));
+    assert.match(content, /question: canShowAggregateReviewSummary\(\)/);
     assert.match(content, /Where can I explore ONEDECORE projects/);
     assert.doesNotMatch(content, /Can every design be customised/);
     assert.match(read("HomeFaq.tsx"), /useState<string \| null>\(null\)/);

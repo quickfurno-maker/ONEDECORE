@@ -64,7 +64,7 @@ export function InteriorsConversionPage({
         <HomeProcess />
         <InteriorsServiceAreas />
         <HomeReviews />
-        <HomeFaq />
+        <HomeFaq leadFormMode={leadFormMode} />
         <HomePlan leadFormMode={leadFormMode} />
       </HomeShell>
     </PlanProvider>

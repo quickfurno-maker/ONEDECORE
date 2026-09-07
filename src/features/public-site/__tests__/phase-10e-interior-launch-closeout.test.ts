@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
-import { HOME_CLAIMS } from "../home-r4/claims.ts";
+import { HOME_CLAIMS, canQuotePublicClaim } from "../home-r4/claims.ts";
 
 const root = process.cwd();
 
@@ -24,8 +24,10 @@ describe("Phase 10E — interior launch closeout", () => {
     const trust = read(
       "src/features/public-site/discovery/DiscoveryHeroTrustBar.tsx"
     );
-    // Server render must emit the real claim; a useState(0) seed would ship
-    // "0+ Projects Delivered" / "0.0/5" to every pre-hydration and no-JS visitor.
+    // When a counter DOES render, the server must emit the real claim: a
+    // useState(0) seed would ship "0+ Projects Delivered" / "0.0/5" to every
+    // pre-hydration and no-JS visitor. Whether it renders at all is now the
+    // evidence gate's decision — see the L1 claim-evidence correction.
     assert.match(trust, /useState\(target\)/);
     assert.doesNotMatch(trust, /useState\(0\)/);
     // Values still come from the single claims source of truth.
@@ -45,8 +47,11 @@ describe("Phase 10E — interior launch closeout", () => {
   });
 
   test("approved claims stay non-zero so the seeded render is meaningful", () => {
+    // Approval keeps the numbers meaningful; it does not publish them.
     assert.ok(HOME_CLAIMS.projectsDelivered > 0);
     assert.ok(HOME_CLAIMS.rating > 0);
+    assert.equal(canQuotePublicClaim("projects-delivered"), false);
+    assert.equal(canQuotePublicClaim("average-rating"), false);
   });
 
   test("shop search and cart utilities are gated on shopEnabled", () => {

@@ -238,7 +238,7 @@ export function DiscoveryHomePage({
               </p>
               <ul className="od-disc-consult__benefits">
                 <li>{PUBLIC_CONSULTATION.label}</li>
-                <li>10-Year warranty on approved scopes</li>
+                <li>Warranty on approved scopes</li>
                 <li>Own manufacturing for custom work</li>
               </ul>
               {!showLeadForm ? (

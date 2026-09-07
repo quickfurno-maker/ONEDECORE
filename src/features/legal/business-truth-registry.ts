@@ -8,10 +8,34 @@ import {
   HOME_CLAIM_COPY,
 } from "../public-site/home-r4/claims.ts";
 import { HOME_REVIEW_MODE } from "../public-site/home-r4/reviews.ts";
+import {
+  PUBLIC_CLAIM_EVIDENCE,
+  type PublicClaimId,
+} from "./claim-evidence.ts";
 import { HOME_PROJECT_PROOF_MODE } from "../public-site/home-r4/project-proof.ts";
 
-export type PublicEvidenceStatus = "pending" | "verified" | "withdrawn";
-export type LegalTermsStatus = "pending" | "approved" | "not-applicable";
+export type {
+  PublicEvidenceStatus,
+  LegalTermsStatus,
+} from "./claim-evidence.ts";
+
+import type {
+  PublicEvidenceStatus,
+  LegalTermsStatus,
+} from "./claim-evidence.ts";
+
+/**
+ * The statuses are recorded ONCE, in `claim-evidence.ts`, and read from there.
+ *
+ * They used to be typed out again in every entry below, which meant the
+ * register and the gate that decides what renders could disagree without
+ * anything noticing. Now the register reports the same fact the page obeys.
+ */
+const evidenceOf = (claimId: PublicClaimId): PublicEvidenceStatus =>
+  PUBLIC_CLAIM_EVIDENCE[claimId].evidence;
+
+const legalTermsOf = (claimId: PublicClaimId): LegalTermsStatus =>
+  PUBLIC_CLAIM_EVIDENCE[claimId].legalTerms;
 
 export interface BusinessTruthEntry {
   readonly claimId: string;
@@ -43,8 +67,8 @@ export const BUSINESS_TRUTH_REGISTRY: readonly BusinessTruthEntry[] = [
     displayCopy: HOME_CLAIM_COPY.projectsDelivered,
     displayLocations: ["homepage-hero", "homepage-proof-strip", "homepage-value"],
     ownerApprovalDisplayCopy: true,
-    publicEvidenceStatus: "pending",
-    legalTermsStatus: "pending",
+    publicEvidenceStatus: evidenceOf("projects-delivered"),
+    legalTermsStatus: legalTermsOf("projects-delivered"),
     structuredDataPermission: false,
     namedReviewPermission: false,
     reviewNotes: [
@@ -58,8 +82,8 @@ export const BUSINESS_TRUTH_REGISTRY: readonly BusinessTruthEntry[] = [
     displayCopy: HOME_CLAIM_COPY.rating,
     displayLocations: ["homepage-reviews-section"],
     ownerApprovalDisplayCopy: true,
-    publicEvidenceStatus: "pending",
-    legalTermsStatus: "pending",
+    publicEvidenceStatus: evidenceOf("average-rating"),
+    legalTermsStatus: legalTermsOf("average-rating"),
     structuredDataPermission: false,
     namedReviewPermission: false,
     reviewNotes: [
@@ -74,8 +98,8 @@ export const BUSINESS_TRUTH_REGISTRY: readonly BusinessTruthEntry[] = [
     displayCopy: HOME_CLAIM_COPY.reviews,
     displayLocations: ["homepage-reviews-section"],
     ownerApprovalDisplayCopy: true,
-    publicEvidenceStatus: "pending",
-    legalTermsStatus: "pending",
+    publicEvidenceStatus: evidenceOf("client-reviews"),
+    legalTermsStatus: legalTermsOf("client-reviews"),
     structuredDataPermission: false,
     namedReviewPermission: false,
     reviewNotes: [
@@ -89,8 +113,8 @@ export const BUSINESS_TRUTH_REGISTRY: readonly BusinessTruthEntry[] = [
     displayCopy: HOME_CLAIM_COPY.warranty,
     displayLocations: ["homepage-proof-strip", "homepage-value"],
     ownerApprovalDisplayCopy: true,
-    publicEvidenceStatus: "pending",
-    legalTermsStatus: "pending",
+    publicEvidenceStatus: evidenceOf("warranty-years"),
+    legalTermsStatus: legalTermsOf("warranty-years"),
     reviewNotes: [
       `Numeric source: HOME_CLAIMS.warrantyYears (${HOME_CLAIMS.warrantyYears}).`,
       "Detailed warranty category terms pending — see warranty-matrix.ts.",
@@ -105,8 +129,8 @@ export const BUSINESS_TRUTH_REGISTRY: readonly BusinessTruthEntry[] = [
     displayCopy: HOME_CLAIM_COPY.satisfaction,
     displayLocations: ["homepage-reviews-section"],
     ownerApprovalDisplayCopy: true,
-    publicEvidenceStatus: "pending",
-    legalTermsStatus: "pending",
+    publicEvidenceStatus: evidenceOf("client-satisfaction"),
+    legalTermsStatus: legalTermsOf("client-satisfaction"),
     structuredDataPermission: false,
     namedReviewPermission: false,
     reviewNotes: [
@@ -119,8 +143,8 @@ export const BUSINESS_TRUTH_REGISTRY: readonly BusinessTruthEntry[] = [
     displayCopy: HOME_CLAIM_COPY.customDesigns,
     displayLocations: ["homepage-value"],
     ownerApprovalDisplayCopy: true,
-    publicEvidenceStatus: "pending",
-    legalTermsStatus: "pending",
+    publicEvidenceStatus: evidenceOf("custom-designs"),
+    legalTermsStatus: legalTermsOf("custom-designs"),
     structuredDataPermission: false,
     namedReviewPermission: false,
     reviewNotes: [
@@ -133,8 +157,8 @@ export const BUSINESS_TRUTH_REGISTRY: readonly BusinessTruthEntry[] = [
     displayCopy: HOME_CLAIM_COPY.manufacturing,
     displayLocations: ["homepage-factory-section"],
     ownerApprovalDisplayCopy: true,
-    publicEvidenceStatus: "pending",
-    legalTermsStatus: "pending",
+    publicEvidenceStatus: evidenceOf("own-manufacturing-unit"),
+    legalTermsStatus: legalTermsOf("own-manufacturing-unit"),
     structuredDataPermission: false,
     namedReviewPermission: false,
     reviewNotes: [
@@ -148,8 +172,8 @@ export const BUSINESS_TRUTH_REGISTRY: readonly BusinessTruthEntry[] = [
     displayCopy: HOME_CLAIM_COPY.freeConsultation,
     displayLocations: ["homepage-hero", "homepage-cta"],
     ownerApprovalDisplayCopy: true,
-    publicEvidenceStatus: "pending",
-    legalTermsStatus: "pending",
+    publicEvidenceStatus: evidenceOf("free-design-consultation"),
+    legalTermsStatus: legalTermsOf("free-design-consultation"),
     structuredDataPermission: false,
     namedReviewPermission: false,
     reviewNotes: [

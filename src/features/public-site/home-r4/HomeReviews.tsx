@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PM_REVIEWS, PM_SECTION_IDS } from "./content";
 import { usePlan } from "./PlanContext";
 import {
+  canShowAggregateReviewSummary,
   canShowVerifiedExcerpts,
   HOME_REVIEW_MODE,
   HOME_REVIEW_SOURCE_URL,
@@ -66,10 +67,23 @@ function VerifiedExcerpts() {
   );
 }
 
-/** Aggregate client review signals — no unverified excerpts. */
+/**
+ * Aggregate client review signals — no unverified excerpts, and no aggregate
+ * either until there is a source to cite.
+ *
+ * `canShowAggregateReviewSummary()` is false while the rating, the review count
+ * and the satisfaction figure are unevidenced and `HOME_REVIEW_SOURCE_URL` is
+ * null. In that state the score, the decorative star field and the two stat
+ * cells are not rendered at all: a five-star graphic reads as a platform rating
+ * that does not exist, and softening the number would not make it sourced.
+ *
+ * The section itself stays. It carries the process rail and both conversion
+ * CTAs, and its heading changes with the copy rather than the markup.
+ */
 export function HomeReviews() {
   const { openPlanner } = usePlan();
   const { rating, count, satisfactionPercent } = HOME_REVIEW_SUMMARY;
+  const showAggregate = canShowAggregateReviewSummary();
 
   return (
     <section
@@ -87,6 +101,7 @@ export function HomeReviews() {
           <p className="pm-lede">{PM_REVIEWS.body}</p>
         </Reveal>
 
+        {showAggregate ? (
         <Reveal className="pm-reviews__aggregate" order={1}>
           <div
             className="pm-reviews__ratingBlock"
@@ -122,6 +137,7 @@ export function HomeReviews() {
             </li>
           </ul>
         </Reveal>
+        ) : null}
 
         <Reveal className="pm-reviews__rail" order={2}>
           <p className="pm-reviews__railLabel">{PM_REVIEWS.railLabel}</p>
@@ -165,11 +181,13 @@ export function HomeReviews() {
 
         <noscript>
           <div className="pm-noscript">
-            <p>
-              {rating}/5 {PM_REVIEWS.ratingCaption} · {count}+{" "}
-              {PM_REVIEWS.reviewsCaption} · {satisfactionPercent}%{" "}
-              {PM_REVIEWS.satisfactionCaption}
-            </p>
+            {showAggregate ? (
+              <p>
+                {rating}/5 {PM_REVIEWS.ratingCaption} · {count}+{" "}
+                {PM_REVIEWS.reviewsCaption} · {satisfactionPercent}%{" "}
+                {PM_REVIEWS.satisfactionCaption}
+              </p>
+            ) : null}
             <ul>
               {PM_REVIEWS.railItems.map((item) => (
                 <li key={item}>{item}</li>

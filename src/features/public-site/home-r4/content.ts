@@ -9,7 +9,8 @@
  * until public evidence URLs exist.
  */
 import { BUDGET_COMFORT_OPTIONS, type BudgetComfortId } from "./budget-config.ts";
-import { HOME_CLAIMS } from "./claims.ts";
+import { HOME_CLAIMS, canQuotePublicClaim } from "./claims.ts";
+import { canShowAggregateReviewSummary } from "./reviews.ts";
 import {
   FEATURED_PORTFOLIO_COPY,
   PROCESS_STEPS,
@@ -34,12 +35,25 @@ export const PM_SECTION_IDS = {
   plan: "plan",
 } as const;
 
+/**
+ * The section at `#reviews` is only a reviews section when it can show reviews.
+ *
+ * While the rating, the review count and the satisfaction figure are
+ * unevidenced and there is no source URL to cite, that section renders process
+ * copy instead — so labelling the anchor "Reviews" would promise something the
+ * page does not deliver. The anchor id is deliberately unchanged: renaming it
+ * would break existing links and scroll-spy for no gain.
+ */
+export const PM_REVIEWS_NAV_LABEL = canShowAggregateReviewSummary()
+  ? "Reviews"
+  : "How We Work";
+
 export const PM_NAV_ITEMS = [
   { label: "Services", href: `#${PM_SECTION_IDS.services}` },
   { label: "Estimate", href: `#${PM_SECTION_IDS.estimate}` },
   { label: "Why ONEDECORE", href: `#${PM_SECTION_IDS.why}` },
   { label: "Process", href: `#${PM_SECTION_IDS.process}` },
-  { label: "Reviews", href: `#${PM_SECTION_IDS.reviews}` },
+  { label: PM_REVIEWS_NAV_LABEL, href: `#${PM_SECTION_IDS.reviews}` },
   { label: "FAQs", href: `#${PM_SECTION_IDS.faqs}` },
 ] as const;
 
@@ -213,17 +227,26 @@ export const PM_HERO = {
   areasCollapseLabel: "Show fewer areas",
 } as const;
 
+/**
+ * Hero credibility cells, with unevidenced figures withheld.
+ *
+ * The projects count and the rating are dropped rather than softened — a cell
+ * reading "Many" where "500+" used to be is the same unsourced claim with worse
+ * copy. What remains states how ONEDECORE works, which needs no measurement.
+ */
 export const PM_CREDIBILITY = [
-  {
-    id: "projects",
-    stat: `${HOME_CLAIMS.projectsDelivered}+`,
-    label: "Projects Delivered",
-  },
-  {
-    id: "rating",
-    stat: `${HOME_CLAIMS.rating}/5`,
-    label: "Average Rating",
-  },
+  ...(canQuotePublicClaim("projects-delivered")
+    ? [
+        {
+          id: "projects",
+          stat: `${HOME_CLAIMS.projectsDelivered}+`,
+          label: "Projects Delivered",
+        },
+      ]
+    : []),
+  ...(canQuotePublicClaim("average-rating")
+    ? [{ id: "rating", stat: `${HOME_CLAIMS.rating}/5`, label: "Average Rating" }]
+    : []),
   {
     id: "manufacturing",
     stat: "Own",
@@ -231,8 +254,17 @@ export const PM_CREDIBILITY = [
   },
   {
     id: "warranty",
-    stat: `${HOME_CLAIMS.warrantyYears}-Year`,
-    label: "Warranty",
+    stat: canQuotePublicClaim("warranty-years")
+      ? `${HOME_CLAIMS.warrantyYears}-Year`
+      : "Covered",
+    label: canQuotePublicClaim("warranty-years")
+      ? "Warranty"
+      : "Approved Scopes",
+  },
+  {
+    id: "process",
+    stat: "End To End",
+    label: "Design To Installation",
   },
 ] as const;
 
@@ -384,19 +416,32 @@ export const PM_SERVICE_CTA = PM_CTA.open;
 
 /* ----------------------------------------------------------- proof strip */
 
+/**
+ * Proof metrics. The two performance figures are withheld; what remains counts
+ * ONEDECORE's own service structure, which is a fact about the offer rather
+ * than a claim about results.
+ */
 export const PM_PROOF_METRICS = [
-  {
-    id: "projects",
-    value: HOME_CLAIMS.projectsDelivered,
-    suffix: "+",
-    label: "Projects Delivered",
-  },
-  {
-    id: "custom",
-    value: HOME_CLAIMS.customDesignPercent,
-    suffix: "%",
-    label: "Custom Designs",
-  },
+  ...(canQuotePublicClaim("projects-delivered")
+    ? [
+        {
+          id: "projects",
+          value: HOME_CLAIMS.projectsDelivered,
+          suffix: "+",
+          label: "Projects Delivered",
+        },
+      ]
+    : []),
+  ...(canQuotePublicClaim("custom-designs")
+    ? [
+        {
+          id: "custom",
+          value: HOME_CLAIMS.customDesignPercent,
+          suffix: "%",
+          label: "Custom Designs",
+        },
+      ]
+    : []),
   {
     id: "services",
     value: 3,
@@ -576,7 +621,10 @@ export const PM_FACTORY = {
     "production reference",
     "installation check",
   ],
-  calloutTitle: "10-Year Warranty Support",
+  // The duration is what is pending, not the support itself.
+  calloutTitle: canQuotePublicClaim("warranty-years")
+    ? `${HOME_CLAIMS.warrantyYears}-Year Warranty Support`
+    : "After-Sales Support On Approved Scopes",
   calloutBody:
     "Warranty coverage applies according to ONEDECORE’s approved written terms, product categories and exclusions.",
   imageryNote:
@@ -586,10 +634,21 @@ export const PM_FACTORY = {
 
 /* ----------------------------------------------------------- reviews */
 
+/**
+ * The heading and lede switch when the rating cannot be quoted.
+ *
+ * The section still earns its place — it carries the process rail and the two
+ * conversion CTAs — but it stops calling itself "Client Reviews" and stops
+ * asserting a score. `canShowAggregateReviewSummary()` decides.
+ */
 export const PM_REVIEWS = {
-  eyebrow: "Client Reviews",
-  heading: `Rated ${HOME_CLAIMS.rating}/5 by homeowners across Pune`,
-  body: `More than ${HOME_CLAIMS.reviews} client reviews reflect the confidence homeowners place in ONEDECORE’s custom planning, manufacturing control and coordinated interior delivery.`,
+  eyebrow: canShowAggregateReviewSummary() ? "Client Reviews" : "How We Work",
+  heading: canShowAggregateReviewSummary()
+    ? `Rated ${HOME_CLAIMS.rating}/5 by homeowners across Pune`
+    : "Built around how homeowners across Pune actually decide",
+  body: canShowAggregateReviewSummary()
+    ? `More than ${HOME_CLAIMS.reviews} client reviews reflect the confidence homeowners place in ONEDECORE’s custom planning, manufacturing control and coordinated interior delivery.`
+    : "Custom planning, manufacturing control and coordinated delivery — the parts of an interior project that decide whether it lands on time and as drawn.",
   starLabel: `${HOME_CLAIMS.rating} out of 5 average rating`,
   ratingCaption: "Average Client Rating",
   reviewsCaption: "Client Reviews",
@@ -868,8 +927,16 @@ export const PM_FAQS = [
   {
     id: "warranty",
     question: "Does ONEDECORE provide a warranty?",
-    answer:
-      "ONEDECORE offers 10-year warranty support on eligible modular furniture and interior work according to approved written terms and exclusions.",
+    /*
+     * The duration is pending owner approval, every category period is null and
+     * no claims contact is recorded. The fallback therefore promises neither a
+     * term nor universal coverage — it says coverage follows the agreed written
+     * terms where it applies, and that the public category terms are not yet
+     * published. That is what `/warranty` itself says.
+     */
+    answer: canQuotePublicClaim("warranty-years")
+      ? `ONEDECORE offers ${HOME_CLAIMS.warrantyYears}-year warranty support on eligible modular furniture and interior work according to approved written terms and exclusions.`
+      : "Warranty coverage, where applicable, follows the written terms and exclusions agreed for the project. Detailed public category terms are not yet published.",
   },
   {
     id: "consultation",
@@ -884,10 +951,20 @@ export const PM_FAQS = [
       "ONEDECORE serves homes across Pune, including the listed 26 service areas.",
   },
   {
+    /*
+     * This used to say the homepage shows an aggregate rating and review count.
+     * It no longer does — those figures are withheld until there is evidence
+     * and a source to cite — so the answer described a section that does not
+     * exist. Rather than restore the claim, the entry now answers the question
+     * a homeowner actually has at this stage.
+     */
     id: "reviews",
-    question: "How are ONEDECORE’s ratings and review count presented?",
-    answer:
-      "The homepage shows ONEDECORE’s owner-approved aggregate rating and review count. Individual review excerpts will only appear when their original source records are approved.",
+    question: canShowAggregateReviewSummary()
+      ? "How are ONEDECORE’s ratings and review count presented?"
+      : "How can I judge ONEDECORE’s work before committing?",
+    answer: canShowAggregateReviewSummary()
+      ? "The homepage shows ONEDECORE’s aggregate rating and review count. Individual review excerpts will only appear when their original source records are approved."
+      : "Start with the free consultation and the published Portfolio. Scope, materials and milestones are clarified in writing before work begins, so you can judge the plan rather than a score.",
   },
   {
     id: "portfolio",
@@ -896,12 +973,51 @@ export const PM_FAQS = [
       "Visit the ONEDECORE Portfolio for published project pages. Authentic completed-project photography and case studies will be added as final media is approved.",
   },
   {
+    /*
+     * The answer used to be "No — secure lead submission will connect in a
+     * later release", which stopped being true the moment the lead form went
+     * active and `/interiors` began rendering it.
+     *
+     * The copy carries BOTH forms and the component picks, exactly as PM_CLOSE
+     * already does with its `*Active` variants. This module deliberately does
+     * not import the form mode: it is a copy module, and the Phase 4A guard
+     * asserts that nothing under `home-r4` reaches into the intake feature
+     * outside the gated capture component.
+     */
     id: "submitted",
     question: "Is anything submitted from this page?",
+    questionActive: "What happens when I submit the consultation form?",
     answer:
       "No. You can create, review and copy your interior brief locally. Secure lead submission will connect in a later release.",
+    answerActive:
+      "Your consultation request is sent to ONEDECORE for review and follow-up. Submitting the form does not confirm an appointment or quotation.",
   },
 ] as const;
+
+/**
+ * The FAQ entry to render for a given lead form mode.
+ *
+ * An entry may carry `questionActive` / `answerActive`; when the form is live
+ * those win. Everything else is unconditional.
+ */
+export function resolveFaqEntry(
+  entry: (typeof PM_FAQS)[number],
+  formActive: boolean
+): { readonly id: string; readonly question: string; readonly answer: string } {
+  const active = entry as {
+    readonly id: string;
+    readonly question: string;
+    readonly answer: string;
+    readonly questionActive?: string;
+    readonly answerActive?: string;
+  };
+  return {
+    id: active.id,
+    question:
+      formActive && active.questionActive ? active.questionActive : active.question,
+    answer: formActive && active.answerActive ? active.answerActive : active.answer,
+  };
+}
 
 /* ------------------------------------------------------------------- close */
 
@@ -956,7 +1072,7 @@ export const PM_FOOTER = {
     { label: "Estimate", href: `#${PM_SECTION_IDS.estimate}` },
     { label: "Why ONEDECORE", href: `#${PM_SECTION_IDS.why}` },
     { label: "Process", href: `#${PM_SECTION_IDS.process}` },
-    { label: "Reviews", href: `#${PM_SECTION_IDS.reviews}` },
+    { label: PM_REVIEWS_NAV_LABEL, href: `#${PM_SECTION_IDS.reviews}` },
     { label: "FAQs", href: `#${PM_SECTION_IDS.faqs}` },
   ],
   rights: "All rights reserved.",

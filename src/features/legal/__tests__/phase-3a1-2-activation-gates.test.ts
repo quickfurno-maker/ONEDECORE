@@ -342,8 +342,42 @@ describe("Phase 3A1.2 regression", () => {
     ]) {
       assert.ok(existsSync(join(root, "src/app/(legal)", page)));
     }
+    /*
+     * This used to assert that the sitemap NEVER mentions a legal path. That
+     * was right while the legal documents were drafts: submitting a `noindex`
+     * draft to Search Console would have been an error, and the simplest way
+     * to guarantee it was to keep the paths out of the file entirely.
+     *
+     * They are published now — `LEGAL_PUBLICATION_MODE` is `published` and
+     * `getLegalRobots()` returns `index: true` — so the original hazard is
+     * gone and the pages belong in the sitemap. What must survive is the
+     * REASON the assertion existed: a legal page may never be submitted while
+     * it is not indexable. The sitemap now expresses that as a gate on the
+     * same function the pages themselves render with, so this asserts the gate
+     * rather than the absence.
+     */
     const sitemap = readFileSync(join(root, "src/app/sitemap.ts"), "utf8");
-    assert.doesNotMatch(sitemap, /privacy|terms|warranty|data-rights|communication-consent/);
+    assert.match(sitemap, /getLegalRobots\(\)\.index/);
+    for (const path of [
+      "privacy",
+      "terms",
+      "warranty",
+      "data-rights",
+      "communication-consent",
+    ]) {
+      assert.ok(
+        sitemap.includes(`"${path}"`),
+        `sitemap should list ${path} once published`
+      );
+    }
+    // And they are pushed ONLY from inside that gate.
+    const gateAt = sitemap.indexOf("if (getLegalRobots().index)");
+    const pushAt = sitemap.indexOf("for (const path of LEGAL_PATHS)");
+    assert.ok(gateAt > 0, "the publication gate must exist");
+    assert.ok(
+      pushAt > gateAt,
+      "legal paths must be pushed only inside the publication gate"
+    );
     assert.equal(existsSync(join(root, "src/app/api/leads")), false);
     const claims = readFileSync(
       join(root, "src/features/public-site/home-r4/claims.ts"),

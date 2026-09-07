@@ -2,7 +2,7 @@
  * Homepage review presentation — aggregate claims from claims.ts only.
  * No Review / rating JSON-LD until public evidence URLs exist.
  */
-import { HOME_CLAIMS } from "./claims.ts";
+import { HOME_CLAIMS, canQuotePublicClaim } from "./claims.ts";
 
 export type HomeReviewMode = "aggregate-only" | "verified-excerpts";
 
@@ -44,4 +44,27 @@ export function canShowVerifiedExcerpts(
       Boolean(review.sourceName) &&
       /^https:\/\//i.test(review.sourceUrl)
   );
+}
+
+/**
+ * May the aggregate rating block be shown at all?
+ *
+ * Three things have to be true, and none of them is currently:
+ * the rating must be evidenced, the review count must be evidenced, and there
+ * must be a source a reader can go and check. `HOME_REVIEW_SOURCE_URL` is
+ * `null` and `HOME_VERIFIED_REVIEWS` is empty, so today this is `false` and the
+ * section renders process copy instead of a score.
+ *
+ * The source URL is required separately from the evidence status on purpose. A
+ * rating a visitor cannot verify is not much better than one nobody recorded,
+ * and the decorative five-star field in particular reads as a platform rating
+ * that does not exist.
+ */
+export function canShowAggregateReviewSummary(
+  sourceUrl: string | null = HOME_REVIEW_SOURCE_URL
+): boolean {
+  if (!canQuotePublicClaim("average-rating")) return false;
+  if (!canQuotePublicClaim("client-reviews")) return false;
+  if (!canQuotePublicClaim("client-satisfaction")) return false;
+  return Boolean(sourceUrl);
 }

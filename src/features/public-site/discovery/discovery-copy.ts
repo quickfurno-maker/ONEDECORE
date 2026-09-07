@@ -1,4 +1,8 @@
-import { HOME_CLAIMS, HOME_CLAIM_COPY } from "../home-r4/claims.ts";
+import {
+  HOME_CLAIM_COPY,
+  canQuotePublicClaim,
+  publicClaimLabel,
+} from "../home-r4/claims.ts";
 import {
   PUBLIC_CONSULTATION,
   PUBLIC_CONSULTATION_BY_SERVICE,
@@ -46,17 +50,30 @@ export const DISCOVERY_FURNITURE_PROCESS_STEPS = [
   "Check Serviceability",
 ] as const;
 
+/**
+ * The trust strip, with every unevidenced figure withheld.
+ *
+ * The rating/projects chip is dropped entirely rather than softened: a chip
+ * that said "Highly rated" would be the same unsourced claim in vaguer words.
+ * The warranty chip keeps its meaning without the duration, which is what is
+ * actually pending.
+ */
 export const DISCOVERY_TRUST_STRIP_ITEMS = [
   { id: "consultation", label: "Pune-wide consultation" },
   { id: "manufacturing", label: HOME_CLAIM_COPY.manufacturing },
   { id: "pipeline", label: "Design → Manufacture → Install" },
-  { id: "warranty", label: `${HOME_CLAIMS.warrantyYears}-Year Warranty` },
-  {
-    id: "rating",
-    label: `${HOME_CLAIMS.rating}/5 Average Rating · ${HOME_CLAIMS.projectsDelivered}+ Projects`,
-  },
+  { id: "warranty", label: publicClaimLabel("warranty-years") },
+  ...(canQuotePublicClaim("average-rating") &&
+  canQuotePublicClaim("projects-delivered")
+    ? [
+        {
+          id: "rating",
+          label: `${publicClaimLabel("average-rating")} · ${publicClaimLabel("projects-delivered")}`,
+        },
+      ]
+    : []),
   { id: "areas", label: "Kharadi · Baner · Wakad · Hinjewadi · Koregaon Park" },
-] as const;
+].filter((item): item is { id: string; label: string } => item.label !== null);
 
 export const DISCOVERY_BENEFIT_CARDS = [
   {
@@ -67,7 +84,7 @@ export const DISCOVERY_BENEFIT_CARDS = [
   },
   {
     id: "warranty",
-    title: HOME_CLAIM_COPY.warranty,
+    title: publicClaimLabel("warranty-years") ?? "After-Sales Support",
     body: "Approved interior scopes backed by ONEDECORE's written warranty terms.",
     href: PUBLIC_CONSULTATION.href,
   },
@@ -79,7 +96,7 @@ export const DISCOVERY_BENEFIT_CARDS = [
   },
   {
     id: "custom",
-    title: HOME_CLAIM_COPY.customDesigns,
+    title: publicClaimLabel("custom-designs") ?? "Made To Measure",
     body: "Layouts, storage and finishes planned around your home — not off-the-shelf templates.",
     href: PUBLIC_CONSULTATION.href,
   },
@@ -115,7 +132,7 @@ export const DISCOVERY_PROOF_PILLARS = [
   {
     id: "warranty",
     title: "After-sales support",
-    body: `${HOME_CLAIMS.warrantyYears}-year warranty on approved scopes · ${HOME_CLAIMS.rating}/5 average client rating.`,
+    body: "After-sales support for eligible approved scopes, under the warranty terms agreed for your project.",
   },
   {
     id: "precision",

@@ -1,7 +1,13 @@
 "use client";
 
 import { useId, useState } from "react";
-import { PM_FAQS, PM_FAQ_COPY, PM_SECTION_IDS } from "./content";
+import {
+  PM_FAQS,
+  PM_FAQ_COPY,
+  PM_SECTION_IDS,
+  resolveFaqEntry,
+} from "./content";
+import type { LeadFormMode } from "@/features/lead-intake/public/lead-form-mode";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 
 function Chevron() {
@@ -23,9 +29,19 @@ function Chevron() {
  * Controlled accordion with grid-template-rows motion.
  * Content stays in the DOM (no `hidden`) so open/close can animate.
  */
-export function HomeFaq() {
+export function HomeFaq({
+  leadFormMode = "copy-only",
+}: {
+  /**
+   * Whether the consultation form is live on this page. One FAQ answer depends
+   * on it: "is anything submitted from this page" is only "no" while the form
+   * is not active.
+   */
+  readonly leadFormMode?: LeadFormMode;
+} = {}) {
   const baseId = useId();
   const [openId, setOpenId] = useState<string | null>(null);
+  const formActive = leadFormMode === "active";
 
   return (
     <section
@@ -42,7 +58,8 @@ export function HomeFaq() {
         </Reveal>
 
         <Reveal className="pm-faq__list" order={1}>
-          {PM_FAQS.map((faq) => {
+          {PM_FAQS.map((entry) => {
+            const faq = resolveFaqEntry(entry, formActive);
             const isOpen = openId === faq.id;
             const panelId = `${baseId}-${faq.id}`;
             const triggerId = `${panelId}-trigger`;
