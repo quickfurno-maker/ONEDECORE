@@ -16,7 +16,7 @@
  */
 
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
 
@@ -30,6 +30,7 @@ import {
   budgetRangesForProjectScope,
   isBudgetRangeForScope,
   isLeadProjectScopeCode,
+  projectScopeForServiceDeepLink,
   serviceForProjectScope,
   type LeadProjectScopeCode,
 } from "../project-scope.ts";
@@ -51,12 +52,23 @@ const root = process.cwd();
 const read = (rel: string) =>
   readFileSync(join(root, rel), "utf8").replace(/\r\n/g, "\n");
 
+/** Every file under a directory, as repo-relative paths. */
+function walk(rel: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(join(root, rel))) {
+    const next = `${rel}/${entry}`;
+    if (statSync(join(root, next)).isDirectory()) out.push(...walk(next));
+    else out.push(next);
+  }
+  return out;
+}
+
 const FORM = "src/features/lead-intake/public/PremiumRequirementForm.tsx";
 const CSS = "src/features/lead-intake/public/premium-requirement-form.css";
-const ROUTE = "src/app/design-review/lead-form/page.tsx";
 const CAPTURE = "src/features/public-site/discovery/HomeConsultationCapture.tsx";
+const HOME = "src/features/public-site/discovery/DiscoveryHomePage.tsx";
 const V3_MIGRATION =
-  "supabase/migrations/20260908120000_public_requirement_form_v3.sql";
+  "supabase/migrations/20260907150000_public_requirement_form_v3.sql";
 const V2_MIGRATION =
   "supabase/migrations/20260907130000_public_consultation_single_step_v2.sql";
 
@@ -169,6 +181,20 @@ describe("A. the five scopes and their ladders", () => {
     for (const scope of LEAD_PROJECT_SCOPE_CODES) {
       assert.equal(isBudgetRangeForScope(scope, ""), false);
     }
+  });
+
+  test("a ?service= deep link preselects only where it is unambiguous", () => {
+    /*
+     * `public-nav.ts` still links each service to /?service=<code>#consultation.
+     * Only modular-kitchens names exactly one scope. complete-home-interiors
+     * covers four, and custom-wardrobes covers none — preselecting either would
+     * answer a question the visitor never did.
+     */
+    assert.equal(projectScopeForServiceDeepLink("modular-kitchens"), "kitchen");
+    assert.equal(projectScopeForServiceDeepLink("complete-home-interiors"), null);
+    assert.equal(projectScopeForServiceDeepLink("custom-wardrobes"), null);
+    assert.equal(projectScopeForServiceDeepLink(null), null);
+    assert.equal(projectScopeForServiceDeepLink("kitchen"), null);
   });
 
   test("a stored code can be read back as a label, but only with its scope", () => {
@@ -676,10 +702,55 @@ describe("E. TypeScript and SQL agree about v3", () => {
 /* ========================================================================== */
 
 describe("F. the real surfaces use the real component", () => {
-  test("the homepage capture mounts the requirement form", () => {
+  test("the homepage mounts the requirement form, in place", () => {
+    /*
+     * The homepage renders it through the existing capture wrapper, in the
+     * existing consultation section. The wrapper is the seam; the surrounding
+     * layout is untouched.
+     */
+    const home = read(HOME);
+    assert.match(home, /<HomeConsultationCapture mode=\{leadFormMode\} \/>/);
+
     const capture = read(CAPTURE);
     assert.match(capture, /PremiumRequirementForm/);
     assert.match(capture, /mode=\{mode\}/);
+    // The old form must not be mounted beside the new one.
+    assert.doesNotMatch(capture, /<ConsultationLeadForm/);
+  });
+
+  test("there is exactly ONE requirement form, and no review-only duplicate", () => {
+    /*
+     * WHY THIS TEST EXISTS
+     *
+     * The form was first built behind a localhost-only review route while the
+     * design was being approved. That route has been removed: the approved form
+     * belongs at the real public location, and a second surface rendering a
+     * near-copy is how two implementations start to drift.
+     *
+     * So: nothing may render `PremiumRequirementForm` except the homepage
+     * capture, and the review harness must stay deleted.
+     */
+    const mounts = walk("src")
+      .filter((f) => f.endsWith(".tsx") && !f.includes("__tests__"))
+      .filter((f) => !f.endsWith("PremiumRequirementForm.tsx"))
+      .filter((f) => /<PremiumRequirementForm/.test(read(f)));
+    assert.deepEqual(
+      mounts.map((f) => f.replace(/\\/g, "/")),
+      [CAPTURE],
+      "only the homepage capture may mount the requirement form"
+    );
+
+    for (const gone of [
+      "src/app/design-review",
+      "src/features/lead-intake/public/RequirementFormReview.tsx",
+      "src/features/lead-intake/public/requirement-form-review.css",
+    ]) {
+      assert.equal(
+        existsSync(join(root, gone)),
+        false,
+        `${gone} is review-only scaffolding and must stay removed`
+      );
+    }
   });
 
   test("the form submits through the existing intake client", () => {
@@ -692,17 +763,51 @@ describe("F. the real surfaces use the real component", () => {
     assert.match(source, /getOrCreateKey/);
   });
 
+  test("the deep link is hydration-safe", () => {
+    /*
+     * Reading window.location.search during render would produce "" on the
+     * server and a scope on hydration — a first-render mismatch on exactly the
+     * URLs the deep link exists for. It is read after mount, inside a frame
+     * callback, so the first paint matches the server byte for byte.
+     */
+    const src = read(FORM);
+    const initializer = src.slice(
+      src.indexOf("const [projectScope, setProjectScope]"),
+      src.indexOf("const [budgetRange, setBudgetRange]")
+    );
+    assert.doesNotMatch(initializer, /window|URLSearchParams|location/);
+    /*
+     * A timeout, not a frame callback: rAF is suspended in a backgrounded tab,
+     * so an "open in new tab" deep link would not preselect until the visitor
+     * switched to it.
+     *
+     * Comment-stripped, because the component's own docblock EXPLAINS why rAF
+     * was rejected — and a check that trips on prose is a check that teaches
+     * you to write less of it.
+     */
+    const codeOnly = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
+    assert.match(codeOnly, /useEffect\(\(\) => \{[\s\S]{0,400}window\.setTimeout/);
+    assert.doesNotMatch(codeOnly, /requestAnimationFrame/);
+    assert.match(src, /URLSearchParams\(window\.location\.search\)\.get\("service"\)/);
+    // A deep link must never overwrite a choice already made.
+    assert.match(src, /current === "" \? scope : current/);
+  });
+
   test("preview mode validates and never posts", () => {
     const source = read(FORM);
     assert.match(source, /const canNetworkSubmit = mode === "active";/);
     assert.match(source, /if \(!canNetworkSubmit\) \{\s*\n\s*setUxState\("idle"\);\s*\n\s*return;/);
   });
 
-  test("the review route is fail-closed outside development", () => {
-    const route = read(ROUTE);
-    assert.match(route, /process\.env\.NODE_ENV === "production"/);
-    assert.match(route, /notFound\(\)/);
-    assert.match(route, /robots: \{ index: false, follow: false \}/);
+  test("the form is still gated by the fail-closed lead-form mode", () => {
+    /*
+     * Removing the review route must not remove the production control. The
+     * capture renders nothing in `copy-only`, and the form itself only reaches
+     * the network in `active` — both decided by
+     * NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE, which defaults to copy-only.
+     */
+    const capture = read(CAPTURE);
+    assert.match(capture, /if \(mode === "copy-only"\) \{\s*\n\s*return null;/);
   });
 });
 

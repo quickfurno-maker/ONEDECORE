@@ -5,18 +5,17 @@ import type { LeadFormMode } from "@/features/lead-intake/public/lead-form-mode"
 import "@/features/public-site/home-r4/styles/home-r4.css";
 
 /**
- * Compact homepage requirement wrapper.
+ * The homepage consultation slot.
  *
- * The form owns its own small state (scope + budget + contact), so no planner
- * provider is mounted here. That planner state exists to drive the multi-step
- * interiors planner and its estimator; carrying it for a form that asks five
- * questions only invites property and timeline back in.
+ * This is the seam between the page and the form: `DiscoveryHomePage` decides
+ * WHERE the section sits, this decides WHAT it renders, and the form owns its
+ * own state. No planner provider is mounted — that state exists to drive the
+ * multi-step interiors planner and its estimator, and carrying it for a form
+ * that asks five questions is what once invited property and timeline back in.
  *
- * `ConsultationLeadForm` is still the component the interiors planner surfaces
- * use, and still speaks `public-consult-v2`. This surface — the homepage — now
- * shows the owner-approved requirement form, which speaks v3. Both are real
- * contracts; the difference is which questions the page in front of the visitor
- * actually asked.
+ * The mode gate is deliberately here rather than inside the form: in
+ * `copy-only` the section renders nothing at all, so a misconfigured deploy
+ * shows no form rather than a form that cannot submit.
  */
 export function HomeConsultationCapture({
   mode,

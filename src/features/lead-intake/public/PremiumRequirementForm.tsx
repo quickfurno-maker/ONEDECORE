@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import {
   AREA_LABEL,
   AREA_OPTIONAL_SUFFIX,
@@ -17,6 +17,7 @@ import {
   NAME_LABEL,
   NAME_PLACEHOLDER,
   PROJECT_SCOPE_LABELS,
+  projectScopeForServiceDeepLink,
   REQUIREMENT_LABEL,
   REQUIREMENT_PLACEHOLDER,
   SUBMIT_LABEL,
@@ -133,6 +134,46 @@ export function PremiumRequirementForm({
    */
   const base = useId();
   const id = (suffix: string) => `${base}-${suffix}`;
+
+  /*
+   * `?service=` DEEP LINKS
+   *
+   * `public-nav.ts` still links each service to `/?service=<code>#consultation`.
+   * Only `modular-kitchens` names exactly one scope, so only it preselects; the
+   * other two leave the requirement blank rather than choosing a home size on
+   * the visitor's behalf. See `projectScopeForServiceDeepLink`.
+   *
+   * Read AFTER mount, never in the state initializer: `window.location.search`
+   * is "" on the server and populated on hydration, which is a first-render
+   * mismatch on exactly the URLs the deep link exists for.
+   */
+  useEffect(() => {
+    /*
+     * Deferred rather than set synchronously in the effect body: the first
+     * render must match the server byte for byte, and a synchronous setState
+     * here would also cascade a second render.
+     *
+     * A TIMEOUT rather than `requestAnimationFrame`, which is what the legacy
+     * form uses. rAF is suspended in a backgrounded tab, so a link opened with
+     * "open in new tab" would sit unpreselected until the visitor switched to
+     * it. A timeout fires either way, and "after a macrotask" versus "after
+     * paint" is indistinguishable to anyone looking at the page.
+     *
+     * There is deliberately no "already applied" ref guard. React invokes
+     * effects twice in development; a ref set on the first pass, combined with
+     * the cleanup cancelling that pass, leaves the second pass returning early
+     * and the deep link never applying. The functional update below is the real
+     * guard — it writes only while the requirement is still unchosen, so
+     * running twice is harmless and running once is enough.
+     */
+    const timer = window.setTimeout(() => {
+      const raw = new URLSearchParams(window.location.search).get("service");
+      const scope = projectScopeForServiceDeepLink(raw);
+      // Never overwrite a choice the visitor has already made.
+      if (scope) setProjectScope((current) => (current === "" ? scope : current));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const budgetOptions = budgetRangesForProjectScope(projectScope);
   const budgetLocked = budgetOptions.length === 0;

@@ -140,11 +140,18 @@ describe("Public site simplification — discovery IA", () => {
       * property/timeline questionnaire back into a form that no longer asks
       * them. The single-canonical-path invariant is unchanged.
       */
-    assert.match(wrap, /ConsultationLeadForm/);
     // Comments EXPLAIN why the provider was dropped; assert against code.
     const wrapCode = wrap
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/\/\/.*/g, "");
+    /*
+     * The canonical form is now `PremiumRequirementForm` (public-consult-v3).
+     * Asserted against COMMENT-STRIPPED source: this assertion previously passed
+     * on the word appearing in a docblock, which is the same trap the note above
+     * warns about.
+     */
+    assert.match(wrapCode, /PremiumRequirementForm/);
+    assert.doesNotMatch(wrapCode, /ConsultationLeadForm/);
     assert.doesNotMatch(wrapCode, /PlanProvider/);
     assert.doesNotMatch(wrapCode, /HomeLeadCapture/);
     assert.doesNotMatch(wrap, /HomePlannerSheet|HomeBudgetEstimator|HomePlannerInline/);

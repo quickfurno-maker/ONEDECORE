@@ -214,7 +214,7 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
         "20260907130000_public_consultation_single_step_v2.sql",
         // The premium requirement form contract (public-consult-v3):
         // lead intake only, no COD or payment surface of any kind.
-        "20260908120000_public_requirement_form_v3.sql",
+        "20260907150000_public_requirement_form_v3.sql",
       ],
       "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, CRM 2A-7, CRM 2C cadences, CRM 2D commercial read models, the lead_notes INSERT privilege redrift repair, CRM 2E management analytics, the WhatsApp lead-link repair, and the Workforce V1 attendance lifecycle may follow 9D-D1 COD order foundation"
     );

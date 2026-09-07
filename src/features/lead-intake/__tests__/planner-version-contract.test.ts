@@ -41,7 +41,7 @@ const read = (rel: string) =>
   readFileSync(join(root, rel), "utf8").replace(/\r\n/g, "\n");
 
 const V3_MIGRATION =
-  "supabase/migrations/20260908120000_public_requirement_form_v3.sql";
+  "supabase/migrations/20260907150000_public_requirement_form_v3.sql";
 const V2_MIGRATION =
   "supabase/migrations/20260907130000_public_consultation_single_step_v2.sql";
 const V1_MIGRATION =

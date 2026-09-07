@@ -473,10 +473,16 @@ describe("the visible form is short", () => {
     // test below.
     assert.match(src, /new URLSearchParams\(window\.location\.search\)\.get\("service"\)/);
     assert.match(src, /qualifierForService\(raw\)/);
-    // And the wrapper mounts the adaptive form, not the legacy planner one.
-    const wrapper = read(WRAPPER);
-    assert.match(wrapper, /ConsultationLeadForm/);
-    assert.doesNotMatch(code(wrapper), /HomeLeadCapture|PlanProvider/);
+    /*
+     * The homepage wrapper now mounts `PremiumRequirementForm`
+     * (public-consult-v3); this file's FORM constant still points at the
+     * consultation form, whose own deep-link handling is asserted above.
+     * Comment-stripped, because this assertion once passed on the component
+     * name appearing in a docblock rather than in code.
+     */
+    const wrapper = code(read(WRAPPER));
+    assert.match(wrapper, /PremiumRequirementForm/);
+    assert.doesNotMatch(wrapper, /HomeLeadCapture|PlanProvider/);
   });
 
   test("the deep link is hydration-safe", () => {
@@ -716,7 +722,7 @@ describe("the migration only enables truth", () => {
     );
     assert.equal(
       sorted.pop(),
-      "20260908120000_public_requirement_form_v3.sql",
+      "20260907150000_public_requirement_form_v3.sql",
       "the newest migration is the premium requirement form v3 contract"
     );
   });

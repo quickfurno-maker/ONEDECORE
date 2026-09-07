@@ -43,7 +43,7 @@ describe("Phase 9D-F baseline and payment absence", () => {
   test("latest migration is the public consultation qualifier and deferred payment M38 is absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260908120000_public_requirement_form_v3.sql"
+      "20260907150000_public_requirement_form_v3.sql"
     );
     assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 62);
     assert.equal(

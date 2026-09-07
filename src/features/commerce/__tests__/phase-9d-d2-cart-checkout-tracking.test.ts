@@ -45,7 +45,7 @@ describe("Phase 9D-D2 repository contracts", () => {
   test("latest migration is the public consultation qualifier; deferred payment M38 absent", () => {
     assert.equal(
       latestMigrationName(),
-      "20260908120000_public_requirement_form_v3.sql"
+      "20260907150000_public_requirement_form_v3.sql"
     );
     assert.equal(readdirSync(migrationDir).filter((n) => n.endsWith(".sql")).length, 62);
     assert.equal(

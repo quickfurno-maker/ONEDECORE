@@ -171,6 +171,29 @@ export function serviceForProjectScope(scope: unknown): LeadServiceCode | null {
     : null;
 }
 
+/**
+ * The scope a `?service=` deep link implies — when it implies exactly one.
+ *
+ * `public-nav.ts` links each service to `/?service=<code>#consultation`, and
+ * that preselection should survive the form change where it can do so
+ * truthfully. It can for exactly one service:
+ *
+ *   modular-kitchens         -> kitchen          (one scope, unambiguous)
+ *   complete-home-interiors  -> null             (1/2/3 BHK and villa all map
+ *                                                 to it; picking one would be
+ *                                                 answering for the visitor)
+ *   custom-wardrobes         -> null             (no scope on this form)
+ *
+ * Returning null is the honest answer for the other two: the requirement stays
+ * unselected and the visitor chooses. Guessing would put a project size in CRM
+ * that nobody picked, which is the failure this whole contract exists to avoid.
+ */
+export function projectScopeForServiceDeepLink(
+  service: string | null | undefined
+): LeadProjectScopeCode | null {
+  return service === "modular-kitchens" ? "kitchen" : null;
+}
+
 /** Display label for a stored budget code, for CRM and analytics surfaces. */
 export function budgetRangeLabel(scope: unknown, budget: unknown): string | null {
   const match = budgetRangesForProjectScope(scope).find(
