@@ -863,6 +863,7 @@
 }
 
 .od-disc-dock__btn--primary {
+  flex: 1 1 65%;
   color: #1a120c;
   background: var(--od-gold-light);
 }
@@ -874,8 +875,14 @@
   outline-offset: 2px;
 }
 
+/*
+ * The owner-specified split: WhatsApp ~35%, the consultation CTA ~65%, with the
+ * primary action visually dominant. Basis rather than a width so the flex gap
+ * comes out of both, and only on the narrow bar — the desktop pill sizes to its
+ * content.
+ */
 .od-disc-dock__btn--whatsapp {
-  flex: 0 1 auto;
+  flex: 0 1 35%;
   color: var(--od-text-primary);
   background: color-mix(in srgb, var(--od-bg-section) 88%, transparent);
   border-color: color-mix(in srgb, #25d366 35%, var(--od-line));
@@ -2047,4 +2054,575 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* ========================================================================== */
+/* PREMIUM HOMEPAGE — proof, why, manufacturing, library, process, quality,    */
+/* portfolio and the closing CTA.                                             */
+/*                                                                            */
+/* TONE RHYTHM                                                                */
+/*                                                                            */
+/* The page alternates deep / ivory / neutral rather than running as one       */
+/* continuous dark column. Ivory and neutral are declared as full token SETS,  */
+/* not one-off background overrides: a band that changed only its background   */
+/* would keep ivory text on an ivory ground. Each band re-points the same      */
+/* variables every component already reads, so nothing below needs to know     */
+/* which tone it is sitting on.                                               */
+/* ========================================================================== */
+
+.od-disc-band--ivory {
+  --od-text-primary: #1a1512;
+  --od-text-secondary: #4a3f36;
+  --od-text-muted: #6d5f52;
+  --od-line: rgba(26, 21, 18, 0.12);
+  --od-line-strong: rgba(26, 21, 18, 0.24);
+  --od-gold: #8f6413;
+  background: #f6f1e8;
+  color: var(--od-text-primary);
+}
+
+.od-disc-band--neutral {
+  --od-text-primary: #efe7db;
+  --od-text-secondary: #c9bdae;
+  --od-text-muted: #a2937f;
+  --od-line: rgba(239, 231, 219, 0.12);
+  --od-line-strong: rgba(239, 231, 219, 0.22);
+  background: #1c1613;
+  color: var(--od-text-primary);
+}
+
+/* The editorial headline voice, shared by every new section. */
+.od-disc-display {
+  margin: 0;
+  display: grid;
+  gap: 0.15em;
+  font-size: clamp(1.75rem, 4.2vw, 3rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.od-disc-display span {
+  display: block;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Proof strip                                                                 */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-proof {
+  background: var(--od-bg-deepest);
+  padding-block: clamp(2.25rem, 5vw, 3.75rem);
+  border-bottom: 1px solid var(--od-line);
+}
+
+.od-disc-proof__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* 2x2 on mobile, four across from the first comfortable width. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 2rem) clamp(1rem, 3vw, 2.5rem);
+}
+
+@media (min-width: 62rem) {
+  .od-disc-proof__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.od-disc-proof__item {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  position: relative;
+}
+
+/* Hairline separators, not boxes — and only between columns. */
+@media (min-width: 62rem) {
+  .od-disc-proof__item + .od-disc-proof__item::before {
+    content: "";
+    position: absolute;
+    inset-block: 0.15rem;
+    inset-inline-start: calc(clamp(1rem, 3vw, 2.5rem) / -2);
+    width: 1px;
+    background: var(--od-line);
+  }
+}
+
+.od-disc-proof__value {
+  font-size: clamp(2rem, 6vw, 3.25rem);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--od-gold-light, #f2cd83);
+  font-variant-numeric: tabular-nums;
+}
+
+.od-disc-proof__label {
+  font-size: clamp(0.78rem, 1.6vw, 0.9rem);
+  line-height: 1.35;
+  color: var(--od-text-muted);
+}
+
+.od-disc-proof__footnote {
+  margin: clamp(1.5rem, 4vw, 2.25rem) 0 0;
+  padding-top: clamp(1rem, 2.5vw, 1.5rem);
+  border-top: 1px solid var(--od-line);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--od-text-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Why ONEDECORE                                                               */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-why__head {
+  max-width: 34rem;
+}
+
+.od-disc-why__grid {
+  display: grid;
+  gap: 0;
+  margin-top: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+@media (min-width: 56rem) {
+  .od-disc-why__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(2.5rem, 5vw, 4.5rem);
+  }
+}
+
+/* Hairlines between items, never around them: four equal boxes read as a
+   feature list, which is what every other contractor site already looks like. */
+.od-disc-why__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: clamp(0.9rem, 2vw, 1.4rem);
+  align-items: start;
+  padding-block: clamp(1.5rem, 3.5vw, 2.25rem);
+  border-top: 1px solid var(--od-line);
+}
+
+@media (min-width: 56rem) {
+  .od-disc-why__item:nth-child(-n + 2) {
+    border-top: 0;
+    padding-top: 0;
+  }
+}
+
+.od-disc-why__num {
+  grid-row: 1 / span 2;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--od-gold);
+  padding-top: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.od-disc-why__item h3 {
+  margin: 0;
+  font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.od-disc-why__item p {
+  margin: 0.55rem 0 0;
+  grid-column: 2;
+  color: var(--od-text-secondary);
+  line-height: 1.6;
+  font-size: 0.95rem;
+  max-width: 44ch;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Manufacturing                                                               */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-mfg__shell {
+  display: grid;
+  gap: clamp(1.75rem, 4vw, 3.5rem);
+  align-items: center;
+}
+
+@media (min-width: 62rem) {
+  .od-disc-mfg__shell {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr);
+  }
+}
+
+/* Image first on mobile: the source order already does that. */
+.od-disc-mfg__media {
+  position: relative;
+  border-radius: var(--od-radius-lg, 26px);
+  overflow: hidden;
+  background: var(--od-bg-raised);
+}
+
+.od-disc-mfg__media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  transition: transform 700ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+@media (hover: hover) {
+  .od-disc-mfg__media:hover img {
+    transform: scale(1.03);
+  }
+}
+
+.od-disc-mfg__points {
+  list-style: none;
+  margin: clamp(1.5rem, 3vw, 2.25rem) 0 0;
+  padding: 0;
+  display: grid;
+}
+
+.od-disc-mfg__point {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: clamp(0.9rem, 2vw, 1.4rem);
+  padding-block: clamp(1rem, 2.5vw, 1.35rem);
+  border-top: 1px solid var(--od-line);
+}
+
+.od-disc-mfg__num {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--od-gold);
+  padding-top: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.od-disc-mfg__point h3 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.od-disc-mfg__point p {
+  margin: 0.4rem 0 0;
+  color: var(--od-text-secondary);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Design library rail                                                         */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-library__rail {
+  list-style: none;
+  margin: clamp(1.5rem, 4vw, 2.5rem) 0 0;
+  /* Align the first card with the shell, then let the rail bleed to the edge
+     so the next card can peek. */
+  padding-inline: max(
+    calc((100% - min(80rem, 100% - clamp(2rem, 8vw, 6rem))) / 2),
+    clamp(1rem, 4vw, 3rem)
+  );
+  padding-bottom: 0.5rem;
+  display: flex;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  /* Native scrolling: momentum, keyboard, screen-reader semantics and a
+     scrollbar, none of which a bespoke carousel gets right for free. */
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.od-disc-library__item {
+  /* The partial next card is the affordance that says there is more. */
+  flex: 0 0 74%;
+  scroll-snap-align: start;
+  min-width: 0;
+}
+
+@media (min-width: 48rem) {
+  .od-disc-library__item {
+    flex-basis: 38%;
+  }
+}
+
+@media (min-width: 72rem) {
+  .od-disc-library__item {
+    flex-basis: 28%;
+  }
+}
+
+.od-disc-library__card {
+  display: grid;
+  gap: 0.85rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.od-disc-library__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--od-radius, 18px);
+  overflow: hidden;
+  background: var(--od-bg-raised);
+}
+
+.od-disc-library__media img {
+  object-fit: cover;
+  transition: transform 700ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+@media (hover: hover) {
+  .od-disc-library__card:hover .od-disc-library__media img {
+    transform: scale(1.05);
+  }
+}
+
+.od-disc-library__card:focus-visible {
+  outline: none;
+}
+
+.od-disc-library__card:focus-visible .od-disc-library__media {
+  outline: 2px solid var(--od-gold);
+  outline-offset: 3px;
+}
+
+.od-disc-library__title {
+  font-size: clamp(0.95rem, 2vw, 1.05rem);
+  font-weight: 600;
+}
+
+/* -------------------------------------------------------------------------- */
+/* How it works                                                                */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-how__steps {
+  list-style: none;
+  margin: clamp(1.5rem, 4vw, 2.5rem) 0 0;
+  padding: 0;
+  display: grid;
+  gap: clamp(1.75rem, 4vw, 2.5rem);
+  position: relative;
+}
+
+@media (min-width: 60rem) {
+  .od-disc-how__steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(1.5rem, 3vw, 2.5rem);
+  }
+}
+
+.od-disc-how__step {
+  display: grid;
+  gap: 0.6rem;
+  align-content: start;
+  position: relative;
+  padding-left: 3.25rem;
+}
+
+@media (min-width: 60rem) {
+  .od-disc-how__step {
+    padding-left: 0;
+    padding-top: 3.25rem;
+  }
+}
+
+/* The connecting rail: vertical on mobile, horizontal on desktop. It carries
+   no information the numbered text does not. */
+.od-disc-how__step::before {
+  content: "";
+  position: absolute;
+  background: var(--od-line);
+  inset-block: 0;
+  inset-inline-start: 1.1rem;
+  width: 1px;
+}
+
+.od-disc-how__step:last-child::before {
+  inset-block-end: calc(100% - 2.25rem);
+}
+
+@media (min-width: 60rem) {
+  .od-disc-how__step::before {
+    inset: 1.1rem 0 auto 0;
+    width: auto;
+    height: 1px;
+  }
+
+  .od-disc-how__step:last-child::before {
+    inset-inline-end: calc(100% - 2.25rem);
+    inset-block-end: auto;
+  }
+}
+
+.od-disc-how__marker {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--od-gold) 45%, transparent);
+  border-radius: 50%;
+  background: var(--od-bg-section);
+  color: var(--od-gold);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+
+.od-disc-how__step h3 {
+  margin: 0;
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  line-height: 1.3;
+}
+
+.od-disc-how__step p {
+  margin: 0;
+  color: var(--od-text-secondary);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Quality                                                                     */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-quality__shell {
+  display: grid;
+  gap: clamp(1.75rem, 4vw, 3.5rem);
+}
+
+@media (min-width: 62rem) {
+  .od-disc-quality__shell {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.od-disc-quality__head {
+  margin-bottom: 0;
+  max-width: 34rem;
+}
+
+.od-disc-quality__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.od-disc-quality__item {
+  padding-block: clamp(1rem, 2.5vw, 1.4rem);
+  border-top: 1px solid var(--od-line);
+}
+
+.od-disc-quality__item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.od-disc-quality__item h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--od-gold);
+}
+
+.od-disc-quality__item p {
+  margin: 0.45rem 0 0;
+  color: var(--od-text-secondary);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Portfolio                                                                   */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-homes {
+  border-top: 1px solid var(--od-line);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Closing CTA                                                                 */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-final {
+  background:
+    radial-gradient(
+      120% 100% at 50% 0%,
+      color-mix(in srgb, var(--od-gold) 10%, transparent),
+      transparent 62%
+    ),
+    var(--od-bg-deepest);
+  border-top: 1px solid color-mix(in srgb, var(--od-gold) 24%, transparent);
+  text-align: center;
+}
+
+.od-disc-final__shell {
+  max-width: 46rem;
+}
+
+.od-disc-final__title {
+  justify-items: center;
+}
+
+.od-disc-final__lede {
+  margin-inline: auto;
+  max-width: 44ch;
+}
+
+.od-disc-final__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: clamp(1.5rem, 3vw, 2rem);
+}
+
+@media (max-width: 30rem) {
+  .od-disc-final__actions {
+    flex-direction: column;
+  }
+
+  .od-disc-final__actions > * {
+    width: 100%;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Motion                                                                      */
+/* -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .od-disc-mfg__media img,
+  .od-disc-library__media img {
+    transition: none;
+  }
+
+  .od-disc-mfg__media:hover img,
+  .od-disc-library__card:hover .od-disc-library__media img {
+    transform: none;
+  }
+
+  .od-disc-library__rail {
+    scroll-snap-type: none;
+  }
 }

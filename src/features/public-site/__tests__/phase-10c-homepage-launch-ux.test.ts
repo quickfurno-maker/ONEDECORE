@@ -114,7 +114,13 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.equal(DISCOVERY_SERVICE_CARDS[2]!.cta, "Plan My Wardrobe");
   });
 
-  test("browse tiles include furniture coming soon without shop route", () => {
+  test("the service deep-link record still carries furniture coming soon without a shop route", () => {
+    /*
+     * The browse-tile SECTION was replaced by the design library. The tile
+     * DATA survives as the canonical record of the three service deep links —
+     * which `public-nav.ts` and the library rail both point at — so this
+     * assertion still guards the thing it was written to guard.
+     */
     assert.equal(DISCOVERY_CATEGORY_TILES.length, 4);
     const furniture = DISCOVERY_CATEGORY_TILES.find((tile) => tile.id === "furniture-decor");
     assert.ok(furniture?.comingSoon);
@@ -139,19 +145,18 @@ describe("Phase 10C — homepage launch UX", () => {
      * claim became evidenced. See `claim-evidence.ts`.
      */
     const counter = read(
-      "src/features/public-site/discovery/DiscoveryProjectsCounter.tsx"
+      "src/features/public-site/motion/useCountUp.ts"
     );
     const hero = read("src/features/public-site/discovery/DiscoveryHeroSlider.tsx");
-    const strip = read("src/features/public-site/discovery/DiscoveryTrustStrip.tsx");
+    const strip = read("src/features/public-site/discovery/DiscoveryProofStrip.tsx");
     const css = read("src/features/public-site/discovery/discovery.css");
 
     assert.match(counter, /IntersectionObserver/);
-    assert.match(counter, /HOME_CLAIMS\.projectsDelivered/);
-    assert.match(counter, /canQuotePublicClaim\("projects-delivered"\)/);
+        assert.match(strip, /isClaimDisplayable\(metric\.claimId\)/);
     assert.match(counter, /prefers-reduced-motion/);
-    assert.match(counter, /od-sr-only/);
-    assert.match(strip, /<DiscoveryProjectsCounter \/>/);
-    assert.match(css, /od-disc-projects/);
+    assert.match(strip, /od-sr-only/);
+
+    assert.match(css, /od-disc-proof__value/);
 
     // The hero itself keeps neither the trust bar nor any visible copy.
     assert.doesNotMatch(hero, /DiscoveryHeroTrustBar/);
@@ -168,30 +173,32 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.match(page, /DiscoveryHeroSlider/);
   });
 
-  test("homepage architecture uses slider, trust, benefits, browse, about, process", () => {
+  test("homepage architecture follows the premium narrative order", () => {
     assert.deepEqual([...DISCOVERY_SECTION_ORDER], [
       "header",
       "hero",
-      "trust",
-      "benefits",
-      "browse",
-      "real-homes",
-      "about",
+      "proof",
+      "why",
+      "manufacturing",
+      "design-library",
       "process",
+      "real-homes",
+      "quality",
       "furniture",
       "consultation",
+      "final-cta",
       "footer",
     ]);
 
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
-    const browse = read("src/features/public-site/discovery/DiscoveryBrowseTiles.tsx");
+    const browse = read("src/features/public-site/discovery/DiscoveryDesignLibrary.tsx");
     assert.match(page, /DiscoveryHeroSlider/);
-    assert.match(page, /DiscoveryTrustStrip/);
-    assert.match(page, /DiscoveryBenefitCards/);
-    assert.match(page, /DiscoveryBrowseTiles/);
-    assert.match(browse, /data-od-disc-section="browse"/);
-    assert.match(page, /id="about"/);
-    assert.match(page, /data-od-disc-section="process"/);
+    assert.match(page, /DiscoveryProofStrip/);
+    assert.match(page, /DiscoveryWhy/);
+    assert.match(page, /DiscoveryDesignLibrary/);
+    assert.match(browse, /data-od-disc-section="design-library"/);
+    assert.match(page, /DiscoveryQuality/);
+    assert.match(page, /DiscoveryProcess/);
     assert.match(page, /DiscoveryStickyCta/);
   });
 
@@ -208,7 +215,7 @@ describe("Phase 10C — homepage launch UX", () => {
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     const hero = read("src/features/public-site/discovery/DiscoveryHeroSlider.tsx");
     const copy = read("src/features/public-site/discovery/discovery-copy.ts");
-    const browse = read("src/features/public-site/discovery/DiscoveryBrowseTiles.tsx");
+    const browse = read("src/features/public-site/discovery/DiscoveryDesignLibrary.tsx");
     assert.match(page, /shopEnabled=\{shopLive\}/);
     assert.match(page, /showShopSearch=\{shopLive\}/);
     assert.match(page, /shopLive \? \(/);
@@ -246,7 +253,7 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.match(hero, /<h1 id="od-disc-hero-title" className="od-sr-only">/);
     assert.match(css, /od-disc-dock/);
     assert.match(css, /prefers-reduced-motion/);
-    assert.match(css, /od-disc-trust-strip/);
+    assert.match(css, /od-disc-proof__grid/);
     assert.match(css, /od-disc-hero-progress/);
   });
 
@@ -291,20 +298,51 @@ describe("Phase 10C — homepage launch UX", () => {
 
   test("only the first hero image is prioritized; below-fold imagery stays lazy", () => {
     const hero = read("src/features/public-site/discovery/DiscoveryHeroSlider.tsx");
-    const browse = read("src/features/public-site/discovery/DiscoveryBrowseTiles.tsx");
+    const browse = read("src/features/public-site/discovery/DiscoveryDesignLibrary.tsx");
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     assert.match(hero, /priority=\{index === 0\}/);
     assert.match(hero, /loading=\{index === 0 \? "eager" : "lazy"\}/);
     assert.match(browse, /loading="lazy"/);
     assert.doesNotMatch(browse, /loading="eager"/);
+    // The library rail and the manufacturing image are both below the fold.
+    for (const rel of [
+      "src/features/public-site/discovery/DiscoveryDesignLibrary.tsx",
+      "src/features/public-site/discovery/DiscoveryManufacturing.tsx",
+    ]) {
+      const source = read(rel);
+      assert.match(source, /loading="lazy"/);
+      assert.doesNotMatch(source, /priority/);
+    }
     assert.doesNotMatch(page, /eagerImage=/);
   });
 
-  test("premium polish components exist", () => {
-    assert.ok(existsSync(join(root, "src/features/public-site/discovery/DiscoveryHeroTrustBar.tsx")));
-    assert.ok(existsSync(join(root, "src/features/public-site/discovery/DiscoveryHeroSlider.tsx")));
-    assert.ok(!existsSync(join(root, "src/features/public-site/discovery/DiscoveryPromoStrip.tsx")));
-    assert.ok(existsSync(join(root, "src/features/public-site/discovery/DiscoveryBenefitCards.tsx")));
-    assert.ok(existsSync(join(root, "src/features/public-site/discovery/DiscoveryBrowseTiles.tsx")));
+  test("the premium homepage sections exist, and the replaced ones are gone", () => {
+    const dir = "src/features/public-site/discovery/";
+    for (const name of [
+      "DiscoveryHeroSlider.tsx",
+      "DiscoveryProofStrip.tsx",
+      "DiscoveryWhy.tsx",
+      "DiscoveryManufacturing.tsx",
+      "DiscoveryDesignLibrary.tsx",
+      "DiscoveryProcess.tsx",
+      "DiscoveryQuality.tsx",
+      "DiscoveryFinalCta.tsx",
+    ]) {
+      assert.ok(existsSync(join(root, dir + name)), `${name} must exist`);
+    }
+    /*
+     * Superseded, and deleted rather than left mounted beside their
+     * replacements — two versions of a section is how a homepage starts to
+     * drift from itself.
+     */
+    for (const name of [
+      "DiscoveryPromoStrip.tsx",
+      "DiscoveryBenefitCards.tsx",
+      "DiscoveryBrowseTiles.tsx",
+      "DiscoveryTrustStrip.tsx",
+      "DiscoveryProjectsCounter.tsx",
+    ]) {
+      assert.ok(!existsSync(join(root, dir + name)), `${name} must be removed`);
+    }
   });
 });

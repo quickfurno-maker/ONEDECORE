@@ -34,29 +34,38 @@ function walkFiles(dir: string, acc: string[] = []): string[] {
 
 describe("Public site simplification — discovery IA", () => {
   test("locks the simplified discovery section order", () => {
+    /*
+     * The premium homepage narrative. Each band answers the question the one
+     * before it raises; `furniture` is in the list but not the story, because it
+     * renders only when the Shop gate is live.
+     */
     assert.deepEqual([...DISCOVERY_SECTION_ORDER], [
       "header",
       "hero",
-      "trust",
-      "benefits",
-      "browse",
-      "real-homes",
-      "about",
+      "proof",
+      "why",
+      "manufacturing",
+      "design-library",
       "process",
+      "real-homes",
+      "quality",
       "furniture",
       "consultation",
+      "final-cta",
       "footer",
     ]);
     assert.deepEqual([...DISCOVERY_MAJOR_SECTIONS], [
       "hero",
-      "trust",
-      "benefits",
-      "browse",
-      "real-homes",
-      "about",
+      "proof",
+      "why",
+      "manufacturing",
+      "design-library",
       "process",
+      "real-homes",
+      "quality",
       "furniture",
       "consultation",
+      "final-cta",
     ]);
     assert.equal(DISCOVERY_SERVICE_SECTIONS.length, 3);
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
@@ -65,11 +74,13 @@ describe("Public site simplification — discovery IA", () => {
     assert.doesNotMatch(page, /DiscoveryPromoStrip/);
     assert.doesNotMatch(page, /od-disc-top-chrome/);
     assert.match(page, /DiscoveryHeroSlider/);
-    assert.match(page, /DiscoveryBenefitCards/);
-    assert.match(page, /DiscoveryBrowseTiles/);
-    const browse = read("src/features/public-site/discovery/DiscoveryBrowseTiles.tsx");
-    assert.match(browse, /data-od-disc-section="browse"/);
-    assert.match(page, /id="about"/);
+    assert.match(page, /DiscoveryWhy/);
+    assert.match(page, /DiscoveryDesignLibrary/);
+    const library = read(
+      "src/features/public-site/discovery/DiscoveryDesignLibrary.tsx"
+    );
+    assert.match(library, /data-od-disc-section="design-library"/);
+    assert.match(page, /DiscoveryQuality/);
     assert.match(page, /data-od-disc-section="real-homes"/);
     assert.match(page, /data-od-disc-section="furniture"/);
     assert.match(page, /data-od-disc-section="consultation"/);
@@ -89,7 +100,7 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(page, /HomeConsultationCapture/);
     assert.match(page, /PortfolioCard/);
     assert.match(page, /data-od-portfolio-preview/);
-    assert.match(css, /od-disc-browse-tile/);
+    assert.match(css, /od-disc-library__rail/);
     assert.doesNotMatch(css, /od-disc-top-chrome/);
     assert.doesNotMatch(css, /od-disc-promo/);
     assert.match(css, /od-disc-benefit-card/);
@@ -115,7 +126,16 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(copy, /PUBLIC_CONSULTATION_BY_SERVICE\["complete-home-interiors"\]/);
     assert.match(copy, /PUBLIC_CONSULTATION_BY_SERVICE\["modular-kitchens"\]/);
     assert.match(copy, /PUBLIC_CONSULTATION_BY_SERVICE\["custom-wardrobes"\]/);
-    assert.match(copy, /href: "\/interiors"/);
+    /*
+     * The `/interiors` link moved to the nav when the benefit cards were
+     * replaced; the route is unchanged and still reachable. What this test
+     * exists to prevent is a CONSULTATION path on /interiors, and that is the
+     * assertion below.
+     */
+    assert.match(
+      read("src/features/public-site/chrome/public-nav.ts"),
+      /"\/interiors"/
+    );
     assert.doesNotMatch(copy, /\/interiors#consultation/);
     assert.doesNotMatch(copy, /\/interiors\?service=/);
     const nav = read("src/features/public-site/chrome/public-nav.ts");

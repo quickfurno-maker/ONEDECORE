@@ -40,7 +40,7 @@ import {
   isPublicWhatsAppConfigured,
   normalizeWhatsAppE164,
 } from "../chrome/public-contact.ts";
-import { DISCOVERY_TRUST_STRIP_ITEMS } from "../discovery/discovery-copy.ts";
+import { DISCOVERY_PROOF_METRICS } from "../discovery/discovery-copy.ts";
 import { CONSULTATION_SERVICE_OPTIONS } from "../../lead-intake/public/consultation-copy.ts";
 import { consultationToLeadRequest } from "../../lead-intake/public/consultation-to-lead-request.ts";
 import type { LeadFormAttribution } from "../../lead-intake/public/lead-form-attribution.ts";
@@ -51,8 +51,8 @@ const code = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
 
 const HERO = "src/features/public-site/discovery/DiscoveryHeroSlider.tsx";
-const COUNTER = "src/features/public-site/discovery/DiscoveryProjectsCounter.tsx";
-const STRIP = "src/features/public-site/discovery/DiscoveryTrustStrip.tsx";
+const COUNT_UP = "src/features/public-site/motion/useCountUp.ts";
+const STRIP = "src/features/public-site/discovery/DiscoveryProofStrip.tsx";
 const DOCK = "src/features/public-site/discovery/DiscoveryStickyCta.tsx";
 const CONTACT = "src/features/public-site/chrome/public-contact.ts";
 const FORM = "src/features/lead-intake/public/ConsultationLeadForm.tsx";
@@ -78,12 +78,31 @@ describe("the projects count is displayed without being called verified", () => 
     assert.equal(resolved.displayable, true);
   });
 
-  test("the attestation is recorded, dated and scoped to one claim", () => {
-    const record = PUBLIC_CLAIM_EVIDENCE["projects-delivered"];
-    assert.ok(record.ownerAttestedDisplay, "the grant must be recorded");
-    assert.match(record.ownerAttestedDisplay!.attestedOn, /^\d{4}-\d{2}-\d{2}$/);
-    assert.ok(record.ownerAttestedDisplay!.note.length > 20);
-    assert.deepEqual([...getOwnerAttestedClaimIds()], ["projects-delivered"]);
+  test("every attestation is recorded, dated and explained", () => {
+    /*
+     * L1.1 authorised the project count ALONE. The premium homepage brief
+     * (2026-09-07) authorised three more for the proof strip: the design-library
+     * size, the factory count and the customised-planning percentage.
+     *
+     * The set is asserted exhaustively on purpose. A figure that appears on the
+     * page without appearing here has been published by a component deciding for
+     * itself, which is the failure this register exists to prevent.
+     */
+    assert.deepEqual([...getOwnerAttestedClaimIds()], [
+      "projects-delivered",
+      "custom-designs",
+      "own-manufacturing-unit",
+      "design-inspirations",
+    ]);
+
+    for (const id of getOwnerAttestedClaimIds()) {
+      const record = PUBLIC_CLAIM_EVIDENCE[id];
+      assert.ok(record.ownerAttestedDisplay, `${id}: the grant must be recorded`);
+      assert.match(record.ownerAttestedDisplay!.attestedOn, /^\d{4}-\d{2}-\d{2}$/);
+      assert.ok(record.ownerAttestedDisplay!.note.length > 20, id);
+      // Attested is not evidenced. That distinction is the whole module.
+      assert.equal(isClaimPubliclyEvidenced(id), false, id);
+    }
   });
 
   test("nothing became evidenced — the register is unchanged", () => {
@@ -96,21 +115,35 @@ describe("the projects count is displayed without being called verified", () => 
     assert.doesNotMatch(registry, /structuredDataPermission: true/);
   });
 
-  test("only the project count came back", () => {
+  test("the four attested figures came back, and nothing else did", () => {
     assert.equal(canQuotePublicClaim("projects-delivered"), true);
     assert.equal(publicClaimLabel("projects-delivered"), "500+ Projects Delivered");
+
+    /*
+     * STILL WITHHELD, and these are the ones that matter most: a rating, a
+     * review count and a satisfaction percentage all imply a source that does
+     * not exist, and the warranty duration is a contractual promise whose terms
+     * are still pending. None of them was attested, and none may be quoted.
+     */
     for (const id of [
       "average-rating",
       "client-reviews",
       "client-satisfaction",
       "warranty-years",
-      "custom-designs",
     ] as const) {
       assert.equal(canQuotePublicClaim(id), false, id);
     }
+    /*
+     * A rating, a review count and a satisfaction percentage are figures or
+     * they are nothing — there is no honest qualitative version of "4.9/5", so
+     * they render nothing at all. The warranty keeps a qualitative label
+     * ("Warranty On Approved Scopes") because the SCOPE is real and only the
+     * DURATION is pending.
+     */
     assert.equal(publicClaimLabel("average-rating"), null);
     assert.equal(publicClaimLabel("client-reviews"), null);
     assert.equal(publicClaimLabel("client-satisfaction"), null);
+    assert.doesNotMatch(publicClaimLabel("warranty-years") ?? "", /\d/);
   });
 
   test("an attested claim that also needs legal terms still waits for them", () => {
@@ -125,37 +158,67 @@ describe("the projects count is displayed without being called verified", () => 
     assert.equal(isClaimDisplayable("warranty-years", attestedWarranty), false);
   });
 
-  test("the counter renders below the hero, animated, reduced-motion safe", () => {
-    const counter = read(COUNTER);
-    const counterCode = code(counter);
-    assert.match(counter, /canQuotePublicClaim\("projects-delivered"\)/);
-    assert.match(counter, /IntersectionObserver/);
-    assert.match(counter, /prefers-reduced-motion/);
+  test("the counters render below the hero, animated, reduced-motion safe", () => {
+    /*
+     * One count-up hook now drives all four metrics rather than each metric
+     * carrying its own copy of the animation. Every property the single counter
+     * had is still asserted — it just lives in `useCountUp` now.
+     */
+    const hook = code(read(COUNT_UP));
+    assert.match(hook, /IntersectionObserver/);
+    assert.match(hook, /prefers-reduced-motion/);
     // Seeded with the real figure: a useState(0) seed would ship "0+" to every
     // pre-hydration and no-JS visitor.
-    assert.match(counterCode, /useState<number>\(target\)/);
-    assert.doesNotMatch(counterCode, /useState\(0\)/);
+    assert.match(hook, /useState<number>\(target\)/);
+    assert.doesNotMatch(hook, /useState\(0\)/);
+    // Runs once: `finished` is set and never cleared.
+    assert.match(hook, /finished\.current = true/);
+    assert.match(hook, /reduced \? target : value/);
     assert.equal(HOME_CLAIMS.projectsDelivered, 500);
 
-    // Mounted by the strip, which sits after the hero on the page.
-    assert.match(read(STRIP), /<DiscoveryProjectsCounter \/>/);
+    // The strip asks the register rather than trusting its own list.
+    assert.match(read(STRIP), /isClaimDisplayable\(metric\.claimId\)/);
+
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     assert.ok(
-      page.indexOf("<DiscoveryHeroSlider") < page.indexOf("<DiscoveryTrustStrip"),
-      "the counter's strip must come after the hero"
+      page.indexOf("<DiscoveryHeroSlider") < page.indexOf("<DiscoveryProofStrip"),
+      "the proof strip must come after the hero"
     );
     // And NOT inside the hero.
-    assert.doesNotMatch(read(HERO), /DiscoveryProjectsCounter|DiscoveryHeroTrustBar/);
+    assert.doesNotMatch(read(HERO), /DiscoveryProofStrip|DiscoveryHeroTrustBar/);
   });
 
-  test("the strip leads with manufacturing and process, no suppressed figure", () => {
-    const ids = DISCOVERY_TRUST_STRIP_ITEMS.map((item) => item.id);
-    assert.deepEqual(ids.slice(0, 3), ["manufacturing", "pipeline", "consultation"]);
-    for (const item of DISCOVERY_TRUST_STRIP_ITEMS) {
-      assert.doesNotMatch(item.label, /4\.9|200\+|98%|100% Custom|10-Year/);
+  test("the proof strip quotes no suppressed figure", () => {
+    /*
+     * The ticker was replaced by the four-metric proof strip. The invariant it
+     * protected is unchanged and now easier to state: every metric on the strip
+     * names the claim it is published under, and no metric may carry a rating,
+     * a review count, a satisfaction percentage or a warranty period.
+     */
+    for (const metric of DISCOVERY_PROOF_METRICS) {
+      assert.ok(
+        (PUBLIC_CLAIM_IDS as readonly string[]).includes(metric.claimId),
+        `${metric.claimId} must be a registered claim`
+      );
+      assert.equal(
+        isClaimDisplayable(metric.claimId),
+        true,
+        `${metric.claimId} is on the strip but not displayable`
+      );
+      assert.doesNotMatch(metric.label, /rating|review|satisfaction|warranty/i);
     }
-    // The projects figure is rendered by the counter, not tickered past.
-    assert.ok(!ids.includes("projects"));
+    for (const suppressed of [
+      "average-rating",
+      "client-reviews",
+      "client-satisfaction",
+      "warranty-years",
+    ]) {
+      assert.equal(
+        DISCOVERY_PROOF_METRICS.some((m) => m.claimId === suppressed),
+        false,
+        `${suppressed} must not reach the strip`
+      );
+    }
   });
 });
 
@@ -287,7 +350,7 @@ describe("the WhatsApp CTA is configured, validated, or absent", () => {
   test("the prefill is a service enquiry, not marketing", () => {
     assert.equal(
       PUBLIC_WHATSAPP.prefilledMessage,
-      "Hi ONEDECORE, I'd like to discuss my home interiors."
+      "Hi ONEDECORE, I'd like to discuss my interior requirement."
     );
     assert.doesNotMatch(PUBLIC_WHATSAPP.prefilledMessage, /offer|discount|deal/i);
   });
@@ -532,7 +595,7 @@ describe("an unasked qualifier is absent, not invented", () => {
 
 describe("no measurement layer arrived with this change", () => {
   test("no tag, pixel or container on any touched surface", () => {
-    for (const rel of [HERO, COUNTER, STRIP, DOCK, CONTACT, FORM]) {
+    for (const rel of [HERO, COUNT_UP, STRIP, DOCK, CONTACT, FORM]) {
       const source = read(rel);
       for (const tag of [
         "googletagmanager",

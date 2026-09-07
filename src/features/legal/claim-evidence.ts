@@ -62,6 +62,7 @@ export const PUBLIC_CLAIM_IDS = [
   "custom-designs",
   "own-manufacturing-unit",
   "free-design-consultation",
+  "design-inspirations",
 ] as const;
 
 export type PublicClaimId = (typeof PUBLIC_CLAIM_IDS)[number];
@@ -88,6 +89,12 @@ export interface ClaimEvidenceRecord {
   /** Why it is where it is. Read by humans, not by code. */
   readonly note: string;
 }
+
+
+const OWNER_ATTESTED_HOMEPAGE_PROOF = {
+  attestedOn: "2026-09-07",
+  note: "Owner supplied these four proof-strip figures verbatim in the premium homepage brief and directed that they be displayed. Evidence remains pending and structured data remains forbidden.",
+} as const;
 
 const PENDING = {
   evidence: "pending",
@@ -135,16 +142,35 @@ export const PUBLIC_CLAIM_EVIDENCE: Readonly<
     ...PENDING,
     requiresEffectiveLegalTerms: false,
     note: "A 100% figure is a measurable claim about every project delivered.",
+    /*
+     * Owner-directed (2026-09-07): shown on the homepage proof strip as
+     * "100% Customised Planning". Attested, not verified — no survey or project
+     * register backs it, and `isClaimPubliclyEvidenced` still answers false.
+     */
+    ownerAttestedDisplay: OWNER_ATTESTED_HOMEPAGE_PROOF,
   },
   "own-manufacturing-unit": {
     ...PENDING,
     requiresEffectiveLegalTerms: false,
-    note: "A factual statement about how the business operates rather than a measured figure. Retained deliberately as qualitative copy; no factory address or certificate is asserted.",
+    note: "A factual statement about how the business operates rather than a measured figure. No factory address, certificate or photograph is asserted.",
+    /*
+     * Owner-directed (2026-09-07): the proof strip states the COUNT ("1"). That
+     * turns a qualitative statement into a quantified one, which is exactly the
+     * step that needs recording here rather than being made silently in a
+     * component.
+     */
+    ownerAttestedDisplay: OWNER_ATTESTED_HOMEPAGE_PROOF,
   },
   "free-design-consultation": {
     ...PENDING,
     requiresEffectiveLegalTerms: false,
     note: "An offer the business makes, not a measured figure. Retained.",
+  },
+  "design-inspirations": {
+    ...PENDING,
+    requiresEffectiveLegalTerms: false,
+    note: "The size of the design library. No published catalogue or index backs the count; it is the owner's own statement about their library.",
+    ownerAttestedDisplay: OWNER_ATTESTED_HOMEPAGE_PROOF,
   },
 };
 

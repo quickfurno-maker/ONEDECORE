@@ -1,46 +1,342 @@
-import {
-  HOME_CLAIM_COPY,
-  canQuotePublicClaim,
-  publicClaimLabel,
-} from "../home-r4/claims.ts";
-import {
-  PUBLIC_CONSULTATION,
-  PUBLIC_CONSULTATION_BY_SERVICE,
-} from "../chrome/public-nav.ts";
+import { HOME_CLAIMS } from "../home-r4/claims.ts";
+import { PUBLIC_CONSULTATION_BY_SERVICE } from "../chrome/public-nav.ts";
 
 export type DiscoveryAssetKey =
   | "hero"
   | "completeHomeInteriors"
   | "modularKitchens"
   | "customWardrobes"
-  | "dusk";
+  | "dusk"
+  | "oakJoinery"
+  | "flutedTexture"
+  | "travertineBronze";
 
+/**
+ * The homepage narrative, in order.
+ *
+ * Each band answers the question the previous one raises:
+ *
+ *   proof           can they actually do this?
+ *   why             what makes them different?
+ *   manufacturing   what does "own factory" really mean?
+ *   design-library  how much choice do I get?
+ *   process         what happens after I enquire?
+ *   real-homes      show me.
+ *   quality         can I trust the execution?
+ *   consultation    start.
+ *   final-cta       one last, clear way in.
+ *
+ * `furniture` renders only when the Shop gate is live, which is why it is in
+ * the list but not in the story above.
+ */
 export const DISCOVERY_SECTION_ORDER = [
   "header",
   "hero",
-  "trust",
-  "benefits",
-  "browse",
-  "real-homes",
-  "about",
+  "proof",
+  "why",
+  "manufacturing",
+  "design-library",
   "process",
+  "real-homes",
+  "quality",
   "furniture",
   "consultation",
+  "final-cta",
   "footer",
 ] as const;
 
 /** Major homepage bands before footer. Furniture renders only when Shop is live. */
 export const DISCOVERY_MAJOR_SECTIONS = [
   "hero",
-  "trust",
-  "benefits",
-  "browse",
-  "real-homes",
-  "about",
+  "proof",
+  "why",
+  "manufacturing",
+  "design-library",
   "process",
+  "real-homes",
+  "quality",
   "furniture",
   "consultation",
+  "final-cta",
 ] as const;
+
+/**
+ * The four figures directly below the hero.
+ *
+ * Each carries the claim id it is published under, so `DiscoveryProofStrip` can
+ * ask the evidence register rather than trusting this list. All four are
+ * OWNER-ATTESTED, not evidenced — see `PUBLIC_CLAIM_EVIDENCE`. Withdrawing an
+ * attestation removes the metric from the strip without touching this file.
+ */
+export const DISCOVERY_PROOF_METRICS = [
+  {
+    claimId: "projects-delivered" as const,
+    value: HOME_CLAIMS.projectsDelivered,
+    suffix: "+",
+    label: "Projects Delivered",
+  },
+  {
+    claimId: "design-inspirations" as const,
+    value: HOME_CLAIMS.designInspirations,
+    suffix: "+",
+    label: "Design Inspirations",
+  },
+  {
+    claimId: "own-manufacturing-unit" as const,
+    value: HOME_CLAIMS.manufacturingUnits,
+    suffix: "",
+    label: "Own Modular Factory",
+  },
+  {
+    claimId: "custom-designs" as const,
+    value: HOME_CLAIMS.customDesignPercent,
+    suffix: "%",
+    label: "Customised Planning",
+  },
+] as const;
+
+/*
+ * Locations, not a claim. Hinjewadi and Koregaon Park are already published
+ * across the site in HOME_PUNE_AREAS; the manufacturing line repeats what the
+ * strip above states and the evidence register governs.
+ */
+export const DISCOVERY_PROOF_FOOTNOTE =
+  "Hinjewadi · Koregaon Park · Own Manufacturing Unit";
+
+/* -------------------------------------------------------------------------- */
+/* Why ONEDECORE                                                              */
+/* -------------------------------------------------------------------------- */
+
+export const DISCOVERY_WHY_EYEBROW = "WHY ONEDECORE";
+export const DISCOVERY_WHY_HEADLINE = [
+  "Everything your interior needs.",
+  "Under one roof.",
+] as const;
+
+export const DISCOVERY_WHY_POINTS = [
+  {
+    id: "direct",
+    number: "01",
+    title: "Direct From Manufacturer",
+    body: "No unnecessary middle layers. Your modular furniture and interior elements are manufactured through our own production setup for better control over finish, quality and value.",
+  },
+  {
+    id: "factory",
+    number: "02",
+    title: "Own Modular Factory",
+    body: "Precision machinery, controlled production and consistent finishing for modern kitchens, wardrobes and complete-home interiors.",
+  },
+  {
+    id: "consultation",
+    number: "03",
+    title: "Free Design Consultation",
+    body: "Discuss your layout, style, storage needs and budget with our design team before you decide.",
+  },
+  {
+    id: "library",
+    number: "04",
+    title: "800+ Designs to Choose From",
+    body: "Explore hundreds of kitchen, wardrobe, bedroom and living-space ideas, then customise them around your home.",
+  },
+] as const;
+
+/* -------------------------------------------------------------------------- */
+/* Manufacturer advantage                                                     */
+/* -------------------------------------------------------------------------- */
+
+export const DISCOVERY_MANUFACTURING_EYEBROW = "BUILT DIFFERENTLY";
+export const DISCOVERY_MANUFACTURING_HEADLINE = [
+  "Designed by us.",
+  "Manufactured by us.",
+  "Installed by us.",
+] as const;
+
+export const DISCOVERY_MANUFACTURING_LEDE =
+  "From design planning to modular manufacturing and final installation, ONEDECORE keeps greater control over the process. Our own manufacturing capability helps us deliver customised interiors with consistent finishes, better coordination and fewer unnecessary layers between design and execution.";
+
+export const DISCOVERY_MANUFACTURING_POINTS = [
+  {
+    id: "precision",
+    number: "01",
+    title: "Factory-Made Precision",
+    body: "Machine-finished modular components designed for consistency.",
+  },
+  {
+    id: "dimensions",
+    number: "02",
+    title: "Custom-Built Dimensions",
+    body: "Designed around your actual walls, storage needs and lifestyle.",
+  },
+  {
+    id: "control",
+    number: "03",
+    title: "Better Execution Control",
+    body: "Design, manufacturing and installation coordinated as one process.",
+  },
+] as const;
+
+/* -------------------------------------------------------------------------- */
+/* Design library                                                             */
+/* -------------------------------------------------------------------------- */
+
+export const DISCOVERY_LIBRARY_EYEBROW = "DESIGN LIBRARY";
+export const DISCOVERY_LIBRARY_HEADLINE = [
+  "Start with inspiration.",
+  "Finish with something completely yours.",
+] as const;
+
+export const DISCOVERY_LIBRARY_LEDE =
+  "Choose from 800+ interior ideas across kitchens, wardrobes, living rooms, bedrooms and complete-home themes. Mix finishes, layouts, colours and storage concepts to create a design that works for your home — not just the showroom.";
+
+/**
+ * The library rail.
+ *
+ * `assetKey` names REAL ONEDECORE photography, and each category uses an image
+ * that honestly depicts it. Bedrooms has no bedroom photograph in the asset
+ * library, so it carries a material study rather than a room shot presented as
+ * one — `depictsRoom: false` says so, and the card renders without a room
+ * caption. Borrowing a kitchen photo to stand in for a bedroom would be exactly
+ * the fabricated depiction the claim register exists to prevent.
+ */
+export const DISCOVERY_LIBRARY_CATEGORIES = [
+  {
+    id: "modular-kitchens",
+    title: "Modular Kitchens",
+    assetKey: "modularKitchens" as const satisfies DiscoveryAssetKey,
+    depictsRoom: true,
+    href: PUBLIC_CONSULTATION_BY_SERVICE["modular-kitchens"],
+  },
+  {
+    id: "wardrobes",
+    title: "Wardrobes",
+    assetKey: "customWardrobes" as const satisfies DiscoveryAssetKey,
+    depictsRoom: true,
+    href: PUBLIC_CONSULTATION_BY_SERVICE["custom-wardrobes"],
+  },
+  {
+    id: "living-rooms",
+    title: "Living Rooms",
+    // Not the hero image: reusing it here would make the page look like it owns
+    // one photograph. This asset's own alt describes a living interior.
+    assetKey: "completeHomeInteriors" as const satisfies DiscoveryAssetKey,
+    depictsRoom: true,
+    href: PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"],
+  },
+  {
+    id: "bedrooms",
+    title: "Bedrooms",
+    assetKey: "oakJoinery" as const satisfies DiscoveryAssetKey,
+    depictsRoom: false,
+    href: PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"],
+  },
+  {
+    id: "tv-units",
+    title: "TV Units",
+    assetKey: "flutedTexture" as const satisfies DiscoveryAssetKey,
+    depictsRoom: false,
+    href: PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"],
+  },
+  {
+    id: "complete-homes",
+    title: "Complete Homes",
+    assetKey: "travertineBronze" as const satisfies DiscoveryAssetKey,
+    depictsRoom: false,
+    href: PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"],
+  },
+] as const;
+
+/* -------------------------------------------------------------------------- */
+/* How it works                                                               */
+/* -------------------------------------------------------------------------- */
+
+export const DISCOVERY_HOW_EYEBROW = "HOW IT WORKS";
+export const DISCOVERY_HOW_HEADLINE = [
+  "From first idea to finished home.",
+  "One coordinated process.",
+] as const;
+
+export const DISCOVERY_HOW_STEPS = [
+  {
+    id: "tell",
+    number: "01",
+    title: "Tell us about your home",
+    body: "Select your home type, approximate budget and Pune location.",
+  },
+  {
+    id: "consult",
+    number: "02",
+    title: "Get your free design consultation",
+    body: "Discuss layouts, storage, materials, finishes and ideas with our team.",
+  },
+  {
+    id: "finalise",
+    number: "03",
+    title: "Finalise your design",
+    body: "Choose the design direction, finishes and scope that work for you.",
+  },
+  {
+    id: "execute",
+    number: "04",
+    title: "We manufacture & execute",
+    body: "Your approved interiors move into production and coordinated installation.",
+  },
+] as const;
+
+/* -------------------------------------------------------------------------- */
+/* Quality / trust                                                            */
+/* -------------------------------------------------------------------------- */
+
+export const DISCOVERY_QUALITY_EYEBROW = "QUALITY YOU CAN SEE";
+export const DISCOVERY_QUALITY_HEADLINE = [
+  "Factory precision.",
+  "Designer detailing.",
+  "Site-ready execution.",
+] as const;
+
+export const DISCOVERY_QUALITY_LEDE =
+  "Good interiors are not only about how they look on day one. They depend on accurate planning, controlled manufacturing, material choices and coordinated installation.";
+
+/*
+ * Process statements, not credentials. There is no rating, award, certificate
+ * or warranty period here — none of those is evidenced, and the trust this
+ * section builds has to come from describing how the work is done.
+ */
+export const DISCOVERY_QUALITY_PRINCIPLES = [
+  {
+    id: "precision",
+    title: "Precision Manufacturing",
+    body: "Consistent modular production through controlled factory processes.",
+  },
+  {
+    id: "planning",
+    title: "Design-Led Planning",
+    body: "Layouts shaped around storage, movement and everyday use.",
+  },
+  {
+    id: "materials",
+    title: "Material & Finish Control",
+    body: "Selections coordinated with the approved design direction.",
+  },
+  {
+    id: "installation",
+    title: "Coordinated Installation",
+    body: "A structured path from production to on-site completion.",
+  },
+] as const;
+
+/* -------------------------------------------------------------------------- */
+/* Consultation + closing CTA                                                 */
+/* -------------------------------------------------------------------------- */
+
+export const DISCOVERY_CONSULT_EYEBROW = "START YOUR INTERIOR JOURNEY";
+export const DISCOVERY_CONSULT_HEADLINE = "Tell us what you're planning.";
+export const DISCOVERY_CONSULT_LEDE =
+  "Share a few details about your home and budget. Our design team will help you understand the right possibilities for your space.";
+
+export const DISCOVERY_FINAL_CTA_HEADLINE =
+  "Your home deserves more than a catalogue interior.";
+export const DISCOVERY_FINAL_CTA_LEDE =
+  "Start with a free design consultation and explore what can be created around your space, style and budget.";
 
 export const DISCOVERY_PROCESS_STEPS = ["Consult", "Design", "Manufacture", "Install"] as const;
 
@@ -48,98 +344,6 @@ export const DISCOVERY_FURNITURE_PROCESS_STEPS = [
   "Browse",
   "Explore Details",
   "Check Serviceability",
-] as const;
-
-/**
- * The trust strip, with every unevidenced figure withheld.
- *
- * The rating/projects chip is dropped entirely rather than softened: a chip
- * that said "Highly rated" would be the same unsourced claim in vaguer words.
- * The warranty chip keeps its meaning without the duration, which is what is
- * actually pending.
- */
-/**
- * The strip below the hero, in the order the owner asked for.
- *
- * The projects figure is rendered separately by `DiscoveryProjectsCounter` so
- * it can animate and stay put while the rest tickers past — it is not in this
- * list. Everything here is qualitative: how the work is done, and where.
- */
-export const DISCOVERY_TRUST_STRIP_ITEMS = [
-  { id: "manufacturing", label: HOME_CLAIM_COPY.manufacturing },
-  { id: "pipeline", label: "Design → Manufacture → Install" },
-  { id: "consultation", label: "Pune-wide consultation" },
-  { id: "warranty", label: publicClaimLabel("warranty-years") },
-  ...(canQuotePublicClaim("average-rating")
-    ? [{ id: "rating", label: publicClaimLabel("average-rating") }]
-    : []),
-  { id: "areas", label: "Kharadi · Baner · Wakad · Hinjewadi · Koregaon Park" },
-].filter((item): item is { id: string; label: string } => item.label !== null);
-
-export const DISCOVERY_BENEFIT_CARDS = [
-  {
-    id: "consultation",
-    title: HOME_CLAIM_COPY.freeConsultation,
-    body: "Start with a no-obligation conversation about your home, scope and timeline.",
-    href: PUBLIC_CONSULTATION.href,
-  },
-  {
-    id: "warranty",
-    title: publicClaimLabel("warranty-years") ?? "After-Sales Support",
-    body: "Approved interior scopes backed by ONEDECORE's written warranty terms.",
-    href: PUBLIC_CONSULTATION.href,
-  },
-  {
-    id: "manufacturing",
-    title: HOME_CLAIM_COPY.manufacturing,
-    body: "Custom kitchens and wardrobes built in our facility for accuracy and control.",
-    href: "/interiors",
-  },
-  {
-    id: "custom",
-    title: publicClaimLabel("custom-designs") ?? "Made To Measure",
-    body: "Layouts, storage and finishes planned around your home — not off-the-shelf templates.",
-    href: PUBLIC_CONSULTATION.href,
-  },
-  {
-    id: "team",
-    title: "One Coordinated Team",
-    body: "Design, manufacturing and installation connected through one interior direction.",
-    href: "/#about",
-  },
-] as const;
-
-export const DISCOVERY_PROOF_PILLARS = [
-  {
-    id: "team",
-    title: "One coordinated team",
-    body: "Design, manufacturing and installation stay connected through one interior direction.",
-  },
-  {
-    id: "manufacturing",
-    title: "In-house manufacturing",
-    body: "Custom kitchens and wardrobes are made in our own facility for dimensional accuracy.",
-  },
-  {
-    id: "install",
-    title: "Quality-controlled installation",
-    body: "Approved design intent is carried through site execution and final detailing.",
-  },
-  {
-    id: "process",
-    title: "Transparent process",
-    body: "Scope, materials and milestones are clarified before work begins.",
-  },
-  {
-    id: "warranty",
-    title: "After-sales support",
-    body: "After-sales support for eligible approved scopes, under the warranty terms agreed for your project.",
-  },
-  {
-    id: "precision",
-    title: "Custom design + factory precision",
-    body: "Layouts planned for your home, built with controlled production standards.",
-  },
 ] as const;
 
 /**

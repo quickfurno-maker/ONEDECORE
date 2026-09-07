@@ -39,7 +39,7 @@
 export const PUBLIC_WHATSAPP = {
   label: "WhatsApp",
   ariaLabel: "Chat with ONEDECORE on WhatsApp (opens in a new tab)",
-  prefilledMessage: "Hi ONEDECORE, I'd like to discuss my home interiors.",
+  prefilledMessage: "Hi ONEDECORE, I'd like to discuss my interior requirement.",
 } as const;
 
 export const PUBLIC_WHATSAPP_E164_ENV = "NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164";

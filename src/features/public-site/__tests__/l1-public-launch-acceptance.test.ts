@@ -46,7 +46,11 @@ import {
   isWarrantyPublicationReady,
   LEGAL_PUBLICATION_MODE,
 } from "../../legal/legal-publication.ts";
-import { canQuotePublicClaim, publicClaimLabel } from "../home-r4/claims.ts";
+import {
+  canQuotePublicClaim,
+  publicClaimLabel,
+  resolvePublicClaim,
+} from "../home-r4/claims.ts";
 import { canShowAggregateReviewSummary } from "../home-r4/reviews.ts";
 import {
   PM_FAQS,
@@ -598,10 +602,15 @@ describe("owner-approved wording is not the same thing as public evidence", () =
       "client-reviews",
       "client-satisfaction",
       "warranty-years",
-      "custom-designs",
     ] as const) {
       assert.equal(canQuotePublicClaim(id), false, id);
     }
+    /*
+     * `custom-designs` moved out of this list on 2026-09-07: the owner attested
+     * it for the homepage proof strip. It is still UNEVIDENCED — the assertion
+     * that matters is the one below, and it has not moved.
+     */
+    assert.equal(isClaimPubliclyEvidenced("custom-designs"), false);
   });
 
   test("a rating has no qualitative substitute — it disappears instead", () => {
@@ -615,15 +624,25 @@ describe("owner-approved wording is not the same thing as public evidence", () =
   });
 
   test("claims that describe the work, rather than measure it, survive", () => {
-    for (const id of [
-      "warranty-years",
-      "custom-designs",
-      "own-manufacturing-unit",
-      "free-design-consultation",
-    ] as const) {
+    /*
+     * These have no verified figure, so what survives is the qualitative
+     * wording. `custom-designs` and `own-manufacturing-unit` are no longer in
+     * this list: both are owner-attested for the proof strip and therefore
+     * resolve to their quantified form, which is the point of the attestation.
+     * Their qualitative copy still exists — asserted directly below — so
+     * withdrawing an attestation leaves an honest sentence behind rather than a
+     * blank.
+     */
+    for (const id of ["warranty-years", "free-design-consultation"] as const) {
       const label = publicClaimLabel(id);
       assert.ok(label && label.length > 0, `${id} needs qualitative copy`);
       assert.doesNotMatch(label!, /\d/, `${id} must not carry a figure`);
+    }
+
+    for (const id of ["custom-designs", "own-manufacturing-unit"] as const) {
+      const fallback = resolvePublicClaim(id).qualitative;
+      assert.ok(fallback && fallback.length > 0, `${id} needs qualitative copy`);
+      assert.doesNotMatch(fallback!, /\d/, `${id} fallback must carry no figure`);
     }
   });
 
@@ -684,16 +703,29 @@ describe("the launch surfaces publish no unsupported number", () => {
 
   test("every surface that shows a figure asks the gate first", () => {
     for (const rel of [
-      "src/features/public-site/discovery/discovery-copy.ts",
+      /*
+       * `discovery-copy.ts` no longer renders figures — it hands the proof
+       * strip claim IDs, and the strip asks the register (asserted below).
+       */
+      "src/features/public-site/discovery/DiscoveryProofStrip.tsx",
       "src/features/public-site/discovery/DiscoveryHeroTrustBar.tsx",
       "src/features/public-site/home-r4/content.ts",
     ]) {
       assert.match(
         code(read(rel)),
-        /canQuotePublicClaim\(|publicClaimLabel\(/,
+        /canQuotePublicClaim\(|publicClaimLabel\(|isClaimDisplayable\(/,
         `${rel} must derive its claims from the evidence gate`
       );
     }
+    /*
+     * The proof strip is the surface that actually renders figures now. The
+     * copy module hands it claim IDs; the component asks the register. Neither
+     * half may publish a number on its own authority.
+     */
+    const strip = code(
+      read("src/features/public-site/discovery/DiscoveryProofStrip.tsx")
+    );
+    assert.match(strip, /isClaimDisplayable\(metric\.claimId\)/);
   });
 
   test("the rating block and its decorative stars are gated together", () => {
