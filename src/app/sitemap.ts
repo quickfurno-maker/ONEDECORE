@@ -4,6 +4,22 @@ import { getPublicCommerceSitemap } from "@/features/commerce/public/public-cach
 import { isPublicCommerceReadFailure } from "@/features/commerce/public/public-errors";
 import { SITE_CONFIG, absoluteUrl } from "@/config/site";
 import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
+import { getLegalRobots } from "@/features/legal";
+
+/**
+ * The legal pages, listed only while they are actually indexable.
+ *
+ * `getLegalRobots()` is the same gate the pages themselves render with, so a
+ * draft or owner-approved-but-not-effective document cannot be submitted to
+ * Search Console by this file while the page it points at says `noindex`.
+ */
+const LEGAL_PATHS = [
+  "privacy",
+  "terms",
+  "data-rights",
+  "communication-consent",
+  "warranty",
+] as const;
 
 /** Runtime gate must be readable without rebuild (DEC-0095). */
 export const dynamic = "force-dynamic";
@@ -32,6 +48,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
   ];
+
+  if (getLegalRobots().index) {
+    for (const path of LEGAL_PATHS) {
+      routes.push({
+        url: absoluteUrl(path),
+        lastModified: new Date(),
+        changeFrequency: "yearly",
+        priority: 0.3,
+      });
+    }
+  }
 
   if (shopPublic) {
     routes.push({

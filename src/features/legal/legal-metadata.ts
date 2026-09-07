@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { absoluteUrl } from "@/config/site";
 import {
   LEGAL_DRAFT_BANNER,
   LEGAL_OWNER_APPROVED_BANNER,
@@ -37,8 +38,14 @@ export function buildLegalPageMetadata(input: {
         follow: robots.follow,
       },
     },
+    /*
+     * A canonical is a claim that this URL is THE address of this document.
+     * A draft or owner-approved-but-not-effective page is not that, and it is
+     * `noindex` anyway, so it stays without one. A published page is indexable
+     * and now appears in the sitemap, so it says where it lives.
+     */
     alternates: {
-      canonical: undefined,
+      canonical: robots.index ? absoluteUrl(input.path.replace(/^\//, "")) : undefined,
     },
     openGraph: {
       title: `${titlePrefix}${input.title}`.trim(),

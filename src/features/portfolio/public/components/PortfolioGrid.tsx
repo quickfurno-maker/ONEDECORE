@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PortfolioCard } from "./PortfolioCard";
 import { PublicPortfolioPaginatedCards } from "../types";
 import { PORTFOLIO_SERVICE_LABELS, PortfolioServiceKey } from "../constants";
+import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
 
 export interface PortfolioGridProps {
   data: PublicPortfolioPaginatedCards;
@@ -65,20 +66,51 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
         </div>
       ) : (
         <div id="portfolio-empty-state" className="od-empty">
-          <h3>No projects found</h3>
-          <p>
-            No published interior projects match the selected filter at this
-            time.
-          </p>
-          <div>
-            <Link
-              id="portfolio-empty-reset-button"
-              href="/portfolio"
-              className="od-empty__action"
-            >
-              View All Projects
-            </Link>
-          </div>
+          {/*
+            * Two different emptinesses, and only one of them has a way out.
+            *
+            * A filter that matched nothing is fixed by clearing the filter. An
+            * unfiltered portfolio with nothing in it is not — sending that
+            * visitor to /portfolio returns them to the page they are already
+            * on. They arrived wanting to see work; the honest next step is the
+            * consultation, not a link that changes nothing.
+            */}
+          {activeService ? (
+            <>
+              <h3>No projects found</h3>
+              <p>
+                No published interior projects match the selected filter at this
+                time.
+              </p>
+              <div>
+                <Link
+                  id="portfolio-empty-reset-button"
+                  href="/portfolio"
+                  className="od-empty__action"
+                >
+                  View All Projects
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <h3>Project photography is on its way</h3>
+              <p>
+                Completed ONEDECORE homes are published here as their
+                photography is finished. In the meantime, the fastest way to see
+                what we would do with your home is to talk to us about it.
+              </p>
+              <div>
+                <Link
+                  id="portfolio-empty-consultation-button"
+                  href={PUBLIC_CONSULTATION.href}
+                  className="od-empty__action"
+                >
+                  {PUBLIC_CONSULTATION.label}
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       )}
 
