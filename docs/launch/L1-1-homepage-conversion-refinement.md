@@ -2,13 +2,21 @@
 
 **Phase:** L1.1 (owner-directed, after L1 / PR #155)
 **Date:** 2026-09-07
-**Base `origin/main`:** `179c96215c8cd7e1453ae1880b9db50ac24025f2` (merge of PR #155)
 **Branch:** `feat/public-homepage-conversion-refinement`
+**Started from:** `179c96215c8cd7e1453ae1880b9db50ac24025f2` (merge of PR #155) —
+historical starting point only
+**Current main integrated before final review:**
+`a3d59e946eca53d11a4c90622e0eeb899a612532` (merge of PR #156, mobile CRM lead
+delete). `package.json` was resolved as a union so PR #156's
+`crm-mobile-lead-delete.test.ts` coverage and this branch's L1.1 suite both
+survive.
 
 Four owner-directed changes to the homepage, plus the pre-merge correction that
 gave them a database contract to land on (§4A).
 
-One forward-only migration. **Not applied to managed Supabase.** No analytics or
+**This PR includes exactly ONE forward-only migration.** It has been applied to a
+local Supabase stack and verified there. **Managed Supabase has NOT been mutated
+during this PR — the production migration is still pending.** No analytics or
 provider activation.
 
 ---
@@ -313,25 +321,32 @@ Updated, each preserving the requirement it was written for:
 | --- | --- | --- |
 | `phase-10c-homepage-launch-ux` | hero arrows, headline-labelled dots, tabpanels, hard-coded WhatsApp `null` | image-only hero, position-labelled dots, hidden H1, configured-and-validated WhatsApp |
 | `phase-10e-interior-launch-closeout` | `canQuotePublicClaim("projects-delivered") === false` | `true`, **with** `isClaimPubliclyEvidenced` still `false` |
-| `public-conversion-ux` | two selects, staged submit, required qualifier, stale-answer clearing | one select, always-present submit, optional-but-validated qualifier, no answer left to go stale |
+| `public-conversion-ux` | two selects, staged submit, required qualifier, stale-answer clearing | one select, always-present submit, **qualifier forbidden under `public-consult-v2`**, no answer left to go stale |
 | `l1-public-launch-acceptance` | projects figure withheld; WhatsApp literal `null` | projects attested; WhatsApp config-driven |
 
 | Gate | Result |
 | --- | --- |
-| `npm run test:public-launch` | **152/152 pass** |
-| lead-intake public conversion tests | **44/44 pass** |
+| `npm run test:public-launch` | **151/151 pass** |
+| `npm run test:public-conversion-ux` | **45/45 pass** |
+| planner-version contract suite | **14/14 pass** |
 | `npm run test:app` | **3265/3265 pass** |
+| local database (`supabase test db`) | **52 files / 3294 assertions pass** |
+| `supabase db lint --local` | clean for `submit_lead_intake` |
 | `npm run lint` | 0 errors (30 pre-existing warnings) |
 | `npm run typecheck` | clean |
 | `npm run build` | clean |
 | `git diff --check` | clean |
+| CI Application Quality | **PASS** |
+| CI Database Quality | **PASS** — the Database Quality log confirms suite 52 ran |
 
 The two long-standing Windows-CRLF failures are gone: PR #156, merged into main
 and integrated here, normalises line endings in those source-text assertions.
+`npm run test:app` is fully green locally for the first time.
 
-Local database tests now run too — Docker and the Supabase CLI were both
-available for this pass, so the new migration was actually executed rather than
-deferred to CI.
+Local database tests ran for real: Docker and the Supabase CLI were both
+available for this pass, so the new migration was **executed** rather than
+deferred to CI. Executing it locally is not the same as applying it to managed
+Supabase, which has not happened.
 
 ---
 
@@ -339,6 +354,22 @@ deferred to CI.
 
 **The V2 migration has NOT been applied to managed Supabase.** It is
 forward-only and reviewed first, per the correction brief.
+
+### Deployment order, when approved
+
+The order matters. The form emits `public-consult-v2`, and until the migration is
+applied the managed database will refuse that discriminator outright — so a
+deploy that ships the code first would take the public form down.
+
+1. Apply `20260907130000_public_consultation_single_step_v2.sql` to managed
+   Supabase.
+2. Set the production **build** environment, including
+   `NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164` if a number has been approved.
+3. `npm run build`.
+4. `pm2 restart onedecore --update-env` on the VPS (`/var/www/onedecore`).
+5. Verify the live form submits, and that the `wa.me` href renders if a number
+   was configured:
+   `curl -s https://onedecore.in/ | grep -o 'https://wa.me/[0-9]*'`
 
 No GTM, GA4, Meta Pixel, CAPI or Google conversion upload. No attribution
 persistence — `lead-form-attribution.ts` still reads at submit and writes no
