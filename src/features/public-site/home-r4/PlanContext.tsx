@@ -4,7 +4,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -24,6 +26,16 @@ import {
   type LeadProjectScopeCode,
 } from "../../lead-intake/project-scope.ts";
 import { v4RequiresScope } from "../../lead-intake/contracts.ts";
+import {
+  acceptSubmission,
+  CLOSED_LEAD_SHEET,
+  closeSheet,
+  finishSubmission as finishSubmissionTransition,
+  openSheet,
+  resetSheet,
+  type LeadSheetState,
+  type LeadSheetTransition,
+} from "./lead-sheet-lifecycle.ts";
 import {
   completedStepCount,
   getNextIncompleteStep as computeNextStep,
@@ -73,10 +85,34 @@ interface PlanApi extends PlanSnapshot {
   readonly setStep: (step: PmStep) => void;
   readonly goNext: () => void;
   readonly goBack: () => void;
-  readonly markSubmitted: () => void;
+  /** The reference the server returned for an accepted enquiry, if any. */
+  readonly submissionReference: string | null;
+  /** True when the acceptance was a replay of an enquiry already held. */
+  readonly submissionDuplicate: boolean;
+  /**
+   * Record that the backend ACCEPTED a lead. Deliberately does not close the
+   * sheet — see the note on the implementation.
+   */
+  readonly markSubmitted: (result: LeadSubmissionResult) => void;
+  /** The visitor is done reading the success screen: close it and start clean. */
+  readonly finishSubmission: () => void;
   readonly editSubmission: () => void;
   readonly resetAll: () => void;
   readonly getNextIncompleteStep: () => PmStep;
+}
+
+/**
+ * What the server said about an accepted enquiry.
+ *
+ * Held in context rather than inside the form component because the
+ * confirmation OUTLIVES the form: the fields unmount when the enquiry is
+ * accepted, and a reference that lived in their local state would go with
+ * them. This is the thing the visitor may need to read back to us on the
+ * phone, so it belongs to the journey, not to the widget.
+ */
+export interface LeadSubmissionResult {
+  readonly reference: string | null;
+  readonly duplicate: boolean;
 }
 
 const PlanCtx = createContext<PlanApi | null>(null);
@@ -111,8 +147,16 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
   const [whatsappConsent, setWhatsappConsent] = useState(false);
   const [privacyConsent, setPrivacyConsent] = useState(false);
   const [step, setStepState] = useState<PmStep>(1);
-  const [isOpen, setIsOpen] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  /*
+   * Sheet visibility and submission outcome are ONE value driven by the
+   * transitions in `lead-sheet-lifecycle.ts`, not four independent booleans.
+   * They were independent when a lead could be accepted and the sheet closed
+   * in the same breath, which is the bug that lost a visitor's confirmation.
+   */
+  const [sheet, setSheet] = useState<LeadSheetState>(CLOSED_LEAD_SHEET);
+  const { open: isOpen, submitted } = sheet;
+  const submissionReference = sheet.reference;
+  const submissionDuplicate = sheet.duplicate;
 
   const snapshot = useMemo<PlanSnapshot>(
     () => ({
@@ -154,17 +198,84 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
     [snapshot]
   );
 
-  const openPlanner = useCallback(
-    (target?: PmStep) => {
-      setStepState(target ?? computeNextStep(snapshot));
-      setIsOpen(true);
+  /**
+   * Clear the answers, WITHOUT touching `isOpen` or `submitted`.
+   *
+   * Split out so that "close the sheet" and "forget the enquiry" can be
+   * composed independently. Conflating them is what broke the success screen.
+   */
+  const resetEnquiry = useCallback(() => {
+    setServiceState(null);
+    setProjectScopeState(null);
+    setBudgetRangeState(null);
+    setPropertyState(null);
+    setTimelineState(null);
+    setRooms([]);
+    setBudgetComfortState(null);
+    setEstimateSummaryState(null);
+    setName("");
+    setMobile("");
+    setLocality("");
+    setMessageState("");
+    setWhatsappConsent(false);
+    setPrivacyConsent(false);
+    setStepState(1);
+  }, []);
+
+  /**
+   * Closing a FINISHED enquiry also forgets it.
+   *
+   * Every close path funnels through here — the header X, the scrim, Escape,
+   * and the success screen's Done — so this is the one place that has to get
+   * it right. If the visitor is closing a submitted enquiry, the next CTA must
+   * open a blank form: their name, mobile, message, consent and the previous
+   * submission reference are finished business and must not reappear.
+   */
+  /*
+   * The sheet value is read through a ref so the close handlers KEEP A STABLE
+   * IDENTITY.
+   *
+   * `useSheetOverlay` depends on `closePlanner` and re-runs whenever it
+   * changes: it re-records the element to restore focus to and pulls focus
+   * back to the first control in the panel. Accepting a lead changes the sheet
+   * state, so a dependency-carrying `closePlanner` would yank focus off the
+   * confirmation the instant it appeared. These handlers only ever run from a
+   * click or a keypress, long after the effect below has flushed, so the ref
+   * is never stale when it is actually read.
+   */
+  const sheetRef = useRef<LeadSheetState>(CLOSED_LEAD_SHEET);
+  useEffect(() => {
+    sheetRef.current = sheet;
+  }, [sheet]);
+
+  /** Apply a lifecycle transition, obeying its instruction about the answers. */
+  const applyTransition = useCallback(
+    (transition: LeadSheetTransition) => {
+      if (transition.resetAnswers) resetEnquiry();
+      setSheet(transition.state);
     },
-    [snapshot]
+    [resetEnquiry]
   );
 
   const closePlanner = useCallback(() => {
-    setIsOpen(false);
-  }, []);
+    applyTransition(closeSheet(sheetRef.current));
+  }, [applyTransition]);
+
+  const openPlanner = useCallback(
+    (target?: PmStep) => {
+      const transition = openSheet(sheetRef.current);
+      if (transition.resetAnswers) {
+        // A finished enquiry is being reopened: start over, at the beginning.
+        resetEnquiry();
+        setStepState(target ?? 1);
+      } else {
+        setStepState(target ?? computeNextStep(snapshot));
+      }
+      setSheet(transition.state);
+    },
+    [snapshot, resetEnquiry]
+  );
+
 
   /**
    * Changing the service INVALIDATES a home answer it no longer fits.
@@ -234,12 +345,15 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
         rooms: nextRooms,
       };
       const target = computeNextStep(prospective);
+      const transition = openSheet(sheetRef.current);
+      // Order matters: the reset runs first, these setters overwrite it.
+      if (transition.resetAnswers) resetEnquiry();
       if (input.service) setServiceState(input.service);
       setRooms(nextRooms);
       setStepState(target);
-      setIsOpen(true);
+      setSheet(transition.state);
     },
-    [snapshot]
+    [snapshot, resetEnquiry]
   );
 
   /**
@@ -279,14 +393,17 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
           ? scope
           : null
       );
+      const transition = openSheet(sheetRef.current);
+      // Order matters: the reset runs first, these setters overwrite it.
+      if (transition.resetAnswers) resetEnquiry();
       setBudgetRangeState(null);
       setRooms(nextRooms);
       setBudgetComfortState(selection.budgetComfort);
       setEstimateSummaryState(nextSummary);
       setStepState(target);
-      setIsOpen(true);
+      setSheet(transition.state);
     },
-    [snapshot]
+    [snapshot, resetEnquiry]
   );
 
   const setContact = useCallback((fields: Partial<PlanContactFields>) => {
@@ -317,35 +434,39 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
     setStepState((current) => (current > 1 ? ((current - 1) as PmStep) : current));
   }, []);
 
-  const markSubmitted = useCallback(() => {
-    setSubmitted(true);
-    setIsOpen(false);
-  }, []);
+  /**
+   * THE LEAD WAS ACCEPTED. THE SHEET STAYS OPEN.
+   *
+   * This used to also call `setIsOpen(false)`, and `HomePlannerSheet` returns
+   * null while closed — so the instant the server answered 201 the sheet
+   * unmounted, taking the success message and the submission reference with
+   * it. From the visitor's side the form simply vanished: no confirmation, no
+   * reference, no way to tell a successful enquiry from a lost one.
+   *
+   * Accepting a lead and closing the sheet are now separate events. The
+   * visitor closes it themselves, via `finishSubmission` or any other close
+   * path, once they have actually read the confirmation.
+   */
+  const markSubmitted = useCallback(
+    (result: LeadSubmissionResult) => {
+      applyTransition(acceptSubmission(sheetRef.current, result));
+    },
+    [applyTransition]
+  );
+
+  /** Done on the success screen: close it and clear the finished enquiry. */
+  const finishSubmission = useCallback(() => {
+    applyTransition(finishSubmissionTransition());
+  }, [applyTransition]);
 
   const editSubmission = useCallback(() => {
-    setSubmitted(false);
+    setSheet((current) => ({ ...current, submitted: false }));
     setStepState(4);
   }, []);
 
   const resetAll = useCallback(() => {
-    setServiceState(null);
-    setProjectScopeState(null);
-    setBudgetRangeState(null);
-    setPropertyState(null);
-    setTimelineState(null);
-    setRooms([]);
-    setBudgetComfortState(null);
-    setEstimateSummaryState(null);
-    setName("");
-    setMobile("");
-    setLocality("");
-    setMessageState("");
-    setWhatsappConsent(false);
-    setPrivacyConsent(false);
-    setStepState(1);
-    setIsOpen(false);
-    setSubmitted(false);
-  }, []);
+    applyTransition(resetSheet());
+  }, [applyTransition]);
 
   const value = useMemo<PlanApi>(
     () => ({
@@ -354,6 +475,8 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       isOpen,
       mode: "sheet",
       submitted,
+      submissionReference,
+      submissionDuplicate,
       completedSteps: completedStepCount(snapshot),
       progress: planProgressPercent(snapshot),
       openPlanner,
@@ -374,6 +497,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       goNext,
       goBack,
       markSubmitted,
+      finishSubmission,
       editSubmission,
       resetAll,
       getNextIncompleteStep,
@@ -383,6 +507,8 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       step,
       isOpen,
       submitted,
+      submissionReference,
+      submissionDuplicate,
       openPlanner,
       closePlanner,
       setService,
@@ -401,6 +527,7 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       goNext,
       goBack,
       markSubmitted,
+      finishSubmission,
       editSubmission,
       resetAll,
       getNextIncompleteStep,

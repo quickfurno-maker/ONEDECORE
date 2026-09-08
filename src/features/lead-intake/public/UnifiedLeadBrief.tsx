@@ -48,7 +48,10 @@ import {
 } from "react";
 import { SINGLE_CONSENT_CONCISE_COPY } from "../../legal/consent-registry.ts";
 import { SUBMIT_LABEL } from "../project-scope.ts";
-import { usePlan } from "../../public-site/home-r4/PlanContext";
+import {
+  usePlan,
+  type LeadSubmissionResult,
+} from "../../public-site/home-r4/PlanContext";
 import { collectLeadFormAttribution } from "./lead-form-attribution.ts";
 import {
   LEAD_FORM_FIELD_LIMITS,
@@ -101,8 +104,15 @@ const BRIEF_FIELD_ORDER: readonly BriefFieldKey[] = ["name", "mobile", "consent"
 export const UNIFIED_BRIEF_SUBMITTING_LABEL = "Sending…";
 
 export interface UnifiedLeadBriefProps {
-  /** Called after a lead is accepted, so the sheet can show its success state. */
-  readonly onSubmitted?: () => void;
+  /**
+   * Called once the server ACCEPTS a lead, with what it said about it.
+   *
+   * The result is handed upward rather than rendered here because the
+   * confirmation has to outlive this component: these fields are replaced the
+   * moment an enquiry is accepted, and a reference kept in their local state
+   * would be destroyed along with them.
+   */
+  readonly onSubmitted?: (result: LeadSubmissionResult) => void;
 }
 
 function pulseInvalidHaptic(): void {
@@ -163,6 +173,7 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
   const isSuccess =
     uxState === "success-created" || uxState === "success-duplicate";
   const canAttemptSubmit = !isSubmitting && !isSuccess;
+
 
   const statusMessage = getLeadFormStatusMessage(uxState, {
     retryAfterSeconds,
@@ -307,7 +318,10 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
       setSubmissionReference(result.submissionReference);
       setUxState(mapClientResultToUxState(result));
       submittingRef.current = false;
-      onSubmitted?.();
+      onSubmitted?.({
+        reference: result.submissionReference ?? null,
+        duplicate: result.kind === "success-duplicate",
+      });
       return;
     }
 
@@ -395,7 +409,7 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
         </p>
       ) : null}
 
-      <fieldset className="pm-fieldset" disabled={isSubmitting || isSuccess}>
+      <fieldset className="pm-fieldset" disabled={isSubmitting}>
         <legend className="pm-legend">Where should we send the plan?</legend>
 
         <div className={fieldClass("name")}>
@@ -502,7 +516,7 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
         </div>
       </fieldset>
 
-      <fieldset className="pm-fieldset" disabled={isSubmitting || isSuccess}>
+      <fieldset className="pm-fieldset" disabled={isSubmitting}>
         <legend className="pm-legend">Consent</legend>
         {/*
           ONE checkbox, TWO purposes. The combined wording is the approved

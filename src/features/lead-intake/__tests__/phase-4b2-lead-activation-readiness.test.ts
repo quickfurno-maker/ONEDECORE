@@ -252,7 +252,11 @@ describe("Phase 4B2 API client outcomes", () => {
     const created = getLeadFormStatusMessage("success-created", {
       submissionReference: "OD-TEST-1",
     });
-    assert.equal(created?.title, "Your enquiry has been received.");
+    // The owner-approved sentence. Still an acknowledgement, not a promise.
+    assert.equal(
+      created?.title,
+      "Thank you. We received your consultation request and will follow up."
+    );
     assert.match(created?.body ?? "", /OD-TEST-1/);
     assert.doesNotMatch(created?.title ?? "", /appointment|WhatsApp sent|guaranteed/i);
 

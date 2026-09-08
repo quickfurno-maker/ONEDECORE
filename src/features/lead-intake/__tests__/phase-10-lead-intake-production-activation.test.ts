@@ -5,6 +5,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
+
+import { LEAD_FORM_SUCCESS_TITLE } from "../public/lead-form-errors.ts";
 import { getLeadIntakeServerEnv } from "../../../config/server-env.ts";
 import {
   BUSINESS_IDENTITY,
@@ -199,11 +201,28 @@ describe("Phase 10 consultation conversion path", () => {
   });
 
   test("success copy stays request-received not booking-confirmed", () => {
+    /*
+     * THE RULE IS UNCHANGED; THE WORDS MOVED.
+     *
+     * The confirmation now uses the owner-approved sentence and is held in a
+     * named constant rather than inline, so this asserts the constant. What
+     * must never drift is the PROMISE: we acknowledge receiving a request and
+     * say we will follow up. We do not tell the visitor a consultation is
+     * booked, scheduled or confirmed — nobody has agreed a time with them.
+     */
     const errors = readFileSync(
       join(root, "src/features/lead-intake/public/lead-form-errors.ts"),
       "utf8"
     );
-    assert.match(errors, /enquiry has been received/i);
-    assert.doesNotMatch(errors, /booking confirmed/i);
+    assert.match(errors, /LEAD_FORM_SUCCESS_TITLE/);
+    assert.equal(
+      LEAD_FORM_SUCCESS_TITLE,
+      "Thank you. We received your consultation request and will follow up."
+    );
+    assert.match(LEAD_FORM_SUCCESS_TITLE, /received/i);
+    assert.doesNotMatch(
+      LEAD_FORM_SUCCESS_TITLE,
+      /booking confirmed|confirmed|scheduled|appointment|booked/i
+    );
   });
 });

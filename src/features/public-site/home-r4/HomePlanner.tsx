@@ -18,6 +18,7 @@ import {
 } from "../../lead-intake/project-scope";
 import { v4RequiresScope } from "../../lead-intake/contracts";
 import { UnifiedLeadBrief } from "../../lead-intake/public/UnifiedLeadBrief";
+import { LeadSubmissionSuccess } from "../../lead-intake/public/LeadSubmissionSuccess";
 import { useLeadConsultation } from "../../lead-intake/public/LeadConsultationHost";
 import { LeadIntakeUnavailable } from "../../lead-intake/public/LeadIntakeUnavailable";
 
@@ -257,6 +258,45 @@ function PlannerBody({ idPrefix, onClose, compactHeader }: PlannerBodyProps) {
 
   const legend = PM_PLANNER.steps[plan.step - 1]!.legend;
 
+  /*
+   * ONCE THE LEAD IS ACCEPTED, THE STEPS ARE OVER.
+   *
+   * The confirmation replaces the four-step journey rather than sitting under
+   * it: no progress rail counting steps that are finished, no Back offering to
+   * re-open answers that are already in CRM, no submit control, no editable
+   * field of any kind. The header and its close button stay, because the
+   * visitor still has to be able to leave — and leaving is now THEIR decision.
+   * This screen used to close itself in the same tick it appeared.
+   */
+  if (plan.submitted) {
+    return (
+      <div className="pm-planner__form" data-plan-submitted="">
+        <header
+          className="pm-planner__head"
+          data-compact={compactHeader ? "" : undefined}
+        >
+          <div>
+            <p className="pm-planner__title">{PM_PLANNER.title}</p>
+          </div>
+          {onClose ? (
+            <button
+              type="button"
+              className="pm-iconbtn"
+              onClick={onClose}
+              aria-label={PM_PLANNER.closeLabel}
+            >
+              <CloseIcon />
+            </button>
+          ) : null}
+        </header>
+
+        <div className="pm-planner__panel" data-step="done">
+          <LeadSubmissionSuccess />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pm-planner__form">
       <header
@@ -384,7 +424,7 @@ function PlannerBody({ idPrefix, onClose, compactHeader }: PlannerBodyProps) {
         ) : null}
 
         {plan.step === 4 ? (
-          <UnifiedLeadBrief onSubmitted={() => plan.markSubmitted()} />
+          <UnifiedLeadBrief onSubmitted={plan.markSubmitted} />
         ) : null}
       </div>
 
