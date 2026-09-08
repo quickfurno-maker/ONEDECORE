@@ -9,6 +9,10 @@ import {
   type PortfolioServiceCode,
 } from "../domain/portfolio-service";
 import {
+  PORTFOLIO_CATEGORIES,
+  type PortfolioCategoryId,
+} from "../public/portfolio-categories";
+import {
   type PortfolioFormState,
   INITIAL_PORTFOLIO_FORM_STATE,
 } from "../server/portfolio-form-state";
@@ -22,6 +26,8 @@ export interface PortfolioProjectFormValues {
   propertyType?: string | null;
   completionYear?: number | null;
   services?: PortfolioServiceCode[];
+  /** Room categories this project is browsable under. May be empty. */
+  categories?: PortfolioCategoryId[];
   isFeatured?: boolean;
 }
 
@@ -55,6 +61,13 @@ export function PortfolioProjectForm({
   }, [router, state.redirectTo]);
 
   const assignedServices = initialValues?.services || ["complete_home_interiors"];
+  /*
+   * No default. A new project is UNCLASSIFIED until an editor looks at the
+   * photographs and says which rooms they show — pre-ticking a box here would
+   * put a project under a category nobody chose, which is exactly the
+   * guesswork the room taxonomy exists to avoid.
+   */
+  const assignedCategories = initialValues?.categories ?? [];
 
   return (
     <form
@@ -251,6 +264,43 @@ export function PortfolioProjectForm({
         {state.fieldErrors.services && (
           <p className="mt-1 text-xs text-red-600">
             {state.fieldErrors.services.join(" ")}
+          </p>
+        )}
+      </div>
+
+      {/* Portfolio room categories — many-to-many, optional */}
+      <div>
+        <fieldset>
+          <legend className="block text-xs font-semibold text-[#1A1A1A]">
+            Portfolio categories
+          </legend>
+          <p className="mt-1 text-xs text-stone-500">
+            Where this project appears in public portfolio browsing. A
+            whole-home project may belong to several. Leave all unchecked until
+            the photographs have been reviewed — an unclassified project simply
+            appears under no category.
+          </p>
+          <div className="mt-2 space-y-2">
+            {PORTFOLIO_CATEGORIES.map((category) => (
+              <label
+                key={category.id}
+                className="flex items-center gap-2 text-xs text-stone-700"
+              >
+                <input
+                  type="checkbox"
+                  name="categories"
+                  value={category.id}
+                  defaultChecked={assignedCategories.includes(category.id)}
+                  className="rounded border-[#E5E0DA] text-[#1A1A1A]"
+                />
+                {category.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        {state.fieldErrors.categories && (
+          <p className="mt-1 text-xs text-red-600">
+            {state.fieldErrors.categories.join(" ")}
           </p>
         )}
       </div>

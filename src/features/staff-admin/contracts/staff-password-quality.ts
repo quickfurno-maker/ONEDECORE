@@ -277,9 +277,47 @@ export const cryptoRandomInts: RandomInts = (count, bound) => {
  * This is still only Stage 1: a generated password is overwhelmingly likely to
  * be accepted, but the UI must not claim it until the server says so.
  */
+/**
+ * How many times the generator may redraw before giving up.
+ *
+ * A rejection costs one more draw and happens in roughly one password in four
+ * thousand, so the loop effectively never runs twice. The bound exists so a
+ * pathological `randomInts` — a stub returning a constant, say — cannot hang
+ * the caller; it is a safety valve, not a expected path.
+ */
+const GENERATION_ATTEMPTS = 12;
+
 export function generateStrongStaffPassword(
   randomInts: RandomInts = cryptoRandomInts
 ): string {
+  /*
+   * THE GENERATOR MUST SATISFY ITS OWN VALIDATOR.
+   *
+   * Characters are drawn independently, so a draw can land on a sequential run
+   * like "efgh" or a repeat that `looksEasilyGuessed` then rejects — about one
+   * password in four thousand. The result was a password the admin UI offered
+   * and its own checklist marked "not-common: unmet", which reads as a bug to
+   * whoever is looking at it and, in the test suite, as an intermittent
+   * failure with no cause anyone could see.
+   *
+   * Redrawing is the honest fix: the generator's contract is a password that
+   * passes, so it keeps drawing until it has one rather than weakening the
+   * check that caught it.
+   */
+  for (let attempt = 0; attempt < GENERATION_ATTEMPTS; attempt += 1) {
+    const candidate = drawCandidatePassword(randomInts);
+    if (!looksEasilyGuessed(candidate)) {
+      return candidate;
+    }
+  }
+
+  // Exhausted only by a degenerate randomInts. Returning the last draw beats
+  // throwing in a UI path; it is still class-complete and long enough.
+  return drawCandidatePassword(randomInts);
+}
+
+/** One unfiltered draw: correct by construction for length and character class. */
+function drawCandidatePassword(randomInts: RandomInts): string {
   const [lengthPick] = randomInts(
     1,
     GENERATED_PASSWORD_MAX_LENGTH - GENERATED_PASSWORD_MIN_LENGTH + 1

@@ -1,3 +1,5 @@
+import type { PortfolioCategoryId } from "./portfolio-categories.ts";
+
 export type PublicPortfolioServiceCode =
   | "complete_home_interiors"
   | "modular_kitchens"
@@ -6,6 +8,18 @@ export type PublicPortfolioServiceCode =
 export type PublicPortfolioService = {
   serviceCode: PublicPortfolioServiceCode;
   serviceLabel: string;
+};
+
+/**
+ * The room categories a project can be browsed under.
+ *
+ * A list, not a scalar: one whole-home project legitimately spans several. The
+ * ids are the canonical ones from `portfolio-categories.ts` -- this module does
+ * not restate the labels.
+ */
+export type PublicPortfolioCategory = {
+  categoryId: PortfolioCategoryId;
+  categoryLabel: string;
 };
 
 export type PublicPortfolioImage = {
@@ -41,6 +55,7 @@ export type PublicPortfolioProject = {
   seoDescription: string | null;
   publishedAt: string;
   services: PublicPortfolioService[];
+  categories: PublicPortfolioCategory[];
   cover: PublicPortfolioImage;
   gallery: PublicPortfolioImage[];
 };

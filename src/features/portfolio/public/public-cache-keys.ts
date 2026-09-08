@@ -11,12 +11,26 @@ export function featuredCacheKeyParts(): string[] {
   return ["public-portfolio", "featured"];
 }
 
-export function listingCacheKeyParts(page: number, serviceFilter?: string): string[] {
+/**
+ * The listing cache identity.
+ *
+ * The category belongs IN here, not appended by the caller. It was appended
+ * before, which meant this pure function -- the one the tests read -- described
+ * a key the runtime did not actually use. Two listings that differ only by
+ * category must not share an entry, and the function that says so should be the
+ * function that proves it.
+ */
+export function listingCacheKeyParts(
+  page: number,
+  serviceFilter?: string,
+  categoryFilter?: string
+): string[] {
   return [
     "public-portfolio",
     "list",
     `page:${page}`,
     `service:${serviceFilter ?? "all"}`,
+    `category:${categoryFilter ?? "all"}`,
   ];
 }
 

@@ -734,8 +734,8 @@ describe("the migration only enables truth", () => {
     );
     assert.equal(
       sorted.pop(),
-      "20260908140000_public_unified_form_v4.sql",
-      "the newest migration is the premium requirement form v3 contract"
+      "20260908150000_portfolio_project_categories.sql",
+      "the newest migration is the many-to-many portfolio room taxonomy"
     );
   });
 });

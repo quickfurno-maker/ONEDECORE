@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getClaims } from "@/server/auth/claims";
 import { createClient } from "@/lib/supabase/server";
 import { type PortfolioServiceCode } from "@/features/portfolio/domain/portfolio-service";
+import { isPortfolioCategoryId } from "@/features/portfolio/public/portfolio-categories";
 import { updateProjectAction } from "@/features/portfolio/server/portfolio-cms-actions";
 import { PortfolioProjectForm } from "@/features/portfolio/components/PortfolioProjectForm";
 import { PortfolioStatusControls } from "@/features/portfolio/components/PortfolioStatusControls";
@@ -34,6 +35,7 @@ export default async function AdminPortfolioProjectEditorPage({ params }: Projec
     .select(`
       *,
       portfolio_project_services(service_code),
+      portfolio_project_categories(category_code),
       portfolio_media(*)
     `)
     .eq("id", projectId)
@@ -46,6 +48,16 @@ export default async function AdminPortfolioProjectEditorPage({ params }: Projec
   const assignedServices = (project.portfolio_project_services || []).map(
     (s: { service_code: string }) => s.service_code as PortfolioServiceCode
   );
+
+  /*
+   * Narrowed through the canonical guard rather than cast. A stored code that
+   * is not one of the four would otherwise arrive in the form as a checkbox
+   * that silently does nothing on save; dropping it here means the editor sees
+   * the real, saveable state.
+   */
+  const assignedCategories = (project.portfolio_project_categories || [])
+    .map((c: { category_code: string }) => c.category_code)
+    .filter(isPortfolioCategoryId);
 
   const mediaItems = ((project.portfolio_media || []) as PortfolioMediaItem[]).sort(
     (a, b) => a.sort_order - b.sort_order
@@ -104,6 +116,7 @@ export default async function AdminPortfolioProjectEditorPage({ params }: Projec
           propertyType: project.property_type,
           completionYear: project.completion_year,
           services: assignedServices,
+          categories: assignedCategories,
           isFeatured: project.is_featured,
         }}
       />

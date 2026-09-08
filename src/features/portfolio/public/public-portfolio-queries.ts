@@ -34,6 +34,8 @@ export const DETAIL_PROJECT_COLUMNS = `${CARD_PROJECT_COLUMNS}, description, seo
 
 export const SERVICE_COLUMNS = "project_id, service_code";
 
+export const CATEGORY_COLUMNS = "project_id, category_code";
+
 export const MEDIA_COLUMNS =
   "id, project_id, media_role, status, public_object_path, width_px, height_px, alt_text, caption, sort_order, created_at";
 
@@ -54,6 +56,25 @@ export const LISTING_SELECT =
 
 export const LISTING_FILTERED_SELECT =
   "id, slug, title, summary, status, published_at, location_label, property_type, completion_year, is_featured, portfolio_project_services!inner(service_code), portfolio_media!inner(id)";
+
+/**
+ * Category-filtered listing projections.
+ *
+ * The room category lives in its own many-to-many table now, so filtering by it
+ * means an inner join rather than a column comparison. PostgREST returns the
+ * PARENT once with only its matching children embedded, so a project mapped to
+ * kitchen AND hall still appears exactly once in a kitchen listing -- the join
+ * narrows the parent set, it does not multiply it.
+ *
+ * Written out in full rather than composed: the Supabase select-string type
+ * parser infers row shapes from a single literal, and a composed or conditional
+ * select degrades to a ParserError.
+ */
+export const LISTING_CATEGORY_SELECT =
+  "id, slug, title, summary, status, published_at, location_label, property_type, completion_year, is_featured, portfolio_project_services!inner(service_code), portfolio_media!inner(id), portfolio_project_categories!inner(category_code)";
+
+export const LISTING_CATEGORY_FILTERED_SELECT =
+  "id, slug, title, summary, status, published_at, location_label, property_type, completion_year, is_featured, portfolio_project_services!inner(service_code), portfolio_media!inner(id), portfolio_project_categories!inner(category_code)";
 
 /** Single embedded projection backing the one-request sitemap contract. */
 export const SITEMAP_SELECT = `${CARD_PROJECT_COLUMNS}, updated_at,
@@ -167,22 +188,39 @@ export async function queryPaginatedProjects(
     activeCategory: categoryFilter ?? null,
   };
 
-  const selected = serviceFilter
-    ? supabase
-        .from("portfolio_projects")
-        .select(LISTING_FILTERED_SELECT)
-        .eq("portfolio_project_services.service_code", serviceFilter)
-    : supabase.from("portfolio_projects").select(LISTING_SELECT);
-
   /*
-   * The room category is a plain column on the project, so it filters directly
-   * rather than through the services join. An unclassified project is null and
-   * therefore excluded — which is the point: it has not been looked at, so it
-   * must not be shown to somebody who asked for bedrooms.
+   * FOUR SHAPES, ONE PER FILTER COMBINATION.
+   *
+   * The category join has to be part of the select STRING when it is used, and
+   * the select string must be a single literal for Supabase to infer the row
+   * type, so the combinations are enumerated rather than composed. Service and
+   * category filter independently and compose by intersection: asking for
+   * kitchens sold as modular-kitchens narrows on both.
+   *
+   * An unclassified project has no row in the join table and is therefore
+   * absent from every category listing. That is the point -- nobody has looked
+   * at it, so it must not be shown to somebody who asked for bedrooms.
    */
-  const base = categoryFilter
-    ? selected.eq("portfolio_category_code", categoryFilter)
-    : selected;
+  let base;
+  if (categoryFilter && serviceFilter) {
+    base = supabase
+      .from("portfolio_projects")
+      .select(LISTING_CATEGORY_FILTERED_SELECT)
+      .eq("portfolio_project_services.service_code", serviceFilter)
+      .eq("portfolio_project_categories.category_code", categoryFilter);
+  } else if (categoryFilter) {
+    base = supabase
+      .from("portfolio_projects")
+      .select(LISTING_CATEGORY_SELECT)
+      .eq("portfolio_project_categories.category_code", categoryFilter);
+  } else if (serviceFilter) {
+    base = supabase
+      .from("portfolio_projects")
+      .select(LISTING_FILTERED_SELECT)
+      .eq("portfolio_project_services.service_code", serviceFilter);
+  } else {
+    base = supabase.from("portfolio_projects").select(LISTING_SELECT);
+  }
 
   const { data: projects, error } = await base
     .eq("status", "published")
@@ -251,6 +289,11 @@ export async function queryProjectBySlug(
     .select(SERVICE_COLUMNS)
     .eq("project_id", project.id);
 
+  const { data: categories } = await supabase
+    .from("portfolio_project_categories")
+    .select(CATEGORY_COLUMNS)
+    .eq("project_id", project.id);
+
   const { data: media } = await supabase
     .from("portfolio_media")
     .select(MEDIA_COLUMNS)
@@ -260,7 +303,7 @@ export async function queryProjectBySlug(
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
 
-  return mapProjectToDetail(project, services ?? [], media ?? []);
+  return mapProjectToDetail(project, services ?? [], media ?? [], categories ?? []);
 }
 
 /**

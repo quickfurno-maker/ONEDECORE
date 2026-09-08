@@ -5,9 +5,14 @@ import {
   MAX_GALLERY_IMAGES,
 } from "./constants.ts";
 import type { PortfolioServiceKey } from "./constants.ts";
+import {
+  PORTFOLIO_CATEGORIES,
+  isPortfolioCategoryId,
+} from "./portfolio-categories.ts";
 import { buildPublicStorageUrl } from "./public-url.ts";
 import type {
   PublicPortfolioCard,
+  PublicPortfolioCategory,
   PublicPortfolioImage,
   PublicPortfolioProject,
   PublicPortfolioService,
@@ -16,6 +21,8 @@ import type {
 type ProjectRow = Database["public"]["Tables"]["portfolio_projects"]["Row"];
 type ServiceRow = Database["public"]["Tables"]["portfolio_project_services"]["Row"];
 type MediaRow = Database["public"]["Tables"]["portfolio_media"]["Row"];
+type CategoryRow =
+  Database["public"]["Tables"]["portfolio_project_categories"]["Row"];
 
 /**
  * The mappers accept column subsets so callers can select only what the public
@@ -40,6 +47,36 @@ export type DetailProjectFields = CardProjectFields &
   Pick<ProjectRow, "description" | "seo_title" | "seo_description">;
 
 export type CardServiceFields = Pick<ServiceRow, "project_id" | "service_code">;
+
+export type CardCategoryFields = Pick<
+  CategoryRow,
+  "project_id" | "category_code"
+>;
+
+/**
+ * Category rows -> public DTOs, in the canonical order.
+ *
+ * Ordered by `PORTFOLIO_CATEGORIES` rather than by whatever order the database
+ * returned, so a project's chips read the same on every request. Unknown codes
+ * are dropped rather than rendered: the check constraint should make them
+ * impossible, and a label this module invented would be worse than an omission.
+ */
+export function mapProjectCategories(
+  projectId: string,
+  categories: CardCategoryFields[]
+): PublicPortfolioCategory[] {
+  const codes = new Set(
+    categories
+      .filter((c) => c.project_id === projectId)
+      .map((c) => c.category_code)
+      .filter(isPortfolioCategoryId)
+  );
+
+  return PORTFOLIO_CATEGORIES.filter((c) => codes.has(c.id)).map((c) => ({
+    categoryId: c.id,
+    categoryLabel: c.label,
+  }));
+}
 
 export type CardMediaFields = Pick<
   MediaRow,
@@ -150,7 +187,8 @@ export function mapProjectToCard(
 export function mapProjectToDetail(
   project: DetailProjectFields,
   services: CardServiceFields[],
-  media: CardMediaFields[]
+  media: CardMediaFields[],
+  categories: CardCategoryFields[] = []
 ): PublicPortfolioProject | null {
   const card = mapProjectToCard(project, services, media);
   if (!card) {
@@ -209,6 +247,7 @@ export function mapProjectToDetail(
     seoDescription: project.seo_description ?? null,
     publishedAt: project.published_at!,
     services: card.services,
+    categories: mapProjectCategories(project.id, categories),
     cover: card.cover,
     gallery,
   };

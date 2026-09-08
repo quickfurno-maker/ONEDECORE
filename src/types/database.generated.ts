@@ -4348,6 +4348,32 @@ export type Database = {
           },
         ]
       }
+      portfolio_project_categories: {
+        Row: {
+          category_code: string
+          created_at: string
+          project_id: string
+        }
+        Insert: {
+          category_code: string
+          created_at?: string
+          project_id: string
+        }
+        Update: {
+          category_code?: string
+          created_at?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_project_categories_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portfolio_project_services: {
         Row: {
           created_at: string
@@ -8553,6 +8579,23 @@ export type Database = {
           to: "lead_import_batches"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      replace_portfolio_project_categories: {
+        Args: {
+          requested_category_codes: string[]
+          requested_project_id: string
+        }
+        Returns: {
+          category_code: string
+          created_at: string
+          project_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "portfolio_project_categories"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       replace_portfolio_project_services: {

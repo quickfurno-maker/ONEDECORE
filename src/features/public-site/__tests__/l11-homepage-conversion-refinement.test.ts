@@ -57,7 +57,17 @@ const FORM_STARTED_AT = new Date(Date.now() - 5 * 60_000).toISOString();
 
 
 const root = process.cwd();
-const read = (rel: string) => readFileSync(join(root, rel), "utf8");
+/*
+ * NORMALISED LINE ENDINGS, because assertions below slice on a newline anchor.
+ *
+ * Git checks these files out with CRLF on Windows, so an anchor written with a
+ * bare newline silently fails to match, `indexOf` returns -1, and
+ * `slice(at, -1)` quietly widens to the rest of the file — turning a scoped
+ * assertion into a whole-file one that then fails on unrelated CSS appended
+ * much later. Normalising here makes the anchors mean what they say.
+ */
+const read = (rel: string) =>
+  readFileSync(join(root, rel), "utf8").replace(/\r\n/g, "\n");
 const code = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
 
