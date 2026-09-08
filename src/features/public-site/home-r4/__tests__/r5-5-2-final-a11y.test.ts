@@ -9,6 +9,10 @@ import test, { describe } from "node:test";
 const root = process.cwd();
 const theme = join(root, "src/features/public-site/theme");
 const portfolioApp = join(root, "src/app/portfolio");
+const portfolioSkeleton = join(
+  root,
+  "src/features/portfolio/public/components/PortfolioSkeleton.tsx"
+);
 const canonicalEvidenceLedger = join(
   root,
   "docs/audits/phase-2f-r5-5-2-final-a11y-evidence-truth-ledger.md"
@@ -33,7 +37,8 @@ describe("R5.5.2 forced-colours focus", () => {
 
 describe("R5.5.2 loading status announcement", () => {
   test("status is outside busy region with single spoken message", () => {
-    const source = read(join(portfolioApp, "loading.tsx"));
+    // Same markup, new home — see the note in r5-5-1-dark-qa.test.ts.
+    const source = read(portfolioSkeleton);
     assert.match(source, /role="status"/);
     assert.match(source, /aria-busy="true"/);
     assert.match(source, /aria-label="Loading Portfolio"/);

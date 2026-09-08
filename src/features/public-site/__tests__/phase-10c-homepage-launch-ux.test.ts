@@ -41,7 +41,15 @@ describe("Phase 10C — homepage launch UX", () => {
     const contact = read("src/features/public-site/chrome/public-contact.ts");
     assert.match(page, /showConsultation=\{false\}/);
     assert.match(dock, /od-disc-dock/);
-    assert.match(dock, /PUBLIC_CONSULTATION\.href/);
+    /*
+     * The dock's consultation control is a BUTTON now, not an anchor to
+     * `PUBLIC_CONSULTATION.href`. There is no homepage anchor left to point at
+     * — the form is a sheet — so the control opens it. The shared label is
+     * still what keeps the wording consistent across every CTA.
+     */
+    assert.match(dock, /PUBLIC_CONSULTATION\.label/);
+    assert.match(dock, /<DiscoveryConsultCta/);
+    assert.doesNotMatch(dock, /href=\{PUBLIC_CONSULTATION\.href\}/);
     // WhatsApp is a floating action now; the dock owns Portfolio + consultation.
     assert.match(dock, /portfolio-sticky/);
     assert.match(dock, /consultation-sticky/);
@@ -180,11 +188,17 @@ describe("Phase 10C — homepage launch UX", () => {
   });
 
   test("homepage architecture follows the premium narrative order", () => {
+    /*
+     * Owner-directed, and two moves are locked here. `proof` is GONE from the
+     * homepage: the animated counter now opens `/interiors`, where the visitor
+     * has chosen to read about the work, rather than arriving before the page
+     * has said what the company does. And `areas` dropped from second position
+     * to just before the closing CTAs, where "do you build in my part of Pune?"
+     * is a question someone is actually asking.
+     */
     assert.deepEqual([...DISCOVERY_SECTION_ORDER], [
       "header",
       "hero",
-      "proof",
-      "areas",
       "portfolio-categories",
       "why",
       "manufacturing",
@@ -193,6 +207,7 @@ describe("Phase 10C — homepage launch UX", () => {
       "real-homes",
       "quality",
       "furniture",
+      "areas",
       "consultation",
       "final-cta",
       "footer",
@@ -201,7 +216,12 @@ describe("Phase 10C — homepage launch UX", () => {
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     const browse = read("src/features/public-site/discovery/DiscoveryDesignLibrary.tsx");
     assert.match(page, /DiscoveryHeroSlider/);
-    assert.match(page, /DiscoveryProofStrip/);
+    // The proof counter is on /interiors now, and must not come back here.
+    assert.doesNotMatch(page, /DiscoveryProofStrip/);
+    assert.match(
+      read("src/features/public-site/interiors/InteriorsConversionPage.tsx"),
+      /DiscoveryProofStrip/
+    );
     assert.match(page, /DiscoveryWhy/);
     assert.match(page, /DiscoveryDesignLibrary/);
     assert.match(browse, /data-od-disc-section="design-library"/);
@@ -235,11 +255,18 @@ describe("Phase 10C — homepage launch UX", () => {
   });
 
   test("lead form remains the single canonical homepage engine", () => {
+    /*
+     * Still one engine, and now it is the SAME engine `/interiors` uses. The
+     * homepage embedded its own form until the v4 consolidation; it mounts the
+     * shared sheet once and embeds nothing, so "single canonical" is now true
+     * across the site rather than merely within this page.
+     */
     const page = read("src/app/page.tsx");
     const discovery = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     assert.match(page, /getLeadFormMode/);
-    assert.match(discovery, /<HomeConsultationCapture mode=\{leadFormMode\} \/>/);
-    assert.equal((discovery.match(/<HomeConsultationCapture\b/g) ?? []).length, 1);
+    assert.match(discovery, /<HomePlannerSheet leadFormMode=\{leadFormMode\} \/>/);
+    assert.equal((discovery.match(/<HomePlannerSheet\b/g) ?? []).length, 1);
+    assert.doesNotMatch(discovery, /<HomeConsultationCapture\b/);
   });
 
   test("hero slider exposes carousel semantics, progress, and reduced-motion CSS", () => {

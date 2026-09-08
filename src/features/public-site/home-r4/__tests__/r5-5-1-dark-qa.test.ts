@@ -9,6 +9,10 @@ import test, { describe } from "node:test";
 const root = process.cwd();
 const theme = join(root, "src/features/public-site/theme");
 const portfolioApp = join(root, "src/app/portfolio");
+const portfolioSkeleton = join(
+  root,
+  "src/features/portfolio/public/components/PortfolioSkeleton.tsx"
+);
 const components = join(root, "src/features/portfolio/public/components");
 
 function read(path: string) {
@@ -17,8 +21,24 @@ function read(path: string) {
 
 describe("R5.5.1 Portfolio loading", () => {
   test("loading boundary exists with dark skeleton contract", () => {
-    const path = join(portfolioApp, "loading.tsx");
+    /*
+     * THE SKELETON MOVED, AND THE MOVE IS THE POINT.
+     *
+     * It was `app/portfolio/loading.tsx`, a segment-wide Suspense fallback.
+     * Next starts streaming as soon as such a fallback renders, and once the
+     * headers are sent `notFound()` can no longer set a 404 -- so every invalid
+     * portfolio URL answered "200 OK" with a not-found body. The same markup is
+     * now a component the page mounts inside its own Suspense boundary, AFTER
+     * validating, so the skeleton still covers the fetch and an invalid request
+     * still gets a real 404.
+     */
+    const path = portfolioSkeleton;
     assert.equal(existsSync(path), true);
+    assert.equal(
+      existsSync(join(portfolioApp, "loading.tsx")),
+      false,
+      "a segment loading.tsx would start streaming before the 404 decision"
+    );
     const source = read(path);
     assert.match(source, /aria-busy="true"/);
     assert.match(source, /role="status"/);

@@ -38,6 +38,7 @@ import {
   type ReactNode,
 } from "react";
 import { SINGLE_CONSENT_CONCISE_COPY } from "../../legal/consent-registry.ts";
+import { SUBMIT_LABEL } from "../project-scope.ts";
 import { usePlan } from "../../public-site/home-r4/PlanContext";
 import { collectLeadFormAttribution } from "./lead-form-attribution.ts";
 import {
@@ -81,7 +82,14 @@ type BriefFieldKey = "name" | "mobile" | "consent";
 
 const BRIEF_FIELD_ORDER: readonly BriefFieldKey[] = ["name", "mobile", "consent"];
 
-export const UNIFIED_BRIEF_SUBMIT_LABEL = "Request free consultation";
+/*
+ * THE OWNER-APPROVED WORDING, FROM THE ONE PLACE THAT HOLDS IT.
+ *
+ * `SUBMIT_LABEL` is "Get Free Quote" and lives beside the scope and budget
+ * copy. Re-declaring the string here would let this button and the approved
+ * label drift apart silently, which is exactly what happened before this
+ * import replaced a local copy.
+ */
 export const UNIFIED_BRIEF_SUBMITTING_LABEL = "Sending…";
 
 export interface UnifiedLeadBriefProps {
@@ -552,9 +560,7 @@ export function UnifiedLeadBrief({ mode, onSubmitted }: UnifiedLeadBriefProps) {
           disabled={!canAttemptSubmit}
           data-conversion-action="lead-submit"
         >
-          {isSubmitting
-            ? UNIFIED_BRIEF_SUBMITTING_LABEL
-            : UNIFIED_BRIEF_SUBMIT_LABEL}
+          {isSubmitting ? UNIFIED_BRIEF_SUBMITTING_LABEL : SUBMIT_LABEL}
         </button>
       </div>
     </form>

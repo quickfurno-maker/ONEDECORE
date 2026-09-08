@@ -42,6 +42,7 @@ import {
   BUDGET_RANGES_BY_PROJECT_SCOPE,
   LEAD_PROJECT_SCOPE_CODES,
   SERVICE_BY_PROJECT_SCOPE,
+  SUBMIT_LABEL,
 } from "../project-scope.ts";
 import { unifiedLeadToRequest } from "../public/unified-lead-request.ts";
 import { validateLeadIntakePayload } from "../server/lead-intake-validation.ts";
@@ -588,6 +589,23 @@ describe("the form and the contract ask the same questions", () => {
     assert.doesNotMatch(planner, /PM_PLANNER\.properties/);
     assert.doesNotMatch(planner, /PM_PLANNER\.rooms/);
     assert.doesNotMatch(planner, /budgetComfortOptions/);
+  });
+
+  test("the submit button carries the owner-approved wording, from one place", () => {
+    /*
+     * "Get Free Quote" was approved with the scope and budget copy and lives
+     * beside it. The button imports that constant rather than restating the
+     * string, because a second copy is a second thing to forget when the
+     * wording changes — which is how this button ended up reading something
+     * else before this assertion existed.
+     */
+    assert.equal(SUBMIT_LABEL, "Get Free Quote");
+    const brief = code(read(BRIEF));
+    assert.match(brief, /import \{ SUBMIT_LABEL \} from "\.\.\/project-scope\.ts"/);
+    assert.match(brief, /UNIFIED_BRIEF_SUBMITTING_LABEL : SUBMIT_LABEL/);
+    // No local restatement of the approved wording.
+    assert.doesNotMatch(brief, /"Get Free Quote"/);
+    assert.doesNotMatch(brief, /Request free consultation/);
   });
 
   test("the brief step is the only thing that submits", () => {
