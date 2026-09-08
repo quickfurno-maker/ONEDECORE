@@ -34,6 +34,17 @@ export function listingCacheKeyParts(
   ];
 }
 
+/**
+ * A room gallery's cache identity.
+ *
+ * The room is IN the key, not appended by the caller: two rooms must never
+ * share an entry, and the function that says so should be the one a test can
+ * read.
+ */
+export function roomGalleryCacheKeyParts(room: string): string[] {
+  return ["public-portfolio", "room", `room:${room}`];
+}
+
 export function detailCacheKeyParts(slug: string): string[] {
   return ["public-portfolio", "project", `slug:${slug}`];
 }
@@ -50,6 +61,9 @@ export function publicPortfolioTagsFor(slug: string): string[] {
   return [
     PUBLIC_CACHE_TAGS.FEATURED,
     PUBLIC_CACHE_TAGS.LIST,
+    // Room galleries draw from the same media a project mutation touches, so
+    // any portfolio change expires them too.
+    PUBLIC_CACHE_TAGS.ROOMS,
     PUBLIC_CACHE_TAGS.SITEMAP,
     PUBLIC_CACHE_TAGS.PROJECT(slug),
   ];

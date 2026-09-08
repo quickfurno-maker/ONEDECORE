@@ -1,18 +1,26 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../../types/database.generated.ts";
-import { PUBLIC_LISTING_PAGE_SIZE, MAX_HOMEPAGE_FEATURED } from "./constants.ts";
+import {
+  PUBLIC_LISTING_PAGE_SIZE,
+  MAX_HOMEPAGE_FEATURED,
+  PUBLIC_ROOM_GALLERY_LIMIT,
+} from "./constants.ts";
 import {
   mapProjectToCard,
   mapProjectToDetail,
+  mapRoomPhoto,
   type CardMediaFields,
   type CardServiceFields,
+  type RoomPhotoFields,
 } from "./public-portfolio-mapper.ts";
 import type {
   PublicPortfolioCard,
   PublicPortfolioPaginatedCards,
   PublicPortfolioProject,
+  PublicPortfolioRoomGallery,
   PublicSitemapEntry,
 } from "./types.ts";
+import type { PortfolioRoomCode } from "./portfolio-rooms.ts";
 
 export type PublicSupabaseClient = SupabaseClient<Database>;
 
@@ -37,7 +45,17 @@ export const SERVICE_COLUMNS = "project_id, service_code";
 export const CATEGORY_COLUMNS = "project_id, category_code";
 
 export const MEDIA_COLUMNS =
-  "id, project_id, media_role, status, public_object_path, width_px, height_px, alt_text, caption, sort_order, created_at";
+  "id, project_id, media_role, status, public_object_path, width_px, height_px, alt_text, caption, sort_order, created_at, room_category_code, focal_x, focal_y";
+
+/**
+ * Room-gallery projection: the photograph plus the project it belongs to.
+ *
+ * `portfolio_projects!inner` narrows to published parents in the database
+ * rather than after the page window, so an unpublished project's photographs
+ * never occupy a slot in someone else's gallery.
+ */
+export const ROOM_PHOTO_SELECT =
+  "id, project_id, media_role, status, public_object_path, width_px, height_px, alt_text, caption, sort_order, created_at, room_category_code, focal_x, focal_y, portfolio_projects!inner(slug, title, status, location_label)";
 
 /**
  * Listing projections.
@@ -304,6 +322,50 @@ export async function queryProjectBySlug(
     .order("id", { ascending: true });
 
   return mapProjectToDetail(project, services ?? [], media ?? [], categories ?? []);
+}
+
+/**
+ * Every published photograph tagged with one room.
+ *
+ * THIS RETURNS MEDIA, NOT PROJECTS, and that is the whole correction. A visitor
+ * who picks "Bedroom" wants to look at bedrooms; handing them whole-home case
+ * studies that happen to contain a bedroom answers a different question, and
+ * the alternative — splitting one delivered home into fake room-level projects
+ * so each room gets a card — would put homes in the portfolio that were never
+ * delivered as separate jobs.
+ *
+ * The filters are all applied in the database rather than after the window, so
+ * an unpublished parent, an unprocessed image or an untagged photograph never
+ * occupies a slot that a real one should have had.
+ */
+export async function queryRoomGallery(
+  supabase: PublicSupabaseClient,
+  room: PortfolioRoomCode
+): Promise<PublicPortfolioRoomGallery> {
+  const { data, error } = await supabase
+    .from("portfolio_media")
+    .select(ROOM_PHOTO_SELECT)
+    .eq("room_category_code", room)
+    .eq("status", "ready")
+    .eq("portfolio_projects.status", "published")
+    .not("public_object_path", "is", null)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(PUBLIC_ROOM_GALLERY_LIMIT);
+
+  if (error || !data || data.length === 0) {
+    if (error) logRedacted("ROOM_GALLERY_QUERY_FAILED");
+    return { room, photos: [] };
+  }
+
+  const photos = [];
+  for (const row of data as unknown as RoomPhotoFields[]) {
+    const photo = mapRoomPhoto(row);
+    if (photo) photos.push(photo);
+  }
+
+  return { room, photos };
 }
 
 /**

@@ -4243,6 +4243,8 @@ export type Database = {
           created_at: string
           created_by: string
           file_size_bytes: number | null
+          focal_x: number
+          focal_y: number
           height_px: number | null
           id: string
           media_role: string
@@ -4250,6 +4252,7 @@ export type Database = {
           project_id: string
           public_bucket: string
           public_object_path: string | null
+          room_category_code: string | null
           sort_order: number
           status: string
           updated_at: string
@@ -4262,6 +4265,8 @@ export type Database = {
           created_at?: string
           created_by: string
           file_size_bytes?: number | null
+          focal_x?: number
+          focal_y?: number
           height_px?: number | null
           id?: string
           media_role?: string
@@ -4269,6 +4274,7 @@ export type Database = {
           project_id: string
           public_bucket?: string
           public_object_path?: string | null
+          room_category_code?: string | null
           sort_order?: number
           status?: string
           updated_at?: string
@@ -4281,6 +4287,8 @@ export type Database = {
           created_at?: string
           created_by?: string
           file_size_bytes?: number | null
+          focal_x?: number
+          focal_y?: number
           height_px?: number | null
           id?: string
           media_role?: string
@@ -4288,6 +4296,7 @@ export type Database = {
           project_id?: string
           public_bucket?: string
           public_object_path?: string | null
+          room_category_code?: string | null
           sort_order?: number
           status?: string
           updated_at?: string
@@ -8579,6 +8588,109 @@ export type Database = {
           to: "lead_import_batches"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      reorder_portfolio_project_media: {
+        Args: {
+          requested_media_ids: string[]
+          requested_project_id: string
+        }
+        Returns: {
+          alt_text: string
+          caption: string | null
+          created_at: string
+          created_by: string
+          file_size_bytes: number | null
+          focal_x: number
+          focal_y: number
+          height_px: number | null
+          id: string
+          media_role: string
+          mime_type: string | null
+          project_id: string
+          public_bucket: string
+          public_object_path: string | null
+          room_category_code: string | null
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string
+          width_px: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "portfolio_media"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      set_portfolio_media_room_category: {
+        Args: {
+          requested_media_ids: string[]
+          requested_project_id: string
+          requested_room_code: string | null
+        }
+        Returns: {
+          alt_text: string
+          caption: string | null
+          created_at: string
+          created_by: string
+          file_size_bytes: number | null
+          focal_x: number
+          focal_y: number
+          height_px: number | null
+          id: string
+          media_role: string
+          mime_type: string | null
+          project_id: string
+          public_bucket: string
+          public_object_path: string | null
+          room_category_code: string | null
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string
+          width_px: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "portfolio_media"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      set_portfolio_project_cover: {
+        Args: {
+          requested_media_id: string
+          requested_project_id: string
+        }
+        Returns: {
+          alt_text: string
+          caption: string | null
+          created_at: string
+          created_by: string
+          file_size_bytes: number | null
+          focal_x: number
+          focal_y: number
+          height_px: number | null
+          id: string
+          media_role: string
+          mime_type: string | null
+          project_id: string
+          public_bucket: string
+          public_object_path: string | null
+          room_category_code: string | null
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string
+          width_px: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "portfolio_media"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       replace_portfolio_project_categories: {

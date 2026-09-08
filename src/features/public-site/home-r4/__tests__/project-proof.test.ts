@@ -30,6 +30,9 @@ function card(overrides: Partial<PublicPortfolioCard> = {}): PublicPortfolioCard
       width: 1600,
       height: 1000,
       role: "cover",
+      roomCode: null,
+      focalX: 50,
+      focalY: 50,
     },
     ...overrides,
   };

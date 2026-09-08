@@ -1,37 +1,38 @@
-
-
 /**
- * The four public portfolio categories — one definition, four consumers.
+ * The project-level room facet — compatibility, not public navigation.
  *
- * The homepage cards, the portfolio chips, the URL mapping and the database
- * filter all read this file. Duplicating the labels across those is how a chip
- * ends up linking to a filter nobody implemented.
+ * WHAT THIS IS NOW
  *
- * A REAL TAXONOMY, NOT AN ALIAS
+ * Public browsing moved to `portfolio-rooms.ts`: `Projects | Living Room |
+ * Bedroom | Kitchen`, where the three room views list PHOTOGRAPHS tagged with
+ * `portfolio_media.room_category_code`. A visitor who clicks "Bedroom" wants to
+ * look at bedrooms, and a project-level facet answers a different question.
  *
- * These are ROOM categories and they have their own column,
- * `portfolio_projects.portfolio_category_code`. They are deliberately NOT
- * `service_code` values: that field records the service a project was sold as
- * and is read by CRM and lead matching, and overloading it with rooms to make a
- * navigation control look right would corrupt it.
+ * These ids remain as the `portfolio_project_categories` vocabulary — a
+ * reasonable project-level facet, still stored, still constrained by the
+ * database — and as the `?category=` values old links may carry. They are NOT
+ * the authority for room-photo galleries and no longer drive the homepage
+ * navigation.
  *
- * A project may be unclassified. The column is nullable, nothing was
- * backfilled by guesswork, and an unclassified project simply does not appear
- * under a category — which is the honest behaviour, because the alternative is
- * showing somebody a "bedroom" nobody looked at.
+ * HALL IS GONE
+ *
+ * It was "Hall / Living Room", which asked a visitor to decide which word
+ * described their own room. Living Room is the single public term. Migration
+ * 20260908160000 translated stored `hall` values and removed it from both
+ * database allowlists, so it cannot return through the CMS either.
  */
 
 export type PortfolioCategoryId =
   | "complete-interiors"
   | "kitchen"
-  | "hall"
+  | "living-room"
   | "bedroom";
 
 export interface PortfolioCategory {
   /** Also the stored `portfolio_category_code` and the `?category=` value. */
   readonly id: PortfolioCategoryId;
   readonly label: string;
-  /** Asset key on the homepage card. Real ONEDECORE photography only. */
+  /** Asset key retained for any surface that still renders a facet tile. */
   readonly assetKey: "completeHomeInteriors" | "modularKitchens" | "hero" | "oakJoinery";
   /**
    * Whether that photograph honestly depicts this category. When false the card
@@ -54,8 +55,8 @@ export const PORTFOLIO_CATEGORIES: readonly PortfolioCategory[] = [
     depictsCategory: true,
   },
   {
-    id: "hall",
-    label: "Hall / Living Room",
+    id: "living-room",
+    label: "Living Room",
     // A living room with a media wall — the closest honest depiction available.
     assetKey: "hero",
     depictsCategory: true,
@@ -83,10 +84,18 @@ export function isPortfolioCategoryId(
   );
 }
 
-/** The category the portfolio page selects when nothing is requested. */
+/** The facet the project listing means when nothing is requested. */
 export const DEFAULT_PORTFOLIO_CATEGORY: PortfolioCategoryId = "complete-interiors";
 
-/** The portfolio URL for a category. */
+/**
+ * The portfolio URL for a facet.
+ *
+ * Emits the CANONICAL `?view=` form. `?category=` still parses for links that
+ * already exist in the wild, but nothing should be minting new ones — two
+ * addresses for one listing is how a duplicate-content problem starts.
+ */
 export function portfolioCategoryHref(category: PortfolioCategory): string {
-  return `/portfolio?category=${category.id}`;
+  return category.id === "complete-interiors"
+    ? "/portfolio"
+    : `/portfolio?view=${category.id}`;
 }

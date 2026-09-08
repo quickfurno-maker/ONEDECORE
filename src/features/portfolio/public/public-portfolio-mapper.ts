@@ -9,12 +9,18 @@ import {
   PORTFOLIO_CATEGORIES,
   isPortfolioCategoryId,
 } from "./portfolio-categories.ts";
+import {
+  FOCAL_DEFAULT,
+  isPortfolioRoomCode,
+  normaliseFocalValue,
+} from "./portfolio-rooms.ts";
 import { buildPublicStorageUrl } from "./public-url.ts";
 import type {
   PublicPortfolioCard,
   PublicPortfolioCategory,
   PublicPortfolioImage,
   PublicPortfolioProject,
+  PublicPortfolioRoomPhoto,
   PublicPortfolioService,
 } from "./types.ts";
 
@@ -91,7 +97,76 @@ export type CardMediaFields = Pick<
   | "caption"
   | "sort_order"
   | "created_at"
+  | "room_category_code"
+  | "focal_x"
+  | "focal_y"
 >;
+
+/**
+ * Room-photo fields plus the parent project a gallery card has to name.
+ *
+ * A room gallery lists photographs, but every photograph still belongs to a
+ * delivered home — an image the visitor likes has to lead somewhere.
+ */
+export type RoomPhotoFields = CardMediaFields & {
+  portfolio_projects: {
+    slug: string;
+    title: string;
+    status: string;
+    location_label: string | null;
+  } | null;
+};
+
+/**
+ * One media row -> one room-gallery photograph, or null.
+ *
+ * The guards are the same displayability contract the cards use, applied to a
+ * single image: the parent must be published, the photograph must be processed
+ * and stored, and it must actually be tagged with the room being browsed. A row
+ * failing any of those is skipped rather than rendered as a gap.
+ */
+export function mapRoomPhoto(
+  media: RoomPhotoFields
+): PublicPortfolioRoomPhoto | null {
+  const project = media.portfolio_projects;
+  if (!project || project.status !== "published") return null;
+  if (!project.slug || !SLUG_GRAMMAR_REGEX.test(project.slug)) return null;
+
+  if (media.status !== "ready") return null;
+  if (media.media_role !== "cover" && media.media_role !== "gallery") return null;
+  if (!isPortfolioRoomCode(media.room_category_code)) return null;
+  if (!media.public_object_path) return null;
+  if (!media.width_px || media.width_px <= 0) return null;
+  if (!media.height_px || media.height_px <= 0) return null;
+
+  const url = buildPublicStorageUrl(media.public_object_path, {
+    expectedProjectUuid: media.project_id,
+    expectedMediaUuid: media.id,
+  });
+  if (!url) return null;
+
+  return {
+    mediaId: media.id,
+    roomCode: media.room_category_code,
+    image: {
+      url,
+      // The project title is a poor alt text but a real one; an empty alt on a
+      // content image is worse than a generic description.
+      altText: media.alt_text?.trim() || project.title,
+      caption: media.caption ?? null,
+      width: media.width_px,
+      height: media.height_px,
+      role: media.media_role,
+      roomCode: media.room_category_code,
+      focalX: normaliseFocalValue(media.focal_x ?? FOCAL_DEFAULT),
+      focalY: normaliseFocalValue(media.focal_y ?? FOCAL_DEFAULT),
+    },
+    projectSlug: project.slug,
+    projectTitle: project.title,
+    projectLocationLabel: project.location_label ?? null,
+    sortOrder: media.sort_order ?? 0,
+  };
+}
 
 export function mapProjectToCard(
   project: CardProjectFields,
@@ -169,6 +244,16 @@ export function mapProjectToCard(
     width: coverRow.width_px!,
     height: coverRow.height_px!,
     role: "cover",
+    /*
+     * A cover is normally unclassified — it is the picture that represents the
+     * whole home, not a room. The field travels anyway so a surface that wants
+     * to label it can, without a second query.
+     */
+    roomCode: isPortfolioRoomCode(coverRow.room_category_code)
+      ? coverRow.room_category_code
+      : null,
+    focalX: normaliseFocalValue(coverRow.focal_x ?? FOCAL_DEFAULT),
+    focalY: normaliseFocalValue(coverRow.focal_y ?? FOCAL_DEFAULT),
   };
 
   return {
@@ -231,6 +316,11 @@ export function mapProjectToDetail(
         width: m.width_px!,
         height: m.height_px!,
         role: "gallery",
+        roomCode: isPortfolioRoomCode(m.room_category_code)
+          ? m.room_category_code
+          : null,
+        focalX: normaliseFocalValue(m.focal_x ?? FOCAL_DEFAULT),
+        focalY: normaliseFocalValue(m.focal_y ?? FOCAL_DEFAULT),
       });
     }
   }

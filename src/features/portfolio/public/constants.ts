@@ -11,9 +11,24 @@ export const SLUG_GRAMMAR_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const PUBLIC_CACHE_TAGS = {
   FEATURED: "portfolio:featured",
   LIST: "portfolio:list",
+  /*
+   * Room galleries are their own cached surface: a photograph gaining or losing
+   * a room tag changes what every room view returns without changing any
+   * project listing, and tagging it onto LIST would expire project pages for a
+   * mutation that cannot affect them.
+   */
+  ROOMS: "portfolio:rooms",
   SITEMAP: "portfolio:sitemap",
   PROJECT: (slug: string) => `portfolio:project:${slug}`,
 } as const;
+
+/**
+ * How many photographs one room gallery renders.
+ *
+ * Bounded for the same reason the project listing is: an unbounded gallery is a
+ * page whose weight is decided by however much the owner has uploaded.
+ */
+export const PUBLIC_ROOM_GALLERY_LIMIT = 48;
 
 export const PUBLIC_STORAGE_BUCKET = "portfolio-public";
 

@@ -293,11 +293,13 @@ describe("Public Portfolio — Route-Level Request Validation", () => {
       page: 1,
       service: null,
       category: null,
+      view: "projects",
     });
     assert.deepEqual(parseListingParams({ page: "2", service: "custom_wardrobes" }), {
       page: 2,
       service: "custom_wardrobes",
       category: null,
+      view: "projects",
     });
     /*
      * `?category=` is the room taxonomy, independent of the sold service. Both
@@ -305,10 +307,16 @@ describe("Public Portfolio — Route-Level Request Validation", () => {
      * falling back to an unfiltered listing — a filter that quietly ignores its
      * own parameter shows the visitor the wrong projects.
      */
+    /*
+     * A legacy `?category=` NORMALISES onto the view it meant. `?view=` is the
+     * canonical navigation now, and the route redirects an old link to it
+     * rather than serving one listing at two addresses.
+     */
     assert.deepEqual(parseListingParams({ category: "bedroom" }), {
       page: 1,
       service: null,
       category: "bedroom",
+      view: "bedroom",
     });
     assert.equal(parseListingParams({ page: "0" }), null);
     assert.equal(parseListingParams({ service: "unknown" }), null);
@@ -381,7 +389,13 @@ describe("Public Portfolio — Invalidation Matrix", () => {
     assert.ok(
       publicPortfolioTagsFor(slug).includes(`portfolio:project:${slug}`)
     );
-    assert.equal(publicPortfolioTagsFor(slug).length, 4);
+    /*
+     * FIVE tags now. Room galleries are a fourth cached surface drawing from
+     * the same media a project mutation touches, so `portfolio:rooms` has to
+     * expire alongside the listing, the featured rail and the sitemap.
+     */
+    assert.equal(publicPortfolioTagsFor(slug).length, 5);
+    assert.ok(publicPortfolioTagsFor(slug).includes("portfolio:rooms"));
   });
 
   test("Media invalidation includes /sitemap.xml", () => {
@@ -428,6 +442,9 @@ describe("Public Portfolio — Mapper Invariants & Malformed Project Filtering",
       caption: "Spacious living area",
       sort_order: 1,
       created_at: "2026-06-01T10:00:00Z",
+      room_category_code: null,
+      focal_x: 50,
+      focal_y: 50,
     },
   ];
 
@@ -454,11 +471,20 @@ describe("Public Portfolio — Mapper Invariants & Malformed Project Filtering",
     // No bare identifier fields on the DTO itself.
     assert.equal("id" in card, false);
     assert.equal("projectId" in card, false);
+    /*
+     * `roomCode`, `focalX` and `focalY` joined the image DTO so one uploaded
+     * original can be cropped to 4:5, 9:16 and 16:9 without re-exporting the
+     * file. They are presentation metadata — still no identifiers, no audit
+     * columns and no private-origin fields.
+     */
     assert.deepEqual(Object.keys(card.cover).sort(), [
       "altText",
       "caption",
+      "focalX",
+      "focalY",
       "height",
       "role",
+      "roomCode",
       "url",
       "width",
     ]);
@@ -569,6 +595,9 @@ describe("Public Portfolio — Mapper Invariants & Malformed Project Filtering",
         caption: null,
         sort_order: i + 1,
         created_at: "2026-06-01T10:00:00Z",
+        room_category_code: null,
+        focal_x: 50,
+        focal_y: 50,
       };
     });
 

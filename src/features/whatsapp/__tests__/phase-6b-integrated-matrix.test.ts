@@ -97,7 +97,7 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 65, "Migration count must be exactly 65");
+    assert.equal(files.length, 66, "Migration count must be exactly 66");
 
     // Workforce V1 attendance lifecycle. Still no payment M38.
     const workforce = files.filter((f) => f.startsWith("20260902160000"));
@@ -224,6 +224,9 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
         // The many-to-many portfolio room taxonomy: public portfolio browsing
         // only, no COD or payment surface of any kind.
         "20260908150000_portfolio_project_categories.sql",
+        // Photo-level room browsing and the Hall -> Living Room correction:
+        // public portfolio browsing only, no COD or payment surface.
+        "20260908160000_portfolio_media_room_browse.sql",
       ],
       "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, CRM 2A-7, CRM 2C cadences, CRM 2D commercial read models, the lead_notes INSERT privilege redrift repair, CRM 2E management analytics, the WhatsApp lead-link repair, and the Workforce V1 attendance lifecycle may follow 9D-D1 COD order foundation"
     );

@@ -1,9 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  PORTFOLIO_CATEGORIES,
-  portfolioCategoryHref,
-} from "@/features/portfolio/public/portfolio-categories";
+import { PORTFOLIO_VIEWS } from "@/features/portfolio/public/portfolio-rooms";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 import { getDiscoveryAsset } from "./discovery-assets";
 import {
@@ -18,15 +15,37 @@ import {
  * they want can leave for the work instead of scrolling past six sections of
  * argument first.
  *
- * The categories, their labels, their service mapping and their imagery all
- * come from `PORTFOLIO_CATEGORIES` — the same file the portfolio page reads —
- * so a chip here and a chip there can never disagree about what "Bedroom"
- * means or where it goes.
+ * The four views, their labels and their URLs all come from `PORTFOLIO_VIEWS`
+ * — the same file the portfolio page reads — so a chip here and a tab there can
+ * never disagree about what "Bedroom" means or where it goes.
  *
- * `depictsCategory: false` marks the image decorative and lets the visible
- * title describe the card. Two of the four categories have no photograph of
- * their own; borrowing another room's would be a false depiction.
+ * PROJECTS | LIVING ROOM | BEDROOM | KITCHEN
+ *
+ * There is no Hall. It read as "Hall / Living Room", which asked a visitor to
+ * decide which word described their own room; Living Room is now the single
+ * public term, in the database allowlists as well as here.
+ *
+ * THE IMAGES ARE ART DIRECTION, NOT EVIDENCE
+ *
+ * These tiles are navigation. The artwork on them is ONEDECORE marketing
+ * artwork and is marked decorative, so the visible title does the describing —
+ * a card must never imply that its picture is a delivered project. The real
+ * photographs live behind the link.
  */
+/**
+ * Which artwork sits behind each navigation tile.
+ *
+ * Kept here rather than in `portfolio-rooms.ts` because it is a homepage
+ * presentation choice, not part of the portfolio vocabulary — the portfolio
+ * page renders the same four views with no artwork at all.
+ */
+const VIEW_ARTWORK = {
+  projects: "completeHomeInteriors",
+  "living-room": "hero",
+  bedroom: "oakJoinery",
+  kitchen: "modularKitchens",
+} as const;
+
 export function DiscoveryPortfolioCategories() {
   return (
     <section
@@ -48,24 +67,31 @@ export function DiscoveryPortfolioCategories() {
         data-od-category-rail=""
         aria-label="Portfolio categories"
       >
-        {PORTFOLIO_CATEGORIES.map((category, index) => {
-          const asset = getDiscoveryAsset(category.assetKey);
+        {PORTFOLIO_VIEWS.map((view, index) => {
+          const asset = getDiscoveryAsset(VIEW_ARTWORK[view.id]);
           return (
             <Reveal
-              key={category.id}
+              key={view.id}
               order={index}
               as="li"
               className="od-disc-cats-nav__item"
             >
               <Link
-                href={portfolioCategoryHref(category)}
+                href={view.href}
                 className="od-disc-cats-nav__card"
-                data-conversion-action={`portfolio-category-${category.id}`}
+                data-conversion-action={`portfolio-view-${view.id}`}
+                data-od-portfolio-view={view.id}
               >
                 <span className="od-disc-cats-nav__media">
+                  {/*
+                    Always decorative. This is marketing artwork behind a
+                    navigation label, and captioning it as the room would state
+                    that ONEDECORE delivered the pictured room, which is exactly
+                    the claim the asset register forbids.
+                  */}
                   <Image
                     src={asset.path}
-                    alt={category.depictsCategory ? asset.alt : ""}
+                    alt=""
                     fill
                     sizes="(max-width: 768px) 72vw, 25vw"
                     style={{ objectPosition: asset.focalPoint }}
@@ -73,7 +99,7 @@ export function DiscoveryPortfolioCategories() {
                   />
                 </span>
                 <span className="od-disc-cats-nav__foot">
-                  <span className="od-disc-cats-nav__label">{category.label}</span>
+                  <span className="od-disc-cats-nav__label">{view.label}</span>
                   <span className="od-disc-cats-nav__arrow" aria-hidden="true">
                     →
                   </span>

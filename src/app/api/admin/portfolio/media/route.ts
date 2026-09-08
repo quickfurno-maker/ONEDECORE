@@ -10,6 +10,11 @@ import {
   MAX_FILE_SIZE_BYTES,
 } from "@/features/portfolio/server/portfolio-image-pipeline";
 import { invalidatePublicPortfolio } from "@/features/portfolio/public/public-portfolio-invalidation";
+import {
+  FOCAL_DEFAULT,
+  isPortfolioRoomCode,
+  normaliseFocalValue,
+} from "@/features/portfolio/public/portfolio-rooms";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,6 +61,25 @@ export async function POST(request: NextRequest) {
     const caption = (formData.get("caption") as string)?.trim() || null;
     const file = formData.get("file") as File | null;
 
+    /*
+     * Room and focal point may arrive with the upload so a multi-file drop can
+     * be tagged once rather than image by image afterwards. Both are optional:
+     * an untagged photograph is unclassified, which is a real state, and an
+     * unset focal point is dead centre, which is what the browser does anyway.
+     */
+    const rawRoom = (formData.get("roomCategoryCode") as string)?.trim() || "";
+    if (rawRoom !== "" && !isPortfolioRoomCode(rawRoom)) {
+      return NextResponse.json({ error: "Unknown room category" }, { status: 400 });
+    }
+    const roomCategoryCode = rawRoom === "" ? null : rawRoom;
+
+    const focalX = formData.has("focalX")
+      ? normaliseFocalValue(formData.get("focalX"))
+      : FOCAL_DEFAULT;
+    const focalY = formData.has("focalY")
+      ? normaliseFocalValue(formData.get("focalY"))
+      : FOCAL_DEFAULT;
+
     if (!projectId || !mediaRole || !altText || !file) {
       return NextResponse.json({ error: "Missing required upload parameters" }, { status: 400 });
     }
@@ -98,6 +122,39 @@ export async function POST(request: NextRequest) {
     const masterBuffer = await createSanitisedMaster(inputBuffer, validation.format);
     const masterChecksum = crypto.createHash("sha256").update(masterBuffer).digest("hex");
 
+    /*
+     * SAME FILE, SAME PROJECT — REFUSED.
+     *
+     * Dragging a folder in twice, or re-adding a photograph after a partial
+     * failure, is how a gallery quietly grows duplicates that only a human
+     * eye catches. The checksum is of the SANITISED master, so two exports of
+     * the same shot that differ only in EXIF are correctly seen as the same
+     * picture.
+     *
+     * The scope is this project, deliberately. The same photograph legitimately
+     * appearing in two different projects is not an error anyone has asked us
+     * to prevent, and a global ban would eventually block a real upload.
+     */
+    const { data: duplicates } = await supabase
+      .from("portfolio_media_sources")
+      .select("media_id, portfolio_media!inner(project_id)")
+      .eq("checksum_sha256", masterChecksum);
+
+    const duplicateInProject = (duplicates ?? []).some((row) => {
+      const parent = row.portfolio_media as unknown as { project_id: string } | null;
+      return parent?.project_id === projectId;
+    });
+
+    if (duplicateInProject) {
+      return NextResponse.json(
+        {
+          code: "DUPLICATE_IMAGE",
+          error: "This photograph is already in this project.",
+        },
+        { status: 409 }
+      );
+    }
+
     // 5. Generate Server Media UUID & Paths
     mediaId = crypto.randomUUID();
     masterObjectPath = generateMediaPath(projectId, mediaId, `original.${validation.extension}`);
@@ -117,6 +174,9 @@ export async function POST(request: NextRequest) {
         status: "draft",
         alt_text: altText,
         caption: caption,
+        room_category_code: roomCategoryCode,
+        focal_x: focalX,
+        focal_y: focalY,
         created_by: claims.userId,
         updated_by: claims.userId,
       });

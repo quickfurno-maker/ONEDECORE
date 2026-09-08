@@ -77,11 +77,11 @@ describe("nothing streams before the portfolio decides 404", () => {
      */
     const src = read(LISTING);
     const fetchAt = src.indexOf("getPaginatedProjects(");
-    const componentAt = src.indexOf("async function PortfolioResults");
+    const componentAt = src.indexOf("async function PortfolioProjectResults");
     assert.ok(componentAt > 0, "the results component must exist");
     assert.ok(
       fetchAt > componentAt,
-      "the paginated fetch belongs inside PortfolioResults"
+      "the paginated fetch belongs inside PortfolioProjectResults"
     );
   });
 });
