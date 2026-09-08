@@ -303,6 +303,28 @@ describe("generated passwords", () => {
     }
   });
 
+  test("the generator never emits a password its own validator rejects", () => {
+    /*
+     * THIS TEST USED TO BE INTERMITTENT, and the flake was the bug.
+     *
+     * Characters are drawn independently, so a draw could land on a sequential
+     * run like "efgh" that `looksEasilyGuessed` then flagged — roughly one
+     * password in four thousand. The admin UI would offer a password and its
+     * own checklist would mark it "not-common: unmet".
+     *
+     * The generator redraws now. The sample here is large enough that the old
+     * defect would show up in most runs rather than one in a hundred.
+     */
+    for (let i = 0; i < 5000; i += 1) {
+      const generated = generateStrongStaffPassword();
+      assert.equal(
+        looksEasilyGuessed(generated),
+        false,
+        `generator emitted a guessable password: ${generated}`
+      );
+    }
+  });
+
   test("every generated password satisfies every check", () => {
     for (let i = 0; i < 40; i += 1) {
       const generated = generateStrongStaffPassword();

@@ -44,8 +44,9 @@ export function getPaginatedProjects(
   return unstable_cache(
     () => fetchPaginatedProjects(page, serviceFilter, categoryFilter),
     // The category is part of the cache KEY, not just the query: two listings
-    // that differ only by category must not share a cached result.
-    [...listingCacheKeyParts(page, serviceFilter), categoryFilter ?? "all"],
+    // that differ only by category must not share a cached result. The key
+    // function owns all three components so it can be asserted directly.
+    listingCacheKeyParts(page, serviceFilter, categoryFilter),
     {
       tags: [PUBLIC_CACHE_TAGS.LIST],
       revalidate: false,

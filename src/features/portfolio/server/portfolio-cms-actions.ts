@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { getClaims } from "@/server/auth/claims";
 import { createClient } from "@/lib/supabase/server";
 import { PORTFOLIO_SERVICE_CODES, type PortfolioServiceCode } from "../domain/portfolio-service";
+import {
+  PORTFOLIO_CATEGORY_IDS,
+  isPortfolioCategoryId,
+  type PortfolioCategoryId,
+} from "../public/portfolio-categories";
 import { invalidatePublicPortfolio } from "../public/public-portfolio-invalidation";
 import { type PortfolioFormState } from "./portfolio-form-state";
 
@@ -40,6 +45,31 @@ export async function requirePortfolioManage() {
 /**
  * Server Action: Create a new draft portfolio project.
  */
+/**
+ * The submitted room categories, validated against the canonical allowlist.
+ *
+ * Returns null when the form carried a code that is not one of the four. An
+ * unknown code is REFUSED rather than filtered out: silently dropping it would
+ * save a set the editor did not choose, and they would have no way to tell.
+ *
+ * An empty selection is valid. A project with no room category is unclassified
+ * -- the state every project starts in -- and simply appears under no category
+ * filter. That is different from a project with no service, which is incoherent
+ * and is why the service check demands at least one.
+ */
+function readRequestedCategories(
+  formData: FormData
+): PortfolioCategoryId[] | null {
+  const raw = formData.getAll("categories").map(String);
+  if (raw.some((code) => !isPortfolioCategoryId(code))) {
+    return null;
+  }
+  // De-duplicated and put in canonical order, so a repeated checkbox value
+  // cannot reach the RPC as a duplicate and the stored order is stable.
+  const chosen = new Set(raw);
+  return PORTFOLIO_CATEGORY_IDS.filter((id) => chosen.has(id));
+}
+
 export async function createProjectAction(
   _previousState: PortfolioFormState,
   formData: FormData
@@ -82,6 +112,10 @@ export async function createProjectAction(
   const validServices = services.filter((s) => PORTFOLIO_SERVICE_CODES.includes(s));
   if (validServices.length < 1 || validServices.length > 3) {
     fieldErrors.services = ["Select between 1 and 3 valid services."];
+  }
+  const requestedCategories = readRequestedCategories(formData);
+  if (requestedCategories === null) {
+    fieldErrors.categories = ["Select only valid portfolio categories."];
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -131,6 +165,28 @@ export async function createProjectAction(
     return {
       success: false,
       message: serviceRpcError.message,
+      fieldErrors: {},
+    };
+  }
+
+  /*
+   * Categories go through their own atomic RPC, the same way services do. The
+   * server validates the codes again inside it: this action already checked
+   * them, but the RPC is reachable by any authenticated caller and must not
+   * trust that the check happened.
+   */
+  const { error: categoryRpcError } = await supabase.rpc(
+    "replace_portfolio_project_categories",
+    {
+      requested_project_id: project.id,
+      requested_category_codes: requestedCategories ?? [],
+    }
+  );
+
+  if (categoryRpcError) {
+    return {
+      success: false,
+      message: categoryRpcError.message,
       fieldErrors: {},
     };
   }
@@ -194,6 +250,10 @@ export async function updateProjectAction(
   if (validServices.length < 1 || validServices.length > 3) {
     fieldErrors.services = ["Select between 1 and 3 valid services."];
   }
+  const requestedCategories = readRequestedCategories(formData);
+  if (requestedCategories === null) {
+    fieldErrors.categories = ["Select only valid portfolio categories."];
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     return {
@@ -247,6 +307,27 @@ export async function updateProjectAction(
     return {
       success: false,
       message: serviceRpcError.message,
+      fieldErrors: {},
+    };
+  }
+
+  /*
+   * The category set is REPLACED, not merged: unchecking a box removes the
+   * mapping. The RPC computes the difference under a row lock, so a save never
+   * leaves the project half-classified for a concurrent public read.
+   */
+  const { error: categoryRpcError } = await supabase.rpc(
+    "replace_portfolio_project_categories",
+    {
+      requested_project_id: projectId,
+      requested_category_codes: requestedCategories ?? [],
+    }
+  );
+
+  if (categoryRpcError) {
+    return {
+      success: false,
+      message: categoryRpcError.message,
       fieldErrors: {},
     };
   }

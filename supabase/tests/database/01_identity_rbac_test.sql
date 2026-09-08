@@ -104,8 +104,8 @@ select results_eq(
 -- 10. Verify authorized application tables count
 select results_eq(
   'select count(*)::integer from information_schema.tables where table_schema = ''public'' and table_type = ''BASE TABLE''',
-  array[116],
-  'Public schema must contain exactly the 116 authorized application tables (… + Phase 9D-D1 COD orders + CRM 2A-1 lead_activity_outcome_codes + lead_follow_up_events + CRM 2A-2 crm_sla_policies + crm_sla_clocks + CRM 2C crm_cadence_templates + crm_cadence_steps + crm_lead_cadence_enrollments + crm_cadence_enrollment_events + Workforce V1 attendance_submissions + attendance_submission_events + salary_profiles + salary_statements + salary_statement_lines + salary_payments + salary_statement_events)'
+  array[117],
+  'Public schema must contain exactly the 117 authorized application tables (… + Phase 9D-D1 COD orders + CRM 2A-1 lead_activity_outcome_codes + lead_follow_up_events + CRM 2A-2 crm_sla_policies + crm_sla_clocks + CRM 2C crm_cadence_templates + crm_cadence_steps + crm_lead_cadence_enrollments + crm_cadence_enrollment_events + Workforce V1 attendance_submissions + attendance_submission_events + salary_profiles + salary_statements + salary_statement_lines + salary_payments + salary_statement_events + portfolio_project_categories)'
 );
 
 -- 11. Phase 2C3 — rls_auto_enable existence and security properties
