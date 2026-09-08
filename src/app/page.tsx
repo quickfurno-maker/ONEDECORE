@@ -6,7 +6,6 @@ import {
   getPublicCommerceProducts,
 } from "@/features/commerce/public/public-cache";
 import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
-import { getLeadFormMode } from "@/features/lead-intake/public/lead-form-mode";
 import { getFeaturedProjects } from "@/features/portfolio/public/public-portfolio-cache";
 import type { PublicPortfolioCard } from "@/features/portfolio/public/types";
 import { publicSiteFontVariables } from "@/features/public-site/fonts";
@@ -82,10 +81,9 @@ async function loadPortfolioPreview(): Promise<readonly PublicPortfolioCard[]> {
 }
 
 export default async function HomePage() {
-  const [commerce, portfolioPreview, leadFormMode] = await Promise.all([
+  const [commerce, portfolioPreview] = await Promise.all([
     loadDiscoveryCommerce(),
     loadPortfolioPreview(),
-    Promise.resolve(getLeadFormMode()),
   ]);
 
   return (
@@ -93,7 +91,6 @@ export default async function HomePage() {
       <DiscoveryHomePage
         commerce={commerce}
         portfolioPreview={portfolioPreview}
-        leadFormMode={leadFormMode}
       />
     </div>
   );

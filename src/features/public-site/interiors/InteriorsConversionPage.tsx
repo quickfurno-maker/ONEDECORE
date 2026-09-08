@@ -1,4 +1,3 @@
-import type { LeadFormMode } from "@/features/lead-intake/public/lead-form-mode";
 import { HomeBudgetEstimator } from "@/features/public-site/home-r4/HomeBudgetEstimator";
 import { HomeFactory } from "@/features/public-site/home-r4/HomeFactory";
 import { HomeFaq } from "@/features/public-site/home-r4/HomeFaq";
@@ -10,7 +9,7 @@ import { HomeReviews } from "@/features/public-site/home-r4/HomeReviews";
 import { HomeServicesRooms } from "@/features/public-site/home-r4/HomeServicesRooms";
 import { HomeShell } from "@/features/public-site/home-r4/HomeShell";
 import { HomeWhy } from "@/features/public-site/home-r4/HomeWhy";
-import { PlanProvider } from "@/features/public-site/home-r4/PlanContext";
+import { LeadConsultationHost } from "@/features/lead-intake/public/LeadConsultationHost";
 import { DiscoveryProofStrip } from "@/features/public-site/discovery/DiscoveryProofStrip";
 import "@/features/public-site/discovery/discovery.css";
 import {
@@ -42,13 +41,9 @@ export const INTERIORS_SECTION_ORDER = [
   "consultation",
 ] as const;
 
-export function InteriorsConversionPage({
-  leadFormMode,
-}: {
-  readonly leadFormMode: LeadFormMode;
-}) {
+export function InteriorsConversionPage() {
   return (
-    <PlanProvider>
+    <LeadConsultationHost>
       <HomeShell unifiedNav>
         <div data-od-interiors-order={INTERIORS_SECTION_ORDER.join("|")} hidden />
         <HomeHero />
@@ -75,9 +70,9 @@ export function InteriorsConversionPage({
         <HomeProcess />
         <InteriorsServiceAreas />
         <HomeReviews />
-        <HomeFaq leadFormMode={leadFormMode} />
-        <HomePlan leadFormMode={leadFormMode} />
+        <HomeFaq />
+        <HomePlan />
       </HomeShell>
-    </PlanProvider>
+    </LeadConsultationHost>
   );
 }

@@ -263,9 +263,19 @@ describe("Phase 10C — homepage launch UX", () => {
      */
     const page = read("src/app/page.tsx");
     const discovery = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
-    assert.match(page, /getLeadFormMode/);
-    assert.match(discovery, /<HomePlannerSheet leadFormMode=\{leadFormMode\} \/>/);
-    assert.equal((discovery.match(/<HomePlannerSheet\b/g) ?? []).length, 1);
+    /*
+     * The route no longer threads a build-time form mode. It renders the page,
+     * which mounts the one consultation host; the host asks the running server
+     * whether a lead can be submitted. A NEXT_PUBLIC_ flag baked into HTML
+     * could not know that, and the disagreement lost a real enquiry.
+     */
+    assert.doesNotMatch(page, /leadFormMode/);
+    assert.match(discovery, /<LeadConsultationHost/);
+    assert.equal(
+      (discovery.match(/<LeadConsultationHost\b/g) ?? []).length,
+      1,
+      "the consultation host must be mounted exactly once"
+    );
     assert.doesNotMatch(discovery, /<HomeConsultationCapture\b/);
   });
 

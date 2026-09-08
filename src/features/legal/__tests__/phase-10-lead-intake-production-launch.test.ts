@@ -6,7 +6,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
 import { getLeadIntakeServerEnv } from "../../../config/server-env.ts";
-import { getLeadFormMode } from "../../lead-intake/public/lead-form-mode.ts";
 import {
   BUSINESS_IDENTITY,
   CURRENT_CONSENT_VERSION_IDS,
@@ -197,13 +196,6 @@ describe("Phase 10 production lead-intake server-env gates", () => {
 });
 
 describe("Phase 10 production lead-intake containment", () => {
-  test("public form mode defaults to copy-only in repository", () => {
-    assert.equal(getLeadFormMode({}), "copy-only");
-    const example = readFileSync(join(root, ".env.example"), "utf8");
-    assert.match(example, /NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE=copy-only/);
-    assert.match(example, /ONEDECORE_SHOP_PUBLIC_ENABLED=false/);
-  });
-
   test("no new database migration in this activation slice", () => {
     const gitStatus = readFileSync(
       join(root, "src/features/legal/legal-publication.ts"),

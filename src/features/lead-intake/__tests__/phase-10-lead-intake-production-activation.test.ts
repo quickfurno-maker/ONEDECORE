@@ -133,17 +133,34 @@ describe("Phase 10 lead-intake activation source", () => {
 });
 
 describe("Phase 10 consultation conversion path", () => {
-  test("HomeLeadCapture exposes in-form service/property/timeline from PM_PLANNER", () => {
+  test("the canonical brief collects contact, area and consent — nothing else", () => {
+    /*
+     * THE SHAPE CHANGED WITH THE CONSOLIDATION.
+     *
+     * Service, scope, budget and timeline are answered on the guided steps
+     * BEFORE this one; the brief owns only the contact fields, the optional
+     * Pune area, the optional message and the single consent. It therefore
+     * neither reads `PM_PLANNER` nor sets a service — and it must never touch
+     * `property`, which the v4 contract does not carry at all.
+     */
     const capture = readFileSync(
-      join(root, "src/features/lead-intake/public/HomeLeadCapture.tsx"),
+      join(root, "src/features/lead-intake/public/UnifiedLeadBrief.tsx"),
       "utf8"
     );
-    assert.match(capture, /PM_PLANNER/);
-    assert.match(capture, /plan\.setService/);
-    assert.match(capture, /plan\.setProperty/);
-    assert.match(capture, /plan\.setTimeline/);
-    assert.match(capture, /Your interior need/);
-    assert.doesNotMatch(capture, /silently|fabricate defaults/i);
+    assert.match(capture, /Where should we send the plan\?/);
+    assert.match(capture, /Area in Pune/);
+    assert.match(capture, /plan\.setContact/);
+    assert.doesNotMatch(capture, /plan\.setProperty/);
+    assert.doesNotMatch(capture, /plan\.setService/);
+    /*
+     * Comment-stripped: the docblock uses "silently" in prose about drift and
+     * about the anti-bot window. The rule is about CODE that fabricates a
+     * default the customer never gave.
+     */
+    const captureCode = capture
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*/g, "");
+    assert.doesNotMatch(captureCode, /silently|fabricate defaults/i);
     assert.doesNotMatch(capture, /checked=\{true\}/);
   });
 
@@ -159,18 +176,26 @@ describe("Phase 10 consultation conversion path", () => {
       "utf8"
     );
     assert.match(homePlan, /briefTitleActive/);
-    assert.match(homePlan, /formPrimary/);
-    assert.match(homePlan, /copy-only/);
+    /*
+     * `formPrimary` is gone with the build-time flag that fed it. The section
+     * always offers the consultation now; whether a lead can actually be
+     * submitted is answered by the running server when the sheet opens, which
+     * is the only place that can know.
+     */
+    assert.doesNotMatch(homePlan, /formPrimary/);
+    assert.doesNotMatch(homePlan, /leadFormMode/);
     assert.match(homePlan, /copyBriefSecondaryLabel/);
     assert.doesNotMatch(homePlan, /HomeLeadCapture/);
     assert.doesNotMatch(homePlan, /PremiumRequirementForm/);
-    const activeBranch = homePlan.slice(
-      homePlan.indexOf("formPrimary ?"),
-      homePlan.indexOf('leadFormMode === "copy-only"')
+    /*
+     * The conversion control still comes before the copy-a-brief fallback.
+     * `briefActions` is DEFINED near the top of the file and RENDERED after the
+     * CTA, so the ordering that matters is where it is rendered.
+     */
+    assert.ok(
+      homePlan.indexOf("openPlanner") < homePlan.lastIndexOf("{briefActions}"),
+      "the consultation CTA must render before the secondary brief actions"
     );
-    assert.match(activeBranch, /openPlanner/);
-    assert.match(activeBranch, /briefActions/);
-    assert.ok(activeBranch.indexOf("openPlanner") < activeBranch.indexOf("briefActions"));
   });
 
   test("success copy stays request-received not booking-confirmed", () => {

@@ -1,5 +1,6 @@
 import type { LandingBlock } from "../contracts/blocks.ts";
-import { LiveLandingLeadForm } from "../components/LiveLandingLeadForm.tsx";
+import { LandingLeadLauncher } from "../components/LandingLeadLauncher.tsx";
+import { LeadConsultationHost } from "@/features/lead-intake/public/LeadConsultationHost";
 import type { SignedPublicationContext } from "../contracts/publication-context.ts";
 
 interface LandingPublicRendererProps {
@@ -117,13 +118,12 @@ function PublicBlock({
         </section>
       );
     case "lead_form_placeholder":
-      return (
-        <LiveLandingLeadForm
-          block={block}
-          signedContext={signedContext}
-          campaignExecutionContext={campaignExecutionContext}
-        />
-      );
+      /*
+       * A launcher, not a form. The signed contexts it needs are held by the
+       * `LeadConsultationHost` this renderer is wrapped in, so the block itself
+       * carries no lead state and no second contract.
+       */
+      return <LandingLeadLauncher block={block} />;
     case "footer":
       return (
         <footer className="border-t border-neutral-800 pt-4 text-sm text-neutral-500">
@@ -139,21 +139,37 @@ function PublicBlock({
   }
 }
 
+/**
+ * A published landing page, wrapped in the one canonical consultation host.
+ *
+ * The host is what makes "one form" true here: the page's lead block opens the
+ * same guided v4 sheet the rest of the site opens, and the signed publication
+ * and campaign contexts ride along in the host rather than in a form this
+ * feature owns. Landing Lab therefore keeps its trusted attribution without
+ * keeping a second lead implementation.
+ */
 export function LandingPublicRenderer({
   blocks,
   signedContext,
   campaignExecutionContext,
 }: LandingPublicRendererProps) {
   return (
-    <div className="space-y-10">
-      {blocks.map((block) => (
-        <PublicBlock
-          key={block.blockId}
-          block={block}
-          signedContext={signedContext}
-          campaignExecutionContext={campaignExecutionContext}
-        />
-      ))}
-    </div>
+    <LeadConsultationHost
+      trustedContexts={{
+        landingPublicationContext: signedContext,
+        campaignExecutionContext,
+      }}
+    >
+      <div className="space-y-10">
+        {blocks.map((block) => (
+          <PublicBlock
+            key={block.blockId}
+            block={block}
+            signedContext={signedContext}
+            campaignExecutionContext={campaignExecutionContext}
+          />
+        ))}
+      </div>
+    </LeadConsultationHost>
   );
 }

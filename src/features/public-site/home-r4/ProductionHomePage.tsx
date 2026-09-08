@@ -1,5 +1,4 @@
-import type { LeadFormMode } from "../../lead-intake/public/lead-form-mode";
-import { PlanProvider } from "./PlanContext";
+import { LeadConsultationHost } from "@/features/lead-intake/public/LeadConsultationHost";
 import { HomeBudgetEstimator } from "./HomeBudgetEstimator";
 import { HomeFactory } from "./HomeFactory";
 import { HomeFaq } from "./HomeFaq";
@@ -13,13 +12,9 @@ import { HomeTruthMetrics } from "./HomeTruthMetrics";
 import { HomeWhy } from "./HomeWhy";
 
 /** Production homepage composition — R5.4 reviews and conversion order. */
-export function ProductionHomePage({
-  leadFormMode,
-}: {
-  readonly leadFormMode: LeadFormMode;
-}) {
+export function ProductionHomePage() {
   return (
-    <PlanProvider>
+    <LeadConsultationHost>
       <HomeShell>
         <HomeHero />
         <HomeTruthMetrics />
@@ -30,8 +25,8 @@ export function ProductionHomePage({
         <HomeProcess />
         <HomeReviews />
         <HomeFaq />
-        <HomePlan leadFormMode={leadFormMode} />
+        <HomePlan />
       </HomeShell>
-    </PlanProvider>
+    </LeadConsultationHost>
   );
 }

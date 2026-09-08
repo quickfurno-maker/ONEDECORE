@@ -62,7 +62,7 @@
 - **`lead_intake_requests`:** Idempotency + HMAC fingerprint ledger.
 - **`submit_lead_intake`:** Service-role-only atomic RPC.
 - Public route `/api/public/lead-intake` exists; **defaults disabled** (`ONEDECORE_LEAD_INTAKE_MODE` empty/disabled).
-- Homepage form default: **`copy-only`** (`NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE`).
+- Public form availability is decided by the **server only**. `ONEDECORE_LEAD_INTAKE_MODE` is the single authority; the browser asks `GET /api/public/lead-intake/readiness` (no-store, per request) and renders no editable field when the answer is `false`. The former browser-side `NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE` gate was removed — a build-time public flag cannot know the state of the running server, and the disagreement lost a real enquiry.
 - `contact_suppressions` not created (deferred historically; **not planned in Phase 9A** — OD9A-1 reuses DNC + channel suppression).
 
 ### 2.4 WhatsApp Foundation Domain (Phase 6A — migration 18 managed)

@@ -84,7 +84,13 @@ const PlanCtx = createContext<PlanApi | null>(null);
 /**
  * Single source of truth for the interior plan. Every CTA on the page routes
  * through `openPlanner`, so there is one journey, one submission path, and one
- * success state. Prototype only — nothing leaves the browser.
+ * success state.
+ *
+ * THIS STATE LEAVES THE BROWSER. It used to be a prototype that did not, and
+ * the comment saying so outlived the truth. What is held here — service, scope,
+ * budget, timeline, locality, contact, message — is what `unifiedLeadToRequest`
+ * turns into a `public-consult-v4` body and posts. Treat every field as
+ * customer data on its way to a lead, not as throwaway UI state.
  */
 export function PlanProvider({ children }: { readonly children: ReactNode }) {
   const [service, setServiceState] = useState<PmServiceId | null>(null);

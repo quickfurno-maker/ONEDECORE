@@ -115,7 +115,6 @@ describe("Public site simplification — discovery IA", () => {
     assert.doesNotMatch(page, /heroConsultant|hero-consultant-indian-woman/);
     // The sheet IS mounted here now; the estimator and the inline planner are not.
     assert.doesNotMatch(page, /HomeBudgetEstimator|HomePlannerInline/);
-    assert.match(page, /HomePlannerSheet/);
     assert.doesNotMatch(page, /HomeConsultationCapture/);
     assert.match(page, /PortfolioCard/);
     assert.match(page, /data-od-portfolio-preview/);
@@ -162,12 +161,10 @@ describe("Public site simplification — discovery IA", () => {
     assert.doesNotMatch(nav, /\/interiors#consultation/);
   });
 
-  test("homepage embeds exactly one canonical lead-form path with server leadFormMode", () => {
+  test("homepage embeds exactly one canonical lead-form path, gated by the server", () => {
     const page = read("src/app/page.tsx");
     const discovery = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
-    const wrap = read("src/features/public-site/discovery/HomeConsultationCapture.tsx");
-    assert.match(page, /getLeadFormMode/);
-    assert.match(page, /leadFormMode=\{leadFormMode\}/);
+    assert.doesNotMatch(page, /leadFormMode/);
     /*
      * ONE PATH, AND IT IS THE SAME ONE THE INTERIORS PAGE USES.
      *
@@ -177,39 +174,24 @@ describe("Public site simplification — discovery IA", () => {
      * with `/interiors` rather than being a second implementation of it.
      */
     assert.match(discovery, /id="consultation"/);
-    assert.equal(
-      (discovery.match(/<HomePlannerSheet\b/g) ?? []).length,
-      1,
-      "the sheet must be mounted exactly once"
-    );
-    assert.match(discovery, /<HomePlannerSheet leadFormMode=\{leadFormMode\} \/>/);
-    assert.doesNotMatch(discovery, /<HomeConsultationCapture\b/);
     /*
-      * The consultation section now mounts the ADAPTIVE form, which owns its own
-      * two-field state. The legacy `PlanProvider` existed to drive the
-      * multi-step planner and its estimator; keeping it here only invited the
-      * property/timeline questionnaire back into a form that no longer asks
-      * them. The single-canonical-path invariant is unchanged.
-      */
-    // Comments EXPLAIN why the provider was dropped; assert against code.
-    const wrapCode = wrap
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/\/\/.*/g, "");
-    /*
-     * The canonical form is now `PremiumRequirementForm` (public-consult-v3).
-     * Asserted against COMMENT-STRIPPED source: this assertion previously passed
-     * on the word appearing in a docblock, which is the same trap the note above
-     * warns about.
+     * ONE HOST, MOUNTED ONCE. `LeadConsultationHost` owns the sheet now, and it
+     * also decides whether the form is offered at all by asking the running
+     * server — the build-time `leadFormMode` prop is gone, because a public
+     * flag baked into HTML cannot know the state of the backend.
      */
-    assert.match(wrapCode, /PremiumRequirementForm/);
-    assert.doesNotMatch(wrapCode, /ConsultationLeadForm/);
-    assert.doesNotMatch(wrapCode, /PlanProvider/);
-    assert.doesNotMatch(wrapCode, /HomeLeadCapture/);
-    assert.doesNotMatch(wrap, /HomePlannerSheet|HomeBudgetEstimator|HomePlannerInline/);
+    assert.equal(
+      (discovery.match(/<LeadConsultationHost\b/g) ?? []).length,
+      1,
+      "the consultation host must be mounted exactly once"
+    );
+    assert.doesNotMatch(discovery, /leadFormMode/);
+    assert.doesNotMatch(discovery, /<HomeConsultationCapture\b/);
+
     /*
-     * The homepage mounts the SHEET and still mounts no estimator: the budget
-     * estimator is a planning aid that belongs on the interiors page, and its
-     * output is not what the lead contract asks for.
+     * The homepage mounts the SHEET through the host and still mounts no
+     * estimator: the budget estimator is a planning aid that belongs on the
+     * interiors page, and its output is not what the lead contract asks for.
      */
     assert.doesNotMatch(discovery, /HomeBudgetEstimator|estimator/);
   });
@@ -287,17 +269,6 @@ describe("Public site simplification — discovery IA", () => {
     assert.doesNotMatch(page, /Book Free Consultation/);
   });
 
-  test("root page loads commerce, portfolio preview, and lead form mode", () => {
-    const page = read("src/app/page.tsx");
-    assert.match(page, /getPublicCommerceCategories/);
-    assert.match(page, /featuredOnly:\s*true/);
-    assert.match(page, /isShopPublicEnabled/);
-    assert.match(page, /getFeaturedProjects/);
-    assert.match(page, /getLeadFormMode/);
-    assert.match(page, /Home Interiors, Modular Kitchens & Wardrobes/);
-    assert.doesNotMatch(page, /Furniture in Pune/);
-  });
-
   test("category preview uses public root categories only", () => {
     const src = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     assert.match(src, /row\.isRoot/);
@@ -311,29 +282,6 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(page, /PortfolioCard/);
     assert.match(page, /od-disc-homes__empty/);
     assert.match(page, /View Portfolio/);
-  });
-});
-
-describe("Public site simplification — lead form email lock", () => {
-  test("public HomeLeadCapture has no email field or email-consent UI", () => {
-    const src = read("src/features/lead-intake/public/HomeLeadCapture.tsx");
-    assert.doesNotMatch(src, /type="email"/);
-    assert.doesNotMatch(src, /name="email"/);
-    assert.doesNotMatch(src, /consentServiceEmail/);
-    assert.doesNotMatch(src, /serviceEmailConsent/);
-    assert.doesNotMatch(src, /setEmail/);
-    assert.match(src, /consentServicePhone/);
-    assert.match(src, /consentWhatsapp/);
-    assert.match(src, /const \[whatsappConsent, setWhatsappConsent\] = useState\(false\)/);
-    assert.doesNotMatch(src, /setWhatsappConsent\(true\)/);
-  });
-
-  test("public lead request omits email and email consent when absent", () => {
-    const src = read("src/features/lead-intake/public/HomeLeadCapture.tsx");
-    assert.doesNotMatch(src, /email:\s*hasEmail/);
-    assert.doesNotMatch(src, /serviceEmail:\s*true/);
-    assert.match(src, /serviceEnquiry:\s*true/);
-    assert.match(src, /servicePhone:\s*true/);
   });
 });
 
@@ -356,13 +304,6 @@ describe("Public site simplification — interiors and portfolio", () => {
     assert.match(detail, /Get Free Consultation/);
     assert.match(detail, /href="\/#consultation"/);
     assert.doesNotMatch(detail, /\/interiors#consultation/);
-  });
-
-  test("HomeLeadCapture can preselect canonical service from query string", () => {
-    const src = read("src/features/lead-intake/public/HomeLeadCapture.tsx");
-    assert.match(src, /URLSearchParams/);
-    assert.match(src, /get\("service"\)/);
-    assert.match(src, /plan\.setService/);
   });
 });
 

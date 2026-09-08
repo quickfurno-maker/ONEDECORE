@@ -1,51 +1,46 @@
-"use client";
-
 import type { LeadFormPlaceholderBlock } from "../contracts/blocks.ts";
 
-interface LeadFormBlockPreviewProps {
+/**
+ * What the editor sees where the lead block will sit. Not a form.
+ *
+ * WHY IT STOPPED BEING A `<form>`
+ *
+ * It rendered a real `<form>` element with real (disabled) inputs and a
+ * `preventDefault` submit handler. It never submitted, but it was structurally
+ * a second lead form in the codebase — one more thing to find when auditing
+ * "how many public lead forms are there", and one keystroke away from becoming
+ * a real one if somebody removed a `disabled`.
+ *
+ * The published page does not render fields here either: the block is a
+ * headline, helper text and a button that opens the one canonical consultation
+ * sheet. So the honest preview is that shape, not an imitation of a form the
+ * visitor will never see.
+ *
+ * No `"use client"`: nothing here is interactive.
+ */
+export function LeadFormBlockPreview({
+  block,
+}: {
   readonly block: LeadFormPlaceholderBlock;
-}
-
-export function LeadFormBlockPreview({ block }: LeadFormBlockPreviewProps) {
+}) {
   return (
-    <form
+    <div
       className="rounded-md border border-dashed border-neutral-700 bg-neutral-900/50 p-4"
       data-testid="lead-form-block-preview"
-      onSubmit={(event) => event.preventDefault()}
-      aria-disabled="true"
     >
       <h3 className="text-base font-medium text-neutral-100">{block.headline}</h3>
       {block.helperText ? (
         <p className="mt-1 text-sm text-neutral-400">{block.helperText}</p>
       ) : null}
-      <div className="mt-4 space-y-3">
-        <label className="block text-sm text-neutral-300">
-          Name
-          <input
-            disabled
-            className="mt-1 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-400"
-            placeholder="Preview only"
-          />
-        </label>
-        <label className="block text-sm text-neutral-300">
-          Phone
-          <input
-            disabled
-            className="mt-1 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-400"
-            placeholder="Preview only"
-          />
-        </label>
-      </div>
-      <button
-        type="button"
-        disabled
-        className="mt-4 rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-400"
-      >
+
+      <p className="mt-4 rounded border border-neutral-700 px-4 py-2 text-sm text-neutral-400">
         {block.submitLabel}
-      </button>
-      <p className="mt-2 text-xs text-amber-200" role="status">
-        Prebuild preview — form does not submit.
       </p>
-    </form>
+
+      <p className="mt-2 text-xs text-amber-200" role="status">
+        Preview only. On the published page this opens the ONEDECORE
+        consultation form.
+      </p>
+    </div>
   );
 }

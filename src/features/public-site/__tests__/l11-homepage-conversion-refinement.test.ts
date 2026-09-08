@@ -6,7 +6,7 @@
  *   1. The projects count is displayed again — and ONLY that one.
  *   2. The hero is images and nothing else.
  *   3. WhatsApp sits beside the sticky consultation CTA, from configuration.
- *   4. The consultation form is one compact card.
+ *   4. The consultation CTA opens the one canonical form.
  *
  * The thing that must not move is the evidence model. Restoring a figure the
  * owner asked for is not the same as declaring it verified, and this suite
@@ -41,19 +41,7 @@ import {
   normalizeWhatsAppE164,
 } from "../chrome/public-contact.ts";
 import { DISCOVERY_PROOF_METRICS } from "../discovery/discovery-copy.ts";
-import { CONSULTATION_SERVICE_OPTIONS } from "../../lead-intake/public/consultation-copy.ts";
-import { consultationToLeadRequest } from "../../lead-intake/public/consultation-to-lead-request.ts";
-import type { LeadFormAttribution } from "../../lead-intake/public/lead-form-attribution.ts";
 
-/*
- * RELATIVE, NOT A FIXED DATE.
- *
- * `antiBot.formStartedAt` must be between 800ms and 24 hours old, so a
- * hardcoded timestamp is a time bomb: these fixtures passed on the day they
- * were written and started failing the moment the date rolled over. Five
- * minutes ago is inside the window on every day.
- */
-const FORM_STARTED_AT = new Date(Date.now() - 5 * 60_000).toISOString();
 
 
 const root = process.cwd();
@@ -77,10 +65,10 @@ const STRIP = "src/features/public-site/discovery/DiscoveryProofStrip.tsx";
 const DOCK = "src/features/public-site/discovery/DiscoveryStickyCta.tsx";
 const WA_FAB = "src/features/public-site/discovery/DiscoveryWhatsAppFab.tsx";
 const CONTACT = "src/features/public-site/chrome/public-contact.ts";
-const FORM = "src/features/lead-intake/public/ConsultationLeadForm.tsx";
-const ADAPTER = "src/features/lead-intake/public/consultation-to-lead-request.ts";
 const SERVER = "src/features/lead-intake/server/lead-intake-validation.ts";
 const DISCOVERY_CSS = "src/features/public-site/discovery/discovery.css";
+/** The one canonical public lead form, replacing the deleted per-page ones. */
+const BRIEF = "src/features/lead-intake/public/UnifiedLeadBrief.tsx";
 
 /* ========================================================================== */
 /* 1. One figure restored, by attestation, not by verification                 */
@@ -509,220 +497,12 @@ describe("the WhatsApp CTA is configured, validated, or absent", () => {
 });
 
 /* ========================================================================== */
-/* 4. One compact card                                                         */
-/* ========================================================================== */
-
-describe("the consultation form is a single step with one dropdown", () => {
-  const form = read(FORM);
-  const formCode = code(form);
-
-  test("no step counter, no step state, no auto-advance", () => {
-    for (const gone of [
-      "currentStep",
-      "CONSULTATION_STEPS",
-      "data-od-consult-step",
-      "Step {",
-    ]) {
-      assert.ok(!formCode.includes(gone), `the form must not carry ${gone}`);
-    }
-    assert.match(form, /data-od-consult-layout="single-step"/);
-  });
-
-  test("the qualifier question is gone from the form entirely", () => {
-    for (const gone of [
-      "setQualifierCode",
-      "od-consult-qualifier",
-      "data-od-qualifier-kind",
-      "qualifier.options",
-      "qualifier.placeholder",
-      "qualifier.label",
-    ]) {
-      assert.ok(!formCode.includes(gone), `the form must not render ${gone}`);
-    }
-    /*
-     * The one surviving mention is the adapter argument, and it is explicitly
-     * null — the form asks nothing, so it sends nothing.
-     */
-    assert.match(formCode, /qualifierCode: null,/);
-    assert.equal((formCode.match(/qualifierCode/g) ?? []).length, 1);
-  });
-
-  test("exactly one service dropdown, with the three real services", () => {
-    assert.equal((formCode.match(/<select/g) ?? []).length, 1);
-    assert.match(formCode, /id="od-consult-service"/);
-    assert.deepEqual(
-      CONSULTATION_SERVICE_OPTIONS.map((option) => option.label),
-      ["Complete Home Interiors", "Modular Kitchen", "Custom Wardrobe"]
-    );
-    const copy = read("src/features/lead-intake/public/consultation-copy.ts");
-    assert.match(copy, /CONSULTATION_SERVICE_LABEL = "What do you need\?"/);
-  });
-
-  test("contact fields and the submit are ungated", () => {
-    // They used to be hidden until a qualifier was chosen.
-    assert.doesNotMatch(formCode, /\{qualifierCode \? \(/);
-    assert.match(formCode, /<fieldset className="od-consult-form__group">/);
-    assert.match(formCode, /type="submit"/);
-    assert.equal((formCode.match(/type="submit"/g) ?? []).length, 1);
-    assert.match(form, /Get Free Design Consultation/);
-  });
-
-  test("the Indian mobile UX and paste normalisation survive", () => {
-    assert.match(form, /data-od-lead-phone-ux="national-10"/);
-    assert.match(formCode, /type="tel"/);
-    assert.match(formCode, /inputMode="numeric"/);
-    assert.match(formCode, /autoComplete="tel-national"/);
-    assert.match(formCode, /acceptIndianMobileInput/);
-    assert.match(formCode, /onPaste=/);
-  });
-
-  test("locality is optional and the note stays collapsed behind a toggle", () => {
-    assert.match(form, /locality <span>\(optional\)<\/span>/i);
-    assert.match(formCode, /noteOpen/);
-    assert.match(formCode, /od-consult-form__note-toggle/);
-  });
-
-  test("all three consents and both legal links are preserved", () => {
-    for (const kept of [
-      "serviceEnquiryConsent",
-      "servicePhoneConsent",
-      "whatsappConsent",
-      "LEAD_FORM_PRIVACY_PATH",
-      "LEAD_FORM_TERMS_PATH",
-    ]) {
-      assert.ok(formCode.includes(kept), `the form must keep ${kept}`);
-    }
-    for (const forbidden of ["marketingConsent", "promotionalConsent"]) {
-      assert.ok(!form.includes(forbidden), `must not fabricate ${forbidden}`);
-    }
-  });
-
-  test("attribution, idempotency and the honeypot are untouched", () => {
-    for (const kept of [
-      "collectLeadFormAttribution",
-      "fingerprintLeadPayload",
-      "getOrCreateKey",
-      "LEAD_FORM_HONEYPOT_FIELD",
-      "formStartedAt",
-    ]) {
-      assert.ok(formCode.includes(kept), `the form must keep ${kept}`);
-    }
-  });
-
-  test("preview and copy-only never reach the network; active submits", () => {
-    assert.match(formCode, /const canNetworkSubmit = mode === "active"/);
-    assert.match(formCode, /if \(!canNetworkSubmit\)/);
-    const capture = code(
-      read("src/features/public-site/discovery/HomeConsultationCapture.tsx")
-    );
-    assert.match(capture, /mode === "copy-only"/);
-    assert.match(capture, /return null/);
-  });
-
-  test("the success message confirms receipt and promises nothing", () => {
-    const copy = read("src/features/lead-intake/public/consultation-copy.ts");
-    assert.match(
-      copy,
-      /"Thank you\. We received your consultation request and will follow up\."/
-    );
-    assert.match(formCode, /CONSULTATION_SUCCESS_MESSAGE/);
-  });
-});
-
-/* ========================================================================== */
-/* 5. The qualifier is optional — and still strict when it appears             */
-/* ========================================================================== */
-
-describe("an unasked qualifier is absent, not invented", () => {
-  const attribution: LeadFormAttribution = { landingPath: "/" };
-  const base = {
-    name: "Asha Menon",
-    mobile: "9876543210",
-    consent: { serviceEnquiry: true, servicePhone: true } as const,
-    attribution,
-    antiBot: { website: "", formStartedAt: FORM_STARTED_AT },
-    idempotencyKey: "k-1",
-  };
-
-  test("a body with no qualifier is accepted and carries none", () => {
-    const result = consultationToLeadRequest({
-      ...base,
-      service: "modular-kitchens",
-      qualifierCode: null,
-    });
-    assert.equal(result.ok, true);
-    if (!result.ok) return;
-    assert.equal("qualifier" in result.body.requirements, false);
-    // And nothing else was invented to fill the gap.
-    for (const unasked of ["property", "timeline", "rooms", "budgetComfort", "estimate"]) {
-      assert.equal(unasked in result.body.requirements, false, unasked);
-    }
-  });
-
-  test("a supplied qualifier is REFUSED, however valid it looks", () => {
-    /*
-     * The pre-merge correction upgraded this from optional to forbidden. The
-     * form asks no service-specific question, so a qualifier in the payload
-     * came from a stale or tampered client — and `public-consult-v2` says so in
-     * both layers rather than quietly dropping it.
-     */
-    for (const code of ["new-kitchen", "apartment-3bhk", "made-up"]) {
-      const result = consultationToLeadRequest({
-        ...base,
-        service: "modular-kitchens",
-        qualifierCode: code,
-      });
-      assert.equal(result.ok, false, `${code} must be refused`);
-      if (result.ok) continue;
-      assert.ok(result.fields.includes("requirements.qualifier"));
-    }
-  });
-
-  test("the service itself is still required", () => {
-    const result = consultationToLeadRequest({
-      ...base,
-      service: null,
-      qualifierCode: null,
-    });
-    assert.equal(result.ok, false);
-    if (result.ok) return;
-    assert.ok(result.fields.includes("requirements.service"));
-  });
-
-  test("the server refuses it under v2 and requires it under v1", () => {
-    const server = code(read(SERVER));
-    // v2 and v3 share every prohibition, so the server states them once
-    // against a flag both versions set.
-    assert.match(server, /if \(forbidsQualifier\) \{/);
-    assert.match(server, /const forbidsQualifier =/);
-    // v1's strict branch survives underneath.
-    assert.match(server, /isAllowedLeadQualifier\(kind, code\)/);
-    assert.match(server, /LEAD_QUALIFIER_KIND_BY_SERVICE\[service as LeadServiceCode\] !== kind/);
-    /*
-     * Unasked fields are still rejected rather than ignored. The list became
-     * conditional when v4 arrived -- v4 is the one version that DOES ask for a
-     * timeline -- so the assertion follows it: the timeline is excluded for v4
-     * and for nothing else, and the remaining prohibitions are unconditional.
-     */
-    assert.match(server, /isPublicConsultV4 \? \[\] : \(\["timeline"\] as const\)/);
-    assert.match(server, /"rooms",\s*\n\s*"budgetComfort",\s*\n\s*"estimate",/);
-  });
-
-  test("the adapter emits v2 and forbids rather than loosens", () => {
-    const adapter = read(ADAPTER);
-    assert.match(adapter, /plannerVersion: PUBLIC_CONSULT_V2_PLANNER_VERSION/);
-    assert.match(adapter, /IT IS FORBIDDEN/);
-    assert.doesNotMatch(adapter, /hasQualifier/);
-  });
-});
-
-/* ========================================================================== */
-/* 6. L1.1 introduced no tracking                                              */
+/* 4. L1.1 introduced no tracking                                              */
 /* ========================================================================== */
 
 describe("no measurement layer arrived with this change", () => {
   test("no tag, pixel or container on any touched surface", () => {
-    for (const rel of [HERO, COUNT_UP, STRIP, DOCK, WA_FAB, CONTACT, FORM]) {
+    for (const rel of [HERO, COUNT_UP, STRIP, DOCK, WA_FAB, CONTACT, BRIEF]) {
       const source = read(rel);
       for (const tag of [
         "googletagmanager",

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { LeadFormMode } from "../../lead-intake/public/lead-form-mode.ts";
 import { PM_CLOSE, PM_PLANNER, PM_SECTION_IDS } from "./content";
 import { formatInteriorBrief } from "./plan-state";
 import { usePlan } from "./PlanContext";
@@ -28,18 +27,18 @@ function labelOf(
  * has already answered and the control that opens the sheet at the first
  * question still outstanding.
  *
- * Lead form mode is resolved on the server and passed in to avoid SSR/client
- * drift; it decides whether a conversion CTA is offered at all or the page
- * falls back to the copy-a-brief path.
+ * THE CONVERSION CTA IS ALWAYS OFFERED
+ *
+ * It used to be conditional on a build-time public flag, which is what let the
+ * page promise a live form while the server could accept nothing. Whether a
+ * lead can actually be submitted is now decided by the running server, at the
+ * moment the sheet opens — so this section simply offers the consultation and
+ * lets the sheet answer honestly. Copying a brief remains the secondary path
+ * for somebody who would rather not send anything.
  */
-export function HomePlan({
-  leadFormMode,
-}: {
-  readonly leadFormMode: LeadFormMode;
-}) {
+export function HomePlan() {
   const plan = usePlan();
   const [copyState, setCopyState] = useState<"idle" | "ok" | "err">("idle");
-  const formPrimary = leadFormMode === "active" || leadFormMode === "preview";
 
   const budgetLabel = labelOf(
     PM_PLANNER.budgetComfortOptions,
@@ -92,27 +91,16 @@ export function HomePlan({
   };
 
   const briefActions = (
-    <div className={formPrimary ? "pm-close__secondary" : undefined}>
-      {!formPrimary ? (
-        <>
-          <h3 className="pm-planner__successTitle">{PM_CLOSE.briefTitle}</h3>
-          <p className="pm-planner__successBody">{PM_CLOSE.briefBody}</p>
-        </>
-      ) : (
-        <p className="pm-close__secondary-label">Other options</p>
-      )}
+    <div className="pm-close__secondary">
+      <p className="pm-close__secondary-label">Other options</p>
       <div className="pm-close__actions">
         <button
           type="button"
-          className={
-            formPrimary
-              ? "dc-btn dc-btn--ghost"
-              : "dc-btn dc-btn--primary pm-btn--sheen"
-          }
+          className="dc-btn dc-btn--ghost"
           onClick={() => void onCopy()}
           data-conversion-action="brief-copy"
         >
-          {formPrimary ? PM_CLOSE.copyBriefSecondaryLabel : PM_CLOSE.submitLabel}
+          {PM_CLOSE.copyBriefSecondaryLabel}
         </button>
         <Link
           href={PM_CLOSE.secondaryHref}
@@ -137,7 +125,6 @@ export function HomePlan({
       id="consultation"
       className="pm-section pm-close"
       aria-labelledby="pm-close-title"
-      data-lead-form-mode={leadFormMode}
     >
       <span id={PM_SECTION_IDS.plan} />
       <span className="pm-close__glow" aria-hidden="true" />
@@ -148,10 +135,10 @@ export function HomePlan({
             {PM_CLOSE.heading}
           </h2>
           <p className="pm-lede">
-            {formPrimary ? PM_CLOSE.ledeActive : PM_CLOSE.lede}
+            {PM_CLOSE.ledeActive}
           </p>
           <p className="pm-close__reassurance">
-            {formPrimary ? PM_CLOSE.reassuranceActive : PM_CLOSE.reassurance}
+            {PM_CLOSE.reassuranceActive}
           </p>
 
           <div className="pm-summary pm-summary--intro">
@@ -188,32 +175,24 @@ export function HomePlan({
           <div
             className="pm-planner__success"
             role="region"
-            aria-label={
-              formPrimary ? "Consultation request" : "Interior brief actions"
-            }
+            aria-label="Consultation request"
           >
-            {formPrimary ? (
-              <>
-                <h3 className="pm-planner__successTitle">
-                  {PM_CLOSE.briefTitleActive}
-                </h3>
-                <p className="pm-planner__successBody">{PM_CLOSE.briefBodyActive}</p>
-                <div className="pm-close__form-actions">
-                  <button
-                    type="button"
-                    className="dc-btn dc-btn--primary pm-btn--sheen"
-                    onClick={() => plan.openPlanner(plan.getNextIncompleteStep())}
-                    data-conversion-action="consultation-plan"
-                  >
-                    {PM_CLOSE.submitLabel}
-                  </button>
-                </div>
-                <p className="pm-close__reassurance">{PM_CLOSE.reassuranceActive}</p>
-                {briefActions}
-              </>
-            ) : leadFormMode === "copy-only" ? (
-              briefActions
-            ) : null}
+            <h3 className="pm-planner__successTitle">
+              {PM_CLOSE.briefTitleActive}
+            </h3>
+            <p className="pm-planner__successBody">{PM_CLOSE.briefBodyActive}</p>
+            <div className="pm-close__form-actions">
+              <button
+                type="button"
+                className="dc-btn dc-btn--primary pm-btn--sheen"
+                onClick={() => plan.openPlanner(plan.getNextIncompleteStep())}
+                data-conversion-action="consultation-plan"
+              >
+                {PM_CLOSE.submitLabel}
+              </button>
+            </div>
+            <p className="pm-close__reassurance">{PM_CLOSE.reassuranceActive}</p>
+            {briefActions}
           </div>
         </div>
       </div>

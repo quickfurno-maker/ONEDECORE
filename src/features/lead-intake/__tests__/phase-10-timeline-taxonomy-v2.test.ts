@@ -60,12 +60,20 @@ describe("PR94 timeline taxonomy v2", () => {
     ]);
   });
 
-  test("HomePlan summary resolves timeline through PM_PLANNER labels", () => {
+  test("the timeline vocabulary is rendered from PM_PLANNER, once", () => {
+    /*
+     * The timeline is asked on step 3 of the guided sheet now, not in the brief
+     * step — so the planner is where the options are rendered. What must stay
+     * true is that no surface hardcodes a code, and that the retired v1 codes
+     * appear nowhere.
+     */
     const plan = read("src/features/public-site/home-r4/HomePlan.tsx");
-    const capture = read("src/features/lead-intake/public/HomeLeadCapture.tsx");
+    const planner = read("src/features/public-site/home-r4/HomePlanner.tsx");
+    const capture = read("src/features/lead-intake/public/UnifiedLeadBrief.tsx");
     assert.match(plan, /labelOf\(PM_PLANNER\.timelines, plan\.timeline\)/);
-    assert.match(capture, /PM_PLANNER\.timelines\.map/);
+    assert.match(planner, /PM_PLANNER\.timelines/);
     assert.doesNotMatch(plan, /ready-now|within-3-months/);
+    assert.doesNotMatch(planner, /ready-now|within-3-months/);
     assert.doesNotMatch(capture, /ready-now|within-3-months/);
   });
 
@@ -105,7 +113,7 @@ describe("PR94 timeline taxonomy v2", () => {
 
   test("no silent remapping helpers from new IDs to legacy IDs", () => {
     const files = [
-      "src/features/lead-intake/public/plan-to-lead-request.ts",
+      "src/features/lead-intake/public/unified-lead-request.ts",
       "src/features/lead-intake/server/lead-intake-validation.ts",
       "src/features/lead-intake/planner-allowlist.ts",
       "src/features/public-site/home-r4/content.ts",

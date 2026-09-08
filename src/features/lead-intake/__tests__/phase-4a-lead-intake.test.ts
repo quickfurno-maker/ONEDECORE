@@ -1009,15 +1009,20 @@ describe("Phase 4A homepage and server-only guards", () => {
 
     const homePlan = readFileSync(join(home, "HomePlan.tsx"), "utf8");
     assert.doesNotMatch(homePlan, /\/api\/public\/lead-intake/);
-    assert.match(homePlan, /leadFormMode/);
-    assert.match(homePlan, /copy-only/);
+    /*
+     * The section no longer takes a mode. Whether a lead can be submitted is
+     * decided by the running server when the sheet opens, not by a build-time
+     * flag threaded through page props — the disagreement between those two
+     * lost a real enquiry.
+     */
+    assert.match(homePlan, /openPlanner/);
 
     const interiors = readFileSync(join(root, "src/app/interiors/page.tsx"), "utf8");
-    assert.match(interiors, /getLeadFormMode/);
-    assert.match(interiors, /leadFormMode/);
+    assert.match(interiors, /InteriorsConversionPage/);
+    assert.doesNotMatch(interiors, /leadFormMode/);
     const discovery = readFileSync(join(root, "src/app/page.tsx"), "utf8");
-    assert.match(discovery, /getLeadFormMode/);
-    assert.match(discovery, /leadFormMode/);
+    assert.match(discovery, /DiscoveryHomePage/);
+    assert.doesNotMatch(discovery, /leadFormMode/);
     const discoveryPage = readFileSync(
       join(root, "src/features/public-site/discovery/DiscoveryHomePage.tsx"),
       "utf8"
@@ -1027,7 +1032,7 @@ describe("Phase 4A homepage and server-only guards", () => {
      * of its own. This assertion is inverted from what it once said, and the
      * inversion is the change: one form, one contract, one submission path.
      */
-    assert.match(discoveryPage, /HomePlannerSheet/);
+    assert.match(discoveryPage, /LeadConsultationHost/);
     assert.doesNotMatch(discoveryPage, /HomeConsultationCapture/);
     assert.doesNotMatch(discoveryPage, /PremiumRequirementForm/);
 
@@ -1057,7 +1062,12 @@ describe("Phase 4A homepage and server-only guards", () => {
     }
     const example = readFileSync(join(root, ".env.example"), "utf8");
     assert.match(example, /ONEDECORE_LEAD_INTAKE_MODE=/);
-    assert.match(example, /NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE=/);
+    /*
+     * The browser-side gate is gone. `.env.example` documents the ONE server
+     * authority instead, and must not instruct anyone to set the removed flag.
+     */
+    assert.match(example, /ONEDECORE_LEAD_INTAKE_MODE=/);
+    assert.doesNotMatch(example, /^\s*NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE\s*=/m);
     assert.match(example, /SUPABASE_SERVICE_ROLE_KEY=/);
     assert.match(example, /ONEDECORE_LEAD_HASH_SECRET=/);
     assert.doesNotMatch(example, /SUPABASE_SECRET_KEY=/);
@@ -1071,8 +1081,13 @@ describe("Phase 4A homepage and server-only guards", () => {
     assert.doesNotMatch(page, /api\/public\/lead-intake/);
     assert.doesNotMatch(page, /submitLeadIntake/);
     assert.doesNotMatch(page, /export const dynamic\s*=\s*["']force-dynamic["']/);
-    assert.match(interiors, /getLeadFormMode/);
-    assert.match(interiors, /leadFormMode=\{leadFormMode\}/);
+    /*
+     * The interiors route no longer threads a build-time form mode. It renders
+     * the conversion page, which mounts the one consultation host; the host
+     * asks the running server whether a lead can be submitted.
+     */
+    assert.match(interiors, /InteriorsConversionPage/);
+    assert.doesNotMatch(interiors, /leadFormMode/);
   });
 
   test("suppression safety note is documented and unenforced in Phase 4A RPC", () => {

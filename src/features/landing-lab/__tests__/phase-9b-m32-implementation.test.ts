@@ -23,6 +23,9 @@ import { buildSamplePublicationContext } from "../fixtures/landing-fixtures.ts";
 import { SERVICE_ENQUIRY_COPY_VERSION, SERVICE_COMMUNICATION_COPY_VERSION, LEAD_INTAKE_NOTICE_VERSION, LEAD_INTAKE_PLANNER_VERSION } from "../../lead-intake/contracts.ts";
 import type { createAdminClient } from "../../../lib/supabase/admin.ts";
 
+const stripComments = (source: string) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
+
 const root = process.cwd();
 const secret = "phase-9b-m32-test-secret-value-32chars";
 
@@ -130,33 +133,58 @@ describe("Phase 9B M32 exposures and activation", () => {
   test("no dangerouslySetInnerHTML in public renderer or live form", () => {
     for (const path of [
       "src/features/landing-lab/components/LandingPublicRenderer.tsx",
-      "src/features/landing-lab/components/LiveLandingLeadForm.tsx",
+      "src/features/landing-lab/components/LandingLeadLauncher.tsx",
       "src/app/lp/[slug]/page.tsx",
     ]) {
       assert.doesNotMatch(readFileSync(join(root, path), "utf8"), /dangerouslySetInnerHTML/);
     }
   });
 
-  test("live form is distinct from non-submitting preview", () => {
+  test("the public block is a launcher into the one canonical form", () => {
+    /*
+     * Landing Lab used to own `LiveLandingLeadForm`: its own `<form>`, its own
+     * consent presentation, its own validation and a request body stamped
+     * `home-r4-v1`. That made it a second public lead implementation with a
+     * second contract, and a visitor answered different questions depending on
+     * which page they landed on.
+     *
+     * It is a launcher now. The signed publication and campaign contexts it
+     * needs are carried by `LeadConsultationHost`, so trusted attribution
+     * survives without this feature owning a form.
+     */
     const preview = readFileSync(join(root, "src/features/landing-lab/components/LeadFormBlockPreview.tsx"), "utf8");
-    const live = readFileSync(join(root, "src/features/landing-lab/components/LiveLandingLeadForm.tsx"), "utf8");
-    assert.match(preview, /does not submit/i);
-    assert.match(live, /\/api\/public\/lead-intake/);
-    assert.doesNotMatch(live, /marketing:\s*true/i);
+    const launcher = readFileSync(join(root, "src/features/landing-lab/components/LandingLeadLauncher.tsx"), "utf8");
+    const renderer = readFileSync(join(root, "src/features/landing-lab/components/LandingPublicRenderer.tsx"), "utf8");
+
+    assert.match(preview, /Preview only/i);
+    /*
+     * Comment-stripped throughout: these docblocks describe the forms that
+     * were removed, and an assertion that trips on its own explanation is an
+     * instruction to delete the explanation.
+     */
+    assert.doesNotMatch(stripComments(preview), /<form\b/);
+
+    assert.doesNotMatch(stripComments(launcher), /<form\b/);
+    assert.doesNotMatch(stripComments(launcher), /\/api\/public\/lead-intake/);
+    assert.match(launcher, /openPlanner\(\)/);
+
+    assert.match(renderer, /LeadConsultationHost/);
+    assert.match(renderer, /landingPublicationContext: signedContext/);
+    assert.match(renderer, /campaignExecutionContext/);
   });
 
-  test("live form does not invent customer requirements", () => {
-    const live = readFileSync(join(root, "src/features/landing-lab/components/LiveLandingLeadForm.tsx"), "utf8");
-    assert.doesNotMatch(live, /defaultChecked/);
-    assert.match(live, /defaultValue=""/);
-    assert.match(live, /Select service/);
-    assert.match(live, /Select property/);
-    assert.match(live, /Select timeline/);
-    assert.match(live, /Rooms \(optional\)/);
-    assert.doesNotMatch(live, /type="hidden"[^>]*name="service"/);
-    assert.doesNotMatch(live, /type="hidden"[^>]*name="property"/);
-    assert.doesNotMatch(live, /type="hidden"[^>]*name="timeline"/);
-    assert.doesNotMatch(live, /type="hidden"[^>]*name="rooms"/);
+  test("the landing block invents no customer requirement", () => {
+    /*
+     * The old form asked for property and rooms — fields the canonical contract
+     * no longer collects at all. The launcher asks for nothing: every answer is
+     * given inside the one v4 sheet, so there is no second place for a default
+     * to be invented.
+     */
+    const launcher = readFileSync(join(root, "src/features/landing-lab/components/LandingLeadLauncher.tsx"), "utf8");
+    const launcherCode = stripComments(launcher);
+    assert.doesNotMatch(launcherCode, /defaultChecked/);
+    assert.doesNotMatch(launcherCode, /type="hidden"/);
+    assert.doesNotMatch(launcherCode, /property|rooms|timeline|budget/i);
     const emptyRooms = validateLeadIntakePayload(intakeBody({
       requirements: {
         service: "complete-home-interiors",

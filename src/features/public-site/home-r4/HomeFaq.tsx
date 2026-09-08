@@ -7,7 +7,6 @@ import {
   PM_SECTION_IDS,
   resolveFaqEntry,
 } from "./content";
-import type { LeadFormMode } from "@/features/lead-intake/public/lead-form-mode";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 
 function Chevron() {
@@ -29,19 +28,15 @@ function Chevron() {
  * Controlled accordion with grid-template-rows motion.
  * Content stays in the DOM (no `hidden`) so open/close can animate.
  */
-export function HomeFaq({
-  leadFormMode = "copy-only",
-}: {
-  /**
-   * Whether the consultation form is live on this page. One FAQ answer depends
-   * on it: "is anything submitted from this page" is only "no" while the form
-   * is not active.
-   */
-  readonly leadFormMode?: LeadFormMode;
-} = {}) {
+export function HomeFaq() {
   const baseId = useId();
   const [openId, setOpenId] = useState<string | null>(null);
-  const formActive = leadFormMode === "active";
+  /*
+   * The FAQ answers describe a site whose consultation form submits, because it
+   * does. Whether the backend can accept a lead at this instant is answered by
+   * the sheet when it opens, not by a build-time flag baked into this copy.
+   */
+  const formActive = true;
 
   return (
     <section

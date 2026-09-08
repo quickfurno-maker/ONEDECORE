@@ -414,12 +414,21 @@ describe("crawlers are pointed at the launch surface and away from the rest", ()
 /* ========================================================================== */
 
 describe("L1 did not disturb the working lead funnel", () => {
-  const form = read("src/features/lead-intake/public/ConsultationLeadForm.tsx");
+  /*
+   * THE FUNNEL IS ONE FORM NOW.
+   *
+   * `ConsultationLeadForm` was one of four public lead forms and is deleted.
+   * The guarantees below moved to the canonical brief — and one of them
+   * INVERTED: consent used to be two visible checkboxes plus an optional
+   * WhatsApp box, and is now a single combined consent. An optional consent
+   * nobody is shown must be ABSENT from the request, never recorded as false.
+   */
+  const form = read("src/features/lead-intake/public/UnifiedLeadBrief.tsx");
 
-  test("consent stays separated and no marketing consent is fabricated", () => {
-    assert.match(form, /serviceEnquiryConsent/);
-    assert.match(form, /servicePhoneConsent/);
-    assert.match(form, /whatsappService/);
+  test("one visible consent, and no marketing consent is fabricated", () => {
+    assert.match(form, /SINGLE_CONSENT_CONCISE_COPY/);
+    assert.doesNotMatch(code(form), /serviceEnquiryConsent|servicePhoneConsent/);
+    assert.doesNotMatch(code(form), /whatsappService/);
     for (const forbidden of [
       "marketingConsent",
       "promotionalConsent",
@@ -856,8 +865,13 @@ describe("public copy matches the page it describes", () => {
      * asserts. Threading the mode through the component is how PM_CLOSE
      * already does it.
      */
-    assert.doesNotMatch(content, /getLeadFormMode/);
-    assert.match(faqComponent, /leadFormMode === "active"/);
+    assert.doesNotMatch(content, /leadFormMode/);
+    /*
+     * The FAQ answers describe a site whose form submits, because it does.
+     * Whether the backend can accept a lead at this instant is answered by the
+     * sheet when it opens, not by copy compiled into the page.
+     */
+    assert.match(faqComponent, /const formActive = true/);
     assert.match(faqComponent, /resolveFaqEntry\(entry, formActive\)/);
 
     // Resolution is truthful in both directions.
