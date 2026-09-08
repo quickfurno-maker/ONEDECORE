@@ -1094,3 +1094,275 @@ button.od-btn-primary {
     white-space: nowrap;
   }
 }
+
+/* ==========================================================================
+   Portfolio browsing — Projects | Living Room | Bedroom | Kitchen
+   ==========================================================================
+   Two browse modes share one page. Projects lists whole-home case studies;
+   the three room views list photographs. The tabs, the 4:5 grid and the
+   lightbox below are the surfaces that difference needs.
+   ========================================================================== */
+
+.od-portfolio-views {
+  margin: 1.25rem 0 2rem;
+}
+
+/*
+ * Scrolls rather than wraps. Four labels do not fit across a narrow phone at a
+ * legible size, and the usual escapes — wrapping to a second line, or shrinking
+ * the text — either push the content down or make the targets too small.
+ */
+.od-portfolio-views__rail {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0 0 0.25rem;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.od-portfolio-views__rail::-webkit-scrollbar {
+  display: none;
+}
+
+.od-portfolio-views__tab {
+  display: inline-flex;
+  align-items: center;
+  /* 44px minimum target, per the mobile touch contract. */
+  min-height: 44px;
+  padding: 0 1.05rem;
+  border: 1px solid var(--od-line, rgba(255, 255, 255, 0.14));
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  color: var(--od-text-secondary, rgba(255, 255, 255, 0.72));
+  text-decoration: none;
+  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+}
+
+.od-portfolio-views__tab:hover {
+  color: var(--od-text-primary, #fff);
+  border-color: color-mix(in srgb, var(--od-gold, #c9a962) 55%, transparent);
+}
+
+.od-portfolio-views__tab[data-active] {
+  color: var(--od-bg-deepest, #14120f);
+  background: var(--od-gold, #c9a962);
+  border-color: var(--od-gold, #c9a962);
+}
+
+.od-portfolio-views__tab:focus-visible {
+  outline: 2px solid var(--od-gold, #c9a962);
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Room gallery — photographs, 4:5                                             */
+/* -------------------------------------------------------------------------- */
+
+.od-room-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: clamp(0.6rem, 1.6vw, 1rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.od-room-gallery__tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  /* The card ratio. One original, cropped by focal point, not re-exported. */
+  aspect-ratio: 4 / 5;
+  padding: 0;
+  border: 0;
+  border-radius: var(--od-radius, 14px);
+  overflow: hidden;
+  background: var(--od-bg-raised, #1c1916);
+  cursor: pointer;
+}
+
+.od-room-gallery__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.od-room-gallery__tile:hover .od-room-gallery__image {
+  transform: scale(1.03);
+}
+
+.od-room-gallery__tile:focus-visible {
+  outline: 2px solid var(--od-gold, #c9a962);
+  outline-offset: 3px;
+}
+
+/* The project name sits on the image, so it needs its own ground to be read. */
+.od-room-gallery__meta {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 2.25rem 0.85rem 0.75rem;
+  text-align: left;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.78));
+}
+
+.od-room-gallery__project {
+  font-size: 0.86rem;
+  color: var(--od-text-primary, #fff);
+}
+
+.od-room-gallery__where {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--od-text-muted, rgba(255, 255, 255, 0.6));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Lightbox                                                                    */
+/* -------------------------------------------------------------------------- */
+
+.od-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: clamp(0.75rem, 3vw, 2rem);
+}
+
+.od-lightbox__scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(8, 7, 6, 0.86);
+  cursor: pointer;
+}
+
+.od-lightbox__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: min(1100px, 94vw);
+  max-height: 92vh;
+  overflow: auto;
+  padding: clamp(0.75rem, 2vw, 1.25rem);
+  border-radius: var(--od-radius-lg, 20px);
+  background: var(--od-bg-raised, #1c1916);
+}
+
+.od-lightbox__image {
+  width: 100%;
+  height: auto;
+  /* Natural ratio: the grid cropped to 4:5, this is the photograph itself. */
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: var(--od-radius, 14px);
+}
+
+.od-lightbox__close {
+  position: absolute;
+  inset-block-start: 0.5rem;
+  inset-inline-end: 0.5rem;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--od-line, rgba(255, 255, 255, 0.14));
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--od-text-primary, #fff);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.od-lightbox__close:focus-visible,
+.od-lightbox__cta:focus-visible {
+  outline: 2px solid var(--od-gold, #c9a962);
+  outline-offset: 2px;
+}
+
+.od-lightbox__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.od-lightbox__title {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--od-text-primary, #fff);
+}
+
+.od-lightbox__room {
+  margin: 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--od-gold, #c9a962);
+}
+
+.od-lightbox__caption {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--od-text-secondary, rgba(255, 255, 255, 0.72));
+}
+
+.od-lightbox__cta {
+  align-self: flex-start;
+  margin-top: 0.35rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Project detail — room filters                                               */
+/* -------------------------------------------------------------------------- */
+
+.od-gallery__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.od-gallery__filter {
+  min-height: 44px;
+  padding: 0 0.95rem;
+  border: 1px solid var(--od-line, rgba(255, 255, 255, 0.14));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--od-text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.od-gallery__filter[data-active] {
+  color: var(--od-bg-deepest, #14120f);
+  background: var(--od-gold, #c9a962);
+  border-color: var(--od-gold, #c9a962);
+}
+
+.od-gallery__filter:focus-visible {
+  outline: 2px solid var(--od-gold, #c9a962);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-room-gallery__image,
+  .od-portfolio-views__tab {
+    transition: none;
+  }
+
+  .od-room-gallery__tile:hover .od-room-gallery__image {
+    transform: none;
+  }
+}

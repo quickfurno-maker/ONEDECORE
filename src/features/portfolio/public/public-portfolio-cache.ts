@@ -5,18 +5,22 @@ import {
   detailCacheKeyParts,
   featuredCacheKeyParts,
   listingCacheKeyParts,
+  roomGalleryCacheKeyParts,
   sitemapCacheKeyParts,
 } from "./public-cache-keys.ts";
 import {
   fetchFeaturedProjects,
   fetchPaginatedProjects,
   fetchProjectBySlug,
+  fetchRoomGallery,
   fetchSitemapEntries,
 } from "./public-portfolio-repository.ts";
+import type { PortfolioRoomCode } from "./portfolio-rooms.ts";
 import type {
   PublicPortfolioCard,
   PublicPortfolioPaginatedCards,
   PublicPortfolioProject,
+  PublicPortfolioRoomGallery,
   PublicSitemapEntry,
 } from "./types.ts";
 
@@ -49,6 +53,19 @@ export function getPaginatedProjects(
     listingCacheKeyParts(page, serviceFilter, categoryFilter),
     {
       tags: [PUBLIC_CACHE_TAGS.LIST],
+      revalidate: false,
+    }
+  )();
+}
+
+export function getRoomGallery(
+  room: PortfolioRoomCode
+): Promise<PublicPortfolioRoomGallery> {
+  return unstable_cache(
+    () => fetchRoomGallery(room),
+    roomGalleryCacheKeyParts(room),
+    {
+      tags: [PUBLIC_CACHE_TAGS.ROOMS],
       revalidate: false,
     }
   )();

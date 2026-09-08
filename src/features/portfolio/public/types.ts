@@ -1,4 +1,5 @@
 import type { PortfolioCategoryId } from "./portfolio-categories.ts";
+import type { PortfolioRoomCode } from "./portfolio-rooms.ts";
 
 export type PublicPortfolioServiceCode =
   | "complete_home_interiors"
@@ -29,6 +30,34 @@ export type PublicPortfolioImage = {
   width: number;
   height: number;
   role: "cover" | "gallery";
+  /** Which room this photograph shows, or null when it is not room-browsable. */
+  roomCode: PortfolioRoomCode | null;
+  /** Point of interest, 0-100 percent, so one original serves every crop. */
+  focalX: number;
+  focalY: number;
+};
+
+/**
+ * One photograph in a room gallery, carrying the project it came from.
+ *
+ * The room views list PHOTOGRAPHS, not projects, but every photograph still
+ * belongs to a delivered home and must be able to say which — otherwise the
+ * gallery is a mood board and the visitor cannot get from an image they like to
+ * the project that produced it.
+ */
+export type PublicPortfolioRoomPhoto = {
+  mediaId: string;
+  roomCode: PortfolioRoomCode;
+  image: PublicPortfolioImage;
+  projectSlug: string;
+  projectTitle: string;
+  projectLocationLabel: string | null;
+  sortOrder: number;
+};
+
+export type PublicPortfolioRoomGallery = {
+  room: PortfolioRoomCode;
+  photos: PublicPortfolioRoomPhoto[];
 };
 
 export type PublicPortfolioCard = {

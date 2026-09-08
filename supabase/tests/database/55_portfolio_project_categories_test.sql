@@ -3,7 +3,7 @@
 -- WHAT THIS SUITE EXISTS TO PREVENT
 --
 -- `portfolio_projects` is a whole-project record: one row is one delivered
--- home, photographed across its kitchen, its hall and its bedrooms. The old
+-- home, photographed across its kitchen, its living room and its bedrooms. The old
 -- scalar `portfolio_category_code` could file that home under exactly one of
 -- those, which left the other categories empty even though the photographs
 -- existed — and the only ways around it were to split one home into fake
@@ -157,7 +157,7 @@ insert into public.portfolio_project_categories (project_id, category_code)
 values
   ('b1111111-1111-4111-8111-111111111111', 'complete-interiors'),
   ('b1111111-1111-4111-8111-111111111111', 'kitchen'),
-  ('b1111111-1111-4111-8111-111111111111', 'hall'),
+  ('b1111111-1111-4111-8111-111111111111', 'living-room'),
   ('b1111111-1111-4111-8111-111111111111', 'bedroom');
 
 select results_eq(
@@ -183,7 +183,7 @@ select results_eq(
 select results_eq(
   $$select count(*)::integer from public.portfolio_project_categories
      where project_id = 'b1111111-1111-4111-8111-111111111111'
-       and category_code = 'hall'$$,
+       and category_code = 'living-room'$$,
   array[1],
   'a multi-category project appears exactly once within a single category'
 );
@@ -254,9 +254,9 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', 'a1111111-1111-4111-8111-111111111111', true);
 
 select lives_ok(
-  $$select public.replace_portfolio_project_categories(
+  $$select count(*) from public.replace_portfolio_project_categories(
       'b1111111-1111-4111-8111-111111111111',
-      array['kitchen', 'hall']
+      array['kitchen', 'living-room']
     )$$,
   'a manager may replace the category set'
 );
@@ -265,12 +265,12 @@ select results_eq(
   $$select category_code::text from public.portfolio_project_categories
      where project_id = 'b1111111-1111-4111-8111-111111111111'
      order by category_code$$,
-  array['hall', 'kitchen'],
+  array['kitchen', 'living-room'],
   'unchecked categories are removed and checked ones kept — it REPLACES'
 );
 
 select lives_ok(
-  $$select public.replace_portfolio_project_categories(
+  $$select count(*) from public.replace_portfolio_project_categories(
       'b1111111-1111-4111-8111-111111111111',
       array[]::text[]
     )$$,
@@ -285,7 +285,7 @@ select results_eq(
 );
 
 select throws_ok(
-  $$select public.replace_portfolio_project_categories(
+  $$select count(*) from public.replace_portfolio_project_categories(
       'b1111111-1111-4111-8111-111111111111',
       array['kitchen', 'balcony']
     )$$,
@@ -296,7 +296,7 @@ select throws_ok(
 
 -- A repeated code in one request is harmless, not a unique violation.
 select lives_ok(
-  $$select public.replace_portfolio_project_categories(
+  $$select count(*) from public.replace_portfolio_project_categories(
       'b1111111-1111-4111-8111-111111111111',
       array['kitchen', 'kitchen']
     )$$,
@@ -318,7 +318,7 @@ select results_eq(
 select set_config('request.jwt.claim.sub', 'a2222222-2222-4222-8222-222222222222', true);
 
 select throws_ok(
-  $$select public.replace_portfolio_project_categories(
+  $$select count(*) from public.replace_portfolio_project_categories(
       'b1111111-1111-4111-8111-111111111111',
       array['bedroom']
     )$$,

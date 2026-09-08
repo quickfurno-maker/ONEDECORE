@@ -5,13 +5,16 @@ import {
   queryFeaturedProjects,
   queryPaginatedProjects,
   queryProjectBySlug,
+  queryRoomGallery,
   querySitemapEntries,
   type PublicSupabaseClient,
 } from "./public-portfolio-queries.ts";
+import type { PortfolioRoomCode } from "./portfolio-rooms.ts";
 import type {
   PublicPortfolioCard,
   PublicPortfolioPaginatedCards,
   PublicPortfolioProject,
+  PublicPortfolioRoomGallery,
   PublicSitemapEntry,
 } from "./types.ts";
 
@@ -41,6 +44,12 @@ export function createPublicAnonClient(): PublicSupabaseClient {
 
 export function fetchFeaturedProjects(): Promise<PublicPortfolioCard[]> {
   return queryFeaturedProjects(createPublicAnonClient());
+}
+
+export function fetchRoomGallery(
+  room: PortfolioRoomCode
+): Promise<PublicPortfolioRoomGallery> {
+  return queryRoomGallery(createPublicAnonClient(), room);
 }
 
 export function fetchPaginatedProjects(

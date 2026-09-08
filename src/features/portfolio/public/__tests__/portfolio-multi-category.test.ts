@@ -53,6 +53,9 @@ const code = (source: string) =>
 
 const MIGRATION =
   "supabase/migrations/20260908150000_portfolio_project_categories.sql";
+/** Where the allowlist and the replacement RPC were last redefined. */
+const ROOM_MIGRATION =
+  "supabase/migrations/20260908160000_portfolio_media_room_browse.sql";
 const QUERIES = "src/features/portfolio/public/public-portfolio-queries.ts";
 const ACTIONS = "src/features/portfolio/server/portfolio-cms-actions.ts";
 const FORM = "src/features/portfolio/components/PortfolioProjectForm.tsx";
@@ -281,11 +284,11 @@ describe("a whole-home project spans categories without duplicating", () => {
   test("an unrecognised stored code is dropped, never labelled", () => {
     const rogue = [
       { project_id: PROJECT, category_code: "balcony" },
-      { project_id: PROJECT, category_code: "hall" },
+      { project_id: PROJECT, category_code: "living-room" },
     ];
     assert.deepEqual(
       mapProjectCategories(PROJECT, rogue).map((c) => c.categoryId),
-      ["hall"],
+      ["living-room"],
       "a label this module invented would be worse than an omission"
     );
   });
@@ -485,7 +488,13 @@ describe("the deprecated scalar is retained and unused", () => {
 
 describe("the category vocabulary is declared once", () => {
   test("the ids match the SQL check constraint exactly", () => {
-    const sql = read(MIGRATION);
+    /*
+     * The CURRENT constraint, not the one this table was born with. Migration
+     * 20260908160000 rewrote the allowlist to drop Hall for Living Room, and
+     * reading 20260908150000 here would assert a definition the database has
+     * already replaced.
+     */
+    const sql = read(ROOM_MIGRATION);
     const constraint = /check \(category_code in \(([^)]*)\)\)/.exec(sql);
     assert.ok(constraint, "the migration must carry a category allowlist");
     const listed = [...constraint![1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
@@ -493,7 +502,7 @@ describe("the category vocabulary is declared once", () => {
   });
 
   test("the RPC validates against the same four", () => {
-    const sql = read(MIGRATION);
+    const sql = read(ROOM_MIGRATION);
     const guard = /if v_code not in \(([^)]*)\) then/.exec(sql);
     assert.ok(guard);
     const listed = [...guard![1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
@@ -503,11 +512,11 @@ describe("the category vocabulary is declared once", () => {
   test("the homepage cards still name the approved four, in order", () => {
     assert.deepEqual(
       PORTFOLIO_CATEGORIES.map((c) => c.id),
-      ["complete-interiors", "kitchen", "hall", "bedroom"]
+      ["complete-interiors", "kitchen", "living-room", "bedroom"]
     );
     assert.deepEqual(
       PORTFOLIO_CATEGORIES.map((c) => c.label),
-      ["Complete Interiors", "Kitchen", "Hall / Living Room", "Bedroom"]
+      ["Complete Interiors", "Kitchen", "Living Room", "Bedroom"]
     );
   });
 
