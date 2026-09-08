@@ -30,6 +30,8 @@ function read(name: string) {
 function empty(overrides: Partial<PlanSnapshot> = {}): PlanSnapshot {
   return {
     service: null,
+    projectScope: null,
+    budgetRange: null,
     property: null,
     timeline: null,
     rooms: [],
@@ -60,6 +62,8 @@ function applySelection(
   const prospective: PlanSnapshot = {
     ...current,
     service: selection.service,
+    projectScope: null,
+    budgetRange: null,
     property: selection.property,
     rooms,
     budgetComfort: selection.budgetComfort,
@@ -72,8 +76,20 @@ function applySelection(
   };
 }
 
+/*
+ * WHY THESE NOW OPEN AT THE HOME STEP
+ *
+ * The estimator answers a different question from the one the lead form asks.
+ * It works in property sizes and finishes; `public-consult-v4` works in project
+ * scopes and the budget ladder belonging to each. Carrying an estimator answer
+ * across would be a guess, so `applyEstimateToPlanAndOpen` clears the scope and
+ * band and the sheet stops on the home step to ask properly.
+ *
+ * The estimate itself is still applied and still shown — it is a planning
+ * figure, not a submitted one.
+ */
 describe("R5.3.1 complete-home mapping", () => {
-  test("empty + 1 BHK Essential opens at timeline step 3", () => {
+  test("empty + 1 BHK Essential stops at the home step to ask scope", () => {
     const { selection, prospective, step } = applySelection(
       empty(),
       "complete-home",
@@ -84,7 +100,9 @@ describe("R5.3.1 complete-home mapping", () => {
     assert.equal(selection.property, "apartment-1bhk");
     assert.deepEqual([...selection.rooms], []);
     assert.equal(prospective.property, "apartment-1bhk");
-    assert.equal(step, 3);
+    assert.equal(prospective.projectScope, null);
+    assert.equal(prospective.budgetRange, null);
+    assert.equal(step, 2);
   });
 
   test("empty + 2 BHK Premium carries ₹5.9L – ₹10.4L and apartment-2bhk", () => {
@@ -99,10 +117,10 @@ describe("R5.3.1 complete-home mapping", () => {
     );
     assert.equal(selection.property, "apartment-2bhk");
     assert.equal(selection.estimatorRangeLabel, "₹5.9L – ₹10.4L");
-    assert.equal(step, 3);
+    assert.equal(step, 2);
   });
 
-  test("existing timeline/locality/notes preserved → step 4", () => {
+  test("existing timeline/locality/notes are preserved across the estimate", () => {
     const { prospective, step } = applySelection(
       empty({
         timeline: "within-1-month",
@@ -116,7 +134,12 @@ describe("R5.3.1 complete-home mapping", () => {
     assert.equal(prospective.timeline, "within-1-month");
     assert.equal(prospective.locality, "Baner");
     assert.equal(prospective.message, "Prefer warm oak");
-    assert.equal(step, 4);
+    /*
+     * Step 2, not 4: the timeline the visitor already gave is kept, and the
+     * home question the estimator cannot answer is still asked.
+     */
+    assert.equal(prospective.timeline, "within-1-month");
+    assert.equal(step, 2);
   });
 });
 
@@ -132,7 +155,7 @@ describe("R5.3.1 kitchen wardrobe selected-room mapping", () => {
     assert.equal(selection.property, "single-room");
     assert.deepEqual([...selection.rooms], ["kitchen"]);
     assert.ok(selection.budgetComfort);
-    assert.equal(step, 3);
+    assert.equal(step, 2);
   });
 
   test("7–10 ft Essential wardrobes dedupe on repeat", () => {

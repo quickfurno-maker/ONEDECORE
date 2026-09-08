@@ -130,12 +130,59 @@ export const PUBLIC_CONSULT_V2_PLANNER_VERSION = "public-consult-v2" as const;
 export const PUBLIC_CONSULT_V3_PLANNER_VERSION = "public-consult-v3" as const;
 
 /**
- * What the current public requirement form emits.
+ * The UNIFIED multi-step public form.
  *
- * Pointed at v3. The v1 and v2 constants survive for the rows and the contracts
- * that still mean v1 and v2.
+ * WHY A FOURTH VERSION RATHER THAN A LOOSER THIRD
+ *
+ * The site now has one lead form: the guided Service -> Home -> Timeline ->
+ * Brief flow, with the scope-specific budget ladder folded in. That set of
+ * answers does not fit any existing contract. `home-r4-v1` carries a timeline
+ * but knows nothing of project scope or the budget ladders; `public-consult-v3`
+ * carries scope and budget and FORBIDS a timeline outright — and that
+ * prohibition is what makes a v3 row readable, because a null timeline under v3
+ * means "never asked" rather than "asked and lost".
+ *
+ * Relaxing v3 would delete that distinction from every row stored under it. So
+ * v4 is added beside it, exactly as v3 was added beside v2 and v2 beside v1.
+ *
+ * WHAT V4 MEANS
+ *
+ *   service        required, allowlisted
+ *   projectScope   required for complete-home-interiors and modular-kitchens;
+ *                  ABSENT for custom-wardrobes, which has no scope list
+ *   budgetRange    required whenever a scope is present, and must belong to
+ *                  THAT scope's ladder; absent with the scope
+ *   timeline       required, from the existing LEAD_TIMELINE_CODES vocabulary
+ *   locality       optional
+ *   message        optional
+ *   qualifier, property, rooms, budgetComfort, estimate — all FORBIDDEN
+ *
+ * The wardrobe exception is deliberate and narrow. There is no scope list that
+ * describes a wardrobe job and no owner-approved wardrobe budget ladder, so the
+ * form asks neither — and a contract that demanded them would force the UI to
+ * invent an answer.
  */
-export const PUBLIC_CONSULT_PLANNER_VERSION = PUBLIC_CONSULT_V3_PLANNER_VERSION;
+export const PUBLIC_CONSULT_V4_PLANNER_VERSION = "public-consult-v4" as const;
+
+/** Services whose scope the form asks for. Wardrobes are the exception. */
+export const V4_SCOPED_SERVICES = [
+  "complete-home-interiors",
+  "modular-kitchens",
+] as const;
+
+/** True when v4 must carry a project scope and a budget for this service. */
+export function v4RequiresScope(service: string): boolean {
+  return (V4_SCOPED_SERVICES as readonly string[]).includes(service);
+}
+
+/**
+ * What the canonical public form emits.
+ *
+ * Pointed at v4. The v1, v2 and v3 constants survive for the rows and the
+ * contracts that still mean v1, v2 and v3 — all three remain accepted so
+ * historical rows stay readable and nothing stored changes meaning.
+ */
+export const PUBLIC_CONSULT_PLANNER_VERSION = PUBLIC_CONSULT_V4_PLANNER_VERSION;
 
 /** Every planner version the intake endpoint accepts. */
 export const LEAD_INTAKE_PLANNER_VERSIONS = [
@@ -143,6 +190,7 @@ export const LEAD_INTAKE_PLANNER_VERSIONS = [
   PUBLIC_CONSULT_V1_PLANNER_VERSION,
   PUBLIC_CONSULT_V2_PLANNER_VERSION,
   PUBLIC_CONSULT_V3_PLANNER_VERSION,
+  PUBLIC_CONSULT_V4_PLANNER_VERSION,
 ] as const;
 
 export type LeadIntakePlannerVersion =

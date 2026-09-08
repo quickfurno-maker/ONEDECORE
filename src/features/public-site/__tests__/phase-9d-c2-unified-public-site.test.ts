@@ -39,11 +39,16 @@ describe("Public site simplification — discovery IA", () => {
      * before it raises; `furniture` is in the list but not the story, because it
      * renders only when the Shop gate is live.
      */
+    /*
+     * Two owner-directed moves are locked here. `proof` is GONE from the
+     * homepage: the counter opens `/interiors` instead of arriving before the
+     * page has said what the company does. And `areas` dropped from second
+     * position to just before the closing CTAs, where "do you build in my part
+     * of Pune?" is a question someone is actually asking.
+     */
     assert.deepEqual([...DISCOVERY_SECTION_ORDER], [
       "header",
       "hero",
-      "proof",
-      "areas",
       "portfolio-categories",
       "why",
       "manufacturing",
@@ -52,14 +57,13 @@ describe("Public site simplification — discovery IA", () => {
       "real-homes",
       "quality",
       "furniture",
+      "areas",
       "consultation",
       "final-cta",
       "footer",
     ]);
     assert.deepEqual([...DISCOVERY_MAJOR_SECTIONS], [
       "hero",
-      "proof",
-      "areas",
       "portfolio-categories",
       "why",
       "manufacturing",
@@ -68,6 +72,7 @@ describe("Public site simplification — discovery IA", () => {
       "real-homes",
       "quality",
       "furniture",
+      "areas",
       "consultation",
       "final-cta",
     ]);
@@ -90,7 +95,15 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(page, /data-od-disc-section="consultation"/);
     assert.match(page, /shopLive \? \(/);
     assert.match(page, /PUBLIC_CONSULTATION\.label/);
-    assert.match(page, /PUBLIC_CONSULTATION\.href/);
+    /*
+     * The consultation CTA is no longer an anchor to `PUBLIC_CONSULTATION.href`.
+     * There is nothing on this page to anchor TO any more — the form is a sheet
+     * — so the control opens it instead. The LABEL still comes from the shared
+     * nav constant, which is what kept the wording consistent in the first
+     * place; only the destination stopped being a URL.
+     */
+    assert.match(page, /<DiscoveryConsultCta/);
+    assert.doesNotMatch(page, /href=\{PUBLIC_CONSULTATION\.href\}/);
     assert.doesNotMatch(page, /Book Free Consultation/);
     assert.match(page, /href="\/portfolio"/);
     assert.doesNotMatch(page, /\/interiors#consultation/);
@@ -100,8 +113,10 @@ describe("Public site simplification — discovery IA", () => {
     assert.doesNotMatch(page, /furniture collection is being prepared/i);
     assert.doesNotMatch(page, /DiscoveryPuneCoverage/);
     assert.doesNotMatch(page, /heroConsultant|hero-consultant-indian-woman/);
-    assert.doesNotMatch(page, /HomePlannerSheet|HomeBudgetEstimator|HomePlannerInline/);
-    assert.match(page, /HomeConsultationCapture/);
+    // The sheet IS mounted here now; the estimator and the inline planner are not.
+    assert.doesNotMatch(page, /HomeBudgetEstimator|HomePlannerInline/);
+    assert.match(page, /HomePlannerSheet/);
+    assert.doesNotMatch(page, /HomeConsultationCapture/);
     assert.match(page, /PortfolioCard/);
     assert.match(page, /data-od-portfolio-preview/);
     assert.match(css, /od-disc-library__rail/);
@@ -153,10 +168,22 @@ describe("Public site simplification — discovery IA", () => {
     const wrap = read("src/features/public-site/discovery/HomeConsultationCapture.tsx");
     assert.match(page, /getLeadFormMode/);
     assert.match(page, /leadFormMode=\{leadFormMode\}/);
-    assert.match(discovery, /HomeConsultationCapture/);
+    /*
+     * ONE PATH, AND IT IS THE SAME ONE THE INTERIORS PAGE USES.
+     *
+     * The homepage embedded its own form until this change. The invariant that
+     * mattered - exactly one canonical lead-form path, with the mode resolved
+     * on the server - is unchanged; what changed is that the path is now shared
+     * with `/interiors` rather than being a second implementation of it.
+     */
     assert.match(discovery, /id="consultation"/);
-    assert.match(discovery, /<HomeConsultationCapture mode=\{leadFormMode\} \/>/);
-    assert.equal((discovery.match(/<HomeConsultationCapture\b/g) ?? []).length, 1);
+    assert.equal(
+      (discovery.match(/<HomePlannerSheet\b/g) ?? []).length,
+      1,
+      "the sheet must be mounted exactly once"
+    );
+    assert.match(discovery, /<HomePlannerSheet leadFormMode=\{leadFormMode\} \/>/);
+    assert.doesNotMatch(discovery, /<HomeConsultationCapture\b/);
     /*
       * The consultation section now mounts the ADAPTIVE form, which owns its own
       * two-field state. The legacy `PlanProvider` existed to drive the
@@ -179,7 +206,12 @@ describe("Public site simplification — discovery IA", () => {
     assert.doesNotMatch(wrapCode, /PlanProvider/);
     assert.doesNotMatch(wrapCode, /HomeLeadCapture/);
     assert.doesNotMatch(wrap, /HomePlannerSheet|HomeBudgetEstimator|HomePlannerInline/);
-    assert.doesNotMatch(discovery, /HomePlannerSheet|HomeBudgetEstimator|estimator/);
+    /*
+     * The homepage mounts the SHEET and still mounts no estimator: the budget
+     * estimator is a planning aid that belongs on the interiors page, and its
+     * output is not what the lead contract asks for.
+     */
+    assert.doesNotMatch(discovery, /HomeBudgetEstimator|estimator/);
   });
 
   test("homepage hides pincode, shop search, and shop nav while shop is off", () => {
@@ -306,7 +338,7 @@ describe("Public site simplification — lead form email lock", () => {
 });
 
 describe("Public site simplification — interiors and portfolio", () => {
-  test("/interiors route is retained with its own consultation form", () => {
+  test("/interiors route is retained, and offers the same canonical form", () => {
     assert.equal(existsSync(join(root, "src/app/interiors/page.tsx")), true);
     const route = read("src/app/interiors/page.tsx");
     const blocks = read("src/features/public-site/interiors/InteriorsServiceBlocks.tsx");
@@ -314,7 +346,9 @@ describe("Public site simplification — interiors and portfolio", () => {
     assert.match(route, /InteriorsConversionPage/);
     assert.match(blocks, /id="modular-kitchen"/);
     assert.match(plan, /id="consultation"/);
-    assert.match(plan, /HomeLeadCapture/);
+    // Its OWN form is gone; the section opens the shared sheet.
+    assert.doesNotMatch(plan, /HomeLeadCapture/);
+    assert.match(plan, /openPlanner/);
   });
 
   test("portfolio detail CTA targets homepage consultation", () => {

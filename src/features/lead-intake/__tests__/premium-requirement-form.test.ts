@@ -38,6 +38,7 @@ import {
   LEAD_INTAKE_PLANNER_VERSIONS,
   PUBLIC_CONSULT_PLANNER_VERSION,
   PUBLIC_CONSULT_V3_PLANNER_VERSION,
+  PUBLIC_CONSULT_V4_PLANNER_VERSION,
   SINGLE_CONSENT_SERVICE_COMMUNICATION_COPY_VERSION,
   SINGLE_CONSENT_SERVICE_ENQUIRY_COPY_VERSION,
 } from "../contracts.ts";
@@ -47,6 +48,17 @@ import {
   SINGLE_CONSENT_CONCISE_COPY,
   getConsentVersionById,
 } from "../../legal/consent-registry.ts";
+
+/*
+ * RELATIVE, NOT A FIXED DATE.
+ *
+ * `antiBot.formStartedAt` must be between 800ms and 24 hours old, so a
+ * hardcoded timestamp is a time bomb: these fixtures passed on the day they
+ * were written and started failing the moment the date rolled over. Five
+ * minutes ago is inside the window on every day.
+ */
+const FORM_STARTED_AT = new Date(Date.now() - 5 * 60_000).toISOString();
+
 
 const root = process.cwd();
 const read = (rel: string) =>
@@ -67,6 +79,8 @@ const FORM = "src/features/lead-intake/public/PremiumRequirementForm.tsx";
 const CSS = "src/features/lead-intake/public/premium-requirement-form.css";
 const CAPTURE = "src/features/public-site/discovery/HomeConsultationCapture.tsx";
 const HOME = "src/features/public-site/discovery/DiscoveryHomePage.tsx";
+const V4_MIGRATION =
+  "supabase/migrations/20260908140000_public_unified_form_v4.sql";
 const V3_MIGRATION =
   "supabase/migrations/20260907150000_public_requirement_form_v3.sql";
 const V2_MIGRATION =
@@ -78,7 +92,7 @@ const BASE = {
   mobile: "9876543210",
   consent: true,
   attribution: { landingPath: "/" },
-  antiBot: { website: "", formStartedAt: "2026-09-07T00:00:00.000Z" },
+  antiBot: { website: "", formStartedAt: FORM_STARTED_AT },
   idempotencyKey: "00000000-0000-4000-8000-000000000000",
 };
 
@@ -620,19 +634,63 @@ describe("D. one checkbox, two required records, no fabricated optional", () => 
 describe("E. TypeScript and SQL agree about v3", () => {
   const sql = read(V3_MIGRATION);
 
-  test("v3 was ADDED to the version list, not substituted", () => {
+  test("v3 was ADDED to the version list, and v4 was added after it", () => {
+    /*
+     * The rule this asserts is "add, never substitute", so the arrival of v4
+     * has to leave v3 exactly where it was. What DID move is the pointer:
+     * `PUBLIC_CONSULT_PLANNER_VERSION` names whichever version the current
+     * public form speaks, and that is now v4. v3 is no longer canonical and is
+     * still accepted -- which is the whole difference between adding a version
+     * and replacing one.
+     */
     assert.deepEqual(
       [...LEAD_INTAKE_PLANNER_VERSIONS],
-      ["home-r4-v1", "public-consult-v1", "public-consult-v2", "public-consult-v3"]
+      [
+        "home-r4-v1",
+        "public-consult-v1",
+        "public-consult-v2",
+        "public-consult-v3",
+        "public-consult-v4",
+      ]
     );
-    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, PUBLIC_CONSULT_V3_PLANNER_VERSION);
+    assert.ok(
+      (LEAD_INTAKE_PLANNER_VERSIONS as readonly string[]).includes(
+        PUBLIC_CONSULT_V3_PLANNER_VERSION
+      ),
+      "v3 must stay accepted after v4 arrives"
+    );
+    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, PUBLIC_CONSULT_V4_PLANNER_VERSION);
   });
 
   test("the SQL allowlist is the same list", () => {
-    const match = /p_planner_version not in \(\s*([^)]*)\)/.exec(sql);
+    /*
+     * `create or replace` means the LAST definition is the one the database
+     * runs, so the allowlist TypeScript has to agree with lives in the newest
+     * migration, not in v3's. v3's own allowlist is asserted separately below,
+     * as history that must not have been edited.
+     */
+    const match = /p_planner_version not in \(\s*([^)]*)\)/.exec(read(V4_MIGRATION));
     assert.ok(match, "the SQL must carry a planner-version allowlist");
     const listed = [...match![1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
     assert.deepEqual(listed.sort(), [...LEAD_INTAKE_PLANNER_VERSIONS].sort());
+  });
+
+  test("v3's own migration was not edited to make room for v4", () => {
+    /*
+     * A forward-only migration adds a file; it does not reach back into one
+     * that has already run. If v3's allowlist ever grows a fourth public
+     * version, someone rewrote applied history.
+     */
+    const match = /p_planner_version not in \(\s*([^)]*)\)/.exec(sql);
+    assert.ok(match);
+    const listed = [...match![1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    assert.deepEqual(listed.sort(), [
+      "home-r4-v1",
+      "public-consult-v1",
+      "public-consult-v2",
+      "public-consult-v3",
+    ]);
+    assert.doesNotMatch(sql, /public-consult-v4/);
   });
 
   test("the SQL keeps a branch for every earlier version", () => {
@@ -702,19 +760,25 @@ describe("E. TypeScript and SQL agree about v3", () => {
 /* ========================================================================== */
 
 describe("F. the real surfaces use the real component", () => {
-  test("the homepage mounts the requirement form, in place", () => {
+  test("the homepage mounts the canonical sheet, and no form of its own", () => {
     /*
-     * The homepage renders it through the existing capture wrapper, in the
-     * existing consultation section. The wrapper is the seam; the surrounding
-     * layout is untouched.
+     * THIS ASSERTION IS INVERTED FROM WHAT IT ONCE SAID, DELIBERATELY.
+     *
+     * The requirement form was the homepage's inline form and spoke v3. The
+     * site now has ONE lead form — the guided sheet, speaking v4 — so the
+     * homepage mounts that and embeds nothing. The v3 modules are still here
+     * and still tested above, because rows collected under v3 must stay
+     * readable; they are simply no longer mounted by a route.
      */
     const home = read(HOME);
-    assert.match(home, /<HomeConsultationCapture mode=\{leadFormMode\} \/>/);
+    assert.match(home, /<HomePlannerSheet leadFormMode=\{leadFormMode\} \/>/);
+    assert.doesNotMatch(home, /HomeConsultationCapture/);
+    assert.doesNotMatch(home, /PremiumRequirementForm/);
 
+    // The wrapper survives as the v3 surface; it must not gain a second form.
     const capture = read(CAPTURE);
     assert.match(capture, /PremiumRequirementForm/);
     assert.match(capture, /mode=\{mode\}/);
-    // The old form must not be mounted beside the new one.
     assert.doesNotMatch(capture, /<ConsultationLeadForm/);
   });
 
@@ -839,6 +903,6 @@ function forgedBody(over: {
       )![1],
     },
     attribution: { landingPath: "/" },
-    antiBot: { website: "", formStartedAt: "2026-09-07T00:00:00.000Z" },
+    antiBot: { website: "", formStartedAt: FORM_STARTED_AT },
   };
 }

@@ -9,9 +9,10 @@ import { HomeProcess } from "@/features/public-site/home-r4/HomeProcess";
 import { HomeReviews } from "@/features/public-site/home-r4/HomeReviews";
 import { HomeServicesRooms } from "@/features/public-site/home-r4/HomeServicesRooms";
 import { HomeShell } from "@/features/public-site/home-r4/HomeShell";
-import { HomeTruthMetrics } from "@/features/public-site/home-r4/HomeTruthMetrics";
 import { HomeWhy } from "@/features/public-site/home-r4/HomeWhy";
 import { PlanProvider } from "@/features/public-site/home-r4/PlanContext";
+import { DiscoveryProofStrip } from "@/features/public-site/discovery/DiscoveryProofStrip";
+import "@/features/public-site/discovery/discovery.css";
 import {
   InteriorsKitchenFeature,
   InteriorsPortfolioBridge,
@@ -51,7 +52,17 @@ export function InteriorsConversionPage({
       <HomeShell unifiedNav>
         <div data-od-interiors-order={INTERIORS_SECTION_ORDER.join("|")} hidden />
         <HomeHero />
-        <HomeTruthMetrics />
+        {/*
+          THE PROOF COUNTER LIVES HERE NOW.
+
+          It used to sit second on the homepage, animating four figures at
+          someone who had not yet been told what the company does. On this page
+          the visitor has already chosen to read about the work, so the figures
+          answer a question they are actually asking. Nothing about the claim
+          gating changed with the move: every metric is still rendered only if
+          `isClaimDisplayable` says so.
+        */}
+        <DiscoveryProofStrip />
         <HomeServicesRooms />
         <InteriorsKitchenFeature />
         <InteriorsWardrobes />

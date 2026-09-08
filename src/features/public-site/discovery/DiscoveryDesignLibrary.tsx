@@ -1,6 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
 import { Reveal } from "@/features/public-site/motion/Reveal";
+import { DiscoveryConsultCta } from "./DiscoveryConsultCta";
 import { getDiscoveryAsset } from "./discovery-assets";
 import {
   DISCOVERY_LIBRARY_CATEGORIES,
@@ -55,7 +55,18 @@ export function DiscoveryDesignLibrary() {
           const asset = getDiscoveryAsset(category.assetKey);
           return (
             <li key={category.id} className="od-disc-library__item">
-              <Link href={category.href} className="od-disc-library__card">
+              {/*
+                These cards used to be links to a homepage anchor with a
+                `?service=` query. They open the one lead form now, with the
+                same service already answered — the destination the query was
+                standing in for.
+              */}
+              <DiscoveryConsultCta
+                className="od-disc-library__card"
+                service={category.service}
+                conversionAction={`design-library-${category.id}`}
+                ariaLabel={`Plan ${category.title} — free design consultation`}
+              >
                 <span className="od-disc-library__media">
                   <Image
                     src={asset.path}
@@ -67,7 +78,7 @@ export function DiscoveryDesignLibrary() {
                   />
                 </span>
                 <span className="od-disc-library__title">{category.title}</span>
-              </Link>
+              </DiscoveryConsultCta>
             </li>
           );
         })}

@@ -29,11 +29,18 @@ export type DiscoveryAssetKey =
  * `furniture` renders only when the Shop gate is live, which is why it is in
  * the list but not in the story above.
  */
+/**
+ * The running order, owner-directed.
+ *
+ * Two changes worth naming. The proof COUNTER is gone from the homepage: it
+ * lives on `/interiors`, where a visitor has already chosen to read about the
+ * work, rather than as the second thing anyone sees. And "areas" moved down to
+ * sit beside the closing CTAs — where the city you build in is a practical
+ * question — instead of interrupting the argument before it has been made.
+ */
 export const DISCOVERY_SECTION_ORDER = [
   "header",
   "hero",
-  "proof",
-  "areas",
   "portfolio-categories",
   "why",
   "manufacturing",
@@ -42,6 +49,7 @@ export const DISCOVERY_SECTION_ORDER = [
   "real-homes",
   "quality",
   "furniture",
+  "areas",
   "consultation",
   "final-cta",
   "footer",
@@ -50,8 +58,6 @@ export const DISCOVERY_SECTION_ORDER = [
 /** Major homepage bands before footer. Furniture renders only when Shop is live. */
 export const DISCOVERY_MAJOR_SECTIONS = [
   "hero",
-  "proof",
-  "areas",
   "portfolio-categories",
   "why",
   "manufacturing",
@@ -60,12 +66,17 @@ export const DISCOVERY_MAJOR_SECTIONS = [
   "real-homes",
   "quality",
   "furniture",
+  "areas",
   "consultation",
   "final-cta",
 ] as const;
 
 /**
- * The four figures directly below the hero.
+ * The four figures on the interiors page, directly below its hero.
+ *
+ * They were the homepage's second band until the owner moved them: four
+ * animated numbers arrived before the page had said what the company does.
+ * They now open `/interiors`, where the visitor has already asked.
  *
  * Each carries the claim id it is published under, so `DiscoveryProofStrip` can
  * ask the evidence register rather than trusting this list. All four are
@@ -277,14 +288,14 @@ export const DISCOVERY_LIBRARY_CATEGORIES = [
     title: "Modular Kitchens",
     assetKey: "modularKitchens" as const satisfies DiscoveryAssetKey,
     depictsRoom: true,
-    href: PUBLIC_CONSULTATION_BY_SERVICE["modular-kitchens"],
+    service: "modular-kitchens" as const,
   },
   {
     id: "wardrobes",
     title: "Wardrobes",
     assetKey: "customWardrobes" as const satisfies DiscoveryAssetKey,
     depictsRoom: true,
-    href: PUBLIC_CONSULTATION_BY_SERVICE["custom-wardrobes"],
+    service: "custom-wardrobes" as const,
   },
   {
     id: "living-rooms",
@@ -293,28 +304,28 @@ export const DISCOVERY_LIBRARY_CATEGORIES = [
     // one photograph. This asset's own alt describes a living interior.
     assetKey: "completeHomeInteriors" as const satisfies DiscoveryAssetKey,
     depictsRoom: true,
-    href: PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"],
+    service: "complete-home-interiors" as const,
   },
   {
     id: "bedrooms",
     title: "Bedrooms",
     assetKey: "oakJoinery" as const satisfies DiscoveryAssetKey,
     depictsRoom: false,
-    href: PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"],
+    service: "complete-home-interiors" as const,
   },
   {
     id: "tv-units",
     title: "TV Units",
     assetKey: "flutedTexture" as const satisfies DiscoveryAssetKey,
     depictsRoom: false,
-    href: PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"],
+    service: "complete-home-interiors" as const,
   },
   {
     id: "complete-homes",
     title: "Complete Homes",
     assetKey: "travertineBronze" as const satisfies DiscoveryAssetKey,
     depictsRoom: false,
-    href: PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"],
+    service: "complete-home-interiors" as const,
   },
 ] as const;
 

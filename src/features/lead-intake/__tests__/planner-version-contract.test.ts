@@ -31,15 +31,29 @@ import {
   PUBLIC_CONSULT_V1_PLANNER_VERSION,
   PUBLIC_CONSULT_V2_PLANNER_VERSION,
   PUBLIC_CONSULT_V3_PLANNER_VERSION,
+  PUBLIC_CONSULT_V4_PLANNER_VERSION,
   PUBLIC_CONSULT_PLANNER_VERSION,
 } from "../contracts.ts";
 import { consultationToLeadRequest } from "../public/consultation-to-lead-request.ts";
 import type { LeadFormAttribution } from "../public/lead-form-attribution.ts";
 
+/*
+ * RELATIVE, NOT A FIXED DATE.
+ *
+ * `antiBot.formStartedAt` must be between 800ms and 24 hours old, so a
+ * hardcoded timestamp is a time bomb: these fixtures passed on the day they
+ * were written and started failing the moment the date rolled over. Five
+ * minutes ago is inside the window on every day.
+ */
+const FORM_STARTED_AT = new Date(Date.now() - 5 * 60_000).toISOString();
+
+
 const root = process.cwd();
 const read = (rel: string) =>
   readFileSync(join(root, rel), "utf8").replace(/\r\n/g, "\n");
 
+const V4_MIGRATION =
+  "supabase/migrations/20260908140000_public_unified_form_v4.sql";
 const V3_MIGRATION =
   "supabase/migrations/20260907150000_public_requirement_form_v3.sql";
 const V2_MIGRATION =
@@ -54,7 +68,7 @@ const BASE = {
   mobile: "9876543210",
   consent: { serviceEnquiry: true, servicePhone: true } as const,
   attribution,
-  antiBot: { website: "", formStartedAt: "2026-09-07T00:00:00.000Z" },
+  antiBot: { website: "", formStartedAt: FORM_STARTED_AT },
   idempotencyKey: "contract-1",
 };
 
@@ -68,9 +82,9 @@ describe("every version TypeScript accepts has an SQL branch", () => {
    * last definition wins, so that file is what the database actually runs, and
    * therefore what the TypeScript has to agree with.
    */
-  const sql = read(V3_MIGRATION);
+  const sql = read(V4_MIGRATION);
 
-  test("there are exactly four, and they are the four", () => {
+  test("there are exactly five, and they are the five", () => {
     assert.deepEqual(
       [...LEAD_INTAKE_PLANNER_VERSIONS],
       [
@@ -78,12 +92,14 @@ describe("every version TypeScript accepts has an SQL branch", () => {
         "public-consult-v1",
         "public-consult-v2",
         "public-consult-v3",
+        "public-consult-v4",
       ]
     );
     assert.equal(LEAD_INTAKE_PLANNER_VERSION, "home-r4-v1");
     assert.equal(PUBLIC_CONSULT_V1_PLANNER_VERSION, "public-consult-v1");
     assert.equal(PUBLIC_CONSULT_V2_PLANNER_VERSION, "public-consult-v2");
     assert.equal(PUBLIC_CONSULT_V3_PLANNER_VERSION, "public-consult-v3");
+    assert.equal(PUBLIC_CONSULT_V4_PLANNER_VERSION, "public-consult-v4");
   });
 
   test("the SQL allowlist is the same list", () => {
@@ -98,6 +114,7 @@ describe("every version TypeScript accepts has an SQL branch", () => {
     assert.match(sql, /elsif p_planner_version = 'public-consult-v1' then/);
     assert.match(sql, /elsif p_planner_version = 'public-consult-v2' then/);
     assert.match(sql, /elsif p_planner_version = 'public-consult-v3' then/);
+    assert.match(sql, /elsif p_planner_version = 'public-consult-v4' then/);
   });
 
   test("and its own branch in the TypeScript validator", () => {
@@ -108,6 +125,7 @@ describe("every version TypeScript accepts has an SQL branch", () => {
     assert.match(server, /const isPublicConsultV1 =/);
     assert.match(server, /const isPublicConsultV2 =/);
     assert.match(server, /const isPublicConsultV3 =/);
+    assert.match(server, /const isPublicConsultV4 =/);
   });
 });
 
@@ -132,7 +150,7 @@ describe("the interiors-planner consultation form still speaks v2", () => {
     assert.equal(result.ok, true);
     if (!result.ok) return;
     assert.equal(result.body.plannerVersion, "public-consult-v2");
-    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v3");
+    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v4");
     assert.notEqual(result.body.plannerVersion, PUBLIC_CONSULT_PLANNER_VERSION);
   });
 
@@ -217,7 +235,14 @@ describe("v2 forbids the unasked fields on both sides of the boundary", () => {
     assert.match(branch, /fields\.push\("requirements\.property"\)/);
     // timeline, rooms, budget and estimate are refused by the shared
     // unasked-field loop that both public versions run.
-    assert.match(server, /for \(const unasked of \[\s*\n\s*"timeline",/);
+    /*
+     * The timeline is the one field that MOVES between versions: v1, v2 and v3
+     * reject it, v4 requires it. The shared loop therefore drops "timeline"
+     * from its list under v4 rather than listing it unconditionally, and v4
+     * validates it separately just below.
+     */
+    assert.match(server, /isPublicConsultV4 \? \[\] : \(\["timeline"\] as const\)/);
+    assert.match(server, /if \(isPublicConsultV4\) \{[\s\S]{0,300}LEAD_TIMELINE_CODES/);
   });
 });
 

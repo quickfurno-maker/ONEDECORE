@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
 import { Reveal } from "@/features/public-site/motion/Reveal";
+import { DiscoveryConsultCta } from "./DiscoveryConsultCta";
 import {
   DISCOVERY_FINAL_CTA_EYEBROW,
   DISCOVERY_FINAL_CTA_HEADLINE,
@@ -37,13 +38,12 @@ export function DiscoveryFinalCta() {
           <p className="od-disc-lede od-disc-final__lede">{DISCOVERY_FINAL_CTA_LEDE}</p>
 
           <div className="od-disc-final__actions">
-            <Link
-              href={PUBLIC_CONSULTATION.href}
+            <DiscoveryConsultCta
               className="od-disc-btn od-disc-btn--primary"
-              data-conversion-action="consultation-final"
+              conversionAction="consultation-final"
             >
               {PUBLIC_CONSULTATION.label}
-            </Link>
+            </DiscoveryConsultCta>
             <Link
               href="/portfolio"
               className="od-disc-btn od-disc-btn--ghost"

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
+import { DiscoveryConsultCta } from "./DiscoveryConsultCta";
 
 /**
  * The bottom conversion dock — Portfolio beside the consultation CTA.
@@ -79,14 +80,14 @@ export function DiscoveryStickyCta() {
       >
         <span>Portfolio</span>
       </Link>
-      <Link
-        href={PUBLIC_CONSULTATION.href}
+      <DiscoveryConsultCta
         className="od-disc-dock__btn od-disc-dock__btn--primary"
-        data-conversion-action="consultation-sticky"
+        conversionAction="consultation-sticky"
+        ariaLabel={PUBLIC_CONSULTATION.label}
       >
         <span className="od-disc-dock__labelFull">{PUBLIC_CONSULTATION.label}</span>
         <span className="od-disc-dock__labelShort">{PUBLIC_CONSULTATION.mobileLabel}</span>
-      </Link>
+      </DiscoveryConsultCta>
     </div>
   );
 }

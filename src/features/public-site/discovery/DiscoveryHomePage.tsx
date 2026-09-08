@@ -6,15 +6,16 @@ import { PublicSiteHeader } from "@/features/public-site/chrome/PublicSiteHeader
 import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 import { RevealRuntime } from "@/features/public-site/motion/RevealRuntime";
-import { HomeConsultationCapture } from "./HomeConsultationCapture";
+import { PlanProvider } from "@/features/public-site/home-r4/PlanContext";
+import { HomePlannerSheet } from "@/features/public-site/home-r4/HomePlanner";
 import { DiscoveryAreasServed } from "./DiscoveryAreasServed";
+import { DiscoveryConsultCta } from "./DiscoveryConsultCta";
 import { DiscoveryDesignLibrary } from "./DiscoveryDesignLibrary";
 import { DiscoveryFinalCta } from "./DiscoveryFinalCta";
 import { DiscoveryHeroSlider } from "./DiscoveryHeroSlider";
 import { DiscoveryManufacturing } from "./DiscoveryManufacturing";
 import { DiscoveryProcess } from "./DiscoveryProcess";
 import { DiscoveryPortfolioCategories } from "./DiscoveryPortfolioCategories";
-import { DiscoveryProofStrip } from "./DiscoveryProofStrip";
 import { DiscoveryQuality } from "./DiscoveryQuality";
 import { DiscoveryStickyCta } from "./DiscoveryStickyCta";
 import { DiscoveryWhatsAppFab } from "./DiscoveryWhatsAppFab";
@@ -53,6 +54,18 @@ export type DiscoveryCommerceState =
  * nothing else. The two blocks that remain inline are the ones that depend on
  * data this component receives: the portfolio preview and the shop teaser.
  *
+ * ONE FORM, OPENED FROM EVERYWHERE
+ *
+ * This page used to carry its own inline lead form, which meant the site had
+ * two — a second contract, a second set of validation rules, and a second way
+ * for an enquiry to go missing. It has none of its own now. Every CTA here
+ * opens the SAME guided sheet the interiors page uses, mounted once at the
+ * bottom of this component, so there is one journey and one submission path.
+ *
+ * THE PROOF COUNTER IS NOT HERE EITHER. It lives on `/interiors`, where a
+ * visitor has chosen to read about the work, rather than as the second thing
+ * anyone sees on the homepage.
+ *
  * THE HERO IS UNTOUCHED.
  *
  * TONE RHYTHM
@@ -81,191 +94,226 @@ export function DiscoveryHomePage({
   const featured = commerce.ok ? commerce.featured.slice(0, 8) : [];
   const shopLive = commerce.ok;
   const showPincode = shopLive && (roots.length > 0 || featured.length > 0);
-  const showLiveFurniture = shopLive && (roots.length > 0 || featured.length > 0);
-  const showLeadForm = leadFormMode === "active" || leadFormMode === "preview";
+  const showLiveFurniture =
+    shopLive && (roots.length > 0 || featured.length > 0);
 
   return (
-    <div className="od-discovery" data-public-dark-theme="" data-od-discovery="">
-      <div data-od-discovery-order={DISCOVERY_SECTION_ORDER.join("|")} hidden />
-      <a className="od-skip" href="#od-discovery-main">
-        Skip to content
-      </a>
-      <PublicSiteHeader
-        current="home"
-        showConsultation={false}
-        showShopSearch={shopLive}
-        shopEnabled={shopLive}
-      />
-      <RevealRuntime />
-      <main id="od-discovery-main">
-        <DiscoveryHeroSlider />
-        <DiscoveryProofStrip />
-        <DiscoveryAreasServed />
-        <DiscoveryPortfolioCategories />
-        <DiscoveryWhy />
-        <DiscoveryManufacturing />
-        <DiscoveryDesignLibrary />
-        <DiscoveryProcess />
+    <PlanProvider>
+      <div
+        className="od-discovery"
+        data-public-dark-theme=""
+        data-od-discovery=""
+        data-lead-form-mode={leadFormMode}
+      >
+        <div
+          data-od-discovery-order={DISCOVERY_SECTION_ORDER.join("|")}
+          hidden
+        />
+        <a className="od-skip" href="#od-discovery-main">
+          Skip to content
+        </a>
+        <PublicSiteHeader
+          current="home"
+          showConsultation={false}
+          showShopSearch={shopLive}
+          shopEnabled={shopLive}
+        />
+        <RevealRuntime />
+        <main id="od-discovery-main">
+          <DiscoveryHeroSlider />
+          <DiscoveryPortfolioCategories />
+          <DiscoveryWhy />
+          <DiscoveryManufacturing />
+          <DiscoveryDesignLibrary />
+          <DiscoveryProcess />
 
-        {/* Portfolio — fewer, larger, quieter. The data path is unchanged. */}
-        <section
-          className="od-disc-band od-disc-band--deep od-disc-homes"
-          data-od-disc-section="real-homes"
-          aria-labelledby="od-disc-homes-title"
-        >
-          <div className="od-disc-shell">
-            <Reveal as="header" className="od-disc-band__head od-disc-band__head--row">
-              <div>
-                <p className="od-disc-kicker">Portfolio</p>
-                <h2 id="od-disc-homes-title" className="od-disc-display">
-                  <span>Homes we&rsquo;ve transformed across Pune.</span>
-                </h2>
-              </div>
-              <Link
-                href="/portfolio"
-                className="od-disc-btn od-disc-btn--ghost od-disc-homes__head-cta"
-              >
-                View Full Portfolio
-              </Link>
-            </Reveal>
-            {portfolioPreview.length > 0 ? (
-              <div
-                className="od-disc-homes__rail od-disc-homes__rail--collection"
-                data-od-portfolio-preview=""
-              >
-                {portfolioPreview.map((card) => (
-                  <PortfolioCard key={card.slug} card={card} />
-                ))}
-              </div>
-            ) : (
-              <Reveal>
-                <p className="od-disc-lede od-disc-homes__empty">
-                  Published project photography will appear here as the portfolio is
-                  curated.
-                </p>
-              </Reveal>
-            )}
-          </div>
-        </section>
-
-        <DiscoveryQuality />
-
-        {shopLive ? (
+          {/* Portfolio — fewer, larger, quieter. The data path is unchanged. */}
           <section
-            id="furniture-teaser"
-            className="od-disc-band od-disc-band--surface od-disc-band--divided"
-            data-od-disc-section="furniture"
-            aria-labelledby="od-disc-furn-title"
+            className="od-disc-band od-disc-band--deep od-disc-homes"
+            data-od-disc-section="real-homes"
+            aria-labelledby="od-disc-homes-title"
           >
             <div className="od-disc-shell">
-              <Reveal as="header" className="od-disc-band__head">
-                <p className="od-disc-kicker">Furniture</p>
-                <h2 id="od-disc-furn-title">Furniture made for complete homes.</h2>
+              <Reveal
+                as="header"
+                className="od-disc-band__head od-disc-band__head--row"
+              >
+                <div>
+                  <p className="od-disc-kicker">Portfolio</p>
+                  <h2 id="od-disc-homes-title" className="od-disc-display">
+                    <span>Homes we&rsquo;ve transformed across Pune.</span>
+                  </h2>
+                </div>
+                <Link
+                  href="/portfolio"
+                  className="od-disc-btn od-disc-btn--ghost od-disc-homes__head-cta"
+                >
+                  View Full Portfolio
+                </Link>
               </Reveal>
-              {showLiveFurniture ? (
-                <>
-                  {roots.length > 0 ? (
-                    <div
-                      className={`od-disc-cats ${roots.length === 1 ? "od-disc-cats--one" : ""}`}
-                    >
-                      {roots.map((row) => (
-                        <Link
-                          key={row.slug}
-                          href={`/shop/c/${row.slug}`}
-                          className="od-disc-cat"
-                        >
-                          <strong>{row.name}</strong>
-                          {row.shortDescription ? <span>{row.shortDescription}</span> : null}
-                        </Link>
-                      ))}
-                    </div>
-                  ) : null}
-                  {featured.length > 0 ? (
-                    <>
-                      <h3 className="od-disc-subhead">Featured furniture</h3>
-                      <div className="od-disc-featured od-shop__grid">
-                        {featured.map((card) => (
-                          <ShopProductCard key={card.slug} card={card} showWishlist={false} />
-                        ))}
-                      </div>
-                      <p className="od-disc-viewall">
-                        <Link href="/shop">View All</Link>
-                      </p>
-                    </>
-                  ) : null}
-                  {showPincode ? (
-                    <div className="od-disc-pin">
-                      <h3 className="od-disc-subhead">Furniture pincode check</h3>
-                      <ShopPincodeChecker />
-                    </div>
-                  ) : null}
-                </>
+              {portfolioPreview.length > 0 ? (
+                <div
+                  className="od-disc-homes__rail od-disc-homes__rail--collection"
+                  data-od-portfolio-preview=""
+                >
+                  {portfolioPreview.map((card) => (
+                    <PortfolioCard key={card.slug} card={card} />
+                  ))}
+                </div>
               ) : (
                 <Reveal>
-                  <p className="od-disc-lede">
-                    Browse furniture categories when products are listed.
+                  <p className="od-disc-lede od-disc-homes__empty">
+                    Published project photography will appear here as the
+                    portfolio is curated.
                   </p>
-                  <Link href="/shop" className="od-disc-btn od-disc-btn--ghost">
-                    Shop Furniture
-                  </Link>
-                  <ol className="od-disc-furn-steps">
-                    {DISCOVERY_FURNITURE_PROCESS_STEPS.map((step) => (
-                      <li key={step}>{step}</li>
-                    ))}
-                  </ol>
                 </Reveal>
               )}
             </div>
           </section>
-        ) : null}
 
-        <section
-          id="consultation"
-          className="od-disc-band od-disc-consult"
-          data-od-disc-section="consultation"
-          aria-labelledby="od-disc-consult-title"
-        >
-          <div className="od-disc-shell od-disc-consult__layout">
-            <Reveal>
-              <p className="od-disc-kicker">{DISCOVERY_CONSULT_EYEBROW}</p>
-              <h2 id="od-disc-consult-title" className="od-disc-display">
-                <span>{DISCOVERY_CONSULT_HEADLINE}</span>
-              </h2>
-              <p className="od-disc-lede">{DISCOVERY_CONSULT_LEDE}</p>
-              <ul className="od-disc-consult__benefits">
-                <li>{PUBLIC_CONSULTATION.label}</li>
-                <li>Own modular factory</li>
-                <li>Design, manufacturing and installation coordinated</li>
-              </ul>
-              {!showLeadForm ? (
+          <DiscoveryQuality />
+
+          {/*
+          Areas moved here from directly under the hero. Which parts of Pune we
+          serve is a practical question, and a practical question belongs beside
+          the point where someone decides to ask one — not in front of the
+          argument for why they would.
+        */}
+          <DiscoveryAreasServed />
+
+          {shopLive ? (
+            <section
+              id="furniture-teaser"
+              className="od-disc-band od-disc-band--surface od-disc-band--divided"
+              data-od-disc-section="furniture"
+              aria-labelledby="od-disc-furn-title"
+            >
+              <div className="od-disc-shell">
+                <Reveal as="header" className="od-disc-band__head">
+                  <p className="od-disc-kicker">Furniture</p>
+                  <h2 id="od-disc-furn-title">
+                    Furniture made for complete homes.
+                  </h2>
+                </Reveal>
+                {showLiveFurniture ? (
+                  <>
+                    {roots.length > 0 ? (
+                      <div
+                        className={`od-disc-cats ${roots.length === 1 ? "od-disc-cats--one" : ""}`}
+                      >
+                        {roots.map((row) => (
+                          <Link
+                            key={row.slug}
+                            href={`/shop/c/${row.slug}`}
+                            className="od-disc-cat"
+                          >
+                            <strong>{row.name}</strong>
+                            {row.shortDescription ? (
+                              <span>{row.shortDescription}</span>
+                            ) : null}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                    {featured.length > 0 ? (
+                      <>
+                        <h3 className="od-disc-subhead">Featured furniture</h3>
+                        <div className="od-disc-featured od-shop__grid">
+                          {featured.map((card) => (
+                            <ShopProductCard
+                              key={card.slug}
+                              card={card}
+                              showWishlist={false}
+                            />
+                          ))}
+                        </div>
+                        <p className="od-disc-viewall">
+                          <Link href="/shop">View All</Link>
+                        </p>
+                      </>
+                    ) : null}
+                    {showPincode ? (
+                      <div className="od-disc-pin">
+                        <h3 className="od-disc-subhead">
+                          Furniture pincode check
+                        </h3>
+                        <ShopPincodeChecker />
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <Reveal>
+                    <p className="od-disc-lede">
+                      Browse furniture categories when products are listed.
+                    </p>
+                    <Link
+                      href="/shop"
+                      className="od-disc-btn od-disc-btn--ghost"
+                    >
+                      Shop Furniture
+                    </Link>
+                    <ol className="od-disc-furn-steps">
+                      {DISCOVERY_FURNITURE_PROCESS_STEPS.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ol>
+                  </Reveal>
+                )}
+              </div>
+            </section>
+          ) : null}
+
+          {/*
+          COMPACT CTA, NOT A FORM.
+
+          The panel that stood here was a full lead form. The questions it asked
+          are now the sheet's first three steps, so what remains is the reason to
+          open it and the control that does.
+        */}
+          <section
+            id="consultation"
+            className="od-disc-band od-disc-consult od-disc-consult--compact"
+            data-od-disc-section="consultation"
+            aria-labelledby="od-disc-consult-title"
+          >
+            <div className="od-disc-shell">
+              <Reveal className="od-disc-consult__compact">
+                <p className="od-disc-kicker">{DISCOVERY_CONSULT_EYEBROW}</p>
+                <h2 id="od-disc-consult-title" className="od-disc-display">
+                  <span>{DISCOVERY_CONSULT_HEADLINE}</span>
+                </h2>
+                <p className="od-disc-lede">{DISCOVERY_CONSULT_LEDE}</p>
+                <ul className="od-disc-consult__benefits">
+                  <li>Free design consultation</li>
+                  <li>Own modular factory</li>
+                  <li>Design, manufacturing and installation coordinated</li>
+                </ul>
                 <div className="od-disc-cta-row">
-                  <Link
-                    href={PUBLIC_CONSULTATION.href}
+                  <DiscoveryConsultCta
                     className="od-disc-btn od-disc-btn--primary od-disc-btn--sheen"
+                    conversionAction="consultation-band"
                   >
                     {PUBLIC_CONSULTATION.label}
-                  </Link>
-                  <Link href="/portfolio" className="od-disc-btn od-disc-btn--ghost">
+                  </DiscoveryConsultCta>
+                  <Link
+                    href="/portfolio"
+                    className="od-disc-btn od-disc-btn--ghost"
+                  >
                     View Portfolio
                   </Link>
                 </div>
-              ) : null}
-            </Reveal>
-            {showLeadForm ? (
-              <Reveal order={1}>
-                <div className="od-disc-consult__panel">
-                  <HomeConsultationCapture mode={leadFormMode} />
-                </div>
               </Reveal>
-            ) : null}
-          </div>
-        </section>
+            </div>
+          </section>
 
-        <DiscoveryFinalCta />
-      </main>
-      <DiscoveryWhatsAppFab />
-      <DiscoveryStickyCta />
-      <PublicSiteFooter shopEnabled={shopLive} />
-    </div>
+          <DiscoveryFinalCta />
+        </main>
+        <DiscoveryWhatsAppFab />
+        <DiscoveryStickyCta />
+        <PublicSiteFooter shopEnabled={shopLive} />
+        {/* Mounted ONCE. Every CTA above opens this and nothing else. */}
+        <HomePlannerSheet leadFormMode={leadFormMode} />
+      </div>
+    </PlanProvider>
   );
 }

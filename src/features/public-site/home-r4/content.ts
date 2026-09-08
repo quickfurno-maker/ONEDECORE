@@ -278,7 +278,7 @@ export const PM_PLANNER = {
     { id: 1, legend: "What are you planning?", short: "Service" },
     { id: 2, legend: "What kind of home?", short: "Home" },
     { id: 3, legend: "When do you need it?", short: "Timeline" },
-    { id: 4, legend: "Add locality notes (optional)", short: "Brief" },
+    { id: 4, legend: "Where should we send the plan?", short: "Brief" },
   ],
   services: [
     { id: "complete-home-interiors", label: "Complete Home Interiors" },
@@ -308,6 +308,17 @@ export const PM_PLANNER = {
     { id: "other", label: "Other" },
   ],
   roomsLegend: "Rooms or areas (optional)",
+  scopeLegend: "How big is the home?",
+  budgetRangeLegend: "Approximate budget",
+  budgetRangeLockedHint:
+    "Choose the size of your home and the matching budget bands appear here.",
+  /*
+   * Wardrobes have no size list and no approved budget ladder, so this step
+   * asks nothing for them. The copy says why rather than showing an empty
+   * panel, and it promises a conversation rather than a price.
+   */
+  wardrobeScopeNote:
+    "Wardrobe projects are sized from your actual wall and storage plan, so there is no standard budget band to pick here. We will size it with you on the free consultation.",
   nameLabel: "Name",
   mobileLabel: "Mobile number",
   localityLabel: "Pune locality",

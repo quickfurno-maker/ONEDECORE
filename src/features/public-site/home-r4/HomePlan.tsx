@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { HomeLeadCapture } from "../../lead-intake/public/HomeLeadCapture.tsx";
 import type { LeadFormMode } from "../../lead-intake/public/lead-form-mode.ts";
 import { PM_CLOSE, PM_PLANNER, PM_SECTION_IDS } from "./content";
 import { formatInteriorBrief } from "./plan-state";
@@ -17,9 +16,21 @@ function labelOf(
 }
 
 /**
- * Final plan section — summary + clipboard brief export.
- * Lead form mode is resolved on the server and passed in to avoid SSR/client drift.
- * When leadFormMode is active/preview, the enquiry form is the primary conversion path.
+ * Final plan section — summary + clipboard brief export + the CTA that opens
+ * the one lead form.
+ *
+ * THIS SECTION NO LONGER CONTAINS A FORM.
+ *
+ * It used to mount a second, flat lead form beside the guided sheet: two forms,
+ * two contracts, two sets of validation rules, and two ways for an enquiry to
+ * be lost. The sheet asks the same questions in a better order and is the only
+ * thing that submits, so what is left here is the summary of what the visitor
+ * has already answered and the control that opens the sheet at the first
+ * question still outstanding.
+ *
+ * Lead form mode is resolved on the server and passed in to avoid SSR/client
+ * drift; it decides whether a conversion CTA is offered at all or the page
+ * falls back to the copy-a-brief path.
  */
 export function HomePlan({
   leadFormMode,
@@ -187,7 +198,17 @@ export function HomePlan({
                   {PM_CLOSE.briefTitleActive}
                 </h3>
                 <p className="pm-planner__successBody">{PM_CLOSE.briefBodyActive}</p>
-                <HomeLeadCapture mode={leadFormMode} />
+                <div className="pm-close__form-actions">
+                  <button
+                    type="button"
+                    className="dc-btn dc-btn--primary pm-btn--sheen"
+                    onClick={() => plan.openPlanner(plan.getNextIncompleteStep())}
+                    data-conversion-action="consultation-plan"
+                  >
+                    {PM_CLOSE.submitLabel}
+                  </button>
+                </div>
+                <p className="pm-close__reassurance">{PM_CLOSE.reassuranceActive}</p>
                 {briefActions}
               </>
             ) : leadFormMode === "copy-only" ? (

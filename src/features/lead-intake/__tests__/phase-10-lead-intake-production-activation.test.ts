@@ -147,7 +147,13 @@ describe("Phase 10 consultation conversion path", () => {
     assert.doesNotMatch(capture, /checked=\{true\}/);
   });
 
-  test("active mode makes enquiry form primary over copy brief", () => {
+  test("active mode makes the enquiry CTA primary over copy brief", () => {
+    /*
+     * The section used to MOUNT a second lead form. It opens the one canonical
+     * sheet now, so what this asserts is the ordering that still matters: in
+     * active mode the conversion control comes first and the copy-a-brief
+     * fallback is secondary — and no form is mounted here at all.
+     */
     const homePlan = readFileSync(
       join(root, "src/features/public-site/home-r4/HomePlan.tsx"),
       "utf8"
@@ -155,15 +161,16 @@ describe("Phase 10 consultation conversion path", () => {
     assert.match(homePlan, /briefTitleActive/);
     assert.match(homePlan, /formPrimary/);
     assert.match(homePlan, /copy-only/);
-    assert.match(homePlan, /HomeLeadCapture/);
     assert.match(homePlan, /copyBriefSecondaryLabel/);
+    assert.doesNotMatch(homePlan, /HomeLeadCapture/);
+    assert.doesNotMatch(homePlan, /PremiumRequirementForm/);
     const activeBranch = homePlan.slice(
       homePlan.indexOf("formPrimary ?"),
       homePlan.indexOf('leadFormMode === "copy-only"')
     );
-    assert.match(activeBranch, /HomeLeadCapture/);
+    assert.match(activeBranch, /openPlanner/);
     assert.match(activeBranch, /briefActions/);
-    assert.ok(activeBranch.indexOf("HomeLeadCapture") < activeBranch.indexOf("briefActions"));
+    assert.ok(activeBranch.indexOf("openPlanner") < activeBranch.indexOf("briefActions"));
   });
 
   test("success copy stays request-received not booking-confirmed", () => {

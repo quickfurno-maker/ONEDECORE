@@ -3269,3 +3269,20 @@
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   Compact consultation band
+   ==========================================================================
+   The band used to be a two-column layout: argument on the left, a full lead
+   form on the right. There is no form on this page any more — every CTA opens
+   the one guided sheet — so the band is a single measured column that ends in
+   the control that opens it.
+   ========================================================================== */
+
+.od-disc-consult--compact .od-disc-consult__compact {
+  max-width: 62ch;
+}
+
+.od-disc-consult--compact .od-disc-consult__benefits {
+  margin-bottom: 24px;
+}

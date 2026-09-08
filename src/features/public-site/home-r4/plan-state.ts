@@ -9,6 +9,12 @@ import type {
   PmTimelineId,
 } from "./content.ts";
 import type { BudgetComfortId } from "./budget-config.ts";
+import {
+  isBudgetRangeForScope,
+  serviceForProjectScope,
+  type LeadProjectScopeCode,
+} from "../../lead-intake/project-scope.ts";
+import { v4RequiresScope } from "../../lead-intake/contracts.ts";
 
 export interface PlanEstimateSummary {
   readonly serviceLabel: string;
@@ -19,6 +25,13 @@ export interface PlanEstimateSummary {
 
 export interface PlanSnapshot {
   readonly service: PmServiceId | null;
+  /**
+   * The `public-consult-v4` home question: which size of home the work is for,
+   * and which band from THAT scope's ladder. Both are null for
+   * `custom-wardrobes`, which asks neither — see `homeStepComplete`.
+   */
+  readonly projectScope: LeadProjectScopeCode | null;
+  readonly budgetRange: string | null;
   readonly property: PmPropertyId | null;
   readonly timeline: PmTimelineId | null;
   readonly rooms: readonly PmRoomId[];
@@ -52,7 +65,8 @@ export function formatInteriorBrief(
   return [
     "ONEDECORE — My Interior Brief",
     `Service: ${snapshot.service ?? "Not selected"}`,
-    `Property: ${snapshot.property ?? "Not selected"}`,
+    `Home: ${snapshot.projectScope ?? "Not selected"}`,
+    `Budget: ${snapshot.budgetRange ?? "Not selected"}`,
     `Timeline: ${snapshot.timeline ?? "Not selected"}`,
     `Rooms: ${rooms}`,
     snapshot.budgetComfort && budgetLabel
@@ -67,12 +81,35 @@ export function formatInteriorBrief(
 }
 
 /**
- * First incomplete step: no service → 1, no property → 2, no timeline → 3,
- * otherwise the brief/locality step.
+ * Is the HOME step answered?
+ *
+ * `custom-wardrobes` asks nothing here — there is no scope list that describes
+ * a wardrobe job and no owner-approved wardrobe budget ladder — so for that
+ * service the step is complete as soon as the service is chosen. For the other
+ * two, both answers are required AND the pair must agree: the budget has to
+ * come from this scope's ladder, and the scope has to belong to this service.
+ *
+ * This is the same rule `unifiedLeadToRequest` and the SQL enforce. It is
+ * stated here in terms of step completion so the rail, the resume CTA and the
+ * submission cannot disagree about whether the visitor has answered.
+ */
+export function homeStepComplete(snapshot: PlanSnapshot): boolean {
+  if (!snapshot.service) return false;
+  if (!v4RequiresScope(snapshot.service)) return true;
+  if (!snapshot.projectScope) return false;
+  if (serviceForProjectScope(snapshot.projectScope) !== snapshot.service) {
+    return false;
+  }
+  return isBudgetRangeForScope(snapshot.projectScope, snapshot.budgetRange);
+}
+
+/**
+ * First incomplete step: no service → 1, home unanswered → 2, no timeline → 3,
+ * otherwise the brief step where the enquiry is actually sent.
  */
 export function getNextIncompleteStep(snapshot: PlanSnapshot): PmStep {
   if (!snapshot.service) return 1;
-  if (!snapshot.property) return 2;
+  if (!homeStepComplete(snapshot)) return 2;
   if (!snapshot.timeline) return 3;
   return 4;
 }
@@ -80,10 +117,11 @@ export function getNextIncompleteStep(snapshot: PlanSnapshot): PmStep {
 /** Steps whose required choice is already made — drives the progress rail. */
 export function completedStepCount(snapshot: PlanSnapshot): 0 | 1 | 2 | 3 | 4 {
   let count = 0;
+  const home = homeStepComplete(snapshot);
   if (snapshot.service) count += 1;
-  if (snapshot.property) count += 1;
+  if (home) count += 1;
   if (snapshot.timeline) count += 1;
-  if (snapshot.service && snapshot.property && snapshot.timeline) count += 1;
+  if (snapshot.service && home && snapshot.timeline) count += 1;
   return count as 0 | 1 | 2 | 3 | 4;
 }
 
@@ -112,16 +150,17 @@ export type ReadinessState = "exploring" | "planning" | "brief-ready";
 
 /**
  * Neutral readiness from plan answers — not a score, AI rating, or lead status.
- * Core answers counted: service, property, timeline, ≥1 room, non-empty locality.
+ * Core answers counted: service, the home step, timeline, ≥1 room, non-empty
+ * locality.
  */
 export function computeReadinessState(snapshot: PlanSnapshot): ReadinessState {
-  if (snapshot.service && snapshot.property && snapshot.timeline) {
+  if (snapshot.service && homeStepComplete(snapshot) && snapshot.timeline) {
     return "brief-ready";
   }
 
   let core = 0;
   if (snapshot.service) core += 1;
-  if (snapshot.property) core += 1;
+  if (homeStepComplete(snapshot)) core += 1;
   if (snapshot.timeline) core += 1;
   if (snapshot.rooms.length > 0) core += 1;
   if (snapshot.locality.trim()) core += 1;

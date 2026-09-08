@@ -39,11 +39,24 @@ import {
 } from "../public/lead-form-errors.ts";
 import { isSafeSameSitePath } from "../same-site-path.ts";
 
+/*
+ * RELATIVE, NOT A FIXED DATE.
+ *
+ * `antiBot.formStartedAt` must be between 800ms and 24 hours old, so a
+ * hardcoded timestamp is a time bomb: these fixtures passed on the day they
+ * were written and started failing the moment the date rolled over. Five
+ * minutes ago is inside the window on every day.
+ */
+const FORM_STARTED_AT = new Date(Date.now() - 5 * 60_000).toISOString();
+
+
 const root = process.cwd();
 
 function samplePlan(overrides: Partial<PlanSnapshot> = {}): PlanSnapshot {
   return {
     service: "complete-home-interiors",
+    projectScope: null,
+    budgetRange: null,
     property: "apartment-2bhk",
     timeline: "within-1-month",
     rooms: ["living", "kitchen"],
@@ -189,7 +202,7 @@ describe("Phase 4B2 plan adapter and form fields", () => {
         whatsappService: true,
       },
       attribution: { landingPath: "/" },
-      antiBot: { website: "", formStartedAt: "2026-07-30T00:00:00.000Z" },
+      antiBot: { website: "", formStartedAt: FORM_STARTED_AT },
       idempotencyKey: "22222222-2222-4222-8222-222222222222",
     });
     assert.equal(result.ok, true);
@@ -212,7 +225,7 @@ describe("Phase 4B2 plan adapter and form fields", () => {
       email: "synthetic@example.test",
       consent: { serviceEnquiry: true, servicePhone: true },
       attribution: { landingPath: "/" },
-      antiBot: { website: "", formStartedAt: "2026-07-30T00:00:00.000Z" },
+      antiBot: { website: "", formStartedAt: FORM_STARTED_AT },
       idempotencyKey: "22222222-2222-4222-8222-222222222222",
     });
     assert.equal(noConsent.ok, false);
@@ -227,7 +240,7 @@ describe("Phase 4B2 plan adapter and form fields", () => {
         serviceEmail: true,
       },
       attribution: { landingPath: "/" },
-      antiBot: { website: "", formStartedAt: "2026-07-30T00:00:00.000Z" },
+      antiBot: { website: "", formStartedAt: FORM_STARTED_AT },
       idempotencyKey: "22222222-2222-4222-8222-222222222222",
     });
     assert.equal(noEmail.ok, false);
@@ -368,14 +381,16 @@ describe("Phase 4B2 accessibility and copy-only regression", () => {
     assert.doesNotMatch(capture, /defaultChecked=\{true\}/);
   });
 
-  test("HomePlan keeps copy-only path without fetch", () => {
+  test("HomePlan keeps the copy-only path and mounts no form of its own", () => {
     const homePlan = readFileSync(
       join(root, "src/features/public-site/home-r4/HomePlan.tsx"),
       "utf8"
     );
     assert.match(homePlan, /copy-only/);
     assert.doesNotMatch(homePlan, /\/api\/public\/lead-intake/);
-    assert.match(homePlan, /HomeLeadCapture/);
+    // The section offers the canonical sheet; it no longer embeds a form.
+    assert.match(homePlan, /openPlanner/);
+    assert.doesNotMatch(homePlan, /HomeLeadCapture/);
   });
 
   test("env example documents form mode default", () => {

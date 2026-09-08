@@ -599,19 +599,21 @@ describe("the legacy planner contract still works", () => {
   test("every planner version is ADDED, never substituted", () => {
     /*
      * Each version keeps its name and its meaning, because rows already stored
-     * under it were collected that way. v3 is the current public form; v1 and
-     * v2 still describe exactly what their own forms asked.
+     * under it were collected that way. v4 is the current public form; v1, v2
+     * and v3 still describe exactly what their own forms asked, and all three
+     * are still accepted.
      */
     assert.equal(LEAD_INTAKE_PLANNER_VERSION, "home-r4-v1");
     assert.equal(PUBLIC_CONSULT_V1_PLANNER_VERSION, "public-consult-v1");
-    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v3");
+    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v4");
     const all = new Set([
       LEAD_INTAKE_PLANNER_VERSION,
       PUBLIC_CONSULT_V1_PLANNER_VERSION,
       "public-consult-v2",
+      "public-consult-v3",
       PUBLIC_CONSULT_PLANNER_VERSION,
     ]);
-    assert.equal(all.size, 4, "four distinct versions, none reused");
+    assert.equal(all.size, 5, "five distinct versions, none reused");
   });
 
   test("the planner variant still demands property and timeline", () => {
@@ -665,10 +667,20 @@ describe("the legacy planner contract still works", () => {
     assert.equal(complete.ok, true);
   });
 
-  test("the legacy form is untouched and still mounted by the planner page", () => {
+  test("the legacy planner form is untouched, and no longer mounted", () => {
+    /*
+     * `HomeLeadCapture` still speaks `home-r4-v1` and still exists, because
+     * that contract still has to mean what it meant when rows were stored under
+     * it. What changed is that no route mounts it: the consultation section
+     * opens the one canonical sheet instead of embedding a second form.
+     */
     const legacy = read("src/features/lead-intake/public/HomeLeadCapture.tsx");
     assert.match(legacy, /planToLeadRequest/);
-    assert.match(read("src/features/public-site/home-r4/HomePlan.tsx"), /HomeLeadCapture/);
+    const adapter = read("src/features/lead-intake/public/plan-to-lead-request.ts");
+    assert.match(adapter, /plannerVersion: LEAD_INTAKE_PLANNER_VERSION/);
+    const plan = read("src/features/public-site/home-r4/HomePlan.tsx");
+    assert.doesNotMatch(plan, /HomeLeadCapture/);
+    assert.match(plan, /openPlanner/);
   });
 });
 
@@ -722,7 +734,7 @@ describe("the migration only enables truth", () => {
     );
     assert.equal(
       sorted.pop(),
-      "20260907170000_portfolio_room_category_taxonomy.sql",
+      "20260908140000_public_unified_form_v4.sql",
       "the newest migration is the premium requirement form v3 contract"
     );
   });

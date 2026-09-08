@@ -45,6 +45,17 @@ import { CONSULTATION_SERVICE_OPTIONS } from "../../lead-intake/public/consultat
 import { consultationToLeadRequest } from "../../lead-intake/public/consultation-to-lead-request.ts";
 import type { LeadFormAttribution } from "../../lead-intake/public/lead-form-attribution.ts";
 
+/*
+ * RELATIVE, NOT A FIXED DATE.
+ *
+ * `antiBot.formStartedAt` must be between 800ms and 24 hours old, so a
+ * hardcoded timestamp is a time bomb: these fixtures passed on the day they
+ * were written and started failing the moment the date rolled over. Five
+ * minutes ago is inside the window on every day.
+ */
+const FORM_STARTED_AT = new Date(Date.now() - 5 * 60_000).toISOString();
+
+
 const root = process.cwd();
 const read = (rel: string) => readFileSync(join(root, rel), "utf8");
 const code = (source: string) =>
@@ -203,9 +214,23 @@ describe("the projects count is displayed without being called verified", () => 
     // The strip asks the register rather than trusting its own list.
     assert.match(read(STRIP), /isClaimDisplayable\(metric\.claimId\)/);
 
+    /*
+     * THE STRIP MOVED, BY OWNER DIRECTION.
+     *
+     * It used to sit second on the homepage. It now opens `/interiors`, where
+     * the visitor has already chosen to read about the work rather than being
+     * shown four animated figures before being told what the company does. The
+     * evidence model is untouched by the move — the assertions above still hold
+     * — so what changes here is only WHERE it is mounted.
+     */
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
+    assert.doesNotMatch(page, /DiscoveryProofStrip/);
+
+    const interiors = read(
+      "src/features/public-site/interiors/InteriorsConversionPage.tsx"
+    );
     assert.ok(
-      page.indexOf("<DiscoveryHeroSlider") < page.indexOf("<DiscoveryProofStrip"),
+      interiors.indexOf("<HomeHero") < interiors.indexOf("<DiscoveryProofStrip"),
       "the proof strip must come after the hero"
     );
     // And NOT inside the hero.
@@ -407,10 +432,18 @@ describe("the WhatsApp CTA is configured, validated, or absent", () => {
   test("every conversion action carries a stable hook and nothing reads them yet", () => {
     const dock = read(DOCK);
     const fab = read(WA_FAB);
+    const cta = read("src/features/public-site/discovery/DiscoveryConsultCta.tsx");
     assert.match(dock, /data-conversion-action="portfolio-sticky"/);
-    assert.match(dock, /data-conversion-action="consultation-sticky"/);
+    /*
+     * The consultation hook is passed to the shared CTA now rather than written
+     * inline: the button became a control that opens the one lead form instead
+     * of a link to a page anchor. The NAME is unchanged, which is the point —
+     * a later measurement layer binds to the name, not to the element.
+     */
+    assert.match(dock, /conversionAction="consultation-sticky"/);
+    assert.match(cta, /data-conversion-action=\{conversionAction\}/);
     assert.match(fab, /data-conversion-action="whatsapp-fab"/);
-    for (const source of [dock, fab]) {
+    for (const source of [dock, fab, cta]) {
       for (const tag of ["gtag(", "fbq(", "dataLayer", "googletagmanager"]) {
         assert.ok(!source.includes(tag), `must not add ${tag}`);
       }
@@ -597,7 +630,7 @@ describe("an unasked qualifier is absent, not invented", () => {
     mobile: "9876543210",
     consent: { serviceEnquiry: true, servicePhone: true } as const,
     attribution,
-    antiBot: { website: "", formStartedAt: "2026-09-07T00:00:00.000Z" },
+    antiBot: { website: "", formStartedAt: FORM_STARTED_AT },
     idempotencyKey: "k-1",
   };
 
@@ -655,8 +688,14 @@ describe("an unasked qualifier is absent, not invented", () => {
     // v1's strict branch survives underneath.
     assert.match(server, /isAllowedLeadQualifier\(kind, code\)/);
     assert.match(server, /LEAD_QUALIFIER_KIND_BY_SERVICE\[service as LeadServiceCode\] !== kind/);
-    // Unasked fields are still rejected rather than ignored.
-    assert.match(server, /"timeline",\s*\n\s*"rooms",/);
+    /*
+     * Unasked fields are still rejected rather than ignored. The list became
+     * conditional when v4 arrived -- v4 is the one version that DOES ask for a
+     * timeline -- so the assertion follows it: the timeline is excluded for v4
+     * and for nothing else, and the remaining prohibitions are unconditional.
+     */
+    assert.match(server, /isPublicConsultV4 \? \[\] : \(\["timeline"\] as const\)/);
+    assert.match(server, /"rooms",\s*\n\s*"budgetComfort",\s*\n\s*"estimate",/);
   });
 
   test("the adapter emits v2 and forbids rather than loosens", () => {
