@@ -225,7 +225,9 @@ describe("no fabricated property or timeline", () => {
     assert.equal(req.timeline, undefined, "no timeline may be invented");
     assert.equal(req.rooms, undefined);
     assert.equal(req.budgetComfort, undefined);
-    assert.equal(result.body.plannerVersion, PUBLIC_CONSULT_PLANNER_VERSION);
+    // Pinned to v2 explicitly. This adapter serves the interiors-planner
+    // surfaces and must keep emitting the version whose rules it obeys, not
+    // whatever `PUBLIC_CONSULT_PLANNER_VERSION` currently points at (v3).
     assert.equal(result.body.plannerVersion, "public-consult-v2");
   });
 
@@ -471,10 +473,16 @@ describe("the visible form is short", () => {
     // test below.
     assert.match(src, /new URLSearchParams\(window\.location\.search\)\.get\("service"\)/);
     assert.match(src, /qualifierForService\(raw\)/);
-    // And the wrapper mounts the adaptive form, not the legacy planner one.
-    const wrapper = read(WRAPPER);
-    assert.match(wrapper, /ConsultationLeadForm/);
-    assert.doesNotMatch(code(wrapper), /HomeLeadCapture|PlanProvider/);
+    /*
+     * The homepage wrapper now mounts `PremiumRequirementForm`
+     * (public-consult-v3); this file's FORM constant still points at the
+     * consultation form, whose own deep-link handling is asserted above.
+     * Comment-stripped, because this assertion once passed on the component
+     * name appearing in a docblock rather than in code.
+     */
+    const wrapper = code(read(WRAPPER));
+    assert.match(wrapper, /PremiumRequirementForm/);
+    assert.doesNotMatch(wrapper, /HomeLeadCapture|PlanProvider/);
   });
 
   test("the deep link is hydration-safe", () => {
@@ -588,16 +596,24 @@ describe("the visible form is short", () => {
 /* ========================================================================== */
 
 describe("the legacy planner contract still works", () => {
-  test("all three planner versions are accepted", () => {
+  test("every planner version is ADDED, never substituted", () => {
     /*
-     * v2 was ADDED, not substituted. v1 keeps its name and its meaning because
-     * rows already stored under it were collected that way.
+     * Each version keeps its name and its meaning, because rows already stored
+     * under it were collected that way. v4 is the current public form; v1, v2
+     * and v3 still describe exactly what their own forms asked, and all three
+     * are still accepted.
      */
     assert.equal(LEAD_INTAKE_PLANNER_VERSION, "home-r4-v1");
     assert.equal(PUBLIC_CONSULT_V1_PLANNER_VERSION, "public-consult-v1");
-    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v2");
-    assert.notEqual(LEAD_INTAKE_PLANNER_VERSION, PUBLIC_CONSULT_PLANNER_VERSION);
-    assert.notEqual(PUBLIC_CONSULT_V1_PLANNER_VERSION, PUBLIC_CONSULT_PLANNER_VERSION);
+    assert.equal(PUBLIC_CONSULT_PLANNER_VERSION, "public-consult-v4");
+    const all = new Set([
+      LEAD_INTAKE_PLANNER_VERSION,
+      PUBLIC_CONSULT_V1_PLANNER_VERSION,
+      "public-consult-v2",
+      "public-consult-v3",
+      PUBLIC_CONSULT_PLANNER_VERSION,
+    ]);
+    assert.equal(all.size, 5, "five distinct versions, none reused");
   });
 
   test("the planner variant still demands property and timeline", () => {
@@ -651,10 +667,20 @@ describe("the legacy planner contract still works", () => {
     assert.equal(complete.ok, true);
   });
 
-  test("the legacy form is untouched and still mounted by the planner page", () => {
+  test("the legacy planner form is untouched, and no longer mounted", () => {
+    /*
+     * `HomeLeadCapture` still speaks `home-r4-v1` and still exists, because
+     * that contract still has to mean what it meant when rows were stored under
+     * it. What changed is that no route mounts it: the consultation section
+     * opens the one canonical sheet instead of embedding a second form.
+     */
     const legacy = read("src/features/lead-intake/public/HomeLeadCapture.tsx");
     assert.match(legacy, /planToLeadRequest/);
-    assert.match(read("src/features/public-site/home-r4/HomePlan.tsx"), /HomeLeadCapture/);
+    const adapter = read("src/features/lead-intake/public/plan-to-lead-request.ts");
+    assert.match(adapter, /plannerVersion: LEAD_INTAKE_PLANNER_VERSION/);
+    const plan = read("src/features/public-site/home-r4/HomePlan.tsx");
+    assert.doesNotMatch(plan, /HomeLeadCapture/);
+    assert.match(plan, /openPlanner/);
   });
 });
 
@@ -708,8 +734,8 @@ describe("the migration only enables truth", () => {
     );
     assert.equal(
       sorted.pop(),
-      "20260907130000_public_consultation_single_step_v2.sql",
-      "the newest migration is the single-step v2 contract"
+      "20260908140000_public_unified_form_v4.sql",
+      "the newest migration is the premium requirement form v3 contract"
     );
   });
 });

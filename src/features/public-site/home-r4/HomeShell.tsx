@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
+import { getLeadFormMode } from "@/features/lead-intake/public/lead-form-mode";
 import { PublicSiteFooter } from "@/features/public-site/chrome/PublicSiteFooter";
 import { PublicSiteHeader } from "@/features/public-site/chrome/PublicSiteHeader";
 import { HomeFooter } from "./HomeFooter";
@@ -21,6 +22,12 @@ export function HomeShell({
   readonly unifiedNav?: boolean;
 }) {
   const shopEnabled = isShopPublicEnabled();
+  /*
+   * Resolved on the SERVER and passed down, so the sheet renders the same mode
+   * on both sides of hydration. Reading it in the client component would give a
+   * different answer during SSR and flip the form on first paint.
+   */
+  const leadFormMode = getLeadFormMode();
 
   return (
     <div data-public-home-r4="" data-public-dark-theme="">
@@ -45,7 +52,7 @@ export function HomeShell({
       ) : (
         <HomeFooter />
       )}
-      <HomePlannerSheet />
+      <HomePlannerSheet leadFormMode={leadFormMode} />
       <RevealRuntime />
     </div>
   );

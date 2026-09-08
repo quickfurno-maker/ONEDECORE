@@ -108,6 +108,9 @@ function validatedFixture(
     qualifier: null,
     rooms: ["living", "kitchen"],
     budgetComfort: "6-12l",
+    // The legacy planner asks for neither; v3 is the only version that does.
+    projectScope: null,
+    budgetRange: null,
     estimateSnapshot: null,
     locality: "Koregaon Park",
     message: "Synthetic local-test brief",
@@ -976,17 +979,34 @@ describe("Phase 4A route runtime", () => {
 
 describe("Phase 4A homepage and server-only guards", () => {
   test("homepage copy flow unchanged; intake fetch only in gated capture module", () => {
+    /*
+     * THE POINT OF THIS TEST HAS NOT CHANGED, BUT ITS SHAPE HAS.
+     *
+     * The rule is that exactly one module may reach the intake endpoint. That
+     * used to mean the planner touched nothing under `lead-intake` at all,
+     * because the planner did not submit. It does now — step 4 of the sheet is
+     * the site's only submission path — so the rule is stated directly: the
+     * planner may name the client module, and it may not name the URL.
+     */
     const home = join(root, "src/features/public-site/home-r4");
-    const copyOnlySources = [
-      "HomePlanner.tsx",
-      "PlanContext.tsx",
-      "content.ts",
-    ];
-    for (const file of copyOnlySources) {
+    for (const file of ["PlanContext.tsx", "content.ts"]) {
       const src = readFileSync(join(home, file), "utf8");
       assert.doesNotMatch(src, /\/api\/public\/lead-intake/);
-      assert.doesNotMatch(src, /lead-intake/);
+      assert.doesNotMatch(src, /lead-intake\/public/);
     }
+    const planner = readFileSync(join(home, "HomePlanner.tsx"), "utf8");
+    assert.doesNotMatch(planner, /\/api\/public\/lead-intake/);
+    assert.doesNotMatch(planner, /submitLeadIntake/);
+    // It composes the brief; it does not submit one itself.
+    assert.match(planner, /UnifiedLeadBrief/);
+
+    const brief = readFileSync(
+      join(root, "src/features/lead-intake/public/UnifiedLeadBrief.tsx"),
+      "utf8"
+    );
+    assert.doesNotMatch(brief, /\/api\/public\/lead-intake/);
+    assert.match(brief, /submitLeadIntake/);
+
     const homePlan = readFileSync(join(home, "HomePlan.tsx"), "utf8");
     assert.doesNotMatch(homePlan, /\/api\/public\/lead-intake/);
     assert.match(homePlan, /leadFormMode/);
@@ -1002,15 +1022,14 @@ describe("Phase 4A homepage and server-only guards", () => {
       join(root, "src/features/public-site/discovery/DiscoveryHomePage.tsx"),
       "utf8"
     );
-    assert.match(discoveryPage, /HomeConsultationCapture/);
-    assert.doesNotMatch(discoveryPage, /HomePlannerSheet/);
-
-    const capture = readFileSync(
-      join(root, "src/features/lead-intake/public/HomeLeadCapture.tsx"),
-      "utf8"
-    );
-    assert.match(capture, /submitLeadIntake/);
-    assert.match(capture, /copy-only/);
+    /*
+     * The homepage mounts the SAME sheet the interiors page does, and no form
+     * of its own. This assertion is inverted from what it once said, and the
+     * inversion is the change: one form, one contract, one submission path.
+     */
+    assert.match(discoveryPage, /HomePlannerSheet/);
+    assert.doesNotMatch(discoveryPage, /HomeConsultationCapture/);
+    assert.doesNotMatch(discoveryPage, /PremiumRequirementForm/);
 
     const client = readFileSync(
       join(root, "src/features/lead-intake/public/lead-intake-client.ts"),

@@ -152,7 +152,8 @@ export async function queryFeaturedProjects(
 export async function queryPaginatedProjects(
   supabase: PublicSupabaseClient,
   page: number,
-  serviceFilter?: string
+  serviceFilter?: string,
+  categoryFilter?: string
 ): Promise<PublicPortfolioPaginatedCards> {
   const offset = (page - 1) * PUBLIC_LISTING_PAGE_SIZE;
   const limit = PUBLIC_LISTING_PAGE_SIZE + 1;
@@ -163,14 +164,25 @@ export async function queryPaginatedProjects(
     pageSize: PUBLIC_LISTING_PAGE_SIZE,
     hasNextPage: false,
     activeService: serviceFilter ?? null,
+    activeCategory: categoryFilter ?? null,
   };
 
-  const base = serviceFilter
+  const selected = serviceFilter
     ? supabase
         .from("portfolio_projects")
         .select(LISTING_FILTERED_SELECT)
         .eq("portfolio_project_services.service_code", serviceFilter)
     : supabase.from("portfolio_projects").select(LISTING_SELECT);
+
+  /*
+   * The room category is a plain column on the project, so it filters directly
+   * rather than through the services join. An unclassified project is null and
+   * therefore excluded — which is the point: it has not been looked at, so it
+   * must not be shown to somebody who asked for bedrooms.
+   */
+  const base = categoryFilter
+    ? selected.eq("portfolio_category_code", categoryFilter)
+    : selected;
 
   const { data: projects, error } = await base
     .eq("status", "published")
@@ -213,6 +225,7 @@ export async function queryPaginatedProjects(
     pageSize: PUBLIC_LISTING_PAGE_SIZE,
     hasNextPage: cards.length > PUBLIC_LISTING_PAGE_SIZE,
     activeService: serviceFilter ?? null,
+    activeCategory: categoryFilter ?? null,
   };
 }
 

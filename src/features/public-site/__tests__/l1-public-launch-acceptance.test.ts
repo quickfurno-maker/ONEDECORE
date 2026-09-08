@@ -46,7 +46,11 @@ import {
   isWarrantyPublicationReady,
   LEGAL_PUBLICATION_MODE,
 } from "../../legal/legal-publication.ts";
-import { canQuotePublicClaim, publicClaimLabel } from "../home-r4/claims.ts";
+import {
+  canQuotePublicClaim,
+  publicClaimLabel,
+  resolvePublicClaim,
+} from "../home-r4/claims.ts";
 import { canShowAggregateReviewSummary } from "../home-r4/reviews.ts";
 import {
   PM_FAQS,
@@ -562,11 +566,19 @@ describe("owner-approved wording is not the same thing as public evidence", () =
   });
 
   test("a claim needs verified evidence, and a warranty needs terms as well", () => {
+    /*
+     * THE RULE, not the current state: verified evidence alone is not enough
+     * for a claim that also promises contractual terms. The real warranty
+     * record now carries approved terms (owner-approved display wording,
+     * 2026-09-07), so the fixture puts them back to pending to keep exercising
+     * the rule rather than the configuration.
+     */
     const verifiedOnly = {
       ...PUBLIC_CLAIM_EVIDENCE,
       "warranty-years": {
         ...PUBLIC_CLAIM_EVIDENCE["warranty-years"],
         evidence: "verified" as const,
+        legalTerms: "pending" as const,
       },
       "projects-delivered": {
         ...PUBLIC_CLAIM_EVIDENCE["projects-delivered"],
@@ -597,11 +609,15 @@ describe("owner-approved wording is not the same thing as public evidence", () =
       "average-rating",
       "client-reviews",
       "client-satisfaction",
-      "warranty-years",
-      "custom-designs",
     ] as const) {
       assert.equal(canQuotePublicClaim(id), false, id);
     }
+    /*
+     * `custom-designs` moved out of this list on 2026-09-07: the owner attested
+     * it for the homepage proof strip. It is still UNEVIDENCED — the assertion
+     * that matters is the one below, and it has not moved.
+     */
+    assert.equal(isClaimPubliclyEvidenced("custom-designs"), false);
   });
 
   test("a rating has no qualitative substitute — it disappears instead", () => {
@@ -615,15 +631,29 @@ describe("owner-approved wording is not the same thing as public evidence", () =
   });
 
   test("claims that describe the work, rather than measure it, survive", () => {
-    for (const id of [
-      "warranty-years",
-      "custom-designs",
-      "own-manufacturing-unit",
-      "free-design-consultation",
-    ] as const) {
+    /*
+     * These have no verified figure, so what survives is the qualitative
+     * wording. `custom-designs` and `own-manufacturing-unit` are no longer in
+     * this list: both are owner-attested for the proof strip and therefore
+     * resolve to their quantified form, which is the point of the attestation.
+     * Their qualitative copy still exists — asserted directly below — so
+     * withdrawing an attestation leaves an honest sentence behind rather than a
+     * blank.
+     */
+    for (const id of ["free-design-consultation"] as const) {
       const label = publicClaimLabel(id);
       assert.ok(label && label.length > 0, `${id} needs qualitative copy`);
       assert.doesNotMatch(label!, /\d/, `${id} must not carry a figure`);
+    }
+
+    for (const id of [
+      "custom-designs",
+      "own-manufacturing-unit",
+      "warranty-years",
+    ] as const) {
+      const fallback = resolvePublicClaim(id).qualitative;
+      assert.ok(fallback && fallback.length > 0, `${id} needs qualitative copy`);
+      assert.doesNotMatch(fallback!, /\d/, `${id} fallback must carry no figure`);
     }
   });
 
@@ -684,16 +714,29 @@ describe("the launch surfaces publish no unsupported number", () => {
 
   test("every surface that shows a figure asks the gate first", () => {
     for (const rel of [
-      "src/features/public-site/discovery/discovery-copy.ts",
+      /*
+       * `discovery-copy.ts` no longer renders figures — it hands the proof
+       * strip claim IDs, and the strip asks the register (asserted below).
+       */
+      "src/features/public-site/discovery/DiscoveryProofStrip.tsx",
       "src/features/public-site/discovery/DiscoveryHeroTrustBar.tsx",
       "src/features/public-site/home-r4/content.ts",
     ]) {
       assert.match(
         code(read(rel)),
-        /canQuotePublicClaim\(|publicClaimLabel\(/,
+        /canQuotePublicClaim\(|publicClaimLabel\(|isClaimDisplayable\(/,
         `${rel} must derive its claims from the evidence gate`
       );
     }
+    /*
+     * The proof strip is the surface that actually renders figures now. The
+     * copy module hands it claim IDs; the component asks the register. Neither
+     * half may publish a number on its own authority.
+     */
+    const strip = code(
+      read("src/features/public-site/discovery/DiscoveryProofStrip.tsx")
+    );
+    assert.match(strip, /isClaimDisplayable\(metric\.claimId\)/);
   });
 
   test("the rating block and its decorative stars are gated together", () => {
@@ -828,9 +871,22 @@ describe("public copy matches the page it describes", () => {
   });
 
   test("the warranty FAQ promises neither a duration nor universal cover", () => {
-    assert.equal(canQuotePublicClaim("warranty-years"), false);
+    /*
+     * The proof strip now carries a hedged headline ("Up to N+ Years"), because
+     * the owner approved that display wording. The FAQ is where a visitor goes
+     * for the detail, and the DETAIL is still pending — so the FAQ must keep
+     * saying so, and must still not name a duration or promise universal cover.
+     * The headline and the FAQ are allowed to differ in precision; they are not
+     * allowed to contradict.
+     */
     const entry = faq("warranty");
-    assert.doesNotMatch(entry.answer, /\b\d+\s*-?\s*year/i);
+    /*
+     * A hedged ceiling ("up to N+ years") is allowed now that the owner has
+     * approved that wording; a FLAT duration ("10-year warranty") is not, and
+     * neither is universal cover.
+     */
+    assert.match(entry.answer, /up to \d+\+ years/i);
+    assert.doesNotMatch(entry.answer, /\b\d+\s*-\s*year/i);
     for (const forbidden of ["10-year", "10-Year", "all ", "every "]) {
       assert.ok(
         !entry.answer.includes(forbidden),

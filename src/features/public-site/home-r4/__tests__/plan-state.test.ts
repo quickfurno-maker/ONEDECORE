@@ -15,6 +15,8 @@ import {
 function base(overrides: Partial<PlanSnapshot> = {}): PlanSnapshot {
   return {
     service: null,
+    projectScope: null,
+    budgetRange: null,
     property: null,
     timeline: null,
     rooms: [],
@@ -30,8 +32,16 @@ function base(overrides: Partial<PlanSnapshot> = {}): PlanSnapshot {
   };
 }
 
+/*
+ * A plan whose HOME step is answered the way `public-consult-v4` requires: a
+ * project scope and a budget band from that scope's own ladder. `property` is
+ * left set because the estimator still writes it and the brief still prints it
+ * — it is simply no longer what gates a step.
+ */
 const READY = base({
   service: "modular-kitchens",
+  projectScope: "kitchen",
+  budgetRange: "kitchen-1-2l",
   property: "apartment-3bhk",
   timeline: "within-1-month",
   locality: "Baner",
@@ -43,20 +53,74 @@ describe("getNextIncompleteStep", () => {
     assert.equal(getNextIncompleteStep(base()), 1);
   });
 
-  test("service chosen moves to the property step", () => {
+  test("service chosen moves to the home step", () => {
     assert.equal(
       getNextIncompleteStep(base({ service: "modular-kitchens" })),
       2
     );
   });
 
-  test("service and property move to the timeline step", () => {
+  test("a scope without its budget band is still the home step", () => {
+    // Half an answer is not an answer: the budget belongs to the scope.
     assert.equal(
       getNextIncompleteStep(
-        base({ service: "modular-kitchens", property: "apartment-3bhk" })
+        base({ service: "modular-kitchens", projectScope: "kitchen" })
+      ),
+      2
+    );
+  });
+
+  test("a budget from the WRONG ladder does not complete the home step", () => {
+    /*
+     * `villa-above-20l` is a real code and nonsense on a kitchen enquiry. If
+     * the rail let this through, the sheet would look finished and the request
+     * would be refused at the RPC.
+     */
+    assert.equal(
+      getNextIncompleteStep(
+        base({
+          service: "modular-kitchens",
+          projectScope: "kitchen",
+          budgetRange: "villa-above-20l",
+        })
+      ),
+      2
+    );
+  });
+
+  test("service and a matched scope/budget move to the timeline step", () => {
+    assert.equal(
+      getNextIncompleteStep(
+        base({
+          service: "modular-kitchens",
+          projectScope: "kitchen",
+          budgetRange: "kitchen-2-3l",
+        })
       ),
       3
     );
+  });
+
+  test("wardrobes skip the home step, because it asks them nothing", () => {
+    /*
+     * No scope list describes a wardrobe job and no owner-approved wardrobe
+     * budget ladder exists. Demanding either would force the sheet to invent an
+     * answer, so the step is complete as soon as the service is chosen.
+     */
+    assert.equal(
+      getNextIncompleteStep(base({ service: "custom-wardrobes" })),
+      3
+    );
+    assert.equal(
+      getNextIncompleteStep(
+        base({ service: "custom-wardrobes", timeline: "immediate" })
+      ),
+      4
+    );
+  });
+
+  test("core choices move to the brief step", () => {
+    assert.equal(getNextIncompleteStep(READY), 4);
   });
 
   test("core choices move to the brief step", () => {
@@ -68,6 +132,8 @@ describe("progress", () => {
   test("counts each satisfied step", () => {
     assert.equal(completedStepCount(base()), 0);
     assert.equal(completedStepCount(base({ service: "modular-kitchens" })), 1);
+    // Wardrobes get the home step for free — it asks them nothing.
+    assert.equal(completedStepCount(base({ service: "custom-wardrobes" })), 2);
     assert.equal(completedStepCount(READY), 4);
   });
 

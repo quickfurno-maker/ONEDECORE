@@ -110,7 +110,7 @@ describe("home-r4 production guards", () => {
     const content = read(join(homeR4, "content.ts"));
     const claims = read(join(homeR4, "claims.ts"));
     assert.match(content, /from "\.\/claims\.ts"/);
-    assert.match(claims, /projectsDelivered: 500/);
+    assert.match(claims, /projectsDelivered: 1000/);
     assert.match(claims, /No JSON-LD aggregateRating\/Review\/Warranty/);
   });
 

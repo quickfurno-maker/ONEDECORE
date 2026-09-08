@@ -13,17 +13,36 @@ interface ProjectDetailPageProps {
 }
 
 /**
- * Rejects malformed slugs before querying so traversal and grammar violations
- * never reach Supabase.
+ * SEO NOTE: `notFound()` BELONGS IN THE PAGE, NOT IN THE METADATA.
+ *
+ * `loadPublishedProject` used to be awaited by BOTH `generateMetadata` and the
+ * page component, so a missing slug threw from metadata first. The not-found
+ * body rendered and the response still carried HTTP 200 — an indexable page
+ * saying "not found" for every bad slug a crawler tried.
+ *
+ * The lookup is split in two now. `findPublishedProject` returns null and never
+ * throws, which is what metadata needs; `loadPublishedProject` calls
+ * `notFound()` and is used only by the page, which is the render path Next can
+ * catch and turn into a real 404.
  */
-async function loadPublishedProject(slugPromise: Promise<{ slug: string }>) {
+/**
+ * Rejects malformed slugs before querying so traversal and grammar violations
+ * never reach Supabase. Returns null rather than throwing, so metadata can ask
+ * the question without deciding the response.
+ */
+async function findPublishedProject(slugPromise: Promise<{ slug: string }>) {
   const { slug } = await slugPromise;
 
   if (!isValidPortfolioSlug(slug)) {
-    notFound();
+    return null;
   }
 
-  const project = await getProjectBySlug(slug);
+  return (await getProjectBySlug(slug)) ?? null;
+}
+
+/** The render-path variant: refuses, and lets Next set the 404 status. */
+async function loadPublishedProject(slugPromise: Promise<{ slug: string }>) {
+  const project = await findPublishedProject(slugPromise);
 
   if (!project) {
     notFound();
@@ -33,7 +52,15 @@ async function loadPublishedProject(slugPromise: Promise<{ slug: string }>) {
 }
 
 export async function generateMetadata({ params }: ProjectDetailPageProps): Promise<Metadata> {
-  const project = await loadPublishedProject(params);
+  const project = await findPublishedProject(params);
+
+  if (!project) {
+    // No project to describe. The page component returns the real 404.
+    return {
+      title: `Portfolio — ${SITE_CONFIG.name}`,
+      robots: { index: false, follow: false },
+    };
+  }
 
   const title = project.seoTitle || `${project.title} — ${SITE_CONFIG.name}`;
   const description = project.seoDescription || project.summary;

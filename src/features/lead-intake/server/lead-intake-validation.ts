@@ -10,6 +10,15 @@ import {
   LEAD_BUDGET_COMFORT_CODES,
   LEAD_INTAKE_NOTICE_VERSION,
   LEAD_INTAKE_PLANNER_VERSIONS,
+  PUBLIC_CONSULT_V3_PLANNER_VERSION,
+  PUBLIC_CONSULT_V4_PLANNER_VERSION,
+  v4RequiresScope,
+  SINGLE_CONSENT_SERVICE_COMMUNICATION_COPY_VERSION,
+  SINGLE_CONSENT_SERVICE_ENQUIRY_COPY_VERSION,
+  isBudgetRangeForScope,
+  isLeadProjectScopeCode,
+  serviceForProjectScope,
+  type LeadProjectScopeCode,
   PUBLIC_CONSULT_V1_PLANNER_VERSION,
   PUBLIC_CONSULT_V2_PLANNER_VERSION,
   LEAD_QUALIFIER_KIND_BY_SERVICE,
@@ -338,6 +347,9 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
    *   public-consult-v2  qualifier, property, timeline, rooms, budget and
    *                      estimate ALL forbidden — the single-step form asks
    *                      for none of them
+   *   public-consult-v3  projectScope + budgetRange REQUIRED and cross-checked
+   *                      against each other; service derived from the scope;
+   *                      everything v2 forbids stays forbidden
    *
    * These mirror the SQL branch-for-branch. They have to: `submit_lead_intake`
    * is SECURITY DEFINER and enforces the same rules itself, so a disagreement
@@ -346,7 +358,20 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
    */
   const isPublicConsultV1 = plannerVersion === PUBLIC_CONSULT_V1_PLANNER_VERSION;
   const isPublicConsultV2 = plannerVersion === PUBLIC_CONSULT_V2_PLANNER_VERSION;
-  const isPublicConsult = isPublicConsultV1 || isPublicConsultV2;
+  const isPublicConsultV3 = plannerVersion === PUBLIC_CONSULT_V3_PLANNER_VERSION;
+  const isPublicConsultV4 = plannerVersion === PUBLIC_CONSULT_V4_PLANNER_VERSION;
+  /*
+   * v2 and v3 share every prohibition; they differ only in what they ADD. So
+   * the "unasked field" rules below are written once against this flag, and v3
+   * layers its two required answers on top.
+   */
+  const forbidsQualifier =
+    isPublicConsultV2 || isPublicConsultV3 || isPublicConsultV4;
+  const isPublicConsult =
+    isPublicConsultV1 ||
+    isPublicConsultV2 ||
+    isPublicConsultV3 ||
+    isPublicConsultV4;
 
   if (!isPlainObject(input.contact)) {
     fields.push("contact");
@@ -408,6 +433,8 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
       "rooms",
       "budgetComfort",
       "estimate",
+      "projectScope",
+      "budgetRange",
       "locality",
       "message",
     ]),
@@ -421,6 +448,73 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     !(LEAD_SERVICE_CODES as readonly string[]).includes(service)
   ) {
     fields.push("requirements.service");
+  }
+
+  /*
+   * PROJECT SCOPE AND BUDGET RANGE (v3 only)
+   *
+   * Three checks, and all three matter:
+   *
+   *   1. the scope is one of the five;
+   *   2. the budget belongs to THAT scope's ladder — `villa-above-20l` is a
+   *      real code and still nonsense on a kitchen enquiry;
+   *   3. the service is the one the scope implies.
+   *
+   * (3) is why the service is DERIVED rather than believed. A body claiming
+   * `2-bhk` with `modular-kitchens` is not a body to correct quietly; it is a
+   * caller sending a contradiction, and the rest of what it sent is no more
+   * trustworthy than the part that disagrees with itself.
+   *
+   * Every other version must not carry these fields at all: they were never on
+   * screen, and accepting them would put an answer in CRM nobody gave.
+   */
+  let projectScope: LeadProjectScopeCode | null = null;
+  let budgetRange: string | null = null;
+
+  if (isPublicConsultV3 || isPublicConsultV4) {
+    /*
+     * v3 always asks for a scope. v4 asks only where one exists: there is no
+     * scope list describing a wardrobe job and no approved wardrobe budget
+     * ladder, so `custom-wardrobes` carries neither — and carrying one would
+     * mean the form invented an answer. The absence is ENFORCED rather than
+     * tolerated, so a stale client cannot smuggle a scope onto a wardrobe.
+     */
+    const scopeExpected = isPublicConsultV3 || v4RequiresScope(service ?? "");
+    const scope = input.requirements.projectScope;
+
+    if (!scopeExpected) {
+      for (const unasked of ["projectScope", "budgetRange"] as const) {
+        if (input.requirements[unasked] != null) {
+          fields.push(`requirements.${unasked}`);
+        }
+      }
+    } else if (!isLeadProjectScopeCode(scope)) {
+      fields.push("requirements.projectScope");
+    } else {
+      projectScope = scope;
+
+      const budget = asString(input.requirements.budgetRange);
+      if (!budget || !isBudgetRangeForScope(scope, budget)) {
+        fields.push("requirements.budgetRange");
+      } else {
+        budgetRange = budget;
+      }
+
+      /*
+       * The service is CHECKED against the scope rather than believed. A body
+       * claiming 2-bhk with modular-kitchens contradicts itself, and the rest
+       * of what it sent is no more trustworthy than the half that disagrees.
+       */
+      if (service && serviceForProjectScope(scope) !== service) {
+        fields.push("requirements.service");
+      }
+    }
+  } else {
+    for (const unasked of ["projectScope", "budgetRange"] as const) {
+      if (input.requirements[unasked] != null) {
+        fields.push(`requirements.${unasked}`);
+      }
+    }
   }
 
   /*
@@ -442,21 +536,35 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     /*
      * UNASKED FIELDS ARE REJECTED, NOT IGNORED.
      *
-     * Neither public form collects a timeline, a room list, a budget band or an
-     * estimate. v1 adds one service qualifier; v2 adds nothing. Anything else in
-     * the body was never on screen, so accepting it would let a tampered or
-     * stale client put an answer in CRM that no customer gave — the exact
-     * failure these variants exist to prevent. Silently dropping them would be
-     * almost as bad: the caller would believe it was stored.
+     * Anything in the body that was never on screen came from a tampered or
+     * stale client, and accepting it would put an answer in CRM that no
+     * customer gave. Silently dropping it would be almost as bad: the caller
+     * would believe it was stored.
+     *
+     * The timeline is the one field that MOVES between versions. v1, v2 and v3
+     * never ask for it and reject it. The unified v4 form asks for it in step
+     * three, so v4 requires it — from the existing vocabulary, not free text.
      */
     for (const unasked of [
-      "timeline",
+      ...(isPublicConsultV4 ? [] : (["timeline"] as const)),
       "rooms",
       "budgetComfort",
       "estimate",
     ] as const) {
       if (input.requirements[unasked] != null) {
         fields.push(`requirements.${unasked}`);
+      }
+    }
+
+    if (isPublicConsultV4) {
+      const asked = asString(input.requirements.timeline);
+      if (
+        !asked ||
+        !(LEAD_TIMELINE_CODES as readonly string[]).includes(asked)
+      ) {
+        fields.push("requirements.timeline");
+      } else {
+        timeline = asked;
       }
     }
 
@@ -484,7 +592,7 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
      * v2's form asks nothing of the sort, so a qualifier is FORBIDDEN. Not
      * optional: optional would accept an answer that was never on screen.
      */
-    if (isPublicConsultV2) {
+    if (forbidsQualifier) {
       /*
        * v2 asks no service-specific question, so a qualifier in the body was
        * never on screen. Rejected rather than ignored — see the unasked-field
@@ -680,14 +788,35 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     }
   }
 
+  /*
+   * CONSENT EVIDENCE RECORDS THE WORDING THAT WAS SHOWN.
+   *
+   * v3's form shows ONE checkbox covering both required purposes, so it records
+   * the combined copy versions — not the two separate v1.0 strings, which
+   * describe a two-checkbox layout the visitor never saw. v4 inherits that
+   * layout: the unified sheet's brief step shows the same single combined
+   * sentence, so it records the same combined versions.
+   *
+   * `home-r4-v1`, v1 and v2 still show two checkboxes and still record the
+   * separate copies. Accepting either shape's copy under the other would file
+   * evidence of a sentence nobody read.
+   */
+  const usesSingleConsentCopy = isPublicConsultV3 || isPublicConsultV4;
+  const expectedCopyServiceEnquiry = usesSingleConsentCopy
+    ? SINGLE_CONSENT_SERVICE_ENQUIRY_COPY_VERSION
+    : SERVICE_ENQUIRY_COPY_VERSION;
+  const expectedCopyServiceCommunication = usesSingleConsentCopy
+    ? SINGLE_CONSENT_SERVICE_COMMUNICATION_COPY_VERSION
+    : SERVICE_COMMUNICATION_COPY_VERSION;
+
   const copyServiceEnquiry = asString(input.consent.serviceEnquiryCopyVersion);
-  if (copyServiceEnquiry !== SERVICE_ENQUIRY_COPY_VERSION) {
+  if (copyServiceEnquiry !== expectedCopyServiceEnquiry) {
     fields.push("consent.serviceEnquiryCopyVersion");
   }
   const copyServiceCommunication = asString(
     input.consent.serviceCommunicationCopyVersion
   );
-  if (copyServiceCommunication !== SERVICE_COMMUNICATION_COPY_VERSION) {
+  if (copyServiceCommunication !== expectedCopyServiceCommunication) {
     fields.push("consent.serviceCommunicationCopyVersion");
   }
 
@@ -698,6 +827,18 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
 
   const consentWhatsapp = input.consent.whatsappService === true;
   let copyWhatsapp: string | null = null;
+
+  /*
+   * v3's ONE checkbox covers the two REQUIRED purposes and nothing else.
+   *
+   * WhatsApp is optional, and its form field is gone. A body arriving under v3
+   * with WhatsApp granted therefore claims a permission that no visitor was
+   * offered, so it is refused rather than recorded. The alternative — quietly
+   * setting it false — would let a caller believe it stored an opt-in.
+   */
+  if (isPublicConsultV3 && input.consent.whatsappService != null) {
+    fields.push("consent.whatsappService");
+  }
 
   if (consentWhatsapp) {
     copyWhatsapp = asString(input.consent.whatsappCopyVersion);
@@ -850,6 +991,8 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
       qualifier: qualifier as ValidatedLeadIntake["qualifier"],
       rooms,
       budgetComfort,
+      projectScope,
+      budgetRange,
       estimateSnapshot,
       locality,
       message,

@@ -94,7 +94,7 @@ describe("suggestBudgetComfort", () => {
 
 describe("claims register integrity", () => {
   test("numeric HOME_CLAIMS appear in HOME_CLAIM_COPY", () => {
-    assert.match(HOME_CLAIM_COPY.projectsDelivered, /500/);
+    assert.match(HOME_CLAIM_COPY.projectsDelivered, /1000/);
     assert.match(HOME_CLAIM_COPY.rating, /4\.9/);
     assert.match(HOME_CLAIM_COPY.reviews, /200/);
     assert.match(HOME_CLAIM_COPY.warranty, /10/);

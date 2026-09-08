@@ -1060,3 +1060,37 @@ button.od-btn-primary {
     box-shadow: none;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Portfolio page — category chips on mobile                                   */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Five chips will not fit across a 390px screen, and wrapping them into two
+ * ragged rows reads as a mistake. They scroll horizontally instead, with the
+ * row bleeding to the edge so the last chip is visibly cut rather than
+ * mysteriously absent.
+ */
+@media (max-width: 48rem) {
+  .od-portfolio-filters {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+  }
+
+  .od-portfolio-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .od-portfolio-filters .od-filter {
+    flex: 0 0 auto;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+}

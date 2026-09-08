@@ -1,16 +1,21 @@
 "use client";
 
-import { ConsultationLeadForm } from "@/features/lead-intake/public/ConsultationLeadForm";
+import { PremiumRequirementForm } from "@/features/lead-intake/public/PremiumRequirementForm";
 import type { LeadFormMode } from "@/features/lead-intake/public/lead-form-mode";
 import "@/features/public-site/home-r4/styles/home-r4.css";
 
 /**
- * Compact homepage consultation wrapper.
+ * The homepage consultation slot.
  *
- * The adaptive form owns its own small state (service + one qualifier), so the
- * legacy `PlanProvider` is no longer mounted here. That planner state exists to
- * drive the multi-step interiors planner and its estimator; carrying it for a
- * form that asks two questions only invited property/timeline back in.
+ * This is the seam between the page and the form: `DiscoveryHomePage` decides
+ * WHERE the section sits, this decides WHAT it renders, and the form owns its
+ * own state. No planner provider is mounted — that state exists to drive the
+ * multi-step interiors planner and its estimator, and carrying it for a form
+ * that asks five questions is what once invited property and timeline back in.
+ *
+ * The mode gate is deliberately here rather than inside the form: in
+ * `copy-only` the section renders nothing at all, so a misconfigured deploy
+ * shows no form rather than a form that cannot submit.
  */
 export function HomeConsultationCapture({
   mode,
@@ -28,7 +33,7 @@ export function HomeConsultationCapture({
       data-lead-form-mode={mode}
       className="od-disc-consult__capture"
     >
-      <ConsultationLeadForm mode={mode} />
+      <PremiumRequirementForm mode={mode} />
     </div>
   );
 }

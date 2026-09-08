@@ -19,6 +19,12 @@ import type {
 import type { EstimatorPlanSelection } from "./estimator-plan-map";
 import { toEstimateSummary } from "./estimator-plan-map";
 import {
+  isBudgetRangeForScope,
+  serviceForProjectScope,
+  type LeadProjectScopeCode,
+} from "../../lead-intake/project-scope.ts";
+import { v4RequiresScope } from "../../lead-intake/contracts.ts";
+import {
   completedStepCount,
   getNextIncompleteStep as computeNextStep,
   planProgressPercent,
@@ -51,6 +57,8 @@ interface PlanApi extends PlanSnapshot {
   readonly openPlanner: (step?: PmStep) => void;
   readonly closePlanner: () => void;
   readonly setService: (service: PmServiceId) => void;
+  readonly setProjectScope: (scope: LeadProjectScopeCode) => void;
+  readonly setBudgetRange: (budget: string) => void;
   readonly setProperty: (property: PmPropertyId) => void;
   readonly setTimeline: (timeline: PmTimelineId) => void;
   readonly toggleRoom: (room: PmRoomId) => void;
@@ -80,6 +88,9 @@ const PlanCtx = createContext<PlanApi | null>(null);
  */
 export function PlanProvider({ children }: { readonly children: ReactNode }) {
   const [service, setServiceState] = useState<PmServiceId | null>(null);
+  const [projectScope, setProjectScopeState] =
+    useState<LeadProjectScopeCode | null>(null);
+  const [budgetRange, setBudgetRangeState] = useState<string | null>(null);
   const [property, setPropertyState] = useState<PmPropertyId | null>(null);
   const [timeline, setTimelineState] = useState<PmTimelineId | null>(null);
   const [rooms, setRooms] = useState<readonly PmRoomId[]>([]);
@@ -100,6 +111,8 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
   const snapshot = useMemo<PlanSnapshot>(
     () => ({
       service,
+      projectScope,
+      budgetRange,
       property,
       timeline,
       rooms,
@@ -114,6 +127,8 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
     }),
     [
       service,
+      projectScope,
+      budgetRange,
       property,
       timeline,
       rooms,
@@ -145,8 +160,39 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
     setIsOpen(false);
   }, []);
 
+  /**
+   * Changing the service INVALIDATES a home answer it no longer fits.
+   *
+   * Switching to `custom-wardrobes` must clear both, because v4 requires their
+   * absence for that service; switching between the two scoped services must
+   * clear a scope that belonged to the other one, because a kitchen scope on a
+   * complete-home enquiry is refused. Leaving stale values behind would let the
+   * sheet look answered while the request it produces is rejected.
+   */
   const setService = useCallback((next: PmServiceId) => {
     setServiceState(next);
+    setProjectScopeState((scope) => {
+      if (scope === null) return null;
+      if (!v4RequiresScope(next)) return null;
+      return serviceForProjectScope(scope) === next ? scope : null;
+    });
+    setBudgetRangeState((budget) => {
+      if (budget === null) return null;
+      if (!v4RequiresScope(next)) return null;
+      return budget;
+    });
+  }, []);
+
+  /** A new scope means a new ladder, so the band chosen from the old one goes. */
+  const setProjectScope = useCallback((next: LeadProjectScopeCode) => {
+    setProjectScopeState(next);
+    setBudgetRangeState((budget) =>
+      isBudgetRangeForScope(next, budget) ? budget : null
+    );
+  }, []);
+
+  const setBudgetRange = useCallback((next: string) => {
+    setBudgetRangeState(next);
   }, []);
 
   const setProperty = useCallback((next: PmPropertyId) => {
@@ -205,6 +251,8 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       const prospective: PlanSnapshot = {
         ...snapshot,
         service: selection.service,
+        projectScope: null,
+        budgetRange: null,
         property: selection.property,
         rooms: nextRooms,
         budgetComfort: selection.budgetComfort,
@@ -213,6 +261,19 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       const target = computeNextStep(prospective);
       setServiceState(selection.service);
       setPropertyState(selection.property);
+      /*
+       * The estimator answers a different question — property size and finish,
+       * not the v4 scope ladder — so it must not leave a scope from a service
+       * it just replaced. It clears rather than guesses.
+       */
+      setProjectScopeState((scope) =>
+        scope !== null &&
+        v4RequiresScope(selection.service) &&
+        serviceForProjectScope(scope) === selection.service
+          ? scope
+          : null
+      );
+      setBudgetRangeState(null);
       setRooms(nextRooms);
       setBudgetComfortState(selection.budgetComfort);
       setEstimateSummaryState(nextSummary);
@@ -262,6 +323,8 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
 
   const resetAll = useCallback(() => {
     setServiceState(null);
+    setProjectScopeState(null);
+    setBudgetRangeState(null);
     setPropertyState(null);
     setTimelineState(null);
     setRooms([]);
@@ -290,6 +353,8 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       openPlanner,
       closePlanner,
       setService,
+      setProjectScope,
+      setBudgetRange,
       setProperty,
       setTimeline,
       toggleRoom,
@@ -315,6 +380,8 @@ export function PlanProvider({ children }: { readonly children: ReactNode }) {
       openPlanner,
       closePlanner,
       setService,
+      setProjectScope,
+      setBudgetRange,
       setProperty,
       setTimeline,
       toggleRoom,

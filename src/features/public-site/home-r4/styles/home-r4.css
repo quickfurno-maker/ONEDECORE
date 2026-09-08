@@ -4397,3 +4397,64 @@
     gap: 14px;
   }
 }
+
+/* ==========================================================================
+   The unified lead form's Brief step (public-consult-v4)
+   ==========================================================================
+   Step 4 of the sheet is the only thing on the public site that submits, so it
+   is its own form element nested inside the sheet's step panel. These rules
+   give it the same field rhythm as the steps before it — the visitor should not
+   feel they have crossed into a different form when they reach the last one.
+   ========================================================================== */
+
+[data-public-home-r4] .pm-brief {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+[data-public-home-r4] .pm-brief__success {
+  margin: 0;
+  color: var(--pm-stone);
+  font-size: 0.92rem;
+}
+
+/* Off-screen rather than display:none — a hidden input some bots still fill. */
+[data-public-home-r4] .pm-brief__honeypot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+[data-public-home-r4] .pm-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--pm-stone);
+}
+
+[data-public-home-r4] .pm-consent input {
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--pm-accent, #c9a962);
+}
+
+[data-public-home-r4] .pm-consent--invalid {
+  border-radius: var(--pm-r-sm);
+  outline: 1px solid rgba(224, 138, 122, 0.55);
+  outline-offset: 2px;
+}
+
+[data-public-home-r4] .pm-planner__actions--brief {
+  justify-content: flex-end;
+}

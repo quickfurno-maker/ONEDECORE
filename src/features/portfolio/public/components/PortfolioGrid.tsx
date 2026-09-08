@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PortfolioCard } from "./PortfolioCard";
 import { PublicPortfolioPaginatedCards } from "../types";
-import { PORTFOLIO_SERVICE_LABELS, PortfolioServiceKey } from "../constants";
+import { PORTFOLIO_CATEGORIES } from "../portfolio-categories";
 import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
 
 export interface PortfolioGridProps {
@@ -9,12 +9,19 @@ export interface PortfolioGridProps {
 }
 
 export function PortfolioGrid({ data }: PortfolioGridProps) {
-  const { cards, page, hasNextPage, activeService } = data;
+  const { cards, page, hasNextPage, activeService, activeCategory } = data;
 
-  const buildUrl = (targetPage: number, service?: string | null) => {
+  const buildUrl = (
+    targetPage: number,
+    service?: string | null,
+    category?: string | null
+  ) => {
     const params = new URLSearchParams();
     if (service) {
       params.set("service", service);
+    }
+    if (category) {
+      params.set("category", category);
     }
     if (targetPage > 1) {
       params.set("page", targetPage.toString());
@@ -25,10 +32,19 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
 
   return (
     <div id="portfolio-grid-container" className="space-y-8">
+      {/*
+        * The four owner-approved categories, from the same config the homepage
+        * cards read, filtering on the real `portfolio_category_code` column.
+        *
+        * "All Projects" stays first. It is the unfiltered canonical URL, the
+        * reset target of the empty state, and — until every project has been
+        * classified — the only view that shows unclassified work. Removing it
+        * would hide projects rather than organise them.
+        */}
       <nav
         id="portfolio-filter-tabs"
         className="od-portfolio-filters"
-        aria-label="Filter Portfolio by service"
+        aria-label="Filter Portfolio by category"
       >
         <Link
           id="portfolio-filter-all"
@@ -39,23 +55,21 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
         >
           All Projects
         </Link>
-        {(Object.keys(PORTFOLIO_SERVICE_LABELS) as PortfolioServiceKey[]).map(
-          (code) => {
-            const isActive = activeService === code;
-            return (
-              <Link
-                key={code}
-                id={`portfolio-filter-${code}`}
-                href={buildUrl(1, code)}
-                className="od-filter"
-                data-active={isActive ? "" : undefined}
-                aria-current={isActive ? "page" : undefined}
-              >
-                {PORTFOLIO_SERVICE_LABELS[code]}
-              </Link>
-            );
-          }
-        )}
+        {PORTFOLIO_CATEGORIES.map((category) => {
+          const isActive = activeCategory === category.id;
+          return (
+            <Link
+              key={category.id}
+              id={`portfolio-filter-${category.id}`}
+              href={buildUrl(1, null, category.id)}
+              className="od-filter"
+              data-active={isActive ? "" : undefined}
+              aria-current={isActive ? "page" : undefined}
+            >
+              {category.label}
+            </Link>
+          );
+        })}
       </nav>
 
       {cards.length > 0 ? (
@@ -123,7 +137,7 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
           {page > 1 ? (
             <Link
               id="portfolio-prev-page-button"
-              href={buildUrl(page - 1, activeService)}
+              href={buildUrl(page - 1, activeService, activeCategory)}
               className="od-page-btn"
             >
               &larr; Previous Page
@@ -137,7 +151,7 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
           {hasNextPage ? (
             <Link
               id="portfolio-next-page-button"
-              href={buildUrl(page + 1, activeService)}
+              href={buildUrl(page + 1, activeService, activeCategory)}
               className="od-page-btn"
             >
               Next Page &rarr;

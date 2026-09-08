@@ -22,6 +22,8 @@ function read(name: string) {
 function empty(): PlanSnapshot {
   return {
     service: null,
+    projectScope: null,
+    budgetRange: null,
     property: null,
     timeline: null,
     rooms: [],
@@ -47,7 +49,12 @@ describe("R5.1 atomic plan prospective steps", () => {
     assert.equal(getNextIncompleteStep(prospective), 2);
   });
 
-  test("empty + bedroom storage opens at step 2 without duplicate rooms", () => {
+  test("empty + bedroom storage dedupes rooms and skips the home step", () => {
+    /*
+     * Wardrobes land on step 3, not step 2. The home step asks for a project
+     * scope and a band from that scope's budget ladder, and neither exists for
+     * a wardrobe job — so there is nothing on that step to stop at.
+     */
     let rooms = ensureRoom([], "bedrooms");
     rooms = ensureRoom(rooms, "wardrobes");
     rooms = ensureRoom(rooms, "bedrooms");
@@ -59,7 +66,7 @@ describe("R5.1 atomic plan prospective steps", () => {
         service: "custom-wardrobes",
         rooms,
       }),
-      2
+      3
     );
   });
 
@@ -72,9 +79,16 @@ describe("R5.1 atomic plan prospective steps", () => {
   });
 
   test("complete core + dining opens at step 4", () => {
+    /*
+     * "Complete core" is now scope + budget + timeline. `property` is still set
+     * because the estimator writes it and the brief prints it, but it no longer
+     * gates a step: `public-consult-v4` does not carry the field.
+     */
     const prospective = {
       ...empty(),
       service: "complete-home-interiors" as const,
+      projectScope: "3-bhk" as const,
+      budgetRange: "3bhk-9-13l",
       property: "apartment-3bhk" as const,
       timeline: "within-1-month" as const,
       rooms: ensureRoom(["living"], "dining"),

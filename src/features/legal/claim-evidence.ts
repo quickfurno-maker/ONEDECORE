@@ -62,6 +62,8 @@ export const PUBLIC_CLAIM_IDS = [
   "custom-designs",
   "own-manufacturing-unit",
   "free-design-consultation",
+  "design-inspirations",
+  "delivery-window",
 ] as const;
 
 export type PublicClaimId = (typeof PUBLIC_CLAIM_IDS)[number];
@@ -88,6 +90,12 @@ export interface ClaimEvidenceRecord {
   /** Why it is where it is. Read by humans, not by code. */
   readonly note: string;
 }
+
+
+const OWNER_ATTESTED_HOMEPAGE_PROOF = {
+  attestedOn: "2026-09-07",
+  note: "Owner supplied these proof-strip figures verbatim in the premium homepage brief and directed that they be displayed. Evidence remains pending and structured data remains forbidden.",
+} as const;
 
 const PENDING = {
   evidence: "pending",
@@ -122,9 +130,33 @@ export const PUBLIC_CLAIM_EVIDENCE: Readonly<
     note: "Same source gap as the rating. No review platform is connected.",
   },
   "warranty-years": {
-    ...PENDING,
+    evidence: "pending",
+    /*
+     * APPROVED FOR DISPLAY WORDING ONLY — 2026-09-07, owner-directed.
+     *
+     * The owner explicitly approved the marketing wording "Up to 10+ Years
+     * Warranty" for the homepage proof strip and authorised the minimum status
+     * change needed to reflect that approval. This is that minimum: the claim's
+     * own `legalTerms` moves to approved so `isClaimDisplayable` stops refusing
+     * the hedged headline.
+     *
+     * WHAT THIS DOES NOT DO
+     *
+     * It does not set a warranty period for any product, does not create a
+     * claims process, and does not touch `WARRANTY_POLICY_STATUS`, which stays
+     * scope-pending-owner-approval and still governs the warranty PAGE. The
+     * headline is hedged ("Up to ... +") and carries a link to the warranty
+     * terms beside it, because "up to" is a ceiling and a visitor is entitled
+     * to read what it actually covers.
+     *
+     * `evidence` stays PENDING. Nothing here makes the figure verified, and
+     * `isClaimPubliclyEvidenced` still answers false, which is what keeps it out
+     * of structured data.
+     */
+    legalTerms: "approved",
     requiresEffectiveLegalTerms: true,
-    note: "WARRANTY_POLICY_STATUS is scope-pending-owner-approval, every category period is null and no claims contact is recorded.",
+    note: "Display wording approved by the owner on 2026-09-07 for the proof strip. WARRANTY_POLICY_STATUS remains scope-pending-owner-approval, category periods remain null, and no claims contact is recorded — so the strip hedges the figure and links to the warranty terms.",
+    ownerAttestedDisplay: OWNER_ATTESTED_HOMEPAGE_PROOF,
   },
   "client-satisfaction": {
     ...PENDING,
@@ -135,16 +167,41 @@ export const PUBLIC_CLAIM_EVIDENCE: Readonly<
     ...PENDING,
     requiresEffectiveLegalTerms: false,
     note: "A 100% figure is a measurable claim about every project delivered.",
+    /*
+     * Owner-directed (2026-09-07): shown on the homepage proof strip as
+     * "100% Customised Planning". Attested, not verified — no survey or project
+     * register backs it, and `isClaimPubliclyEvidenced` still answers false.
+     */
+    ownerAttestedDisplay: OWNER_ATTESTED_HOMEPAGE_PROOF,
   },
   "own-manufacturing-unit": {
     ...PENDING,
     requiresEffectiveLegalTerms: false,
-    note: "A factual statement about how the business operates rather than a measured figure. Retained deliberately as qualitative copy; no factory address or certificate is asserted.",
+    note: "A factual statement about how the business operates rather than a measured figure. No factory address, certificate or photograph is asserted.",
+    /*
+     * Owner-directed (2026-09-07): the proof strip states the COUNT ("1"). That
+     * turns a qualitative statement into a quantified one, which is exactly the
+     * step that needs recording here rather than being made silently in a
+     * component.
+     */
+    ownerAttestedDisplay: OWNER_ATTESTED_HOMEPAGE_PROOF,
   },
   "free-design-consultation": {
     ...PENDING,
     requiresEffectiveLegalTerms: false,
     note: "An offer the business makes, not a measured figure. Retained.",
+  },
+  "design-inspirations": {
+    ...PENDING,
+    requiresEffectiveLegalTerms: false,
+    note: "The size of the design library. No published catalogue or index backs the count; it is the owner's own statement about their library.",
+    ownerAttestedDisplay: OWNER_ATTESTED_HOMEPAGE_PROOF,
+  },
+  "delivery-window": {
+    ...PENDING,
+    requiresEffectiveLegalTerms: false,
+    note: "A stated delivery window. No delivery register or measured average backs it; it is the owner's own statement about their process, and it is presented as a headline figure rather than a contractual commitment.",
+    ownerAttestedDisplay: OWNER_ATTESTED_HOMEPAGE_PROOF,
   },
 };
 

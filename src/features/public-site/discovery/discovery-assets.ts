@@ -7,6 +7,9 @@ export const DISCOVERY_ASSETS = {
   modularKitchens: PM_ASSETS.modularKitchens,
   customWardrobes: PM_ASSETS.customWardrobes,
   dusk: PM_ASSETS.dusk,
+  oakJoinery: PM_ASSETS.materialTimber,
+  flutedTexture: PM_ASSETS.materialTexture,
+  travertineBronze: PM_ASSETS.materialStone,
 } as const satisfies Record<DiscoveryAssetKey, (typeof PM_ASSETS)[keyof typeof PM_ASSETS]>;
 
 export function getDiscoveryAsset(key: DiscoveryAssetKey) {

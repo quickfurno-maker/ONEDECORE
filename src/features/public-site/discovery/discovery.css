@@ -863,6 +863,7 @@
 }
 
 .od-disc-dock__btn--primary {
+  flex: 1 1 65%;
   color: #1a120c;
   background: var(--od-gold-light);
 }
@@ -874,8 +875,14 @@
   outline-offset: 2px;
 }
 
+/*
+ * The owner-specified split: WhatsApp ~35%, the consultation CTA ~65%, with the
+ * primary action visually dominant. Basis rather than a width so the flex gap
+ * comes out of both, and only on the narrow bar — the desktop pill sizes to its
+ * content.
+ */
 .od-disc-dock__btn--whatsapp {
-  flex: 0 1 auto;
+  flex: 0 1 35%;
   color: var(--od-text-primary);
   background: color-mix(in srgb, var(--od-bg-section) 88%, transparent);
   border-color: color-mix(in srgb, #25d366 35%, var(--od-line));
@@ -2047,4 +2054,1235 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* ========================================================================== */
+/* PREMIUM HOMEPAGE — proof, why, manufacturing, library, process, quality,    */
+/* portfolio and the closing CTA.                                             */
+/*                                                                            */
+/* TONE RHYTHM                                                                */
+/*                                                                            */
+/* The page alternates deep / ivory / neutral rather than running as one       */
+/* continuous dark column. Ivory and neutral are declared as full token SETS,  */
+/* not one-off background overrides: a band that changed only its background   */
+/* would keep ivory text on an ivory ground. Each band re-points the same      */
+/* variables every component already reads, so nothing below needs to know     */
+/* which tone it is sitting on.                                               */
+/* ========================================================================== */
+
+.od-disc-band--ivory {
+  --od-text-primary: #1a1512;
+  --od-text-secondary: #4a3f36;
+  --od-text-muted: #6d5f52;
+  --od-line: rgba(26, 21, 18, 0.12);
+  --od-line-strong: rgba(26, 21, 18, 0.24);
+  --od-gold: #8f6413;
+  background: #f6f1e8;
+  color: var(--od-text-primary);
+}
+
+.od-disc-band--neutral {
+  --od-text-primary: #efe7db;
+  --od-text-secondary: #c9bdae;
+  --od-text-muted: #a2937f;
+  --od-line: rgba(239, 231, 219, 0.12);
+  --od-line-strong: rgba(239, 231, 219, 0.22);
+  background: #1c1613;
+  color: var(--od-text-primary);
+}
+
+/* The editorial headline voice, shared by every new section. */
+.od-disc-display {
+  margin: 0;
+  display: grid;
+  gap: 0.15em;
+  font-size: clamp(1.75rem, 4.2vw, 3rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.od-disc-display span {
+  display: block;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Proof strip                                                                 */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-proof {
+  background: var(--od-bg-deepest);
+  padding-block: clamp(2.25rem, 5vw, 3.75rem);
+  border-bottom: 1px solid var(--od-line);
+}
+
+.od-disc-proof__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* 2x2 on mobile, four across from the first comfortable width. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 2rem) clamp(1rem, 3vw, 2.5rem);
+}
+
+@media (min-width: 62rem) {
+  .od-disc-proof__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.od-disc-proof__item {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  position: relative;
+}
+
+/* Hairline separators, not boxes — and only between columns. */
+@media (min-width: 62rem) {
+  .od-disc-proof__item + .od-disc-proof__item::before {
+    content: "";
+    position: absolute;
+    inset-block: 0.15rem;
+    inset-inline-start: calc(clamp(1rem, 3vw, 2.5rem) / -2);
+    width: 1px;
+    background: var(--od-line);
+  }
+}
+
+.od-disc-proof__value {
+  font-size: clamp(2rem, 6vw, 3.25rem);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--od-gold-light, #f2cd83);
+  font-variant-numeric: tabular-nums;
+}
+
+.od-disc-proof__label {
+  font-size: clamp(0.78rem, 1.6vw, 0.9rem);
+  line-height: 1.35;
+  color: var(--od-text-muted);
+}
+
+.od-disc-proof__footnote {
+  margin: clamp(1.5rem, 4vw, 2.25rem) 0 0;
+  padding-top: clamp(1rem, 2.5vw, 1.5rem);
+  border-top: 1px solid var(--od-line);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--od-text-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Why ONEDECORE                                                               */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-why__head {
+  max-width: 34rem;
+}
+
+.od-disc-why__grid {
+  display: grid;
+  gap: 0;
+  margin-top: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+@media (min-width: 56rem) {
+  .od-disc-why__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(2.5rem, 5vw, 4.5rem);
+  }
+}
+
+/* Hairlines between items, never around them: four equal boxes read as a
+   feature list, which is what every other contractor site already looks like. */
+.od-disc-why__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: clamp(0.9rem, 2vw, 1.4rem);
+  align-items: start;
+  padding-block: clamp(1.5rem, 3.5vw, 2.25rem);
+  border-top: 1px solid var(--od-line);
+}
+
+@media (min-width: 56rem) {
+  .od-disc-why__item:nth-child(-n + 2) {
+    border-top: 0;
+    padding-top: 0;
+  }
+}
+
+.od-disc-why__num {
+  grid-row: 1 / span 2;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--od-gold);
+  padding-top: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.od-disc-why__item h3 {
+  margin: 0;
+  font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.od-disc-why__item p {
+  margin: 0.55rem 0 0;
+  grid-column: 2;
+  color: var(--od-text-secondary);
+  line-height: 1.6;
+  font-size: 0.95rem;
+  max-width: 44ch;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Manufacturing                                                               */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-mfg__shell {
+  display: grid;
+  gap: clamp(1.75rem, 4vw, 3.5rem);
+  align-items: center;
+}
+
+@media (min-width: 62rem) {
+  .od-disc-mfg__shell {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr);
+  }
+}
+
+/* Image first on mobile: the source order already does that. */
+.od-disc-mfg__media {
+  position: relative;
+  border-radius: var(--od-radius-lg, 26px);
+  overflow: hidden;
+  background: var(--od-bg-raised);
+}
+
+.od-disc-mfg__media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  transition: transform 700ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+@media (hover: hover) {
+  .od-disc-mfg__media:hover img {
+    transform: scale(1.03);
+  }
+}
+
+.od-disc-mfg__points {
+  list-style: none;
+  margin: clamp(1.5rem, 3vw, 2.25rem) 0 0;
+  padding: 0;
+  display: grid;
+}
+
+.od-disc-mfg__point {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: clamp(0.9rem, 2vw, 1.4rem);
+  padding-block: clamp(1rem, 2.5vw, 1.35rem);
+  border-top: 1px solid var(--od-line);
+}
+
+.od-disc-mfg__num {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--od-gold);
+  padding-top: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.od-disc-mfg__point h3 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.od-disc-mfg__point p {
+  margin: 0.4rem 0 0;
+  color: var(--od-text-secondary);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Design library rail                                                         */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-library__rail {
+  list-style: none;
+  margin: clamp(1.5rem, 4vw, 2.5rem) 0 0;
+  /* Align the first card with the shell, then let the rail bleed to the edge
+     so the next card can peek. */
+  padding-inline: max(
+    calc((100% - min(80rem, 100% - clamp(2rem, 8vw, 6rem))) / 2),
+    clamp(1rem, 4vw, 3rem)
+  );
+  padding-bottom: 0.5rem;
+  display: flex;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  /* Native scrolling: momentum, keyboard, screen-reader semantics and a
+     scrollbar, none of which a bespoke carousel gets right for free. */
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.od-disc-library__item {
+  /* The partial next card is the affordance that says there is more. */
+  flex: 0 0 74%;
+  scroll-snap-align: start;
+  min-width: 0;
+}
+
+@media (min-width: 48rem) {
+  .od-disc-library__item {
+    flex-basis: 38%;
+  }
+}
+
+@media (min-width: 72rem) {
+  .od-disc-library__item {
+    flex-basis: 28%;
+  }
+}
+
+.od-disc-library__card {
+  display: grid;
+  gap: 0.85rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.od-disc-library__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--od-radius, 18px);
+  overflow: hidden;
+  background: var(--od-bg-raised);
+}
+
+.od-disc-library__media img {
+  object-fit: cover;
+  transition: transform 700ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+@media (hover: hover) {
+  .od-disc-library__card:hover .od-disc-library__media img {
+    transform: scale(1.05);
+  }
+}
+
+.od-disc-library__card:focus-visible {
+  outline: none;
+}
+
+.od-disc-library__card:focus-visible .od-disc-library__media {
+  outline: 2px solid var(--od-gold);
+  outline-offset: 3px;
+}
+
+.od-disc-library__title {
+  font-size: clamp(0.95rem, 2vw, 1.05rem);
+  font-weight: 600;
+}
+
+/* -------------------------------------------------------------------------- */
+/* How it works                                                                */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-how__steps {
+  list-style: none;
+  margin: clamp(1.5rem, 4vw, 2.5rem) 0 0;
+  padding: 0;
+  display: grid;
+  gap: clamp(1.75rem, 4vw, 2.5rem);
+  position: relative;
+}
+
+@media (min-width: 60rem) {
+  .od-disc-how__steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(1.5rem, 3vw, 2.5rem);
+  }
+}
+
+.od-disc-how__step {
+  display: grid;
+  gap: 0.6rem;
+  align-content: start;
+  position: relative;
+  padding-left: 3.25rem;
+}
+
+@media (min-width: 60rem) {
+  .od-disc-how__step {
+    padding-left: 0;
+    padding-top: 3.25rem;
+  }
+}
+
+/* The connecting rail: vertical on mobile, horizontal on desktop. It carries
+   no information the numbered text does not. */
+.od-disc-how__step::before {
+  content: "";
+  position: absolute;
+  background: var(--od-line);
+  inset-block: 0;
+  inset-inline-start: 1.1rem;
+  width: 1px;
+}
+
+.od-disc-how__step:last-child::before {
+  inset-block-end: calc(100% - 2.25rem);
+}
+
+@media (min-width: 60rem) {
+  .od-disc-how__step::before {
+    inset: 1.1rem 0 auto 0;
+    width: auto;
+    height: 1px;
+  }
+
+  .od-disc-how__step:last-child::before {
+    inset-inline-end: calc(100% - 2.25rem);
+    inset-block-end: auto;
+  }
+}
+
+.od-disc-how__marker {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--od-gold) 45%, transparent);
+  border-radius: 50%;
+  background: var(--od-bg-section);
+  color: var(--od-gold);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+
+.od-disc-how__step h3 {
+  margin: 0;
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  line-height: 1.3;
+}
+
+.od-disc-how__step p {
+  margin: 0;
+  color: var(--od-text-secondary);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Quality                                                                     */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-quality__shell {
+  display: grid;
+  gap: clamp(1.75rem, 4vw, 3.5rem);
+}
+
+@media (min-width: 62rem) {
+  .od-disc-quality__shell {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.od-disc-quality__head {
+  margin-bottom: 0;
+  max-width: 34rem;
+}
+
+.od-disc-quality__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.od-disc-quality__item {
+  padding-block: clamp(1rem, 2.5vw, 1.4rem);
+  border-top: 1px solid var(--od-line);
+}
+
+.od-disc-quality__item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.od-disc-quality__item h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--od-gold);
+}
+
+.od-disc-quality__item p {
+  margin: 0.45rem 0 0;
+  color: var(--od-text-secondary);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Portfolio                                                                   */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-homes {
+  border-top: 1px solid var(--od-line);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Closing CTA                                                                 */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-final {
+  background:
+    radial-gradient(
+      120% 100% at 50% 0%,
+      color-mix(in srgb, var(--od-gold) 10%, transparent),
+      transparent 62%
+    ),
+    var(--od-bg-deepest);
+  border-top: 1px solid color-mix(in srgb, var(--od-gold) 24%, transparent);
+  text-align: center;
+}
+
+.od-disc-final__shell {
+  max-width: 46rem;
+}
+
+.od-disc-final__title {
+  justify-items: center;
+}
+
+.od-disc-final__lede {
+  margin-inline: auto;
+  max-width: 44ch;
+}
+
+.od-disc-final__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: clamp(1.5rem, 3vw, 2rem);
+}
+
+@media (max-width: 30rem) {
+  .od-disc-final__actions {
+    flex-direction: column;
+  }
+
+  .od-disc-final__actions > * {
+    width: 100%;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Motion                                                                      */
+/* -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .od-disc-mfg__media img,
+  .od-disc-library__media img {
+    transition: none;
+  }
+
+  .od-disc-mfg__media:hover img,
+  .od-disc-library__card:hover .od-disc-library__media img {
+    transform: none;
+  }
+
+  .od-disc-library__rail {
+    scroll-snap-type: none;
+  }
+}
+
+/* ========================================================================== */
+/* MOBILE CONVERSION REFINEMENT                                               */
+/* portfolio category rail · Why cards · form density · closing CTA ·         */
+/* Portfolio/consultation dock · floating WhatsApp                            */
+/* ========================================================================== */
+
+/* -------------------------------------------------------------------------- */
+/* Portfolio category rail                                                     */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-cats-nav__rail {
+  list-style: none;
+  margin: clamp(1.25rem, 3.5vw, 2rem) 0 0;
+  /* First card aligns with the shell, then the rail bleeds so the next peeks. */
+  padding-inline: max(
+    calc((100% - min(80rem, 100% - clamp(2rem, 8vw, 6rem))) / 2),
+    clamp(1rem, 4vw, 3rem)
+  );
+  padding-bottom: 0.5rem;
+  display: flex;
+  gap: clamp(0.7rem, 2vw, 1.1rem);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.od-disc-cats-nav__item {
+  /* ~270px at a 390px viewport, leaving the next card visibly begun. */
+  flex: 0 0 clamp(16rem, 69vw, 17.5rem);
+  scroll-snap-align: start;
+  min-width: 0;
+}
+
+/* Four across once there is room; the rail stops scrolling and becomes a grid. */
+@media (min-width: 64rem) {
+  .od-disc-cats-nav__rail {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  .od-disc-cats-nav__item {
+    flex: initial;
+  }
+}
+
+.od-disc-cats-nav__card {
+  position: relative;
+  display: block;
+  border-radius: var(--od-radius, 18px);
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--od-text-primary);
+  background: var(--od-bg-raised);
+  transition:
+    transform 200ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow 200ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.od-disc-cats-nav__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+}
+
+.od-disc-cats-nav__media img {
+  object-fit: cover;
+  transition: transform 600ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+/* The label sits on a scrim, not a solid bar: the photograph is the content. */
+.od-disc-cats-nav__foot {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1.25rem 1rem 0.95rem;
+  background: linear-gradient(
+    to top,
+    rgba(8, 7, 6, 0.88),
+    rgba(8, 7, 6, 0.55) 55%,
+    transparent
+  );
+  color: #fff9f0;
+}
+
+.od-disc-cats-nav__label {
+  font-size: clamp(0.95rem, 2vw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.od-disc-cats-nav__arrow {
+  color: var(--od-gold-light, #f2cd83);
+  transition: transform 200ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+@media (hover: hover) {
+  .od-disc-cats-nav__card:hover .od-disc-cats-nav__media img {
+    transform: scale(1.05);
+  }
+
+  .od-disc-cats-nav__card:hover .od-disc-cats-nav__arrow {
+    transform: translateX(3px);
+  }
+}
+
+.od-disc-cats-nav__card:active {
+  transform: scale(0.985);
+}
+
+.od-disc-cats-nav__card:focus-visible {
+  outline: 2px solid var(--od-gold);
+  outline-offset: 3px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Why ONEDECORE — cards                                                       */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-why__grid {
+  gap: clamp(0.75rem, 2vw, 1.1rem);
+}
+
+@media (min-width: 56rem) {
+  .od-disc-why__grid {
+    column-gap: clamp(0.75rem, 2vw, 1.1rem);
+    row-gap: clamp(0.75rem, 2vw, 1.1rem);
+  }
+}
+
+/* Cards now, not hairline rows: rounded, hairline-bordered, barely shadowed. */
+.od-disc-why__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: clamp(0.85rem, 2vw, 1.15rem);
+  align-items: start;
+  padding: clamp(1.15rem, 3vw, 1.6rem);
+  border: 1px solid var(--od-line);
+  border-top: 1px solid var(--od-line);
+  border-radius: var(--od-radius, 18px);
+  background: color-mix(in srgb, var(--od-text-primary) 3%, transparent);
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 200ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color 200ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow 200ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+@media (min-width: 56rem) {
+  .od-disc-why__item:nth-child(-n + 2) {
+    padding-top: clamp(1.15rem, 3vw, 1.6rem);
+  }
+}
+
+/* A gold hairline that grows across the top on hover — the whole accent. */
+.od-disc-why__item::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  height: 2px;
+  width: 0;
+  background: var(--od-gold);
+  transition: width 260ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+@media (hover: hover) {
+  .od-disc-why__item:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--od-gold) 38%, var(--od-line));
+    box-shadow: 0 14px 32px color-mix(in srgb, #000 14%, transparent);
+  }
+
+  .od-disc-why__item:hover::after {
+    width: 100%;
+  }
+}
+
+.od-disc-why__num {
+  padding-top: 0.1rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Consultation section — mobile density                                       */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-consult__benefits {
+  margin: clamp(0.9rem, 2.5vw, 1.25rem) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--od-text-secondary);
+}
+
+.od-disc-consult__benefits li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.od-disc-consult__benefits li::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  margin-top: 0.5rem;
+  border-radius: 50%;
+  background: var(--od-gold);
+}
+
+@media (max-width: 60rem) {
+  /* The heading, the copy and the trust points are one block; the form card is
+     the next. The old layout put a section-sized gap between every pair. */
+  .od-disc-consult__layout {
+    gap: clamp(1.1rem, 3.5vw, 1.6rem);
+  }
+
+  .od-disc-consult .od-disc-lede {
+    margin-top: 0.6rem;
+  }
+
+  .od-disc-consult__panel {
+    padding: clamp(1.1rem, 4vw, 1.5rem);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Closing CTA — compact                                                       */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-final {
+  padding-block: clamp(2.25rem, 5vw, 4rem);
+}
+
+.od-disc-final__lede {
+  margin-top: 0.75rem;
+}
+
+.od-disc-final__actions {
+  margin-top: clamp(1.15rem, 2.5vw, 1.75rem);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sticky dock — Portfolio + consultation                                      */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-dock__btn--secondary {
+  flex: 0 1 35%;
+  color: var(--od-text-primary);
+  background: color-mix(in srgb, var(--od-bg-section) 88%, transparent);
+  border-color: var(--od-line-strong);
+}
+
+.od-disc-dock__btn--secondary:hover,
+.od-disc-dock__btn--secondary:focus-visible {
+  border-color: var(--od-gold);
+  outline: 2px solid color-mix(in srgb, var(--od-gold) 45%, transparent);
+  outline-offset: 2px;
+}
+
+/* The dock is fixed, so the last section needs room to clear it. */
+@media (max-width: 1023px) {
+  .od-discovery {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Floating WhatsApp                                                           */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-wa {
+  position: fixed;
+  z-index: 46;
+  inset-inline-end: clamp(0.85rem, 4vw, 1.25rem);
+  /* Above the dock, always — the dock's own height plus the safe area. */
+  inset-block-end: calc(4.75rem + env(safe-area-inset-bottom));
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #25d366;
+  color: #05300f;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.34);
+  transition:
+    transform 180ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow 180ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  /* Wiggle for 0.7s, then rest — a 10s cycle whose visible part is short. */
+  animation: od-wa-wiggle 10s ease-in-out 4s infinite;
+}
+
+@media (min-width: 1024px) {
+  .od-disc-wa {
+    inset-block-end: clamp(1.5rem, 4vw, 2.5rem);
+  }
+}
+
+.od-disc-wa:hover,
+.od-disc-wa:focus-visible {
+  transform: scale(1.06);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.42);
+}
+
+.od-disc-wa:focus-visible {
+  outline: 3px solid #fff9f0;
+  outline-offset: 3px;
+}
+
+.od-disc-wa:active {
+  transform: scale(0.96);
+}
+
+.od-disc-wa__icon {
+  display: block;
+}
+
+/*
+ * A transform-only shake: transforms do not reflow, so nothing on the page
+ * moves around it. 93% of the cycle is the rest state, which is what keeps this
+ * an occasional cue rather than a permanently jiggling button.
+ */
+@keyframes od-wa-wiggle {
+  0%,
+  92%,
+  100% {
+    transform: rotate(0deg);
+  }
+  93% {
+    transform: rotate(-9deg);
+  }
+  94.5% {
+    transform: rotate(7deg);
+  }
+  96% {
+    transform: rotate(-6deg);
+  }
+  97.5% {
+    transform: rotate(4deg);
+  }
+  99% {
+    transform: rotate(-2deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-disc-wa {
+    animation: none;
+  }
+
+  .od-disc-cats-nav__card,
+  .od-disc-cats-nav__media img,
+  .od-disc-cats-nav__arrow,
+  .od-disc-why__item,
+  .od-disc-why__item::after {
+    transition: none;
+  }
+
+  .od-disc-cats-nav__rail {
+    scroll-snap-type: none;
+  }
+
+  .od-disc-why__item:hover {
+    transform: none;
+  }
+}
+
+/* ========================================================================== */
+/* FINAL PASS — premium proof zone · areas marquee · closing panel            */
+/* ========================================================================== */
+
+/* -------------------------------------------------------------------------- */
+/* Proof zone — depth without cards                                            */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-proof {
+  position: relative;
+  isolation: isolate;
+  /* A single soft gold wash from above, so the strip reads as lit rather than
+     as a panel sitting on the page. No borders, no boxes. */
+  background:
+    radial-gradient(
+      120% 140% at 50% -20%,
+      color-mix(in srgb, var(--od-gold) 13%, transparent),
+      transparent 58%
+    ),
+    var(--od-bg-deepest);
+  overflow: hidden;
+}
+
+/* A hairline that draws itself across the top once the strip is in view. */
+.od-disc-proof::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  height: 1px;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--od-gold) 70%, transparent),
+    transparent
+  );
+  animation: od-line-draw 900ms var(--dc-ease, cubic-bezier(0.22, 1, 0.36, 1))
+    360ms forwards;
+}
+
+@keyframes od-line-draw {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.od-disc-proof__value {
+  /* Ivory into gold: the number is the brightest thing in the band. */
+  background: linear-gradient(
+    180deg,
+    var(--od-text-primary) 6%,
+    var(--od-gold-light, #f2cd83) 96%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-wrap: balance;
+}
+
+.od-disc-proof__label {
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font-size: clamp(0.66rem, 1.4vw, 0.74rem);
+  font-weight: 600;
+}
+
+/* The warranty is the only metric that carries terms, and the link has to read
+   as a link without competing with the label it follows. */
+.od-disc-proof__terms {
+  color: var(--od-gold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.od-disc-proof__terms:hover,
+.od-disc-proof__terms:focus-visible {
+  color: var(--od-gold-light, #f2cd83);
+}
+
+.od-disc-proof__footnote {
+  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-disc-proof::before {
+    animation: none;
+    transform: scaleX(1);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Areas served — two opposed marquees                                         */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-areas {
+  background: var(--od-bg-section);
+  padding-block: clamp(2rem, 4.5vw, 3.25rem);
+  border-block: 1px solid var(--od-line);
+  overflow: hidden;
+}
+
+.od-disc-areas__head {
+  margin-bottom: clamp(1.1rem, 3vw, 1.75rem);
+  max-width: 34rem;
+}
+
+.od-disc-areas__rails {
+  display: grid;
+  gap: 0.6rem;
+}
+
+/*
+ * The row is a real horizontally scrollable element. The drift is decoration
+ * layered on top of a list a thumb can drag and a keyboard can tab through.
+ */
+.od-disc-areas__row {
+  display: flex;
+  gap: 0.6rem;
+  width: max-content;
+  overflow-x: auto;
+  scrollbar-width: none;
+  animation: od-areas-drift 34s linear infinite;
+}
+
+.od-disc-areas__row::-webkit-scrollbar {
+  display: none;
+}
+
+.od-disc-areas__row[data-reverse] {
+  animation-direction: reverse;
+}
+
+/* A name someone is trying to read should stop moving. */
+.od-disc-areas__row:hover,
+.od-disc-areas__row:focus-within {
+  animation-play-state: paused;
+}
+
+.od-disc-areas__track {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.od-disc-areas__chip {
+  flex: 0 0 auto;
+  padding: 0.5rem 0.95rem;
+  border: 1px solid var(--od-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--od-text-primary) 3%, transparent);
+  color: var(--od-text-secondary);
+  font-size: clamp(0.78rem, 1.6vw, 0.88rem);
+  white-space: nowrap;
+}
+
+/*
+ * Exactly -50%: each row renders its chips twice, so the second set lands where
+ * the first began and the seam cannot be seen.
+ */
+@keyframes od-areas-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-disc-areas__row {
+    animation: none;
+    /* Autoplay stops; dragging does not. */
+    width: 100%;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Closing panel                                                               */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-final {
+  padding-block: clamp(2rem, 4.5vw, 3.5rem);
+  text-align: left;
+}
+
+/* A panel with its own edges: the spacing is the panel's padding, not a
+   section-height of empty band. */
+.od-disc-final__panel {
+  max-width: 52rem;
+  margin-inline: auto;
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  border: 1px solid color-mix(in srgb, var(--od-gold) 26%, var(--od-line));
+  border-radius: var(--od-radius-lg, 26px);
+  background:
+    radial-gradient(
+      100% 140% at 0% 0%,
+      color-mix(in srgb, var(--od-gold) 9%, transparent),
+      transparent 62%
+    ),
+    var(--od-bg-raised);
+}
+
+.od-disc-final__title {
+  justify-items: start;
+  margin-top: 0.15rem;
+}
+
+.od-disc-final__lede {
+  margin-top: 0.7rem;
+  margin-inline: 0;
+}
+
+.od-disc-final__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  justify-content: flex-start;
+  margin-top: clamp(1.15rem, 2.5vw, 1.6rem);
+}
+
+.od-disc-final__proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: clamp(1.1rem, 2.5vw, 1.5rem) 0 0;
+  padding-top: clamp(0.9rem, 2vw, 1.25rem);
+  border-top: 1px solid var(--od-line);
+  list-style: none;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--od-text-muted);
+}
+
+.od-disc-final__proof li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.od-disc-final__proof li + li::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--od-gold);
+}
+
+@media (max-width: 30rem) {
+  .od-disc-final__actions {
+    flex-direction: column;
+  }
+
+  .od-disc-final__actions > * {
+    width: 100%;
+  }
+}
+
+/* ==========================================================================
+   Compact consultation band
+   ==========================================================================
+   The band used to be a two-column layout: argument on the left, a full lead
+   form on the right. There is no form on this page any more — every CTA opens
+   the one guided sheet — so the band is a single measured column that ends in
+   the control that opens it.
+   ========================================================================== */
+
+.od-disc-consult--compact .od-disc-consult__compact {
+  max-width: 62ch;
+}
+
+.od-disc-consult--compact .od-disc-consult__benefits {
+  margin-bottom: 24px;
 }

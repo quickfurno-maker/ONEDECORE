@@ -331,6 +331,6 @@ describe("Phase 3A1.1 regression scope", () => {
       "utf8"
     );
     assert.match(claims, /warrantyYears:\s*10/);
-    assert.match(claims, /projectsDelivered:\s*500/);
+    assert.match(claims, /projectsDelivered:\s*1000/);
   });
 });

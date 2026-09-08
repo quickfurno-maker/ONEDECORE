@@ -40,10 +40,21 @@ import {
   isPublicWhatsAppConfigured,
   normalizeWhatsAppE164,
 } from "../chrome/public-contact.ts";
-import { DISCOVERY_TRUST_STRIP_ITEMS } from "../discovery/discovery-copy.ts";
+import { DISCOVERY_PROOF_METRICS } from "../discovery/discovery-copy.ts";
 import { CONSULTATION_SERVICE_OPTIONS } from "../../lead-intake/public/consultation-copy.ts";
 import { consultationToLeadRequest } from "../../lead-intake/public/consultation-to-lead-request.ts";
 import type { LeadFormAttribution } from "../../lead-intake/public/lead-form-attribution.ts";
+
+/*
+ * RELATIVE, NOT A FIXED DATE.
+ *
+ * `antiBot.formStartedAt` must be between 800ms and 24 hours old, so a
+ * hardcoded timestamp is a time bomb: these fixtures passed on the day they
+ * were written and started failing the moment the date rolled over. Five
+ * minutes ago is inside the window on every day.
+ */
+const FORM_STARTED_AT = new Date(Date.now() - 5 * 60_000).toISOString();
+
 
 const root = process.cwd();
 const read = (rel: string) => readFileSync(join(root, rel), "utf8");
@@ -51,9 +62,10 @@ const code = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
 
 const HERO = "src/features/public-site/discovery/DiscoveryHeroSlider.tsx";
-const COUNTER = "src/features/public-site/discovery/DiscoveryProjectsCounter.tsx";
-const STRIP = "src/features/public-site/discovery/DiscoveryTrustStrip.tsx";
+const COUNT_UP = "src/features/public-site/motion/useCountUp.ts";
+const STRIP = "src/features/public-site/discovery/DiscoveryProofStrip.tsx";
 const DOCK = "src/features/public-site/discovery/DiscoveryStickyCta.tsx";
+const WA_FAB = "src/features/public-site/discovery/DiscoveryWhatsAppFab.tsx";
 const CONTACT = "src/features/public-site/chrome/public-contact.ts";
 const FORM = "src/features/lead-intake/public/ConsultationLeadForm.tsx";
 const ADAPTER = "src/features/lead-intake/public/consultation-to-lead-request.ts";
@@ -78,12 +90,38 @@ describe("the projects count is displayed without being called verified", () => 
     assert.equal(resolved.displayable, true);
   });
 
-  test("the attestation is recorded, dated and scoped to one claim", () => {
-    const record = PUBLIC_CLAIM_EVIDENCE["projects-delivered"];
-    assert.ok(record.ownerAttestedDisplay, "the grant must be recorded");
-    assert.match(record.ownerAttestedDisplay!.attestedOn, /^\d{4}-\d{2}-\d{2}$/);
-    assert.ok(record.ownerAttestedDisplay!.note.length > 20);
-    assert.deepEqual([...getOwnerAttestedClaimIds()], ["projects-delivered"]);
+  test("every attestation is recorded, dated and explained", () => {
+    /*
+     * L1.1 authorised the project count ALONE. The premium homepage brief
+     * (2026-09-07) authorised three more for the proof strip: the design-library
+     * size, the factory count and the customised-planning percentage.
+     *
+     * The set is asserted exhaustively on purpose. A figure that appears on the
+     * page without appearing here has been published by a component deciding for
+     * itself, which is the failure this register exists to prevent.
+     */
+    /*
+     * ATTESTED AND DISPLAYABLE. `warranty-years` is attested too and is
+     * deliberately absent: it also requires effective legal terms, so the
+     * helper excludes it. That exclusion is asserted directly below.
+     */
+    assert.deepEqual([...getOwnerAttestedClaimIds()], [
+      "projects-delivered",
+      "warranty-years",
+      "custom-designs",
+      "own-manufacturing-unit",
+      "design-inspirations",
+      "delivery-window",
+    ]);
+
+    for (const id of getOwnerAttestedClaimIds()) {
+      const record = PUBLIC_CLAIM_EVIDENCE[id];
+      assert.ok(record.ownerAttestedDisplay, `${id}: the grant must be recorded`);
+      assert.match(record.ownerAttestedDisplay!.attestedOn, /^\d{4}-\d{2}-\d{2}$/);
+      assert.ok(record.ownerAttestedDisplay!.note.length > 20, id);
+      // Attested is not evidenced. That distinction is the whole module.
+      assert.equal(isClaimPubliclyEvidenced(id), false, id);
+    }
   });
 
   test("nothing became evidenced — the register is unchanged", () => {
@@ -96,66 +134,152 @@ describe("the projects count is displayed without being called verified", () => 
     assert.doesNotMatch(registry, /structuredDataPermission: true/);
   });
 
-  test("only the project count came back", () => {
+  test("the four attested figures came back, and nothing else did", () => {
     assert.equal(canQuotePublicClaim("projects-delivered"), true);
-    assert.equal(publicClaimLabel("projects-delivered"), "500+ Projects Delivered");
+    assert.equal(publicClaimLabel("projects-delivered"), "1000+ Projects Delivered");
+
+    /*
+     * STILL WITHHELD, and these are the ones that matter most: a rating, a
+     * review count and a satisfaction percentage all imply a source that does
+     * not exist, and the warranty duration is a contractual promise whose terms
+     * are still pending. None of them was attested, and none may be quoted.
+     */
+    /*
+     * STILL WITHHELD. A rating, a review count and a satisfaction percentage
+     * imply a source that does not exist, and none of them was attested. They
+     * are figures or they are nothing — there is no honest qualitative version
+     * of "4.9/5" — so they render nothing at all.
+     */
     for (const id of [
       "average-rating",
       "client-reviews",
       "client-satisfaction",
-      "warranty-years",
-      "custom-designs",
     ] as const) {
       assert.equal(canQuotePublicClaim(id), false, id);
+      assert.equal(publicClaimLabel(id), null, id);
     }
-    assert.equal(publicClaimLabel("average-rating"), null);
-    assert.equal(publicClaimLabel("client-reviews"), null);
-    assert.equal(publicClaimLabel("client-satisfaction"), null);
+
+    /*
+     * The warranty IS quotable now, and the wording is what makes that
+     * defensible: "Up to N+ Years" is a hedged ceiling, not "N-year warranty on
+     * everything". If this label ever loses its hedge, this assertion is the
+     * thing that should stop it.
+     */
+    assert.equal(canQuotePublicClaim("warranty-years"), true);
+    assert.match(publicClaimLabel("warranty-years") ?? "", /^Up to \d+\+ Years/);
   });
 
   test("an attested claim that also needs legal terms still waits for them", () => {
-    // Attestation is not a bypass for a contractual promise.
-    const attestedWarranty = {
+    /*
+     * THE RULE, not the current state. The real warranty record now carries
+     * approved terms — the owner approved the display wording on 2026-09-07 —
+     * so the hypothetical has to put them back to pending to exercise the rule
+     * this test exists for: attestation alone never publishes a contractual
+     * promise.
+     */
+    const attestedButPending = {
       ...PUBLIC_CLAIM_EVIDENCE,
       "warranty-years": {
         ...PUBLIC_CLAIM_EVIDENCE["warranty-years"],
+        legalTerms: "pending" as const,
         ownerAttestedDisplay: { attestedOn: "2026-01-01", note: "hypothetical" },
       },
     };
-    assert.equal(isClaimDisplayable("warranty-years", attestedWarranty), false);
+    assert.equal(isClaimDisplayable("warranty-years", attestedButPending), false);
+    // And requiring terms at all is what makes the rule reachable.
+    assert.equal(
+      PUBLIC_CLAIM_EVIDENCE["warranty-years"].requiresEffectiveLegalTerms,
+      true
+    );
   });
 
-  test("the counter renders below the hero, animated, reduced-motion safe", () => {
-    const counter = read(COUNTER);
-    const counterCode = code(counter);
-    assert.match(counter, /canQuotePublicClaim\("projects-delivered"\)/);
-    assert.match(counter, /IntersectionObserver/);
-    assert.match(counter, /prefers-reduced-motion/);
+  test("the counters render below the hero, animated, reduced-motion safe", () => {
+    /*
+     * One count-up hook now drives all four metrics rather than each metric
+     * carrying its own copy of the animation. Every property the single counter
+     * had is still asserted — it just lives in `useCountUp` now.
+     */
+    const hook = code(read(COUNT_UP));
+    assert.match(hook, /IntersectionObserver/);
+    assert.match(hook, /prefers-reduced-motion/);
     // Seeded with the real figure: a useState(0) seed would ship "0+" to every
     // pre-hydration and no-JS visitor.
-    assert.match(counterCode, /useState<number>\(target\)/);
-    assert.doesNotMatch(counterCode, /useState\(0\)/);
-    assert.equal(HOME_CLAIMS.projectsDelivered, 500);
+    assert.match(hook, /useState<number>\(target\)/);
+    assert.doesNotMatch(hook, /useState\(0\)/);
+    // Runs once: `finished` is set and never cleared.
+    assert.match(hook, /finished\.current = true/);
+    assert.match(hook, /reduced \? target : value/);
+    assert.equal(HOME_CLAIMS.projectsDelivered, 1000);
 
-    // Mounted by the strip, which sits after the hero on the page.
-    assert.match(read(STRIP), /<DiscoveryProjectsCounter \/>/);
+    // The strip asks the register rather than trusting its own list.
+    assert.match(read(STRIP), /isClaimDisplayable\(metric\.claimId\)/);
+
+    /*
+     * THE STRIP MOVED, BY OWNER DIRECTION.
+     *
+     * It used to sit second on the homepage. It now opens `/interiors`, where
+     * the visitor has already chosen to read about the work rather than being
+     * shown four animated figures before being told what the company does. The
+     * evidence model is untouched by the move — the assertions above still hold
+     * — so what changes here is only WHERE it is mounted.
+     */
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
+    assert.doesNotMatch(page, /DiscoveryProofStrip/);
+
+    const interiors = read(
+      "src/features/public-site/interiors/InteriorsConversionPage.tsx"
+    );
     assert.ok(
-      page.indexOf("<DiscoveryHeroSlider") < page.indexOf("<DiscoveryTrustStrip"),
-      "the counter's strip must come after the hero"
+      interiors.indexOf("<HomeHero") < interiors.indexOf("<DiscoveryProofStrip"),
+      "the proof strip must come after the hero"
     );
     // And NOT inside the hero.
-    assert.doesNotMatch(read(HERO), /DiscoveryProjectsCounter|DiscoveryHeroTrustBar/);
+    assert.doesNotMatch(read(HERO), /DiscoveryProofStrip|DiscoveryHeroTrustBar/);
   });
 
-  test("the strip leads with manufacturing and process, no suppressed figure", () => {
-    const ids = DISCOVERY_TRUST_STRIP_ITEMS.map((item) => item.id);
-    assert.deepEqual(ids.slice(0, 3), ["manufacturing", "pipeline", "consultation"]);
-    for (const item of DISCOVERY_TRUST_STRIP_ITEMS) {
-      assert.doesNotMatch(item.label, /4\.9|200\+|98%|100% Custom|10-Year/);
+  test("the proof strip quotes no suppressed figure", () => {
+    /*
+     * The ticker was replaced by the four-metric proof strip. The invariant it
+     * protected is unchanged and now easier to state: every metric on the strip
+     * names the claim it is published under, and no metric may carry a rating,
+     * a review count, a satisfaction percentage or a warranty period.
+     */
+    for (const metric of DISCOVERY_PROOF_METRICS) {
+      assert.ok(
+        (PUBLIC_CLAIM_IDS as readonly string[]).includes(metric.claimId),
+        `${metric.claimId} must be a registered claim`
+      );
     }
-    // The projects figure is rendered by the counter, not tickered past.
-    assert.ok(!ids.includes("projects"));
+    /*
+     * The strip FILTERS on the gate rather than trusting its own list, so a
+     * metric only renders once the register says it may. All four do now.
+     */
+    const rendered = DISCOVERY_PROOF_METRICS.filter((m) =>
+      isClaimDisplayable(m.claimId)
+    );
+    assert.equal(rendered.length, 4);
+
+    /*
+     * The warranty is the only metric carrying a contractual promise, so it is
+     * the only one that must link to its terms. A ceiling without terms beside
+     * it reads as a guarantee.
+     */
+    const warranty = rendered.find((m) => m.claimId === "warranty-years");
+    assert.ok(warranty, "the warranty metric must render");
+    assert.equal("termsHref" in warranty!, true);
+    assert.match(warranty!.prefix, /^Up to/);
+    assert.match(warranty!.suffix, /\+/);
+    for (const suppressed of [
+      "average-rating",
+      "client-reviews",
+      "client-satisfaction",
+    ]) {
+      assert.equal(
+        DISCOVERY_PROOF_METRICS.some((m) => m.claimId === suppressed),
+        false,
+        `${suppressed} must not reach the strip`
+      );
+    }
   });
 });
 
@@ -287,26 +411,76 @@ describe("the WhatsApp CTA is configured, validated, or absent", () => {
   test("the prefill is a service enquiry, not marketing", () => {
     assert.equal(
       PUBLIC_WHATSAPP.prefilledMessage,
-      "Hi ONEDECORE, I'd like to discuss my home interiors."
+      "Hi ONEDECORE, I'd like to discuss my interior requirement."
     );
     assert.doesNotMatch(PUBLIC_WHATSAPP.prefilledMessage, /offer|discount|deal/i);
   });
 
-  test("the dock renders WhatsApp only when a link exists — never dead", () => {
-    const dock = code(read(DOCK));
-    assert.match(dock, /const whatsappHref = getPublicWhatsAppHref\(\)/);
-    assert.match(dock, /\{whatsappHref \? \(/);
-    assert.match(dock, /\) : null\}/);
-    assert.match(dock, /href=\{whatsappHref\}/);
+  test("WhatsApp renders only when a link exists — never dead", () => {
+    /*
+     * WhatsApp moved out of the dock and became a floating action. The rule it
+     * carried moved with it: configured or absent, never present-and-dead.
+     */
+    const fab = code(read(WA_FAB));
+    assert.match(fab, /const href = getPublicWhatsAppHref\(\)/);
+    assert.match(fab, /if \(!href\) \{[\s\S]{0,40}return null;/);
+    assert.match(fab, /href=\{href\}/);
+    // And the dock no longer knows about WhatsApp at all.
+    assert.doesNotMatch(code(read(DOCK)), /getPublicWhatsAppHref|whatsapp/i);
   });
 
-  test("both dock actions carry stable hooks and nothing reads them yet", () => {
+  test("every conversion action carries a stable hook and nothing reads them yet", () => {
     const dock = read(DOCK);
-    assert.match(dock, /data-conversion-action="whatsapp-click"/);
-    assert.match(dock, /data-conversion-action="consultation-sticky"/);
-    for (const tag of ["gtag(", "fbq(", "dataLayer", "googletagmanager"]) {
-      assert.ok(!dock.includes(tag), `L1.1 must not add ${tag}`);
+    const fab = read(WA_FAB);
+    const cta = read("src/features/public-site/discovery/DiscoveryConsultCta.tsx");
+    assert.match(dock, /data-conversion-action="portfolio-sticky"/);
+    /*
+     * The consultation hook is passed to the shared CTA now rather than written
+     * inline: the button became a control that opens the one lead form instead
+     * of a link to a page anchor. The NAME is unchanged, which is the point —
+     * a later measurement layer binds to the name, not to the element.
+     */
+    assert.match(dock, /conversionAction="consultation-sticky"/);
+    assert.match(cta, /data-conversion-action=\{conversionAction\}/);
+    assert.match(fab, /data-conversion-action="whatsapp-fab"/);
+    for (const source of [dock, fab, cta]) {
+      for (const tag of ["gtag(", "fbq(", "dataLayer", "googletagmanager"]) {
+        assert.ok(!source.includes(tag), `must not add ${tag}`);
+      }
     }
+  });
+
+  test("the floating WhatsApp wiggles briefly, and not at all under reduced motion", () => {
+    const css = read(DISCOVERY_CSS);
+    assert.match(css, /@keyframes od-wa-wiggle/);
+    // A transform-only keyframe: no reflow, so nothing shifts around it.
+    const at = css.indexOf("@keyframes od-wa-wiggle");
+    const frames = css.slice(at, css.indexOf("}\n}", at));
+    assert.match(frames, /transform: rotate/);
+    assert.doesNotMatch(frames, /margin|width|height|top|left/);
+    // Most of the cycle is the rest state — an occasional cue, not a jiggle.
+    assert.match(css, /animation: od-wa-wiggle 10s/);
+    // And the whole thing is off when the visitor asked for less motion.
+    /*
+     * Located by RULE, not by position: several reduced-motion blocks exist and
+     * `lastIndexOf` silently started matching whichever one happened to be
+     * last.
+     */
+    const waRule = /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,600}?\.od-disc-wa \{[\s\S]{0,60}?animation: none;/;
+    assert.match(css, waRule);
+    /*
+     * No device haptics. Comment-stripped, because the component's docblock
+     * EXPLAINS why it does not call it — a check that trips on prose is a check
+     * that teaches you to write less of it.
+     */
+    /*
+     * A haptic is allowed, but ONLY from a real tap. It must sit inside the
+     * click handler and never at module scope, on mount or on a timer.
+     */
+    const fabCode = code(read(WA_FAB));
+    assert.match(fabCode, /const onTap = \(\) => \{[\s\S]{0,220}navigator\.vibrate/);
+    assert.match(fabCode, /onClick=\{onTap\}/);
+    assert.doesNotMatch(fabCode, /useEffect|setInterval|setTimeout/);
   });
 
   test("the dock buttons clear 48px and respect the safe area", () => {
@@ -456,7 +630,7 @@ describe("an unasked qualifier is absent, not invented", () => {
     mobile: "9876543210",
     consent: { serviceEnquiry: true, servicePhone: true } as const,
     attribution,
-    antiBot: { website: "", formStartedAt: "2026-09-07T00:00:00.000Z" },
+    antiBot: { website: "", formStartedAt: FORM_STARTED_AT },
     idempotencyKey: "k-1",
   };
 
@@ -507,12 +681,21 @@ describe("an unasked qualifier is absent, not invented", () => {
 
   test("the server refuses it under v2 and requires it under v1", () => {
     const server = code(read(SERVER));
-    assert.match(server, /if \(isPublicConsultV2\) \{/);
+    // v2 and v3 share every prohibition, so the server states them once
+    // against a flag both versions set.
+    assert.match(server, /if \(forbidsQualifier\) \{/);
+    assert.match(server, /const forbidsQualifier =/);
     // v1's strict branch survives underneath.
     assert.match(server, /isAllowedLeadQualifier\(kind, code\)/);
     assert.match(server, /LEAD_QUALIFIER_KIND_BY_SERVICE\[service as LeadServiceCode\] !== kind/);
-    // Unasked fields are still rejected rather than ignored.
-    assert.match(server, /"timeline",\s*\n\s*"rooms",/);
+    /*
+     * Unasked fields are still rejected rather than ignored. The list became
+     * conditional when v4 arrived -- v4 is the one version that DOES ask for a
+     * timeline -- so the assertion follows it: the timeline is excluded for v4
+     * and for nothing else, and the remaining prohibitions are unconditional.
+     */
+    assert.match(server, /isPublicConsultV4 \? \[\] : \(\["timeline"\] as const\)/);
+    assert.match(server, /"rooms",\s*\n\s*"budgetComfort",\s*\n\s*"estimate",/);
   });
 
   test("the adapter emits v2 and forbids rather than loosens", () => {
@@ -529,7 +712,7 @@ describe("an unasked qualifier is absent, not invented", () => {
 
 describe("no measurement layer arrived with this change", () => {
   test("no tag, pixel or container on any touched surface", () => {
-    for (const rel of [HERO, COUNTER, STRIP, DOCK, CONTACT, FORM]) {
+    for (const rel of [HERO, COUNT_UP, STRIP, DOCK, WA_FAB, CONTACT, FORM]) {
       const source = read(rel);
       for (const tag of [
         "googletagmanager",
