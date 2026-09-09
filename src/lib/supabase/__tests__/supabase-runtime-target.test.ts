@@ -218,9 +218,31 @@ describe("both clients compose the same rule", () => {
     assert.equal(isManagedOneDecoreSupabaseUrl(MANAGED), true);
   });
 
-  test("neither client is reachable from browser code", () => {
+  test("the credential-bearing factories stay server-only", () => {
+    /*
+     * The validator itself is intentionally NOT server-only: it holds no
+     * secret, and the browser client resolves its target through the same
+     * predicates via `config/env.ts`. What must never reach the browser is a
+     * factory that carries the service-role key.
+     */
     assert.match(serviceRole, /^import "server-only";/m);
     assert.match(admin, /^import "server-only";/m);
-    assert.match(read("src/lib/supabase/runtime-target.ts"), /^import "server-only";/m);
+    // The IMPORT, not the word: the file explains in prose why it has none.
+    assert.doesNotMatch(
+      read("src/lib/supabase/runtime-target.ts"),
+      /^import "server-only";/m
+    );
+  });
+
+  test("the browser/server public env uses the same predicates", () => {
+    const publicEnv = read("src/config/env.ts");
+    assert.match(publicEnv, /isManagedOneDecoreSupabaseUrl/);
+    assert.match(publicEnv, /isLoopbackSupabaseUrl/);
+    /*
+     * The old rule skipped the managed-host check whenever the hostname was
+     * loopback — with no NODE_ENV condition on that half — so production
+     * accepted 127.0.0.1.
+     */
+    assert.doesNotMatch(publicEnv, /hostname === "127\.0\.0\.1"/);
   });
 });

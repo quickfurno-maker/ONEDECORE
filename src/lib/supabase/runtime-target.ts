@@ -1,7 +1,13 @@
-import "server-only";
-
 /**
  * WHICH SUPABASE PROJECT THIS PROCESS IS ALLOWED TO TALK TO.
+ *
+ * DELIBERATELY NOT `server-only`. This module holds no secret and grants no
+ * capability — it validates a URL, and the URL it validates is already public
+ * (`NEXT_PUBLIC_SUPABASE_URL` ships in the browser bundle by definition). The
+ * browser-side Supabase client resolves its target through `config/env.ts`,
+ * which needs these same predicates, and a second copy of a security predicate
+ * is how one of them gets relaxed alone. The credential-bearing factories
+ * (`service-role.ts`, `admin.ts`) remain server-only.
  *
  * WHY THIS IS ITS OWN LAYER
  *
