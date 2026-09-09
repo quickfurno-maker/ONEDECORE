@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Json } from "@/types/database.generated";
+import type { Json } from "@/types/database";
 import { createAdminClient } from "@/lib/supabase/service-role";
 import { normalizeCommerceOrderError } from "./order-errors.ts";
 import {

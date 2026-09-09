@@ -6,7 +6,7 @@ import {
   ADMIN_HOME,
   isSafeStaffRedirect,
 } from "@/features/manager-workspace/contracts/manager-home";
-import type { Database } from "@/types/database.generated";
+import type { Database } from "@/types/database";
 
 /**
  * Session cookie refresh and admin authentication for the Next.js 16 Proxy.

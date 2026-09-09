@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Tables } from "@/types/database.generated";
+import type { Tables } from "@/types/database";
 
 export type PortfolioProjectRow = Tables<"portfolio_projects">;
 export type PortfolioMediaRow = Tables<"portfolio_media">;

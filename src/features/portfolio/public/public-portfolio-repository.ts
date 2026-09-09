@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../../../types/database.generated.ts";
+import type { Database } from "../../../types/database.ts";
 import {
   queryFeaturedProjects,
   queryPaginatedProjects,

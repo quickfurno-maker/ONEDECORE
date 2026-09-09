@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClient } from "@supabase/supabase-js";
 import { getLeadIntakeServerEnv } from "../../config/server-env.ts";
-import type { Database } from "../../types/database.generated.ts";
+import type { Database } from "../../types/database.ts";
 
 /**
  * Server-only Supabase administrative client (service role).

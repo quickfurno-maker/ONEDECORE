@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "../../../types/database.generated.ts";
+import type { Database } from "../../../types/database.ts";
 
 export function createLandingLabServiceClient(): SupabaseClient<Database> | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";

@@ -1,7 +1,7 @@
 import "server-only";
 import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import type { Database, Json } from '@/types/database.generated';
+import type { Database, Json } from '@/types/database';
 import type {
   WhatsappDispatchBindRow,
   WhatsappDispatchClaimRow,

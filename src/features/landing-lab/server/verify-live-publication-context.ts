@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Json } from "../../../types/database.generated.ts";
+import type { Database, Json } from "../../../types/database.ts";
 import type { SignedPublicationContext } from "../contracts/publication-context.ts";
 import { verifyPublicationContext } from "./publication-context-crypto.ts";
 import { getLandingLabHmacSecret } from "./landing-lab-env.ts";

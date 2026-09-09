@@ -5,7 +5,7 @@ import type { CampaignLifecycleState } from "../contracts/lifecycle";
 import type { CampaignTargetingMode } from "../contracts/targeting";
 import type { MarketingChannel } from "../contracts/channel";
 import type { AudienceRuleGroup } from "../contracts/audience-rule";
-import type { Json } from "@/types/database.generated";
+import type { Json } from "@/types/database";
 
 export interface CampaignListItem {
   readonly id: string;

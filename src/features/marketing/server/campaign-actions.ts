@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { campaignErrorFromUnknown, type CampaignActionCode } from "./campaign-errors";
-import type { Json } from "@/types/database.generated";
+import type { Json } from "@/types/database";
 
 export interface CampaignActionResult<T = void> {
   readonly success: boolean;

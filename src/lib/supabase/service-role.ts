@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database.generated";
+import type { Database } from "@/types/database";
 import { resolveSupabaseRuntimeTarget } from "./runtime-target.ts";
 
 /**
