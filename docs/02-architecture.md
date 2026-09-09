@@ -1,5 +1,50 @@
 # 02 — TECHNICAL ARCHITECTURE AND REPOSITORY SPECIFICATION
 
+> **CURRENT ARCHITECTURE - synced 2026-09-09 against `main` `63ce0777`.**
+>
+> Runtime: **Next.js 16.3.3**, **React 19.2.4**, Node 24. The framework version
+> named in the historical status line below is superseded.
+>
+> **Shape as built.** A modular monolith. App routes and server actions call
+> feature-owned modules - `contracts` / `domain` / `server` / `components` -
+> which reach Postgres through canonical Supabase clients. There is no central
+> `src/server/repositories` layer and the code is not being moved back to one;
+> feature ownership is what the codebase actually uses and what its tests
+> assume.
+>
+> **Supabase target validation.** `src/lib/supabase/runtime-target.ts` decides
+> which project a process may talk to: in production the managed ONEDECORE
+> project or nothing, outside production that or a strict loopback stack. The
+> browser client, the cookie-scoped server client and the service-role client
+> all compose it, so they cannot disagree about where the database is.
+>
+> **Two transports, one permission model.** The browser path is cookie-scoped,
+> the mobile path bearer-token. Both resolve to the same access context and the
+> same database-side `public.authorize` plus RLS, so authorization is not
+> reimplemented per transport.
+>
+> **Service-role boundary.** The privileged client is server-only, refuses a
+> publishable key in its slot, and is never reachable from a client component.
+>
+> **Public lead intake.** One canonical form (`public-consult-v4`) posting
+> same-origin; availability is answered per request by the running server, never
+> by a build-time flag.
+>
+> **CRM read semantics.** `/admin/crm/leads` is a chronological inbox ordered by
+> receipt; `/admin/crm/pipeline` is a sales-priority workspace with its own
+> ranking. Two products, two orders, deliberately.
+>
+> **Database security contracts.** RLS on every public table, FORCE RLS on a
+> reviewed subset, a frozen anon RPC surface and a frozen service-role-only RPC
+> surface - enforced by `supabase/tests/database/57_*` and `58_*`.
+>
+> **Provider adapters fail closed.** Campaign, WhatsApp and Kriti transports
+> refuse to reach a provider until a certified activation path exists; no
+> environment value alone opens them.
+>
+> Everything below this banner is the earlier architecture baseline, retained as
+> evidence.
+
 **Document Status:** Locked Architecture Baseline (truth-synced through Phase 9D-B M35 managed closeout, August 23, 2026)
 **Pattern:** Modular Monolith
 **Framework:** Next.js 16.2.11

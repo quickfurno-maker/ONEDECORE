@@ -1,6 +1,6 @@
 # 00 — PROJECT TRUTH AND GOVERNANCE BASELINE
 
-**Document Status:** Locked Governance Baseline (truth-synced 2026-09-02 to the accelerated closeout lock)
+**Document Status:** Current truth, synced 2026-09-09 to repository `main` `63ce0777f6663e03a5a5ff9c82625f7f5056da8f`
 **Project Name:** ONEDECORE
 **Tagline:** One Vision. Complete Interiors.
 **Domain:** `onedecore.in`
@@ -8,31 +8,127 @@
 **Deployment Target:** Hostinger VPS (`91.108.105.192`; app `/var/www/onedecore`; PM2 `onedecore`; Nginx → `127.0.0.1:3000`)
 **Production lifecycle:** runtime user `onedecore`; PM2 home `/home/onedecore/.pm2`; systemd unit **`pm2-onedecore.service`**. Restart with **`systemctl restart pm2-onedecore`** — **never `pm2 restart onedecore` as root**, whose PM2 daemon is a different process universe and does not own the production process. Verify with `systemctl is-active pm2-onedecore`, `sudo -iu onedecore pm2 status` and `curl -sS http://127.0.0.1:3000/api/health`. Full procedure: [docs/runbooks/phase-10a-production-smoke-matrix.md](runbooks/phase-10a-production-smoke-matrix.md).
 
-> **CURRENT EXECUTION AUTHORITY:** [docs/11 — Accelerated Closeout Roadmap](11-accelerated-closeout-roadmap.md) (owner-locked 2026-09-02, **DEC-0097**).
-> Sequencing instructions in [09 — Phase Implementation Roadmap](09-phase-roadmap.md) and [CRM 2.0 Product Roadmap](product/crm-2.0-roadmap.md) are **historical evidence only** and no longer schedule work.
+## Four states, deliberately not collapsed
 
-**Protected `main` baseline:** `27bcee1f36468175e1509e5ec10a0b3533f9c7d7` (PR **#121** merged; exact certified head `0a42534213c817b05b48c96fb6fa6e6c7761cd85`).
-**Current Phase:** **P1** — governance truth sync & release freeze (**documentation/governance only; no runtime change**).
-**Next Phase:** **P2** — production exact-SHA alignment & smoke verification.
-**Final lock:** **P8** is E-commerce production activation (**second-last**); **P9** is Meta WhatsApp + n8n production activation (**final**).
-**Previous Phase:** CRM 2E management analytics + WhatsApp lead-link repair + WhatsApp launch certification + CRM SLA admin settings (PRs #117–#121, all **MERGED**).
+Most of the confusion this document has caused over its life came from treating
+four different things as one. A change can be merged without being deployed,
+deployed without being activated, and a database migration can be live in
+managed Supabase while the application change that motivated it is not yet on
+the VPS. That is the normal state of affairs during a hardening programme, not
+an anomaly, and the vocabulary below exists so it can be stated rather than
+glossed.
 
-### Live vs off (current, 2026-09-02)
+| Status | Means |
+| :--- | :--- |
+| **BUILT** | Code exists on a branch |
+| **MERGED** | On protected `main` |
+| **MANAGED_APPLIED** | Migration applied to managed Supabase `lpurlfmpvriyvpkujvyl` |
+| **DEPLOYED** | Owner-certified as running on the VPS |
+| **ACTIVATED** | Switched on for real users |
+| **OFF / FAIL-CLOSED** | Built, deliberately not activated; absence of config is the OFF state |
+| **DEFERRED** | Not scheduled |
+
+### A. Repository state — `main` at truth-sync
+
+| | |
+| :--- | :--- |
+| `main` | `63ce0777f6663e03a5a5ff9c82625f7f5056da8f` |
+| Migrations in repository | **67** |
+| Migration tail | `20260909120000_revoke_authenticated_truncate_trigger.sql` |
+| pgTAP suites | 58 files |
+| Application test files | 138, all classified and run by CI |
+| Next.js / React | 16.3.3 / 19.2.4 |
+
+### B. Managed database state — `lpurlfmpvriyvpkujvyl`
+
+| | |
+| :--- | :--- |
+| Migrations applied | **67**, tail `20260909120000` |
+| Migration 67 | **MANAGED_APPLIED** — owner-authorized, applied, verified after apply |
+| Verified privilege result | `authenticated` TRUNCATE **0**, TRIGGER **0**, REFERENCES **0**; SELECT **111** unchanged |
+| RLS | enabled on every public table; FORCE RLS on the reviewed subset |
+
+*Owner-certified after apply. Not re-queried by this document.*
+
+### C. Deployed application state — VPS
+
+| | |
+| :--- | :--- |
+| Last owner-certified application release | `9fe5838574017aa74e5e6e2aae248b86000c0b42` |
+| Contains | canonical v4 lead intake, visible success state, CRM newest-first inbox |
+| **Not yet certified as deployed** | PR #163 runtime/config hardening, PR #164 test contracts |
+
+**PR #164's migration is live in managed Supabase; PR #163's and #164's
+application code is on `main` but has not been certified onto the VPS in this
+handoff.** These are different planes and this row is the reason the vocabulary
+above exists.
+
+### D. Feature activation state
 
 | Capability | State |
 | :--- | :--- |
-| Public website, homepage, portfolio | **LIVE** |
-| Public website lead intake | **LIVE** |
-| CRM through **2E** (2A–2E) | **MERGED / PRODUCTION LIVE** |
-| CRM first-contact SLA | **ACTIVE in managed Supabase** — 60 business minutes, Asia/Kolkata, Mon–Sat, 09:00–19:00, non-retroactive |
-| Repository migrations / managed migrations | **49 / 49** — aligned; **no pending managed batch** |
-| Shop public gate (`ONEDECORE_SHOP_PUBLIC_ENABLED`) | **OFF / fail-closed** — activation is **P8** |
-| Online payments / M38 | **DEFERRED** — not on `main`, not managed |
-| Meta WhatsApp live callback / tokens / outbound | **OFF** — activation is **P9** |
-| n8n production automation | **DEFERRED** — activation is **P9** |
-| Campaign live spend | **OFF** — activation is **P6** |
-| Landing Lab public gate | **OFF** — activation is **P6** |
-| Kriti provider production activation | **DEFERRED** — activation is **P7** |
+| Public website, homepage, portfolio | **ACTIVATED** |
+| Public lead intake (`public-consult-v4`) | **ACTIVATED** |
+| CRM (2A–2E, chronological Leads inbox) | **ACTIVATED** |
+| CRM first-contact SLA | **ACTIVATED** — 60 business minutes, Asia/Kolkata, Mon–Sat 09:00–19:00, non-retroactive |
+| Shop / COD storefront | **OFF / FAIL-CLOSED** |
+| Online payments | **DEFERRED** — no migration on `main`, none managed |
+| Landing Lab public route | **OFF / FAIL-CLOSED** |
+| Campaign live spend | **OFF / FAIL-CLOSED** — see note below |
+| Meta WhatsApp webhook / outbound | **OFF / FAIL-CLOSED** |
+| Kriti provider | **OFF / FAIL-CLOSED** |
+| n8n production automation | **DEFERRED** |
+
+**Campaign activation is not an environment toggle.** Two gates
+(`ONEDECORE_CAMPAIGN_EXECUTION_MODE`, `ONEDECORE_CAMPAIGN_PRODUCTION_ENABLED`)
+guard live provider traffic, and satisfying both is still not sufficient: the
+live transport is deliberately unimplemented, so no configuration reaches Meta
+or Google today. Live activation is its own certified piece of work.
+
+### Canonical public lead contract
+
+One public form, `public-consult-v4`, submitting to `POST /api/public/lead-intake`.
+The server decides availability at runtime; the browser never does.
+
+Consent recorded by that form is exactly two purposes:
+
+- `SERVICE_ENQUIRY` (website-form)
+- `SERVICE_COMMUNICATION` (phone)
+
+It does **not** capture `WHATSAPP_SERVICE` or `MARKETING`, and neither may be
+inferred from a consultation submission. Those are distinct purposes with their
+own lawful basis.
+
+### Current hardening programme
+
+| Lane | Scope | State |
+| :--- | :--- | :--- |
+| 1 | Runtime/config/test governance | **MERGED** — PR #163 |
+| 2 | Database security contracts | **MERGED** — PR #164; migration 67 **MANAGED_APPLIED** |
+| 3 | Repository truth + environment contract | **this PR** |
+| 4 | Generated database types | pending |
+| 5 | Dependencies, HTTP/CSP | pending |
+| 6 | Performance / index review | pending |
+
+Feature activation remains separate from hardening and owner-gated throughout.
+
+### Outstanding technical debt
+
+- `src/types/database.generated.ts` is stale beyond the two `leads` columns added by hand; a full regeneration is a ~991-line diff and drops nullable RPC args this repository restores manually. Lane 4.
+- 7 npm advisories (4 high, 3 moderate); direct: `sharp`, `exceljs`, `csv-parse`. Lane 5.
+- No Content-Security-Policy; the other four security headers are set. Lane 5.
+- `service_role` holds TRUNCATE/TRIGGER/REFERENCES broadly; narrowing it needs its own review of admin and fixture paths.
+- Repository visibility is **public**; no credential is committed, and the decision is the owner's.
+
+---
+
+> **HISTORICAL EVIDENCE BELOW — NOT CURRENT EXECUTION AUTHORITY.**
+>
+> Everything from here down records the state at the phase and date it names.
+> Migration counts, phase sequencing, "public intake inactive" and "production
+> deployment pending" were true when written and are superseded by the four
+> tables above. It is the audit trail; it is not instructions, and it is not
+> edited to look current.
 
 ---
 

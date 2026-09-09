@@ -1,5 +1,37 @@
 # 05 — SUPABASE DATA DOMAINS AND SCHEMA SPECIFICATION
 
+> **CURRENT DATA STATE - synced 2026-09-09 against `main` `63ce0777`.**
+>
+> | | |
+> | :--- | :--- |
+> | Repository migrations | **67** |
+> | Migration tail | `20260909120000_revoke_authenticated_truncate_trigger.sql` |
+> | Managed (`lpurlfmpvriyvpkujvyl`) | **67 applied**, aligned |
+> | Public tables | 117, RLS enabled on all 117 |
+> | FORCE RLS | 24 - commerce, salary, attendance submissions, campaign metrics |
+> | Service-only (RLS, zero policies) | 6 - `quotation_access_grants` and five WhatsApp internals |
+>
+> **Migration 67** revokes `TRUNCATE`, `TRIGGER` and `REFERENCES` from
+> `authenticated` on the attendance, salary, leave, Kriti and staff tables that
+> had inherited them from Supabase's default `GRANT ALL`. TRUNCATE is not
+> subject to RLS, so those grants sat around the row-level protections rather
+> than under them. Verified after apply: `authenticated` TRUNCATE 0, TRIGGER 0,
+> REFERENCES 0, SELECT 111 unchanged.
+>
+> **Canonical lead fields (`public-consult-v4`).** `service_code`,
+> `project_scope_code`, `budget_range_code`, `timeline_code`, `locality`,
+> `planner_version`, `landing_path`. Scope and budget are null for
+> `custom-wardrobes`, which is asked neither - an absence, not missing data.
+> Legacy `property_code`, `room_codes` and `budget_comfort_code` remain for
+> pre-v4 leads and are never inferred for new ones.
+>
+> **Portfolio** carries many-to-many room categories and photo-level room
+> browsing. **Workforce** covers attendance, leave and salary. **Commerce** and
+> **campaign** foundations exist and are switched off.
+>
+> The migration-by-migration narrative below is retained as evidence and its
+> counts are historical.
+
 **Document Status:** Locked Data Domain Baseline (truth-synced through Phase 9D-B M35 managed closeout, August 23, 2026)
 **Source of Truth:** Supabase PostgreSQL
 **Enforcement:** 100% RLS Coverage on Exposed API Schemas
