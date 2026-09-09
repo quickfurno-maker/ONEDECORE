@@ -9,6 +9,7 @@
     "  integration - needs a running local Supabase; run in the Database job"
   ],
   "application": [
+    "src/config/__tests__/env-contract.test.ts",
     "src/features/admin-ops/__tests__/ops-suite-correction.test.ts",
     "src/features/commerce/__tests__/commerce-dashboard-ui.test.ts",
     "src/features/commerce/__tests__/phase-10-cod-production-readiness.test.ts",
