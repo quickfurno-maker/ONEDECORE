@@ -13,7 +13,7 @@
 -- survives contact with a roadmap.
 
 begin;
-select plan(34);
+select plan(40);
 
 -- ===========================================================================
 -- A. SECURITY DEFINER privilege governance
@@ -23,26 +23,39 @@ select plan(34);
 -- attacker who can create objects in a schema earlier on the path can shadow a
 -- table or operator the function resolves unqualified, and the function will
 -- happily run their version as the owner.
+--
+-- PRESENCE IS NOT ENOUGH. `search_path=public` is pinned and useless: `public`
+-- is exactly the writable schema an attacker would plant a shadowing object in.
+-- So the assertion is on the VALUE, against the two forms actually in use:
+--
+--   search_path=""            428 functions - resolve nothing implicitly
+--   search_path=pg_catalog      1 function  - rls_auto_enable(), an event
+--                                             trigger helper that needs the
+--                                             catalog and nothing else
+--
+-- Anything else - `public`, `$user`, or any writable schema - fails here.
 select is(
   (select count(*)::int
      from pg_proc p
      join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public'
+    where n.nspname in ('public', 'private')
       and p.prosecdef
-      and coalesce(array_to_string(p.proconfig, ','), '') not like '%search_path%'),
+      and coalesce(array_to_string(p.proconfig, ','), '') not in
+          ('search_path=""', 'search_path=pg_catalog')),
   0,
-  'every public SECURITY DEFINER function pins search_path'
+  'every SECURITY DEFINER function uses an approved safe search_path value'
 );
 
+-- Stated separately so the failure message says which schema drifted.
 select is(
   (select count(*)::int
      from pg_proc p
      join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'private'
       and p.prosecdef
-      and coalesce(array_to_string(p.proconfig, ','), '') not like '%search_path%'),
+      and coalesce(array_to_string(p.proconfig, ','), '') <> 'search_path=""'),
   0,
-  'every private SECURITY DEFINER function pins search_path'
+  'every private SECURITY DEFINER function resolves nothing implicitly'
 );
 
 -- The complete anon-executable definer surface. Anything beyond this list is a
@@ -121,6 +134,110 @@ select ok(
   'quotation capability acceptance stays anon-callable'
 );
 
+-- WHY THERE IS NO "NO PRIVATE HELPER IS AUTHENTICATED-EXECUTABLE" RULE.
+--
+-- 94 of the 320 private functions ARE executable by authenticated, and that is
+-- the design rather than a leak. Two distinct reasons:
+--
+--   1. RLS policy helpers. private.crm_can_view_lead is called from inside the
+--      consent policies. A policy expression runs with the caller's privileges,
+--      so if authenticated could not execute it, every policy using it would
+--      error instead of filtering.
+--
+--   2. The *_impl bodies self-authorize. private.assign_lead_impl opens with
+--      auth.uid() and authorize('leads.assign') and raises 42501 on either, so
+--      reaching it directly is equivalent to reaching it through its wrapper.
+--
+-- The boundary that matters is therefore not the schema. It is which privileged
+-- routines stay closed, which is what follows.
+
+-- The service-role-only surface: 30 public definer functions anon and
+-- authenticated must never reach - campaign run operations, WhatsApp ingest and
+-- dispatch, COD order creation, landing publication verification, lead intake,
+-- quotation grant issuance, project materialization.
+--
+-- Frozen as an exact set on purpose. If one gains authenticated EXECUTE it
+-- drops out and this fails; if a new backend RPC appears it is added and this
+-- fails until somebody classifies it. Both are the review this contract exists
+-- to force.
+select set_eq(
+  $CONTRACT$select (p.oid::regprocedure)::text
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.prosecdef
+       and has_function_privilege('service_role', p.oid, 'EXECUTE')
+       and not has_function_privilege('authenticated', p.oid, 'EXECUTE')$CONTRACT$,
+  array[
+    'bind_campaign_run_operation(uuid,text,text,text,text)',
+    'bind_whatsapp_send_intent_dispatch(uuid,text,timestamp with time zone)',
+    'claim_campaign_run_operation(text,integer)',
+    'claim_whatsapp_send_intent_for_dispatch(uuid,text,text)',
+    'complete_campaign_run_operation(uuid,text,jsonb)',
+    'consume_commerce_public_rate_limit(text,text,text)',
+    'create_public_commerce_cod_order(jsonb,jsonb,jsonb,uuid)',
+    'enqueue_campaign_conversion_feedback(uuid)',
+    'enqueue_campaign_metrics_sync(uuid,date)',
+    'enqueue_pending_attributable_campaign_conversion_feedback()',
+    'fail_campaign_run_operation(uuid,text,boolean)',
+    'get_campaign_run_operation_for_reconcile(uuid)',
+    'get_live_landing_publication(text)',
+    'get_public_commerce_order_tracking_snapshot(text)',
+    'ingest_meta_whatsapp_message(text,text,text,text,text,text,text,text,text,text,text,text,text,jsonb,text,timestamp with time zone)',
+    'ingest_meta_whatsapp_status(text,text,text,text,text,text,text,text,timestamp with time zone,jsonb)',
+    'issue_quotation_access_grant_internal(uuid,uuid,uuid,text,text,boolean)',
+    'mark_campaign_conversion_feedback_state(uuid,text,text,text)',
+    'mark_campaign_run_operation_needs_reconcile(uuid,text)',
+    'materialize_closed_won_project_internal(uuid,text)',
+    'quote_public_commerce_cart(jsonb,text,text)',
+    'reconcile_whatsapp_dispatch_attempt(uuid,text)',
+    'record_landing_exposure(uuid,uuid,text,text,text)',
+    'record_whatsapp_dispatch_attempt_outcome(uuid,text,text,integer,jsonb)',
+    'resolve_campaign_run_create_reconcile_found(uuid,text,text,text,text)',
+    'submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text,text,text,text,text)',
+    'upsert_campaign_metric_snapshot(uuid,timestamp with time zone,timestamp with time zone,text,bigint,bigint,bigint,bigint,text,text)',
+    'verify_campaign_execution_context_binding(text,text,text,text,integer,text)',
+    'verify_live_landing_publication_context(text,text,integer,text,text)',
+    'verify_public_commerce_order_tracking_identity(text,text)'
+  ],
+  'the service-role-only RPC surface is exactly the reviewed set'
+);
+
+select is(
+  (select count(*)::int
+     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.prosecdef
+      and has_function_privilege('service_role', p.oid, 'EXECUTE')
+      and not has_function_privilege('authenticated', p.oid, 'EXECUTE')
+      and has_function_privilege('anon', p.oid, 'EXECUTE')),
+  0,
+  'no service-role-only RPC is executable by anon'
+);
+
+-- The privileged private helpers. These do NOT self-authorize the way the
+-- *_impl bodies do - they are the internals those bodies call once a permission
+-- check has already passed - so reaching them directly would skip the check.
+select is(
+  (select count(*)::int
+     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'private'
+      and p.proname in (
+        'salary_append_event', 'salary_require_manager', 'salary_profile_for_date',
+        'salary_statement_totals', 'staff_append_admin_event',
+        'staff_require_credential_admin', 'staff_finalize_invite_from_saga',
+        'staff_guard_login_phone_drift', 'derive_attendance_day'
+      )
+      and (has_function_privilege('authenticated', p.oid, 'EXECUTE')
+        or has_function_privilege('anon', p.oid, 'EXECUTE'))),
+  0,
+  'privileged private helpers stay closed to anon and authenticated'
+);
+
+-- anon cannot even resolve a name inside private, which is what makes any stray
+-- ACL there moot rather than merely unused.
+select ok(
+  not has_schema_privilege('anon', 'private', 'USAGE'),
+  'anon has no USAGE on the private schema'
+);
+
 -- ===========================================================================
 -- B. Table privilege governance
 -- ===========================================================================
@@ -147,6 +264,22 @@ select is(
       and has_table_privilege('authenticated', c.oid, 'TRIGGER')),
   0,
   'authenticated holds TRIGGER on no public table'
+);
+
+-- REFERENCES was revoked alongside the other two and belongs to the same
+-- invariant. Relational shape is owned by migrations and the trusted backend;
+-- an end-user runtime role has no business creating foreign keys against
+-- application tables, and a key it owns can pin rows another role is entitled
+-- to delete. Asserted dynamically like its siblings so a future table cannot
+-- reintroduce it by inheriting Supabase's default GRANT ALL.
+select is(
+  (select count(*)::int
+     from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind in ('r', 'p')
+      and has_table_privilege('authenticated', c.oid, 'REFERENCES')),
+  0,
+  'authenticated holds REFERENCES on no public table'
 );
 
 select is(
@@ -224,6 +357,19 @@ select ok(
     where n.nspname = 'public'
       and c.relname in ('attendance_submissions', 'attendance_submission_events')),
   'attendance submissions force RLS against the owner'
+);
+
+-- Campaign metrics are the fourth member of the reviewed FORCE set and were
+-- described as such without being pinned. They are written by service-role
+-- ingestion and read by the owner's reporting, so owner bypass here would put
+-- spend and conversion figures outside the policies that scope them.
+select ok(
+  (select bool_and(c.relforcerowsecurity)
+     from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relname in ('campaign_metric_snapshots',
+                        'campaign_conversion_feedback_events')),
+  'campaign metric tables force RLS against the owner'
 );
 
 -- ===========================================================================
