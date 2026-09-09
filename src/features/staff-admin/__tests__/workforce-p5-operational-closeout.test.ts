@@ -111,8 +111,8 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
     );
     assert.equal(
       sorted[sorted.length - 1],
-      "20260908160000_portfolio_media_room_browse.sql",
-      "the newest migration is the photo-level room browse correction"
+      "20260909120000_revoke_authenticated_truncate_trigger.sql",
+      "the newest migration revokes TRUNCATE/TRIGGER from authenticated"
     );
     // M55 and M56 are still present and untouched by name.
     assert.ok(files.includes("20260904140000_interior_room_wise_quotation.sql"));
