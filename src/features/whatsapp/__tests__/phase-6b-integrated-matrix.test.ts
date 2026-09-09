@@ -97,7 +97,7 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 66, "Migration count must be exactly 66");
+    assert.equal(files.length, 67, "Migration count must be exactly 67");
 
     // Workforce V1 attendance lifecycle. Still no payment M38.
     const workforce = files.filter((f) => f.startsWith("20260902160000"));
@@ -227,6 +227,11 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
         // Photo-level room browsing and the Hall -> Living Room correction:
         // public portfolio browsing only, no COD or payment surface.
         "20260908160000_portfolio_media_room_browse.sql",
+        // Revokes TRUNCATE/TRIGGER/REFERENCES from `authenticated` on the
+        // attendance, salary, leave, Kriti and staff tables that had inherited
+        // them from Supabase's default GRANT ALL. Removes privilege only:
+        // creates no table, no function and no COD or payment surface.
+        "20260909120000_revoke_authenticated_truncate_trigger.sql",
       ],
       "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, CRM 2A-7, CRM 2C cadences, CRM 2D commercial read models, the lead_notes INSERT privilege redrift repair, CRM 2E management analytics, the WhatsApp lead-link repair, and the Workforce V1 attendance lifecycle may follow 9D-D1 COD order foundation"
     );
