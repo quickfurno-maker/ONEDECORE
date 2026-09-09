@@ -10,6 +10,7 @@ import {
   type LeadImportParsedRow,
 } from "../contracts/lead-import-contracts.ts";
 import { CrmError } from "./crm-errors.ts";
+import { assertSafeXlsxArchive } from "./xlsx-archive-preflight.ts";
 
 function stripUtf8Bom(value: string): string {
   return value.charCodeAt(0) === 0xfeff ? value.slice(1) : value;
@@ -127,13 +128,42 @@ async function assertNoXlsxFormulas(worksheet: ExcelJS.Worksheet): Promise<void>
   });
 }
 
-async function extractXlsxHeadersAndRecords(buffer: Buffer): Promise<{
+/**
+ * Hand a buffer to ExcelJS.
+ *
+ * Extracted so the archive gate below can be tested for what it actually
+ * guarantees — that an unsafe file never reaches the parser — rather than by
+ * reading the source and hoping the two statements stay in that order.
+ */
+export type XlsxWorkbookLoader = (buffer: Buffer) => Promise<ExcelJS.Workbook>;
+
+const loadWorkbookWithExcelJs: XlsxWorkbookLoader = async (buffer) => {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+  return workbook;
+};
+
+export async function extractXlsxHeadersAndRecords(
+  buffer: Buffer,
+  loadWorkbook: XlsxWorkbookLoader = loadWorkbookWithExcelJs
+): Promise<{
   worksheetName: string;
   headers: string[];
   records: Record<string, string>[];
 }> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+  /*
+   * BEFORE THE PARSER, NOT AFTER.
+   *
+   * The row and column limits further down are applied to a workbook ExcelJS
+   * has already decompressed, so they bound the result rather than the work. A
+   * 5 MiB archive declaring gigabytes of content would reach the parser first
+   * and the limits second. This gate reads the ZIP central directory and
+   * decompresses nothing; see `xlsx-archive-preflight.ts` for what that does
+   * and does not prove.
+   */
+  assertSafeXlsxArchive(buffer);
+
+  const workbook = await loadWorkbook(buffer);
 
   const worksheet = workbook.worksheets[0];
   if (!worksheet) {
