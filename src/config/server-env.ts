@@ -15,6 +15,24 @@ import {
 } from "../features/legal/terms-content.ts";
 import { areWebsiteLeadProcessorsReady } from "../features/legal/processor-register.ts";
 import type { LeadIntakeActivationInput } from "../features/legal/business-identity.ts";
+/*
+ * Supabase TARGET identity is a runtime property, not a lead-intake one, so it
+ * is owned by `lib/supabase/runtime-target.ts` and merely composed here. This
+ * module keeps what is genuinely its own: consent versions, processor
+ * diligence, published legal documents, the hash secret and trust-proxy.
+ *
+ * The two predicates are re-exported because callers and tests already import
+ * them from here, and moving a definition should not move its address.
+ */
+import {
+  isLoopbackSupabaseUrl,
+  isManagedOneDecoreSupabaseUrl,
+} from "../lib/supabase/runtime-target.ts";
+
+export {
+  isLoopbackSupabaseUrl,
+  isManagedOneDecoreSupabaseUrl,
+} from "../lib/supabase/runtime-target.ts";
 
 export type LeadIntakeMode = "disabled" | "local-test" | "enabled";
 
@@ -32,7 +50,7 @@ const MODE_VALUES = new Set<LeadIntakeMode>([
   "enabled",
 ]);
 
-const MANAGED_HOST = "lpurlfmpvriyvpkujvyl.supabase.co";
+
 
 function readOptional(
   env: NodeJS.ProcessEnv | Record<string, string | undefined>,
@@ -50,52 +68,6 @@ function looksLikePublishableKey(key: string): boolean {
 function safeUrlError(code: string): Error {
   // Never include URL or key material in errors.
   return new Error(`[ONEDECORE Lead Env] ${code}`);
-}
-
-/**
- * True only for strict loopback Supabase URLs (local-test).
- * Requires http:, loopback host, explicit valid port, root path only.
- * Rejects remote/managed hosts, credentials, query, fragment, and ambiguous URLs.
- */
-export function isLoopbackSupabaseUrl(urlStr: string): boolean {
-  let parsed: URL;
-  try {
-    parsed = new URL(urlStr);
-  } catch {
-    return false;
-  }
-  if (parsed.protocol !== "http:") return false;
-  if (parsed.username || parsed.password) return false;
-  if (parsed.search) return false;
-  if (parsed.hash) return false;
-  const path = parsed.pathname === "/" ? "/" : parsed.pathname;
-  if (path !== "/" && path !== "") return false;
-  if (!parsed.port) return false;
-  const portNum = Number(parsed.port);
-  if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535) {
-    return false;
-  }
-  const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  return host === "127.0.0.1" || host === "localhost" || host === "::1";
-}
-
-/**
- * True only for the ONEDECORE managed Supabase project over HTTPS.
- */
-export function isManagedOneDecoreSupabaseUrl(urlStr: string): boolean {
-  let parsed: URL;
-  try {
-    parsed = new URL(urlStr);
-  } catch {
-    return false;
-  }
-  if (parsed.protocol !== "https:") return false;
-  if (parsed.username || parsed.password) return false;
-  if (parsed.hash) return false;
-  if (parsed.search) return false;
-  const path = parsed.pathname === "/" ? "" : parsed.pathname;
-  if (path !== "" && path !== "/") return false;
-  return parsed.hostname.toLowerCase() === MANAGED_HOST;
 }
 
 /**

@@ -3,6 +3,11 @@
  * Validates public Supabase configuration values at runtime without logging credential values.
  */
 
+import {
+  isLoopbackSupabaseUrl,
+  isManagedOneDecoreSupabaseUrl,
+} from "@/lib/supabase/runtime-target";
+
 function getEnvVar(name: string): string {
   const value = process.env[name];
   if (!value || value.trim() === "") {
@@ -13,35 +18,37 @@ function getEnvVar(name: string): string {
   return value.trim();
 }
 
+/**
+ * THE PRODUCTION TARGET RULE, WITH THE LOOPBACK ESCAPE CLOSED.
+ *
+ * This used to compute `isLocal` as "hostname is loopback OR NODE_ENV is not
+ * production", and then skip the managed-host check whenever `isLocal` was
+ * true. The first half of that disjunction had no NODE_ENV condition, so a
+ * loopback hostname disabled the check IN PRODUCTION TOO: a production build
+ * configured with `http://127.0.0.1:54321` would have been accepted here and
+ * handed to the browser and cookie-scoped clients without complaint.
+ *
+ * The predicates are the shared ones, so the browser client, the server
+ * client and the service-role client now agree on what "the database" is.
+ */
 function validateSupabaseUrl(urlStr: string): string {
-  try {
-    const parsed = new URL(urlStr);
-    const isLocal =
-      parsed.hostname === "127.0.0.1" ||
-      parsed.hostname === "localhost" ||
-      process.env.NODE_ENV !== "production";
+  if (isManagedOneDecoreSupabaseUrl(urlStr)) {
+    return new URL(urlStr).origin;
+  }
 
-    if (!isLocal) {
-      if (parsed.protocol !== "https:") {
-        throw new Error(
-          `[ONEDECORE Env Error] NEXT_PUBLIC_SUPABASE_URL must use HTTPS protocol.`
-        );
-      }
-      if (parsed.hostname !== "lpurlfmpvriyvpkujvyl.supabase.co") {
-        throw new Error(
-          `[ONEDECORE Env Error] Invalid NEXT_PUBLIC_SUPABASE_URL hostname. Expected lpurlfmpvriyvpkujvyl.supabase.co`
-        );
-      }
-    }
-    return parsed.origin;
-  } catch (err) {
-    if (err instanceof Error && err.message.startsWith("[ONEDECORE Env Error]")) {
-      throw err;
-    }
+  if (process.env.NODE_ENV === "production") {
     throw new Error(
-      `[ONEDECORE Env Error] Malformed NEXT_PUBLIC_SUPABASE_URL format.`
+      `[ONEDECORE Env Error] NEXT_PUBLIC_SUPABASE_URL must be the managed ONEDECORE Supabase project.`
     );
   }
+
+  if (isLoopbackSupabaseUrl(urlStr)) {
+    return new URL(urlStr).origin;
+  }
+
+  throw new Error(
+    `[ONEDECORE Env Error] NEXT_PUBLIC_SUPABASE_URL must be the managed ONEDECORE project, or a loopback stack outside production.`
+  );
 }
 
 function validatePublishableKey(keyStr: string): string {
