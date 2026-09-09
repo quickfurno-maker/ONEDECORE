@@ -22,6 +22,8 @@ export interface CrmLeadListRow {
   readonly status: string;
   readonly submitted_name: string;
   readonly service_code: string;
+  readonly project_scope_code: string | null;
+  readonly budget_range_code: string | null;
   readonly locality: string | null;
   readonly assigned_to: string | null;
   readonly manual_sales_temperature: string | null;
@@ -40,6 +42,17 @@ export interface CrmLeadListItem {
   readonly status: LeadStageCode;
   readonly submittedName: string;
   readonly serviceCode: string;
+  /*
+   * The customer's own size and budget answers.
+   *
+   * These belong in a list DTO that deliberately excludes almost everything:
+   * they are sales QUALIFICATION facts, the two things a salesperson wants
+   * before deciding who to call first, and they carry no contact detail, no
+   * message, no intake evidence. Null is a real answer — wardrobes are asked
+   * neither, and pre-v4 leads were asked neither.
+   */
+  readonly projectScopeCode: string | null;
+  readonly budgetRangeCode: string | null;
   readonly locality: string | null;
   readonly entryMethod: string;
   readonly primarySourceLabel: string;
@@ -95,6 +108,8 @@ const CRM_LEAD_LIST_ITEM_KEYS = [
   "status",
   "submittedName",
   "serviceCode",
+  "projectScopeCode",
+  "budgetRangeCode",
   "locality",
   "entryMethod",
   "primarySourceLabel",
@@ -170,6 +185,8 @@ export function mapLeadRowToListItem(
     status: row.status as LeadStageCode,
     submittedName: row.submitted_name,
     serviceCode: row.service_code,
+    projectScopeCode: row.project_scope_code,
+    budgetRangeCode: row.budget_range_code,
     locality: row.locality,
     entryMethod: row.entry_method,
     primarySourceLabel: row.lead_sources?.display_name ?? "Unknown source",

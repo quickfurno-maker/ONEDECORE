@@ -30,6 +30,9 @@ function sampleLeadRow(overrides: Partial<CrmLeadListRow> = {}): CrmLeadListRow 
     status: "new",
     submitted_name: "Test Lead",
     service_code: "complete-home-interiors",
+    // v4 requirement facts. Null here: this fixture is a pre-v4 lead.
+    project_scope_code: null,
+    budget_range_code: null,
     locality: "Koregaon Park",
     assigned_to: null,
   manual_sales_temperature: null,

@@ -1,6 +1,9 @@
 import Link from "next/link";
 import type { CrmLeadListItem } from "../../contracts/lead-dtos.ts";
-import { formatCrmCodeLabel } from "../../contracts/crm-labels.ts";
+import {
+  formatCrmCodeLabel,
+  formatProjectRequirementMeta,
+} from "../../contracts/crm-labels.ts";
 import {
   CRM_SITE_VISIT_STATE_LABELS,
   formatLeadQuotationState,
@@ -30,7 +33,12 @@ function initials(name: string): string {
 export function LeadListCards({ items }: LeadListCardsProps) {
   return (
     <div className="space-y-2.5 md:hidden">
-      {items.map((item) => (
+      {items.map((item) => {
+        const requirementMeta = formatProjectRequirementMeta(
+          item.projectScopeCode,
+          item.budgetRangeCode
+        );
+        return (
         <Link
           key={item.id}
           href={`/admin/crm/leads/${item.id}`}
@@ -49,10 +57,31 @@ export function LeadListCards({ items }: LeadListCardsProps) {
                 source={item.salesBucketSource}
               />
             </div>
-            <p className="mt-1 truncate text-[13px] text-[var(--crm-text-secondary)]">
+            <p
+              className="mt-1 truncate text-[13px] text-[var(--crm-text-secondary)]"
+              data-testid="lead-card-service"
+            >
               {formatCrmCodeLabel(item.serviceCode)}
               {item.locality ? ` · ${item.locality}` : ""}
             </p>
+            {/*
+              Size and budget get their OWN line rather than being appended to
+              the one above: on a phone that line is already service plus
+              locality, and a fourth value would truncate the lot. Values only,
+              no "Project scope:" labels — in a list the numbers speak, and the
+              card still has to leave room for stage, bucket and milestones.
+
+              Absent when the customer was asked neither, so a wardrobe card
+              gains no empty row.
+            */}
+            {requirementMeta ? (
+              <p
+                className="mt-0.5 truncate text-xs text-[var(--crm-muted)]"
+                data-testid="lead-card-requirement-meta"
+              >
+                {requirementMeta}
+              </p>
+            ) : null}
             {/* Stage is a separate fact from the bucket above, so the card
                 carries both rather than collapsing them into one signal. */}
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -104,7 +133,8 @@ export function LeadListCards({ items }: LeadListCardsProps) {
             </div>
           </div>
         </Link>
-      ))}
+        );
+      })}
     </div>
   );
 }

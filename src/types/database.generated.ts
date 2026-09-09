@@ -3952,6 +3952,7 @@ export type Database = {
           assigned_to: string | null
           attribution: Json
           budget_comfort_code: string | null
+          budget_range_code: string | null
           closed_lost_note: string | null
           closed_lost_reason_id: string | null
           contact_id: string
@@ -3977,6 +3978,7 @@ export type Database = {
           qualifier_code: string | null
           qualifier_kind: string | null
           primary_source_id: string
+          project_scope_code: string | null
           property_code: string | null
           room_codes: string[]
           service_code: string
@@ -3992,6 +3994,7 @@ export type Database = {
           assigned_to?: string | null
           attribution?: Json
           budget_comfort_code?: string | null
+          budget_range_code?: string | null
           closed_lost_note?: string | null
           closed_lost_reason_id?: string | null
           contact_id: string
@@ -4017,6 +4020,7 @@ export type Database = {
           qualifier_code?: string | null
           qualifier_kind?: string | null
           primary_source_id: string
+          project_scope_code?: string | null
           property_code?: string | null
           room_codes?: string[]
           service_code: string
@@ -4032,6 +4036,7 @@ export type Database = {
           assigned_to?: string | null
           attribution?: Json
           budget_comfort_code?: string | null
+          budget_range_code?: string | null
           closed_lost_note?: string | null
           closed_lost_reason_id?: string | null
           contact_id?: string
@@ -4057,6 +4062,7 @@ export type Database = {
           qualifier_code?: string | null
           qualifier_kind?: string | null
           primary_source_id?: string
+          project_scope_code?: string | null
           property_code?: string | null
           room_codes?: string[]
           service_code?: string
