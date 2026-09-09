@@ -78,7 +78,6 @@ describe("home-r4 production guards", () => {
     const page = read(pagePath);
     const interiors = read(join(root, "src/app/interiors/page.tsx"));
     assert.match(page, /getFeaturedProjects/);
-    assert.match(page, /getLeadFormMode/);
     assert.doesNotMatch(page, /force-dynamic/);
     assert.match(page, /DiscoveryHomePage/);
     assert.doesNotMatch(page, /loadConceptFeatured/);
@@ -87,7 +86,13 @@ describe("home-r4 production guards", () => {
     assert.match(page, /index:\s*true/);
     assert.match(page, /Home Interiors, Modular Kitchens & Wardrobes in Pune/);
     assert.match(interiors, /InteriorsConversionPage/);
-    assert.match(interiors, /getLeadFormMode/);
+    /*
+     * The route no longer threads a build-time form mode. It renders the page,
+     * which mounts the one consultation host; the host asks the running server
+     * whether a lead can be submitted. A NEXT_PUBLIC_ flag baked into HTML
+     * could not know that, and the disagreement lost a real enquiry.
+     */
+    assert.doesNotMatch(interiors, /leadFormMode/);
   });
 
   test("homepage no longer mounts HomeProjects or project-preview copy", () => {

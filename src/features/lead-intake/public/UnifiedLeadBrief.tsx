@@ -18,6 +18,15 @@
  * fields, the consent checkbox and the submission state, because those exist
  * only here and must not survive a step change or leak into the shared plan.
  *
+ * THERE IS NO "PREVIEW" MODE HERE ANY MORE
+ *
+ * This step used to take a `mode` prop derived from a build-time public flag,
+ * and would validate-but-not-send when that flag said "preview". That flag was
+ * the split brain: the browser could believe the form was live while the server
+ * could not accept anything, and a real enquiry was lost that way. Whether a
+ * lead can be submitted is now a question only the running server answers, and
+ * the sheet does not render this step at all unless the answer was yes.
+ *
  * THE ANTI-BOT WINDOW
  *
  * `formStartedAt` is stamped when this component first mounts, which is when
@@ -39,7 +48,10 @@ import {
 } from "react";
 import { SINGLE_CONSENT_CONCISE_COPY } from "../../legal/consent-registry.ts";
 import { SUBMIT_LABEL } from "../project-scope.ts";
-import { usePlan } from "../../public-site/home-r4/PlanContext";
+import {
+  usePlan,
+  type LeadSubmissionResult,
+} from "../../public-site/home-r4/PlanContext";
 import { collectLeadFormAttribution } from "./lead-form-attribution.ts";
 import {
   LEAD_FORM_FIELD_LIMITS,
@@ -50,7 +62,6 @@ import {
 import {
   fieldPathToLabel,
   getLeadFormStatusMessage,
-  LEAD_FORM_PREVIEW_NOTICE,
   mapClientResultToUxState,
   type LeadFormUxState,
 } from "./lead-form-errors.ts";
@@ -69,7 +80,7 @@ import {
   shouldReuseOnError,
 } from "./lead-form-idempotency.ts";
 import { submitLeadIntake } from "./lead-intake-client.ts";
-import type { LeadFormMode } from "./lead-form-mode.ts";
+import { useLeadConsultation } from "./LeadConsultationHost";
 import { unifiedLeadToRequest } from "./unified-lead-request.ts";
 
 /**
@@ -93,9 +104,15 @@ const BRIEF_FIELD_ORDER: readonly BriefFieldKey[] = ["name", "mobile", "consent"
 export const UNIFIED_BRIEF_SUBMITTING_LABEL = "Sending…";
 
 export interface UnifiedLeadBriefProps {
-  readonly mode: LeadFormMode;
-  /** Called after a lead is accepted, so the sheet can show its success state. */
-  readonly onSubmitted?: () => void;
+  /**
+   * Called once the server ACCEPTS a lead, with what it said about it.
+   *
+   * The result is handed upward rather than rendered here because the
+   * confirmation has to outlive this component: these fields are replaced the
+   * moment an enquiry is accepted, and a reference kept in their local state
+   * would be destroyed along with them.
+   */
+  readonly onSubmitted?: (result: LeadSubmissionResult) => void;
 }
 
 function pulseInvalidHaptic(): void {
@@ -108,8 +125,9 @@ function pulseInvalidHaptic(): void {
   }
 }
 
-export function UnifiedLeadBrief({ mode, onSubmitted }: UnifiedLeadBriefProps) {
+export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
   const plan = usePlan();
+  const { trustedContexts } = useLeadConsultation();
   const formId = useId();
 
   const nameRef = useRef<HTMLInputElement>(null);
@@ -155,7 +173,7 @@ export function UnifiedLeadBrief({ mode, onSubmitted }: UnifiedLeadBriefProps) {
   const isSuccess =
     uxState === "success-created" || uxState === "success-duplicate";
   const canAttemptSubmit = !isSubmitting && !isSuccess;
-  const canNetworkSubmit = mode === "active" && canAttemptSubmit;
+
 
   const statusMessage = getLeadFormStatusMessage(uxState, {
     retryAfterSeconds,
@@ -255,12 +273,6 @@ export function UnifiedLeadBrief({ mode, onSubmitted }: UnifiedLeadBriefProps) {
 
     setFieldErrors({});
 
-    // Preview: client validation only — never call intake.
-    if (!canNetworkSubmit) {
-      setUxState("idle");
-      return;
-    }
-
     submittingRef.current = true;
     setUxState("submitting");
 
@@ -277,6 +289,12 @@ export function UnifiedLeadBrief({ mode, onSubmitted }: UnifiedLeadBriefProps) {
       attribution: collectLeadFormAttribution(),
       antiBot: { website: honeypot, formStartedAt },
       idempotencyKey: "00000000-0000-4000-8000-000000000000",
+      /*
+       * Present only when the visitor arrived through a published Landing Lab
+       * page. Relayed exactly as the server signed them — this form neither
+       * mints nor inspects them, which is what keeps the attribution trustable.
+       */
+      trustedContexts,
     });
 
     if (!draft.ok) {
@@ -300,7 +318,10 @@ export function UnifiedLeadBrief({ mode, onSubmitted }: UnifiedLeadBriefProps) {
       setSubmissionReference(result.submissionReference);
       setUxState(mapClientResultToUxState(result));
       submittingRef.current = false;
-      onSubmitted?.();
+      onSubmitted?.({
+        reference: result.submissionReference ?? null,
+        duplicate: result.kind === "success-duplicate",
+      });
       return;
     }
 
@@ -355,12 +376,6 @@ export function UnifiedLeadBrief({ mode, onSubmitted }: UnifiedLeadBriefProps) {
       data-od-lead-form="unified-v4"
       data-od-lead-phone-ux="national-10"
     >
-      {mode === "preview" ? (
-        <p className="pm-planner__hint" role="note">
-          {LEAD_FORM_PREVIEW_NOTICE}
-        </p>
-      ) : null}
-
       {showSummary ? (
         <div
           ref={summaryRef}
@@ -394,7 +409,7 @@ export function UnifiedLeadBrief({ mode, onSubmitted }: UnifiedLeadBriefProps) {
         </p>
       ) : null}
 
-      <fieldset className="pm-fieldset" disabled={isSubmitting || isSuccess}>
+      <fieldset className="pm-fieldset" disabled={isSubmitting}>
         <legend className="pm-legend">Where should we send the plan?</legend>
 
         <div className={fieldClass("name")}>
@@ -501,7 +516,7 @@ export function UnifiedLeadBrief({ mode, onSubmitted }: UnifiedLeadBriefProps) {
         </div>
       </fieldset>
 
-      <fieldset className="pm-fieldset" disabled={isSubmitting || isSuccess}>
+      <fieldset className="pm-fieldset" disabled={isSubmitting}>
         <legend className="pm-legend">Consent</legend>
         {/*
           ONE checkbox, TWO purposes. The combined wording is the approved

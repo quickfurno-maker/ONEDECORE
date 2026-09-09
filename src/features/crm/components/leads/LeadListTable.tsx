@@ -1,6 +1,9 @@
 import Link from "next/link";
 import type { CrmLeadListItem } from "../../contracts/lead-dtos.ts";
-import { formatCrmCodeLabel } from "../../contracts/crm-labels.ts";
+import {
+  formatCrmCodeLabel,
+  formatProjectRequirementMeta,
+} from "../../contracts/crm-labels.ts";
 import {
   CRM_SITE_VISIT_STATE_LABELS,
   formatLeadQuotationState,
@@ -78,7 +81,12 @@ export function LeadListTable({ items }: LeadListTableProps) {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {items.map((item) => {
+              const requirementMeta = formatProjectRequirementMeta(
+                item.projectScopeCode,
+                item.budgetRangeCode
+              );
+              return (
               <tr
                 key={item.id}
                 className="crm-row h-14 border-t border-[var(--crm-border)]"
@@ -101,8 +109,30 @@ export function LeadListTable({ items }: LeadListTableProps) {
                     </span>
                   </Link>
                 </td>
+                {/*
+                  THE REQUIREMENT, NOT JUST THE SERVICE.
+
+                  The service alone does not tell a salesperson which call to
+                  make first; "2 BHK · ₹8–12 Lakh" does. It goes in the cell
+                  that already exists rather than in two new columns, because
+                  the queue has to stay readable on a laptop.
+
+                  The second line is omitted entirely when the customer was
+                  asked neither — a wardrobe enquiry showing "— · —" would
+                  dress a correct silence up as missing data.
+                */}
                 <td className="px-4 text-[var(--crm-text-secondary)]">
-                  {formatCrmCodeLabel(item.serviceCode)}
+                  <span className="block" data-testid="lead-row-service">
+                    {formatCrmCodeLabel(item.serviceCode)}
+                  </span>
+                  {requirementMeta ? (
+                    <span
+                      className="mt-0.5 block text-xs text-[var(--crm-muted)]"
+                      data-testid="lead-row-requirement-meta"
+                    >
+                      {requirementMeta}
+                    </span>
+                  ) : null}
                 </td>
                 <td className="px-4">
                   <LeadSalesBucketBadge
@@ -150,7 +180,8 @@ export function LeadListTable({ items }: LeadListTableProps) {
                   {formatTimestamp(item.createdAt)}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

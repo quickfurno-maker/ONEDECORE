@@ -4419,6 +4419,65 @@
   font-size: 0.92rem;
 }
 
+/* ==========================================================================
+   THE CONFIRMATION PANEL
+   --------------------------------------------------------------------------
+   Replaces the fields once a lead is accepted, inside the same sheet. It has
+   to read as the deliberate end of the journey rather than as an empty form:
+   generous vertical space, the thank-you at panel scale, and the reference set
+   apart so it can be read back over the phone.
+   ========================================================================== */
+
+[data-public-home-r4] .pm-brief--done {
+  gap: 20px;
+  padding: 8px 0 4px;
+  text-align: left;
+}
+
+[data-public-home-r4] .pm-brief__success-title {
+  margin: 0;
+  color: var(--pm-ivory);
+  font-size: 1.12rem;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+/* The focus ring belongs on the heading: focus is moved here on success. */
+[data-public-home-r4] .pm-brief__success-title:focus-visible {
+  outline: 2px solid var(--pm-bronze);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+[data-public-home-r4] .pm-brief__reference {
+  margin: 0;
+  color: var(--pm-stone);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+[data-public-home-r4] .pm-brief__reference-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--pm-ivory);
+}
+
+[data-public-home-r4] .pm-brief__done-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Full width on phones so the only remaining action is unmissable. */
+@media (max-width: 520px) {
+  [data-public-home-r4] .pm-brief__done-actions {
+    justify-content: stretch;
+  }
+
+  [data-public-home-r4] .pm-brief__done-actions > .dc-btn {
+    width: 100%;
+  }
+}
+
 /* Off-screen rather than display:none — a hidden input some bots still fill. */
 [data-public-home-r4] .pm-brief__honeypot {
   position: absolute;

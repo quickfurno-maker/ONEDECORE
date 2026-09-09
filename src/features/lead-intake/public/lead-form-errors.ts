@@ -112,6 +112,22 @@ export function mapClientResultToUxState(
   }
 }
 
+/*
+ * THE OWNER-APPROVED CONFIRMATION.
+ *
+ * Held here rather than inlined in the panel so the words the visitor reads
+ * after a successful enquiry have exactly one definition.
+ */
+export const LEAD_FORM_SUCCESS_TITLE =
+  "Thank you. We received your consultation request and will follow up.";
+
+/** The replay acknowledgement: honest that nothing new was raised. */
+export const LEAD_FORM_DUPLICATE_TITLE =
+  "We already have this consultation request. Our team will follow up.";
+
+/** The success screen's only control. */
+export const LEAD_FORM_DONE_LABEL = "Done";
+
 export function getLeadFormStatusMessage(
   state: LeadFormUxState,
   options?: {
@@ -128,16 +144,24 @@ export function getLeadFormStatusMessage(
     case "success-created":
       return {
         state,
-        title: "Your enquiry has been received.",
+        title: LEAD_FORM_SUCCESS_TITLE,
         body: options?.submissionReference
           ? `Reference: ${options.submissionReference}`
           : undefined,
         isError: false,
       };
     case "success-duplicate":
+      /*
+       * A REPLAY IS NOT A SECOND LEAD.
+       *
+       * The server answered 200 because it recognised an enquiry it already
+       * holds. Saying "received" again would tell the visitor a second request
+       * was raised; the wording has to acknowledge what they sent without
+       * implying anything new was created.
+       */
       return {
         state,
-        title: "This enquiry was already received.",
+        title: LEAD_FORM_DUPLICATE_TITLE,
         body: options?.submissionReference
           ? `Reference: ${options.submissionReference}`
           : undefined,

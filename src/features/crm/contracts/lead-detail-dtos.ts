@@ -24,6 +24,21 @@ export interface CrmLeadDetailOverview {
    * kitchen or wardrobe enquiry legitimately carries neither.
    */
   readonly propertyCode: string | null;
+  /**
+   * The `public-consult-v4` answers, kept ALONGSIDE the legacy fields above
+   * rather than replacing them.
+   *
+   * v4 asks how big the job is and what budget band the customer is
+   * comfortable with; older planner versions asked about property type, rooms
+   * and budget comfort instead. A lead carries whichever pair its form
+   * actually collected, so both must survive here — a v2 lead has no scope,
+   * and a v4 lead has no property, and neither absence is a defect.
+   *
+   * Null for `custom-wardrobes` even under v4: that service has no scope list
+   * and no owner-approved budget ladder, so it is never asked.
+   */
+  readonly projectScopeCode: string | null;
+  readonly budgetRangeCode: string | null;
   readonly timelineCode: string | null;
   /** The service-specific answer the public form did collect. */
   readonly qualifierKind: string | null;

@@ -81,7 +81,7 @@ describe("Public Indian mobile national UX", () => {
   });
 });
 
-describe("Public lead form field validation + HomeLeadCapture phone UX", () => {
+describe("Public lead form field validation + the canonical brief phone UX", () => {
   test("blank and invalid mobile messages; required fields block submit path", () => {
     const blank = validateLeadFormFields({
       name: "",
@@ -130,8 +130,8 @@ describe("Public lead form field validation + HomeLeadCapture phone UX", () => {
     assert.doesNotMatch(INDIAN_MOBILE_HELPER, /\+91/);
   });
 
-  test("HomeLeadCapture uses national-10 UX without +91 instruction", () => {
-    const src = read("src/features/lead-intake/public/HomeLeadCapture.tsx");
+  test("the canonical brief uses national-10 UX without +91 instruction", () => {
+    const src = read("src/features/lead-intake/public/UnifiedLeadBrief.tsx");
     assert.match(src, /autoComplete="tel-national"/);
     assert.match(src, /inputMode="numeric"/);
     assert.match(src, /maxLength=\{10\}/);
@@ -142,12 +142,19 @@ describe("Public lead form field validation + HomeLeadCapture phone UX", () => {
     assert.match(src, /pm-field--shake/);
     assert.match(src, /aria-describedby/);
     assert.match(src, /acceptIndianMobileInput/);
-    assert.match(src, /canNetworkSubmit/);
+    /*
+     * `canNetworkSubmit` is gone with the build-time preview mode. The brief
+     * only renders once the SERVER has said a lead can be submitted, so there
+     * is no longer a client-side "validate but do not send" branch to gate.
+     */
+    assert.match(src, /canAttemptSubmit/);
     assert.doesNotMatch(src, /type="email"/);
-    assert.match(
-      src,
-      /const \[whatsappConsent, setWhatsappConsent\] = useState\(false\)/
-    );
+    /*
+     * There is exactly ONE visible consent now. The separate WhatsApp checkbox
+     * was removed with the legacy form: an optional consent nobody is asked for
+     * must be absent from the request, not recorded as false.
+     */
+    assert.doesNotMatch(src, /whatsappConsent/);
     assert.doesNotMatch(src, /HomePlannerSheet|HomeBudgetEstimator/);
   });
 

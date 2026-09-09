@@ -6,12 +6,34 @@ Legal/consent activation state is **published and effective from 2026-08-25** in
 
 Public lead collection remains **disabled by default at runtime** until VPS deployment sets environment variables.
 
-Dual gates:
+### One gate, not two
 
-1. Browser UI: `NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE` defaults to `copy-only`
-2. Server: `ONEDECORE_LEAD_INTAKE_MODE` defaults to `disabled`
+`ONEDECORE_LEAD_INTAKE_MODE` (server-only, defaults to `disabled`) is the **single
+authority** on whether the public form submits.
 
-Client `active` cannot bypass a disabled server.
+There used to be a second, browser-side gate — `NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE`.
+It has been **removed**, and the reason matters: a `NEXT_PUBLIC_` value is baked
+into the HTML at build time and cannot know anything about the running server.
+The two could disagree, and when they did the browser rendered an active,
+four-step form against a backend that could accept nothing. A real customer
+enquiry was lost that way.
+
+The public form now asks the server at the moment a visitor opens it:
+
+```
+GET /api/public/lead-intake/readiness   ->   { "available": true|false }
+```
+
+Evaluated per request, `no-store`, Node runtime, and it reveals **only** that
+boolean — never which check failed, which variable is missing, or how long a
+secret is. If the answer is `false` the sheet renders no editable field at all;
+it shows an unavailable notice and, where a real number is configured, a direct
+contact action.
+
+`POST /api/public/lead-intake` remains the only submission endpoint and
+re-validates everything for itself. Readiness decides what the UI *offers*; the
+POST decides what the server *accepts*, and a race between them still fails
+visibly rather than silently.
 
 Canonical activation decision source (fail-closed):
 
@@ -136,7 +158,6 @@ leadProcessorsRegistered = true
 Production environment **on VPS before** build (no secret values in git):
 
 ```text
-NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE=active
 ONEDECORE_LEAD_INTAKE_MODE=enabled
 ONEDECORE_TRUST_PROXY=true
 ONEDECORE_SHOP_PUBLIC_ENABLED=false

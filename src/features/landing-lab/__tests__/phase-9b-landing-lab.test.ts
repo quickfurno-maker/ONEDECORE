@@ -46,6 +46,9 @@ import {
   verifyPublicationContext,
 } from "../server/publication-context-crypto.ts";
 
+const stripComments = (source: string) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
+
 const root = process.cwd();
 const secret = "phase-9b-test-secret";
 
@@ -425,12 +428,28 @@ describe("Phase 9B UI prebuild contracts", () => {
     assert.match(LANDING_LAB_PREBUILD_BANNER, /not a public publication/i);
   });
 
-  test("lead form preview is non-submitting", () => {
+  test("lead form preview is not a form at all", () => {
+    /*
+     * It used to render a real `<form>` with disabled inputs and a
+     * `preventDefault` handler. It never submitted, but it was structurally a
+     * second lead form — one `disabled` away from becoming a real one, and one
+     * more thing to find when auditing how many public lead forms exist.
+     *
+     * The published page does not render fields here either: the block is a
+     * headline and a button that opens the one canonical consultation sheet.
+     * So the honest preview is that shape.
+     */
     const leadForm = readFileSync(join(root, componentPaths[9]!), "utf8");
-    assert.match(leadForm, /preventDefault/);
-    assert.match(leadForm, /disabled/);
-    assert.match(leadForm, /does not submit/i);
-    assert.doesNotMatch(leadForm, /fetch\(|supabase/i);
+    /*
+     * Comment-stripped: the docblock explains what this used to be, and an
+     * assertion that trips on its own documentation is an instruction to
+     * delete the documentation.
+     */
+    const leadFormCode = stripComments(leadForm);
+    assert.doesNotMatch(leadFormCode, /<form\b/);
+    assert.doesNotMatch(leadFormCode, /<input\b/);
+    assert.match(leadForm, /Preview only/i);
+    assert.doesNotMatch(leadFormCode, /fetch\(|supabase/i);
   });
 
   test("variant comparison uses frozen versions fixture", () => {

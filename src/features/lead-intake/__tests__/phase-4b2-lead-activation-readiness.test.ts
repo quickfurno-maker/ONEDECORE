@@ -1,4 +1,13 @@
 /**
+ * TRIMMED WHEN THE SITE CONSOLIDATED ON ONE FORM.
+ *
+ * The blocks that certified the deleted legacy planner form, its adapter and
+ * the build-time `LEAD_FORM_MODE` gate are gone with the code they described —
+ * a test that keeps dead UI alive is not coverage, it is an anchor. What
+ * remains is what still governs the canonical v4 path: consent version
+ * contracts, idempotency, API client outcome mapping and attribution
+ * hardening.
+ *
  * Phase 4B2 — public lead form gates, consent selector, adapter, idempotency, client.
  */
 
@@ -21,10 +30,6 @@ import {
   type LeadIntakeRequestBody,
 } from "../contracts.ts";
 import {
-  getLeadFormMode,
-  type LeadFormMode,
-} from "../public/lead-form-mode.ts";
-import {
   fingerprintLeadPayload,
   getOrCreateKey,
   resetAfterSuccess,
@@ -32,10 +37,9 @@ import {
   shouldReuseOnError,
 } from "../public/lead-form-idempotency.ts";
 import { submitLeadIntake } from "../public/lead-intake-client.ts";
-import { planToLeadRequest } from "../public/plan-to-lead-request.ts";
 import {
   getLeadFormStatusMessage,
-  validateLeadFormFields,
+  mapClientResultToUxState,
 } from "../public/lead-form-errors.ts";
 import { isSafeSameSitePath } from "../same-site-path.ts";
 
@@ -98,28 +102,6 @@ function sampleBody(
   };
 }
 
-describe("Phase 4B2 lead form mode", () => {
-  test("defaults to copy-only for missing/invalid values", () => {
-    assert.equal(getLeadFormMode({}), "copy-only");
-    assert.equal(
-      getLeadFormMode({ NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE: "" }),
-      "copy-only"
-    );
-    assert.equal(
-      getLeadFormMode({ NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE: "enabled" }),
-      "copy-only"
-    );
-  });
-
-  test("accepts copy-only, preview, active", () => {
-    for (const mode of ["copy-only", "preview", "active"] as LeadFormMode[]) {
-      assert.equal(
-        getLeadFormMode({ NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE: mode }),
-        mode
-      );
-    }
-  });
-});
 
 describe("Phase 4B2 current consent version contract", () => {
   test("maps exactly one current version id per purpose", () => {
@@ -186,90 +168,6 @@ describe("Phase 4B2 current consent version contract", () => {
   });
 });
 
-describe("Phase 4B2 plan adapter and form fields", () => {
-  test("maps planner + form fields without server-owned fields", () => {
-    const result = planToLeadRequest({
-      plan: samplePlan(),
-      name: "Test Person",
-      mobile: "+919876543210",
-      email: "synthetic@example.test",
-      locality: "Koregaon Park",
-      message: "Hello",
-      consent: {
-        serviceEnquiry: true,
-        servicePhone: true,
-        serviceEmail: true,
-        whatsappService: true,
-      },
-      attribution: { landingPath: "/" },
-      antiBot: { website: "", formStartedAt: FORM_STARTED_AT },
-      idempotencyKey: "22222222-2222-4222-8222-222222222222",
-    });
-    assert.equal(result.ok, true);
-    if (!result.ok) return;
-    assert.equal(result.body.consent.serviceChannels.email, true);
-    assert.equal(result.body.consent.whatsappService, true);
-    assert.equal(result.body.consent.whatsappCopyVersion, WHATSAPP_COPY_VERSION);
-    const raw = JSON.stringify(result.body);
-    assert.doesNotMatch(raw, /"source"/);
-    assert.doesNotMatch(raw, /"actor"/);
-    assert.doesNotMatch(raw, /"status"/);
-    assert.doesNotMatch(raw, /marketing/i);
-  });
-
-  test("rejects email without consent and consent without email", () => {
-    const noConsent = planToLeadRequest({
-      plan: samplePlan(),
-      name: "Test Person",
-      mobile: "+919876543210",
-      email: "synthetic@example.test",
-      consent: { serviceEnquiry: true, servicePhone: true },
-      attribution: { landingPath: "/" },
-      antiBot: { website: "", formStartedAt: FORM_STARTED_AT },
-      idempotencyKey: "22222222-2222-4222-8222-222222222222",
-    });
-    assert.equal(noConsent.ok, false);
-
-    const noEmail = planToLeadRequest({
-      plan: samplePlan(),
-      name: "Test Person",
-      mobile: "+919876543210",
-      consent: {
-        serviceEnquiry: true,
-        servicePhone: true,
-        serviceEmail: true,
-      },
-      attribution: { landingPath: "/" },
-      antiBot: { website: "", formStartedAt: FORM_STARTED_AT },
-      idempotencyKey: "22222222-2222-4222-8222-222222222222",
-    });
-    assert.equal(noEmail.ok, false);
-  });
-
-  test("client validation requires consents and forbids marketing fields", () => {
-    const result = validateLeadFormFields({
-      name: "A",
-      mobile: "",
-      email: "x@y.z",
-      locality: "",
-      message: "",
-      serviceEnquiryConsent: false,
-      servicePhoneConsent: false,
-      serviceEmailConsent: false,
-      hasEmail: true,
-    });
-    assert.ok(result.messages.length >= 3);
-    assert.equal(result.ok, false);
-
-    const capture = readFileSync(
-      join(root, "src/features/lead-intake/public/HomeLeadCapture.tsx"),
-      "utf8"
-    );
-    assert.doesNotMatch(capture, /MARKETING/);
-    assert.doesNotMatch(capture, /marketingConsent/);
-    assert.match(capture, /SERVICE_ENQUIRY|serviceEnquiry|consentServiceEnquiry/);
-  });
-});
 
 describe("Phase 4B2 idempotency session", () => {
   test("reuses key for identical payload; resets on change, success, conflict", () => {
@@ -354,7 +252,11 @@ describe("Phase 4B2 API client outcomes", () => {
     const created = getLeadFormStatusMessage("success-created", {
       submissionReference: "OD-TEST-1",
     });
-    assert.equal(created?.title, "Your enquiry has been received.");
+    // The owner-approved sentence. Still an acknowledgement, not a promise.
+    assert.equal(
+      created?.title,
+      "Thank you. We received your consultation request and will follow up."
+    );
     assert.match(created?.body ?? "", /OD-TEST-1/);
     assert.doesNotMatch(created?.title ?? "", /appointment|WhatsApp sent|guaranteed/i);
 
@@ -367,36 +269,8 @@ describe("Phase 4B2 API client outcomes", () => {
 });
 
 describe("Phase 4B2 accessibility and copy-only regression", () => {
-  test("form uses fieldsets, labels, aria and no marketing", () => {
-    const capture = readFileSync(
-      join(root, "src/features/lead-intake/public/HomeLeadCapture.tsx"),
-      "utf8"
-    );
-    assert.match(capture, /<fieldset/);
-    assert.match(capture, /<legend/);
-    assert.match(capture, /aria-invalid/);
-    assert.match(capture, /aria-busy/);
-    assert.match(capture, /aria-live/);
-    assert.match(capture, /role="alert"/);
-    assert.doesNotMatch(capture, /defaultChecked=\{true\}/);
-  });
 
-  test("HomePlan keeps the copy-only path and mounts no form of its own", () => {
-    const homePlan = readFileSync(
-      join(root, "src/features/public-site/home-r4/HomePlan.tsx"),
-      "utf8"
-    );
-    assert.match(homePlan, /copy-only/);
-    assert.doesNotMatch(homePlan, /\/api\/public\/lead-intake/);
-    // The section offers the canonical sheet; it no longer embeds a form.
-    assert.match(homePlan, /openPlanner/);
-    assert.doesNotMatch(homePlan, /HomeLeadCapture/);
-  });
 
-  test("env example documents form mode default", () => {
-    const example = readFileSync(join(root, ".env.example"), "utf8");
-    assert.match(example, /NEXT_PUBLIC_ONEDECORE_LEAD_FORM_MODE=copy-only/);
-  });
 
   test("same-site attribution hardening shared module", () => {
     assert.equal(isSafeSameSitePath("/portfolio?x=1#y"), true);

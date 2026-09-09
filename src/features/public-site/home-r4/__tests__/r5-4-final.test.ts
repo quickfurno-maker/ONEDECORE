@@ -29,11 +29,16 @@ describe("R5.4 static homepage", () => {
     const page = readFileSync(pagePath, "utf8");
     const interiors = readFileSync(join(root, "src/app/interiors/page.tsx"), "utf8");
     assert.match(page, /getFeaturedProjects/);
-    assert.match(page, /getLeadFormMode/);
     assert.doesNotMatch(page, /force-dynamic/);
     assert.match(page, /DiscoveryHomePage/);
-    assert.match(interiors, /getLeadFormMode/);
-    assert.match(interiors, /<InteriorsConversionPage leadFormMode=\{leadFormMode\} \/>/);
+    /*
+     * The route no longer threads a build-time form mode. It renders the page,
+     * which mounts the one consultation host; the host asks the running server
+     * whether a lead can be submitted. A NEXT_PUBLIC_ flag baked into HTML
+     * could not know that, and the disagreement lost a real enquiry.
+     */
+    assert.match(interiors, /<InteriorsConversionPage \/>/);
+    assert.doesNotMatch(interiors, /leadFormMode/);
   });
 
   test("ProductionHomePage has no featured prop or HomeProjects", () => {

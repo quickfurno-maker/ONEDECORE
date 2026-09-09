@@ -45,7 +45,7 @@ import {
 import { latestIso } from "./crm-lead-score-signals.ts";
 
 const CRM_LEAD_LIST_SELECT =
-  "id, status, submitted_name, service_code, locality, assigned_to, manual_sales_temperature, entry_method, primary_source_id, created_at, updated_at, lead_sources!leads_primary_source_id_fkey(display_name)";
+  "id, status, submitted_name, service_code, project_scope_code, budget_range_code, locality, assigned_to, manual_sales_temperature, entry_method, primary_source_id, created_at, updated_at, lead_sources!leads_primary_source_id_fkey(display_name)";
 
 function startOfTodayIso(): string {
   const now = new Date();

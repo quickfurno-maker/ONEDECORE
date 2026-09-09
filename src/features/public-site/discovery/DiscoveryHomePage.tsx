@@ -6,8 +6,7 @@ import { PublicSiteHeader } from "@/features/public-site/chrome/PublicSiteHeader
 import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 import { RevealRuntime } from "@/features/public-site/motion/RevealRuntime";
-import { PlanProvider } from "@/features/public-site/home-r4/PlanContext";
-import { HomePlannerSheet } from "@/features/public-site/home-r4/HomePlanner";
+import { LeadConsultationHost } from "@/features/lead-intake/public/LeadConsultationHost";
 import { DiscoveryAreasServed } from "./DiscoveryAreasServed";
 import { DiscoveryConsultCta } from "./DiscoveryConsultCta";
 import { DiscoveryDesignLibrary } from "./DiscoveryDesignLibrary";
@@ -33,7 +32,6 @@ import { ShopPincodeChecker } from "@/features/commerce/public/components/ShopPi
 import { ShopProductCard } from "@/features/commerce/public/components/ShopProductCard";
 import type { PublicCommerceCategory } from "@/features/commerce/public/public-types";
 import type { PublicCommerceProductCard } from "@/features/commerce/public/public-types";
-import type { LeadFormMode } from "@/features/lead-intake/public/lead-form-mode";
 
 export type DiscoveryCommerceState =
   | {
@@ -59,8 +57,13 @@ export type DiscoveryCommerceState =
  * This page used to carry its own inline lead form, which meant the site had
  * two — a second contract, a second set of validation rules, and a second way
  * for an enquiry to go missing. It has none of its own now. Every CTA here
- * opens the SAME guided sheet the interiors page uses, mounted once at the
- * bottom of this component, so there is one journey and one submission path.
+ * opens the SAME guided sheet every other public surface opens, mounted once by
+ * `LeadConsultationHost`, so there is one journey and one submission path.
+ *
+ * The host also decides whether the form is offered at all: it asks the running
+ * server before rendering a single editable field. A build-time flag used to
+ * answer that, and a real enquiry was lost because the flag said yes while the
+ * backend said no.
  *
  * THE PROOF COUNTER IS NOT HERE EITHER. It lives on `/interiors`, where a
  * visitor has chosen to read about the work, rather than as the second thing
@@ -78,11 +81,9 @@ export type DiscoveryCommerceState =
 export function DiscoveryHomePage({
   commerce,
   portfolioPreview,
-  leadFormMode,
 }: {
   readonly commerce: DiscoveryCommerceState;
   readonly portfolioPreview: readonly PublicPortfolioCard[];
-  readonly leadFormMode: LeadFormMode;
 }) {
   const roots = commerce.ok
     ? commerce.categories
@@ -98,12 +99,11 @@ export function DiscoveryHomePage({
     shopLive && (roots.length > 0 || featured.length > 0);
 
   return (
-    <PlanProvider>
+    <LeadConsultationHost>
       <div
         className="od-discovery"
         data-public-dark-theme=""
         data-od-discovery=""
-        data-lead-form-mode={leadFormMode}
       >
         <div
           data-od-discovery-order={DISCOVERY_SECTION_ORDER.join("|")}
@@ -311,9 +311,7 @@ export function DiscoveryHomePage({
         <DiscoveryWhatsAppFab />
         <DiscoveryStickyCta />
         <PublicSiteFooter shopEnabled={shopLive} />
-        {/* Mounted ONCE. Every CTA above opens this and nothing else. */}
-        <HomePlannerSheet leadFormMode={leadFormMode} />
       </div>
-    </PlanProvider>
+    </LeadConsultationHost>
   );
 }

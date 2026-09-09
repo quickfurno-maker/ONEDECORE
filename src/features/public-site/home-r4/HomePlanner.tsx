@@ -17,8 +17,10 @@ import {
   type LeadProjectScopeCode,
 } from "../../lead-intake/project-scope";
 import { v4RequiresScope } from "../../lead-intake/contracts";
-import type { LeadFormMode } from "../../lead-intake/public/lead-form-mode";
 import { UnifiedLeadBrief } from "../../lead-intake/public/UnifiedLeadBrief";
+import { LeadSubmissionSuccess } from "../../lead-intake/public/LeadSubmissionSuccess";
+import { useLeadConsultation } from "../../lead-intake/public/LeadConsultationHost";
+import { LeadIntakeUnavailable } from "../../lead-intake/public/LeadIntakeUnavailable";
 
 /* ------------------------------------------------------------------ atoms */
 
@@ -86,13 +88,29 @@ function ArrowIcon() {
 
 /** Animated progress rail plus per-step status dots. */
 function PlanProgress({ compact = false }: { readonly compact?: boolean }) {
-  const { step, progress, setStep, service, property, timeline } = usePlan();
+  const plan = usePlan();
+  const { step, progress, setStep, service, timeline } = plan;
+
+  /*
+   * V4 FACTS ONLY.
+   *
+   * This used to ask whether `property` was set -- a `home-r4-v1` field that
+   * step 2 no longer collects. Under v4 the Home step is a project scope plus a
+   * budget band from that scope's ladder, and `custom-wardrobes` skips it
+   * entirely. Reading the old field meant the rail's step buttons stayed
+   * disabled for every visitor: the form worked forwards and was frozen
+   * backwards, so nobody could return to an answered step.
+   *
+   * `homeStepComplete` is the same predicate the Continue button and the
+   * request adapter use, so the rail cannot disagree with either.
+   */
+  const homeDone = homeStepComplete(plan);
 
   const reached = (target: PmStep): boolean => {
     if (target === 1) return true;
     if (target === 2) return Boolean(service);
-    if (target === 3) return Boolean(service && property);
-    return Boolean(service && property && timeline);
+    if (target === 3) return Boolean(service) && homeDone;
+    return Boolean(service) && homeDone && Boolean(timeline);
   };
 
   return (
@@ -194,7 +212,6 @@ interface PlannerBodyProps {
   readonly idPrefix: string;
   readonly onClose?: () => void;
   readonly compactHeader?: boolean;
-  readonly leadFormMode: LeadFormMode;
 }
 
 /**
@@ -205,12 +222,7 @@ interface PlannerBodyProps {
  * - nesting the brief inside another form would be invalid HTML and would let
  * Enter on a radio button reach the wrong submit handler.
  */
-function PlannerBody({
-  idPrefix,
-  onClose,
-  compactHeader,
-  leadFormMode,
-}: PlannerBodyProps) {
+function PlannerBody({ idPrefix, onClose, compactHeader }: PlannerBodyProps) {
   const plan = usePlan();
   const [errors, setErrors] = useState<readonly string[]>([]);
   const errorRef = useRef<HTMLDivElement | null>(null);
@@ -245,6 +257,45 @@ function PlannerBody({
   };
 
   const legend = PM_PLANNER.steps[plan.step - 1]!.legend;
+
+  /*
+   * ONCE THE LEAD IS ACCEPTED, THE STEPS ARE OVER.
+   *
+   * The confirmation replaces the four-step journey rather than sitting under
+   * it: no progress rail counting steps that are finished, no Back offering to
+   * re-open answers that are already in CRM, no submit control, no editable
+   * field of any kind. The header and its close button stay, because the
+   * visitor still has to be able to leave — and leaving is now THEIR decision.
+   * This screen used to close itself in the same tick it appeared.
+   */
+  if (plan.submitted) {
+    return (
+      <div className="pm-planner__form" data-plan-submitted="">
+        <header
+          className="pm-planner__head"
+          data-compact={compactHeader ? "" : undefined}
+        >
+          <div>
+            <p className="pm-planner__title">{PM_PLANNER.title}</p>
+          </div>
+          {onClose ? (
+            <button
+              type="button"
+              className="pm-iconbtn"
+              onClick={onClose}
+              aria-label={PM_PLANNER.closeLabel}
+            >
+              <CloseIcon />
+            </button>
+          ) : null}
+        </header>
+
+        <div className="pm-planner__panel" data-step="done">
+          <LeadSubmissionSuccess />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pm-planner__form">
@@ -373,10 +424,7 @@ function PlannerBody({
         ) : null}
 
         {plan.step === 4 ? (
-          <UnifiedLeadBrief
-            mode={leadFormMode}
-            onSubmitted={() => plan.markSubmitted()}
-          />
+          <UnifiedLeadBrief onSubmitted={plan.markSubmitted} />
         ) : null}
       </div>
 
@@ -485,16 +533,40 @@ function useSheetOverlay(open: boolean, closePlanner: () => void) {
   return panelRef;
 }
 
+/**
+ * The brief moment between opening the sheet and hearing back from the server.
+ *
+ * Deliberately quiet and deliberately not a form: showing fields here and
+ * taking them away a moment later would be worse than a short wait.
+ */
+function LeadIntakeChecking() {
+  return (
+    <div className="pm-planner__form" role="status" aria-live="polite">
+      <p className="pm-planner__title">One moment</p>
+      <p className="pm-planner__hint">Preparing your consultation…</p>
+    </div>
+  );
+}
+
 /** Bottom sheet used below the inline breakpoint. */
-export function HomePlannerSheet({
-  leadFormMode,
-}: {
-  readonly leadFormMode: LeadFormMode;
-}) {
+export function HomePlannerSheet() {
   const plan = usePlan();
   const { isOpen, closePlanner } = plan;
+  const { readiness, checkReadiness } = useLeadConsultation();
   const panelRef = useSheetOverlay(isOpen, closePlanner);
   const idPrefix = useId();
+
+  /*
+   * ASK THE SERVER WHEN THE SHEET OPENS, NOT WHEN THE PAGE LOADS.
+   *
+   * The answer has to be about the backend as it is now. A page built while the
+   * backend was healthy and served to somebody afterwards is precisely how a
+   * real enquiry was lost, so the check is tied to the moment the visitor asks
+   * for the form rather than to the moment the HTML was produced.
+   */
+  useEffect(() => {
+    if (isOpen) void checkReadiness();
+  }, [isOpen, checkReadiness]);
 
   if (!isOpen) return null;
 
@@ -517,7 +589,7 @@ export function HomePlannerSheet({
         data-plan-scope={plan.projectScope ?? ""}
         data-plan-budget-range={plan.budgetRange ?? ""}
         data-plan-timeline={plan.timeline ?? ""}
-        data-lead-form-mode={leadFormMode}
+        data-lead-readiness={readiness}
         data-plan-estimate={plan.estimateSummary?.rangeLabel ?? ""}
       >
         <button
@@ -534,12 +606,24 @@ export function HomePlannerSheet({
           aria-label={PM_PLANNER.title}
         >
           <span className="pm-sheet__grip" aria-hidden="true" />
-          <PlannerBody
-            idPrefix={idPrefix}
-            onClose={closePlanner}
-            compactHeader
-            leadFormMode={leadFormMode}
-          />
+          {/*
+            NO EDITABLE FIELDS UNTIL THE SERVER SAYS YES.
+
+            A visitor must never be invited to answer four steps into a backend
+            that cannot accept the result -- which is exactly what happened when
+            a build-time public flag was allowed to answer this question.
+          */}
+          {readiness === "unavailable" ? (
+            <LeadIntakeUnavailable onClose={closePlanner} />
+          ) : readiness === "available" ? (
+            <PlannerBody
+              idPrefix={idPrefix}
+              onClose={closePlanner}
+              compactHeader
+            />
+          ) : (
+            <LeadIntakeChecking />
+          )}
         </div>
       </div>
     </div>

@@ -1,5 +1,10 @@
 import type { CrmLeadDetailOverview } from "../../contracts/lead-detail-dtos.ts";
-import { formatCrmCodeLabel, formatCrmCodeList } from "../../contracts/crm-labels.ts";
+import {
+  formatBudgetRangeLabel,
+  formatCrmCodeLabel,
+  formatCrmCodeList,
+  formatProjectScopeLabel,
+} from "../../contracts/crm-labels.ts";
 import { LeadStatusBadge } from "./LeadStatusBadge.tsx";
 import type { LeadStageCode } from "../../contracts/lead-stages.ts";
 
@@ -41,16 +46,46 @@ export function LeadDetailOverview({ overview }: LeadDetailOverviewProps) {
             {formatCrmCodeLabel(overview.serviceCode)}
           </dd>
         </div>
+        {/*
+          THE CUSTOMER'S OWN SIZE AND BUDGET ANSWERS, NEXT TO THE SERVICE.
+
+          These read as one requirement — "Modular Kitchens / Kitchen /
+          ₹2–3 Lakh / Within 1 month" — so they sit together rather than being
+          scattered among the legacy fields below. A dash here is a real
+          answer: wardrobes are never asked either question.
+        */}
         <div>
-          <dt className="text-xs text-[var(--crm-muted)]">Property</dt>
-          <dd className="mt-1 text-sm text-[var(--crm-text)]">
-            {formatCrmCodeLabel(overview.propertyCode)}
+          <dt className="text-xs text-[var(--crm-muted)]">Project scope</dt>
+          <dd
+            className="mt-1 text-sm text-[var(--crm-text)]"
+            data-testid="lead-detail-project-scope"
+          >
+            {formatProjectScopeLabel(overview.projectScopeCode)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-[var(--crm-muted)]">Budget range</dt>
+          <dd
+            className="mt-1 text-sm text-[var(--crm-text)]"
+            data-testid="lead-detail-budget-range"
+          >
+            {formatBudgetRangeLabel(
+              overview.projectScopeCode,
+              overview.budgetRangeCode
+            )}
           </dd>
         </div>
         <div>
           <dt className="text-xs text-[var(--crm-muted)]">Timeline</dt>
           <dd className="mt-1 text-sm text-[var(--crm-text)]">
             {formatCrmCodeLabel(overview.timelineCode)}
+          </dd>
+        </div>
+        {/* Legacy planner answers. Populated on pre-v4 leads, null on v4. */}
+        <div>
+          <dt className="text-xs text-[var(--crm-muted)]">Property</dt>
+          <dd className="mt-1 text-sm text-[var(--crm-text)]">
+            {formatCrmCodeLabel(overview.propertyCode)}
           </dd>
         </div>
         <div>

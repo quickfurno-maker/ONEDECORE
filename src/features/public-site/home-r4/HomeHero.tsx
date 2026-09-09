@@ -53,7 +53,14 @@ export function HomeHero() {
           priority
           fetchPriority="high"
           sizes="100vw"
-          quality={80}
+          /*
+           * 75 is what is actually served. `images.qualities` defaults to
+           * [75], so an 80 here was dropped from the emitted srcset and only
+           * produced a warning on every dev boot. Matching the configured
+           * value changes no pixel and removes a message that read like a
+           * broken image.
+           */
+          quality={75}
           className="pm-hero__mediaImg"
           style={{ objectPosition: HERO.focalPoint }}
         />

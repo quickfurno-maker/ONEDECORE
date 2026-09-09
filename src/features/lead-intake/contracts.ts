@@ -299,6 +299,12 @@ export interface LeadIntakeRequestBody {
     readonly formStartedAt: string;
   };
   readonly landingPublicationContext?: SignedPublicationContext;
+  /**
+   * Signed campaign execution context, when the visitor arrived through a
+   * campaign-published landing page. `unknown` because the client only ever
+   * relays what the server signed — the server owns the shape and verifies it.
+   */
+  readonly campaignExecutionContext?: unknown;
 }
 
 export type LeadIntakeRpcOutcome =

@@ -59,6 +59,21 @@ import {
 import { acceptIndianMobileInput } from "./indian-mobile.ts";
 import { LEAD_FORM_FIELD_LIMITS } from "./lead-form-contract.ts";
 import type { LeadFormAttribution } from "./lead-form-attribution.ts";
+import type { SignedPublicationContext } from "../../landing-lab/contracts/publication-context.ts";
+
+/**
+ * Signed contexts a published Landing Lab page carries.
+ *
+ * Opaque on the client by design. They are minted and verified server-side; the
+ * form's only job is to hand back what it was given, unaltered. Typing them as
+ * concrete shapes here would invite client code to construct one, and a
+ * client-constructed attribution context is exactly what the signature exists
+ * to make impossible.
+ */
+export interface LeadIntakeTrustedContexts {
+  readonly landingPublicationContext?: SignedPublicationContext;
+  readonly campaignExecutionContext?: unknown;
+}
 
 export interface UnifiedLeadFormInput {
   readonly service: string | null;
@@ -74,6 +89,12 @@ export interface UnifiedLeadFormInput {
   readonly attribution: LeadFormAttribution;
   readonly antiBot: { readonly website: string; readonly formStartedAt: string };
   readonly idempotencyKey: string;
+  /**
+   * Present only when the visitor came through a published Landing Lab page.
+   * Attached verbatim; the server verifies the signature and refuses a forged
+   * or expired one.
+   */
+  readonly trustedContexts?: LeadIntakeTrustedContexts;
 }
 
 export type UnifiedLeadRequestResult =
@@ -228,6 +249,23 @@ export function unifiedLeadToRequest(
       },
       attribution: input.attribution,
       antiBot: input.antiBot,
+      /*
+       * Spread, not sent as null. The validator rejects unknown root keys and
+       * treats an explicit null differently from an absent one, and a lead that
+       * did not come from a landing page has no context to carry.
+       */
+      ...(input.trustedContexts?.landingPublicationContext != null
+        ? {
+            landingPublicationContext:
+              input.trustedContexts.landingPublicationContext,
+          }
+        : {}),
+      ...(input.trustedContexts?.campaignExecutionContext != null
+        ? {
+            campaignExecutionContext:
+              input.trustedContexts.campaignExecutionContext,
+          }
+        : {}),
     },
   };
 }
