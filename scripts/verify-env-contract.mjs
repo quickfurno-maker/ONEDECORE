@@ -24,6 +24,11 @@ import {
   readEnvExampleKeys,
   readEnvExampleCommentedKeys,
 } from "./lib/env-key-scanner.mjs";
+import {
+  findCredentialShapedValues,
+  findDuplicateKeys,
+  findNonBlankSecrets,
+} from "./lib/env-example-rules.mjs";
 import { ONEDECORE_ENV_CONTRACT } from "../src/config/env-contract.ts";
 
 const problems = [];
@@ -115,42 +120,25 @@ const exampleKeys = readEnvExampleKeys();
 const exampleCommented = readEnvExampleCommentedKeys();
 
 /*
- * A duplicate assignment is not a style problem. dotenv keeps the last one, so
- * two lines for the same key means the file documents one value and provisions
- * another, and the reader has no way to tell which without knowing the loader.
+ * The rules themselves live in `lib/env-example-rules.mjs` as pure functions,
+ * so the suite can hand them fixtures instead of editing this repository's own
+ * .env.example to find out what they do.
  */
-const seenExampleKeys = new Set();
-for (const entry of exampleEntries) {
-  if (seenExampleKeys.has(entry.key)) {
-    fail(
-      `DUPLICATE KEY ${entry.key} is assigned more than once in .env.example.\n` +
-        `              The last assignment silently wins; delete the others.`
-    );
-  }
-  seenExampleKeys.add(entry.key);
+for (const key of findDuplicateKeys(exampleEntries)) {
+  fail(
+    `DUPLICATE KEY ${key} is assigned more than once in .env.example.\n` +
+      `              The last assignment silently wins; delete the others.`
+  );
 }
 
-/*
- * EVERY REGISTERED SECRET MUST BE BLANK.
- *
- * Shape detection alone is not enough: it catches a Supabase JWT or a Meta
- * token, and misses a Groq key, a Google client secret, a bcrypt hash, or
- * somebody's `hunter2`. The registry already knows which keys are secrets, so
- * the rule is the strong one — a secret in a provisioning template has no
- * legitimate non-empty value, placeholder or otherwise. A would-be example
- * belongs in a comment, where it cannot be copied into a running system by a
- * loader.
- */
-for (const entry of exampleEntries) {
-  const contract = registry.get(entry.key);
-  if (!contract || contract.sensitivity !== "secret") continue;
-  if (entry.value !== "") {
-    fail(
-      `SECRET VALUE  ${entry.key} is a registered secret with a non-empty value in .env.example.\n` +
-        `              Registered secrets must be exactly \`${entry.key}=\`.\n` +
-        `              Put any illustrative value in a comment instead.`
-    );
-  }
+// Every registered secret must be exactly blank; see the rule module for why
+// shape detection alone was not enough.
+for (const key of findNonBlankSecrets(exampleEntries, registry)) {
+  fail(
+    `SECRET VALUE  ${key} is a registered secret with a non-empty value in .env.example.\n` +
+      `              Registered secrets must be exactly \`${key}=\`.\n` +
+      `              Put any illustrative value in a comment instead.`
+  );
 }
 
 for (const entry of registry.values()) {
@@ -184,30 +172,13 @@ for (const name of exampleCommented) {
 
 // -------------------------------------------------------- no real secrets ---
 
-/*
- * Defence in depth, not the primary rule. The registry check above already
- * requires every known secret to be blank; this catches a credential parked on
- * a key that is NOT registered as a secret — a token pasted into a config slot,
- * say — which the registry alone would have no opinion about.
- */
-const SECRET_SHAPES = [
-  /^eyJ[A-Za-z0-9_-]{20,}/,
-  /^sb_secret_/,
-  /^sbp_/,
-  /^EAA[A-Za-z0-9]{20,}/,
-  /^sk-[A-Za-z0-9_-]{16,}/,
-  /^gsk_[A-Za-z0-9]{16,}/,
-  /^ya29\./,
-  /^ghp_[A-Za-z0-9]{20,}/,
-  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
-];
-for (const entry of exampleEntries) {
-  if (SECRET_SHAPES.some((shape) => shape.test(entry.value))) {
-    fail(
-      `CREDENTIAL    ${entry.key} holds a value shaped like a real credential.\n` +
-        `              Replace it with an empty placeholder.`
-    );
-  }
+// Defence in depth: a credential parked on a key the registry does not
+// classify as a secret, which the rule above would have no opinion about.
+for (const key of findCredentialShapedValues(exampleEntries)) {
+  fail(
+    `CREDENTIAL    ${key} holds a value shaped like a real credential.\n` +
+      `              Replace it with an empty placeholder.`
+  );
 }
 
 // ----------------------------------------------------------------- report ---

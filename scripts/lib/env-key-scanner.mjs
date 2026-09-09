@@ -12,9 +12,11 @@
  * Two independent filters fix that:
  *
  *   1. SHAPE. Only real read sites count — `process.env.X`, `process.env["X"]`,
- *      `env.X`, `env["X"]`, and the string argument of the repository's own
- *      env readers (`readOptional(env, "X")`, `getEnvVar("X")`). A bare string
- *      sitting in a union type or a throw is not a read.
+ *      `env.X`, `env["X"]`, and calls that are demonstrably environment-backed:
+ *      a helper handed the env object (`read(env, "X")`) or one of this
+ *      repository's key-only readers (`getEnvVar("X")`). A bare string sitting
+ *      in a union type or a throw is not a read, and neither is
+ *      `read(config, "META_AUTH")`.
  *
  *   2. NAMESPACE. Only names inside the namespaces this project actually uses.
  *      `META_WHATSAPP_ACCESS_TOKEN` is an env var; `META_AUTH` is not, and no
@@ -53,20 +55,28 @@ const ENV_PREFIXES = [
 const ENV_EXACT = new Set(["NODE_ENV", "QUOTATION_CAPABILITY_SECRET"]);
 
 /**
- * Functions whose string arguments name an environment variable.
+ * Helpers that take the environment as an argument, e.g. `read(env, "KEY")`.
  *
- * `read` is deliberately included even though the name is generic: a match
- * still has to satisfy the namespace filter, so an unrelated `read(x, "foo")`
- * contributes nothing. Leaving it out cost more — the Meta and Google Ads
- * credentials are read through exactly that helper and went unreported.
+ * The name alone proves nothing — `read` is about as generic as an identifier
+ * gets — so a call only counts as an environment read when one of its
+ * arguments is itself env-bearing. `read(config, "META_AUTH")` therefore stays
+ * invisible while `read(env, "META_AUTH")` does not, which is the distinction
+ * that lets unknown keys be reported without drowning the signal in noise.
  */
-const ENV_READER_FUNCTIONS = new Set([
+const ENV_READER_WITH_ENV_ARGUMENT = new Set([
   "read",
   "readOptional",
   "readRequired",
-  "getEnvVar",
-  "readEnv",
 ]);
+
+/**
+ * Repository-owned helpers that read `process.env` internally and take only a
+ * key, e.g. `getEnvVar("NEXT_PUBLIC_SUPABASE_URL")` in `src/config/env.ts`.
+ *
+ * These are named individually and deliberately: their env-backed signature is
+ * a known fact about this codebase, not something inferred from a name.
+ */
+const ENV_READER_KEY_ONLY = new Set(["getEnvVar", "readEnv"]);
 
 export function isEnvKeyName(name) {
   if (ENV_EXACT.has(name)) return true;
@@ -236,18 +246,28 @@ export function scanEnvKeys(options = {}) {
         }
       }
 
-      // readOptional(env, "X")  |  read(env, "X")  |  getEnvVar("X")
+      // read(env, "X") | readOptional(env, "X") | getEnvVar("X")
+      //
+      // ESTABLISH ENV-BACKING FIRST, THEN CLASSIFY.
+      //
+      // This used to check the namespace BEFORE recording, which meant a
+      // helper read of an unfamiliar key vanished silently — the exact failure
+      // mode the unknown-namespace net exists to prevent, and helper reads were
+      // already one original source of contract drift. The question of whether
+      // a call touches the environment is now answered by its shape, and the
+      // question of whether the key is familiar is left to `record`.
       if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
-        if (ENV_READER_FUNCTIONS.has(node.expression.text)) {
+        const callee = node.expression.text;
+        const envBacked =
+          ENV_READER_KEY_ONLY.has(callee) ||
+          (ENV_READER_WITH_ENV_ARGUMENT.has(callee) &&
+            node.arguments.some((argument) => isEnvBearingExpression(argument)));
+
+        if (envBacked) {
           for (const argument of node.arguments) {
             const literal = stringLiteralText(argument);
-            // Namespace-only here: a generic `read(...)` argument is not
-            // evidence of an environment read on its own.
-            if (literal && isEnvKeyName(literal)) record(literal, file);
-            if (
-              ts.isIdentifier(argument) &&
-              constants.has(argument.text)
-            ) {
+            if (literal) record(literal, file);
+            if (ts.isIdentifier(argument) && constants.has(argument.text)) {
               record(constants.get(argument.text), file);
             }
           }

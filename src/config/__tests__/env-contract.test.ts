@@ -189,58 +189,36 @@ describe("F. the template never carries a secret value", () => {
     }
   });
 
-  test("the guard itself enforces the blank rule and the duplicate rule", () => {
+  test("the guard composes the rules that reject those files", () => {
     /*
-     * The invariants above describe the file as it stands; these assert that
-     * `verify-env-contract.mjs` would REJECT a file that broke them, which is
-     * what actually protects the repository in CI.
+     * The invariants above describe .env.example as it stands. That the guard
+     * would REJECT a file breaking them is proved behaviourally against
+     * fixtures in `env-key-scanner.test.ts`; this only checks the verifier
+     * still calls the rules rather than reimplementing them inline.
      */
     const verifier = read("scripts/verify-env-contract.mjs");
-    assert.match(verifier, /sensitivity !== "secret"/);
-    assert.match(verifier, /SECRET VALUE/);
-    assert.match(verifier, /DUPLICATE KEY/);
+    assert.match(verifier, /findNonBlankSecrets/);
+    assert.match(verifier, /findDuplicateKeys/);
+    assert.match(verifier, /findCredentialShapedValues/);
     assert.match(verifier, /readEnvExampleEntries/);
   });
 });
 
 describe("G. production config outside src/ is scanned too", () => {
-  const scanner = read("scripts/lib/env-key-scanner.mjs");
-
-  test("next.config.ts is in the default scan set", () => {
-    /*
-     * `src/` is not the whole runtime. next.config.ts executes during the
-     * build and can read anything, so a src-only scan would have left the
-     * contract complete and wrong.
-     */
-    assert.match(scanner, /"next\.config\.ts"/);
-  });
-
-  test("middleware and instrumentation are covered when they appear", () => {
-    for (const file of [
-      "middleware.ts",
-      "src/middleware.ts",
-      "instrumentation.ts",
-      "src/instrumentation.ts",
-    ]) {
-      assert.ok(
-        scanner.includes(`"${file}"`),
-        `${file} should be scanned if it is ever added`
-      );
-    }
-  });
-
-  test("the verifier uses the default roots AND files", () => {
-    // Passing "src" would take the string branch and silently scan no config.
+  /*
+   * WHAT is scanned by default — src/, next.config.ts, middleware,
+   * instrumentation — is proved by running the scanner against fixtures in
+   * `env-key-scanner.test.ts`, because listing a filename in the scanner's
+   * source proves only that the string is present, not that the file is ever
+   * opened. What remains here is the wiring: the verifier must ask for the
+   * defaults rather than for one directory.
+   */
+  test("the verifier asks for the default roots AND files", () => {
+    // `scanEnvKeys("src")` takes the bare-string branch, which supplies no
+    // extra files — the contract would come out complete and wrong.
     const verifier = read("scripts/verify-env-contract.mjs");
     assert.match(verifier, /scanEnvKeys\(\)/);
     assert.doesNotMatch(verifier, /scanEnvKeys\("src"\)/);
-  });
-
-  test("tooling directories stay out of the contract", () => {
-    // scripts/ and tests read whatever they need; folding them in would turn
-    // the contract into a list of everything anyone ever touched.
-    assert.match(scanner, /__tests__/);
-    assert.doesNotMatch(scanner, /"scripts"/);
   });
 });
 
