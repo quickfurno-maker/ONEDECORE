@@ -83,13 +83,23 @@ describe("Phase 10 COD production readiness", () => {
   });
 
   test("security headers and health probe exist without payment routes", () => {
+    /*
+     * The header VALUES moved into `src/config/http-security.ts` and are
+     * asserted there, against the builder that produces them, rather than by
+     * matching strings in `next.config.ts` — which passed while the config said
+     * the right thing and would have kept passing if it stopped sending them.
+     *
+     * The Phase 10 assertion here was also that no CSP existed. That was true
+     * when it was written and is deliberately no longer true: a production CSP
+     * and HSTS were added in Lane 5. What this test still owns is that the
+     * config routes SOME header set over every path, and the rest of the
+     * commerce readiness contract.
+     */
     const nextConfig = read("next.config.ts");
     const health = read("src/app/api/health/route.ts");
-    assert.match(nextConfig, /X-Content-Type-Options/);
-    assert.match(nextConfig, /Referrer-Policy/);
-    assert.match(nextConfig, /X-Frame-Options/);
-    assert.match(nextConfig, /Permissions-Policy/);
-    assert.doesNotMatch(nextConfig, /Content-Security-Policy/);
+    assert.match(nextConfig, /buildSecurityHeaders/);
+    assert.match(nextConfig, /source:\s*"\/:path\*"/);
+    assert.match(nextConfig, /headers:\s*securityHeaders/);
     assert.match(health, /ok:\s*true/);
     assert.match(health, /no-store/);
     assert.equal(existsSync(join(root, "src/app/api/webhooks/commerce")), false);
