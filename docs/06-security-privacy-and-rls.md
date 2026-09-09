@@ -1,5 +1,56 @@
 # 06 — SECURITY, PRIVACY AND ROW LEVEL SECURITY (RLS) POLICIES
 
+> **CURRENT SECURITY CONTRACT - synced 2026-09-09 against `main` `63ce0777`.**
+>
+> The invariants below are machine-enforced. The authority is
+> `supabase/tests/database/57_database_security_contracts_test.sql` (40
+> assertions) and `58_consent_visibility_behaviour_test.sql` (12), not this
+> prose - which is why no function list is reproduced here.
+>
+> - **RLS on every public table**, asserted dynamically so a new table without
+>   it fails CI.
+> - **FORCE RLS is selective, not universal.** It binds the owner too, and is
+>   required where owner bypass must not become an escape hatch: salary,
+>   commerce, attendance submissions, campaign metrics. Claiming it everywhere
+>   would be false.
+> - **SECURITY DEFINER search_path is checked by VALUE**, not presence: the
+>   empty path or `pg_catalog` only. A pinned `public` would be pinned and
+>   useless, `public` being the writable schema an attacker would plant a
+>   shadowing object in.
+> - **The anon RPC surface is frozen** at seven functions - two quotation
+>   capability RPCs and five public commerce reads.
+> - **A service-role-only surface of 30 RPCs is frozen**, so none can gain
+>   `authenticated` EXECUTE unnoticed.
+> - **Private-schema helpers are intentionally reachable by `authenticated`.**
+>   RLS policy helpers must be executable or the policies error instead of
+>   filtering, and the `*_impl` bodies self-authorize. The enforced boundary is
+>   the privileged helpers that stay closed, plus `anon` having no USAGE on
+>   `private` at all.
+> - **Service-only tables use RLS with zero policies** - default deny - and
+>   grant nothing to `anon` or `authenticated` either.
+> - **`authenticated` holds no TRUNCATE, TRIGGER or REFERENCES** on any public
+>   table; `anon` reads four published portfolio tables and nothing else.
+>
+> **Consent visibility.** Two permissive SELECT policies on `consent_events`,
+> OR-combined. The CRM policy is lead-scoped: the row's own lead must be
+> visible. The marketing policy is contact-scoped - deliberately, because
+> marketing consent belongs to the person and whoever manages it must see every
+> consent that person gave or withdrew - but restricted to `MARKETING` rows, to
+> holders of `marketing_consents.manage`, and still requiring a visible lead for
+> that contact.
+>
+> **That widening is currently latent.** `marketing_consents.manage` is held by
+> `super_admin` alone, who also holds `consents.read` and `leads.read_all`, so
+> the CRM policy already shows them everything and the marketing policy grants
+> nobody anything extra today. It begins to matter the day a narrower marketing
+> role is introduced - which is exactly the case suite 58 pins.
+>
+> **Consent writes.** No role writes `consent_events` directly, not
+> `authenticated` and not `service_role`. Every row comes from a postgres-owned
+> definer routine.
+>
+> The baseline below is retained as evidence.
+
 **Document Status:** Locked Security Baseline (truth-synced through Phase 9D-B repository implementation, August 20, 2026)
 **RLS Target:** 100% Coverage on API-Exposed Application Tables
 **Default Access:** Anonymous Access Denied for Private Schemas

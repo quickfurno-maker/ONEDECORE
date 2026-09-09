@@ -1,5 +1,32 @@
 # 11 — ACCELERATED CLOSEOUT ROADMAP (CURRENT EXECUTION AUTHORITY)
 
+> **CURRENT EXECUTION - synced 2026-09-09.**
+>
+> The accelerated closeout sequence below (P1-P9, owner-locked 2026-09-02) is
+> **HISTORICAL**. Its early phases are complete and its numbering no longer
+> describes what is being executed. The current programme is:
+>
+> | Lane | Scope | State |
+> | :--- | :--- | :--- |
+> | 1 | Runtime/config/test governance | **MERGED** - PR #163 |
+> | 2 | Database security contracts | **MERGED** - PR #164; migration 67 managed-applied |
+> | 3 | Repository truth + environment contract | **this PR** |
+> | 4 | Generated database types | pending |
+> | 5 | Dependencies, HTTP security headers / CSP | pending |
+> | 6 | Performance and index review | pending |
+> | - | Final architecture re-audit | after lane 6 |
+>
+> **Feature activation is separate from hardening and remains owner-gated.**
+>
+> One correction the old sequence invites: campaign activation appears below as
+> a later phase, which reads as though it were a matter of turning something on.
+> It is not. Two gates guard live provider traffic and satisfying both is still
+> insufficient - the live transport is deliberately unimplemented, so no
+> environment value reaches Meta or Google today. Live campaign execution
+> requires building and certifying that path.
+>
+> Everything below is retained as the historical sequencing record.
+
 **Document Status:** Owner-Locked Current Execution Authority
 **Owner lock date:** 2026-09-02
 **Supersedes as current-execution authority:** [09 — Phase Implementation Roadmap](09-phase-roadmap.md) (retained as historical implementation roadmap + evidence ledger) and [CRM 2.0 Product Roadmap](product/crm-2.0-roadmap.md) (retained as historical approved CRM product plan)
