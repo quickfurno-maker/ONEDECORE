@@ -145,7 +145,8 @@
     "src/features/whatsapp/__tests__/phase-6b-b4-provider-dispatch.test.ts",
     "src/features/whatsapp/__tests__/phase-6b-integrated-matrix.test.ts",
     "src/lib/supabase/__tests__/proxy-auth-response.test.ts",
-    "src/lib/supabase/__tests__/supabase-runtime-target.test.ts"
+    "src/lib/supabase/__tests__/supabase-runtime-target.test.ts",
+    "src/types/__tests__/database-types.test.ts"
   ],
   "image": [
     "src/features/portfolio/server/__tests__/portfolio-image-pipeline.test.ts"

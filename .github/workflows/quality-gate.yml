@@ -76,7 +76,11 @@ jobs:
       - name: Reset local database and apply migrations
         run: npm run db:reset
 
-      - name: Database lint and pgTAP tests
+      # check:db verifies that the checked-in generated database types still
+      # match these migrations, then runs the lint and pgTAP suites. This is the
+      # only job with a database, so it is the only place the type drift guard
+      # can run.
+      - name: Generated type freshness, database lint, and pgTAP tests
         run: npm run check:db
 
       - name: Commerce D1 concurrency tests
