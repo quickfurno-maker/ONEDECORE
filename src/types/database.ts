@@ -174,12 +174,53 @@ type CorrectedFunctions = {
 };
 
 /**
+ * The PostgREST version the managed OneDecore project runs.
+ *
+ * WHY A HANDWRITTEN LITERAL AND NOT GENERATOR OUTPUT
+ *
+ * supabase-js reads `Database["__InternalSupabase"]["PostgrestVersion"]` to pick
+ * type-level feature flags — `MaxAffectedEnabled` and `SpreadOnManyEnabled` are
+ * derived from whether the version starts with 13 or 14. When the key is absent
+ * the client defaults to `{ PostgrestVersion: "12" }`, so a Database type
+ * without it does not merely lose information: it actively asserts PostgREST 12.
+ *
+ * Local generation cannot supply this. The value describes the HOSTED RUNTIME,
+ * not the schema — `supabase gen types --local` reports the version of the
+ * PostgREST in the developer's Docker stack, which is not what production runs,
+ * and the whole point of generating from migrations is that the checked-in file
+ * does not depend on any deployed environment. So the two planes are kept apart:
+ *
+ *   business schema        -> repository migrations, local typegen, in
+ *                             `database.generated.ts`
+ *   managed runtime metadata -> observed read-only from project
+ *                             `lpurlfmpvriyvpkujvyl`, pinned here
+ *
+ * CI still needs no credential: this is a literal in reviewed source, checked by
+ * the type tests. Confirm it during a release audit — a read-only
+ * `supabase gen types --linked` prints it — and change it here deliberately if
+ * the managed runtime is ever upgraded.
+ *
+ * Observed 2026-09-09 on project `lpurlfmpvriyvpkujvyl`: 14.5.
+ */
+export const MANAGED_POSTGREST_VERSION = "14.5" as const;
+
+/**
  * The type every Supabase client in this application is parameterised by.
  *
  * Tables, views, enums and composite types come through exactly as generated —
- * only the argument types of the functions listed above differ.
+ * only the argument types of the functions listed above differ, plus the
+ * runtime metadata above.
+ *
+ * `__InternalSupabase` is REPLACED rather than intersected. If local typegen
+ * ever starts emitting its own version, an intersection would produce
+ * `"14.5" & "<other>"` — the impossible type `never` — and the client would
+ * silently fall back to its default. Omitting the key first means this file
+ * stays the single authority for the value.
  */
-export type Database = Omit<GeneratedDatabase, "public"> & {
+export type Database = Omit<GeneratedDatabase, "public" | "__InternalSupabase"> & {
+  __InternalSupabase: {
+    PostgrestVersion: typeof MANAGED_POSTGREST_VERSION;
+  };
   public: Omit<GeneratedPublic, "Functions"> & {
     Functions: CorrectedFunctions;
   };

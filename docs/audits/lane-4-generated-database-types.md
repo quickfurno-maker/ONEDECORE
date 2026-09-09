@@ -169,16 +169,49 @@ compared structurally against the local generation:
 **Zero business-schema difference.** Identical tables, views, functions, enums
 and composite types.
 
-The only delta is environment metadata, exactly as expected at 67/67 migration
-alignment:
+The remaining delta is runtime metadata, not schema — but it is not
+inconsequential, and it is handled deliberately rather than dropped.
 
-- managed output carries `__InternalSupabase: { PostgrestVersion: "14.5" }`;
-  the local stack's CLI does not emit the block
-- the same version detection changes parenthesisation in the generic helper
-  boilerplate at the end of the file
+### Two planes, two authorities
 
-Neither is schema drift. Local generation owns the checked-in shape; CI never
-needs a production credential.
+| Plane | Authority | Where it lives |
+| :--- | :--- | :--- |
+| Business schema | Repository migrations, generated locally | `src/types/database.generated.ts` |
+| Managed runtime metadata | The managed project, observed read-only during a release audit | `src/types/database.ts` |
+
+Managed generation reports `__InternalSupabase: { PostgrestVersion: "14.5" }`.
+Local generation supplies no hosted runtime version, and should not: `--local`
+would report the PostgREST inside a developer's Docker stack, and the checked-in
+schema file is deliberately independent of any deployed environment.
+
+**That value is load-bearing.** `supabase-js` 2.110.8 reads
+`Database["__InternalSupabase"]["PostgrestVersion"]` to select type-level
+feature flags — `MaxAffectedEnabled` and `SpreadOnManyEnabled` are derived from
+whether the version begins `13` or `14` — and when the key is absent the client
+defaults to `{ PostgrestVersion: "12" }`. A Database type without it therefore
+does not merely omit information: it asserts PostgREST 12 against a managed
+runtime that is 14.5.
+
+So the application overlay pins it:
+
+```ts
+export const MANAGED_POSTGREST_VERSION = "14.5" as const;
+```
+
+The key is **replaced**, not intersected. Should local typegen ever start
+emitting a version of its own, an intersection would yield
+`"14.5" & "<other>"` — the impossible type `never` — and the client would
+silently fall back to its default. Omitting it first keeps one authority for the
+value.
+
+The parenthesisation difference in the generic helper boilerplate at the end of
+the file comes from the same version detection and carries no meaning.
+
+**The generated file remains local-schema canonical.** The application Database
+type adds managed runtime metadata separately. CI stays local and
+credential-free: the version is a literal in reviewed source, checked by
+compile-time tests, and re-confirmed by a read-only `gen types --linked` during
+a release audit. It changes only when someone changes it on purpose.
 
 ---
 

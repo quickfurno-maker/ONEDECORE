@@ -105,6 +105,67 @@ type _ExposureReturnsUnchanged = Expect<
   Equals<Fn<"record_landing_exposure">["Returns"], GeneratedDatabase["public"]["Functions"]["record_landing_exposure"]["Returns"]>
 >;
 
+// ------------------------------------------ F. managed PostgREST runtime version ---
+
+/*
+ * supabase-js selects type-level feature flags from
+ * `Database["__InternalSupabase"]["PostgrestVersion"]`. In the installed
+ * version its default is `{ PostgrestVersion: "12" }` when the key is absent,
+ * so a Database type without it does not merely omit information — it asserts
+ * PostgREST 12, and `MaxAffectedEnabled` / `SpreadOnManyEnabled` come out false
+ * against a managed runtime that is 14.5.
+ *
+ * The value cannot come from local generation: `--local` would report the
+ * PostgREST inside the developer's Docker stack, and the checked-in schema file
+ * is deliberately independent of any deployed environment. It is therefore
+ * pinned in the overlay, which is the same reason the nullable arguments are.
+ */
+type _ApplicationPostgrestVersion = Expect<
+  Equals<Database["__InternalSupabase"]["PostgrestVersion"], "14.5">
+>;
+
+/*
+ * Not widened to `string`. A widened version silently disables the version
+ * feature flags again — `IsPostgrest14<string>` is false — so the literal is
+ * the whole point.
+ */
+type _PostgrestVersionIsNotString = Expect<
+  Equals<Equals<Database["__InternalSupabase"]["PostgrestVersion"], string>, false>
+>;
+type _PostgrestVersionSatisfiesFourteen = Expect<
+  Database["__InternalSupabase"]["PostgrestVersion"] extends `14${string}` ? true : false
+>;
+
+/*
+ * The block holds the version and nothing else, so a future generated field
+ * cannot arrive unreviewed by way of the overlay.
+ *
+ * This assertion is also what makes the replacement robust. The overlay OMITS
+ * `__InternalSupabase` from the generated type before adding its own, so if
+ * local typegen ever starts emitting a version of its own, the application type
+ * is still exactly "14.5" — where an intersection would have produced
+ * `"14.5" & "<other>"`, which is `never`, and the client would silently fall
+ * back to its default.
+ */
+type _InternalBlockHoldsOnlyTheVersion = Expect<
+  Equals<keyof Database["__InternalSupabase"], "PostgrestVersion">
+>;
+
+/*
+ * The gate supabase-js itself applies, restated rather than copied: its client
+ * takes `Database["__InternalSupabase"]` when the Database matches this shape
+ * and `{ PostgrestVersion: "12" }` when it does not. The pair proves the
+ * overlay is what satisfies it — the raw generated type does not, which is the
+ * whole reason this correction exists.
+ */
+type SupabaseJsInternalGate = { __InternalSupabase: { PostgrestVersion: string } };
+type _ApplicationTypeSatisfiesTheGate = Expect<
+  Database extends SupabaseJsInternalGate ? true : false
+>;
+type _GeneratedTypeAloneDoesNot = Expect<
+  Equals<GeneratedDatabase extends SupabaseJsInternalGate ? true : false, false>
+>;
+
 // ------------------------------------------------------- E. no broad weakening ---
 
 /*
@@ -288,6 +349,45 @@ describe("B. runtime code uses the application type", () => {
     };
     walk(path.join(root, "src"));
     assert.deepEqual(offenders, []);
+  });
+});
+
+describe("the managed PostgREST version is owned by the overlay", () => {
+  const overlay = read("src/types/database.ts");
+  const generated = read("src/types/database.generated.ts");
+
+  test("the overlay pins the observed managed version as a literal", () => {
+    // The type assertions above prove the Database type carries "14.5". This
+    // proves the exported constant they derive from says so too, which is what
+    // a release audit reads when re-confirming against the managed project.
+    assert.match(overlay, /MANAGED_POSTGREST_VERSION = "14\.5" as const/);
+  });
+
+  test("the version is static, not read from the environment at runtime", () => {
+    /*
+     * A version resolved at runtime would be useless: supabase-js consumes it
+     * at COMPILE time to pick feature flags, so it has to be a literal in
+     * reviewed source. It also keeps CI credential-free — nothing has to reach
+     * the managed project to typecheck.
+     */
+    const version = overlay.slice(overlay.indexOf("MANAGED_POSTGREST_VERSION"));
+    assert.ok(!/process\.env/.test(version), "the version must not come from the environment");
+    assert.ok(!/await |fetch\(/.test(version), "the version must not be fetched");
+  });
+
+  test("the generated file does not carry a hosted runtime version", () => {
+    /*
+     * Local generation reports the PostgREST inside a developer's Docker stack,
+     * which is not what production runs, and the checked-in schema file is
+     * deliberately independent of any deployed environment. If this ever fails,
+     * local typegen has started emitting a version: check whether it is the
+     * hosted one before changing anything. The overlay omits the key before
+     * adding its own, so the application type is unaffected either way.
+     */
+    assert.ok(
+      !generated.includes("PostgrestVersion"),
+      "local typegen has started emitting a PostgREST version; see src/types/database.ts"
+    );
   });
 });
 
