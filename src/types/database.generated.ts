@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       attendance_corrections: {
@@ -275,6 +250,142 @@ export type Database = {
             columns: ["supersedes_policy_id"]
             isOneToOne: false
             referencedRelation: "attendance_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_submission_events: {
+        Row: {
+          actor_id: string | null
+          attendance_date: string
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          new_category: string | null
+          new_state: string | null
+          previous_category: string | null
+          previous_state: string | null
+          reason: string | null
+          staff_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          attendance_date: string
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          new_category?: string | null
+          new_state?: string | null
+          previous_category?: string | null
+          previous_state?: string | null
+          reason?: string | null
+          staff_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          attendance_date?: string
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          new_category?: string | null
+          new_state?: string | null
+          previous_category?: string | null
+          previous_state?: string | null
+          reason?: string | null
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_submission_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_submission_events_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_submissions: {
+        Row: {
+          attendance_date: string
+          attendance_policy_id: string | null
+          created_at: string
+          credited_minutes: number | null
+          final_category: string | null
+          is_late: boolean
+          late_minutes: number
+          lifecycle_state: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          staff_id: string
+          submitted_at: string | null
+          submitted_category: string | null
+          updated_at: string
+        }
+        Insert: {
+          attendance_date: string
+          attendance_policy_id?: string | null
+          created_at?: string
+          credited_minutes?: number | null
+          final_category?: string | null
+          is_late?: boolean
+          late_minutes?: number
+          lifecycle_state?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          staff_id: string
+          submitted_at?: string | null
+          submitted_category?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attendance_date?: string
+          attendance_policy_id?: string | null
+          created_at?: string
+          credited_minutes?: number | null
+          final_category?: string | null
+          is_late?: boolean
+          late_minutes?: number
+          lifecycle_state?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          staff_id?: string
+          submitted_at?: string | null
+          submitted_category?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_submissions_attendance_policy_id_fkey"
+            columns: ["attendance_policy_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_submissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_submissions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3957,9 +4068,9 @@ export type Database = {
           closed_lost_reason_id: string | null
           contact_id: string
           created_at: string
+          delete_reason: string | null
           deleted_at: string | null
           deleted_by: string | null
-          delete_reason: string | null
           deletion_reference: string | null
           entry_method: string
           estimate_snapshot: Json | null
@@ -3975,11 +4086,11 @@ export type Database = {
           on_hold_reason: string | null
           on_hold_since: string | null
           planner_version: string | null
-          qualifier_code: string | null
-          qualifier_kind: string | null
           primary_source_id: string
           project_scope_code: string | null
           property_code: string | null
+          qualifier_code: string | null
+          qualifier_kind: string | null
           room_codes: string[]
           service_code: string
           source: string
@@ -3999,9 +4110,9 @@ export type Database = {
           closed_lost_reason_id?: string | null
           contact_id: string
           created_at?: string
+          delete_reason?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
-          delete_reason?: string | null
           deletion_reference?: string | null
           entry_method: string
           estimate_snapshot?: Json | null
@@ -4017,11 +4128,11 @@ export type Database = {
           on_hold_reason?: string | null
           on_hold_since?: string | null
           planner_version?: string | null
-          qualifier_code?: string | null
-          qualifier_kind?: string | null
           primary_source_id: string
           project_scope_code?: string | null
           property_code?: string | null
+          qualifier_code?: string | null
+          qualifier_kind?: string | null
           room_codes?: string[]
           service_code: string
           source?: string
@@ -4041,9 +4152,9 @@ export type Database = {
           closed_lost_reason_id?: string | null
           contact_id?: string
           created_at?: string
+          delete_reason?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
-          delete_reason?: string | null
           deletion_reference?: string | null
           entry_method?: string
           estimate_snapshot?: Json | null
@@ -4059,11 +4170,11 @@ export type Database = {
           on_hold_reason?: string | null
           on_hold_since?: string | null
           planner_version?: string | null
-          qualifier_code?: string | null
-          qualifier_kind?: string | null
           primary_source_id?: string
           project_scope_code?: string | null
           property_code?: string | null
+          qualifier_code?: string | null
+          qualifier_kind?: string | null
           room_codes?: string[]
           service_code?: string
           source?: string
@@ -4083,15 +4194,15 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "leads_assigned_to_fkey"
-            columns: ["assigned_to"]
+            foreignKeyName: "fk_leads_manual_sales_temperature_set_by"
+            columns: ["manual_sales_temperature_set_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "leads_deleted_by_fkey"
-            columns: ["deleted_by"]
+            foreignKeyName: "leads_assigned_to_fkey"
+            columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -4101,6 +4212,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -4424,8 +4542,8 @@ export type Database = {
           id: string
           is_featured: boolean
           location_label: string | null
-          property_type: string | null
           portfolio_category_code: string | null
+          property_type: string | null
           published_at: string | null
           seo_description: string | null
           seo_title: string | null
@@ -4445,8 +4563,8 @@ export type Database = {
           id?: string
           is_featured?: boolean
           location_label?: string | null
-          property_type?: string | null
           portfolio_category_code?: string | null
+          property_type?: string | null
           published_at?: string | null
           seo_description?: string | null
           seo_title?: string | null
@@ -4466,8 +4584,8 @@ export type Database = {
           id?: string
           is_featured?: boolean
           location_label?: string | null
-          property_type?: string | null
           portfolio_category_code?: string | null
+          property_type?: string | null
           published_at?: string | null
           seo_description?: string | null
           seo_title?: string | null
@@ -5391,9 +5509,11 @@ export type Database = {
       }
       quotation_items: {
         Row: {
+          calculation_basis: string
           created_at: string
           description: string | null
           display_order: number
+          height_ft: number | null
           id: string
           item_name: string
           line_total_paise: number
@@ -5402,11 +5522,14 @@ export type Database = {
           specifications: string | null
           unit_of_measure: string
           unit_rate_paise: number
+          width_ft: number | null
         }
         Insert: {
+          calculation_basis?: string
           created_at?: string
           description?: string | null
           display_order?: number
+          height_ft?: number | null
           id?: string
           item_name: string
           line_total_paise: number
@@ -5415,11 +5538,14 @@ export type Database = {
           specifications?: string | null
           unit_of_measure: string
           unit_rate_paise: number
+          width_ft?: number | null
         }
         Update: {
+          calculation_basis?: string
           created_at?: string
           description?: string | null
           display_order?: number
+          height_ft?: number | null
           id?: string
           item_name?: string
           line_total_paise?: number
@@ -5428,6 +5554,7 @@ export type Database = {
           specifications?: string | null
           unit_of_measure?: string
           unit_rate_paise?: number
+          width_ft?: number | null
         }
         Relationships: [
           {
@@ -5895,6 +6022,309 @@ export type Database = {
         }
         Relationships: []
       }
+      salary_payments: {
+        Row: {
+          amount_paise: number
+          created_at: string
+          id: string
+          method: string
+          note: string | null
+          payment_date: string
+          recorded_by: string
+          reference: string | null
+          staff_id: string
+          statement_id: string
+        }
+        Insert: {
+          amount_paise: number
+          created_at?: string
+          id?: string
+          method: string
+          note?: string | null
+          payment_date: string
+          recorded_by: string
+          reference?: string | null
+          staff_id: string
+          statement_id: string
+        }
+        Update: {
+          amount_paise?: number
+          created_at?: string
+          id?: string
+          method?: string
+          note?: string | null
+          payment_date?: string
+          recorded_by?: string
+          reference?: string | null
+          staff_id?: string
+          statement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_payments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payments_statement_id_fkey"
+            columns: ["statement_id"]
+            isOneToOne: false
+            referencedRelation: "salary_statements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_profiles: {
+        Row: {
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          monthly_base_salary_paise: number
+          note: string | null
+          set_by: string
+          staff_id: string
+        }
+        Insert: {
+          created_at?: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          monthly_base_salary_paise: number
+          note?: string | null
+          set_by: string
+          staff_id: string
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          monthly_base_salary_paise?: number
+          note?: string | null
+          set_by?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_profiles_set_by_fkey"
+            columns: ["set_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_profiles_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_statement_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          new_status: string | null
+          previous_status: string | null
+          reason: string | null
+          statement_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          statement_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          statement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_statement_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_statement_events_statement_id_fkey"
+            columns: ["statement_id"]
+            isOneToOne: false
+            referencedRelation: "salary_statements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_statement_lines: {
+        Row: {
+          amount_paise: number
+          created_at: string
+          created_by: string
+          direction: string
+          id: string
+          line_type: string
+          note: string | null
+          statement_id: string
+        }
+        Insert: {
+          amount_paise: number
+          created_at?: string
+          created_by: string
+          direction: string
+          id?: string
+          line_type: string
+          note?: string | null
+          statement_id: string
+        }
+        Update: {
+          amount_paise?: number
+          created_at?: string
+          created_by?: string
+          direction?: string
+          id?: string
+          line_type?: string
+          note?: string | null
+          statement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_statement_lines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_statement_lines_statement_id_fkey"
+            columns: ["statement_id"]
+            isOneToOne: false
+            referencedRelation: "salary_statements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_statements: {
+        Row: {
+          absent_count: number
+          approved_day_count: number
+          base_salary_paise: number
+          created_at: string
+          created_by: string
+          credited_minutes: number
+          finalized_at: string | null
+          finalized_by: string | null
+          full_day_12h_count: number
+          full_day_8h_count: number
+          half_day_4h_count: number
+          id: string
+          late_day_count: number
+          salary_month: string
+          salary_profile_id: string
+          staff_id: string
+          status: string
+          updated_at: string
+          weekly_off_count: number
+        }
+        Insert: {
+          absent_count?: number
+          approved_day_count?: number
+          base_salary_paise: number
+          created_at?: string
+          created_by: string
+          credited_minutes?: number
+          finalized_at?: string | null
+          finalized_by?: string | null
+          full_day_12h_count?: number
+          full_day_8h_count?: number
+          half_day_4h_count?: number
+          id?: string
+          late_day_count?: number
+          salary_month: string
+          salary_profile_id: string
+          staff_id: string
+          status?: string
+          updated_at?: string
+          weekly_off_count?: number
+        }
+        Update: {
+          absent_count?: number
+          approved_day_count?: number
+          base_salary_paise?: number
+          created_at?: string
+          created_by?: string
+          credited_minutes?: number
+          finalized_at?: string | null
+          finalized_by?: string | null
+          full_day_12h_count?: number
+          full_day_8h_count?: number
+          half_day_4h_count?: number
+          id?: string
+          late_day_count?: number
+          salary_month?: string
+          salary_profile_id?: string
+          staff_id?: string
+          status?: string
+          updated_at?: string
+          weekly_off_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_statements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_statements_finalized_by_fkey"
+            columns: ["finalized_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_statements_salary_profile_id_fkey"
+            columns: ["salary_profile_id"]
+            isOneToOne: false
+            referencedRelation: "salary_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_statements_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_target_events: {
         Row: {
           actor_id: string
@@ -6063,37 +6493,52 @@ export type Database = {
       }
       staff_employment_profiles: {
         Row: {
+          access_revoked_at: string | null
+          access_state: string
           attendance_eligible: boolean
           attendance_policy_id: string | null
           created_at: string
+          credentials_issued_at: string | null
+          credentials_password_set_at: string | null
           designation: string
           employee_code: string
           invite_reconciliation_state: string
           joining_date: string
+          login_phone_e164: string | null
           reporting_manager_id: string | null
           staff_id: string
           updated_at: string
         }
         Insert: {
+          access_revoked_at?: string | null
+          access_state?: string
           attendance_eligible?: boolean
           attendance_policy_id?: string | null
           created_at?: string
+          credentials_issued_at?: string | null
+          credentials_password_set_at?: string | null
           designation: string
           employee_code: string
           invite_reconciliation_state?: string
           joining_date: string
+          login_phone_e164?: string | null
           reporting_manager_id?: string | null
           staff_id: string
           updated_at?: string
         }
         Update: {
+          access_revoked_at?: string | null
+          access_state?: string
           attendance_eligible?: boolean
           attendance_policy_id?: string | null
           created_at?: string
+          credentials_issued_at?: string | null
+          credentials_password_set_at?: string | null
           designation?: string
           employee_code?: string
           invite_reconciliation_state?: string
           joining_date?: string
+          login_phone_e164?: string | null
           reporting_manager_id?: string | null
           staff_id?: string
           updated_at?: string
@@ -6147,6 +6592,13 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -6698,6 +7150,15 @@ export type Database = {
         }
         Returns: Json
       }
+      add_salary_statement_line: {
+        Args: {
+          p_amount_paise: number
+          p_line_type: string
+          p_note?: string
+          p_statement_id: string
+        }
+        Returns: Json
+      }
       adjust_commerce_inventory: {
         Args: {
           p_delta: number
@@ -6734,6 +7195,15 @@ export type Database = {
           p_usage_metadata?: Json
         }
         Returns: string
+      }
+      approve_attendance_day: {
+        Args: {
+          p_attendance_date: string
+          p_final_category?: string
+          p_note?: string
+          p_staff_id: string
+        }
+        Returns: Json
       }
       approve_lead_import_batch: {
         Args: { p_batch_id: string; p_expected_revision: number }
@@ -6850,22 +7320,34 @@ export type Database = {
           assigned_to: string | null
           attribution: Json
           budget_comfort_code: string | null
+          budget_range_code: string | null
           closed_lost_note: string | null
           closed_lost_reason_id: string | null
           contact_id: string
           created_at: string
+          delete_reason: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          deletion_reference: string | null
           entry_method: string
           estimate_snapshot: Json | null
           id: string
           landing_path: string | null
           locality: string | null
+          manual_sales_temperature: string | null
+          manual_sales_temperature_reason: string | null
+          manual_sales_temperature_set_at: string | null
+          manual_sales_temperature_set_by: string | null
           message: string | null
           on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
           planner_version: string | null
           primary_source_id: string
-          property_code: string
+          project_scope_code: string | null
+          property_code: string | null
+          qualifier_code: string | null
+          qualifier_kind: string | null
           room_codes: string[]
           service_code: string
           source: string
@@ -6873,7 +7355,7 @@ export type Database = {
           submission_reference: string
           submitted_email: string | null
           submitted_name: string
-          timeline_code: string
+          timeline_code: string | null
           updated_at: string
         }
         SetofOptions: {
@@ -6892,6 +7374,10 @@ export type Database = {
         }
         Returns: Json
       }
+      attach_staff_app_access: {
+        Args: { p_email: string; p_staff_id: string }
+        Returns: Json
+      }
       authorize: { Args: { requested_permission: string }; Returns: boolean }
       authorize_commerce_product_media_upload: {
         Args: {
@@ -6900,17 +7386,26 @@ export type Database = {
           p_is_primary: boolean
           p_product_id: string
           p_sort_order: number
-          p_variant_id: string | null
+          p_variant_id: string
+        }
+        Returns: Json
+      }
+      begin_staff_credential_operation: {
+        Args: {
+          p_operation: string
+          p_phone?: string
+          p_reason?: string
+          p_staff_id: string
         }
         Returns: Json
       }
       bind_campaign_run_operation: {
         Args: {
           p_operation_id: string
-          p_provider_ad_group_id?: string | null
-          p_provider_ad_set_id?: string | null
+          p_provider_ad_group_id?: string
+          p_provider_ad_set_id?: string
           p_provider_campaign_id: string
-          p_provider_status?: string | null
+          p_provider_status?: string
         }
         Returns: Json
       }
@@ -7269,6 +7764,10 @@ export type Database = {
         }
         Returns: Json
       }
+      complete_staff_credential_operation: {
+        Args: { p_operation_id: string }
+        Returns: Json
+      }
       conclude_landing_experiment: {
         Args: {
           p_experiment_id: string
@@ -7321,6 +7820,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      confirm_staff_app_access: { Args: { p_staff_id: string }; Returns: Json }
       consume_commerce_public_rate_limit: {
         Args: {
           p_network_fingerprint_hash: string
@@ -7408,8 +7908,8 @@ export type Database = {
       }
       create_landing_publication: {
         Args: {
-          p_campaign_reference: string | null
-          p_campaign_version_number: number | null
+          p_campaign_reference: string
+          p_campaign_version_number: number
           p_idempotency_key: string
           p_landing_page_id: string
           p_version_id: string
@@ -7641,22 +8141,34 @@ export type Database = {
           assigned_to: string | null
           attribution: Json
           budget_comfort_code: string | null
+          budget_range_code: string | null
           closed_lost_note: string | null
           closed_lost_reason_id: string | null
           contact_id: string
           created_at: string
+          delete_reason: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          deletion_reference: string | null
           entry_method: string
           estimate_snapshot: Json | null
           id: string
           landing_path: string | null
           locality: string | null
+          manual_sales_temperature: string | null
+          manual_sales_temperature_reason: string | null
+          manual_sales_temperature_set_at: string | null
+          manual_sales_temperature_set_by: string | null
           message: string | null
           on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
           planner_version: string | null
           primary_source_id: string
-          property_code: string
+          project_scope_code: string | null
+          property_code: string | null
+          qualifier_code: string | null
+          qualifier_kind: string | null
           room_codes: string[]
           service_code: string
           source: string
@@ -7664,7 +8176,7 @@ export type Database = {
           submission_reference: string
           submitted_email: string | null
           submitted_name: string
-          timeline_code: string
+          timeline_code: string | null
           updated_at: string
         }
         SetofOptions: {
@@ -7745,6 +8257,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_salary_statement: {
+        Args: { p_salary_month: string; p_staff_id: string }
+        Returns: Json
+      }
       create_sales_target: {
         Args: {
           p_closed_won_count_target: number
@@ -7779,6 +8295,21 @@ export type Database = {
       }
       create_staff_member: {
         Args: { p_client_request_id: string }
+        Returns: Json
+      }
+      create_staff_member_without_invite: {
+        Args: {
+          p_attendance_eligible: boolean
+          p_attendance_policy_id: string
+          p_client_request_id: string
+          p_designation: string
+          p_display_name: string
+          p_employee_code: string
+          p_joining_date: string
+          p_phone_e164: string
+          p_reporting_manager_id: string
+          p_role_code: string
+        }
         Returns: Json
       }
       create_whatsapp_service_send_intent: {
@@ -7936,6 +8467,10 @@ export type Database = {
         }
         Returns: Json
       }
+      fail_staff_credential_operation: {
+        Args: { p_error?: string; p_operation_id: string }
+        Returns: Json
+      }
       finalize_commerce_product_media: {
         Args: {
           p_idempotency_key: string
@@ -7958,8 +8493,20 @@ export type Database = {
         }
         Returns: Json
       }
+      finalize_salary_statement: {
+        Args: { p_note?: string; p_statement_id: string }
+        Returns: Json
+      }
       freeze_landing_page_version: {
         Args: { p_idempotency_key: string; p_version_id: string }
+        Returns: Json
+      }
+      get_attendance_approval_inbox: {
+        Args: { p_from?: string; p_limit?: number; p_to?: string }
+        Returns: Json
+      }
+      get_attendance_monthly_summary: {
+        Args: { p_month: string; p_staff_id: string }
         Returns: Json
       }
       get_campaign_metrics_board: {
@@ -7989,23 +8536,23 @@ export type Database = {
       get_crm_management_analytics: {
         Args: {
           p_end: string
-          p_owner_id?: string | null
-          p_source_id?: string | null
+          p_owner_id?: string
+          p_source_id?: string
           p_start: string
-          p_target_month?: string | null
+          p_target_month?: string
         }
         Returns: Json
       }
       get_crm_my_day: {
         Args: {
           p_attention_limit?: number
-          p_owner_id?: string | null
+          p_owner_id?: string
           p_upcoming_limit?: number
         }
         Returns: Json
       }
       get_crm_pipeline_value_summary: {
-        Args: { p_owner_id?: string | null }
+        Args: { p_owner_id?: string }
         Returns: Json
       }
       get_live_landing_publication: { Args: { p_slug: string }; Returns: Json }
@@ -8031,6 +8578,11 @@ export type Database = {
         Returns: Json
       }
       get_quotation_draft: { Args: { p_quotation_id: string }; Returns: Json }
+      get_salary_statement: { Args: { p_statement_id: string }; Returns: Json }
+      get_staff_credential_operation: {
+        Args: { p_staff_id: string }
+        Returns: Json
+      }
       has_active_role: { Args: { p_role_code: string }; Returns: boolean }
       hold_project_design: {
         Args: {
@@ -8122,12 +8674,13 @@ export type Database = {
         Args: never
         Returns: Json
       }
-      list_project_high_level_status: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      list_project_high_level_status: { Args: never; Returns: Json }
       list_public_commerce_categories: { Args: never; Returns: Json }
       list_public_commerce_sitemap: { Args: never; Returns: Json }
+      list_salary_statements: {
+        Args: { p_limit?: number; p_staff_id?: string }
+        Returns: Json
+      }
       lock_sales_target: {
         Args: {
           p_expected_revision: number
@@ -8305,9 +8858,9 @@ export type Database = {
       record_landing_exposure: {
         Args: {
           p_assignment_epoch: string
-          p_experiment_id: string | null
+          p_experiment_id: string
           p_publication_id: string
-          p_variant_key: string | null
+          p_variant_key: string
           p_visitor_key_hash: string
         }
         Returns: Json
@@ -8353,6 +8906,18 @@ export type Database = {
         }
         Returns: Json
       }
+      record_salary_payment: {
+        Args: {
+          p_amount_paise: number
+          p_method: string
+          p_note?: string
+          p_payment_date: string
+          p_reference?: string
+          p_statement_id: string
+        }
+        Returns: Json
+      }
+      record_staff_first_login: { Args: never; Returns: Json }
       record_staff_invite_auth_success: {
         Args: { p_client_request_id: string; p_staff_id: string }
         Returns: Json
@@ -8370,6 +8935,10 @@ export type Database = {
           outcome_code: string
           send_intent_id: string
         }[]
+      }
+      reject_attendance_day: {
+        Args: { p_attendance_date: string; p_note: string; p_staff_id: string }
+        Returns: Json
       }
       reject_lead_import_batch: {
         Args: {
@@ -8432,6 +9001,14 @@ export type Database = {
         }
         Returns: Json
       }
+      remove_salary_statement_line: {
+        Args: { p_line_id: string }
+        Returns: Json
+      }
+      reopen_salary_statement: {
+        Args: { p_reason: string; p_statement_id: string }
+        Returns: Json
+      }
       reopen_sales_target: {
         Args: {
           p_expected_revision: number
@@ -8459,6 +9036,37 @@ export type Database = {
           to: "sales_targets"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      reorder_portfolio_project_media: {
+        Args: { requested_media_ids: string[]; requested_project_id: string }
+        Returns: {
+          alt_text: string
+          caption: string | null
+          created_at: string
+          created_by: string
+          file_size_bytes: number | null
+          focal_x: number
+          focal_y: number
+          height_px: number | null
+          id: string
+          media_role: string
+          mime_type: string | null
+          project_id: string
+          public_bucket: string
+          public_object_path: string | null
+          room_category_code: string | null
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string
+          width_px: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "portfolio_media"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       repair_closed_won_project_materialization: {
@@ -8596,109 +9204,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      reorder_portfolio_project_media: {
-        Args: {
-          requested_media_ids: string[]
-          requested_project_id: string
-        }
-        Returns: {
-          alt_text: string
-          caption: string | null
-          created_at: string
-          created_by: string
-          file_size_bytes: number | null
-          focal_x: number
-          focal_y: number
-          height_px: number | null
-          id: string
-          media_role: string
-          mime_type: string | null
-          project_id: string
-          public_bucket: string
-          public_object_path: string | null
-          room_category_code: string | null
-          sort_order: number
-          status: string
-          updated_at: string
-          updated_by: string
-          width_px: number | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "portfolio_media"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      set_portfolio_media_room_category: {
-        Args: {
-          requested_media_ids: string[]
-          requested_project_id: string
-          requested_room_code: string | null
-        }
-        Returns: {
-          alt_text: string
-          caption: string | null
-          created_at: string
-          created_by: string
-          file_size_bytes: number | null
-          focal_x: number
-          focal_y: number
-          height_px: number | null
-          id: string
-          media_role: string
-          mime_type: string | null
-          project_id: string
-          public_bucket: string
-          public_object_path: string | null
-          room_category_code: string | null
-          sort_order: number
-          status: string
-          updated_at: string
-          updated_by: string
-          width_px: number | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "portfolio_media"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      set_portfolio_project_cover: {
-        Args: {
-          requested_media_id: string
-          requested_project_id: string
-        }
-        Returns: {
-          alt_text: string
-          caption: string | null
-          created_at: string
-          created_by: string
-          file_size_bytes: number | null
-          focal_x: number
-          focal_y: number
-          height_px: number | null
-          id: string
-          media_role: string
-          mime_type: string | null
-          project_id: string
-          public_bucket: string
-          public_object_path: string | null
-          room_category_code: string | null
-          sort_order: number
-          status: string
-          updated_at: string
-          updated_by: string
-          width_px: number | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "portfolio_media"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
       replace_portfolio_project_categories: {
         Args: {
           requested_category_codes: string[]
@@ -8741,6 +9246,10 @@ export type Database = {
           p_mode: string
           p_quotation_id: string
         }
+        Returns: Json
+      }
+      request_attendance_correction: {
+        Args: { p_attendance_date: string; p_note: string }
         Returns: Json
       }
       request_campaign_approval: {
@@ -8878,6 +9387,10 @@ export type Database = {
         Args: { p_idempotency_key: string; p_project_id: string }
         Returns: Json
       }
+      return_attendance_for_correction: {
+        Args: { p_attendance_date: string; p_note: string; p_staff_id: string }
+        Returns: Json
+      }
       revise_sales_target: {
         Args: {
           p_closed_won_count_target: number
@@ -8913,10 +9426,6 @@ export type Database = {
         Args: { p_grant_id: string; p_reason?: string }
         Returns: Json
       }
-      set_lead_sales_temperature: {
-        Args: { p_lead_id: string; p_reason?: string; p_temperature: string }
-        Returns: Database["public"]["Tables"]["leads"]["Row"]
-      }
       save_campaign_draft: {
         Args: {
           p_budget_snapshot: Json
@@ -8935,7 +9444,7 @@ export type Database = {
       }
       save_landing_experiment_draft: {
         Args: {
-          p_experiment_id: string | null
+          p_experiment_id: string
           p_idempotency_key: string
           p_publication_id: string
           p_variants: Json
@@ -9012,6 +9521,123 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_lead_sales_temperature: {
+        Args: { p_lead_id: string; p_reason?: string; p_temperature: string }
+        Returns: {
+          assigned_to: string | null
+          attribution: Json
+          budget_comfort_code: string | null
+          budget_range_code: string | null
+          closed_lost_note: string | null
+          closed_lost_reason_id: string | null
+          contact_id: string
+          created_at: string
+          delete_reason: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          deletion_reference: string | null
+          entry_method: string
+          estimate_snapshot: Json | null
+          id: string
+          landing_path: string | null
+          locality: string | null
+          manual_sales_temperature: string | null
+          manual_sales_temperature_reason: string | null
+          manual_sales_temperature_set_at: string | null
+          manual_sales_temperature_set_by: string | null
+          message: string | null
+          on_hold_previous_status: string | null
+          on_hold_reason: string | null
+          on_hold_since: string | null
+          planner_version: string | null
+          primary_source_id: string
+          project_scope_code: string | null
+          property_code: string | null
+          qualifier_code: string | null
+          qualifier_kind: string | null
+          room_codes: string[]
+          service_code: string
+          source: string
+          status: string
+          submission_reference: string
+          submitted_email: string | null
+          submitted_name: string
+          timeline_code: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_portfolio_media_room_category: {
+        Args: {
+          requested_media_ids: string[]
+          requested_project_id: string
+          requested_room_code: string
+        }
+        Returns: {
+          alt_text: string
+          caption: string | null
+          created_at: string
+          created_by: string
+          file_size_bytes: number | null
+          focal_x: number
+          focal_y: number
+          height_px: number | null
+          id: string
+          media_role: string
+          mime_type: string | null
+          project_id: string
+          public_bucket: string
+          public_object_path: string | null
+          room_category_code: string | null
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string
+          width_px: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "portfolio_media"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      set_portfolio_project_cover: {
+        Args: { requested_media_id: string; requested_project_id: string }
+        Returns: {
+          alt_text: string
+          caption: string | null
+          created_at: string
+          created_by: string
+          file_size_bytes: number | null
+          focal_x: number
+          focal_y: number
+          height_px: number | null
+          id: string
+          media_role: string
+          mime_type: string | null
+          project_id: string
+          public_bucket: string
+          public_object_path: string | null
+          room_category_code: string | null
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string
+          width_px: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "portfolio_media"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       set_portfolio_project_status: {
         Args: { requested_project_id: string; requested_status: string }
         Returns: {
@@ -9022,6 +9648,7 @@ export type Database = {
           id: string
           is_featured: boolean
           location_label: string | null
+          portfolio_category_code: string | null
           property_type: string | null
           published_at: string | null
           seo_description: string | null
@@ -9054,6 +9681,15 @@ export type Database = {
         Args: { p_max_discount: number }
         Returns: Json
       }
+      set_salary_profile: {
+        Args: {
+          p_effective_from: string
+          p_monthly_base_salary_paise: number
+          p_note?: string
+          p_staff_id: string
+        }
+        Returns: Json
+      }
       set_staff_profile_status: {
         Args: { p_reason: string; p_staff_id: string; p_status: string }
         Returns: Json
@@ -9082,6 +9718,10 @@ export type Database = {
       }
       start_project_execution_snag: {
         Args: { p_idempotency_key: string; p_snag_id: string }
+        Returns: Json
+      }
+      submit_attendance_day: {
+        Args: { p_attendance_date: string; p_category: string }
         Returns: Json
       }
       submit_lead_import_batch: {
@@ -9132,6 +9772,7 @@ export type Database = {
         Args: {
           p_attribution: Json
           p_budget_comfort_code: string
+          p_budget_range_code?: string
           p_consent_service_email: boolean
           p_consent_service_enquiry: boolean
           p_consent_service_phone: boolean
@@ -9146,12 +9787,13 @@ export type Database = {
           p_message: string
           p_network_fingerprint_hash: string
           p_notice_version: string
-          p_qualifier_code?: string
-          p_qualifier_kind?: string
           p_phone_e164: string
           p_phone_fingerprint_hash: string
           p_planner_version: string
+          p_project_scope_code?: string
           p_property_code: string
+          p_qualifier_code?: string
+          p_qualifier_kind?: string
           p_request_hash: string
           p_room_codes: string[]
           p_service_code: string
@@ -9166,6 +9808,10 @@ export type Database = {
           retry_after_seconds: number
           submission_reference: string
         }[]
+      }
+      sync_staff_access_states: {
+        Args: { p_staff_id?: string }
+        Returns: number
       }
       transfer_activity_ownership: {
         Args: { p_activity_id: string; p_new_owner_id: string }
@@ -9232,22 +9878,34 @@ export type Database = {
           assigned_to: string | null
           attribution: Json
           budget_comfort_code: string | null
+          budget_range_code: string | null
           closed_lost_note: string | null
           closed_lost_reason_id: string | null
           contact_id: string
           created_at: string
+          delete_reason: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          deletion_reference: string | null
           entry_method: string
           estimate_snapshot: Json | null
           id: string
           landing_path: string | null
           locality: string | null
+          manual_sales_temperature: string | null
+          manual_sales_temperature_reason: string | null
+          manual_sales_temperature_set_at: string | null
+          manual_sales_temperature_set_by: string | null
           message: string | null
           on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
           planner_version: string | null
           primary_source_id: string
-          property_code: string
+          project_scope_code: string | null
+          property_code: string | null
+          qualifier_code: string | null
+          qualifier_kind: string | null
           room_codes: string[]
           service_code: string
           source: string
@@ -9255,7 +9913,7 @@ export type Database = {
           submission_reference: string
           submitted_email: string | null
           submitted_name: string
-          timeline_code: string
+          timeline_code: string | null
           updated_at: string
         }
         SetofOptions: {
@@ -9595,11 +10253,11 @@ export type Database = {
       }
       verify_live_landing_publication_context: {
         Args: {
-          p_experiment_reference: string | null
+          p_experiment_reference: string
           p_page_reference: string
           p_page_version_number: number
           p_publication_reference: string
-          p_variant_key: string | null
+          p_variant_key: string
         }
         Returns: Json
       }
@@ -9739,11 +10397,7 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
 } as const
-
