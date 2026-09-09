@@ -1291,13 +1291,24 @@ describe("dashboard Recent Leads is genuinely recent", () => {
     assert.match(src, /const activity: OpsActivityItem\[\] = recentLeads\.map/);
   });
 
-  test("the smart Leads workspace ordering is untouched", () => {
+  test("the Leads workspace machinery is untouched around the new order", () => {
+    /*
+     * THE SORT CHANGED ON PURPOSE; NOTHING ELSE DID.
+     *
+     * The Leads page is the chronological inbox now, so it orders by receipt
+     * rather than by sales priority. What this test still guards is everything
+     * AROUND that decision: the whole cohort is scored, buckets are counted
+     * over it, and the page is sliced from the ordered set — so Recent Leads
+     * and the workspace remain two distinct reads rather than one drifting
+     * into the other.
+     */
     const src = read(QUERIES);
-    // The queue still scores the whole cohort, resolves buckets, then slices.
     assert.match(src, /const bucketCounts = countSalesBuckets\(scored\.map/);
-    assert.match(src, /sortSegmentedLeads\(filtered, now\)/);
+    assert.match(src, /sortLeadsByReceivedNewestFirst\(filtered\)/);
     assert.match(src, /ordered\.slice\(from, from \+ query\.pageSize\)/);
     assert.match(src, /fetchLeadScoreBatch\(leadIds(?:, db)?\)/);
+    // Priority ranking must not sneak back into this page's final order.
+    assert.doesNotMatch(src, /sortSegmentedLeads\(/);
   });
 });
 

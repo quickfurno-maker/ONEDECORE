@@ -26,7 +26,7 @@ import {
   type CrmLeadSalesBucketCounts,
 } from "../contracts/lead-sales-bucket.ts";
 import { parseManualSalesTemperature } from "../contracts/lead-sales-temperature.ts";
-import { sortSegmentedLeads } from "../contracts/lead-segmentation-order.ts";
+import { sortLeadsByReceivedNewestFirst } from "../contracts/lead-received-order.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
 import { chunkLeadIds } from "../contracts/lead-batch-chunking.ts";
@@ -472,8 +472,9 @@ export interface LeadSegmentationPageResult
  * Reads the whole RLS-visible candidate cohort in bounded chunks.
  *
  * `.range()` is applied per chunk, so no single request has to return the entire
- * month. Rows arrive already ordered by (created_at, id) which makes the scan
- * deterministic and the truncation boundary reproducible.
+ * month. Rows arrive already ordered by (created_at DESC, id DESC), which makes
+ * the scan deterministic, the truncation boundary reproducible, and — because
+ * the ceiling cuts whatever is read last — keeps the newest leads in the cohort.
  */
 /**
  * Overflow result.
@@ -503,12 +504,28 @@ async function readCohortRows(
 ): Promise<{ rows: CrmLeadListRow[]; truncated: boolean } | null> {
   const supabase = await resolveCrmDb(db);
 
+  /*
+   * THE SCAN READS NEWEST FIRST, AND THAT IS A CORRECTNESS REQUIREMENT.
+   *
+   * The cohort is bounded by `CRM_LEAD_COHORT_MAX_ROWS`. Whatever the scan
+   * reaches last is what gets dropped when a month overflows that ceiling —
+   * so an oldest-first scan discards the NEWEST leads, which are precisely the
+   * rows this page exists to show. A busy month could therefore hide the
+   * enquiry that arrived a minute ago while faithfully listing last month's.
+   *
+   * Reading `created_at DESC, id DESC` keeps the scan just as deterministic
+   * and reproducible, and moves the truncation boundary to the far end of the
+   * cohort where it belongs: the oldest rows fall off, never the newest.
+   *
+   * The pipeline reads its own cohort in `crm-pipeline-queries.ts` and is not
+   * affected by this direction.
+   */
   const baseRequest = () =>
     supabase
       .from("leads")
       .select(CRM_LEAD_LIST_SELECT)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true }) as unknown as LeadListFilterBuilder;
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false }) as unknown as LeadListFilterBuilder;
 
   // When an id-restricting filter is active the candidate set is ALREADY known,
   // so the scan walks it in bounded id chunks. That avoids sending one enormous
@@ -772,7 +789,19 @@ export async function queryLeadListPage(
     ? scored.filter((item) => item.salesBucket === query.bucket)
     : scored;
 
-  const ordered = sortSegmentedLeads(filtered, now);
+  /*
+   * NEWEST RECEIVED FIRST — this is an inbox, not a work queue.
+   *
+   * The ordering used to be the sales-priority comparator, which put an
+   * older HOT lead above a brand-new one. That is right for the pipeline and
+   * wrong here: the owner opens this page to see what just came in, and a
+   * fresh enquiry appearing below week-old leads reads as a lost enquiry.
+   *
+   * Ordering happens AFTER filtering and BEFORE the page slice, so a filter
+   * narrows the candidate set without ever changing the sort rule, and page 1
+   * always holds the newest matching rows.
+   */
+  const ordered = sortLeadsByReceivedNewestFirst(filtered);
 
   const from = (query.page - 1) * query.pageSize;
   const items = ordered.slice(from, from + query.pageSize);
