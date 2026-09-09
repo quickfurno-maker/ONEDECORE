@@ -58,6 +58,26 @@ and `58_consent_visibility_behaviour_test.sql`.
   HMAC signature before any payload is processed.
 - **Quotation acceptance** captures immutable document hashes, client
   identifier, timestamp and audit events.
+- **Uploaded workbooks are bounded before they are parsed.** A bulk-import
+  `.xlsx` is a ZIP; its central directory is checked against declared entry
+  count, per-entry and total uncompressed size, and expansion ratio, and
+  rejected for ZIP64, encryption, macros, absolute paths or traversal, before
+  ExcelJS decompresses anything. This bounds the common amplification
+  constructions; it is not a proof against every malformed deflate stream.
+- **Production HTTP responses are configured with a Content-Security-Policy
+  and HSTS**, alongside the existing nosniff, referrer-policy, frame-deny and
+  permissions-policy headers. The policy is enforced and static-compatible
+  rather than nonce-based: it bounds where scripts, styles, images, fonts,
+  connections, frames and form posts may come from, and it does not stop an
+  injected inline script. Development ships neither header.
+- **Production high and critical dependency advisories fail CI.** `npm run
+  verify:dependencies` audits production dependencies on every Application
+  Quality run; an unfixable finding requires a per-advisory reviewed exception
+  naming its reachability, compensating control and expiry.
+
+These four controls are **configured in this repository and merged**. Whether
+they are live on onedecore.in depends on a deployment, which this repository
+does not perform.
 
 ## 3. Consent
 
