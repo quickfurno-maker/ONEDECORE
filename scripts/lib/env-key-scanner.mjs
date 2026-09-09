@@ -73,23 +73,54 @@ export function isEnvKeyName(name) {
   return ENV_PREFIXES.some((prefix) => name.startsWith(prefix));
 }
 
-function listSourceFiles(root) {
+/**
+ * Files that influence production or the production build.
+ *
+ * `src/` is not the whole runtime. `next.config.ts` executes during the build
+ * and can read anything it likes, so a `process.env` call there would have
+ * slipped past a src-only scan entirely — the contract would have been
+ * complete and wrong. Middleware and instrumentation files belong here too and
+ * are listed so they are covered the day somebody adds one.
+ *
+ * Deliberately NOT scanned: `scripts/`, tests, fixtures, docs and build output.
+ * Those read whatever they need for tooling and QA, and folding them in would
+ * turn the contract into a list of everything anyone ever touched.
+ */
+const DEFAULT_ROOTS = ["src"];
+const DEFAULT_FILES = [
+  "next.config.ts",
+  "middleware.ts",
+  "src/middleware.ts",
+  "instrumentation.ts",
+  "src/instrumentation.ts",
+  "instrumentation-client.ts",
+  "src/instrumentation-client.ts",
+];
+
+function listSourceFiles(roots, extraFiles) {
   const files = [];
-  (function walk(dir) {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.posix.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        // Tests may reference any key to exercise a parser; they are not the
-        // production contract and would otherwise inflate it.
-        if (entry.name === "__tests__" || entry.name === "node_modules") continue;
-        walk(full);
-        continue;
+  for (const root of roots) {
+    if (!fs.existsSync(root)) continue;
+    (function walk(dir) {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.posix.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          // Tests may reference any key to exercise a parser; they are not the
+          // production contract and would otherwise inflate it.
+          if (entry.name === "__tests__" || entry.name === "node_modules") continue;
+          walk(full);
+          continue;
+        }
+        if (!/\.(ts|tsx)$/.test(entry.name)) continue;
+        if (entry.name.endsWith(".test.ts") || entry.name.endsWith(".d.ts")) continue;
+        files.push(full);
       }
-      if (!/\.(ts|tsx)$/.test(entry.name)) continue;
-      if (entry.name.endsWith(".test.ts") || entry.name.endsWith(".d.ts")) continue;
-      files.push(full);
-    }
-  })(root);
+    })(root);
+  }
+  // Listed files are optional: absent ones are simply not scanned.
+  for (const file of extraFiles) {
+    if (fs.existsSync(file) && !files.includes(file)) files.push(file);
+  }
   return files.sort();
 }
 
@@ -112,7 +143,14 @@ function stringLiteralText(node) {
 /**
  * @returns {{ keys: Map<string, Set<string>>, unknownNamespace: Map<string, Set<string>> }}
  */
-export function scanEnvKeys(root = "src") {
+export function scanEnvKeys(options = {}) {
+  /*
+   * Accepts `{ roots, files }`. A bare string is still accepted so a caller
+   * asking for one directory reads naturally.
+   */
+  const roots = typeof options === "string" ? [options] : options.roots ?? DEFAULT_ROOTS;
+  const extraFiles =
+    typeof options === "string" ? [] : options.files ?? DEFAULT_FILES;
   const found = new Map();
   /*
    * The namespace filter can fail in two directions, and only one of them is
@@ -143,7 +181,7 @@ export function scanEnvKeys(root = "src") {
     found.get(name).add(file);
   };
 
-  for (const file of listSourceFiles(root)) {
+  for (const file of listSourceFiles(roots, extraFiles)) {
     const source = ts.createSourceFile(
       file,
       fs.readFileSync(file, "utf8"),
@@ -238,14 +276,39 @@ export function scanEnvKeys(root = "src") {
   return { keys: found, unknownNamespace };
 }
 
+/**
+ * Active `KEY=value` assignments, in order, with values.
+ *
+ * Values matter as much as names here. `.env.example` is a provisioning
+ * template, not a fixture: a registered secret must be BLANK in it, and only a
+ * parser that returns values can say whether it is. Order is preserved so a
+ * duplicate assignment — where the last one silently wins at runtime — can be
+ * reported rather than deduplicated away by a Set.
+ */
+export function readEnvExampleEntries(file = ".env.example") {
+  const entries = [];
+  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+    const match = /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(line.trim());
+    if (!match) continue;
+    /*
+     * Quotes are stripped before the emptiness check, so `KEY=""` counts as a
+     * value of nothing rather than a two-character string that would sail past
+     * a naive test.
+     */
+    const raw = match[2].trim();
+    const unquoted =
+      (raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2) ||
+      (raw.startsWith("'") && raw.endsWith("'") && raw.length >= 2)
+        ? raw.slice(1, -1).trim()
+        : raw;
+    entries.push({ key: match[1], value: unquoted, raw: match[2] });
+  }
+  return entries;
+}
+
 /** Uncommented `KEY=` assignments in a dotenv-style file. */
 export function readEnvExampleKeys(file = ".env.example") {
-  const keys = new Set();
-  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
-    const match = /^([A-Z][A-Z0-9_]*)=/.exec(line.trim());
-    if (match) keys.add(match[1]);
-  }
-  return keys;
+  return new Set(readEnvExampleEntries(file).map((entry) => entry.key));
 }
 
 /** Commented-out `# KEY=` lines: documented but intentionally unset. */

@@ -21,12 +21,35 @@ glossed.
 | Status | Means |
 | :--- | :--- |
 | **BUILT** | Code exists on a branch |
-| **MERGED** | On protected `main` |
+| **MERGED** | On `main`, through the approved PR + exact-head CI workflow |
 | **MANAGED_APPLIED** | Migration applied to managed Supabase `lpurlfmpvriyvpkujvyl` |
 | **DEPLOYED** | Owner-certified as running on the VPS |
 | **ACTIVATED** | Switched on for real users |
 | **OFF / FAIL-CLOSED** | Built, deliberately not activated; absence of config is the OFF state |
 | **DEFERRED** | Not scheduled |
+
+### Branch governance — verified 2026-09-09
+
+`main` uses **classic GitHub branch protection**, confirmed against the API
+rather than assumed:
+
+| Control | Verified value |
+| :--- | :--- |
+| `protected` | true |
+| Required status checks | **Application Quality**, **Database Quality** (strict — branch must be current) |
+| Enforced for admins | **yes** (`enforce_admins`) |
+| Force pushes | disabled |
+| Branch deletion | disabled |
+| Conversation resolution | required |
+| Required approving reviews | 0 |
+
+Repository **rulesets are empty** (`[]`). Protection is configured the classic
+way, so an audit that inspects only rulesets will report no protection and be
+wrong. That is worth recording, because such an audit already has.
+
+Zero required reviewers means CI, not a second person, is what stands between a
+branch and `main` — which is why the exact-head green requirement is treated as
+non-negotiable in this programme rather than as a formality.
 
 ### A. Repository state — `main` at truth-sync
 

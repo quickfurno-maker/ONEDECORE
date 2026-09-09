@@ -17,10 +17,10 @@
  * secret may not be public-scoped, and NEXT_PUBLIC_ may not carry one.
  */
 
-import fs from "node:fs";
 import process from "node:process";
 import {
   scanEnvKeys,
+  readEnvExampleEntries,
   readEnvExampleKeys,
   readEnvExampleCommentedKeys,
 } from "./lib/env-key-scanner.mjs";
@@ -69,7 +69,9 @@ for (const entry of registry.values()) {
 
 // ----------------------------------------------------------------- source ---
 
-const { keys: sourceKeys, unknownNamespace } = scanEnvKeys("src");
+// Default roots AND config files: `src/` alone would miss next.config.ts,
+// which runs during the build and can read anything.
+const { keys: sourceKeys, unknownNamespace } = scanEnvKeys();
 
 for (const [name, files] of sourceKeys) {
   if (!registry.has(name)) {
@@ -108,8 +110,48 @@ for (const [name, files] of unknownNamespace) {
 
 // ---------------------------------------------------------- .env.example ---
 
+const exampleEntries = readEnvExampleEntries();
 const exampleKeys = readEnvExampleKeys();
 const exampleCommented = readEnvExampleCommentedKeys();
+
+/*
+ * A duplicate assignment is not a style problem. dotenv keeps the last one, so
+ * two lines for the same key means the file documents one value and provisions
+ * another, and the reader has no way to tell which without knowing the loader.
+ */
+const seenExampleKeys = new Set();
+for (const entry of exampleEntries) {
+  if (seenExampleKeys.has(entry.key)) {
+    fail(
+      `DUPLICATE KEY ${entry.key} is assigned more than once in .env.example.\n` +
+        `              The last assignment silently wins; delete the others.`
+    );
+  }
+  seenExampleKeys.add(entry.key);
+}
+
+/*
+ * EVERY REGISTERED SECRET MUST BE BLANK.
+ *
+ * Shape detection alone is not enough: it catches a Supabase JWT or a Meta
+ * token, and misses a Groq key, a Google client secret, a bcrypt hash, or
+ * somebody's `hunter2`. The registry already knows which keys are secrets, so
+ * the rule is the strong one — a secret in a provisioning template has no
+ * legitimate non-empty value, placeholder or otherwise. A would-be example
+ * belongs in a comment, where it cannot be copied into a running system by a
+ * loader.
+ */
+for (const entry of exampleEntries) {
+  const contract = registry.get(entry.key);
+  if (!contract || contract.sensitivity !== "secret") continue;
+  if (entry.value !== "") {
+    fail(
+      `SECRET VALUE  ${entry.key} is a registered secret with a non-empty value in .env.example.\n` +
+        `              Registered secrets must be exactly \`${entry.key}=\`.\n` +
+        `              Put any illustrative value in a comment instead.`
+    );
+  }
+}
 
 for (const entry of registry.values()) {
   if (entry.inEnvExample && !exampleKeys.has(entry.name)) {
@@ -143,24 +185,26 @@ for (const name of exampleCommented) {
 // -------------------------------------------------------- no real secrets ---
 
 /*
- * A placeholder is fine; a token is not. This looks for values with the shape
- * of real credentials rather than for any non-empty value, so documented
- * defaults like `false` and `disabled` stay allowed.
+ * Defence in depth, not the primary rule. The registry check above already
+ * requires every known secret to be blank; this catches a credential parked on
+ * a key that is NOT registered as a secret — a token pasted into a config slot,
+ * say — which the registry alone would have no opinion about.
  */
 const SECRET_SHAPES = [
   /^eyJ[A-Za-z0-9_-]{20,}/,
   /^sb_secret_/,
   /^sbp_/,
   /^EAA[A-Za-z0-9]{20,}/,
+  /^sk-[A-Za-z0-9_-]{16,}/,
+  /^gsk_[A-Za-z0-9]{16,}/,
+  /^ya29\./,
+  /^ghp_[A-Za-z0-9]{20,}/,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
 ];
-for (const line of fs.readFileSync(".env.example", "utf8").split(/\r?\n/)) {
-  const match = /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(line.trim());
-  if (!match) continue;
-  const value = match[2].trim();
-  if (SECRET_SHAPES.some((shape) => shape.test(value))) {
+for (const entry of exampleEntries) {
+  if (SECRET_SHAPES.some((shape) => shape.test(entry.value))) {
     fail(
-      `SECRET VALUE  ${match[1]} looks like a real credential in .env.example.\n` +
+      `CREDENTIAL    ${entry.key} holds a value shaped like a real credential.\n` +
         `              Replace it with an empty placeholder.`
     );
   }

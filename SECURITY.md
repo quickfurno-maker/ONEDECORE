@@ -82,7 +82,18 @@ see, and the separate marketing-manager path is restricted to `MARKETING` rows
 and still requires a visible lead for that contact. Both are proven behaviourally
 against real roles, not by reading policy text.
 
-Opt-out (`STOP`) immediately revokes messaging consent.
+### Opt-out is a required behaviour, not a shipped one
+
+There is no STOP handling in this codebase today, and WhatsApp messaging is OFF
+and fail-closed, so nothing is currently sending anything a customer would need
+to stop. Saying otherwise would describe a control that does not exist.
+
+When outbound messaging is activated, opt-out handling must update the CRM
+consent and suppression source of truth through an explicit governed flow.
+Receiving an inbound message must not, by itself, fabricate or infer a consent
+withdrawal: a webhook payload is a claim about what someone typed, and consent
+state is a legal record. The two are connected by a reviewed path or not at
+all.
 
 ## 4. Privacy and data minimization
 

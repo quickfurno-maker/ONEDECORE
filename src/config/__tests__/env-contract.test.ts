@@ -144,6 +144,106 @@ describe("B. deferred capabilities are still gates, and still closed", () => {
   });
 });
 
+describe("F. the template never carries a secret value", () => {
+  /*
+   * Shape detection alone was not enough. It catches a Supabase JWT or a Meta
+   * token and misses a Groq key, a Google client secret, or somebody's
+   * `hunter2`. The registry already knows which keys are secrets, so the rule
+   * is the strong one: a secret in a provisioning template has no legitimate
+   * non-empty value, placeholder or otherwise.
+   */
+  const entries = read(".env.example")
+    .split("\n")
+    .map((line) => /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(line.trim()))
+    .filter((match): match is RegExpExecArray => match !== null)
+    .map((match) => ({ key: match[1]!, value: match[2]!.trim() }));
+
+  test("every registered secret is exactly blank", () => {
+    for (const entry of entries) {
+      const contract = findEnvKeyContract(entry.key);
+      if (contract?.sensitivity !== "secret") continue;
+      assert.equal(
+        entry.value,
+        "",
+        `${entry.key} is a registered secret and must be an empty assignment`
+      );
+    }
+  });
+
+  test("at least one secret is actually being checked", () => {
+    // Guards the guard: if no secret were active in the template, the
+    // assertion above would pass by having nothing to look at.
+    const secrets = entries.filter(
+      (entry) => findEnvKeyContract(entry.key)?.sensitivity === "secret"
+    );
+    assert.ok(secrets.length >= 5, "the template should carry the known secrets");
+  });
+
+  test("no key is assigned twice", () => {
+    // dotenv keeps the last assignment, so a duplicate documents one value and
+    // provisions another.
+    const seen = new Set<string>();
+    for (const entry of entries) {
+      assert.ok(!seen.has(entry.key), `${entry.key} is assigned more than once`);
+      seen.add(entry.key);
+    }
+  });
+
+  test("the guard itself enforces the blank rule and the duplicate rule", () => {
+    /*
+     * The invariants above describe the file as it stands; these assert that
+     * `verify-env-contract.mjs` would REJECT a file that broke them, which is
+     * what actually protects the repository in CI.
+     */
+    const verifier = read("scripts/verify-env-contract.mjs");
+    assert.match(verifier, /sensitivity !== "secret"/);
+    assert.match(verifier, /SECRET VALUE/);
+    assert.match(verifier, /DUPLICATE KEY/);
+    assert.match(verifier, /readEnvExampleEntries/);
+  });
+});
+
+describe("G. production config outside src/ is scanned too", () => {
+  const scanner = read("scripts/lib/env-key-scanner.mjs");
+
+  test("next.config.ts is in the default scan set", () => {
+    /*
+     * `src/` is not the whole runtime. next.config.ts executes during the
+     * build and can read anything, so a src-only scan would have left the
+     * contract complete and wrong.
+     */
+    assert.match(scanner, /"next\.config\.ts"/);
+  });
+
+  test("middleware and instrumentation are covered when they appear", () => {
+    for (const file of [
+      "middleware.ts",
+      "src/middleware.ts",
+      "instrumentation.ts",
+      "src/instrumentation.ts",
+    ]) {
+      assert.ok(
+        scanner.includes(`"${file}"`),
+        `${file} should be scanned if it is ever added`
+      );
+    }
+  });
+
+  test("the verifier uses the default roots AND files", () => {
+    // Passing "src" would take the string branch and silently scan no config.
+    const verifier = read("scripts/verify-env-contract.mjs");
+    assert.match(verifier, /scanEnvKeys\(\)/);
+    assert.doesNotMatch(verifier, /scanEnvKeys\("src"\)/);
+  });
+
+  test("tooling directories stay out of the contract", () => {
+    // scripts/ and tests read whatever they need; folding them in would turn
+    // the contract into a list of everything anyone ever touched.
+    assert.match(scanner, /__tests__/);
+    assert.doesNotMatch(scanner, /"scripts"/);
+  });
+});
+
 describe("C. cryptographic domains stay separate", () => {
   test("each domain has its own registered secret", () => {
     for (const name of [
