@@ -2,7 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/database.generated";
+import type { Database } from "@/types/database";
 import {
   mapCreateStaffMemberRpcResult,
   normalizeEmployeeCode,

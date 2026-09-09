@@ -5,7 +5,7 @@
  */
 
 import { revalidatePath } from "next/cache";
-import type { Json } from "@/types/database.generated";
+import type { Json } from "@/types/database";
 import { buildSaveRoomsPayload } from "../contracts/save-rooms-payload.ts";
 import { createClient } from "@/lib/supabase/server";
 import type {

@@ -1,6 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { getPublicSupabaseEnv } from "@/config/env";
-import type { Database } from "@/types/database.generated";
+import type { Database } from "@/types/database";
 
 /**
  * Creates a browser-scoped Supabase client instance using generated Database types.

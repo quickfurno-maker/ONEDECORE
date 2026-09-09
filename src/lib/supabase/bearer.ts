@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getPublicSupabaseEnv } from "@/config/env";
-import type { Database } from "@/types/database.generated";
+import type { Database } from "@/types/database";
 
 /**
  * Creates a Supabase client authenticated by a caller-supplied access token.

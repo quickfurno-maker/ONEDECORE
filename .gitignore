@@ -58,3 +58,6 @@ Thumbs.db
 *.njsproj
 *.sln
 *.swp
+
+# Scratch output from database type generation audits (never committed).
+.tmp/

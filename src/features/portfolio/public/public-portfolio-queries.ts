@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "../../../types/database.generated.ts";
+import type { Database } from "../../../types/database.ts";
 import {
   PUBLIC_LISTING_PAGE_SIZE,
   MAX_HOMEPAGE_FEATURED,

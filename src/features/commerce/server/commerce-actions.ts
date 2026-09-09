@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { Json } from "@/types/database.generated";
+import type { Json } from "@/types/database";
 import { parsePaiseInteger, validateOptionValues } from "../domain/option-values";
 import {
   CommerceActionError,

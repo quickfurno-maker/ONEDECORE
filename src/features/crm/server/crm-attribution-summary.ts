@@ -1,4 +1,4 @@
-import type { Json } from "@/types/database.generated";
+import type { Json } from "@/types/database";
 
 export function formatMarketingTouchSummary(attribution: Json | null): string | null {
   if (!attribution || typeof attribution !== "object" || Array.isArray(attribution)) {

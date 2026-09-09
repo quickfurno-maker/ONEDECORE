@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getPublicSupabaseEnv } from "@/config/env";
-import type { Database } from "@/types/database.generated";
+import type { Database } from "@/types/database";
 
 /**
  * Creates a server-scoped Supabase client instance using generated Database types.

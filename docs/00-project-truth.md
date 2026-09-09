@@ -128,16 +128,24 @@ own lawful basis.
 | :--- | :--- | :--- |
 | 1 | Runtime/config/test governance | **MERGED** — PR #163 |
 | 2 | Database security contracts | **MERGED** — PR #164; migration 67 **MANAGED_APPLIED** |
-| 3 | Repository truth + environment contract | **this PR** |
-| 4 | Generated database types | pending |
+| 3 | Repository truth + environment contract | **MERGED** — PR #165 |
+| 4 | Generated database types | **this PR** |
 | 5 | Dependencies, HTTP/CSP | pending |
 | 6 | Performance / index review | pending |
 
 Feature activation remains separate from hardening and owner-gated throughout.
 
+### Generated database types
+
+`src/types/database.generated.ts` is machine output, regenerated from
+`supabase/migrations/` against a clean local stack by `npm run db:types:generate`
+and checked by `npm run verify:db-types` inside Database Quality. Nobody edits
+it. Application corrections — the RPC arguments that accept SQL NULL, which the
+generator cannot express — live in `src/types/database.ts`, which every Supabase
+client is parameterised by. See `docs/audits/lane-4-generated-database-types.md`.
+
 ### Outstanding technical debt
 
-- `src/types/database.generated.ts` is stale beyond the two `leads` columns added by hand; a full regeneration is a ~991-line diff and drops nullable RPC args this repository restores manually. Lane 4.
 - 7 npm advisories (4 high, 3 moderate); direct: `sharp`, `exceljs`, `csv-parse`. Lane 5.
 - No Content-Security-Policy; the other four security headers are set. Lane 5.
 - `service_role` holds TRUNCATE/TRIGGER/REFERENCES broadly; narrowing it needs its own review of admin and fixture paths.

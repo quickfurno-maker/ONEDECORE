@@ -10,7 +10,7 @@ import {
   fingerprintRequest,
 } from "./request-fingerprints.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "../../../types/database.generated.ts";
+import type { Database } from "../../../types/database.ts";
 
 export interface LeadIntakeServiceDeps {
   readonly mode: LeadIntakeMode;

@@ -6,7 +6,7 @@ import {
   type LoginCookieAdapter,
   type LoginSupabaseClient,
 } from "@/features/staff-admin/server/staff-login-submit";
-import type { Database } from "@/types/database.generated";
+import type { Database } from "@/types/database";
 
 /**
  * The single production login mutation authority.

@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database.generated";
+import type { Database } from "@/types/database";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 import type { CrmLeadListRow } from "../contracts/lead-dtos.ts";
 import type {

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { landingLabErrorFromUnknown, type LandingLabActionCode } from "./landing-errors.ts";
 import { validateLandingPageBlocks, type LandingBlock } from "../contracts/blocks.ts";
-import type { Json } from "@/types/database.generated.ts";
+import type { Json } from "@/types/database";
 
 export interface LandingLabActionResult<T = void> {
   readonly success: boolean;

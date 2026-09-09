@@ -1,4 +1,4 @@
-import type { Database } from "../../../types/database.generated.ts";
+import type { Database } from "../../../types/database.ts";
 import {
   PORTFOLIO_SERVICE_LABELS,
   SLUG_GRAMMAR_REGEX,
