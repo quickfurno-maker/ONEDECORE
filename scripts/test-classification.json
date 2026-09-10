@@ -9,8 +9,10 @@
     "  integration - needs a running local Supabase; run in the Database job"
   ],
   "application": [
+    "src/config/__tests__/dependency-security.test.ts",
     "src/config/__tests__/env-contract.test.ts",
     "src/config/__tests__/env-key-scanner.test.ts",
+    "src/config/__tests__/http-security.test.ts",
     "src/features/admin-ops/__tests__/ops-suite-correction.test.ts",
     "src/features/commerce/__tests__/commerce-dashboard-ui.test.ts",
     "src/features/commerce/__tests__/phase-10-cod-production-readiness.test.ts",
@@ -54,6 +56,7 @@
     "src/features/crm/__tests__/phase-5d-bulk-import.test.ts",
     "src/features/crm/__tests__/phase-5e-sales-targets-reporting.test.ts",
     "src/features/crm/__tests__/phone-e164.test.ts",
+    "src/features/crm/__tests__/xlsx-archive-preflight.test.ts",
     "src/features/kriti/__tests__/phase-6c-formal-runtime.test.ts",
     "src/features/kriti/__tests__/phase-6c-k0-contracts.test.ts",
     "src/features/kriti/__tests__/phase-6c-k1-provider-core.test.ts",

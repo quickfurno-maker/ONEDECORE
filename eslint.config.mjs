@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Scratch output from local audits. Gitignored, and not source.
+    ".tmp/**",
   ]),
   {
     /*

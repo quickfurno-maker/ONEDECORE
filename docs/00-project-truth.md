@@ -129,8 +129,8 @@ own lawful basis.
 | 1 | Runtime/config/test governance | **MERGED** — PR #163 |
 | 2 | Database security contracts | **MERGED** — PR #164; migration 67 **MANAGED_APPLIED** |
 | 3 | Repository truth + environment contract | **MERGED** — PR #165 |
-| 4 | Generated database types | **this PR** |
-| 5 | Dependencies, HTTP/CSP | pending |
+| 4 | Generated database types | **MERGED** — PR #166 |
+| 5 | Dependencies, HTTP/CSP | **this PR** |
 | 6 | Performance / index review | pending |
 
 Feature activation remains separate from hardening and owner-gated throughout.
@@ -144,10 +144,31 @@ it. Application corrections — the RPC arguments that accept SQL NULL, which th
 generator cannot express — live in `src/types/database.ts`, which every Supabase
 client is parameterised by. See `docs/audits/lane-4-generated-database-types.md`.
 
+### Uploaded workbook ingestion
+
+A bulk-import `.xlsx` passes two gates before ExcelJS: a structural check of the
+ZIP central directory, and a bounded inflation of every entry that counts actual
+output against a hard ceiling and requires it to match what was declared. The
+second exists because the first can only read what an archive claims. See
+`docs/audits/lane-5-dependency-http-security.md`.
+
+### HTTP security headers
+
+Production responses are configured with an enforced, static-compatible
+Content-Security-Policy and one-year HSTS (no `includeSubDomains`, no
+`preload`), alongside the four headers that predate them. The policy is built in
+`src/config/http-security.ts`; `next dev` gets neither. Configured and merged —
+**not** verified live, which needs a deployment. See
+`docs/audits/lane-5-dependency-http-security.md`.
+
 ### Outstanding technical debt
 
-- 7 npm advisories (4 high, 3 moderate); direct: `sharp`, `exceljs`, `csv-parse`. Lane 5.
-- No Content-Security-Policy; the other four security headers are set. Lane 5.
+- 3 npm advisories, all **moderate**, none with a safe patch: `csv-parse`
+  (prototype replacement via the columns path — not reachable under the
+  importer's option set, proven by test), and `uuid` via `exceljs` (a bounds
+  check in v3/v5/v6 with a `buf` argument; ExcelJS imports only `v4`, on a write
+  path this repository never takes). Production high/critical: **zero**, and
+  `verify:dependencies` fails CI if that changes.
 - `service_role` holds TRUNCATE/TRIGGER/REFERENCES broadly; narrowing it needs its own review of admin and fixture paths.
 - Repository visibility is **public**; no credential is committed, and the decision is the owner's.
 

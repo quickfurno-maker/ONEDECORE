@@ -1,14 +1,19 @@
 import type { NextConfig } from "next";
 
-const securityHeaders = [
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "X-Frame-Options", value: "DENY" },
-  {
-    key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
-  },
-];
+import { buildSecurityHeaders } from "./src/config/http-security.ts";
+
+/*
+ * The header set is decided in `src/config/http-security.ts`, a pure module the
+ * test suite can assert against directly. This file only supplies the one fact
+ * it cannot know: whether this is a production build.
+ *
+ * `next dev` gets the four baseline headers and no CSP — an enforced policy
+ * breaks HMR, and the usual development escape hatch (`'unsafe-eval'`) is the
+ * kind of thing that ships by accident. There is no development policy to leak.
+ */
+const securityHeaders = buildSecurityHeaders({
+  isProduction: process.env.NODE_ENV === "production",
+});
 
 const nextConfig: NextConfig = {
   experimental: {

@@ -12,7 +12,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "check": "npm run verify:tests && npm run verify:env && npm run lint && npm run typecheck && npm run build",
+    "check": "npm run verify:tests && npm run verify:env && npm run verify:dependencies && npm run lint && npm run typecheck && npm run build",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
@@ -84,7 +84,8 @@
     "qa:crm-whatsapp-launch-certification": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types scripts/crm-whatsapp-launch-certification-e2e.ts",
     "test:staff-password-ux": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/staff-admin/__tests__/staff-password-ux.test.ts",
     "verify:tests": "node scripts/verify-test-classification.mjs",
-    "verify:env": "node --experimental-strip-types scripts/verify-env-contract.mjs"
+    "verify:env": "node --experimental-strip-types scripts/verify-env-contract.mjs",
+    "verify:dependencies": "node scripts/verify-dependency-security.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",
@@ -96,7 +97,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "server-only": "0.0.1",
-    "sharp": "0.35.3"
+    "sharp": "0.35.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

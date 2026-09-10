@@ -10,6 +10,8 @@ import {
   type LeadImportParsedRow,
 } from "../contracts/lead-import-contracts.ts";
 import { CrmError } from "./crm-errors.ts";
+import { assertSafeXlsxArchive } from "./xlsx-archive-preflight.ts";
+import { assertBoundedXlsxDecompression } from "./xlsx-bounded-decompression.ts";
 
 function stripUtf8Bom(value: string): string {
   return value.charCodeAt(0) === 0xfeff ? value.slice(1) : value;
@@ -127,13 +129,48 @@ async function assertNoXlsxFormulas(worksheet: ExcelJS.Worksheet): Promise<void>
   });
 }
 
-async function extractXlsxHeadersAndRecords(buffer: Buffer): Promise<{
+/**
+ * Hand a buffer to ExcelJS.
+ *
+ * Extracted so the archive gate below can be tested for what it actually
+ * guarantees — that an unsafe file never reaches the parser — rather than by
+ * reading the source and hoping the two statements stay in that order.
+ */
+export type XlsxWorkbookLoader = (buffer: Buffer) => Promise<ExcelJS.Workbook>;
+
+const loadWorkbookWithExcelJs: XlsxWorkbookLoader = async (buffer) => {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+  return workbook;
+};
+
+export async function extractXlsxHeadersAndRecords(
+  buffer: Buffer,
+  loadWorkbook: XlsxWorkbookLoader = loadWorkbookWithExcelJs
+): Promise<{
   worksheetName: string;
   headers: string[];
   records: Record<string, string>[];
 }> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+  /*
+   * TWO GATES, BOTH BEFORE THE PARSER.
+   *
+   * The row and column limits further down are applied to a workbook ExcelJS
+   * has already decompressed, so they bound the result rather than the work.
+   *
+   * Gate 1 reads the ZIP central directory and decompresses nothing. It stops
+   * archives that are structurally not workbooks, and archives whose own
+   * declaration is out of bounds.
+   *
+   * Gate 2 stops the archives that lie. A directory can declare a safe size and
+   * inflate to gigabytes; JSZip only notices the mismatch after materialising
+   * the output. So each entry is inflated here first, under a hard ceiling,
+   * counted and discarded, and required to match its declaration.
+   */
+  const entries = assertSafeXlsxArchive(buffer);
+  await assertBoundedXlsxDecompression(buffer, entries);
+
+  const workbook = await loadWorkbook(buffer);
 
   const worksheet = workbook.worksheets[0];
   if (!worksheet) {
