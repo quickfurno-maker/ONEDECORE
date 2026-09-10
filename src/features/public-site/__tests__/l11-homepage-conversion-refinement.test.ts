@@ -213,26 +213,40 @@ describe("the projects count is displayed without being called verified", () => 
     assert.match(read(STRIP), /isClaimDisplayable\(metric\.claimId\)/);
 
     /*
-     * THE STRIP MOVED, BY OWNER DIRECTION.
+     * THE STRIP IS NOW MOUNTED NOWHERE, BY OWNER DIRECTION.
      *
-     * It used to sit second on the homepage. It now opens `/interiors`, where
-     * the visitor has already chosen to read about the work rather than being
-     * shown four animated figures before being told what the company does. The
-     * evidence model is untouched by the move — the assertions above still hold
-     * — so what changes here is only WHERE it is mounted.
+     * It opened `/interiors` for a while, directly under a hero that already
+     * carries a credibility row. Two numeric proof blocks within one screen of
+     * each other do not double the proof — they make a visitor ask which of the
+     * two is the real number. The hero's row survived because it is part of the
+     * hero's argument; the strip did not.
+     *
+     * The component and its evidence model are deliberately untouched: the
+     * assertions above still run against it, and it stays available for a
+     * surface that has no credibility row of its own.
      */
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     assert.doesNotMatch(page, /DiscoveryProofStrip/);
 
-    const interiors = read(
-      "src/features/public-site/interiors/InteriorsConversionPage.tsx"
+    // Comment-stripped: the page explains in prose why the strip left, and
+    // that explanation names it.
+    const interiors = code(
+      read("src/features/public-site/interiors/InteriorsConversionPage.tsx")
     );
-    assert.ok(
-      interiors.indexOf("<HomeHero") < interiors.indexOf("<DiscoveryProofStrip"),
-      "the proof strip must come after the hero"
-    );
+    assert.doesNotMatch(interiors, /DiscoveryProofStrip/);
     // And NOT inside the hero.
     assert.doesNotMatch(read(HERO), /DiscoveryProofStrip|DiscoveryHeroTrustBar/);
+
+    /*
+     * The hook did not become unused when the strip was unmounted — the
+     * INTERIORS hero's credibility row drives it now, which is the whole point
+     * of there being one counter engine. (`HERO` above is the homepage slider,
+     * a different component.)
+     */
+    assert.match(
+      read("src/features/public-site/home-r4/HomeHero.tsx"),
+      /useCountUp\(item\.value\)/
+    );
   });
 
   test("the proof strip quotes no suppressed figure", () => {
