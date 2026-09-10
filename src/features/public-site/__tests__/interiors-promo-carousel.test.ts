@@ -238,30 +238,51 @@ describe("a banner links as a whole card or not at all", () => {
 /* -------------------------------------------------------------------------- */
 
 describe("geometry", () => {
-  test("mobile: 82vw, exact 9:16, 20px radius, 12px gap, 16px inset", () => {
+  test("mobile: 74vw capped at 60vh, exact 9:16, 20px radius, 12px gap, 16px inset", () => {
+    /*
+     * 74vw, down from 82vw. At 82 the card stood 569px tall on a 390px phone
+     * and the rail read as a full-page story viewer rather than a promotional
+     * strip. The width the owner asked for and the height ceiling are one
+     * `min()`, so whichever binds first still yields an exact 9:16 box.
+     */
     const css = read(CSS);
-    assert.match(css, /flex: 0 0 min\(82vw, calc\(76vh \* 9 \/ 16\)\)/);
+    assert.match(css, /flex: 0 0 min\(74vw, calc\(60vh \* 9 \/ 16\)\)/);
     assert.match(css, /\.od-int-promo__frame \{[\s\S]*?aspect-ratio: 9 \/ 16/);
     assert.match(css, /\.od-int-promo__frame \{[\s\S]*?border-radius: 20px/);
     assert.match(css, /gap: 12px/);
     assert.match(css, /padding: 0 16px/);
+    // The previous, taller card must not come back.
+    assert.doesNotMatch(css, /flex: 0 0 min\(82vw/);
   });
 
-  test("the height guard caps WIDTH so the ratio stays exact", () => {
+  test("the height ceiling is expressed as a WIDTH so the ratio stays exact", () => {
     /*
      * A `max-height` on a box with `aspect-ratio` is satisfied by distorting
-     * or cropping. Capping the width instead makes a short viewport show a
-     * smaller card that is still 9:16, which is what the artwork needs.
+     * or cropping. `60vh * 9/16` is the width that produces a 60vh-tall 9:16
+     * card, so the ceiling is enforced without the ratio ever being the thing
+     * that gives.
      */
     const css = read(CSS);
     const frame = /\.od-int-promo__frame \{[\s\S]*?\n\}/.exec(css);
     assert.ok(frame);
     assert.doesNotMatch(frame[0], /max-height/, "the frame must not cap height");
-    assert.match(css, /calc\(76vh \* 9 \/ 16\)/);
+    assert.doesNotMatch(
+      /\.od-int-promo__card \{[\s\S]*?\n\}/.exec(css)![0],
+      /max-height/,
+      "the card must not cap height either"
+    );
+    assert.match(css, /calc\(60vh \* 9 \/ 16\)/);
     assert.match(css, /calc\(70vh \* 9 \/ 16\)/);
   });
 
   test("desktop: more cards, not a bigger one — and never a billboard", () => {
+    /*
+     * The desktop cap stays at 70vh deliberately. Sweeping it against the
+     * built page showed every value from 58vh to 65vh moves 1280 and 1440 from
+     * three cards to four, so tightening it is not a shorter rail — it is a
+     * different layout, reached by changing a number that looks like it only
+     * controls height.
+     */
     const css = read(CSS);
     assert.match(css, /flex: 0 0 min\(clamp\(300px, 26vw, 360px\), calc\(70vh \* 9 \/ 16\)\)/);
     assert.match(css, /@media \(min-width: 48rem\)[\s\S]*?border-radius: 24px/);
