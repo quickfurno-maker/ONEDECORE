@@ -264,11 +264,21 @@ describe("Phase 10C — homepage launch UX", () => {
   });
 
   test("portfolio preview loads three featured projects with empty fallback", () => {
-    // Fewer, larger, quieter. Three reads as curated proof at every
-    // breakpoint; six read as a contact sheet.
-    const route = read("src/app/page.tsx");
+    /*
+     * Fewer, larger, quieter. Three reads as curated proof at every
+     * breakpoint; six read as a contact sheet.
+     *
+     * This preview belongs to `DiscoveryHomePage`, which is no longer mounted
+     * at `/` — the Interiors page is. The component and its contract are
+     * unchanged and still asserted here; only the route that used to fetch for
+     * it has stopped, which is why the slice assertion moved off the route.
+     */
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
-    assert.match(route, /slice\(0, 3\)/);
+    assert.doesNotMatch(
+      read("src/app/page.tsx"),
+      /getFeaturedProjects/,
+      "the root must not fetch portfolio data it does not render"
+    );
     assert.match(page, /projects\.length > 0/);
     assert.match(page, /od-disc-homes__empty/);
     assert.match(page, /data-od-portfolio-preview/);

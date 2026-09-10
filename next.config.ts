@@ -67,6 +67,28 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  /*
+   * `/interiors` moved to `/`, permanently.
+   *
+   * The Interiors experience is the homepage now, and it must exist at exactly
+   * one URL. Two routes rendering the same page would compete for the same
+   * queries and split whatever authority the old path has earned.
+   *
+   * This is config, not a page, on purpose. Next checks redirects BEFORE the
+   * filesystem, so `/interiors` never reaches a component: no render, no
+   * flash of content, no `useEffect` bouncing a visitor who has already begun
+   * reading. `permanent: true` is a 308 rather than a 301 so the request
+   * method survives the hop.
+   */
+  async redirects() {
+    return [
+      {
+        source: "/interiors",
+        destination: "/",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

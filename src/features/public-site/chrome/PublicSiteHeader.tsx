@@ -28,7 +28,8 @@ function getFocusables(container: HTMLElement): HTMLElement[] {
  * anything re-rendering.
  */
 function isCurrent(current: PublicNavCurrent, href: string): boolean {
-  if (current === "interiors" && href.startsWith("/interiors")) return href === "/interiors";
+  // Interiors is the site root now, so that is the href to match.
+  if (current === "interiors" && href === "/") return true;
   if (current === "shop" && href === "/shop") return true;
   if (current === "portfolio" && href === "/portfolio") return true;
   return false;

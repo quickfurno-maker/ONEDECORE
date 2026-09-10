@@ -177,7 +177,13 @@ describe("Public lead form field validation + the canonical brief phone UX", () 
     assert.match(nav, /href: "\/#contact"/);
     assert.match(nav, /#consultation/);
     assert.match(nav, /getPublicNavDestinations/);
-    const page = read("src/app/page.tsx");
-    assert.match(page, /isShopPublicEnabled/);
+    /*
+     * The shop gate moved down a layer with the homepage switch: the root
+     * renders the Interiors page, and `HomeShell` is what reads
+     * `isShopPublicEnabled()` to decide whether Shop appears in the nav. The
+     * lock is the same one, asserted where it now lives.
+     */
+    const shell = read("src/features/public-site/home-r4/HomeShell.tsx");
+    assert.match(shell, /isShopPublicEnabled/);
   });
 });

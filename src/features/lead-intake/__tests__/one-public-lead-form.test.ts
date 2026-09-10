@@ -50,8 +50,9 @@ const PUBLIC_ROOTS = [
   "src/features/lead-intake/public",
   "src/features/public-site",
   "src/features/portfolio/public",
+  // `/` IS the interiors experience now; `src/app/interiors` no longer exists.
   "src/app/page.tsx",
-  "src/app/interiors",
+  "src/features/public-site/interiors",
   "src/app/portfolio",
   "src/app/lp",
   // Landing Lab is mostly an ADMIN workspace. Only the components a published

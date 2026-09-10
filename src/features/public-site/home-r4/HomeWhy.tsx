@@ -25,6 +25,20 @@ export function HomeWhy() {
       className="pm-section pm-why"
       aria-labelledby="pm-why-title"
     >
+      {/*
+        `#about` lands here.
+
+        The public menu has offered an About destination since the common
+        homepage existed, and this is the section that answers it: why work
+        with ONEDECORE. Adding a second "about us" band to satisfy the link
+        would be two places making the same argument, so the anchor is an alias
+        on the section that already makes it.
+
+        A zero-height marker rather than a second `id` on the `<section>`,
+        because an element can only carry one — and it carries its own
+        scroll-margin so the heading clears the sticky header.
+      */}
+      <span id="about" className="od-disc-anchor-alias" aria-hidden="true" />
       <div className="dc-container">
         <Reveal className="pm-head">
           <p className="pm-eyebrow">{PM_WHY.eyebrow}</p>

@@ -68,8 +68,15 @@ const read = (rel: string) => readFileSync(join(root, rel), "utf8");
 const code = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
 
+/*
+ * `/` IS the Interiors experience now, and `/interiors` is a 308 to it (see
+ * `next.config.ts`). There is one route file, so the assertions that used to
+ * run over both now run over one — and the ones that were really about the
+ * Interiors CONTENT point at the component that renders it.
+ */
 const HOME = "src/app/page.tsx";
-const INTERIORS = "src/app/interiors/page.tsx";
+const INTERIORS_PAGE =
+  "src/features/public-site/interiors/InteriorsConversionPage.tsx";
 const ROBOTS = "src/app/robots.ts";
 const SITEMAP = "src/app/sitemap.ts";
 const ROOT_LAYOUT = "src/app/layout.tsx";
@@ -87,7 +94,7 @@ const LEGAL_PAGES = [
 ] as const;
 
 /** Every statically prerendered public page. */
-const PRERENDERED_PUBLIC_PAGES = [HOME, INTERIORS, ...LEGAL_PAGES] as const;
+const PRERENDERED_PUBLIC_PAGES = [HOME, ...LEGAL_PAGES] as const;
 
 /* ========================================================================== */
 /* 1. Cache policy — the L1 launch blocker                                     */
@@ -141,15 +148,22 @@ describe("public marketing HTML is not frozen for a year", () => {
 
   test("the homepage's runtime gates are re-read, not frozen at build", () => {
     /*
-     * `/` reads `isShopPublicEnabled()`, a runtime environment gate. Fully
-     * static, that gate was fixed at build time while the `force-dynamic`
-     * sitemap read it live — so turning the storefront off would have produced
-     * a sitemap without /shop and a homepage still advertising it. A revalidate
-     * window is what makes the two agree.
+     * The gate moved down a layer, not away.
+     *
+     * The old common homepage read `isShopPublicEnabled()` in the route itself.
+     * The Interiors page that replaced it reads the same gate inside
+     * `HomeShell`, which is what decides whether Shop appears in the nav. The
+     * invariant is unchanged and still worth asserting: a fully static page
+     * would freeze that gate at build time while the `force-dynamic` sitemap
+     * read it live, and turning the storefront off would leave a sitemap
+     * without /shop and a homepage still advertising it. The revalidate window
+     * is what makes the two agree.
      */
-    const home = code(read(HOME));
-    assert.match(home, /isShopPublicEnabled\(\)/);
-    assert.match(home, /export const revalidate = \d+;/);
+    assert.match(
+      code(read("src/features/public-site/home-r4/HomeShell.tsx")),
+      /isShopPublicEnabled\(\)/
+    );
+    assert.match(code(read(HOME)), /export const revalidate = \d+;/);
   });
 });
 
@@ -178,7 +192,7 @@ describe("no analytics, Pixel or tag manager exists yet", () => {
   const SURFACES = [
     ROOT_LAYOUT,
     HOME,
-    INTERIORS,
+    INTERIORS_PAGE,
     FOOTER,
     HEADER,
     "src/features/public-site/discovery/DiscoveryHomePage.tsx",
@@ -254,7 +268,7 @@ describe("the storefront stays contained while the funnel is interiors-only", ()
   });
 
   test("the interiors funnel pages carry no storefront link", () => {
-    for (const rel of [INTERIORS, PORTFOLIO_GRID]) {
+    for (const rel of [INTERIORS_PAGE, PORTFOLIO_GRID]) {
       assert.doesNotMatch(
         read(rel),
         /href=["']\/shop/,
@@ -299,7 +313,7 @@ describe("the public site says where the business is, without leaking the funnel
 
   test("a channel the owner has not recorded is not invented anywhere", () => {
     assert.equal(BUSINESS_IDENTITY.businessPhoneE164, null);
-    for (const rel of [FOOTER, HEADER, HOME, INTERIORS]) {
+    for (const rel of [FOOTER, HEADER, HOME, INTERIORS_PAGE]) {
       assert.doesNotMatch(
         code(read(rel)),
         /href="tel:\+?\d/,
@@ -319,7 +333,7 @@ describe("the public site says where the business is, without leaking the funnel
     assert.match(contact, /NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164/);
     assert.doesNotMatch(contact, /wa\.me\/\d/);
     assert.doesNotMatch(contact, /\+\d{8,}/);
-    for (const rel of [FOOTER, HEADER, HOME, INTERIORS]) {
+    for (const rel of [FOOTER, HEADER, HOME, INTERIORS_PAGE]) {
       assert.doesNotMatch(
         read(rel),
         /wa\.me|api\.whatsapp\.com/,
@@ -416,7 +430,7 @@ describe("crawlers are pointed at the launch surface and away from the rest", ()
   });
 
   test("the launch pages declare their own canonical and OpenGraph", () => {
-    for (const rel of [HOME, INTERIORS]) {
+    for (const rel of [HOME]) {
       const source = read(rel);
       assert.match(source, /alternates: \{ canonical:/, rel);
       assert.match(source, /openGraph: \{/, rel);

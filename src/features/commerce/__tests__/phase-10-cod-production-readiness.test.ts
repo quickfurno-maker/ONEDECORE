@@ -48,30 +48,40 @@ describe("Phase 10 COD production readiness", () => {
     assert.match(sitemap, /if \(shopPublic\)/);
   });
 
-  test("homepage discovery commerce fails closed before public catalogue reads", () => {
+  test("the homepage performs no public catalogue read at all", () => {
+    /*
+     * THIS INVARIANT GOT STRONGER, NOT WEAKER.
+     *
+     * It used to say: the homepage must call `isShopPublicEnabled()` BEFORE it
+     * touches `getPublicCommerceCategories` or `getPublicCommerceProducts`, so
+     * a gated storefront could never leak a catalogue read from the front page.
+     *
+     * The root renders the Interiors page now, and the Interiors page sells
+     * nothing — so there is no commerce read on the homepage to order behind a
+     * gate. "Never reads the catalogue" is a stricter guarantee than "reads it
+     * only after checking", and it is what this asserts.
+     *
+     * The gate itself is unchanged and still fail-closed; `/shop` and the shop
+     * surfaces remain its consumers, with their own certification below.
+     */
     const page = read("src/app/page.tsx");
-    assert.match(
-      page,
-      /import\s+\{\s*isShopPublicEnabled\s*\}\s+from\s+"@\/features\/commerce\/server\/shop-public-gate"/
-    );
-    assert.match(page, /getPublicCommerceCategories/);
-    assert.match(page, /getPublicCommerceProducts/);
+    assert.doesNotMatch(page, /getPublicCommerceCategories/);
+    assert.doesNotMatch(page, /getPublicCommerceProducts/);
+    assert.doesNotMatch(page, /loadDiscoveryCommerce/);
     assert.doesNotMatch(page, /ONEDECORE_SHOP_PUBLIC_ENABLED/);
 
-    const loaderStart = page.indexOf("async function loadDiscoveryCommerce");
-    assert.ok(loaderStart >= 0, "loadDiscoveryCommerce must exist");
-    const loader = page.slice(loaderStart);
-    const gateIdx = loader.search(/if\s*\(\s*!isShopPublicEnabled\s*\(\s*\)\s*\)/);
-    const categoriesIdx = loader.indexOf("getPublicCommerceCategories");
-    const productsIdx = loader.indexOf("getPublicCommerceProducts");
-    assert.ok(gateIdx >= 0, "homepage must call isShopPublicEnabled() before commerce reads");
-    assert.ok(categoriesIdx >= 0, "homepage must retain getPublicCommerceCategories for shop-ON");
-    assert.ok(productsIdx >= 0, "homepage must retain getPublicCommerceProducts for shop-ON");
-    assert.ok(
-      gateIdx < categoriesIdx && gateIdx < productsIdx,
-      "isShopPublicEnabled() must precede public commerce category/product reads"
+    /*
+     * The gate module is untouched, and the Shop nav on this page still reads
+     * it through the shell — absent Shop when the gate is off, rather than a
+     * link into a dead surface.
+     */
+    const gate = read("src/features/commerce/server/shop-public-gate.ts");
+    assert.match(gate, /ONEDECORE_SHOP_PUBLIC_ENABLED/);
+    assert.match(gate, /=== "true"/);
+    assert.match(
+      read("src/features/public-site/home-r4/HomeShell.tsx"),
+      /isShopPublicEnabled\(\)/
     );
-    assert.match(loader, /return\s*\{\s*ok:\s*false\s*\}/);
   });
 
   test("server action body size limit is 21mb", () => {

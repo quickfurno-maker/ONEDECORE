@@ -1,5 +1,5 @@
 /**
- * The /interiors promotional rail: one 9:16 format, six empty slots.
+ * The promotional rail on the homepage: one 5:8 format, six empty slots.
  *
  * WHAT THIS SUITE IS DEFENDING
  *
@@ -8,7 +8,7 @@
  *     two chances for them to say different things. A `desktopImage` field
  *     creeping back would reintroduce that silently.
  *
- *  2. The 9:16 shape. It is the one thing the artwork depends on, and the
+ *  2. The 5:8 shape. It is the one thing the artwork depends on, and the
  *     easiest way to break it is a `max-height` on a box with `aspect-ratio` —
  *     the browser satisfies the cap by distorting or cropping rather than by
  *     refusing.
@@ -115,10 +115,17 @@ describe("the rail is six configurable slots", () => {
     assert.match(config, /readonly href\?: string \| null/);
   });
 
-  test("the authored format is 9:16 and the CSS agrees", () => {
-    assert.equal(INTERIORS_PROMO_RATIO, "9 / 16");
+  test("the authored format is 5:8 and the CSS agrees", () => {
+    /*
+     * 5:8, not 9:16. A 9:16 card is the shape of a phone screen, and a rail
+     * built from it read as a story viewer however much width came off it —
+     * the banner filled the fold and the hero was always a scroll away.
+     */
+    assert.equal(INTERIORS_PROMO_RATIO, "5 / 8");
     const css = read(CSS);
-    assert.match(css, /aspect-ratio: 9 \/ 16/);
+    assert.match(css, /aspect-ratio: 5 \/ 8/);
+    // The old, taller frame must not survive in the active rule.
+    assert.doesNotMatch(css, /aspect-ratio: 9 \/ 16/);
     // And no landscape frame survives anywhere.
     assert.doesNotMatch(css, /aspect-ratio: 12 \/ 5/);
   });
@@ -238,21 +245,21 @@ describe("a banner links as a whole card or not at all", () => {
 /* -------------------------------------------------------------------------- */
 
 describe("geometry", () => {
-  test("mobile: 74vw capped at 60vh, exact 9:16, 20px radius, 12px gap, 16px inset", () => {
+  test("mobile: 74vw capped at 60vh, exact 5:8, 20px radius, 12px gap, 16px inset", () => {
     /*
-     * 74vw, down from 82vw. At 82 the card stood 569px tall on a 390px phone
-     * and the rail read as a full-page story viewer rather than a promotional
-     * strip. The width the owner asked for and the height ceiling are one
-     * `min()`, so whichever binds first still yields an exact 9:16 box.
+     * The width settled at 74vw a pass ago; the ratio is what changed. The
+     * width the owner asked for and the height ceiling are one `min()`, so
+     * whichever binds first still yields an exact 5:8 box.
      */
     const css = read(CSS);
-    assert.match(css, /flex: 0 0 min\(74vw, calc\(60vh \* 9 \/ 16\)\)/);
-    assert.match(css, /\.od-int-promo__frame \{[\s\S]*?aspect-ratio: 9 \/ 16/);
+    assert.match(css, /flex: 0 0 min\(74vw, calc\(60vh \* 5 \/ 8\)\)/);
+    assert.match(css, /\.od-int-promo__frame \{[\s\S]*?aspect-ratio: 5 \/ 8/);
     assert.match(css, /\.od-int-promo__frame \{[\s\S]*?border-radius: 20px/);
     assert.match(css, /gap: 12px/);
     assert.match(css, /padding: 0 16px/);
-    // The previous, taller card must not come back.
+    // Neither of the previous, taller cards may come back.
     assert.doesNotMatch(css, /flex: 0 0 min\(82vw/);
+    assert.doesNotMatch(css, /calc\(60vh \* 9 \/ 16\)/);
   });
 
   test("the height ceiling is expressed as a WIDTH so the ratio stays exact", () => {
@@ -271,8 +278,8 @@ describe("geometry", () => {
       /max-height/,
       "the card must not cap height either"
     );
-    assert.match(css, /calc\(60vh \* 9 \/ 16\)/);
-    assert.match(css, /calc\(70vh \* 9 \/ 16\)/);
+    assert.match(css, /calc\(60vh \* 5 \/ 8\)/);
+    assert.match(css, /calc\(70vh \* 5 \/ 8\)/);
   });
 
   test("desktop: more cards, not a bigger one — and never a billboard", () => {
@@ -284,7 +291,7 @@ describe("geometry", () => {
      * controls height.
      */
     const css = read(CSS);
-    assert.match(css, /flex: 0 0 min\(clamp\(300px, 26vw, 360px\), calc\(70vh \* 9 \/ 16\)\)/);
+    assert.match(css, /flex: 0 0 min\(clamp\(300px, 26vw, 360px\), calc\(70vh \* 5 \/ 8\)\)/);
     assert.match(css, /@media \(min-width: 48rem\)[\s\S]*?border-radius: 24px/);
     assert.match(css, /@media \(min-width: 48rem\)[\s\S]*?gap: 22px/);
     // The old single-banner desktop layout must not come back.
@@ -631,5 +638,161 @@ describe("the page keeps exactly one H1", () => {
     assert.match(carousel, /<h2 id=\{labelId\} className="od-sr-only">/);
     // No per-slide heading at all now that the slots carry no copy.
     assert.doesNotMatch(carousel, /<h3[\s>]/);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* 10. The interiors experience is the canonical homepage                      */
+/* -------------------------------------------------------------------------- */
+
+describe("interiors is the homepage, at exactly one URL", () => {
+  const ROOT = "src/app/page.tsx";
+
+  test("the root route renders the shared interiors component", () => {
+    /*
+     * The SAME component, not a copy. Two implementations look identical on
+     * the day they are written and diverge on the first edit — usually the one
+     * nobody remembers to make twice.
+     */
+    const route = code(read(ROOT));
+    assert.match(route, /<InteriorsConversionPage \/>/);
+    assert.match(
+      route,
+      /from "@\/features\/public-site\/interiors\/InteriorsConversionPage"/
+    );
+    assert.equal(
+      (route.match(/<InteriorsConversionPage \/>/g) ?? []).length,
+      1,
+      "exactly one mount"
+    );
+  });
+
+  test("/interiors is a permanent redirect, declared before the filesystem", () => {
+    // The route file is gone: a page that renders and then redirects would
+    // flash content at a visitor who has already begun reading.
+    assert.equal(existsSync(join(root, "src/app/interiors/page.tsx")), false);
+    assert.equal(existsSync(join(root, "src/app/interiors")), false);
+    const config = read("next.config.ts");
+    const block = /async redirects\(\)[\s\S]*?async headers\(\)/.exec(config);
+    assert.ok(block, "next.config.ts must declare redirects()");
+    assert.match(block[0], /source: "\/interiors"/);
+    assert.match(block[0], /destination: "\/"/);
+    // `permanent: true` is a 308, which preserves the request method.
+    assert.match(block[0], /permanent: true/);
+  });
+
+  test("no client-side redirect was used instead", () => {
+    const route = code(read(ROOT));
+    assert.doesNotMatch(route, /useEffect|router\.(replace|push)|permanentRedirect/);
+  });
+
+  test("the root publishes the interiors metadata, canonical at the site root", () => {
+    const route = read(ROOT);
+    assert.match(route, /Home Interiors & Modular Kitchens in Pune/);
+    assert.match(route, /alternates: \{ canonical: SITE_CONFIG\.url \}/);
+    assert.match(route, /url: SITE_CONFIG\.url/);
+    assert.match(route, /robots: \{ index: true, follow: true \}/);
+    // The canonical must not point at the redirect.
+    assert.doesNotMatch(route, /absoluteUrl\("interiors"\)/);
+    assert.match(route, /export const revalidate = 300;/);
+  });
+
+  test("the root fetches nothing the interiors page does not render", () => {
+    /*
+     * The common homepage read featured commerce categories, featured products
+     * and a portfolio preview before it could render. None of that is used
+     * here, and leaving those reads running invisibly behind a page that
+     * ignores their results would be a cost with no output.
+     */
+    const route = code(read(ROOT));
+    for (const gone of [
+      "getPublicCommerceCategories",
+      "getPublicCommerceProducts",
+      "getFeaturedProjects",
+      "DiscoveryHomePage",
+      "isShopPublicEnabled",
+    ]) {
+      assert.doesNotMatch(route, new RegExp(gone), `${gone} must not run from the root`);
+    }
+    // And nothing made the route dynamic.
+    assert.doesNotMatch(route, /cookies\(\)|headers\(\)|force-dynamic/);
+  });
+
+  test("the sitemap lists the root and not the redirect", () => {
+    const sitemap = read("src/app/sitemap.ts");
+    assert.doesNotMatch(sitemap, /absoluteUrl\("interiors"\)/);
+    assert.match(sitemap, /url: SITE_CONFIG\.url/);
+  });
+
+  test("Interiors navigates straight to the root, not through the 308", () => {
+    const nav = read("src/features/public-site/chrome/public-nav.ts");
+    assert.match(
+      nav,
+      /id: "interiors",\s+label: "Interiors",\s+href: "\/",/
+    );
+    assert.doesNotMatch(nav, /href: "\/interiors"/);
+    // Still no Home item; the wordmark is the home affordance.
+    assert.doesNotMatch(nav, /label: "Home"/);
+    // And the header knows the root is where Interiors is current.
+    assert.match(
+      code(read("src/features/public-site/chrome/PublicSiteHeader.tsx")),
+      /current === "interiors" && href === "\/"/
+    );
+  });
+
+  test("live surfaces link to the canonical URL rather than the redirect", () => {
+    for (const rel of [
+      "src/features/commerce/public/components/ShopPublicInactive.tsx",
+      "src/features/commerce/public/shell/commerce-nav.ts",
+    ]) {
+      assert.doesNotMatch(
+        code(read(rel)),
+        /["']\/interiors["']/,
+        `${rel} should link to / directly`
+      );
+    }
+  });
+
+  test("About and Contact resolve to real sections on the root page", () => {
+    /*
+     * The menu has offered these destinations since the common homepage
+     * existed. They must still land somewhere now that the Interiors page is
+     * the homepage — a menu item scrolling to nothing is worse than no item.
+     *
+     * Aliases on the sections that already make those arguments, not new
+     * sections and certainly not a second contact form.
+     */
+    const nav = read("src/features/public-site/chrome/public-nav.ts");
+    assert.match(nav, /href: "\/#about"/);
+    assert.match(nav, /href: "\/#contact"/);
+
+    const why = read("src/features/public-site/home-r4/HomeWhy.tsx");
+    assert.match(why, /id="about"/);
+    const plan = read("src/features/public-site/home-r4/HomePlan.tsx");
+    assert.match(plan, /id="contact"/);
+    // The older alias survives for links that already point at it.
+    assert.match(plan, /id="consultation"/);
+
+    // Both sections are composed into the page the root renders.
+    const page = code(read(PAGE));
+    assert.match(page, /<HomeWhy \/>/);
+    assert.match(page, /<HomePlan \/>/);
+
+    // And the anchors carry an offset so the sticky header does not cover them.
+    const css = read("src/features/public-site/discovery/discovery.css");
+    assert.match(css, /#about,\s+#contact \{[\s\S]*?scroll-margin-top/);
+    assert.match(css, /\.od-disc-anchor-alias \{[\s\S]*?scroll-margin-top/);
+  });
+
+  test("adding the anchors did not add a second lead path", () => {
+    const page = code(read(PAGE));
+    assert.equal(
+      (page.match(/<LeadConsultationHost>/g) ?? []).length,
+      1,
+      "exactly one consultation host"
+    );
+    const plan = code(read("src/features/public-site/home-r4/HomePlan.tsx"));
+    assert.doesNotMatch(plan, /<form|HomeLeadCapture/);
+    assert.match(plan, /openPlanner/);
   });
 });

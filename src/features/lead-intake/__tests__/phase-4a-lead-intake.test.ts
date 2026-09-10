@@ -1017,24 +1017,27 @@ describe("Phase 4A homepage and server-only guards", () => {
      */
     assert.match(homePlan, /openPlanner/);
 
-    const interiors = readFileSync(join(root, "src/app/interiors/page.tsx"), "utf8");
-    assert.match(interiors, /InteriorsConversionPage/);
-    assert.doesNotMatch(interiors, /leadFormMode/);
-    const discovery = readFileSync(join(root, "src/app/page.tsx"), "utf8");
-    assert.match(discovery, /DiscoveryHomePage/);
-    assert.doesNotMatch(discovery, /leadFormMode/);
-    const discoveryPage = readFileSync(
-      join(root, "src/features/public-site/discovery/DiscoveryHomePage.tsx"),
+    /*
+     * The root route IS the interiors route now — `/interiors` is a 308 to it —
+     * so there is one page file to assert rather than two. It renders the
+     * conversion page, which mounts the one consultation host; the host asks
+     * the running server whether a lead can be submitted.
+     */
+    const rootRoute = readFileSync(join(root, "src/app/page.tsx"), "utf8");
+    assert.match(rootRoute, /InteriorsConversionPage/);
+    assert.doesNotMatch(rootRoute, /leadFormMode/);
+    const interiorsPage = readFileSync(
+      join(root, "src/features/public-site/interiors/InteriorsConversionPage.tsx"),
       "utf8"
     );
     /*
-     * The homepage mounts the SAME sheet the interiors page does, and no form
-     * of its own. This assertion is inverted from what it once said, and the
-     * inversion is the change: one form, one contract, one submission path.
+     * The homepage mounts exactly one consultation host and no form of its
+     * own. One form, one contract, one submission path — and now literally one
+     * page, since the homepage and the interiors page are the same file.
      */
-    assert.match(discoveryPage, /LeadConsultationHost/);
-    assert.doesNotMatch(discoveryPage, /HomeConsultationCapture/);
-    assert.doesNotMatch(discoveryPage, /PremiumRequirementForm/);
+    assert.match(interiorsPage, /LeadConsultationHost/);
+    assert.doesNotMatch(interiorsPage, /HomeConsultationCapture/);
+    assert.doesNotMatch(interiorsPage, /PremiumRequirementForm/);
 
     const client = readFileSync(
       join(root, "src/features/lead-intake/public/lead-intake-client.ts"),
@@ -1077,17 +1080,17 @@ describe("Phase 4A homepage and server-only guards", () => {
 
   test("slash route remains static in app page", () => {
     const page = readFileSync(join(root, "src/app/page.tsx"), "utf8");
-    const interiors = readFileSync(join(root, "src/app/interiors/page.tsx"), "utf8");
     assert.doesNotMatch(page, /api\/public\/lead-intake/);
     assert.doesNotMatch(page, /submitLeadIntake/);
     assert.doesNotMatch(page, /export const dynamic\s*=\s*["']force-dynamic["']/);
     /*
-     * The interiors route no longer threads a build-time form mode. It renders
-     * the conversion page, which mounts the one consultation host; the host
-     * asks the running server whether a lead can be submitted.
+     * The root renders the interiors conversion page and threads no build-time
+     * form mode. The one consultation host it mounts asks the running server
+     * whether a lead can be submitted.
      */
-    assert.match(interiors, /InteriorsConversionPage/);
-    assert.doesNotMatch(interiors, /leadFormMode/);
+    assert.match(page, /InteriorsConversionPage/);
+    assert.doesNotMatch(page, /leadFormMode/);
+    assert.match(page, /export const revalidate = \d+;/);
   });
 
   test("suppression safety note is documented and unenforced in Phase 4A RPC", () => {

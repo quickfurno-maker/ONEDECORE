@@ -14,7 +14,7 @@ export function ShopPublicInactive() {
       </header>
       <section className="od-shop__section">
         <p>
-          <Link href="/interiors" className="od-shop-btn od-shop-btn--gold">
+          <Link href="/" className="od-shop-btn od-shop-btn--gold">
             Explore interiors
           </Link>{" "}
           <Link href="/portfolio" className="od-shop-btn od-shop-btn--ghost">

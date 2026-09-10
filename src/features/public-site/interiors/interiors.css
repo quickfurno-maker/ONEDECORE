@@ -39,7 +39,7 @@
 }
 
 /* ========================================================================== */
-/* Promotional rail — one 9:16 format, more cards as the viewport grows       */
+/* Promotional rail — one 5:8 format, more cards as the viewport grows        */
 /* ========================================================================== */
 
 /*
@@ -86,26 +86,28 @@
 /*
  * ONE CARD DOMINANT, THE NEXT ONE PEEKING.
  *
- * 74vw, down from 82vw. At 82 the card stood 569px tall on a 390px phone —
- * two thirds of the screen — and the rail read as a full-page story viewer
- * rather than as a promotional strip you glance along. The narrower card is
- * about 63px shorter and hands the difference to the next banner, which now
- * shows roughly a quarter of itself instead of a thin sliver. That sliver was
- * the entire swipe affordance, and more of it is a clearer invitation.
+ * The width has settled at 74vw. What changed here is the RATIO: 5:8 rather
+ * than 9:16. At the same width that is about 50px shorter on a 390px phone,
+ * and the difference goes straight to the hero underneath — the card had been
+ * tall enough that the page below it was still a scroll away.
+ *
+ * 5:8 (0.625) is a portrait promotional card. 9:16 (0.5625) is the shape of a
+ * phone screen, which is why a rail built from it kept reading as a story
+ * viewer no matter how much width came off it.
  *
  * BOTH LIMITS ARE WIDTHS, BECAUSE HEIGHT CANNOT BE CAPPED SAFELY.
  *
  * A `max-height` on a box with `aspect-ratio` is satisfied by shrinking both
- * axes or by cropping, and either one stops the frame being 9:16 — the one
+ * axes or by cropping, and either one stops the frame being 5:8 — the one
  * thing the artwork depends on. So the 60vh ceiling is expressed as the width
- * that produces it, `60vh * 9/16`, and `min()` takes whichever limit binds
+ * that produces it, `60vh * 5/8`, and `min()` takes whichever limit binds
  * first. The ratio then falls out exactly, at every viewport.
  *
  * On a tall phone 74vw wins; on a short or landscape one the height term does,
  * and the card simply gets smaller rather than distorted.
  */
 .od-int-promo__card {
-  flex: 0 0 min(74vw, calc(60vh * 9 / 16));
+  flex: 0 0 min(74vw, calc(60vh * 5 / 8));
   scroll-snap-align: start;
   scroll-snap-stop: always;
 }
@@ -115,7 +117,7 @@
   display: block;
   width: 100%;
   /* The authored format, exactly, at every breakpoint. */
-  aspect-ratio: 9 / 16;
+  aspect-ratio: 5 / 8;
   border-radius: 20px;
   overflow: hidden;
   background: var(--od-bg-deepest, #0b0908);
@@ -238,7 +240,7 @@
    * MORE CARDS, NOT A BIGGER CARD.
    *
    * The banner does not become a landscape billboard on a wider screen — it
-   * stays the same 9:16 artwork and the rail simply fits more of them. That is
+   * stays the same 5:8 artwork and the rail simply fits more of them. That is
    * what lets one exported file serve every device.
    *
    * The clamp keeps a card in the 300-360px band the design system wants; the
@@ -246,10 +248,14 @@
    *
    * 70vh IS THE CARD COUNT, NOT JUST A HEIGHT.
    *
-   * The mobile card was cut to 74vw/60vh in this pass and the obvious next
-   * move was to cut the desktop card with it. Sweeping the cap against the
-   * built page says otherwise: how many cards fit is a step function of card
-   * width, and every value from 58vh to 65vh moves 1280 and 1440 from three
+   * The cap is unchanged at 70vh, and it now rarely binds: at 5:8 the width
+   * clamp reaches its limit first on most desktops, so the shorter ratio does
+   * the height reduction on its own. It stays because on a short laptop it is
+   * still the thing that keeps the rail off the fold.
+   *
+   * When it was tried tighter, sweeping against the built page showed how much
+   * fits is a step function of card width, and every value from 58vh to 65vh
+   * moved 1280 and 1440 from three
    * cards to four — a different layout from the approved one, arrived at by
    * changing a number that looks like it only controls height.
    *
@@ -265,7 +271,7 @@
    * complaint actually was.
    */
   .od-int-promo__card {
-    flex: 0 0 min(clamp(300px, 26vw, 360px), calc(70vh * 9 / 16));
+    flex: 0 0 min(clamp(300px, 26vw, 360px), calc(70vh * 5 / 8));
   }
 
   .od-int-promo__frame {
