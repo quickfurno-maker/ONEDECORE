@@ -449,20 +449,102 @@ describe("interaction", () => {
 /* -------------------------------------------------------------------------- */
 
 describe("/interiors composition", () => {
-  test("the rail precedes the hero, and the hero is mounted once", () => {
+  /**
+   * The whole page, in order, as it is actually composed.
+   *
+   * This is the regression that keeps costing money to rediscover: the rail
+   * spent one build ABOVE the hero, and a visitor arriving at onedecore.in met
+   * six unexplained frames before anything told them what the company does.
+   * Nothing failed — the page rendered, every section was present, and the
+   * order was simply wrong.
+   *
+   * So the order is asserted as one list rather than as a pair of "X before Y"
+   * checks. A pairwise test passes happily while a section three places away
+   * has moved.
+   */
+  const EXPECTED_COMPOSITION = [
+    "<HomeHero />",
+    "<InteriorsPromoCarousel />",
+    "<HomeServicesRooms />",
+    "<InteriorsKitchenFeature />",
+    "<InteriorsWardrobes />",
+    "<InteriorsRenovation />",
+    "<HomeWhy />",
+    "<HomeFactory />",
+    "<HomeBudgetEstimator />",
+    "<InteriorsPortfolioBridge />",
+    "<HomeMaterials />",
+    "<HomeProcess />",
+    "<InteriorsServiceAreas />",
+    "<HomeReviews />",
+    "<HomeFaq />",
+    "<HomePlan />",
+  ] as const;
+
+  test("the hero opens the page and the rail follows it", () => {
     const page = code(read(PAGE));
-    const promo = page.indexOf("<InteriorsPromoCarousel />");
     const hero = page.indexOf("<HomeHero />");
-    assert.ok(promo > 0 && hero > 0);
-    assert.ok(promo < hero, "the rail must come before the hero");
+    const promo = page.indexOf("<InteriorsPromoCarousel />");
+    const services = page.indexOf("<HomeServicesRooms />");
+    assert.ok(hero > 0 && promo > 0 && services > 0);
+    assert.ok(hero < promo, "the hero must come before the rail");
+    assert.ok(promo < services, "the rail must come before the service sections");
     assert.equal((page.match(/<HomeHero \/>/g) ?? []).length, 1);
     assert.equal((page.match(/<InteriorsPromoCarousel \/>/g) ?? []).length, 1);
   });
 
+  test("every established section is mounted once, in its established order", () => {
+    const page = code(read(PAGE));
+    const positions = EXPECTED_COMPOSITION.map((tag) => {
+      const escaped = tag.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+      const matches = page.match(new RegExp(escaped, "g")) ?? [];
+      assert.equal(matches.length, 1, `${tag} must be mounted exactly once`);
+      return { tag, at: page.indexOf(tag) };
+    });
+
+    const actual = [...positions].sort((a, b) => a.at - b.at).map((p) => p.tag);
+    assert.deepEqual(
+      actual,
+      [...EXPECTED_COMPOSITION],
+      "the page composition drifted from the approved order"
+    );
+  });
+
   test("the section order contract matches what is rendered", () => {
     const order = readInteriorsSectionOrder();
-    assert.deepEqual(order.slice(0, 3), ["header", "promo-carousel", "hero"]);
+    assert.deepEqual(order.slice(0, 3), ["header", "hero", "promo-carousel"]);
+    // The contract still describes the rest of the established journey.
+    assert.deepEqual(
+      [...order],
+      [
+        "header",
+        "hero",
+        "promo-carousel",
+        "complete-interiors",
+        "modular-kitchen",
+        "wardrobes",
+        "renovation",
+        "why",
+        "factory",
+        "estimator",
+        "portfolio",
+        "materials",
+        "process",
+        "service-areas",
+        "testimonials",
+        "faq",
+        "consultation",
+      ]
+    );
     assert.ok(!order.includes("trust"));
+    /*
+     * The estimator sits between the factory and the portfolio bridge, which is
+     * the sequence the page was approved with: prove the manufacturing, offer
+     * the estimate, then show the work.
+     */
+    assert.ok(order.indexOf("factory") < order.indexOf("estimator"));
+    assert.ok(order.indexOf("estimator") < order.indexOf("portfolio"));
+    assert.ok(order.indexOf("portfolio") < order.indexOf("materials"));
   });
 
   test("the second proof counter stays removed", () => {
