@@ -32,43 +32,56 @@ export type DiscoveryAssetKey =
 /**
  * The running order, owner-directed.
  *
- * Two changes worth naming. The proof COUNTER is gone from the homepage: it
- * lives on `/interiors`, where a visitor has already chosen to read about the
- * work, rather than as the second thing anyone sees. And "areas" moved down to
- * sit beside the closing CTAs — where the city you build in is a practical
- * question — instead of interrupting the argument before it has been made.
+ * ONEDECORE IS ONE BRAND WITH TWO JOURNEYS
+ *
+ * The homepage used to be an interiors landing page with a furniture block near
+ * the bottom. That is not what the company is: interiors and furniture are two
+ * deliberate paths under one brand, and a visitor arriving at `/` is choosing
+ * between them before they are reading about either.
+ *
+ * So the page now offers the choice first and proves it afterwards:
+ *
+ *   hero                one brand, two ways in
+ *   interior-usps       why the interiors path is credible
+ *   featured-interiors  show me
+ *   shop                the second vertical, at full size
+ *   about               why both live under one name
+ *   contact             start
+ *
+ * WHAT LEFT, AND WHY
+ *
+ * The manufacturing, design-library, process, quality, areas-served and
+ * portfolio-category bands are gone from this page. Each is a good answer to a
+ * question a visitor asks AFTER choosing interiors, and `/interiors` is where
+ * they choose it. Keeping all of them here made the homepage argue one vertical
+ * at length and mention the other in passing.
+ *
+ * The components remain in the repository. They are not dead — `/interiors`
+ * and later work use them — and deleting them would have made this a much
+ * larger change than the running order needs.
+ *
+ * `shop` renders only when the fail-closed gate is live, which is why the
+ * contract names its position without promising its presence.
  */
 export const DISCOVERY_SECTION_ORDER = [
   "header",
   "hero",
-  "portfolio-categories",
-  "why",
-  "manufacturing",
-  "design-library",
-  "process",
-  "real-homes",
-  "quality",
-  "furniture",
-  "areas",
-  "consultation",
-  "final-cta",
+  "interior-usps",
+  "featured-interiors",
+  "shop",
+  "about",
+  "contact",
   "footer",
 ] as const;
 
-/** Major homepage bands before footer. Furniture renders only when Shop is live. */
+/** Major homepage bands before footer. Shop renders only when Shop is live. */
 export const DISCOVERY_MAJOR_SECTIONS = [
   "hero",
-  "portfolio-categories",
-  "why",
-  "manufacturing",
-  "design-library",
-  "process",
-  "real-homes",
-  "quality",
-  "furniture",
-  "areas",
-  "consultation",
-  "final-cta",
+  "interior-usps",
+  "featured-interiors",
+  "shop",
+  "about",
+  "contact",
 ] as const;
 
 /**
@@ -568,3 +581,73 @@ export const DISCOVERY_TRUST_LABELS = [
   "Quality Control",
   "After-Sales Support",
 ] as const;
+
+
+/* -------------------------------------------------------------------------- */
+/* Common brand gateway                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The hero's visible copy.
+ *
+ * The hero was image-only, with the H1 visually hidden, because the photography
+ * was the argument for an interiors company. As the gateway to two verticals it
+ * has to say which two, so the H1 is on screen again and carries the brand
+ * rather than a service list.
+ *
+ * Short enough to read before the first slide changes. No claim that needs
+ * evidence: what ONEDECORE does, and the two ways in.
+ */
+export const DISCOVERY_GATEWAY_EYEBROW = "INTERIORS & FURNITURE · PUNE";
+
+export const DISCOVERY_GATEWAY_TITLE = "Complete homes, start to finish.";
+
+export const DISCOVERY_GATEWAY_LEDE =
+  "ONEDECORE designs and builds home interiors, and makes the furniture that goes in them. Two journeys, one home-focused brand.";
+
+export const DISCOVERY_GATEWAY_INTERIORS_CTA = "Explore Interiors";
+export const DISCOVERY_GATEWAY_SHOP_CTA = "Shop Furniture";
+
+/**
+ * Why the two verticals share a name.
+ *
+ * Deliberately NOT a second copy of the interior USPs above it. That block
+ * argues that ONEDECORE can do interior work; this one argues why furniture
+ * belongs beside it — and stops short of promising anything the product does
+ * not actually deliver. No claim here implies that buying a sofa comes with a
+ * designer, or that the two journeys share delivery, warranty or scheduling.
+ */
+export const DISCOVERY_ABOUT_EYEBROW = "ABOUT ONEDECORE";
+
+export const DISCOVERY_ABOUT_HEADLINE = [
+  "One brand for the home.",
+  "Two ways to work with us.",
+] as const;
+
+export const DISCOVERY_ABOUT_LEDE =
+  "Designing a home and furnishing one are different decisions, made at different times. ONEDECORE keeps them as separate journeys rather than blending them into a single catalogue — and keeps a consistent eye on material, proportion and finish across both.";
+
+export const DISCOVERY_ABOUT_POINTS = [
+  {
+    id: "interiors",
+    title: "Interiors",
+    body: "Design, modular manufacturing and installation for complete homes, kitchens and wardrobes — planned around your space.",
+    cta: "Explore Interiors",
+    href: "/interiors",
+  },
+  {
+    id: "furniture",
+    title: "Furniture",
+    body: "Pieces you can choose and buy on their own, without commissioning an interior project.",
+    cta: "Shop Furniture",
+    href: "/shop",
+  },
+] as const;
+
+/** The closing band: one consultation invitation, and the Contact destination. */
+export const DISCOVERY_CONTACT_EYEBROW = "GET STARTED";
+
+export const DISCOVERY_CONTACT_HEADLINE = "Tell us about your home.";
+
+export const DISCOVERY_CONTACT_LEDE =
+  "Share your space, style and budget. Our design team will take it from there — no obligation.";

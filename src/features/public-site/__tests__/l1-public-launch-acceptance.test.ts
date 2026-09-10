@@ -208,14 +208,25 @@ describe("no analytics, Pixel or tag manager exists yet", () => {
 /* ========================================================================== */
 
 describe("the storefront stays contained while the funnel is interiors-only", () => {
-  test("Shop is appended to the public nav only when the gate is on", () => {
+  test("Shop enters the public nav only when the gate is on", () => {
     const off = getPublicNavDestinations(false);
     const on = getPublicNavDestinations(true);
     assert.ok(
       off.every((item) => !item.href.startsWith("/shop")),
       "gate off must offer no /shop destination"
     );
-    assert.deepEqual([...on], [...PUBLIC_NAV_CORE, PUBLIC_NAV_SHOP]);
+    assert.deepEqual([...off], [...PUBLIC_NAV_CORE]);
+    /*
+     * Shop takes SECOND position rather than last. It is one of ONEDECORE's
+     * two verticals, and appending it read as an afterthought bolted onto an
+     * interiors site.
+     */
+    assert.equal(on.length, PUBLIC_NAV_CORE.length + 1);
+    assert.deepEqual(on[1], PUBLIC_NAV_SHOP);
+    assert.deepEqual(
+      on.map((item) => item.id),
+      ["interiors", "shop", "portfolio", "about", "contact"]
+    );
   });
 
   test("header and footer default to the gate being off", () => {
@@ -352,7 +363,12 @@ describe("no public page leaves the visitor without a next step", () => {
   });
 
   test("the consultation target is one canonical destination", () => {
-    assert.equal(PUBLIC_CONSULTATION.href, "/#consultation");
+    /*
+     * The closing band is the Contact destination now, so one anchor serves
+     * both: `#contact` is canonical, and `#consultation` remains an alias on
+     * the same section for the links that already point at it.
+     */
+    assert.equal(PUBLIC_CONSULTATION.href, "/#contact");
     for (const rel of [FOOTER, HEADER]) {
       assert.match(read(rel), /PUBLIC_CONSULTATION\.href/, rel);
     }

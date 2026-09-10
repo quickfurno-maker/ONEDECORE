@@ -7,28 +7,20 @@ import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 import { RevealRuntime } from "@/features/public-site/motion/RevealRuntime";
 import { LeadConsultationHost } from "@/features/lead-intake/public/LeadConsultationHost";
-import { DiscoveryAreasServed } from "./DiscoveryAreasServed";
+import { DiscoveryAbout } from "./DiscoveryAbout";
 import { DiscoveryConsultCta } from "./DiscoveryConsultCta";
-import { DiscoveryDesignLibrary } from "./DiscoveryDesignLibrary";
-import { DiscoveryFinalCta } from "./DiscoveryFinalCta";
 import { DiscoveryHeroSlider } from "./DiscoveryHeroSlider";
-import { DiscoveryManufacturing } from "./DiscoveryManufacturing";
-import { DiscoveryProcess } from "./DiscoveryProcess";
-import { DiscoveryPortfolioCategories } from "./DiscoveryPortfolioCategories";
-import { DiscoveryQuality } from "./DiscoveryQuality";
 import { DiscoveryStickyCta } from "./DiscoveryStickyCta";
 import { DiscoveryWhatsAppFab } from "./DiscoveryWhatsAppFab";
 import { DiscoveryWhy } from "./DiscoveryWhy";
 import {
-  DISCOVERY_CONSULT_EYEBROW,
-  DISCOVERY_CONSULT_HEADLINE,
-  DISCOVERY_CONSULT_LEDE,
-  DISCOVERY_FURNITURE_PROCESS_STEPS,
+  DISCOVERY_CONTACT_EYEBROW,
+  DISCOVERY_CONTACT_HEADLINE,
+  DISCOVERY_CONTACT_LEDE,
   DISCOVERY_SECTION_ORDER,
 } from "./discovery-copy";
 import "./discovery.css";
 import "@/features/commerce/public/shop.css";
-import { ShopPincodeChecker } from "@/features/commerce/public/components/ShopPincodeChecker";
 import { ShopProductCard } from "@/features/commerce/public/components/ShopProductCard";
 import type { PublicCommerceCategory } from "@/features/commerce/public/public-types";
 import type { PublicCommerceProductCard } from "@/features/commerce/public/public-types";
@@ -42,41 +34,43 @@ export type DiscoveryCommerceState =
   | { readonly ok: false };
 
 /**
- * The ONEDECORE homepage.
+ * The ONEDECORE homepage — one brand, two ways in.
  *
- * THE NARRATIVE IS THE STRUCTURE
+ * WHAT THIS PAGE IS
  *
- * Each band answers the question the one before it raises — see
- * `DISCOVERY_SECTION_ORDER`. Sections are separate components rather than a
- * thousand lines of JSX here, so this file reads as the running order and
- * nothing else. The two blocks that remain inline are the ones that depend on
- * data this component receives: the portfolio preview and the shop teaser.
+ * A gateway. ONEDECORE designs and builds interiors, and sells furniture, and
+ * a visitor arriving at `/` is choosing between those before they are reading
+ * about either. So the page offers the choice in the first screen and then
+ * gives each vertical enough proof to be credible — rather than arguing
+ * interiors at length and mentioning furniture near the footer.
+ *
+ * The running order is `DISCOVERY_SECTION_ORDER`, and the reasoning for each
+ * band being where it is lives there.
+ *
+ * WHAT LEFT THE HOMEPAGE
+ *
+ * The portfolio-category, manufacturing, design-library, process, quality and
+ * areas-served bands, and one of the two closing consultation bands. Every one
+ * of them answers a question a visitor asks after choosing interiors, and
+ * `/interiors` is where that choice is made. None of the components was
+ * deleted: they are used elsewhere and removing files is a different change
+ * from reordering a page.
  *
  * ONE FORM, OPENED FROM EVERYWHERE
  *
- * This page used to carry its own inline lead form, which meant the site had
- * two — a second contract, a second set of validation rules, and a second way
- * for an enquiry to go missing. It has none of its own now. Every CTA here
- * opens the SAME guided sheet every other public surface opens, mounted once by
- * `LeadConsultationHost`, so there is one journey and one submission path.
+ * This page has no form of its own. Every CTA opens the SAME guided sheet every
+ * other public surface opens, mounted once by `LeadConsultationHost`, so there
+ * is one journey and one submission path. The host also decides whether the
+ * form is offered at all by asking the running server — a build-time flag used
+ * to answer that, and a real enquiry was lost because the flag said yes while
+ * the backend said no.
  *
- * The host also decides whether the form is offered at all: it asks the running
- * server before rendering a single editable field. A build-time flag used to
- * answer that, and a real enquiry was lost because the flag said yes while the
- * backend said no.
+ * SHOP IS FAIL-CLOSED THROUGHOUT
  *
- * THE PROOF COUNTER IS NOT HERE EITHER. It lives on `/interiors`, where a
- * visitor has chosen to read about the work, rather than as the second thing
- * anyone sees on the homepage.
- *
- * THE HERO IS UNTOUCHED.
- *
- * TONE RHYTHM
- *
- * The page alternates deep, ivory and neutral bands rather than running as one
- * continuous dark column — the rhythm is what stops a long page reading as an
- * undifferentiated scroll. The tones are declared on the section elements via
- * `od-disc-band--*` so the sequence can be read straight down this file.
+ * `commerce.ok` is the gate. When it is false the hero drops its second button,
+ * the shop band does not render, the About section drops its furniture half and
+ * the header drops Shop from the menu — nothing is shown disabled, because a
+ * link to a gated surface is a dead end wearing a menu item's clothes.
  */
 export function DiscoveryHomePage({
   commerce,
@@ -85,18 +79,28 @@ export function DiscoveryHomePage({
   readonly commerce: DiscoveryCommerceState;
   readonly portfolioPreview: readonly PublicPortfolioCard[];
 }) {
+  const shopLive = commerce.ok;
+
+  /*
+   * Compact on purpose. This is a teaser for the Shop journey, not a second
+   * copy of the Shop homepage: up to four root categories and four featured
+   * pieces, and never an empty slot padded out to fill a grid.
+   */
   const roots = commerce.ok
     ? commerce.categories
         .filter((row) => row.isRoot)
         .slice()
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .slice(0, 6)
+        .slice(0, 4)
     : [];
-  const featured = commerce.ok ? commerce.featured.slice(0, 8) : [];
-  const shopLive = commerce.ok;
-  const showPincode = shopLive && (roots.length > 0 || featured.length > 0);
-  const showLiveFurniture =
-    shopLive && (roots.length > 0 || featured.length > 0);
+  const featured = commerce.ok ? commerce.featured.slice(0, 4) : [];
+  const hasShopContent = shopLive && (roots.length > 0 || featured.length > 0);
+
+  /*
+   * Fewer, larger, quieter. Three is the shape that reads as curated proof at
+   * every breakpoint; six read as a contact sheet.
+   */
+  const projects = portfolioPreview.slice(0, 3);
 
   return (
     <LeadConsultationHost>
@@ -120,17 +124,18 @@ export function DiscoveryHomePage({
         />
         <RevealRuntime />
         <main id="od-discovery-main">
-          <DiscoveryHeroSlider />
-          <DiscoveryPortfolioCategories />
-          <DiscoveryWhy />
-          <DiscoveryManufacturing />
-          <DiscoveryDesignLibrary />
-          <DiscoveryProcess />
+          <DiscoveryHeroSlider shopLive={shopLive} />
 
-          {/* Portfolio — fewer, larger, quieter. The data path is unchanged. */}
+          {/* Why the interiors path is credible — four points, not the whole
+              of /interiors. */}
+          <DiscoveryWhy />
+
+          {/* Proof for the claim just made. Interior projects only: this
+              preview reads from the portfolio publication path and shows
+              nothing else. */}
           <section
             className="od-disc-band od-disc-band--deep od-disc-homes"
-            data-od-disc-section="real-homes"
+            data-od-disc-section="featured-interiors"
             aria-labelledby="od-disc-homes-title"
           >
             <div className="od-disc-shell">
@@ -148,19 +153,23 @@ export function DiscoveryHomePage({
                   href="/portfolio"
                   className="od-disc-btn od-disc-btn--ghost od-disc-homes__head-cta"
                 >
-                  View Full Portfolio
+                  View Portfolio
                 </Link>
               </Reveal>
-              {portfolioPreview.length > 0 ? (
+              {projects.length > 0 ? (
                 <div
                   className="od-disc-homes__rail od-disc-homes__rail--collection"
                   data-od-portfolio-preview=""
                 >
-                  {portfolioPreview.map((card) => (
+                  {projects.map((card) => (
                     <PortfolioCard key={card.slug} card={card} />
                   ))}
                 </div>
               ) : (
+                /*
+                 * Honest empty state. No stock photography and no placeholder
+                 * that could be mistaken for completed customer work.
+                 */
                 <Reveal>
                   <p className="od-disc-lede od-disc-homes__empty">
                     Published project photography will appear here as the
@@ -171,31 +180,36 @@ export function DiscoveryHomePage({
             </div>
           </section>
 
-          <DiscoveryQuality />
-
-          {/*
-          Areas moved here from directly under the hero. Which parts of Pune we
-          serve is a practical question, and a practical question belongs beside
-          the point where someone decides to ask one — not in front of the
-          argument for why they would.
-        */}
-          <DiscoveryAreasServed />
-
+          {/* The second vertical, at full size rather than as an afterthought.
+              The pincode checker moved to the Shop journey, where a
+              serviceability question actually belongs. */}
           {shopLive ? (
             <section
               id="furniture-teaser"
               className="od-disc-band od-disc-band--surface od-disc-band--divided"
-              data-od-disc-section="furniture"
+              data-od-disc-section="shop"
               aria-labelledby="od-disc-furn-title"
             >
               <div className="od-disc-shell">
-                <Reveal as="header" className="od-disc-band__head">
-                  <p className="od-disc-kicker">Furniture</p>
-                  <h2 id="od-disc-furn-title">
-                    Furniture made for complete homes.
-                  </h2>
+                <Reveal
+                  as="header"
+                  className="od-disc-band__head od-disc-band__head--row"
+                >
+                  <div>
+                    <p className="od-disc-kicker">Furniture</p>
+                    <h2 id="od-disc-furn-title" className="od-disc-display">
+                      <span>Furniture made for complete homes.</span>
+                    </h2>
+                  </div>
+                  <Link
+                    href="/shop"
+                    className="od-disc-btn od-disc-btn--ghost od-disc-homes__head-cta"
+                  >
+                    Explore Shop
+                  </Link>
                 </Reveal>
-                {showLiveFurniture ? (
+
+                {hasShopContent ? (
                   <>
                     {roots.length > 0 ? (
                       <div
@@ -216,73 +230,57 @@ export function DiscoveryHomePage({
                       </div>
                     ) : null}
                     {featured.length > 0 ? (
-                      <>
-                        <h3 className="od-disc-subhead">Featured furniture</h3>
-                        <div className="od-disc-featured od-shop__grid">
-                          {featured.map((card) => (
-                            <ShopProductCard
-                              key={card.slug}
-                              card={card}
-                              showWishlist={false}
-                            />
-                          ))}
-                        </div>
-                        <p className="od-disc-viewall">
-                          <Link href="/shop">View All</Link>
-                        </p>
-                      </>
-                    ) : null}
-                    {showPincode ? (
-                      <div className="od-disc-pin">
-                        <h3 className="od-disc-subhead">
-                          Furniture pincode check
-                        </h3>
-                        <ShopPincodeChecker />
+                      <div className="od-disc-featured od-shop__grid">
+                        {featured.map((card) => (
+                          <ShopProductCard
+                            key={card.slug}
+                            card={card}
+                            showWishlist={false}
+                          />
+                        ))}
                       </div>
                     ) : null}
                   </>
                 ) : (
                   <Reveal>
                     <p className="od-disc-lede">
-                      Browse furniture categories when products are listed.
+                      Furniture categories appear here as products are listed.
                     </p>
-                    <Link
-                      href="/shop"
-                      className="od-disc-btn od-disc-btn--ghost"
-                    >
-                      Shop Furniture
-                    </Link>
-                    <ol className="od-disc-furn-steps">
-                      {DISCOVERY_FURNITURE_PROCESS_STEPS.map((step) => (
-                        <li key={step}>{step}</li>
-                      ))}
-                    </ol>
                   </Reveal>
                 )}
               </div>
             </section>
           ) : null}
 
-          {/*
-          COMPACT CTA, NOT A FORM.
+          {/* Why both verticals share one name. Owns `#about`. */}
+          <DiscoveryAbout shopLive={shopLive} />
 
-          The panel that stood here was a full lead form. The questions it asked
-          are now the sheet's first three steps, so what remains is the reason to
-          open it and the control that does.
-        */}
+          {/*
+            ONE CLOSING BAND.
+
+            The page used to end with a consultation band AND a final CTA, which
+            asked the same thing twice and made neither feel like the decision
+            point. This is the single closing invitation, and it is the `#contact`
+            destination for every public page's menu.
+
+            `#consultation` stays as an alias on the same section: `/portfolio/
+            [slug]` and the Shop nav link to it, and breaking a working anchor to
+            save a word is a poor trade.
+          */}
           <section
-            id="consultation"
+            id="contact"
             className="od-disc-band od-disc-consult od-disc-consult--compact"
-            data-od-disc-section="consultation"
+            data-od-disc-section="contact"
             aria-labelledby="od-disc-consult-title"
           >
+            <span id="consultation" className="od-disc-anchor-alias" aria-hidden="true" />
             <div className="od-disc-shell">
               <Reveal className="od-disc-consult__compact">
-                <p className="od-disc-kicker">{DISCOVERY_CONSULT_EYEBROW}</p>
+                <p className="od-disc-kicker">{DISCOVERY_CONTACT_EYEBROW}</p>
                 <h2 id="od-disc-consult-title" className="od-disc-display">
-                  <span>{DISCOVERY_CONSULT_HEADLINE}</span>
+                  <span>{DISCOVERY_CONTACT_HEADLINE}</span>
                 </h2>
-                <p className="od-disc-lede">{DISCOVERY_CONSULT_LEDE}</p>
+                <p className="od-disc-lede">{DISCOVERY_CONTACT_LEDE}</p>
                 <ul className="od-disc-consult__benefits">
                   <li>Free design consultation</li>
                   <li>Own modular factory</li>
@@ -305,8 +303,6 @@ export function DiscoveryHomePage({
               </Reveal>
             </div>
           </section>
-
-          <DiscoveryFinalCta />
         </main>
         <DiscoveryWhatsAppFab />
         <DiscoveryStickyCta />

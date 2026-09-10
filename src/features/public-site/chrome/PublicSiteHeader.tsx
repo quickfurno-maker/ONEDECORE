@@ -19,12 +19,18 @@ function getFocusables(container: HTMLElement): HTMLElement[] {
   );
 }
 
+/**
+ * Whether a menu item points at the page being rendered.
+ *
+ * Anchor destinations are deliberately never current. `#about` and `#contact`
+ * are positions within the homepage, and a header cannot honestly claim the
+ * visitor is "on" one of them — scrolling would make the claim false without
+ * anything re-rendering.
+ */
 function isCurrent(current: PublicNavCurrent, href: string): boolean {
-  if (current === "home" && href === "/") return true;
   if (current === "interiors" && href.startsWith("/interiors")) return href === "/interiors";
   if (current === "shop" && href === "/shop") return true;
   if (current === "portfolio" && href === "/portfolio") return true;
-  if (current === "about" && href === "/#about") return true;
   return false;
 }
 

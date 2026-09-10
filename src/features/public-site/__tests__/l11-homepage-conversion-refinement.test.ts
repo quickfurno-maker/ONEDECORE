@@ -289,14 +289,22 @@ describe("the hero carries images, dots and no words", () => {
   const hero = read(HERO);
   const heroCode = code(hero);
 
-  test("no headline, kicker, lede, badge, CTA or trust bar", () => {
+  test("no rotating headline, kicker, badge or trust bar layered on the slides", () => {
+    /*
+     * L1.1 stripped the hero to photography because five layered elements were
+     * competing with it. The gateway hero brought back ONE block — an eyebrow,
+     * the H1, a sentence and two buttons — because a page offering two journeys
+     * has to name them on the first screen.
+     *
+     * What must not return is the rest: a headline that changes with the slide,
+     * a badge, the panel/layout scaffolding, and the trust bar. The copy is
+     * fixed and belongs to the page, not to whichever image is showing.
+     */
     for (const gone of [
       "od-disc-hero__headline",
       "od-disc-kicker",
-      "od-disc-hero__lede",
       "od-disc-hero__badge",
       "od-disc-hero__panel",
-      "od-disc-hero__copy",
       "od-disc-hero__layout",
       "DiscoveryHeroTrustBar",
       "slide.headline",
@@ -323,11 +331,18 @@ describe("the hero carries images, dots and no words", () => {
     assert.match(heroCode, /alt=""/);
   });
 
-  test("a visually hidden H1 keeps the page's identity", () => {
-    assert.match(hero, /<h1 id="od-disc-hero-title" className="od-sr-only">/);
-    assert.match(hero, /DISCOVERY_HERO_PAGE_TITLE/);
+  test("one visible H1 carries the brand", () => {
+    /*
+     * The H1 was visually hidden while the hero was pure decoration for an
+     * interiors page. As the gateway to two verticals it is on screen: a
+     * visitor cannot choose between journeys the first screen never names.
+     */
+    assert.match(hero, /<h1 id="od-disc-hero-title">\{DISCOVERY_GATEWAY_TITLE\}<\/h1>/);
+    assert.doesNotMatch(hero, /<h1[^>]*od-sr-only/);
+    assert.equal((hero.match(/<h1/g) ?? []).length, 1, "exactly one H1");
     const copy = read("src/features/public-site/discovery/discovery-copy.ts");
-    assert.match(copy, /export const DISCOVERY_HERO_PAGE_TITLE/);
+    assert.match(copy, /export const DISCOVERY_GATEWAY_TITLE/);
+    assert.match(copy, /export const DISCOVERY_GATEWAY_LEDE/);
   });
 
   test("autoplay is 5-6 seconds and reduced motion still pauses it", () => {

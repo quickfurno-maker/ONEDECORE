@@ -33,48 +33,33 @@ function walkFiles(dir: string, acc: string[] = []): string[] {
 }
 
 describe("Public site simplification — discovery IA", () => {
-  test("locks the simplified discovery section order", () => {
+  test("locks the gateway discovery section order", () => {
     /*
-     * The premium homepage narrative. Each band answers the question the one
-     * before it raises; `furniture` is in the list but not the story, because it
-     * renders only when the Shop gate is live.
-     */
-    /*
-     * Two owner-directed moves are locked here. `proof` is GONE from the
-     * homepage: the counter opens `/interiors` instead of arriving before the
-     * page has said what the company does. And `areas` dropped from second
-     * position to just before the closing CTAs, where "do you build in my part
-     * of Pune?" is a question someone is actually asking.
+     * ONEDECORE is one brand with two journeys, and `/` is the gateway between
+     * them. The page offers the choice on the first screen, proves the
+     * interiors path, gives furniture a band of its own, explains why both
+     * share a name, and closes once.
+     *
+     * `shop` is in the contract but conditional in the DOM: it renders only
+     * when the fail-closed gate is live.
      */
     assert.deepEqual([...DISCOVERY_SECTION_ORDER], [
       "header",
       "hero",
-      "portfolio-categories",
-      "why",
-      "manufacturing",
-      "design-library",
-      "process",
-      "real-homes",
-      "quality",
-      "furniture",
-      "areas",
-      "consultation",
-      "final-cta",
+      "interior-usps",
+      "featured-interiors",
+      "shop",
+      "about",
+      "contact",
       "footer",
     ]);
     assert.deepEqual([...DISCOVERY_MAJOR_SECTIONS], [
       "hero",
-      "portfolio-categories",
-      "why",
-      "manufacturing",
-      "design-library",
-      "process",
-      "real-homes",
-      "quality",
-      "furniture",
-      "areas",
-      "consultation",
-      "final-cta",
+      "interior-usps",
+      "featured-interiors",
+      "shop",
+      "about",
+      "contact",
     ]);
     assert.equal(DISCOVERY_SERVICE_SECTIONS.length, 3);
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
@@ -84,15 +69,13 @@ describe("Public site simplification — discovery IA", () => {
     assert.doesNotMatch(page, /od-disc-top-chrome/);
     assert.match(page, /DiscoveryHeroSlider/);
     assert.match(page, /DiscoveryWhy/);
-    assert.match(page, /DiscoveryDesignLibrary/);
-    const library = read(
-      "src/features/public-site/discovery/DiscoveryDesignLibrary.tsx"
-    );
-    assert.match(library, /data-od-disc-section="design-library"/);
-    assert.match(page, /DiscoveryQuality/);
-    assert.match(page, /data-od-disc-section="real-homes"/);
-    assert.match(page, /data-od-disc-section="furniture"/);
-    assert.match(page, /data-od-disc-section="consultation"/);
+    assert.match(page, /DiscoveryAbout/);
+    assert.match(page, /data-od-disc-section="featured-interiors"/);
+    assert.match(page, /data-od-disc-section="shop"/);
+    assert.match(page, /data-od-disc-section="contact"/);
+    // The interiors deep-dive bands moved to /interiors.
+    assert.doesNotMatch(page, /DiscoveryDesignLibrary/);
+    assert.doesNotMatch(page, /DiscoveryQuality/);
     assert.match(page, /shopLive \? \(/);
     assert.match(page, /PUBLIC_CONSULTATION\.label/);
     /*
@@ -108,8 +91,17 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(page, /href="\/portfolio"/);
     assert.doesNotMatch(page, /\/interiors#consultation/);
     assert.doesNotMatch(page, /\/interiors\?service=/);
-    assert.match(page, /ShopPincodeChecker/);
-    assert.match(page, /showPincode/);
+    /*
+     * The pincode checker left the homepage. Serviceability is a checkout
+     * question, and the common homepage is discovery — it belongs in the Shop
+     * journey, which still renders it.
+     */
+    assert.doesNotMatch(page, /ShopPincodeChecker/);
+    /*
+     * The pincode checker left the homepage with the rest of the checkout
+     * utility. Serviceability is a Shop-journey question.
+     */
+    assert.doesNotMatch(page, /showPincode/);
     assert.doesNotMatch(page, /furniture collection is being prepared/i);
     assert.doesNotMatch(page, /DiscoveryPuneCoverage/);
     assert.doesNotMatch(page, /heroConsultant|hero-consultant-indian-woman/);
@@ -127,7 +119,13 @@ describe("Public site simplification — discovery IA", () => {
   });
 
   test("canonical consultation lives on homepage with service preselection", () => {
-    assert.equal(PUBLIC_CONSULTATION.href, "/#consultation");
+    /*
+     * The closing band is the Contact destination now, so the canonical href
+     * is `/#contact`. The per-service deep links still target `#consultation`,
+     * a live alias on that same section — the anchor `/portfolio/[slug]` and
+     * the Shop nav link to.
+     */
+    assert.equal(PUBLIC_CONSULTATION.href, "/#contact");
     assert.equal(
       PUBLIC_CONSULTATION_BY_SERVICE["complete-home-interiors"],
       "/?service=complete-home-interiors#consultation"
@@ -157,7 +155,12 @@ describe("Public site simplification — discovery IA", () => {
     assert.doesNotMatch(copy, /\/interiors#consultation/);
     assert.doesNotMatch(copy, /\/interiors\?service=/);
     const nav = read("src/features/public-site/chrome/public-nav.ts");
-    assert.match(nav, /href: "\/#consultation"/);
+    /*
+     * `#consultation` is no longer the canonical href — it is an alias anchor
+     * on the closing band — but the per-service deep links still use it, so it
+     * must still appear in the module.
+     */
+    assert.match(nav, /#consultation/);
     assert.doesNotMatch(nav, /\/interiors#consultation/);
   });
 
@@ -202,18 +205,18 @@ describe("Public site simplification — discovery IA", () => {
     const nav = read("src/features/public-site/chrome/public-nav.ts");
     assert.match(page, /showShopSearch=\{shopLive\}/);
     assert.match(page, /shopEnabled=\{shopLive\}/);
-    assert.match(page, /showPincode = shopLive/);
+    assert.doesNotMatch(page, /showPincode/);
     assert.match(header, /showShopSearch/);
     assert.match(header, /shopEnabled/);
     assert.match(header, /getPublicNavDestinations\(shopEnabled\)/);
     assert.match(nav, /getPublicNavDestinations/);
     assert.deepEqual(
       getPublicNavDestinations(false).map((row) => row.id),
-      ["home", "interiors", "portfolio", "about"]
+      ["interiors", "portfolio", "about", "contact"]
     );
     assert.deepEqual(
       getPublicNavDestinations(true).map((row) => row.id),
-      ["home", "interiors", "portfolio", "about", "shop"]
+      ["interiors", "shop", "portfolio", "about", "contact"]
     );
     assert.ok(!existsSync(join(root, "src/features/public-site/discovery/DiscoveryPuneCoverage.tsx")));
     assert.ok(HOME_PUNE_AREAS.includes("Kharadi"));
@@ -273,12 +276,12 @@ describe("Public site simplification — discovery IA", () => {
     const src = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     assert.match(src, /row\.isRoot/);
     assert.match(src, /sortOrder/);
-    assert.match(src, /slice\(0, 6\)/);
+    assert.match(src, /slice\(0, 3\)/);
   });
 
   test("real homes section uses portfolio preview with empty-safe behavior", () => {
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
-    assert.match(page, /portfolioPreview\.length > 0/);
+    assert.match(page, /projects\.length > 0/);
     assert.match(page, /PortfolioCard/);
     assert.match(page, /od-disc-homes__empty/);
     assert.match(page, /View Portfolio/);
@@ -308,10 +311,16 @@ describe("Public site simplification — interiors and portfolio", () => {
 });
 
 describe("Public site simplification — nav seo and shop", () => {
-  test("locked nav is Home | Interiors | Portfolio | About | conditional Shop", () => {
+  test("locked nav is Interiors | Shop | Portfolio | About | Contact", () => {
     const nav = read("src/features/public-site/chrome/public-nav.ts");
     const header = read("src/features/public-site/chrome/PublicSiteHeader.tsx");
-    assert.match(nav, /label: "Home"/);
+    /*
+     * No Home item. The wordmark links to `/` and is the affordance every
+     * visitor already expects; a menu slot spent repeating it is expensive on
+     * mobile and buys nothing.
+     */
+    assert.doesNotMatch(nav, /label: "Home"/);
+    assert.match(nav, /label: "Contact"/);
     assert.match(nav, /label: "Interiors"/);
     assert.match(nav, /label: "Portfolio"/);
     assert.match(nav, /label: "About"/);
