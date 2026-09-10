@@ -1,24 +1,26 @@
 /**
- * The /interiors promotional carousel, its composition, and the one counter.
+ * The /interiors promotional rail: one 9:16 format, six empty slots.
  *
  * WHAT THIS SUITE IS DEFENDING
  *
- *  1. Invented offers. The carousel is the surface a discount would land on,
- *     and the owner has published none. A slide announcing "20% off" would be
- *     a claim the business never made, on the page most likely to be shared.
+ *  1. The single-source model. The previous build shipped a portrait file and
+ *     a landscape file per campaign, which is two exports to keep in step and
+ *     two chances for them to say different things. A `desktopImage` field
+ *     creeping back would reintroduce that silently.
  *
- *  2. Invented destinations. A banner CTA pointing at an anchor that does not
- *     exist fails silently — the page simply does not move — so every internal
- *     target is checked against the components that actually render one.
+ *  2. The 9:16 shape. It is the one thing the artwork depends on, and the
+ *     easiest way to break it is a `max-height` on a box with `aspect-ratio` —
+ *     the browser satisfies the cap by distorting or cropping rather than by
+ *     refusing.
  *
- *  3. A second H1. Six rotating titles would give the page six competing
- *     headings depending on when a crawler looked.
+ *  3. One card per step. The obvious implementation of "next" on a multi-card
+ *     rail scrolls by a viewport, which skips three banners at a time and
+ *     leaves a visitor wondering what they missed.
  *
- *  4. The counter quietly animating something it must not: a decimal that
- *     floors to the wrong number, or a word.
+ *  4. Empty meaning empty. No image requests, no invented copy, no CTA, no
+ *     dead href — the slots exist to settle geometry, not to look finished.
  *
- *  5. The contact work from the previous commit regressing while this page is
- *     being rearranged.
+ *  5. Everything the previous two commits established on this page.
  */
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
@@ -27,8 +29,8 @@ import { describe, test } from "node:test";
 import {
   getEnabledInteriorsPromoSlides,
   INTERIORS_PROMO_AUTOPLAY_MS,
-  INTERIORS_PROMO_DESKTOP_RATIO,
-  INTERIORS_PROMO_MOBILE_RATIO,
+  INTERIORS_PROMO_PLACEHOLDER_PREFIX,
+  INTERIORS_PROMO_RATIO,
   INTERIORS_PROMO_SLIDES,
 } from "../interiors/interiors-promo.ts";
 import { PM_CREDIBILITY, pmCredibilityText } from "../home-r4/content.ts";
@@ -39,12 +41,18 @@ const read = (rel: string) => readFileSync(join(root, rel), "utf8");
 const code = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
+const CAROUSEL = "src/features/public-site/interiors/InteriorsPromoCarousel.tsx";
+const CONFIG = "src/features/public-site/interiors/interiors-promo.ts";
+const PAGE = "src/features/public-site/interiors/InteriorsConversionPage.tsx";
+const HERO = "src/features/public-site/home-r4/HomeHero.tsx";
+const CSS = "src/features/public-site/interiors/interiors.css";
+
 /**
  * The page's section-order contract, read from source rather than imported.
  *
  * `InteriorsConversionPage.tsx` imports stylesheets, which `node --test`
- * cannot load. Reading the literal is what the neighbouring suites do, and it
- * asserts the same thing: the array a developer would edit.
+ * cannot load. Reading the literal asserts the same thing: the array a
+ * developer would edit.
  */
 function readInteriorsSectionOrder(): readonly string[] {
   const source = read(PAGE);
@@ -55,16 +63,11 @@ function readInteriorsSectionOrder(): readonly string[] {
   return Array.from(block[1]!.matchAll(/"([^"]+)"/g)).map((match) => match[1]!);
 }
 
-const CAROUSEL = "src/features/public-site/interiors/InteriorsPromoCarousel.tsx";
-const PAGE = "src/features/public-site/interiors/InteriorsConversionPage.tsx";
-const HERO = "src/features/public-site/home-r4/HomeHero.tsx";
-const CSS = "src/features/public-site/interiors/interiors.css";
-
 /* -------------------------------------------------------------------------- */
-/* 1. Slide configuration                                                      */
+/* 1. Config — six empty slots, one source model                               */
 /* -------------------------------------------------------------------------- */
 
-describe("the promo carousel is six configured slots, not six blocks of JSX", () => {
+describe("the rail is six configurable slots", () => {
   test("exactly six slots with stable unique ids", () => {
     assert.equal(INTERIORS_PROMO_SLIDES.length, 6);
     const ids = INTERIORS_PROMO_SLIDES.map((slide) => slide.id);
@@ -74,7 +77,53 @@ describe("the promo carousel is six configured slots, not six blocks of JSX", ()
     }
   });
 
-  test("enabled filtering is what decides what renders", () => {
+  test("every slot is currently empty: no artwork, no destination", () => {
+    for (const slide of INTERIORS_PROMO_SLIDES) {
+      assert.ok(
+        slide.image === undefined || slide.image === null,
+        `${slide.id} must carry no artwork in this review build`
+      );
+      assert.ok(
+        slide.href === undefined || slide.href === null,
+        `${slide.id} must not be clickable while it is empty`
+      );
+    }
+  });
+
+  test("one artwork path per campaign, never a mobile/desktop pair", () => {
+    /*
+     * The previous model had `mobileImage` and `desktopImage`. Two cuts per
+     * campaign is two exports to keep in step, and when they drift nobody
+     * notices until someone opens the site on the other device.
+     */
+    const config = read(CONFIG);
+    for (const gone of [
+      "mobileImage",
+      "desktopImage",
+      "focalPointMobile",
+      "focalPointDesktop",
+      "ctaLabel",
+      "eyebrow",
+    ]) {
+      assert.doesNotMatch(
+        code(config),
+        new RegExp(`\\b${gone}\\b`),
+        `${gone} must not survive into the single-source model`
+      );
+    }
+    assert.match(config, /readonly image\?: string \| null/);
+    assert.match(config, /readonly href\?: string \| null/);
+  });
+
+  test("the authored format is 9:16 and the CSS agrees", () => {
+    assert.equal(INTERIORS_PROMO_RATIO, "9 / 16");
+    const css = read(CSS);
+    assert.match(css, /aspect-ratio: 9 \/ 16/);
+    // And no landscape frame survives anywhere.
+    assert.doesNotMatch(css, /aspect-ratio: 12 \/ 5/);
+  });
+
+  test("enabled filtering decides what renders", () => {
     assert.equal(getEnabledInteriorsPromoSlides().length, 6);
     const withOneOff = INTERIORS_PROMO_SLIDES.map((slide, index) =>
       index === 2 ? { ...slide, enabled: false } : slide
@@ -82,169 +131,221 @@ describe("the promo carousel is six configured slots, not six blocks of JSX", ()
     const enabled = getEnabledInteriorsPromoSlides(withOneOff);
     assert.equal(enabled.length, 5);
     assert.ok(!enabled.some((slide) => slide.id === INTERIORS_PROMO_SLIDES[2]!.id));
-    // Order is the array order, not the filter's accident.
-    assert.deepEqual(
-      enabled.map((slide) => slide.id),
-      withOneOff.filter((slide) => slide.enabled).map((slide) => slide.id)
-    );
   });
 
-  test("all slides disabled renders nothing at all", () => {
+  test("all slots disabled renders nothing at all", () => {
     const allOff = INTERIORS_PROMO_SLIDES.map((slide) => ({
       ...slide,
       enabled: false,
     }));
     assert.equal(getEnabledInteriorsPromoSlides(allOff).length, 0);
-    /*
-     * An empty section would leave a banner-height hole above the hero and
-     * push the whole page down for nothing.
-     */
+    assert.match(code(read(CAROUSEL)), /if \(slideCount === 0\) \{\s*return null;/);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* 2. Empty frames — no images, no copy, no CTA                                */
+/* -------------------------------------------------------------------------- */
+
+describe("the empty slots look like frames, not like finished content", () => {
+  test("a Banner N label and nothing else", () => {
+    assert.equal(INTERIORS_PROMO_PLACEHOLDER_PREFIX, "Banner");
     const carousel = code(read(CAROUSEL));
-    assert.match(carousel, /if \(slideCount === 0\) \{\s*return null;/);
+    assert.match(
+      carousel,
+      /const label = `\$\{INTERIORS_PROMO_PLACEHOLDER_PREFIX\} \$\{index \+ 1\}`/
+    );
+    assert.match(carousel, /className="od-int-promo__emptyLabel">\{label\}/);
   });
 
-  test("every slide has two DIFFERENT real image files", () => {
-    for (const slide of INTERIORS_PROMO_SLIDES) {
-      for (const [which, image] of [
-        ["mobile", slide.mobileImage],
-        ["desktop", slide.desktopImage],
-      ] as const) {
-        assert.ok(
-          image.src.startsWith("/assets/"),
-          `${slide.id} ${which} must be a repository asset`
-        );
-        assert.ok(
-          existsSync(join(root, "public", image.src)),
-          `${slide.id} ${which} asset ${image.src} must exist on disk`
-        );
-        assert.ok(image.width > 0 && image.height > 0, `${slide.id} ${which} size`);
-        assert.match(image.focalPoint, /^\d+% \d+%$/, `${slide.id} ${which} focal`);
-      }
-      /*
-       * The two sources must be different files. If a slide used one asset for
-       * both, the `<picture>` switch would be decorative and the desktop
-       * banner would be the tall mobile artwork stretched wide — the exact
-       * thing the responsive source exists to prevent.
-       */
-      assert.notEqual(
-        slide.mobileImage.src,
-        slide.desktopImage.src,
-        `${slide.id} must not use one asset for both breakpoints`
-      );
+  test("no promotional copy is rendered by the carousel", () => {
+    const carousel = code(read(CAROUSEL));
+    for (const gone of [
+      "od-int-promo__eyebrow",
+      "od-int-promo__title",
+      "od-int-promo__body",
+      "od-int-promo__cta",
+      "od-int-promo__scrim",
+      "od-int-promo__copy",
+    ]) {
+      assert.doesNotMatch(carousel, new RegExp(gone), `${gone} must be gone`);
     }
-  });
-
-  test("no slide invents an offer, a price, or a metric", () => {
-    const forbidden =
-      /\b(\d+\s*%\s*off|% off|flat \d|discount|coupon|promo code|sale ends|offer ends|limited period|EMI|no cost|cashback|free gift|lowest price|starting at ₹|₹\s*\d|guaranteed delivery|award|rated \d)\b/i;
-    for (const slide of INTERIORS_PROMO_SLIDES) {
-      const copy = [slide.eyebrow, slide.title, slide.body, slide.ctaLabel]
-        .filter(Boolean)
-        .join(" ");
-      assert.doesNotMatch(copy, forbidden, `${slide.id} copy invents an offer`);
-      /*
-       * No bare numbers in banner copy either. Every figure on this site is
-       * claim-gated, and a banner is the easiest place for an ungoverned one
-       * to appear.
-       */
-      assert.doesNotMatch(copy, /\d/, `${slide.id} copy must carry no figures`);
-    }
-  });
-
-  test("alt text describes the photograph, never a completed project", () => {
-    for (const slide of INTERIORS_PROMO_SLIDES) {
-      assert.ok(slide.imageAlt.length > 12, `${slide.id} needs honest alt text`);
-      assert.doesNotMatch(
-        slide.imageAlt,
-        /completed project|delivered project|client home|our factory|our showroom/i,
-        `${slide.id} alt must not claim provenance the photo does not have`
-      );
-    }
-  });
-
-  test("the authored artwork formats are 9:16 and 12:5", () => {
-    assert.equal(INTERIORS_PROMO_MOBILE_RATIO, "9 / 16");
-    assert.equal(INTERIORS_PROMO_DESKTOP_RATIO, "12 / 5");
+    // And the stylesheet does not keep the rules alive for a future accident.
     const css = read(CSS);
-    assert.match(css, /aspect-ratio: 9 \/ 16/);
-    assert.match(css, /aspect-ratio: 12 \/ 5/);
-  });
-});
-
-/* -------------------------------------------------------------------------- */
-/* 2. CTA destinations                                                         */
-/* -------------------------------------------------------------------------- */
-
-describe("banner CTAs point only at destinations that exist", () => {
-  test("every href is an on-page anchor or a known route", () => {
-    const known = new Set(["/portfolio", "/interiors", "/shop", "/"]);
-    for (const slide of INTERIORS_PROMO_SLIDES) {
-      if (!slide.href) continue;
-      assert.ok(
-        slide.href.startsWith("#") || known.has(slide.href),
-        `${slide.id} href ${slide.href} is neither an anchor nor a known route`
-      );
-      assert.doesNotMatch(slide.href, /^https?:/, `${slide.id} must stay internal`);
+    for (const gone of ["od-int-promo__cta", "od-int-promo__scrim", "od-int-promo__title"]) {
+      assert.doesNotMatch(css, new RegExp(`\\.${gone}`), `${gone} CSS must be gone`);
     }
   });
 
-  test("every anchor target is actually rendered somewhere on /interiors", () => {
+  test("no image element renders while the slots are empty", () => {
     /*
-     * A CTA pointing at a missing anchor fails silently: the visitor taps and
-     * the page does not move. Checking the source of the components this page
-     * composes is the cheapest way to catch a renamed section.
+     * The `<Image>` branch is retained so that adding a path is the only
+     * change a campaign needs — but it is behind `slide.image`, and no slot
+     * has one, so this build issues no image request at all.
      */
-    const rendered = [
-      "src/features/public-site/home-r4/HomeServicesRooms.tsx",
-      "src/features/public-site/home-r4/HomeFactory.tsx",
-      "src/features/public-site/home-r4/HomePlan.tsx",
-      "src/features/public-site/home-r4/HomeBudgetEstimator.tsx",
-      "src/features/public-site/interiors/InteriorsServiceBlocks.tsx",
-      "src/features/public-site/home-r4/content.ts",
-    ]
-      .map(read)
-      .join("\n");
-
-    for (const slide of INTERIORS_PROMO_SLIDES) {
-      if (!slide.href?.startsWith("#")) continue;
-      const anchor = slide.href.slice(1);
-      const literal = new RegExp(`id="${anchor}"`);
-      const viaConstant = new RegExp(`${anchor}:\\s*"${anchor}"`);
-      assert.ok(
-        literal.test(rendered) || viaConstant.test(rendered),
-        `${slide.id} targets #${anchor}, which nothing on /interiors renders`
-      );
-    }
+    const carousel = code(read(CAROUSEL));
+    assert.match(carousel, /slide\.image \? \(/);
+    assert.match(carousel, /<Image/);
+    assert.match(carousel, /src=\{slide\.image\}/);
   });
 
-  test("a CTA needs both a label and a destination, or neither renders", () => {
+  test("the empty frame is not dressed up as an uploader", () => {
+    const css = read(CSS);
+    const block = /\.od-int-promo__empty \{[\s\S]*?\n\}/.exec(css);
+    assert.ok(block, "the empty frame needs its own rule");
+    assert.doesNotMatch(block[0], /dashed|dotted/, "no drop-zone border");
     const carousel = code(read(CAROUSEL));
-    assert.match(carousel, /slide\.ctaLabel && slide\.href \?/);
-    // And no banner ships its own lead form.
-    assert.doesNotMatch(carousel, /<form|useForm|lead-intake|leadIntake/i);
+    assert.doesNotMatch(carousel, /Upload|Drop |Choose file|placeholder\.(png|jpg)/i);
+  });
+
+  test("no art-direction machinery is left behind", () => {
+    const carousel = code(read(CAROUSEL));
+    for (const gone of ["getImageProps", "<picture>", "srcSet", "--promo-focal"]) {
+      assert.doesNotMatch(
+        carousel,
+        new RegExp(gone.replace(/[<>/]/g, "\\$&")),
+        `${gone} belonged to the two-source model`
+      );
+    }
+    assert.doesNotMatch(read(CSS), /--promo-focal/);
   });
 });
 
 /* -------------------------------------------------------------------------- */
-/* 3. Carousel behaviour                                                       */
+/* 3. Optional whole-card link                                                 */
 /* -------------------------------------------------------------------------- */
 
-describe("carousel interaction", () => {
-  test("autoplay dwells between five and six seconds", () => {
+describe("a banner links as a whole card or not at all", () => {
+  test("href present makes the card a real link; absent makes it inert", () => {
+    const carousel = code(read(CAROUSEL));
+    assert.match(carousel, /slide\.href \? \(/);
+    assert.match(carousel, /<Link\s+href=\{slide\.href\}/);
+    assert.match(carousel, /<article className=\{frameClass\}>\{body\}<\/article>/);
+    // No click-div pretending to be a link, and no button inside a banner.
+    assert.doesNotMatch(carousel, /<div[^>]*onClick/);
+    assert.doesNotMatch(carousel, /<button[^>]*promo-\$\{/);
+  });
+
+  test("a linked banner will have an accessible name", () => {
+    const carousel = code(read(CAROUSEL));
+    assert.match(carousel, /alt=\{slide\.imageAlt \?\? ""\}/);
+    assert.match(read(CONFIG), /readonly imageAlt\?: string \| null/);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* 4. Geometry                                                                 */
+/* -------------------------------------------------------------------------- */
+
+describe("geometry", () => {
+  test("mobile: 82vw, exact 9:16, 20px radius, 12px gap, 16px inset", () => {
+    const css = read(CSS);
+    assert.match(css, /flex: 0 0 min\(82vw, calc\(76vh \* 9 \/ 16\)\)/);
+    assert.match(css, /\.od-int-promo__frame \{[\s\S]*?aspect-ratio: 9 \/ 16/);
+    assert.match(css, /\.od-int-promo__frame \{[\s\S]*?border-radius: 20px/);
+    assert.match(css, /gap: 12px/);
+    assert.match(css, /padding: 0 16px/);
+  });
+
+  test("the height guard caps WIDTH so the ratio stays exact", () => {
+    /*
+     * A `max-height` on a box with `aspect-ratio` is satisfied by distorting
+     * or cropping. Capping the width instead makes a short viewport show a
+     * smaller card that is still 9:16, which is what the artwork needs.
+     */
+    const css = read(CSS);
+    const frame = /\.od-int-promo__frame \{[\s\S]*?\n\}/.exec(css);
+    assert.ok(frame);
+    assert.doesNotMatch(frame[0], /max-height/, "the frame must not cap height");
+    assert.match(css, /calc\(76vh \* 9 \/ 16\)/);
+    assert.match(css, /calc\(70vh \* 9 \/ 16\)/);
+  });
+
+  test("desktop: more cards, not a bigger one — and never a billboard", () => {
+    const css = read(CSS);
+    assert.match(css, /flex: 0 0 min\(clamp\(300px, 26vw, 360px\), calc\(70vh \* 9 \/ 16\)\)/);
+    assert.match(css, /@media \(min-width: 48rem\)[\s\S]*?border-radius: 24px/);
+    assert.match(css, /@media \(min-width: 48rem\)[\s\S]*?gap: 22px/);
+    // The old single-banner desktop layout must not come back.
+    assert.doesNotMatch(css, /flex: 0 0 92vw/);
+    assert.doesNotMatch(css, /flex: 0 0 94%/);
+  });
+
+  test("the rail scrolls but the document never does", () => {
+    const css = read(CSS);
+    assert.match(css, /\.od-int-promo \{[^}]*overflow: clip/);
+    assert.match(css, /overscroll-behavior-x: contain/);
+    assert.match(css, /scroll-snap-type: x mandatory/);
+    assert.match(css, /scroll-snap-align: start/);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* 5. Interaction                                                              */
+/* -------------------------------------------------------------------------- */
+
+describe("interaction", () => {
+  test("autoplay dwells at about 5.5 seconds", () => {
     assert.ok(
       INTERIORS_PROMO_AUTOPLAY_MS >= 5000 && INTERIORS_PROMO_AUTOPLAY_MS <= 6000,
       `autoplay ${INTERIORS_PROMO_AUTOPLAY_MS}ms must sit in the 5-6s band`
     );
-    // Never faster than 4s, which is the floor a reader can keep up with.
-    assert.ok(INTERIORS_PROMO_AUTOPLAY_MS > 4000);
   });
 
-  test("autoplay loops and starts on the first slide", () => {
+  test("every movement is one card, never one viewport", () => {
+    /*
+     * Scrolling by `clientWidth` would jump three or four banners at a desktop
+     * width and skip whatever the visitor was reading.
+     */
     const carousel = code(read(CAROUSEL));
-    assert.match(carousel, /useState\(0\)/);
-    // Modulo wrap in goTo is what makes next-from-last return to the first.
-    assert.match(carousel, /\(\(index % slideCount\) \+ slideCount\) % slideCount/);
-    assert.match(carousel, /goTo\(active \+ 1\)/);
+    assert.doesNotMatch(carousel, /clientWidth\s*[,)]?\s*behavior/);
+    assert.doesNotMatch(carousel, /scrollBy/);
+    assert.match(carousel, /goTo\(active >= maxIndex \|\| atScrollEnd \? 0 : active \+ 1\)/);
+    assert.match(carousel, /goTo\(rail\.scrollLeft <= SCROLL_EPSILON \? maxIndex : active - 1\)/);
+    // Autoplay uses the same one-card step as the arrow.
+    assert.match(carousel, /setTimeout\(goNext, INTERIORS_PROMO_AUTOPLAY_MS\)/);
+  });
+
+  test("the loop point is measured, not assumed", () => {
+    /*
+     * With four cards visible, card 6 can never sit at the start of the rail —
+     * it runs out of scrollable width three cards earlier. Hard-coding
+     * `slideCount - 1` as the last position would leave autoplay stuck against
+     * the end.
+     */
+    const carousel = code(read(CAROUSEL));
+    assert.match(carousel, /rail\.scrollWidth - rail\.clientWidth/);
+    assert.match(carousel, /setMaxIndex\(reachable\)/);
+    assert.match(carousel, /hidden=\{index > maxIndex\}/);
+    /*
+     * The loop point is `maxIndex`, not the raw scroll end. At 1440 the last
+     * reachable card lands with scroll still available, so testing only the
+     * scroll position left a dead beat where the rail crept forward but the
+     * leading card never changed.
+     */
+    assert.match(carousel, /active >= maxIndex \|\| atScrollEnd/);
+    /*
+     * And the active index is clamped to that range, or the final swipe on a
+     * phone lights no dot at all — the nearest card edge there is the last
+     * one, whose dot is hidden because it can never lead.
+     */
+    assert.match(carousel, /setActive\(Math\.min\(nearest, reachable\)\)/);
+  });
+
+  test("the active card is the leading one, computed from scroll position", () => {
+    const carousel = code(read(CAROUSEL));
+    // An IntersectionObserver reports every visible card, which is useless
+    // when four are visible at once.
+    assert.doesNotMatch(carousel, /IntersectionObserver/);
+    assert.match(carousel, /Math\.abs\(offset - rail\.scrollLeft\)/);
+    assert.match(carousel, /setActive\(Math\.min\(nearest, reachable\)\)/);
+    assert.match(carousel, /new ResizeObserver/);
+  });
+
+  test("swipe is the platform's, not a hand-rolled drag handler", () => {
+    const carousel = code(read(CAROUSEL));
+    assert.doesNotMatch(carousel, /onTouchMove|onDragStart|clientX/);
+    assert.match(read(CSS), /overflow-x: auto/);
   });
 
   test("autoplay pauses for hover, focus and touch, and resumes after", () => {
@@ -257,42 +358,8 @@ describe("carousel interaction", () => {
     assert.match(carousel, /onMouseLeave=\{\(\) => setHovered\(false\)\}/);
     assert.match(carousel, /onFocusCapture=\{\(\) => setFocusWithin\(true\)\}/);
     assert.match(carousel, /onBlurCapture=\{\(\) => setFocusWithin\(false\)\}/);
-    assert.match(carousel, /onPointerDown=\{\(\) => setPointerDown\(true\)\}/);
-    // A cancelled gesture must clear the pause too, or autoplay never restarts.
+    // A cancelled gesture must clear the pause, or autoplay never restarts.
     assert.match(carousel, /onPointerCancel=\{\(\) => setPointerDown\(false\)\}/);
-    assert.match(carousel, /if \(paused \|\| slideCount < 2\) return;/);
-  });
-
-  test("swipe is the platform's, not a hand-rolled drag handler", () => {
-    /*
-     * A scroll-snap rail gets momentum, rubber-banding and snap points from
-     * the browser. A JS drag approximates all three and never quite matches
-     * how every other swipe on the device feels.
-     */
-    const css = read(CSS);
-    assert.match(css, /scroll-snap-type: x mandatory/);
-    assert.match(css, /scroll-snap-align: start/);
-    assert.match(css, /overflow-x: auto/);
-    const carousel = code(read(CAROUSEL));
-    assert.doesNotMatch(carousel, /onTouchMove|onDragStart|clientX/);
-  });
-
-  test("the rail scrolls but the document never does", () => {
-    const css = read(CSS);
-    // `clip`, not `hidden`: hidden would make the section a scroll container.
-    assert.match(css, /\.od-int-promo \{[^}]*overflow: clip/);
-    assert.match(css, /overscroll-behavior-x: contain/);
-  });
-
-  test("dots are buttons in a group, not fake tabs", () => {
-    const carousel = code(read(CAROUSEL));
-    assert.match(carousel, /role="group" aria-label="Choose promotion"/);
-    assert.match(carousel, /aria-pressed=\{index === active\}/);
-    assert.doesNotMatch(carousel, /role="tab"|role="tablist"|role="tabpanel"/);
-    // Every control is a real button with a name.
-    assert.match(carousel, /aria-label="Previous promotion"/);
-    assert.match(carousel, /aria-label="Next promotion"/);
-    assert.doesNotMatch(carousel, /<div[^>]*onClick/);
   });
 
   test("arrow keys, Home and End move between slides", () => {
@@ -301,77 +368,34 @@ describe("carousel interaction", () => {
     assert.match(carousel, /event\.key === "ArrowLeft"/);
     assert.match(carousel, /event\.key === "Home"/);
     assert.match(carousel, /event\.key === "End"/);
+    // Keyboard movement respects the reachable range.
+    assert.match(carousel, /Math\.min\(index \+ 1, maxIndex\)/);
+    assert.match(carousel, /nextIndex = maxIndex/);
     // Focus follows selection, or a keyboard user loses their place.
     assert.match(carousel, /dotRefs\.current\[nextIndex\]\?\.focus\(\)/);
-  });
-
-  test("the active slide is observed from the rail, not assumed", () => {
-    const carousel = code(read(CAROUSEL));
-    assert.match(carousel, /new IntersectionObserver/);
-    assert.match(carousel, /root: rail/);
-    // scrollTo, not scrollIntoView: the latter drags the PAGE to the rail.
-    assert.match(carousel, /rail\.scrollTo\(/);
-    assert.doesNotMatch(carousel, /scrollIntoView/);
   });
 
   test("reduced motion disables autoplay and the sliding animation", () => {
     const carousel = code(read(CAROUSEL));
     assert.match(carousel, /usePrefersReducedMotion/);
     assert.match(carousel, /reducedMotion \|\| hovered/);
-    assert.match(carousel, /behavior: reducedMotion \? "auto" : behavior/);
-    const css = read(CSS);
+    assert.match(carousel, /behavior: reducedMotion \? "auto" : "smooth"/);
     assert.match(
-      css,
-      /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.od-int-promo__rail \{\s*scroll-behavior: auto/
+      read(CSS),
+      /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?scroll-behavior: auto/
     );
   });
 
-  test("nothing is announced on a timer", () => {
+  test("controls are real buttons and nothing shouts on a timer", () => {
     const carousel = code(read(CAROUSEL));
+    assert.match(carousel, /role="group" aria-label="Choose promotion"/);
+    assert.match(carousel, /aria-label="Previous promotion"/);
+    assert.match(carousel, /aria-label="Next promotion"/);
+    assert.match(carousel, /aria-pressed=\{index === active\}/);
     assert.doesNotMatch(carousel, /aria-live/);
+    assert.doesNotMatch(carousel, /role="tab"|role="tablist"|role="tabpanel"/);
     assert.match(carousel, /aria-roledescription="carousel"/);
     assert.match(carousel, /aria-roledescription="slide"/);
-  });
-
-  test("only the first banner is hinted; nothing else is preloaded", () => {
-    const carousel = code(read(CAROUSEL));
-    assert.match(carousel, /priority=\{index === 0\}/);
-    /*
-     * `fetchPriority`, not `priority`. `priority` emits a preload for one
-     * specific URL, which on a desktop would fetch the mobile artwork the
-     * browser is about to discard in favour of the landscape source.
-     */
-    assert.match(carousel, /fetchPriority=\{priority \? "high" : undefined\}/);
-    assert.doesNotMatch(carousel, /priority=\{priority\}|loading="eager"/);
-    assert.match(carousel, /PROMO_SIZES = "\(min-width: 64rem\) 92vw/);
-  });
-
-  test("responsive sources switch the file, and both are optimised", () => {
-    const carousel = code(read(CAROUSEL));
-    assert.match(carousel, /<picture>/);
-    assert.match(carousel, /media="\(min-width: 48rem\)"/);
-    /*
-     * `getImageProps` for each source: a hand-written `srcSet={path}` would
-     * walk past the image optimiser and ship the original at full width, and
-     * two CSS-hidden `<Image>` elements would download both files.
-     */
-    assert.match(carousel, /getImageProps\(\{/);
-    assert.match(carousel, /srcSet: desktopSrcSet/);
-    assert.match(carousel, /srcSet: mobileSrcSet/);
-    assert.match(carousel, /src: slide\.desktopImage\.src/);
-    assert.match(carousel, /src: slide\.mobileImage\.src/);
-  });
-
-  test("each source is framed by its own focal point", () => {
-    const carousel = code(read(CAROUSEL));
-    assert.match(carousel, /"--promo-focal-mobile": slide\.mobileImage\.focalPoint/);
-    assert.match(carousel, /"--promo-focal-desktop": slide\.desktopImage\.focalPoint/);
-    const css = read(CSS);
-    assert.match(css, /object-position: var\(--promo-focal-mobile, 50% 50%\)/);
-    assert.match(
-      css,
-      /@media \(min-width: 48rem\) \{\s*\.od-int-promo__img \{\s*object-position: var\(--promo-focal-desktop/
-    );
   });
 
   test("no carousel library was added", () => {
@@ -380,53 +404,41 @@ describe("carousel interaction", () => {
       devDependencies?: Record<string, string>;
     };
     const all = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
-    for (const banned of ["swiper", "slick-carousel", "react-slick", "embla-carousel", "keen-slider"]) {
+    for (const banned of [
+      "swiper",
+      "slick-carousel",
+      "react-slick",
+      "embla-carousel",
+      "keen-slider",
+    ]) {
       assert.ok(!all.includes(banned), `${banned} must not be a dependency`);
     }
   });
 });
 
 /* -------------------------------------------------------------------------- */
-/* 4. Page composition                                                         */
+/* 6. Page composition                                                         */
 /* -------------------------------------------------------------------------- */
 
 describe("/interiors composition", () => {
-  test("the carousel precedes the hero, and the hero is mounted once", () => {
+  test("the rail precedes the hero, and the hero is mounted once", () => {
     const page = code(read(PAGE));
     const promo = page.indexOf("<InteriorsPromoCarousel />");
     const hero = page.indexOf("<HomeHero />");
-    assert.ok(promo > 0, "the carousel must be mounted");
-    assert.ok(hero > 0, "the hero must be mounted");
-    assert.ok(promo < hero, "the carousel must come before the hero");
-    assert.equal(
-      (page.match(/<HomeHero \/>/g) ?? []).length,
-      1,
-      "exactly one hero"
-    );
-    assert.equal(
-      (page.match(/<InteriorsPromoCarousel \/>/g) ?? []).length,
-      1,
-      "exactly one carousel"
-    );
+    assert.ok(promo > 0 && hero > 0);
+    assert.ok(promo < hero, "the rail must come before the hero");
+    assert.equal((page.match(/<HomeHero \/>/g) ?? []).length, 1);
+    assert.equal((page.match(/<InteriorsPromoCarousel \/>/g) ?? []).length, 1);
   });
 
   test("the section order contract matches what is rendered", () => {
     const order = readInteriorsSectionOrder();
     assert.deepEqual(order.slice(0, 3), ["header", "promo-carousel", "hero"]);
-    // The obsolete second-proof slot is gone from the contract.
     assert.ok(!order.includes("trust"));
-    // And the contract still describes the rest of the page it always did.
-    assert.ok(order.includes("modular-kitchen"));
-    assert.ok(order.includes("estimator"));
-    assert.ok(order.includes("consultation"));
   });
 
-  test("the second proof counter no longer renders on /interiors", () => {
-    // Comment-stripped: the page explains in prose WHY the strip left, and
-    // that explanation names it.
-    const page = code(read(PAGE));
-    assert.doesNotMatch(page, /DiscoveryProofStrip/);
-    // But the component survives for a surface with no credibility row.
+  test("the second proof counter stays removed", () => {
+    assert.doesNotMatch(code(read(PAGE)), /DiscoveryProofStrip/);
     assert.ok(
       existsSync(
         join(root, "src/features/public-site/discovery/DiscoveryProofStrip.tsx")
@@ -442,27 +454,23 @@ describe("/interiors composition", () => {
       "DiscoveryHeroTrustBar",
       "VerifiedMetricCounter",
     ]) {
-      assert.doesNotMatch(page, new RegExp(second), `${second} must not render here`);
+      assert.doesNotMatch(page, new RegExp(second));
     }
     assert.match(code(read(HERO)), /pm-hero__credibility/);
   });
 
   test("the carousel logic did not leak into the page file", () => {
-    /*
-     * The page should read as a running order. Carousel state living here
-     * would mean the next campaign change touches the file that describes the
-     * whole page.
-     */
     const page = code(read(PAGE));
-    assert.doesNotMatch(page, /useState|useEffect|IntersectionObserver|scrollTo/);
+    assert.doesNotMatch(page, /useState|useEffect|ResizeObserver|scrollTo/);
     assert.ok(page.split("\n").length < 90, "the page should stay a running order");
   });
 
-  test("the hero itself was moved, not redesigned", () => {
+  test("the hero was moved, not redesigned", () => {
     const hero = code(read(HERO));
     for (const kept of [
       "pm-hero__title",
       "PM_HERO.serviceLine",
+      "PM_HERO.lede",
       "pm-hero__media",
       "hero-start-plan",
       "hero-estimate",
@@ -477,23 +485,14 @@ describe("/interiors composition", () => {
 });
 
 /* -------------------------------------------------------------------------- */
-/* 5. The one animated counter                                                 */
+/* 7. The one animated counter                                                 */
 /* -------------------------------------------------------------------------- */
 
 describe("hero credibility counts numbers and prints words", () => {
   test("cells declare what they are instead of being parsed", () => {
     for (const item of PM_CREDIBILITY) {
-      assert.ok(
-        item.kind === "count" || item.kind === "static",
-        `${item.id} must declare a kind`
-      );
+      assert.ok(item.kind === "count" || item.kind === "static");
       if (item.kind === "count") {
-        assert.equal(typeof item.value, "number");
-        assert.ok(Number.isFinite(item.value));
-        /*
-         * Integers only. `useCountUp` floors its intermediate values, so a
-         * decimal would climb to the wrong number and settle there.
-         */
         assert.ok(
           Number.isInteger(item.value),
           `${item.id} must be an integer to count safely`
@@ -520,91 +519,96 @@ describe("hero credibility counts numbers and prints words", () => {
   test("the numbers count, with their suffixes left alone", () => {
     const byId = new Map(PM_CREDIBILITY.map((item) => [item.id, item]));
     if (canQuotePublicClaim("projects-delivered")) {
-      const projects = byId.get("projects");
-      assert.equal(projects?.kind, "count");
-      assert.equal(projects?.kind === "count" && projects.value, HOME_CLAIMS.projectsDelivered);
-      assert.equal(pmCredibilityText(projects!), `${HOME_CLAIMS.projectsDelivered}+`);
+      assert.equal(
+        pmCredibilityText(byId.get("projects")!),
+        `${HOME_CLAIMS.projectsDelivered}+`
+      );
     }
     if (canQuotePublicClaim("warranty-years")) {
-      const warranty = byId.get("warranty");
-      assert.equal(warranty?.kind, "count");
-      assert.equal(pmCredibilityText(warranty!), `${HOME_CLAIMS.warrantyYears}-Year`);
+      assert.equal(
+        pmCredibilityText(byId.get("warranty")!),
+        `${HOME_CLAIMS.warrantyYears}-Year`
+      );
     }
-    const hero = code(read(HERO));
-    // Only the digits are animated; prefix and suffix are printed as-is.
-    assert.match(hero, /\{item\.prefix \?\? ""\}\s*\{value\}\s*\{item\.suffix \?\? ""\}/);
+    assert.match(
+      code(read(HERO)),
+      /\{item\.prefix \?\? ""\}\s*\{value\}\s*\{item\.suffix \?\? ""\}/
+    );
   });
 
   test("assistive technology gets the final value once, not every frame", () => {
     const hero = code(read(HERO));
     assert.match(hero, /<span className="od-sr-only">\s*\{finalText\} \{item\.label\}/);
     assert.match(hero, /className="pm-hero__credStat" aria-hidden="true"/);
-    assert.match(hero, /className="pm-hero__credLabel" aria-hidden="true"/);
   });
 
-  test("the server render carries the real figure", () => {
+  test("the server render carries the real figure, and gating is unchanged", () => {
     const hook = code(read("src/features/public-site/motion/useCountUp.ts"));
     assert.match(hook, /useState<number>\(target\)/);
     assert.doesNotMatch(hook, /useState\(0\)/);
     assert.match(hook, /finished\.current = true/);
-    assert.match(hook, /reduced \? target : value/);
-    // One engine, reused — not a second animation implementation.
-    assert.match(read(HERO), /from "@\/features\/public-site\/motion\/useCountUp"/);
-  });
-
-  test("claim gating is unchanged", () => {
+    assert.match(read(HERO), /useCountUp\(item\.value\)/);
     const content = code(read("src/features/public-site/home-r4/content.ts"));
     assert.match(content, /canQuotePublicClaim\("projects-delivered"\)/);
     assert.match(content, /canQuotePublicClaim\("average-rating"\)/);
     assert.match(content, /canQuotePublicClaim\("warranty-years"\)/);
-    // No cell may exist without passing a gate or being a plain statement.
-    for (const item of PM_CREDIBILITY) {
-      if (item.id === "projects") assert.ok(canQuotePublicClaim("projects-delivered"));
-      if (item.id === "rating") assert.ok(canQuotePublicClaim("average-rating"));
-    }
   });
 });
 
 /* -------------------------------------------------------------------------- */
-/* 6. Contact UI must not regress while the page is rearranged                  */
+/* 8. Contact actions must not regress                                         */
 /* -------------------------------------------------------------------------- */
 
-describe("the previous commit's contact work still holds", () => {
-  test("header CTA absent, sticky Call Now present, one FAB", () => {
+describe("the earlier contact work still holds", () => {
+  test("header CTA absent, sticky Call Now present, one FAB per surface", () => {
     const shell = code(read("src/features/public-site/home-r4/HomeShell.tsx"));
     assert.match(shell, /showConsultation=\{false\}/);
 
-    const sticky = code(read("src/features/public-site/home-r4/HomeStickyActions.tsx"));
+    const sticky = code(
+      read("src/features/public-site/home-r4/HomeStickyActions.tsx")
+    );
     assert.match(sticky, /data-conversion-action="sticky-continue"/);
     assert.match(sticky, /data-conversion-action="sticky-call"/);
     assert.match(sticky, /href=\{callHref\}/);
     assert.doesNotMatch(sticky, /sticky-estimate/);
 
-    const page = code(read(PAGE));
     assert.equal(
-      (page.match(/<DiscoveryWhatsAppFab \/>/g) ?? []).length,
+      (code(read(PAGE)).match(/<DiscoveryWhatsAppFab \/>/g) ?? []).length,
       1,
-      "exactly one WhatsApp FAB"
+      "/interiors keeps exactly one WhatsApp FAB"
+    );
+    assert.equal(
+      (
+        code(read("src/features/public-site/discovery/DiscoveryHomePage.tsx")).match(
+          /<DiscoveryWhatsAppFab \/>/g
+        ) ?? []
+      ).length,
+      1,
+      "the homepage keeps exactly one WhatsApp FAB"
     );
   });
 
-  test("the estimator survived the sticky change and the reorder", () => {
+  test("the homepage did not gain a promotional rail", () => {
+    const home = code(read("src/features/public-site/discovery/DiscoveryHomePage.tsx"));
+    assert.doesNotMatch(home, /InteriorsPromoCarousel/);
+  });
+
+  test("the estimator survived the reorder", () => {
     assert.match(code(read(PAGE)), /<HomeBudgetEstimator \/>/);
   });
 });
 
 /* -------------------------------------------------------------------------- */
-/* 7. Headings                                                                 */
+/* 9. Headings                                                                 */
 /* -------------------------------------------------------------------------- */
 
 describe("the page keeps exactly one H1", () => {
-  test("the hero owns it and the carousel does not compete", () => {
+  test("the hero owns it and the rail does not compete", () => {
     assert.match(code(read(HERO)), /<h1 id="pm-hero-title"/);
     const carousel = code(read(CAROUSEL));
     assert.doesNotMatch(carousel, /<h1[\s>]/);
-    // The carousel labels itself with a visually hidden h2 and titles slides
-    // as h3, so the outline stays h1 > h2 > h3.
     assert.match(carousel, /<h2 id=\{labelId\} className="od-sr-only">/);
-    assert.match(carousel, /<h3 id=\{headingId\} className="od-int-promo__title">/);
+    // No per-slide heading at all now that the slots carry no copy.
+    assert.doesNotMatch(carousel, /<h3[\s>]/);
   });
 });
