@@ -1,6 +1,6 @@
 # 11 — ACCELERATED CLOSEOUT ROADMAP (CURRENT EXECUTION AUTHORITY)
 
-> **CURRENT EXECUTION - synced 2026-09-10.**
+> **CURRENT EXECUTION - synced 2026-09-10 (final architecture re-audit).**
 >
 > The accelerated closeout sequence below (P1-P9, owner-locked 2026-09-02) is
 > **HISTORICAL**. Its early phases are complete and its numbering no longer
@@ -13,8 +13,11 @@
 > | 3 | Repository truth + environment contract | **MERGED** - PR #165 |
 > | 4 | Generated database types | **MERGED** - PR #166 |
 > | 5 | Dependencies, HTTP security headers / CSP, XLSX ingestion | **MERGED** - PR #167 |
-> | 6 | Performance and index review | **this PR** |
-> | - | Final architecture re-audit | next |
+> | 6 | Performance and index review | **MERGED** - PR #168 |
+> | - | Final architecture re-audit | **this PR** |
+> | - | Deploy certified main | after the audit PR merges |
+> | - | Production smoke / E2E certification | after deployment |
+> | - | Backend/API contract freeze | after production certification |
 >
 > **Feature activation is separate from hardening and remains owner-gated.**
 >

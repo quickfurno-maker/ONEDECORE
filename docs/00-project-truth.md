@@ -131,9 +131,22 @@ own lawful basis.
 | 3 | Repository truth + environment contract | **MERGED** — PR #165 |
 | 4 | Generated database types | **MERGED** — PR #166 |
 | 5 | Dependencies, HTTP/CSP | **MERGED** — PR #167 |
-| 6 | Performance / index review | **this PR** |
+| 6 | Performance / index review | **MERGED** — PR #168 |
+| — | Final architecture re-audit | **this PR** |
 
 Feature activation remains separate from hardening and owner-gated throughout.
+
+### Certification status
+
+The architecture was re-audited at `ec1faf481cfce1aebf5557700371d71639f7e170`
+against the managed project (69 migrations) and the production runtime, and
+certified to proceed to deployment. See
+`docs/audits/final-architecture-certification-2026-09-10.md`.
+
+Production still runs `9fe5838574017aa74e5e6e2aae248b86000c0b42`, six lanes
+behind main. The CSP and HSTS added in Lane 5 are **configured, not live** —
+they reach a browser only when this main is deployed. The backend/API contract
+is **not** frozen; that follows production smoke and E2E certification.
 
 ### Generated database types
 
