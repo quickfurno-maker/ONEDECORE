@@ -11,6 +11,7 @@ import { HomeShell } from "@/features/public-site/home-r4/HomeShell";
 import { HomeWhy } from "@/features/public-site/home-r4/HomeWhy";
 import { LeadConsultationHost } from "@/features/lead-intake/public/LeadConsultationHost";
 import { DiscoveryProofStrip } from "@/features/public-site/discovery/DiscoveryProofStrip";
+import { DiscoveryWhatsAppFab } from "@/features/public-site/discovery/DiscoveryWhatsAppFab";
 import "@/features/public-site/discovery/discovery.css";
 import {
   InteriorsKitchenFeature,
@@ -72,6 +73,18 @@ export function InteriorsConversionPage() {
         <HomeReviews />
         <HomeFaq />
         <HomePlan />
+        {/*
+          THE SAME FAB THE HOMEPAGE USES — one component, one instance.
+
+          Not a copy styled to match: a second implementation would be two
+          places to keep the validated href, the reduced-motion handling and the
+          tap haptic in step, and they would drift. This page already imports
+          `discovery.css`, so the existing styles apply as they are.
+
+          It renders inside the shell so it sits above `.pm-sticky` in the same
+          stacking context the sticky bar lives in.
+        */}
+        <DiscoveryWhatsAppFab />
       </HomeShell>
     </LeadConsultationHost>
   );

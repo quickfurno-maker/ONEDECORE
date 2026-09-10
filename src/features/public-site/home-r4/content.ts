@@ -1068,10 +1068,18 @@ export const PM_CLOSE = {
     "We could not copy automatically. Select and copy the brief manually.",
 } as const;
 
+/*
+ * `estimate` left this bar and did not leave the page.
+ *
+ * The sticky is two actions wide on a phone, and the second slot was spending
+ * itself on a scroll shortcut to a section the visitor reaches anyway. Calling
+ * is the thing a person cannot do from the page at all, and it is the one they
+ * reach for when a form is more commitment than the question deserves.
+ *
+ * `HomeBudgetEstimator` still renders in full — only the shortcut is gone.
+ */
 export const PM_STICKY = {
   plan: PM_CTA.openShort,
-  estimate: "Estimate",
-  estimateHref: `#${PM_SECTION_IDS.estimate}`,
   projects: PM_CTA.projects,
   projectsHref: "/portfolio",
 } as const;

@@ -34,8 +34,24 @@ export function HomeShell({
         Skip to content
       </a>
 
+      {/*
+        NO CONSULTATION PILL IN THE HEADER.
+
+        This shell always mounts `HomeStickyActions`, whose primary button is
+        the same consultation opener. Carrying it twice cost real width in the
+        mobile header — wordmark, nav toggle and a full-size pill competing in
+        a 390px bar — to duplicate an action that is already pinned to the
+        bottom of the screen, where a thumb actually is.
+
+        The header keeps the wordmark (the Home link), the navigation, Shop
+        gating and current-page state. Only the redundant CTA is gone.
+      */}
       {unifiedNav ? (
-        <PublicSiteHeader current="interiors" shopEnabled={shopEnabled} />
+        <PublicSiteHeader
+          current="interiors"
+          shopEnabled={shopEnabled}
+          showConsultation={false}
+        />
       ) : (
         <HomeNavigation />
       )}

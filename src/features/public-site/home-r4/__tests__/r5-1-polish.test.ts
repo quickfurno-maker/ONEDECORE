@@ -164,10 +164,17 @@ describe("R5.1 tab semantics and wordmark", () => {
       "estimator-refine",
       "process-start-plan",
       "brief-copy",
-      "sticky-estimate",
+      /*
+       * `sticky-estimate` became `sticky-call`. The estimator is still on the
+       * page and still emits `hero-estimate` and `estimator-refine`; what left
+       * the sticky bar was a scroll shortcut, and its slot went to the one
+       * action a visitor cannot perform from the page at all.
+       */
+      "sticky-call",
     ]) {
       assert.match(blob, new RegExp(action));
     }
+    assert.doesNotMatch(blob, /sticky-estimate/);
   });
 
   test("noscript fallbacks present for interactive R5.3 sections", () => {
