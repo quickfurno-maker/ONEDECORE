@@ -143,14 +143,14 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(copy, /PUBLIC_CONSULTATION_BY_SERVICE\["modular-kitchens"\]/);
     assert.match(copy, /PUBLIC_CONSULTATION_BY_SERVICE\["custom-wardrobes"\]/);
     /*
-     * The `/interiors` link moved to the nav when the benefit cards were
-     * replaced; the route is unchanged and still reachable. What this test
-     * exists to prevent is a CONSULTATION path on /interiors, and that is the
-     * assertion below.
+     * The Interiors experience is the site root now, so the nav item that
+     * used to point at `/interiors` points at `/`. What this test exists to
+     * prevent is unchanged: a SECOND consultation path living on the interiors
+     * URL, which is the assertion below.
      */
     assert.match(
       read("src/features/public-site/chrome/public-nav.ts"),
-      /"\/interiors"/
+      /href: "\/"/
     );
     assert.doesNotMatch(copy, /\/interiors#consultation/);
     assert.doesNotMatch(copy, /\/interiors\?service=/);
@@ -289,9 +289,20 @@ describe("Public site simplification — discovery IA", () => {
 });
 
 describe("Public site simplification — interiors and portfolio", () => {
-  test("/interiors route is retained, and offers the same canonical form", () => {
-    assert.equal(existsSync(join(root, "src/app/interiors/page.tsx")), true);
-    const route = read("src/app/interiors/page.tsx");
+  test("the interiors experience is at the root, and /interiors redirects to it", () => {
+    /*
+     * There is one Interiors implementation and it lives at `/`. The old route
+     * file is gone on purpose: `/interiors` is a 308 declared in
+     * `next.config.ts`, which Next checks BEFORE the filesystem, so the path
+     * never reaches a component. Two routes rendering the same page would
+     * compete for the same queries.
+     */
+    assert.equal(existsSync(join(root, "src/app/interiors/page.tsx")), false);
+    const config = read("next.config.ts");
+    assert.match(config, /source: "\/interiors"/);
+    assert.match(config, /destination: "\/"/);
+    assert.match(config, /permanent: true/);
+    const route = read("src/app/page.tsx");
     const blocks = read("src/features/public-site/interiors/InteriorsServiceBlocks.tsx");
     const plan = read("src/features/public-site/home-r4/HomePlan.tsx");
     assert.match(route, /InteriorsConversionPage/);
@@ -321,7 +332,14 @@ describe("Public site simplification — nav seo and shop", () => {
      */
     assert.doesNotMatch(nav, /label: "Home"/);
     assert.match(nav, /label: "Contact"/);
+    /*
+     * Interiors keeps its label and takes the root as its destination. It
+     * names a business category — the other being Shop — where "Home" would
+     * name a position in the site, which the wordmark already covers.
+     */
     assert.match(nav, /label: "Interiors"/);
+    assert.match(nav, /href: "\/"/);
+    assert.doesNotMatch(nav, /href: "\/interiors"/);
     assert.match(nav, /label: "Portfolio"/);
     assert.match(nav, /label: "About"/);
     assert.match(nav, /label: "Shop"/);
@@ -332,12 +350,23 @@ describe("Public site simplification — nav seo and shop", () => {
     assert.match(header, /getPublicNavDestinations/);
     assert.equal(existsSync(join(root, "src/app/modular-kitchen")), false);
     assert.equal(existsSync(join(root, "src/app/shop/cart/page.tsx")), true);
-    assert.equal(existsSync(join(root, "src/app/interiors/page.tsx")), true);
+    // The interiors route file is gone: `/interiors` is a config-level 308.
+    assert.equal(existsSync(join(root, "src/app/interiors/page.tsx")), false);
   });
 
-  test("sitemap adds interiors and keeps shop commerce entries", () => {
+  test("sitemap lists the root interiors page, not the redirect", () => {
+    /*
+     * `/interiors` is a 308 to the root entry, and advertising a redirect asks
+     * a crawler to fetch a URL whose only content is a pointer to one already
+     * listed.
+     */
     const sitemap = read("src/app/sitemap.ts");
-    assert.match(sitemap, /absoluteUrl\("interiors"\)/);
+    assert.doesNotMatch(
+      sitemap,
+      /absoluteUrl\("interiors"\)/,
+      "the sitemap must not advertise a redirect"
+    );
+    assert.match(sitemap, /url: SITE_CONFIG\.url/);
     assert.match(sitemap, /absoluteUrl\("shop"\)/);
   });
 

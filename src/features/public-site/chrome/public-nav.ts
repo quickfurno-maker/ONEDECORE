@@ -15,10 +15,22 @@
  * Header, mobile drawer and footer all read this list. They used to drift.
  */
 
+/**
+ * Interiors points at the site root, because that is where it lives now.
+ *
+ * The label stays "Interiors" rather than becoming "Home". It names the
+ * business category a visitor is choosing between — the other being Shop — and
+ * "Home" would name a position in the site instead, which the wordmark already
+ * covers. So the wordmark and this item share a destination and say different
+ * things: one is the way back, one is the vertical.
+ *
+ * `/interiors` is a 308 to `/`. Linking to it here would send every visitor
+ * through a redirect to reach a page the menu could have pointed at directly.
+ */
 export const PUBLIC_NAV_INTERIORS = {
   id: "interiors",
   label: "Interiors",
-  href: "/interiors",
+  href: "/",
 } as const;
 
 export const PUBLIC_NAV_SHOP = {

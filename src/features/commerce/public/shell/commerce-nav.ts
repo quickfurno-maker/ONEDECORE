@@ -64,7 +64,7 @@ export const COMMERCE_FOOTER_SHOP_LINKS = [
 
 export const COMMERCE_FOOTER_BRAND_LINKS = [
   { label: "Complete home interiors", href: "/" },
-  { label: "Interior services", href: "/interiors" },
+  { label: "Interior services", href: "/" },
   { label: "Portfolio", href: "/portfolio" },
   { label: "Free design consultation", href: "/#consultation" },
 ] as const;

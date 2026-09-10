@@ -44,7 +44,7 @@ const SCROLL_EPSILON = 2;
  *
  * ONE COMPONENT, TWO SHAPES, NO BREAKPOINT LOGIC IN JS
  *
- * A phone shows one 9:16 card with the next peeking; a desktop shows three or
+ * A phone shows one 5:8 card with the next peeking; a desktop shows three or
  * four of the same cards. Nothing here knows which — the card width is a CSS
  * clamp, and everything below measures the rail rather than assuming a layout.
  * That is why the step logic works identically at 360px and 1920px: "advance
@@ -344,7 +344,7 @@ function Chevron({ direction }: { readonly direction: "left" | "right" }) {
 }
 
 /**
- * One 9:16 slot: artwork if configured, an empty frame if not.
+ * One 5:8 slot: artwork if configured, an empty frame if not.
  *
  * THE WHOLE CARD IS THE LINK, OR NOTHING IS
  *

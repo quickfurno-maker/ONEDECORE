@@ -25,20 +25,27 @@ function read(name: string) {
 }
 
 describe("R5.4 static homepage", () => {
-  test("page.tsx loads portfolio preview and lead mode without force-dynamic", () => {
-    const page = readFileSync(pagePath, "utf8");
-    const interiors = readFileSync(join(root, "src/app/interiors/page.tsx"), "utf8");
-    assert.match(page, /getFeaturedProjects/);
-    assert.doesNotMatch(page, /force-dynamic/);
-    assert.match(page, /DiscoveryHomePage/);
+  test("page.tsx renders the interiors page without force-dynamic", () => {
     /*
-     * The route no longer threads a build-time form mode. It renders the page,
-     * which mounts the one consultation host; the host asks the running server
+     * THE ROOT IS THE INTERIORS PAGE NOW.
+     *
+     * It renders `InteriorsConversionPage` — the same component `/interiors`
+     * used to, and `/interiors` is a 308 to here. The portfolio preview that
+     * this assertion used to require belonged to the common homepage that the
+     * Interiors page replaced; the route reads no commerce or portfolio data
+     * at all any more, which is the point rather than an omission.
+     */
+    const page = readFileSync(pagePath, "utf8");
+    assert.match(page, /<InteriorsConversionPage \/>/);
+    assert.doesNotMatch(page, /getFeaturedProjects/);
+    assert.doesNotMatch(page, /force-dynamic/);
+    /*
+     * The route threads no build-time form mode. It renders the page, which
+     * mounts the one consultation host; the host asks the running server
      * whether a lead can be submitted. A NEXT_PUBLIC_ flag baked into HTML
      * could not know that, and the disagreement lost a real enquiry.
      */
-    assert.match(interiors, /<InteriorsConversionPage \/>/);
-    assert.doesNotMatch(interiors, /leadFormMode/);
+    assert.doesNotMatch(page, /leadFormMode/);
   });
 
   test("ProductionHomePage has no featured prop or HomeProjects", () => {

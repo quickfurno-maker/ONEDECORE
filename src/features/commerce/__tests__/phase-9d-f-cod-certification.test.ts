@@ -118,16 +118,18 @@ describe("Phase 9D-F SEO and robots", () => {
     const shop = read("src/app/shop/page.tsx");
     const category = read("src/app/shop/c/[slug]/page.tsx");
     const product = read("src/app/shop/product/[slug]/page.tsx");
+    /*
+     * The root IS the interiors page now, and `/interiors` is a 308 to it, so
+     * there is one indexable interiors document to certify rather than two.
+     */
     const home = read("src/app/page.tsx");
-    const interiors = read("src/app/interiors/page.tsx");
     assert.match(shop, /shopOpenGraph/);
     assert.match(shop, /canonical: absoluteUrl\("shop"\)/);
     assert.match(category, /shopOpenGraph/);
     assert.match(category, /shopListingHasQueryDuplicates/);
     assert.match(product, /shopOpenGraph/);
     assert.match(home, /openGraph:/);
-    assert.match(interiors, /openGraph:/);
-    assert.match(interiors, /canonical: absoluteUrl\("interiors"\)/);
+    assert.match(home, /canonical: SITE_CONFIG\.url/);
   });
 
   test("filtered listing query params are treated as non-indexable duplicates", () => {

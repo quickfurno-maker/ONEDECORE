@@ -3,7 +3,7 @@
  *
  * ONE ARTWORK FILE PER CAMPAIGN
  *
- * Every banner is 9:16, on every device. The rail does not switch artwork at a
+ * Every banner is 5:8, on every device. The rail does not switch artwork at a
  * breakpoint — it changes how many cards fit. A phone shows one dominant card
  * with the next peeking; a desktop shows three or four of the same cards side
  * by side. That means a campaign is one file to design, one file to upload and
@@ -11,7 +11,7 @@
  * be kept in step and re-exported together every time the copy moves.
  *
  * It also removes the failure mode of the previous model: a desktop banner
- * that was authored 12:5 and a mobile banner authored 9:16 could drift into
+ * that was authored 12:5 and a mobile banner authored portrait could drift into
  * saying different things, and nobody would notice until someone opened the
  * site on the other device.
  *
@@ -38,7 +38,7 @@ export interface InteriorsPromoSlide {
   readonly id: string;
   readonly enabled: boolean;
   /**
-   * The 9:16 artwork. Absent means the slot renders as an empty frame.
+   * The 5:8 artwork. Absent means the slot renders as an empty frame.
    *
    * One path, not two: the same file is used at every breakpoint.
    */
@@ -62,8 +62,17 @@ export interface InteriorsPromoSlide {
   readonly imageAlt?: string | null;
 }
 
-/** The single authored artwork format. Recommended export: 1080 × 1920. */
-export const INTERIORS_PROMO_RATIO = "9 / 16" as const;
+/**
+ * The single authored artwork format. Recommended export: 1080 × 1728.
+ *
+ * 5:8, not 9:16. A 9:16 card is the shape of a phone screen, and a rail built
+ * from it read as a story viewer however much width came off it — the banner
+ * filled the fold and the page underneath was always a scroll away. 5:8 is a
+ * promotional card: still clearly portrait, but something you glance along.
+ *
+ * Any exact 5:8 export works; 1080 × 1728 is the size to ask a designer for.
+ */
+export const INTERIORS_PROMO_RATIO = "5 / 8" as const;
 
 /** Autoplay dwell. Long enough to read a banner without hurrying. */
 export const INTERIORS_PROMO_AUTOPLAY_MS = 5500;

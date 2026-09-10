@@ -38,12 +38,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 1.0,
     },
-    {
-      url: absoluteUrl("interiors"),
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
+    /*
+     * `/interiors` is deliberately absent.
+     *
+     * It is a 308 to the root entry above, and advertising a redirect in a
+     * sitemap asks a crawler to fetch a URL whose only content is a pointer to
+     * one already listed. The Interiors experience is still here — it is the
+     * root entry.
+     */
     {
       url: absoluteUrl("portfolio"),
       lastModified: new Date(),
