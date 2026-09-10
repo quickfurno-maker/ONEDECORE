@@ -9,6 +9,7 @@ import {
   resolveCrmDashboardWindows,
   type CrmAppointmentActivityType,
   type CrmDashboardSummary,
+  type CrmDashboardTaskCounts,
   type CrmDashboardWindow,
 } from "../contracts/dashboard-summary-contracts.ts";
 
@@ -51,6 +52,72 @@ interface AppointmentRow {
   readonly leads: { readonly submitted_name: string } | null;
 }
 
+/**
+ * The owner whose scheduled work this summary describes.
+ *
+ * THE SAME RULE THE CALENDAR APPLIES, and for the same reason: an
+ * assignment-scoped caller never widens past their own activities, and a broad
+ * reader sees the whole team. Copying the rule rather than inventing one is
+ * what makes the card and the screen its "View All" opens agree.
+ */
+function resolveTaskScopeOwnerId(
+  context: CrmAccessContext
+): string | null {
+  return context.canReadBroad ? null : context.userId;
+}
+
+/**
+ * One exact count of OPEN scheduled activities, run as the caller.
+ *
+ * The predicate is the Calendar's: open status, `due_at` inside a half-open
+ * window, same owner scope. No activity-type filter — all six canonical types
+ * are work the owner has to do — and no `is_primary_next_action` filter, which
+ * is My Day's narrower question rather than the calendar's.
+ *
+ * `head: true` means the rows never leave Postgres. Counting a week of
+ * activities on the phone would move a payload to answer one integer.
+ */
+async function countOpenActivities(
+  window: CrmDashboardWindow | null,
+  beforeIso: string | null,
+  scopeOwnerId: string | null,
+  db?: CrmDb
+): Promise<number> {
+  const supabase = await resolveCrmDb(db);
+
+  let request = supabase
+    .from("lead_follow_ups")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "open");
+
+  if (window) {
+    request = request
+      .gte("due_at", window.startIso)
+      .lt("due_at", window.endIso);
+  }
+
+  /*
+   * Overdue is unbounded below on purpose: an action scheduled last month and
+   * never closed is still overdue, and a floor would quietly stop reporting
+   * the oldest and most neglected work.
+   */
+  if (beforeIso) {
+    request = request.lt("due_at", beforeIso);
+  }
+
+  if (scopeOwnerId) {
+    request = request.eq("owner_id", scopeOwnerId);
+  }
+
+  const { count, error } = await request;
+
+  if (error) {
+    throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+  }
+
+  return count ?? 0;
+}
+
 /** One half-open `created_at` count, run as the caller. */
 async function countLeadsReceived(
   window: CrmDashboardWindow,
@@ -77,7 +144,7 @@ async function countLeadsReceived(
 }
 
 export async function fetchCrmDashboardSummary(
-  _context: CrmAccessContext,
+  context: CrmAccessContext,
   db?: CrmDb
 ): Promise<CrmDashboardSummary> {
   const supabase = await resolveCrmDb(db);
@@ -92,12 +159,18 @@ export async function fetchCrmDashboardSummary(
 
   const appointmentTypes = [...CRM_APPOINTMENT_ACTIVITY_TYPES];
 
+  const taskScopeOwnerId = resolveTaskScopeOwnerId(context);
+
   const [
     todayCount,
     weekCount,
     monthCount,
     totalTodayResult,
     appointmentResult,
+    tasksToday,
+    tasksTomorrow,
+    tasksThisWeek,
+    tasksOverdue,
   ] = await Promise.all([
     countLeadsReceived(windows.today, db),
     countLeadsReceived(windows.thisWeek, db),
@@ -129,6 +202,16 @@ export async function fetchCrmDashboardSummary(
       .order("due_at", { ascending: true })
       .order("id", { ascending: true })
       .limit(APPOINTMENT_SCAN_LIMIT),
+
+    /*
+     * The four task counts, resolved from the SAME `capturedAt` as everything
+     * above. `thisWeek` overlaps today and tomorrow deliberately — it answers
+     * "how much is scheduled this week", not "how much is left after those".
+     */
+    countOpenActivities(windows.today, null, taskScopeOwnerId, db),
+    countOpenActivities(windows.tomorrow, null, taskScopeOwnerId, db),
+    countOpenActivities(windows.thisWeek, null, taskScopeOwnerId, db),
+    countOpenActivities(null, capturedAt, taskScopeOwnerId, db),
   ]);
 
   if (totalTodayResult.error) {
@@ -168,9 +251,17 @@ export async function fetchCrmDashboardSummary(
     ? (nextRow.activity_type as CrmAppointmentActivityType)
     : null;
 
+  const tasks: CrmDashboardTaskCounts = {
+    today: tasksToday,
+    tomorrow: tasksTomorrow,
+    thisWeek: tasksThisWeek,
+    overdue: tasksOverdue,
+  };
+
   return {
     capturedAt,
     localDate: windows.localDate,
+    tasks,
     leads: {
       today: todayCount,
       thisWeek: weekCount,

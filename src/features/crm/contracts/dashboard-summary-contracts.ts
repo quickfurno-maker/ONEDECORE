@@ -82,6 +82,14 @@ export interface CrmDashboardWindows {
   /** `YYYY-MM-DD` in Asia/Kolkata — the day the whole summary describes. */
   readonly localDate: string;
   readonly today: CrmDashboardWindow;
+  /**
+   * The next IST day, for the task summary's "Tomorrow" count.
+   *
+   * Derived from the SAME `localDate` as every other window rather than from a
+   * second clock read, so "today" and "tomorrow" can never describe
+   * non-adjacent days because a request crossed midnight between them.
+   */
+  readonly tomorrow: CrmDashboardWindow;
   readonly thisWeek: CrmDashboardWindow;
   readonly thisMonth: CrmDashboardWindow;
 }
@@ -110,6 +118,10 @@ export function resolveCrmDashboardWindows(
     today: {
       startIso: calendarLocalDayStartUtc(localDate),
       endIso: calendarLocalDayStartUtc(addCalendarDays(localDate, 1)),
+    },
+    tomorrow: {
+      startIso: calendarLocalDayStartUtc(addCalendarDays(localDate, 1)),
+      endIso: calendarLocalDayStartUtc(addCalendarDays(localDate, 2)),
     },
     thisWeek: {
       startIso: calendarLocalDayStartUtc(weekStart),
@@ -171,9 +183,55 @@ export interface CrmDashboardAppointments {
   readonly next: CrmDashboardNextAppointment | null;
 }
 
+/**
+ * Open scheduled work, counted the way the CALENDAR counts it.
+ *
+ * WHY THE CALENDAR AND NOT MY DAY. These four numbers sit on a card whose
+ * "View All" opens the CRM Calendar, and a summary that disagrees with the
+ * screen it opens is worse than no summary. So the predicate here is the
+ * Calendar's exactly — `status = 'open'`, `due_at` inside the window, the same
+ * owner scope — across all six canonical activity types.
+ *
+ * MY DAY'S "OVERDUE" IS A DIFFERENT QUESTION, and deliberately narrower: it
+ * additionally requires `is_primary_next_action` and a lead that is not closed,
+ * because My Day answers "which commitments have I let slip on live leads". A
+ * calendar overdue answers "what was scheduled and is now past". Both are
+ * correct; they are not the same number, and collapsing them would make one of
+ * the two surfaces lie. Neither definition was changed by this contract.
+ *
+ * `thisWeek` OVERLAPS `today` and `tomorrow` on purpose. It answers "how much
+ * is scheduled in this calendar week", so subtracting the days already shown
+ * would make the three numbers fail to describe anything a person asked for.
+ */
+export interface CrmDashboardTaskCounts {
+  /** Open activities due inside the current IST day. */
+  readonly today: number;
+  /** Open activities due inside the next IST day. */
+  readonly tomorrow: number;
+  /** Open activities due inside the current Monday-start IST week. */
+  readonly thisWeek: number;
+  /**
+   * Open activities whose `due_at` is already behind `capturedAt`.
+   *
+   * Unbounded below: an action scheduled last month and never closed is still
+   * overdue, and a lower bound would quietly stop reporting the oldest and
+   * most neglected work.
+   */
+  readonly overdue: number;
+}
+
 export interface CrmDashboardSummary {
   readonly capturedAt: string;
   readonly localDate: string;
   readonly leads: CrmDashboardLeadCounts;
+  /**
+   * The appointment summary, kept for compatibility.
+   *
+   * `tasks` supersedes it on the Owner dashboard — an owner's day is not only
+   * the two activity types a client attends. This stays until every tracked
+   * consumer has moved, because removing a field the shipped app still decodes
+   * would break it in the field rather than at review.
+   */
   readonly appointments: CrmDashboardAppointments;
+  readonly tasks: CrmDashboardTaskCounts;
 }
