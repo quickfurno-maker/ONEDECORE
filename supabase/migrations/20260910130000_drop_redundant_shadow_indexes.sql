@@ -1,0 +1,51 @@
+-- Drop three plain indexes that a UNIQUE constraint index already covers.
+--
+-- WHAT WAS FOUND
+--
+-- A fresh inventory of the managed project's 325 public indexes turned up three
+-- pairs where a plain btree and a unique-constraint btree carry the SAME table,
+-- the SAME columns, in the SAME order:
+--
+--   attendance_events   (staff_id, idempotency_key)
+--     idx_attendance_events_staff_idempotency   plain
+--     uq_attendance_events_staff_idempotency    UNIQUE constraint
+--
+--   commerce_order_items (order_id, line_number)
+--     commerce_order_items_order_idx                 plain
+--     commerce_order_items_order_id_line_number_key  UNIQUE constraint
+--
+--   lead_import_rows    (batch_id, row_number)
+--     idx_lead_import_rows_batch_row   plain
+--     uq_lead_import_rows_batch_row    UNIQUE constraint
+--
+-- A unique btree serves every read a plain btree on the same columns serves —
+-- same structure, same ordering, same prefix lookups. The plain copies are pure
+-- write amplification: every insert and every update of those columns maintains
+-- two identical trees instead of one.
+--
+-- WHY THESE THREE AND NOTHING ELSE
+--
+-- This is not an index cleanup. The same inventory found 201 indexes with zero
+-- recorded scans, 89 of them not constraint-backed, and NONE of them is dropped
+-- here — a zero scan count on a project holding 66 leads means the feature has
+-- not been used yet, not that the index is wrong. Dropping on that evidence
+-- would be removing the index a table needs the week it gets busy.
+--
+-- The test applied is redundancy, not usage. `commerce_order_items_order_idx`
+-- has been scanned twice and is still dropped, because the constraint index
+-- answers those two scans identically.
+--
+-- LOCK IMPACT
+--
+-- `drop index` takes ACCESS EXCLUSIVE on the parent table for the duration.
+-- All three tables are small — the largest is a few pages — so the drop is
+-- effectively instantaneous. `concurrently` is deliberately not used: it cannot
+-- run inside the transaction a Supabase migration executes in, and it buys
+-- nothing at this size.
+--
+-- Reversible: each dropped index is a plain btree whose definition is recorded
+-- above, and the constraint index it duplicated stays.
+
+drop index if exists public.idx_attendance_events_staff_idempotency;
+drop index if exists public.commerce_order_items_order_idx;
+drop index if exists public.idx_lead_import_rows_batch_row;
