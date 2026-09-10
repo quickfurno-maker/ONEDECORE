@@ -84,7 +84,12 @@ describe("home-r4 production guards", () => {
     assert.doesNotMatch(page, /design-concepts/);
     assert.doesNotMatch(page, /noindex/);
     assert.match(page, /index:\s*true/);
-    assert.match(page, /Home Interiors, Modular Kitchens & Wardrobes in Pune/);
+    /*
+     * The common homepage is the brand gateway, so its title names both
+     * verticals rather than the interiors service list. `/interiors` keeps the
+     * interiors-specific metadata.
+     */
+    assert.match(page, /Interiors & Furniture for Complete Homes in Pune/);
     assert.match(interiors, /InteriorsConversionPage/);
     /*
      * The route no longer threads a build-time form mode. It renders the page,

@@ -2,8 +2,16 @@
 
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, TouchEvent } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { DISCOVERY_HERO_SLIDES, DISCOVERY_HERO_PAGE_TITLE } from "./discovery-copy";
+import {
+  DISCOVERY_GATEWAY_EYEBROW,
+  DISCOVERY_GATEWAY_INTERIORS_CTA,
+  DISCOVERY_GATEWAY_LEDE,
+  DISCOVERY_GATEWAY_SHOP_CTA,
+  DISCOVERY_GATEWAY_TITLE,
+  DISCOVERY_HERO_SLIDES,
+} from "./discovery-copy";
 import { getDiscoveryAsset } from "./discovery-assets";
 
 const AUTOPLAY_MS = 5500;
@@ -24,39 +32,51 @@ function usePrefersReducedMotion(): boolean {
 }
 
 /**
- * The homepage hero: sliding images and nothing else.
+ * The homepage hero: the brand, and the two ways into it.
  *
- * WHY THERE IS NO TEXT HERE
+ * WHY THE TEXT CAME BACK
  *
- * Owner-directed. The hero used to carry a kicker, a rotating headline, a lede,
- * a badge and a trust bar layered over the photography, plus prev/next arrows.
- * It is now the photography — the interiors are the argument, and everything
- * that was competing with them has moved below the fold where it can be read
- * rather than skimmed past.
+ * This hero was deliberately image-only, with the H1 visually hidden, on the
+ * argument that the interiors were the argument. That was right for an
+ * interiors landing page. It is wrong for the gateway to a brand that does two
+ * different things, because a visitor cannot choose between two journeys that
+ * the first screen never mentions.
  *
- * WHAT THAT COSTS, AND HOW IT IS PAID
+ * So the H1 is on screen again and carries the brand rather than a service
+ * list, and the two verticals are two buttons rather than a scroll away.
  *
- * A page still needs one H1, and a decorative banner cannot be it. So the H1 is
- * rendered visually hidden: present for assistive technology and for search
- * engines, invisible on screen. The images are `alt=""` because they are
- * decoration, not content — a screen reader user loses nothing by not hearing
- * "modern kitchen photograph", and gains by not hearing it five times.
+ * THE SLIDER MECHANICS ARE UNCHANGED
  *
- * The dots are the only visible control. They are labelled by position rather
- * than by the old marketing headlines, because "image 2" is what they actually
- * do and the headline is no longer on screen to refer to.
+ * Autoplay, pause-on-hover/focus/touch, swipe, reduced-motion, arrow keys and
+ * the labelled dot group all behave exactly as before. Only the layer above the
+ * photography is new.
+ *
+ * SHOP IS CONDITIONAL, NOT DISABLED
+ *
+ * When the fail-closed gate is off, the second button is absent rather than
+ * present-and-broken, and the hero reads as a strong interiors hero. A greyed
+ * button that goes nowhere is worse than no button.
+ *
+ * TEXT OVER PHOTOGRAPHY
+ *
+ * Legibility does not rely on the image being dark enough — `__media::after`
+ * lays a fixed gradient scrim under the copy, so a bright slide cannot swallow
+ * the headline. The images stay `alt=""`: they are decoration, and the words
+ * that matter are now real text beside them.
  *
  * THEY ARE NOT TABS
  *
- * They were, when each dot controlled a copy panel with `role="tabpanel"`. The
- * panels went with the text, and a `tablist` whose tabs control nothing is a
- * promise to assistive technology that the page cannot keep — `aria-selected`
- * on a tab implies a panel to select. So the dots are ordinary buttons in a
- * labelled group, and the current one says so with `aria-pressed`, which is
- * true of a toggle regardless of what it reveals. Arrow-key navigation is kept
- * because it is genuinely useful here.
+ * The dots were, when each controlled a copy panel with `role="tabpanel"`.
+ * A `tablist` whose tabs control nothing is a promise to assistive technology
+ * that the page cannot keep, so they are ordinary buttons in a labelled group
+ * and the current one says so with `aria-pressed`.
  */
-export function DiscoveryHeroSlider() {
+export function DiscoveryHeroSlider({
+  shopLive = false,
+}: {
+  /** Mirrors the fail-closed public Shop gate. */
+  readonly shopLive?: boolean;
+} = {}) {
   const [active, setActive] = useState(0);
   const [hovered, setHovered] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
@@ -123,9 +143,9 @@ export function DiscoveryHeroSlider() {
 
   return (
     <section
-      className="od-disc-hero od-disc-hero--slider od-disc-hero--imageOnly"
+      className="od-disc-hero od-disc-hero--slider od-disc-hero--gateway"
       data-od-disc-section="hero"
-      data-od-hero-image-only=""
+      data-od-hero-gateway=""
       aria-labelledby="od-disc-hero-title"
       aria-roledescription="carousel"
       onMouseEnter={() => setHovered(true)}
@@ -140,14 +160,6 @@ export function DiscoveryHeroSlider() {
       onTouchEnd={onTouchEnd}
       onTouchCancel={() => setTouchPaused(false)}
     >
-      {/*
-        * The page's only H1. Visually hidden, semantically present: the banner
-        * itself is decoration and cannot carry the page's identity.
-        */}
-      <h1 id="od-disc-hero-title" className="od-sr-only">
-        {DISCOVERY_HERO_PAGE_TITLE}
-      </h1>
-
       <div className="od-disc-hero__slides" aria-hidden="true">
         {DISCOVERY_HERO_SLIDES.map((slide, index) => {
           const isActive = index === active;
@@ -182,6 +194,30 @@ export function DiscoveryHeroSlider() {
             </div>
           );
         })}
+      </div>
+
+      {/*
+        * The page's only H1, and now a visible one. It names the brand's job
+        * rather than a service, because the two buttons below it are what
+        * separate the services.
+        */}
+      <div className="od-disc-shell od-disc-hero__copy">
+        <p className="od-disc-hero__eyebrow">{DISCOVERY_GATEWAY_EYEBROW}</p>
+        <h1 id="od-disc-hero-title">{DISCOVERY_GATEWAY_TITLE}</h1>
+        <p className="od-disc-hero__lede">{DISCOVERY_GATEWAY_LEDE}</p>
+        <div className="od-disc-cta-row od-disc-hero__actions">
+          <Link
+            href="/interiors"
+            className="od-disc-btn od-disc-btn--primary od-disc-btn--sheen"
+          >
+            {DISCOVERY_GATEWAY_INTERIORS_CTA}
+          </Link>
+          {shopLive ? (
+            <Link href="/shop" className="od-disc-btn od-disc-btn--ghost">
+              {DISCOVERY_GATEWAY_SHOP_CTA}
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       <div className="od-disc-hero__progress" aria-hidden="true">

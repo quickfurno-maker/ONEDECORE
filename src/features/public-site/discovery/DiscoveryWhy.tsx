@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Reveal } from "@/features/public-site/motion/Reveal";
 import {
   DISCOVERY_WHY_EYEBROW,
@@ -6,18 +7,29 @@ import {
 } from "./discovery-copy";
 
 /**
- * Why ONEDECORE — an editorial 2×2, not a card wall.
+ * The interiors case, in four points — an editorial 2×2, not a card wall.
  *
- * The four points are `<article>`s separated by hairlines rather than boxed
- * cards: four equal boxes read as a feature list, and a feature list is what
- * every contractor site already has. The number is the only ornament, and it
- * sits in the margin so the eye lands on the claim rather than the decoration.
+ * WHAT THIS SECTION IS FOR NOW
+ *
+ * It sits directly under the gateway hero and answers one question: if I pick
+ * the interiors path, why this company? Four points, and deliberately not the
+ * whole of `/interiors` — manufacturing, the design library, the process and
+ * the quality story are all better answers to questions asked after that choice
+ * is made, and they live on the page where it is made.
+ *
+ * The points are `<article>`s separated by hairlines rather than boxed cards:
+ * four equal boxes read as a feature list, and a feature list is what every
+ * contractor site already has. The number is the only ornament, and it sits in
+ * the margin so the eye lands on the claim rather than the decoration.
+ *
+ * The brand-level "why interiors and furniture share a name" argument is a
+ * different section — `DiscoveryAbout`, further down, which owns `#about`.
  */
 export function DiscoveryWhy() {
   return (
     <section
-      className="od-disc-band od-disc-band--ivory od-disc-why"
-      data-od-disc-section="why"
+      className="od-disc-band od-disc-band--surface od-disc-why"
+      data-od-disc-section="interior-usps"
       aria-labelledby="od-disc-why-title"
     >
       <div className="od-disc-shell">
@@ -46,6 +58,18 @@ export function DiscoveryWhy() {
             </Reveal>
           ))}
         </div>
+
+        {/*
+          One action, into the vertical this section just argued for. The
+          consultation CTA is deliberately not repeated here — the page has one
+          closing band for that, and a second invitation this early competes
+          with it rather than adding to it.
+        */}
+        <Reveal className="od-disc-why__cta">
+          <Link href="/interiors" className="od-disc-btn od-disc-btn--ghost">
+            Explore Interiors
+          </Link>
+        </Reveal>
       </div>
     </section>
   );

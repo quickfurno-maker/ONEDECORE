@@ -26,15 +26,15 @@ import {
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: `ONEDECORE — Home Interiors, Modular Kitchens & Wardrobes in Pune`,
+  title: `ONEDECORE — Interiors & Furniture for Complete Homes in Pune`,
   description:
-    "ONEDECORE designs and delivers complete home interiors, modular kitchens and custom wardrobes across Pune — from consultation to installation.",
+    "ONEDECORE brings complete home interiors, modular design and execution, and furniture discovery together under one home-focused brand in Pune.",
   alternates: { canonical: SITE_CONFIG.url },
   robots: { index: true, follow: true },
   openGraph: {
-    title: `ONEDECORE — Home Interiors, Modular Kitchens & Wardrobes in Pune`,
+    title: `ONEDECORE — Interiors & Furniture for Complete Homes in Pune`,
     description:
-      "ONEDECORE designs and delivers complete home interiors, modular kitchens and custom wardrobes across Pune — from consultation to installation.",
+      "ONEDECORE brings complete home interiors, modular design and execution, and furniture discovery together under one home-focused brand in Pune.",
     url: SITE_CONFIG.url,
     siteName: SITE_CONFIG.name,
     locale: SITE_CONFIG.locale,
@@ -71,10 +71,11 @@ async function loadDiscoveryCommerce(): Promise<DiscoveryCommerceState> {
   }
 }
 
+/** Three curated projects: proof for the interiors path, not a contact sheet. */
 async function loadPortfolioPreview(): Promise<readonly PublicPortfolioCard[]> {
   try {
     const featured = await getFeaturedProjects();
-    return featured.slice(0, 6);
+    return featured.slice(0, 3);
   } catch {
     return [];
   }

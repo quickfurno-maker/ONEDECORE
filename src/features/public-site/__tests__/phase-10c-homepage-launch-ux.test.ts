@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { describe, test } from "node:test";
 import {
   DISCOVERY_CATEGORY_TILES,
+  DISCOVERY_GATEWAY_TITLE,
   DISCOVERY_HERO_SLIDES,
   DISCOVERY_SECTION_ORDER,
   DISCOVERY_SERVICE_CARDS,
@@ -24,15 +25,30 @@ function read(rel: string) {
 }
 
 describe("Phase 10C — homepage launch UX", () => {
-  test("nav includes Interiors and About when shop is off", () => {
+  test("nav is the locked IA when shop is off", () => {
+    /*
+     * No Home item: the wordmark links to `/` and is the home affordance every
+     * visitor already expects. A separate entry spends a menu slot — expensive
+     * on mobile — on something the logo already does.
+     */
     const ids = getPublicNavDestinations(false).map((row) => row.id);
-    assert.deepEqual(ids, ["home", "interiors", "portfolio", "about"]);
+    assert.deepEqual(ids, ["interiors", "portfolio", "about", "contact"]);
     assert.ok(!ids.includes("shop"));
+    // "home" is not even a valid nav id any more; the deepEqual above is the
+    // assertion, and the type system now refuses the string.
   });
 
-  test("nav appends Shop only when gate is on", () => {
+  test("Shop takes second position when the gate is on, not last", () => {
+    // It is one of the two verticals, not an appendix. Appending it read as an
+    // afterthought bolted onto an interiors site.
     const ids = getPublicNavDestinations(true).map((row) => row.id);
-    assert.deepEqual(ids, ["home", "interiors", "portfolio", "about", "shop"]);
+    assert.deepEqual(ids, [
+      "interiors",
+      "shop",
+      "portfolio",
+      "about",
+      "contact",
+    ]);
   });
 
   test("homepage header omits consultation CTA; bottom dock owns conversion", () => {
@@ -70,7 +86,12 @@ describe("Phase 10C — homepage launch UX", () => {
   });
 
   test("canonical consultation CTA uses Get Free Design Consultation", () => {
-    assert.equal(PUBLIC_CONSULTATION.href, "/#consultation");
+    /*
+     * The closing band is now the Contact destination, so the canonical
+     * consultation href points at it. `#consultation` survives as an alias on
+     * the same section — `/portfolio/[slug]` and the Shop nav link to it.
+     */
+    assert.equal(PUBLIC_CONSULTATION.href, "/#contact");
     assert.equal(PUBLIC_CONSULTATION.label, "Get Free Design Consultation");
     assert.equal(PUBLIC_CONSULTATION.shortLabel, "Free Design Consultation");
     assert.equal(PUBLIC_CONSULTATION.mobileLabel, "Get Free Design");
@@ -100,10 +121,13 @@ describe("Phase 10C — homepage launch UX", () => {
       assert.ok(!("secondaryCta" in slide), `${slide.id} must not define a secondaryCta`);
     }
 
-    const heroSrc = read("src/features/public-site/discovery/DiscoveryHeroSlider.tsx");
-    const copySrc = read("src/features/public-site/discovery/discovery-copy.ts");
-    for (const src of [heroSrc, copySrc]) {
-      assert.doesNotMatch(src, /href=["']\/shop/);
+    /*
+     * The SLIDE DATA still carries no action of any kind — the actions belong
+     * to the hero's gateway block, which is gated, not to the rotating
+     * photography. That distinction is what this loop protects.
+     */
+    for (const slide of DISCOVERY_HERO_SLIDES) {
+      assert.ok(!("href" in slide), `${slide.id} must not carry an href`);
     }
   });
 
@@ -172,9 +196,12 @@ describe("Phase 10C — homepage launch UX", () => {
 
     assert.match(css, /od-disc-proof__value/);
 
-    // The hero itself keeps neither the trust bar nor any visible copy.
+    // The trust bar stays gone. The gateway copy is NOT clutter of the same
+    // kind: a page offering two journeys has to name them on the first screen.
+    // What must not come back is the layered badge/kicker/trust-bar stack.
     assert.doesNotMatch(hero, /DiscoveryHeroTrustBar/);
     assert.doesNotMatch(hero, /od-disc-hero__headline/);
+    assert.doesNotMatch(hero, /od-disc-hero__badge/);
     assert.doesNotMatch(hero, /od-disc-kicker/);
   });
 
@@ -187,34 +214,30 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.match(page, /DiscoveryHeroSlider/);
   });
 
-  test("homepage architecture follows the premium narrative order", () => {
+  test("homepage architecture follows the owner-locked gateway order", () => {
     /*
-     * Owner-directed, and two moves are locked here. `proof` is GONE from the
-     * homepage: the animated counter now opens `/interiors`, where the visitor
-     * has chosen to read about the work, rather than arriving before the page
-     * has said what the company does. And `areas` dropped from second position
-     * to just before the closing CTAs, where "do you build in my part of Pune?"
-     * is a question someone is actually asking.
+     * ONEDECORE is one brand with two journeys, and `/` is where a visitor
+     * picks one. The page therefore offers the choice first and proves it
+     * afterwards, rather than arguing interiors at length and mentioning
+     * furniture near the footer.
+     *
+     * The interiors deep-dives — manufacturing, the design library, the
+     * process, quality, areas served — are all good answers to questions asked
+     * AFTER that choice, and `/interiors` is where it is made. They left this
+     * page; their components stay in the repository.
      */
     assert.deepEqual([...DISCOVERY_SECTION_ORDER], [
       "header",
       "hero",
-      "portfolio-categories",
-      "why",
-      "manufacturing",
-      "design-library",
-      "process",
-      "real-homes",
-      "quality",
-      "furniture",
-      "areas",
-      "consultation",
-      "final-cta",
+      "interior-usps",
+      "featured-interiors",
+      "shop",
+      "about",
+      "contact",
       "footer",
     ]);
 
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
-    const browse = read("src/features/public-site/discovery/DiscoveryDesignLibrary.tsx");
     assert.match(page, /DiscoveryHeroSlider/);
     // The proof counter is on /interiors now, and must not come back here.
     assert.doesNotMatch(page, /DiscoveryProofStrip/);
@@ -223,18 +246,30 @@ describe("Phase 10C — homepage launch UX", () => {
       /DiscoveryProofStrip/
     );
     assert.match(page, /DiscoveryWhy/);
-    assert.match(page, /DiscoveryDesignLibrary/);
-    assert.match(browse, /data-od-disc-section="design-library"/);
-    assert.match(page, /DiscoveryQuality/);
-    assert.match(page, /DiscoveryProcess/);
+    assert.match(page, /DiscoveryAbout/);
     assert.match(page, /DiscoveryStickyCta/);
+
+    // The interiors deep-dive bands are off the homepage.
+    for (const band of [
+      "DiscoveryDesignLibrary",
+      "DiscoveryManufacturing",
+      "DiscoveryProcess",
+      "DiscoveryQuality",
+      "DiscoveryAreasServed",
+      "DiscoveryPortfolioCategories",
+      "DiscoveryFinalCta",
+    ]) {
+      assert.doesNotMatch(page, new RegExp(band), `${band} should not render on /`);
+    }
   });
 
-  test("portfolio preview loads up to six featured projects with empty fallback", () => {
+  test("portfolio preview loads three featured projects with empty fallback", () => {
+    // Fewer, larger, quieter. Three reads as curated proof at every
+    // breakpoint; six read as a contact sheet.
     const route = read("src/app/page.tsx");
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
-    assert.match(route, /slice\(0, 6\)/);
-    assert.match(page, /portfolioPreview\.length > 0/);
+    assert.match(route, /slice\(0, 3\)/);
+    assert.match(page, /projects\.length > 0/);
     assert.match(page, /od-disc-homes__empty/);
     assert.match(page, /data-od-portfolio-preview/);
   });
@@ -247,9 +282,31 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.match(page, /shopEnabled=\{shopLive\}/);
     assert.match(page, /showShopSearch=\{shopLive\}/);
     assert.match(page, /shopLive \? \(/);
-    for (const src of [hero, copy, browse]) {
-      assert.doesNotMatch(src, /\/shop/);
-    }
+    /*
+     * The design-library band must never mention Shop. The copy module now
+     * does — the About section's furniture half links there — so what is
+     * asserted about copy is that the link belongs to a point the About
+     * component drops when the gate is off, not that the string is absent.
+     */
+    assert.doesNotMatch(browse, /\/shop/);
+    const about = read("src/features/public-site/discovery/DiscoveryAbout.tsx");
+    assert.match(about, /point\.id !== "furniture"/);
+    assert.match(about, /shopLive/);
+    /*
+     * The hero DOES link to /shop — it is one of the two gateway actions — but
+     * only behind the gate. What matters is that the href cannot render while
+     * the gate is off, so the assertion is on the guard rather than on the
+     * absence of the string.
+     */
+    assert.match(hero, /shopLive \? \(/);
+    assert.match(
+      hero,
+      /shopLive \? \(\s*<Link href="\/shop"/,
+      "the hero shop action must be gated on shopLive"
+    );
+    const heroShopOff = hero.slice(0, hero.indexOf("shopLive ? ("));
+    assert.doesNotMatch(heroShopOff, /href="\/shop/);
+
     const shopOffBlock = page.slice(0, page.indexOf("shopLive ? ("));
     assert.doesNotMatch(shopOffBlock, /href=["']\/shop/);
   });
@@ -286,16 +343,21 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.match(hero, /aria-live="polite"/);
     assert.match(hero, /od-disc-hero__progress/);
     /*
-     * L1.1 made the hero image-only by owner direction. The prev/next arrows
-     * and the headline-labelled dots went with the copy; autoplay, swipe and
-     * position-labelled dots remain, and the page keeps one H1 — visually
-     * hidden, since a decorative banner cannot carry the page identity.
+     * The slider mechanics are unchanged from L1.1: no prev/next arrows,
+     * position-labelled dots, autoplay and swipe.
+     *
+     * The H1 is no longer visually hidden. It was, while the hero was pure
+     * decoration for an interiors page — but a gateway offering two journeys
+     * has to name the brand on screen, so the page's one H1 is now visible and
+     * carries it.
      */
     assert.doesNotMatch(hero, /Previous slide/);
     assert.doesNotMatch(hero, /Next slide/);
     assert.match(hero, /Choose banner image/);
     assert.match(hero, /Show image \$\{index \+ 1\}/);
-    assert.match(hero, /<h1 id="od-disc-hero-title" className="od-sr-only">/);
+    assert.match(hero, /<h1 id="od-disc-hero-title">\{DISCOVERY_GATEWAY_TITLE\}<\/h1>/);
+    // Still exactly one.
+    assert.equal((hero.match(/<h1/g) ?? []).length, 1);
     assert.match(css, /od-disc-dock/);
     assert.match(css, /prefers-reduced-motion/);
     assert.match(css, /od-disc-proof__grid/);
