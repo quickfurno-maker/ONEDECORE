@@ -130,6 +130,16 @@ export const ONEDECORE_ENV_CONTRACT: readonly EnvKeyContract[] = [
     inEnvExample: true,
   },
   {
+    name: "NEXT_PUBLIC_ONEDECORE_PHONE_E164",
+    scope: "public",
+    sensitivity: "public",
+    lifecycle: "optional",
+    subsystem: "core",
+    purpose:
+      "The public voice line behind the Call Now action. Separate from the WhatsApp key even when the number matches, so publishing a landline for calls cannot silently redirect chat. Public by design — it is printed on the site.",
+    inEnvExample: true,
+  },
+  {
     name: "NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164",
     scope: "public",
     sensitivity: "public",

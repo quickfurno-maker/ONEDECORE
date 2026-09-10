@@ -100,6 +100,7 @@
     "src/features/projects/__tests__/phase-8b-m29-runtime.test.ts",
     "src/features/projects/__tests__/phase-8c-execution.test.ts",
     "src/features/projects/__tests__/phase-8c-m30-runtime.test.ts",
+    "src/features/public-site/__tests__/interiors-contact-actions.test.ts",
     "src/features/public-site/__tests__/l1-public-launch-acceptance.test.ts",
     "src/features/public-site/__tests__/l11-homepage-conversion-refinement.test.ts",
     "src/features/public-site/__tests__/phase-10c-homepage-launch-ux.test.ts",

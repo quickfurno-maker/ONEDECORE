@@ -2681,10 +2681,69 @@
   font-size: 0.85rem;
 }
 
+/*
+ * Call Now: the glyph sits with the label, not in place of it.
+ *
+ * `gap` rather than a margin so the pair stays centred as one unit however
+ * wide the button gets, and `flex: none` on the icon so a long label shrinks
+ * the text rather than squashing the handset.
+ */
+[data-public-home-r4] .pm-sticky__call {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+[data-public-home-r4] .pm-sticky__icon {
+  flex: none;
+  opacity: 0.85;
+}
+
 @media (min-width: 1080px) {
   [data-public-home-r4] .pm-sticky {
     display: none;
   }
+}
+
+/*
+ * The floating WhatsApp action clears THIS page's sticky bar.
+ *
+ * `discovery.css` positions the FAB above the homepage dock and drops it to a
+ * desktop offset at 1024px. This bar is still on screen until 1080px, so
+ * between those two widths the shared rule would park the button on top of
+ * Call Now. The clearance therefore tracks this bar's breakpoint rather than
+ * the dock's: 10 + 48 + 10 of bar, plus the safe area, plus a 16px gap.
+ *
+ * Overriding the offset is the whole change — colour, size, animation, focus
+ * ring and reduced-motion handling all stay with the one shared component.
+ */
+[data-public-home-r4] .od-disc-wa {
+  inset-block-end: calc(5.25rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1080px) {
+  [data-public-home-r4] .od-disc-wa {
+    inset-block-end: clamp(1.5rem, 4vw, 2.5rem);
+  }
+}
+
+/*
+ * ...and stays a circle while focused.
+ *
+ * `home-foundation.css` gives this shell a blanket focus style —
+ * `[data-public-home-r4] :focus-visible { …; border-radius: 4px }` — which is
+ * right for the rectangular controls it was written for and wrong for a round
+ * button. At `[data-public-home-r4] :focus-visible` (0-2-0) it outranks the
+ * component's own `.od-disc-wa` (0-1-0), so tabbing to the FAB turned it into
+ * a rounded square: the shape changed under the visitor at the exact moment
+ * they were trying to locate it.
+ *
+ * Only the radius is restored. The shell's gold ring and offset are the
+ * page's focus language and stay as they are.
+ */
+[data-public-home-r4] .od-disc-wa:focus-visible {
+  border-radius: 50%;
 }
 
 /* -------------------------------------------------------------- keyframes */

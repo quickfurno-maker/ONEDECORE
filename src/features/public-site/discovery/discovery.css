@@ -3014,9 +3014,33 @@
   animation: od-wa-wiggle 10s ease-in-out 4s infinite;
 }
 
+/*
+ * From 768px up the dock stops being a full-width bar and becomes a pill in
+ * the bottom-RIGHT corner — the corner the FAB already occupies. The old
+ * desktop offset (1.5–2.5rem) put the button on top of it: measured on the
+ * built page, the FAB overlapped "Get Free Design Consultation" at 768, 1024,
+ * 1440 and 1920, clipping the label at every one of them.
+ *
+ * Clearing it is vertical, not horizontal. Moving the FAB left would put it
+ * over the page content and away from the thumb/cursor corner people reach for;
+ * stacking it directly above the pill keeps both in the same corner with the
+ * dock — the primary action — nearest the edge.
+ *
+ * 4.75rem is the pill's 63px plus a 13px gap, the same clearance the Interiors
+ * sticky bar gets in `home-r4.css`.
+ */
+@media (min-width: 768px) {
+  .od-disc-wa {
+    /* Share the dock's gutter so the two line up on the right edge. */
+    inset-inline-end: clamp(1rem, 3vw, 1.75rem);
+    inset-block-end: calc(clamp(1rem, 2.5vw, 1.5rem) + 4.75rem);
+  }
+}
+
 @media (min-width: 1024px) {
   .od-disc-wa {
-    inset-block-end: clamp(1.5rem, 4vw, 2.5rem);
+    inset-inline-end: 1.5rem;
+    inset-block-end: calc(1.5rem + 4.75rem);
   }
 }
 
