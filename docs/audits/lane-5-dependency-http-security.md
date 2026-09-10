@@ -109,7 +109,7 @@ Bulk import is super-admin-only, which narrows who can reach the code. It does
 not make the workbook trustworthy: the file usually came from a portal export,
 an agency or a client.
 
-### The gate
+### Gate 1 — structure and declarations
 
 `src/features/crm/server/xlsx-archive-preflight.ts` — `assertSafeXlsxArchive`,
 called from `extractXlsxHeadersAndRecords` **before** the loader. It reads the
@@ -148,21 +148,79 @@ workbook of long pasted text really does expand past 12 MiB and really does
 compress at 71:1, because XML of repeated markup is extremely compressible.
 Limits set at 8 MiB per entry or 100:1 would have rejected honest imports.
 
-The two limits are complementary rather than redundant: the aggregate cap bounds
-total damage (32 MiB from a 5 MiB upload), and the ratio cap catches a
-single-entry bomb that would otherwise stay under it.
+### Gate 2 — what the bytes ACTUALLY expand to
+
+**Gate 1 alone was not enough, and this was reproduced before it was fixed.**
+
+The central directory records what an entry *claims* to expand to. Nothing makes
+the deflate stream agree. A 17 KB archive declaring 1 MiB — 60:1, comfortably
+inside every Gate 1 limit — inflates to 17 MiB, and Gate 1 accepted it:
+
+```
+archive bytes on disk : 17722 (0.02 MiB)
+declared uncompressed : 1048576 (1.00 MiB)
+ACTUAL inflate output : 17825792 (17.00 MiB)
+declared ratio        : 60.5:1 (limit 250)
+ACTUAL ratio          : 1028.0:1
+GATE 1 VERDICT        : ACCEPTED  <-- the bypass
+```
+
+JSZip — the library ExcelJS parses with — *does* notice, throwing
+`Bug : uncompressed data size mismatch`. But it compares lengths at the end of
+the stream, once the whole output has been materialised. **The declaration
+bounded the error message, not the memory.**
+
+`src/features/crm/server/xlsx-bounded-decompression.ts` —
+`assertBoundedXlsxDecompression`, run after Gate 1 and still before ExcelJS.
+For every entry it:
+
+- rejects any compression method other than stored (0) or deflate (8);
+- locates the payload from the local file header, verifying the signature, that
+  the local method matches the directory's, and that the byte range lies inside
+  the uploaded buffer;
+- inflates with `createInflateRaw`, **counting chunks and discarding them** —
+  nothing accumulates, so measuring a 17 MiB expansion never holds 17 MiB;
+- stops the stream the moment the per-entry ceiling (16 MiB) or the archive's
+  remaining aggregate budget (32 MiB total) is crossed;
+- requires the produced length to **equal** the declared length, in both
+  directions.
+
+Two independent stops, because they fail differently. `maxOutputLength` is
+zlib's own ceiling, enforced inside the inflater, so a stream that would produce
+a gigabyte cannot allocate one even if the accounting were wrong. The chunk
+counting is what enforces the aggregate budget, which zlib knows nothing about,
+and what destroys the stream mid-flight rather than at its end.
+
+Local size fields are deliberately ignored in favour of the directory's
+compressed size. An entry written with a data descriptor (general purpose bit 3)
+leaves them zero and writes the real values after the payload — legal, and
+produced by streaming writers. ExcelJS itself does not use bit 3 (verified:
+16 entries, methods 8 and 0, no data descriptors), but Excel and LibreOffice
+may, and rejecting it would reduce compatibility for no security gain.
+
+After the fix:
+
+```
+GATE 1 VERDICT        : ACCEPTED  <-- declarations only, as designed
+GATE 2 VERDICT        : REJECTED — ACTUAL_ENTRY_LIMIT in xl/sharedStrings.xml
+PARSER PATH           : IMPORT_UNSAFE_ARCHIVE | loader calls: 0
+```
+
+Server-side detail distinguishes `ACTUAL_ENTRY_LIMIT`, `ACTUAL_TOTAL_LIMIT`,
+`SIZE_MISMATCH`, `UNSUPPORTED_COMPRESSION`, `MALFORMED_LOCAL_HEADER` and
+`CORRUPT_STREAM`. The public contract is unchanged: one `IMPORT_UNSAFE_ARCHIVE`
+at HTTP 422, with no ZIP internals in the message.
 
 ### Residual risk — stated plainly
 
-These are the sizes the central directory **declares**. A deflate stream can
-declare one size and produce another, and nothing short of decompressing with a
-hard output cap would catch that. This bounds the ordinary constructions — a
-nested or repeated-block bomb, a hundred thousand members, a member claiming
-gigabytes — and is a material improvement over no bound at all.
+Peak memory on the import path is now bounded by the per-entry ceiling during
+Gate 2 and by the aggregate ceiling across the archive, and a lying directory is
+rejected rather than merely disbelieved.
 
-**It is not a proof, and XLSX denial-of-service is not "impossible".** If that
-becomes the threat worth spending on, the answer is a streaming parser with an
-output ceiling, not more rows in the limit table.
+**This is not a claim that XLSX parsing is now free of resource risk.** ExcelJS
+still builds its own object model from entries that pass, and a workbook can be
+pathological in ways unrelated to compression. What is closed is the
+amplification gap: 5 MiB of upload can no longer become an unbounded inflate.
 
 One behavioural consequence worth knowing: a grossly oversized but benign
 workbook that previously failed with `IMPORT_TOO_MANY_ROWS` may now fail earlier
@@ -170,15 +228,20 @@ with `IMPORT_UNSAFE_ARCHIVE`. Both are 422; the rejection is correct either way.
 
 ### Proof
 
-35 tests in `src/features/crm/__tests__/xlsx-archive-preflight.test.ts`. Every
-archive is built byte by byte and stays a few hundred bytes long — the dangerous
-cases are dangerous in what they *declare*, which is what the gate reads, so
-nothing has to actually expand to test the limit that stops expansion.
+51 tests in `src/features/crm/__tests__/xlsx-archive-preflight.test.ts`. Every
+archive is built byte by byte. Gate 1 fixtures stay a few hundred bytes — those
+cases are dangerous in what they *declare*. Gate 2 fixtures really do expand, at
+a controlled compression ratio: a payload of one repeated byte compresses about
+1000:1 and would be caught by Gate 1's ratio check before Gate 2 ever ran, so
+each payload repeats a random block sized to give deflate exactly as much
+redundancy as the test needs. Every Gate 2 case asserts that **Gate 1 accepts
+it** first, or it would be testing the wrong gate.
 
 The ordering guarantee is tested with an **injected loader that records whether
-it ran**: for eleven unsafe archives the loader is never called, and for a safe
-one it is called exactly once. Reading the source and seeing the two statements
-in the right order would prove nothing about execution.
+it ran**: for fifteen unsafe archives — eleven structural, four lying — the
+loader is never called, and for a real workbook it is called exactly once.
+Reading the source and seeing the calls in the right order would prove nothing
+about execution.
 
 Preserved and re-tested: first worksheet, formula rejection, 1000-row and
 50-column limits, header-keyed records, header fingerprint, worksheet name, and
@@ -320,11 +383,37 @@ Policy:
 - **Dev-only** advisories are not enforced.
 - Prints advisory ids, packages and URLs — not the audit JSON, and no secrets.
 
-An exception is per-advisory and must state: `advisory`, `package`, `severity`,
-`path`, `whyNoSafePatch`, `reachability`, `compensatingControl`, `reviewBy`,
-`removeWhen`. An incomplete exception fails; an expired one fails. There is no
-"ignore this package" switch. **No exception file exists today**, because
-nothing high or critical remains.
+An exception must state: `advisory`, `package`, `severity`, `path`,
+`whyNoSafePatch`, `reachability`, `compensatingControl`, `reviewBy`,
+`removeWhen`.
+
+**It is matched on the whole identity — advisory, package, severity and the
+exact installed node path.** The first version of this guard matched the
+advisory id alone while the file went on asking for the other three, which is
+documentation dressed as a control: a decision reviewed for `uuid` under
+`exceljs` would have excused the same advisory arriving through a different
+package, at a different severity, on a path nobody looked at. Findings are now
+collected per installed location, so one advisory present at two paths is two
+decisions and one exception leaves the other blocking.
+
+Also refused: an incomplete exception; an expired one; a `reviewBy` that is not
+a real calendar date in `YYYY-MM-DD` form (`2026-02-31` would otherwise roll
+into March); two exceptions with the same identity, where the last loaded would
+silently win; two that disagree about severity for the same advisory, package
+and path; and an exception matching **no current finding** — `STALE_EXCEPTION`,
+because an advisory that was fixed, a package that was removed or a dependency
+that moved should bring someone back to the decision rather than leave it
+quietly in place.
+
+Against the live audit the guard reports real installed paths:
+
+```
+moderate: csv-parse 1193670 at node_modules/csv-parse (reported, not blocking)
+moderate: uuid 1119441 at node_modules/uuid (reported, not blocking)
+```
+
+**No exception file exists today**, because nothing high or critical remains.
+The identity rules are exercised with synthetic fixtures, not by adding one.
 
 The policy lives in `scripts/lib/dependency-policy.mjs` as pure functions, so
 the suite feeds it synthetic audits and checks what comes back — including that
@@ -349,5 +438,14 @@ command line is re-parsed by cmd.exe on Windows and sh on Linux.
   speculatively.
 - The pre-existing local ordering issue — `check:db` must run before
   `test:phase-9d-d1-concurrency` on the same database — was left alone.
+- The local `/auth/login` and `/admin` 500s were left alone: they are the Lane 1
+  production-target guard refusing a loopback Supabase under `next start`, and
+  weakening that guard to make a smoke test prettier would be the wrong trade.
+  **Carried forward:** `/`, `/interiors`, `/auth/login`, `/admin` and
+  `/api/health` must be checked for CSP and HSTS against the real production
+  environment after an owner-authorised deployment.
+- No third-party ZIP library was added. Node's `zlib` supplies streaming
+  inflation with an output ceiling, so `yauzl`, `unzipper` and `adm-zip` were
+  not needed.
 - Six pre-existing `as any`/`@ts-ignore` occurrences elsewhere in `src/` are
   unrelated and untouched.

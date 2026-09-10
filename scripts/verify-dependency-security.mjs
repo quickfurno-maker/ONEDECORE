@@ -37,6 +37,7 @@ const EXCEPTIONS_FILE = path.join(repositoryRoot, "security", "dependency-except
 import {
   classifyFindings,
   collectFindings,
+  findStaleExceptions,
   validateExceptions,
 } from "./lib/dependency-policy.mjs";
 
@@ -125,10 +126,22 @@ const { valid: reviewedExceptions, problems } = validateExceptions(
   today
 );
 
-const { blocking, excused, reported } = classifyFindings(
-  collectFindings(audit.audit),
-  reviewedExceptions
-);
+const findings = collectFindings(audit.audit);
+const { blocking, excused, reported } = classifyFindings(findings, reviewedExceptions);
+
+/*
+ * An exception matching nothing in the current audit is not harmless. The
+ * advisory may have been fixed, the package removed, the dependency moved to a
+ * different path, or the severity re-rated — each is a reason to revisit the
+ * decision rather than let it sit there excusing a finding that no longer
+ * exists in the shape it was written for.
+ */
+for (const stale of findStaleExceptions(reviewedExceptions, findings)) {
+  problems.push(
+    `STALE_EXCEPTION exception for ${stale.advisory} (${stale.package} ${stale.severity} at ${stale.path})\n` +
+      `             matches no current finding. Remove it, or re-review it against the audit as it stands.`
+  );
+}
 
 const counts = audit.audit.metadata?.vulnerabilities ?? {};
 const summary =
@@ -138,6 +151,7 @@ const summary =
 for (const finding of blocking) {
   problems.push(
     `${finding.severity.toUpperCase().padEnd(12)} ${finding.package} (${finding.range}) — ${finding.id}\n` +
+      `             at ${finding.path}\n` +
       `             ${finding.title}\n` +
       `             ${finding.url}`
   );
@@ -162,8 +176,12 @@ console.log(
 );
 
 for (const { finding, exception } of excused) {
-  console.log(`  reviewed: ${finding.id} ${finding.package} — review by ${exception.reviewBy}`);
+  console.log(
+    `  reviewed: ${finding.id} ${finding.package} at ${finding.path} — review by ${exception.reviewBy}`
+  );
 }
 for (const finding of reported) {
-  console.log(`  ${finding.severity}: ${finding.package} ${finding.id} (reported, not blocking)`);
+  console.log(
+    `  ${finding.severity}: ${finding.package} ${finding.id} at ${finding.path} (reported, not blocking)`
+  );
 }

@@ -144,6 +144,14 @@ it. Application corrections — the RPC arguments that accept SQL NULL, which th
 generator cannot express — live in `src/types/database.ts`, which every Supabase
 client is parameterised by. See `docs/audits/lane-4-generated-database-types.md`.
 
+### Uploaded workbook ingestion
+
+A bulk-import `.xlsx` passes two gates before ExcelJS: a structural check of the
+ZIP central directory, and a bounded inflation of every entry that counts actual
+output against a hard ceiling and requires it to match what was declared. The
+second exists because the first can only read what an archive claims. See
+`docs/audits/lane-5-dependency-http-security.md`.
+
 ### HTTP security headers
 
 Production responses are configured with an enforced, static-compatible
