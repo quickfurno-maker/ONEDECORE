@@ -36,6 +36,7 @@
     "src/features/crm/__tests__/crm-manual-sales-temperature.test.ts",
     "src/features/crm/__tests__/crm-mobile-admin-contracts.test.ts",
     "src/features/crm/__tests__/crm-mobile-calendar.test.ts",
+    "src/features/crm/__tests__/crm-dashboard-task-summary.test.ts",
     "src/features/crm/__tests__/crm-mobile-dashboard-summary.test.ts",
     "src/features/crm/__tests__/crm-mobile-insights.test.ts",
     "src/features/crm/__tests__/crm-mobile-lead-delete.test.ts",

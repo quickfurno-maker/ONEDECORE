@@ -268,16 +268,24 @@ describe("the counts are bounded and use created_at", () => {
     const body = code(QUERIES);
 
     /*
-     * Two head-count SITES: one shared lead-window helper, invoked once per
-     * window, and one inline appointment total. Four counts, two places.
+     * Three head-count SITES for eight counts: one shared lead-window helper
+     * invoked once per window, one inline appointment total, and one shared
+     * open-activity helper invoked once per task count. Every one of them
+     * leaves its rows in Postgres.
      */
     const headCounts = body.match(/count: "exact", head: true/g) ?? [];
 
-    assert.equal(headCounts.length, 2);
+    assert.equal(headCounts.length, 3);
 
     const invocations = body.match(/countLeadsReceived\(windows\./g) ?? [];
 
     assert.equal(invocations.length, 3);
+
+    const taskCounts =
+      body.match(/countOpenActivities\(/g) ?? [];
+
+    /* One declaration, four invocations. */
+    assert.equal(taskCounts.length, 5);
 
     /* And no select of lead rows anywhere in the summary. */
     assert.ok(
