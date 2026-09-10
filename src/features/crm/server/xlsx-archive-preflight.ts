@@ -112,11 +112,21 @@ function reject(detail: string): never {
   });
 }
 
-/** One central-directory record, as far as this module cares. */
-interface ArchiveEntry {
+/**
+ * One central-directory record, validated.
+ *
+ * `compressionMethod` and `localHeaderOffset` are carried so the bounded
+ * decompression gate can find each entry's payload without parsing the
+ * directory a second time — and so it uses the compressed size this gate
+ * checked rather than the local header's copy, which a data-descriptor entry
+ * leaves as zero.
+ */
+export interface XlsxArchiveEntry {
   readonly name: string;
   readonly compressedBytes: number;
   readonly uncompressedBytes: number;
+  readonly compressionMethod: number;
+  readonly localHeaderOffset: number;
   readonly encrypted: boolean;
   readonly diskNumberStart: number;
 }
@@ -138,14 +148,17 @@ function findEndOfCentralDirectory(buffer: Buffer): number {
 }
 
 /**
- * Reject anything that is not a plain, single-disk, unencrypted XLSX whose
- * declared contents fit the limits above.
+ * GATE 1. Reject anything that is not a plain, single-disk, unencrypted XLSX
+ * whose DECLARED contents fit the limits above.
  *
- * Throws `CrmError` with code `IMPORT_UNSAFE_ARCHIVE`. Returns nothing on
- * success: this is a gate, not a parser, and it deliberately hands no parsed
- * state to the caller that might be mistaken for validated content.
+ * Throws `CrmError` with code `IMPORT_UNSAFE_ARCHIVE`.
+ *
+ * Returns the validated entries for `xlsx-bounded-decompression.ts`, and for no
+ * other purpose. They are directory metadata, not content: a returned entry is
+ * not evidence that the entry's BYTES are safe, which is precisely what Gate 2
+ * exists to establish.
  */
-export function assertSafeXlsxArchive(buffer: Buffer): void {
+export function assertSafeXlsxArchive(buffer: Buffer): readonly XlsxArchiveEntry[] {
   if (buffer.length < EOCD_MINIMUM_LENGTH) {
     reject("shorter than an empty archive");
   }
@@ -202,7 +215,7 @@ export function assertSafeXlsxArchive(buffer: Buffer): void {
     reject(`${totalEntries} entries exceeds the ${LEAD_IMPORT_XLSX_LIMITS.maxEntries} limit`);
   }
 
-  const entries: ArchiveEntry[] = [];
+  const entries: XlsxArchiveEntry[] = [];
   let offset = centralDirectoryOffset;
 
   for (let index = 0; index < totalEntries; index += 1) {
@@ -214,6 +227,8 @@ export function assertSafeXlsxArchive(buffer: Buffer): void {
     }
 
     const flags = buffer.readUInt16LE(offset + 8);
+    const compressionMethod = buffer.readUInt16LE(offset + 10);
+    const localHeaderOffset = buffer.readUInt32LE(offset + 42);
     const compressedBytes = buffer.readUInt32LE(offset + 20);
     const uncompressedBytes = buffer.readUInt32LE(offset + 24);
     const nameLength = buffer.readUInt16LE(offset + 28);
@@ -231,10 +246,16 @@ export function assertSafeXlsxArchive(buffer: Buffer): void {
       reject("ZIP64 sentinel in an entry size");
     }
 
+    if (localHeaderOffset === UINT32_SENTINEL) {
+      reject("ZIP64 sentinel in a local header offset");
+    }
+
     entries.push({
       name: buffer.toString("utf8", nameStart, nameEnd),
       compressedBytes,
       uncompressedBytes,
+      compressionMethod,
+      localHeaderOffset,
       encrypted: (flags & FLAG_ENCRYPTED) !== 0,
       diskNumberStart,
     });
@@ -303,4 +324,6 @@ export function assertSafeXlsxArchive(buffer: Buffer): void {
       reject(`missing required part ${required}`);
     }
   }
+
+  return entries;
 }

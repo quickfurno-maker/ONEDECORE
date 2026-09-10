@@ -11,6 +11,7 @@ import {
 } from "../contracts/lead-import-contracts.ts";
 import { CrmError } from "./crm-errors.ts";
 import { assertSafeXlsxArchive } from "./xlsx-archive-preflight.ts";
+import { assertBoundedXlsxDecompression } from "./xlsx-bounded-decompression.ts";
 
 function stripUtf8Bom(value: string): string {
   return value.charCodeAt(0) === 0xfeff ? value.slice(1) : value;
@@ -152,16 +153,22 @@ export async function extractXlsxHeadersAndRecords(
   records: Record<string, string>[];
 }> {
   /*
-   * BEFORE THE PARSER, NOT AFTER.
+   * TWO GATES, BOTH BEFORE THE PARSER.
    *
    * The row and column limits further down are applied to a workbook ExcelJS
-   * has already decompressed, so they bound the result rather than the work. A
-   * 5 MiB archive declaring gigabytes of content would reach the parser first
-   * and the limits second. This gate reads the ZIP central directory and
-   * decompresses nothing; see `xlsx-archive-preflight.ts` for what that does
-   * and does not prove.
+   * has already decompressed, so they bound the result rather than the work.
+   *
+   * Gate 1 reads the ZIP central directory and decompresses nothing. It stops
+   * archives that are structurally not workbooks, and archives whose own
+   * declaration is out of bounds.
+   *
+   * Gate 2 stops the archives that lie. A directory can declare a safe size and
+   * inflate to gigabytes; JSZip only notices the mismatch after materialising
+   * the output. So each entry is inflated here first, under a hard ceiling,
+   * counted and discarded, and required to match its declaration.
    */
-  assertSafeXlsxArchive(buffer);
+  const entries = assertSafeXlsxArchive(buffer);
+  await assertBoundedXlsxDecompression(buffer, entries);
 
   const workbook = await loadWorkbook(buffer);
 
