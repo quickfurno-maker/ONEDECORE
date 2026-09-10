@@ -7390,6 +7390,10 @@ export type Database = {
         }
         Returns: Json
       }
+      authorize_many: {
+        Args: { requested_permissions: string[] }
+        Returns: Json
+      }
       begin_staff_credential_operation: {
         Args: {
           p_operation: string
