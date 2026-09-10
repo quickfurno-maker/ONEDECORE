@@ -10,9 +10,9 @@ import { HomeServicesRooms } from "@/features/public-site/home-r4/HomeServicesRo
 import { HomeShell } from "@/features/public-site/home-r4/HomeShell";
 import { HomeWhy } from "@/features/public-site/home-r4/HomeWhy";
 import { LeadConsultationHost } from "@/features/lead-intake/public/LeadConsultationHost";
-import { DiscoveryProofStrip } from "@/features/public-site/discovery/DiscoveryProofStrip";
 import { DiscoveryWhatsAppFab } from "@/features/public-site/discovery/DiscoveryWhatsAppFab";
 import "@/features/public-site/discovery/discovery.css";
+import { InteriorsPromoCarousel } from "./InteriorsPromoCarousel";
 import {
   InteriorsKitchenFeature,
   InteriorsPortfolioBridge,
@@ -22,10 +22,21 @@ import {
 } from "./InteriorsServiceBlocks";
 import "./interiors.css";
 
+/*
+ * `trust` is gone and `promo-carousel` takes the slot above the hero.
+ *
+ * The page was showing two numeric proof blocks within one screen of each
+ * other — the hero's credibility row, then `DiscoveryProofStrip` immediately
+ * below it. Two counters arguing the same point do not double the proof; they
+ * make a visitor wonder which one is the real number. The hero's row stays and
+ * now animates; the second strip is no longer composed into this page.
+ *
+ * `DiscoveryProofStrip` itself is untouched and still in the repository.
+ */
 export const INTERIORS_SECTION_ORDER = [
   "header",
+  "promo-carousel",
   "hero",
-  "trust",
   "complete-interiors",
   "modular-kitchen",
   "wardrobes",
@@ -47,18 +58,17 @@ export function InteriorsConversionPage() {
     <LeadConsultationHost>
       <HomeShell unifiedNav>
         <div data-od-interiors-order={INTERIORS_SECTION_ORDER.join("|")} hidden />
-        <HomeHero />
         {/*
-          THE PROOF COUNTER LIVES HERE NOW.
+          Campaigns sit above the hero, and the hero is unchanged beneath them.
 
-          It used to sit second on the homepage, animating four figures at
-          someone who had not yet been told what the company does. On this page
-          the visitor has already chosen to read about the work, so the figures
-          answer a question they are actually asking. Nothing about the claim
-          gating changed with the move: every metric is still rendered only if
-          `isClaimDisplayable` says so.
+          The carousel is the promotional surface — the thing that will carry a
+          festive offer or a new service the week it launches. The hero is the
+          page's argument and does not get rewritten every time a campaign
+          changes, which is exactly why the two are separate blocks rather than
+          one banner that tries to be both.
         */}
-        <DiscoveryProofStrip />
+        <InteriorsPromoCarousel />
+        <HomeHero />
         <HomeServicesRooms />
         <InteriorsKitchenFeature />
         <InteriorsWardrobes />
