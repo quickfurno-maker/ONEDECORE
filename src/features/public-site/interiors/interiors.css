@@ -39,7 +39,7 @@
 }
 
 /* ========================================================================== */
-/* Promotional carousel                                                       */
+/* Promotional rail — one 9:16 format, more cards as the viewport grows       */
 /* ========================================================================== */
 
 /*
@@ -61,8 +61,8 @@
  * `[data-public-home-r4]` is on the selector because the interiors shell resets
  * `ul { padding: 0 }` at `[data-public-home-r4] ul` (0-1-1 in
  * `home-foundation.css`). A bare `.od-int-promo__rail` (0-1-0) loses, and the
- * side inset silently disappeared: the first card sat flush against the left
- * edge of the screen with no gutter at all.
+ * side inset silently disappears: the first card sits flush against the edge of
+ * the screen with no gutter at all.
  */
 [data-public-home-r4] .od-int-promo__rail {
   display: flex;
@@ -84,152 +84,71 @@
 }
 
 /*
- * 82vw leaves roughly 18vw for the next card and the gap, which is the whole
- * point: a visible slice of the next banner says "this row moves" without a
- * caption saying so. Much past 1.15 cards on screen and it stops reading as
- * one dominant banner and starts reading as a card grid.
+ * ONE CARD DOMINANT, THE NEXT ONE PEEKING.
+ *
+ * 82vw leaves roughly 18vw for the following card and the gap, and that sliver
+ * is the whole affordance: it says "this row moves" without a caption saying
+ * so. It works out at about 1.13 cards on screen.
+ *
+ * The height guard is expressed as a WIDTH, not a `max-height`. A max-height on
+ * a box with `aspect-ratio` is satisfied by shrinking both axes or by cropping,
+ * and either one stops the frame being 9:16 — which is the one thing the
+ * artwork depends on. Capping the width instead keeps the ratio exact and
+ * simply makes the card smaller on a short viewport, which is what a landscape
+ * phone actually needs.
  */
 .od-int-promo__card {
-  flex: 0 0 82vw;
+  flex: 0 0 min(82vw, calc(76vh * 9 / 16));
   scroll-snap-align: start;
   scroll-snap-stop: always;
 }
 
-/*
- * WIDTH IS DEFINITE; ONLY THE HEIGHT IS ALLOWED TO GIVE.
- *
- * `width: 100%` matters more than it looks. With an `auto` width, a capped
- * `max-height` and an `aspect-ratio`, the browser satisfies the cap by
- * shrinking BOTH axes — the card silently drops to 63vw on a phone and the
- * peek turns into a second half-card. Pinning the width to the card means the
- * ratio computes a height and the cap simply clips it.
- *
- * 9:16 is the authored mobile format, but a true 9:16 card at 82vw is about
- * 146vw tall: one banner would be a screen and a half and the hero would sit
- * three scrolls down. The ratio holds the artwork's shape, the cap keeps the
- * page browsable, and `cover` plus a focal point absorbs the difference.
- */
 .od-int-promo__frame {
   position: relative;
   display: block;
   width: 100%;
+  /* The authored format, exactly, at every breakpoint. */
+  aspect-ratio: 9 / 16;
   border-radius: 20px;
   overflow: hidden;
   background: var(--od-bg-deepest, #0b0908);
-  aspect-ratio: 9 / 16;
-  max-height: min(62vh, 30rem);
+  text-decoration: none;
 }
 
-.od-int-promo__media {
-  position: absolute;
-  inset: 0;
-}
-
-/*
- * The `<img>` inside `<picture>` fills the frame itself — `next/image`'s own
- * `fill` styles are not in play here, because art direction needs the plain
- * element `getImageProps` returns.
- *
- * The focal point follows the SAME breakpoint as the source switch, so the
- * landscape file is framed by its own focal point rather than by the portrait
- * one it replaced.
- */
 .od-int-promo__img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
   object-fit: cover;
-  object-position: var(--promo-focal-mobile, 50% 50%);
 }
 
-@media (min-width: 48rem) {
-  .od-int-promo__img {
-    object-position: var(--promo-focal-desktop, 50% 50%);
-  }
-}
+/* ------------------------------------------------------ review-only frame */
 
 /*
- * Legibility cannot depend on which photograph is showing. A fixed gradient
- * under the copy means a bright travertine slide and a dark dusk slide carry
- * white text at the same contrast.
+ * The empty slot.
+ *
+ * A charcoal surface and a hairline — no dashed border, no image glyph, no
+ * instructions. Anything that reads as an uploader invites feedback about the
+ * uploader instead of about the frame, and the frame is the only thing this
+ * build is asking about.
  */
-.od-int-promo__scrim {
+.od-int-promo__empty {
   position: absolute;
   inset: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--od-gold, #e9c877) 16%, transparent);
+  border-radius: inherit;
   background: linear-gradient(
-    to top,
-    rgba(6, 5, 4, 0.9) 0%,
-    rgba(6, 5, 4, 0.72) 28%,
-    rgba(6, 5, 4, 0.18) 62%,
-    rgba(6, 5, 4, 0.06) 100%
+    180deg,
+    color-mix(in srgb, var(--od-text-primary, #fff9f0) 4%, transparent),
+    transparent 60%
   );
 }
 
-.od-int-promo__copy {
-  position: absolute;
-  inset-inline: 0;
-  inset-block-end: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: clamp(1rem, 4vw, 1.5rem);
-}
-
-.od-int-promo__eyebrow {
-  margin: 0;
-  font-size: clamp(0.62rem, 2.6vw, 0.7rem);
+.od-int-promo__emptyLabel {
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--od-gold-light, #f0d9a8);
-}
-
-.od-int-promo__title {
-  margin: 0;
-  font-size: clamp(1.15rem, 4.6vw, 1.5rem);
-  line-height: 1.18;
-  letter-spacing: -0.01em;
-  color: #fff9f0;
-  max-width: 20ch;
-}
-
-.od-int-promo__body {
-  margin: 0;
-  font-size: clamp(0.8rem, 3.2vw, 0.9rem);
-  line-height: 1.5;
-  color: rgba(255, 249, 240, 0.82);
-  max-width: 34ch;
-}
-
-/*
- * The CTA is its own block with its own padding, so a longer label makes the
- * pill wider rather than breaking the phrase across two ragged lines.
- */
-.od-int-promo__cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  margin-top: 0.35rem;
-  padding-inline: 1.1rem;
-  border-radius: 999px;
-  background: var(--od-gold, #e9c877);
-  color: #1a1206;
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-decoration: none;
-  white-space: nowrap;
-  transition:
-    transform 160ms var(--dc-ease, ease),
-    filter 160ms var(--dc-ease, ease);
-}
-
-.od-int-promo__cta:hover,
-.od-int-promo__cta:focus-visible {
-  transform: translateY(-1px);
-  filter: brightness(1.05);
+  color: color-mix(in srgb, var(--od-text-primary, #fff9f0) 46%, transparent);
 }
 
 /* --------------------------------------------------------------- controls */
@@ -309,75 +228,36 @@
 
 @media (min-width: 48rem) {
   /*
-   * The landscape source takes over at this width, so the frame changes shape
-   * with it. 12:5 is the authored desktop ratio; the max-height stops a tall
-   * viewport from turning the banner into a billboard that buries the hero.
-   */
-  .od-int-promo__frame {
-    aspect-ratio: 12 / 5;
-    /*
-     * Generous enough that 12:5 renders true at ordinary laptop widths, and
-     * still a cap: at 1920 an uncapped 92% card would be a 730px billboard
-     * with the hero nowhere in sight.
-     */
-    max-height: min(56vh, 34rem);
-    border-radius: 26px;
-  }
-
-  /*
-   * `vw`, not `%`. A percentage resolves against the rail's CONTENT box, so
-   * the inset gets subtracted twice and a "92%" card lands at 85vw — narrow
-   * enough to read as a card rather than a banner. Measuring against the
-   * viewport makes the number mean what it says at every width.
+   * MORE CARDS, NOT A BIGGER CARD.
+   *
+   * The banner does not become a landscape billboard on a wider screen — it
+   * stays the same 9:16 artwork and the rail simply fits more of them. That is
+   * what lets one exported file serve every device.
+   *
+   * The clamp keeps a card in the 300-360px band the design system wants, so a
+   * 1024px viewport shows about three and a 1920px one about four and a half.
+   * The `vh` term is the same ratio-preserving height guard as on mobile.
    */
   .od-int-promo__card {
-    flex: 0 0 92vw;
+    flex: 0 0 min(clamp(300px, 26vw, 360px), calc(70vh * 9 / 16));
+  }
+
+  .od-int-promo__frame {
+    border-radius: 24px;
   }
 
   [data-public-home-r4] .od-int-promo__rail {
-    gap: 18px;
-    padding-inline: 3%;
-    scroll-padding-inline-start: 3%;
-  }
-
-  .od-int-promo__copy {
-    max-width: 34rem;
-    padding: clamp(1.5rem, 3vw, 2.25rem);
-  }
-
-  .od-int-promo__title {
-    font-size: clamp(1.5rem, 2.6vw, 2.1rem);
-    max-width: 24ch;
-  }
-
-  .od-int-promo__body {
-    font-size: 0.95rem;
-  }
-
-  /*
-   * A landscape banner is wide enough that a bottom-only scrim leaves the copy
-   * floating in the middle of the image; the wash comes from the left instead,
-   * sitting behind the text column.
-   */
-  .od-int-promo__scrim {
-    background: linear-gradient(
-      to right,
-      rgba(6, 5, 4, 0.92) 0%,
-      rgba(6, 5, 4, 0.74) 38%,
-      rgba(6, 5, 4, 0.2) 68%,
-      rgba(6, 5, 4, 0.05) 100%
-    );
+    gap: 22px;
+    padding-inline: 4%;
+    scroll-padding-inline-start: 4%;
   }
 
   .od-int-promo__arrow {
     display: inline-flex;
   }
-}
 
-@media (min-width: 64rem) {
-  [data-public-home-r4] .od-int-promo__rail {
-    padding-inline: 4%;
-    scroll-padding-inline-start: 4%;
+  .od-int-promo__emptyLabel {
+    font-size: 0.76rem;
   }
 }
 
@@ -393,14 +273,8 @@
     scroll-behavior: auto;
   }
 
-  .od-int-promo__cta,
   .od-int-promo__dot::before,
   .od-int-promo__arrow {
     transition: none;
-  }
-
-  .od-int-promo__cta:hover,
-  .od-int-promo__cta:focus-visible {
-    transform: none;
   }
 }

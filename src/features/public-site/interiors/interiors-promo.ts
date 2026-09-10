@@ -1,227 +1,83 @@
-import { PM_ASSETS, PM_SECTION_IDS } from "@/features/public-site/home-r4/content";
-
 /**
- * The /interiors promotional carousel, as data.
+ * The /interiors promotional rail, as data.
  *
- * REPLACING A CAMPAIGN IS A CONFIG EDIT
+ * ONE ARTWORK FILE PER CAMPAIGN
  *
- * Everything a campaign consists of — both artwork sources, the copy, the CTA,
- * where it goes, and whether it runs at all — lives in one record below.
- * `InteriorsPromoCarousel` reads this list and knows nothing else about any
- * particular campaign, so swapping the festive banner for the monsoon one is a
- * change to six lines of data, not a new component.
+ * Every banner is 9:16, on every device. The rail does not switch artwork at a
+ * breakpoint — it changes how many cards fit. A phone shows one dominant card
+ * with the next peeking; a desktop shows three or four of the same cards side
+ * by side. That means a campaign is one file to design, one file to upload and
+ * one line to change, instead of a portrait and a landscape cut that have to
+ * be kept in step and re-exported together every time the copy moves.
  *
- * There is deliberately no database, no CMS and no upload flow here. Those are
- * a decision the owner has not made yet, and building the storage before the
- * decision would prejudge it.
+ * It also removes the failure mode of the previous model: a desktop banner
+ * that was authored 12:5 and a mobile banner authored 9:16 could drift into
+ * saying different things, and nobody would notice until someone opened the
+ * site on the other device.
  *
- * TWO SOURCES PER SLIDE, NOT ONE ASSET STRETCHED
+ * THE SLOTS ARE EMPTY ON PURPOSE
  *
- * `mobileImage` fills a 9:16 card; `desktopImage` fills a ~12:5 banner. They
- * are different files, chosen per breakpoint by a real `<picture>` source —
- * not one file cropped two ways by CSS. A tall banner squeezed into a wide
- * frame looks exactly like what it is.
+ * No `image` and no `href` on any of the six. The owner is designing the real
+ * artwork, and this build exists to settle geometry — card size, ratio, gap,
+ * radius, how many are visible, how the rail moves. Filling the slots with
+ * borrowed photography would decide the composition before the artwork that
+ * has to live in it exists, and every judgement made against it would be a
+ * judgement about the wrong picture.
  *
- * THE ARTWORK BELOW IS PLACEHOLDER, AND SAYS SO
+ * So each slot renders an empty frame with a small `Banner N` label. It is a
+ * frame preview, not an uploader and not a mockup.
  *
- * No dedicated promotional artwork exists yet, so these slots borrow the
- * marketing photography already in the repository. None of it is authored at
- * 9:16 or 12:5 — the frames are, and `object-fit: cover` plus a per-slide
- * focal point holds each image honestly inside them until real creative
- * arrives. Because only nine images exist for twelve slots, three are used
- * twice; no slide ever uses the same file for both of its own sources.
+ * ADDING A CAMPAIGN LATER
  *
- * WHAT IS NOT HERE
+ *   { id: "diwali-2026", enabled: true, image: "/assets/.../banner-1.webp" }
  *
- * No discount, no percentage off, no expiry, no coupon, no EMI, no delivery
- * promise, no rating, no award, no price, and no project count. The owner has
- * published no offer, so a banner announcing one would be inventing it. Every
- * line below is a service ONEDECORE actually performs, phrased the way the
- * rest of the site already phrases it.
+ * and optionally an `href` to make the whole card a link. That is the entire
+ * change — the carousel needs no edit at all.
  */
-export interface InteriorsPromoImage {
-  /** Public path of the asset. */
-  readonly src: string;
-  /** Intrinsic size, so the browser can reserve space and avoid layout shift. */
-  readonly width: number;
-  readonly height: number;
-  /** `object-position` inside the card frame. */
-  readonly focalPoint: string;
-}
-
 export interface InteriorsPromoSlide {
   readonly id: string;
   readonly enabled: boolean;
-  /** Fills the 9:16 card. */
-  readonly mobileImage: InteriorsPromoImage;
-  /** Fills the ~12:5 banner. */
-  readonly desktopImage: InteriorsPromoImage;
-  readonly eyebrow?: string;
-  readonly title: string;
-  readonly body?: string;
-  readonly ctaLabel?: string;
-  /** An anchor on this page or an existing route. Never an invented one. */
-  readonly href?: string;
   /**
-   * What the photograph shows.
+   * The 9:16 artwork. Absent means the slot renders as an empty frame.
    *
-   * Empty only where the copy already says everything the image contributes —
-   * a texture behind a headline adds mood, not information, and announcing it
-   * to a screen reader is noise. Where the image IS the message, it is
-   * described.
+   * One path, not two: the same file is used at every breakpoint.
    */
-  readonly imageAlt: string;
+  readonly image?: string | null;
+  /**
+   * Optional destination for the WHOLE card.
+   *
+   * There is no button inside a banner and there will not be one. If a
+   * campaign needs a call to action, it is drawn into the artwork, and this
+   * href makes the card itself the link — one target, no HTML control
+   * competing with a painted one, and nothing for a screen reader to announce
+   * twice. Absent means the card is not interactive at all.
+   */
+  readonly href?: string | null;
+  /**
+   * Describes the artwork, once there is artwork to describe.
+   *
+   * Required alongside `image`: a linked banner whose whole content is a
+   * picture is unusable without it. Meaningless while the slots are empty.
+   */
+  readonly imageAlt?: string | null;
 }
 
-/** The 9:16 mobile card and ~12:5 desktop banner the artwork is authored for. */
-export const INTERIORS_PROMO_MOBILE_RATIO = "9 / 16" as const;
-export const INTERIORS_PROMO_DESKTOP_RATIO = "12 / 5" as const;
+/** The single authored artwork format. Recommended export: 1080 × 1920. */
+export const INTERIORS_PROMO_RATIO = "9 / 16" as const;
 
-/** Autoplay dwell. Long enough to read a two-line banner without hurrying. */
+/** Autoplay dwell. Long enough to read a banner without hurrying. */
 export const INTERIORS_PROMO_AUTOPLAY_MS = 5500;
 
+/** Review-only label prefix; deleted with the empty-frame branch. */
+export const INTERIORS_PROMO_PLACEHOLDER_PREFIX = "Banner";
+
 export const INTERIORS_PROMO_SLIDES: readonly InteriorsPromoSlide[] = [
-  {
-    id: "complete-home-interiors",
-    enabled: true,
-    mobileImage: {
-      src: PM_ASSETS.completeHomeInteriors.path,
-      width: PM_ASSETS.completeHomeInteriors.width,
-      height: PM_ASSETS.completeHomeInteriors.height,
-      focalPoint: "50% 40%",
-    },
-    /*
-     * Deliberately NOT `PM_ASSETS.hero`. That is the photograph the hero
-     * itself uses, and at desktop the banner sits directly above it — the same
-     * room twice on one screen reads as a rendering fault.
-     */
-    desktopImage: {
-      src: PM_ASSETS.dusk.path,
-      width: PM_ASSETS.dusk.width,
-      height: PM_ASSETS.dusk.height,
-      focalPoint: "58% 52%",
-    },
-    eyebrow: "Complete Home Interiors",
-    title: "Your whole home, handled by one team.",
-    body: "Design, manufacturing, installation and handover — coordinated end to end.",
-    ctaLabel: "See what's included",
-    href: `#${PM_SECTION_IDS.services}`,
-    imageAlt: PM_ASSETS.completeHomeInteriors.alt,
-  },
-  {
-    id: "modular-kitchens",
-    enabled: true,
-    mobileImage: {
-      src: PM_ASSETS.modularKitchens.path,
-      width: PM_ASSETS.modularKitchens.width,
-      height: PM_ASSETS.modularKitchens.height,
-      focalPoint: "50% 44%",
-    },
-    desktopImage: {
-      src: PM_ASSETS.materialTexture.path,
-      width: PM_ASSETS.materialTexture.width,
-      height: PM_ASSETS.materialTexture.height,
-      focalPoint: "50% 50%",
-    },
-    eyebrow: "Modular Kitchens",
-    title: "Kitchens built around how you cook.",
-    body: "Planned for your layout, storage and daily routine — then made in our own factory.",
-    ctaLabel: "Explore kitchens",
-    href: "#modular-kitchen",
-    imageAlt: PM_ASSETS.modularKitchens.alt,
-  },
-  {
-    id: "custom-wardrobes",
-    enabled: true,
-    mobileImage: {
-      src: PM_ASSETS.customWardrobes.path,
-      width: PM_ASSETS.customWardrobes.width,
-      height: PM_ASSETS.customWardrobes.height,
-      focalPoint: "50% 38%",
-    },
-    desktopImage: {
-      src: PM_ASSETS.materialTimber.path,
-      width: PM_ASSETS.materialTimber.width,
-      height: PM_ASSETS.materialTimber.height,
-      focalPoint: "50% 50%",
-    },
-    eyebrow: "Custom Wardrobes",
-    title: "Wardrobes measured to the wall you have.",
-    body: "Floor-to-ceiling storage planned around the space, not a standard carcass.",
-    ctaLabel: "Explore wardrobes",
-    href: "#od-int-wardrobe-title",
-    imageAlt: PM_ASSETS.customWardrobes.alt,
-  },
-  {
-    id: "own-manufacturing",
-    enabled: true,
-    mobileImage: {
-      src: PM_ASSETS.materialTimber.path,
-      width: PM_ASSETS.materialTimber.width,
-      height: PM_ASSETS.materialTimber.height,
-      focalPoint: "50% 50%",
-    },
-    desktopImage: {
-      src: PM_ASSETS.materialStone.path,
-      width: PM_ASSETS.materialStone.width,
-      height: PM_ASSETS.materialStone.height,
-      focalPoint: "44% 50%",
-    },
-    eyebrow: "Own Manufacturing",
-    title: "Made by us, not sourced for you.",
-    body: "Our own modular factory means direct control over finish, quality and timeline.",
-    ctaLabel: "Inside the factory",
-    href: `#${PM_SECTION_IDS.factory}`,
-    /*
-     * A material close-up is exactly what this is, and the alt says so. Calling
-     * it "our factory" would be describing a photograph nobody has taken.
-     */
-    imageAlt: PM_ASSETS.materialTimber.alt,
-  },
-  {
-    id: "design-consultation",
-    enabled: true,
-    mobileImage: {
-      src: PM_ASSETS.heroConsultant.path,
-      width: PM_ASSETS.heroConsultant.width,
-      height: PM_ASSETS.heroConsultant.height,
-      focalPoint: "50% 24%",
-    },
-    desktopImage: {
-      src: PM_ASSETS.hero.path,
-      width: PM_ASSETS.hero.width,
-      height: PM_ASSETS.hero.height,
-      focalPoint: "52% 46%",
-    },
-    eyebrow: "Design Consultation",
-    title: "Start with a conversation, not a contract.",
-    body: "Talk through layout, style, storage and budget with our design team first.",
-    ctaLabel: "Book a free consultation",
-    href: `#${PM_SECTION_IDS.plan}`,
-    imageAlt: PM_ASSETS.heroConsultant.alt,
-  },
-  {
-    id: "portfolio-inspiration",
-    enabled: true,
-    mobileImage: {
-      src: PM_ASSETS.hero.path,
-      width: PM_ASSETS.hero.width,
-      height: PM_ASSETS.hero.height,
-      focalPoint: "52% 44%",
-    },
-    desktopImage: {
-      src: PM_ASSETS.materialStone.path,
-      width: PM_ASSETS.materialStone.width,
-      height: PM_ASSETS.materialStone.height,
-      focalPoint: "42% 48%",
-    },
-    eyebrow: "Interior Inspiration",
-    title: "See the finish before you commit.",
-    body: "Rooms, materials and detailing from the work we publish.",
-    ctaLabel: "View portfolio",
-    href: "/portfolio",
-    imageAlt: PM_ASSETS.hero.alt,
-  },
+  { id: "promo-1", enabled: true },
+  { id: "promo-2", enabled: true },
+  { id: "promo-3", enabled: true },
+  { id: "promo-4", enabled: true },
+  { id: "promo-5", enabled: true },
+  { id: "promo-6", enabled: true },
 ];
 
 /** The slides that actually run. Order is the array order. */
