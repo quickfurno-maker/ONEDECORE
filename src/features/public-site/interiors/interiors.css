@@ -86,19 +86,26 @@
 /*
  * ONE CARD DOMINANT, THE NEXT ONE PEEKING.
  *
- * 82vw leaves roughly 18vw for the following card and the gap, and that sliver
- * is the whole affordance: it says "this row moves" without a caption saying
- * so. It works out at about 1.13 cards on screen.
+ * 74vw, down from 82vw. At 82 the card stood 569px tall on a 390px phone —
+ * two thirds of the screen — and the rail read as a full-page story viewer
+ * rather than as a promotional strip you glance along. The narrower card is
+ * about 63px shorter and hands the difference to the next banner, which now
+ * shows roughly a quarter of itself instead of a thin sliver. That sliver was
+ * the entire swipe affordance, and more of it is a clearer invitation.
  *
- * The height guard is expressed as a WIDTH, not a `max-height`. A max-height on
- * a box with `aspect-ratio` is satisfied by shrinking both axes or by cropping,
- * and either one stops the frame being 9:16 — which is the one thing the
- * artwork depends on. Capping the width instead keeps the ratio exact and
- * simply makes the card smaller on a short viewport, which is what a landscape
- * phone actually needs.
+ * BOTH LIMITS ARE WIDTHS, BECAUSE HEIGHT CANNOT BE CAPPED SAFELY.
+ *
+ * A `max-height` on a box with `aspect-ratio` is satisfied by shrinking both
+ * axes or by cropping, and either one stops the frame being 9:16 — the one
+ * thing the artwork depends on. So the 60vh ceiling is expressed as the width
+ * that produces it, `60vh * 9/16`, and `min()` takes whichever limit binds
+ * first. The ratio then falls out exactly, at every viewport.
+ *
+ * On a tall phone 74vw wins; on a short or landscape one the height term does,
+ * and the card simply gets smaller rather than distorted.
  */
 .od-int-promo__card {
-  flex: 0 0 min(82vw, calc(76vh * 9 / 16));
+  flex: 0 0 min(74vw, calc(60vh * 9 / 16));
   scroll-snap-align: start;
   scroll-snap-stop: always;
 }
@@ -234,9 +241,28 @@
    * stays the same 9:16 artwork and the rail simply fits more of them. That is
    * what lets one exported file serve every device.
    *
-   * The clamp keeps a card in the 300-360px band the design system wants, so a
-   * 1024px viewport shows about three and a 1920px one about four and a half.
-   * The `vh` term is the same ratio-preserving height guard as on mobile.
+   * The clamp keeps a card in the 300-360px band the design system wants; the
+   * `vh` term is the same ratio-preserving height guard as on mobile.
+   *
+   * 70vh IS THE CARD COUNT, NOT JUST A HEIGHT.
+   *
+   * The mobile card was cut to 74vw/60vh in this pass and the obvious next
+   * move was to cut the desktop card with it. Sweeping the cap against the
+   * built page says otherwise: how many cards fit is a step function of card
+   * width, and every value from 58vh to 65vh moves 1280 and 1440 from three
+   * cards to four — a different layout from the approved one, arrived at by
+   * changing a number that looks like it only controls height.
+   *
+   *   58/60/62/63vh -> 3 4 4 4 4      (1024 / 1280 / 1440 / 1600 / 1920)
+   *   65vh          -> 3 3 4 4 4, and 1280's fourth card is 98% visible
+   *   67vh          -> 3 3 3 4 4, but the peek grows to ~88% — a card cut by
+   *                    a tenth reads as four cards, not as three and a hint
+   *   70vh          -> 3 3 3 4 4 with a clean 69-71% partial
+   *
+   * 67vh would have saved 27px at 1440 — under 4% — and spent the clean peek
+   * to do it. So the desktop rail keeps the geometry that was signed off, and
+   * the height reduction in this pass is the mobile one, which is where the
+   * complaint actually was.
    */
   .od-int-promo__card {
     flex: 0 0 min(clamp(300px, 26vw, 360px), calc(70vh * 9 / 16));
