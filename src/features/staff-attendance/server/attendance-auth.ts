@@ -8,6 +8,7 @@ import {
   DEFAULT_LOGIN_PORTAL,
   loginPortalHref,
 } from "@/features/staff-admin/contracts/login-portal";
+import { authorizeMany } from "@/server/auth/authorize-many";
 
 const ATTENDANCE_PERMISSION_PROBE_CODES = [
   "attendance.self",
@@ -53,21 +54,19 @@ async function isActiveStaff(userId: string): Promise<boolean> {
   return profile?.status === "active";
 }
 
-async function probePermission(code: AttendancePermissionCode): Promise<boolean> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("authorize", {
-    requested_permission: code,
-  });
-
-  return !error && data === true;
-}
 
 export async function probeAttendancePermissions(): Promise<AttendancePermissionMap> {
-  const entries = await Promise.all(
-    ATTENDANCE_PERMISSION_PROBE_CODES.map(async (code) => [code, await probePermission(code)] as const)
-  );
+  /*
+   * One round trip, not one per code. `authorize_many` loops over
+   * `public.authorize`, so the access rules are unchanged; only the number
+   * of times this request asks them has.
+   */
+  const supabase = await createClient();
+  const answers = await authorizeMany(ATTENDANCE_PERMISSION_PROBE_CODES, supabase);
 
-  return Object.fromEntries(entries) as AttendancePermissionMap;
+  return Object.fromEntries(
+    ATTENDANCE_PERMISSION_PROBE_CODES.map((code) => [code, answers[code] === true])
+  ) as AttendancePermissionMap;
 }
 
 export async function resolveAttendanceAccess(): Promise<AttendanceAccessResolution> {

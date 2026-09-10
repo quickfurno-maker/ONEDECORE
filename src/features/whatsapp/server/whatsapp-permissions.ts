@@ -2,31 +2,28 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import type { WhatsappInboxPermissionCode } from "../contracts/inbox-permissions.ts";
+import { authorizeMany } from "@/server/auth/authorize-many";
 
 export type WhatsappInboxPermissionMap = Record<
   WhatsappInboxPermissionCode,
   boolean
 >;
 
-async function probePermission(code: WhatsappInboxPermissionCode): Promise<boolean> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("authorize", {
-    requested_permission: code,
-  });
-
-  if (error) {
-    return false;
-  }
-
-  return data === true;
-}
 
 export async function probeWhatsappInboxPermissions(): Promise<WhatsappInboxPermissionMap> {
-  const [canRead, canUse, canManage] = await Promise.all([
-    probePermission("whatsapp.inbox.read"),
-    probePermission("whatsapp.inbox.use"),
-    probePermission("whatsapp.inbox.manage"),
-  ]);
+  /*
+   * One round trip, not three. `authorize_many` loops over `public.authorize`,
+   * so the access rules are unchanged; only the number of times this request
+   * asks them has.
+   */
+  const supabase = await createClient();
+  const answers = await authorizeMany(
+    ["whatsapp.inbox.read", "whatsapp.inbox.use", "whatsapp.inbox.manage"] as const,
+    supabase
+  );
+  const canRead = answers["whatsapp.inbox.read"];
+  const canUse = answers["whatsapp.inbox.use"];
+  const canManage = answers["whatsapp.inbox.manage"];
 
   return {
     "whatsapp.inbox.read": canRead,

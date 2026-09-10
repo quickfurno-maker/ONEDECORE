@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { authorizeMany } from "@/server/auth/authorize-many";
 
 export interface LandingLabPermissionProbe {
   readonly canRead: boolean;
@@ -12,19 +13,27 @@ export interface LandingLabPermissionProbe {
 
 export async function probeLandingLabPermissions(): Promise<LandingLabPermissionProbe> {
   const supabase = await createClient();
-  const [readRes, manageRes, publishRes, experimentRes, analyticsRes] = await Promise.all([
-    supabase.rpc("authorize", { requested_permission: "landing_pages.read" }),
-    supabase.rpc("authorize", { requested_permission: "landing_pages.manage" }),
-    supabase.rpc("authorize", { requested_permission: "landing_pages.publish" }),
-    supabase.rpc("authorize", { requested_permission: "landing_experiments.manage" }),
-    supabase.rpc("authorize", { requested_permission: "landing_analytics.read" }),
-  ]);
+  /*
+   * One round trip, not 5. `authorize_many` loops over
+   * `public.authorize`, so the access rules are unchanged; only the number
+   * of times the page asks them has.
+   */
+  const answers = await authorizeMany(
+    [
+    "landing_pages.read",
+    "landing_pages.manage",
+    "landing_pages.publish",
+    "landing_experiments.manage",
+    "landing_analytics.read",
+    ] as const,
+    supabase
+  );
   return {
-    canRead: !readRes.error && readRes.data === true,
-    canManage: !manageRes.error && manageRes.data === true,
-    canPublish: !publishRes.error && publishRes.data === true,
-    canManageExperiments: !experimentRes.error && experimentRes.data === true,
-    canReadAnalytics: !analyticsRes.error && analyticsRes.data === true,
+    canRead: !false && answers["landing_pages.read"],
+    canManage: !false && answers["landing_pages.manage"],
+    canPublish: !false && answers["landing_pages.publish"],
+    canManageExperiments: !false && answers["landing_experiments.manage"],
+    canReadAnalytics: !false && answers["landing_analytics.read"],
   };
 }
 

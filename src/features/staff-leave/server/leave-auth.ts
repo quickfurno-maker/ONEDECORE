@@ -8,6 +8,7 @@ import {
   DEFAULT_LOGIN_PORTAL,
   loginPortalHref,
 } from "@/features/staff-admin/contracts/login-portal";
+import { authorizeMany } from "@/server/auth/authorize-many";
 
 const LEAVE_PERMISSION_PROBE_CODES = [
   "leave.self",
@@ -46,21 +47,19 @@ async function isActiveStaff(userId: string): Promise<boolean> {
   return profile?.status === "active";
 }
 
-async function probePermission(code: LeavePermissionCode): Promise<boolean> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("authorize", {
-    requested_permission: code,
-  });
-
-  return !error && data === true;
-}
 
 export async function probeLeavePermissions(): Promise<LeavePermissionMap> {
-  const entries = await Promise.all(
-    LEAVE_PERMISSION_PROBE_CODES.map(async (code) => [code, await probePermission(code)] as const)
-  );
+  /*
+   * One round trip, not one per code. `authorize_many` loops over
+   * `public.authorize`, so the access rules are unchanged; only the number of
+   * times this request asks them has.
+   */
+  const supabase = await createClient();
+  const answers = await authorizeMany(LEAVE_PERMISSION_PROBE_CODES, supabase);
 
-  return Object.fromEntries(entries) as LeavePermissionMap;
+  return Object.fromEntries(
+    LEAVE_PERMISSION_PROBE_CODES.map((code) => [code, answers[code] === true])
+  ) as LeavePermissionMap;
 }
 
 export async function resolveLeaveAccess(): Promise<LeaveAccessResolution> {

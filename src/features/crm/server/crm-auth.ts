@@ -9,15 +9,16 @@ import {
   type CrmAccessContext,
 } from "../contracts/crm-access.ts";
 import {
-  probeCrmPermissions,
-  probeCanAssignLeads,
-  probeBulkImportPermissions,
-  probeLifecycleMutationPermissions,
-  probeCadencePermissions,
-  probeManualLeadPermissions,
-  probeSalesTargetPermissions,
-  probeSlaPolicyPermissions,
-  probeLeadDeletionPermissions,
+  bulkImportPermissionsFrom,
+  cadencePermissionsFrom,
+  canAssignLeadsFrom,
+  crmPermissionsFrom,
+  leadDeletionPermissionsFrom,
+  lifecycleMutationPermissionsFrom,
+  manualLeadPermissionsFrom,
+  resolveCrmPermissionAnswers,
+  salesTargetPermissionsFrom,
+  slaPolicyPermissionsFrom,
 } from "./crm-permissions.ts";
 import {
   DEFAULT_LOGIN_PORTAL,
@@ -64,25 +65,30 @@ export async function resolveCrmAccess(
     return { kind: "inactive" };
   }
 
-  const permissions = await probeCrmPermissions(db);
-  const canAssignLeads = await probeCanAssignLeads(db);
-  const [
-    manualLeadPermissions,
-    lifecyclePermissions,
-    bulkImportPermissions,
-    salesTargetPermissions,
-    cadencePermissions,
-    slaPolicyPermissions,
-    deletionPermissions,
-  ] = await Promise.all([
-      probeManualLeadPermissions(db),
-      probeLifecycleMutationPermissions(db),
-      probeBulkImportPermissions(db),
-      probeSalesTargetPermissions(db),
-      probeCadencePermissions(db),
-      probeSlaPolicyPermissions(db),
-      probeLeadDeletionPermissions(db),
-    ]);
+  /*
+   * ONE ROUND TRIP, NOT TWENTY-ONE.
+   *
+   * This used to resolve nine probes — one awaited serially, seven in a
+   * Promise.all — each issuing an `authorize` call per permission. Measured, it
+   * was twenty-one round trips for a single request, every one for a different
+   * permission and none of them redundant. The context genuinely needs all
+   * twenty-one answers; it never needed twenty-one questions.
+   *
+   * `public.authorize_many` loops over `public.authorize`, so the access rules
+   * are unchanged and unduplicated. The mappers below are pure, and a code
+   * missing from the answers reads as denied.
+   */
+  const answers = await resolveCrmPermissionAnswers(db);
+
+  const permissions = crmPermissionsFrom(answers);
+  const canAssignLeads = canAssignLeadsFrom(answers);
+  const manualLeadPermissions = manualLeadPermissionsFrom(answers);
+  const lifecyclePermissions = lifecycleMutationPermissionsFrom(answers);
+  const bulkImportPermissions = bulkImportPermissionsFrom(answers);
+  const salesTargetPermissions = salesTargetPermissionsFrom(answers);
+  const cadencePermissions = cadencePermissionsFrom(answers);
+  const slaPolicyPermissions = slaPolicyPermissionsFrom(answers);
+  const deletionPermissions = leadDeletionPermissionsFrom(answers);
   const context: CrmAccessContext = {
     userId: staff.userId,
     email: staff.email,
