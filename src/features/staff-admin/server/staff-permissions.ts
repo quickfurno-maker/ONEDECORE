@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import type { StaffPermissionCode } from "../contracts/permissions.ts";
+import { authorizeMany } from "@/server/auth/authorize-many";
 
 export type StaffPermissionProbeResult = Readonly<
   Record<StaffPermissionCode, boolean>
@@ -28,17 +29,16 @@ const STAFF_PERMISSION_PROBE_CODES = [
  */
 export async function probeStaffPermissions(): Promise<StaffPermissionProbeResult> {
   const supabase = await createClient();
-  const entries = await Promise.all(
-    STAFF_PERMISSION_PROBE_CODES.map(async (code) => {
-      const { data, error } = await supabase.rpc("authorize", {
-        requested_permission: code,
-      });
+  /*
+   * One round trip, not one per code. `authorize_many` loops over
+   * `public.authorize`, so the access rules are unchanged; only the number
+   * of times this request asks them has.
+   */
+  const answers = await authorizeMany(STAFF_PERMISSION_PROBE_CODES, supabase);
 
-      return [code, !error && data === true] as const;
-    })
-  );
-
-  return Object.fromEntries(entries) as StaffPermissionProbeResult;
+  return Object.fromEntries(
+    STAFF_PERMISSION_PROBE_CODES.map((code) => [code, answers[code] === true])
+  ) as StaffPermissionProbeResult;
 }
 
 export async function probeCanManageStaff(): Promise<boolean> {

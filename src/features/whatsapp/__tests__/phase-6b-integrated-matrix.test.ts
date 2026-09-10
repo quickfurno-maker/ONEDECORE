@@ -97,7 +97,7 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 67, "Migration count must be exactly 67");
+    assert.equal(files.length, 69, "Migration count must be exactly 69");
 
     // Workforce V1 attendance lifecycle. Still no payment M38.
     const workforce = files.filter((f) => f.startsWith("20260902160000"));
@@ -232,6 +232,14 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
         // them from Supabase's default GRANT ALL. Removes privilege only:
         // creates no table, no function and no COD or payment surface.
         "20260909120000_revoke_authenticated_truncate_trigger.sql",
+        // Batches permission checks into one round trip by looping over the
+        // existing public.authorize. Adds one function, no table, and no COD
+        // or payment surface of any kind.
+        "20260910120000_authorize_many_batch_rpc.sql",
+        // Drops three plain indexes a UNIQUE constraint index already covered.
+        // Removes redundancy only: creates nothing and no COD or payment
+        // surface of any kind.
+        "20260910130000_drop_redundant_shadow_indexes.sql",
       ],
       "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, CRM 2A-7, CRM 2C cadences, CRM 2D commercial read models, the lead_notes INSERT privilege redrift repair, CRM 2E management analytics, the WhatsApp lead-link repair, and the Workforce V1 attendance lifecycle may follow 9D-D1 COD order foundation"
     );

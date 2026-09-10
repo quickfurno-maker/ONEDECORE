@@ -118,16 +118,23 @@ function input(
 /* ========================================================================== */
 
 describe("SLA settings authorization probe", () => {
-  test("a dedicated probe asks the DB authorize() for crm.sla.manage", () => {
+  test("a dedicated probe asks the DB for crm.sla.manage and nothing else", () => {
+    /*
+     * The permission is now resolved through `authorize_many`, which loops over
+     * the same `public.authorize`. What still matters here is that SLA policy
+     * administration has its OWN code and its own probe, so it can never be
+     * granted as a side effect of another permission.
+     */
     const src = stripComments(readSrc(CRM_PERMISSIONS));
     assert.match(src, /export async function probeSlaPolicyPermissions/);
+    assert.match(src, /SLA_POLICY_CODES = \["crm\.sla\.manage"\]/);
     assert.match(
       src,
-      /probeSlaPolicyPermissions[\s\S]*?requested_permission:\s*"crm\.sla\.manage"/
+      /probeSlaPolicyPermissions[\s\S]*?authorizeMany\(SLA_POLICY_CODES/
     );
     assert.match(
       src,
-      /probeSlaPolicyPermissions[\s\S]*?canManageSlaPolicy:\s*!error && data === true/
+      /slaPolicyPermissionsFrom[\s\S]*?canManageSlaPolicy:\s*granted\(answers, "crm\.sla\.manage"\)/
     );
   });
 
@@ -137,7 +144,8 @@ describe("SLA settings authorization probe", () => {
     );
     const auth = stripComments(readSrc(CRM_AUTH));
     assert.match(access, /readonly canManageSlaPolicy: boolean;/);
-    assert.match(auth, /probeSlaPolicyPermissions\((?:db)?\),/);
+    // Resolved from the single batched answer set rather than its own call.
+    assert.match(auth, /slaPolicyPermissions = slaPolicyPermissionsFrom\(answers\)/);
     assert.match(
       auth,
       /canManageSlaPolicy:\s*slaPolicyPermissions\.canManageSlaPolicy,/
@@ -839,7 +847,7 @@ describe("containment", () => {
     const migrations = readdirSync(join(root, "supabase/migrations")).filter(
       (name) => name.endsWith(".sql")
     );
-    assert.equal(migrations.length, 67);
+    assert.equal(migrations.length, 69);
     // CRM SLA admin settings itself added no migration; the 50th is
     // Workforce V1 attendance lifecycle.
     assert.ok(

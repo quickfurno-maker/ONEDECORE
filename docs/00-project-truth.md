@@ -130,8 +130,8 @@ own lawful basis.
 | 2 | Database security contracts | **MERGED** — PR #164; migration 67 **MANAGED_APPLIED** |
 | 3 | Repository truth + environment contract | **MERGED** — PR #165 |
 | 4 | Generated database types | **MERGED** — PR #166 |
-| 5 | Dependencies, HTTP/CSP | **this PR** |
-| 6 | Performance / index review | pending |
+| 5 | Dependencies, HTTP/CSP | **MERGED** — PR #167 |
+| 6 | Performance / index review | **this PR** |
 
 Feature activation remains separate from hardening and owner-gated throughout.
 
@@ -143,6 +143,16 @@ and checked by `npm run verify:db-types` inside Database Quality. Nobody edits
 it. Application corrections — the RPC arguments that accept SQL NULL, which the
 generator cannot express — live in `src/types/database.ts`, which every Supabase
 client is parameterised by. See `docs/audits/lane-4-generated-database-types.md`.
+
+### Performance and authorization round trips
+
+`public.authorize` accounted for 65,586 of 78,938 managed database round trips.
+`public.authorize_many` answers many permission codes in one call by looping over
+`public.authorize`, so the access rules are unchanged and unduplicated; the CRM
+access context went from 21 round trips to 1, and the admin navigation from 99 to
+26. The largest remaining cost is the per-row RLS helper on `leads` — measured,
+diagnosed and deliberately deferred to its own lane. See
+`docs/audits/lane-6-performance-index-closeout.md`.
 
 ### Uploaded workbook ingestion
 

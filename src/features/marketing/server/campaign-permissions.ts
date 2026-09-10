@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { authorizeMany } from "@/server/auth/authorize-many";
 
 export interface CampaignPermissionProbeResult {
   readonly canReadCampaigns: boolean;
@@ -17,29 +18,47 @@ export interface CampaignPermissionProbeResult {
 
 export async function probeCampaignPermissions(): Promise<CampaignPermissionProbeResult> {
   const supabase = await createClient();
-  const [readRes, draftRes, requestRes, approveRes, consentRes, executeRes, pauseRes, metricsRes, sa, sm] =
-    await Promise.all([
-      supabase.rpc("authorize", { requested_permission: "campaigns.read" }),
-      supabase.rpc("authorize", { requested_permission: "campaigns.draft" }),
-      supabase.rpc("authorize", { requested_permission: "campaigns.request_approval" }),
-      supabase.rpc("authorize", { requested_permission: "campaigns.approve" }),
-      supabase.rpc("authorize", { requested_permission: "marketing_consents.manage" }),
-      supabase.rpc("authorize", { requested_permission: "campaigns.execute" }),
-      supabase.rpc("authorize", { requested_permission: "campaigns.pause" }),
-      supabase.rpc("authorize", { requested_permission: "campaigns.metrics.read" }),
+  /*
+   * Two round trips, not 10.
+   *
+   * `authorize_many` loops over `public.authorize`, so the access rules are
+   * unchanged; only the number of times this page asks them has. The role
+   * checks stay individual — `has_active_role` is about a thirtieth of the
+   * managed authorization traffic, and a second batch endpoint for it would
+   * be machinery bought for very little — but they no longer wait for the
+   * permissions, because neither read depends on the other.
+   */
+  const [answers, [
+    sa,
+    sm,
+  ]] = await Promise.all([
+    authorizeMany(
+      [
+        "campaigns.read",
+        "campaigns.draft",
+        "campaigns.request_approval",
+        "campaigns.approve",
+        "marketing_consents.manage",
+        "campaigns.execute",
+        "campaigns.pause",
+        "campaigns.metrics.read",
+      ] as const,
+      supabase
+    ),
+    Promise.all([
       supabase.rpc("has_active_role", { p_role_code: "super_admin" }),
       supabase.rpc("has_active_role", { p_role_code: "sales_manager" }),
-    ]);
-
+    ]),
+  ]);
   return {
-    canReadCampaigns: !readRes.error && readRes.data === true,
-    canDraftCampaigns: !draftRes.error && draftRes.data === true,
-    canRequestCampaignApproval: !requestRes.error && requestRes.data === true,
-    canApproveCampaigns: !approveRes.error && approveRes.data === true,
-    canManageMarketingConsent: !consentRes.error && consentRes.data === true,
-    canExecuteCampaigns: !executeRes.error && executeRes.data === true,
-    canPauseCampaigns: !pauseRes.error && pauseRes.data === true,
-    canReadCampaignMetrics: !metricsRes.error && metricsRes.data === true,
+    canReadCampaigns: answers["campaigns.read"],
+    canDraftCampaigns: answers["campaigns.draft"],
+    canRequestCampaignApproval: answers["campaigns.request_approval"],
+    canApproveCampaigns: answers["campaigns.approve"],
+    canManageMarketingConsent: answers["marketing_consents.manage"],
+    canExecuteCampaigns: answers["campaigns.execute"],
+    canPauseCampaigns: answers["campaigns.pause"],
+    canReadCampaignMetrics: answers["campaigns.metrics.read"],
     isSuperAdmin: !sa.error && sa.data === true,
     isSalesManager: !sm.error && sm.data === true,
   };

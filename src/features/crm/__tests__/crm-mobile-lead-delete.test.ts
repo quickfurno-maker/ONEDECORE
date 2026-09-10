@@ -205,12 +205,20 @@ describe("the policy endpoint answers a capability, not a role", () => {
       /canDelete: auth\.context\.canDeleteLeads/
     );
 
-    /* Which is `leads.delete`, and only that. */
+    /*
+     * Which is `leads.delete`, and only that.
+     *
+     * The permission is now resolved in a batch rather than a per-code RPC, so
+     * the assertion is on the code the deletion probe reads — the mapper is
+     * pure and its behaviour is covered directly in
+     * `src/server/auth/__tests__/authorize-many.test.ts`.
+     */
     const permissions = read(
       "src", "features", "crm", "server", "crm-permissions.ts"
     );
 
-    assert.match(permissions, /requested_permission: "leads\.delete"/);
+    assert.match(permissions, /LEAD_DELETION_CODES = \["leads\.delete"\]/);
+    assert.match(permissions, /granted\(answers, "leads\.delete"\)/);
   });
 
   test("no role name appears anywhere in the slice", () => {

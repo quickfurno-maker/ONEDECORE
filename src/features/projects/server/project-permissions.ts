@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import type { CrmRoleCode } from "@/features/crm/contracts/permissions";
+import { authorizeMany } from "@/server/auth/authorize-many";
 
 export interface ProjectPermissionProbeResult {
   readonly canReadProjects: boolean;
@@ -29,46 +30,53 @@ export interface ProjectPermissionProbeResult {
 
 export async function probeProjectPermissions(): Promise<ProjectPermissionProbeResult> {
   const supabase = await createClient();
-  const [
-    readRes,
-    highLevelRes,
-    assignRes,
-    acceptRes,
-    designRead,
-    designStaff,
-    executionRead,
-    executionCancel,
+  /*
+   * Two round trips, not 13.
+   *
+   * `authorize_many` loops over `public.authorize`, so the access rules are
+   * unchanged; only the number of times this page asks them has. The role
+   * checks stay individual — `has_active_role` is about a thirtieth of the
+   * managed authorization traffic, and a second batch endpoint for it would
+   * be machinery bought for very little — but they no longer wait for the
+   * permissions, because neither read depends on the other.
+   */
+  const [answers, [
     sa,
     sm,
     se,
     pm,
     designer,
-  ] =
-    await Promise.all([
-      supabase.rpc("authorize", { requested_permission: "projects.read" }),
-      supabase.rpc("authorize", { requested_permission: "projects.read_high_level" }),
-      supabase.rpc("authorize", { requested_permission: "projects.assign_pm" }),
-      supabase.rpc("authorize", { requested_permission: "projects.accept_handover" }),
-      supabase.rpc("authorize", { requested_permission: "project_design.read" }),
-      supabase.rpc("authorize", { requested_permission: "project_design.staff" }),
-      supabase.rpc("authorize", { requested_permission: "project_execution.read" }),
-      supabase.rpc("authorize", { requested_permission: "project_execution.cancel" }),
+  ]] = await Promise.all([
+    authorizeMany(
+      [
+        "projects.read",
+        "projects.read_high_level",
+        "projects.assign_pm",
+        "projects.accept_handover",
+        "project_design.read",
+        "project_design.staff",
+        "project_execution.read",
+        "project_execution.cancel",
+      ] as const,
+      supabase
+    ),
+    Promise.all([
       supabase.rpc("has_active_role", { p_role_code: "super_admin" }),
       supabase.rpc("has_active_role", { p_role_code: "sales_manager" }),
       supabase.rpc("has_active_role", { p_role_code: "sales_executive" }),
       supabase.rpc("has_active_role", { p_role_code: "project_manager" }),
       supabase.rpc("has_active_role", { p_role_code: "designer" }),
-    ]);
-
+    ]),
+  ]);
   return {
-    canReadProjects: !readRes.error && readRes.data === true,
-    canReadProjectsHighLevel: !highLevelRes.error && highLevelRes.data === true,
-    canAssignPm: !assignRes.error && assignRes.data === true,
-    canAcceptHandover: !acceptRes.error && acceptRes.data === true,
-    canReadDesign: !designRead.error && designRead.data === true,
-    canStaffDesigners: !designStaff.error && designStaff.data === true,
-    canReadExecution: !executionRead.error && executionRead.data === true,
-    canCancelExecution: !executionCancel.error && executionCancel.data === true,
+    canReadProjects: answers["projects.read"],
+    canReadProjectsHighLevel: answers["projects.read_high_level"],
+    canAssignPm: answers["projects.assign_pm"],
+    canAcceptHandover: answers["projects.accept_handover"],
+    canReadDesign: answers["project_design.read"],
+    canStaffDesigners: answers["project_design.staff"],
+    canReadExecution: answers["project_execution.read"],
+    canCancelExecution: answers["project_execution.cancel"],
     isSuperAdmin: !sa.error && sa.data === true,
     isSalesManager: !sm.error && sm.data === true,
     isSalesExecutive: !se.error && se.data === true,
