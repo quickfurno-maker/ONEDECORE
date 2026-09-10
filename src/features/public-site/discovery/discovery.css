@@ -135,6 +135,92 @@
   display: block;
 }
 
+/*
+ * The gateway hero.
+ *
+ * Mobile first, and mobile is where this is hardest: the copy has to be
+ * readable over photography on a 360px screen without covering the part of the
+ * image worth showing. So the block sits at the BOTTOM of the frame, the scrim
+ * under it is strongest there, and the height is capped in `dvh` so the first
+ * screen is never entirely hero with nothing beneath it to scroll to.
+ */
+.od-disc-hero.od-disc-hero--gateway {
+  min-height: clamp(30rem, 78dvh, 44rem);
+  padding: 0;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: end;
+}
+
+.od-disc-hero--gateway .od-disc-hero__copy {
+  grid-row: 2;
+  position: relative;
+  z-index: 2;
+  max-width: 46rem;
+  padding-bottom: clamp(3.25rem, 8vw, 4.5rem);
+  padding-top: clamp(2rem, 6vw, 3rem);
+}
+
+.od-disc-hero__eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: clamp(0.68rem, 1.6vw, 0.76rem);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--od-text-secondary) 82%, var(--od-text-primary));
+}
+
+.od-disc-hero--gateway h1 {
+  margin: 0;
+  font-size: clamp(2.1rem, 6.4vw, 4rem);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  max-width: 18ch;
+}
+
+.od-disc-hero--gateway .od-disc-hero__lede {
+  max-width: 44ch;
+}
+
+/*
+ * Two paths, side by side at every width.
+ *
+ * They wrap rather than shrink: a 360px screen shows them stacked and full
+ * width, which is easier to hit than two half-width buttons, and each keeps the
+ * 48px minimum height the shared button rule sets.
+ */
+.od-disc-hero__actions {
+  margin-top: clamp(1.25rem, 3.5vw, 1.75rem);
+}
+
+@media (max-width: 30rem) {
+  .od-disc-hero__actions .od-disc-btn {
+    flex: 1 1 100%;
+  }
+}
+
+/*
+ * A stronger scrim under the gateway copy than the image-only hero needed.
+ * Legibility cannot depend on which slide is showing: a bright travertine frame
+ * has to hold white text as well as a dusk one does.
+ */
+.od-disc-hero--gateway .od-disc-hero__media::after {
+  background:
+    linear-gradient(90deg, rgba(8, 7, 6, 0.86) 0%, rgba(8, 7, 6, 0.55) 52%, rgba(8, 7, 6, 0.3) 100%),
+    linear-gradient(180deg, rgba(8, 7, 6, 0.24) 0%, rgba(8, 7, 6, 0.5) 46%, rgba(8, 7, 6, 0.88) 100%);
+}
+
+/* The dots sit above the copy block rather than under it. */
+.od-disc-hero--gateway .od-disc-hero__dots {
+  position: absolute;
+  inset: auto 0 clamp(0.5rem, 2vw, 1rem) 0;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  gap: 0.3rem;
+  pointer-events: auto;
+}
+
 @media (min-width: 768px) {
   .od-disc-hero.od-disc-hero--imageOnly {
     min-height: clamp(24rem, 68vh, 42rem);
@@ -2928,9 +3014,33 @@
   animation: od-wa-wiggle 10s ease-in-out 4s infinite;
 }
 
+/*
+ * From 768px up the dock stops being a full-width bar and becomes a pill in
+ * the bottom-RIGHT corner — the corner the FAB already occupies. The old
+ * desktop offset (1.5–2.5rem) put the button on top of it: measured on the
+ * built page, the FAB overlapped "Get Free Design Consultation" at 768, 1024,
+ * 1440 and 1920, clipping the label at every one of them.
+ *
+ * Clearing it is vertical, not horizontal. Moving the FAB left would put it
+ * over the page content and away from the thumb/cursor corner people reach for;
+ * stacking it directly above the pill keeps both in the same corner with the
+ * dock — the primary action — nearest the edge.
+ *
+ * 4.75rem is the pill's 63px plus a 13px gap, the same clearance the Interiors
+ * sticky bar gets in `home-r4.css`.
+ */
+@media (min-width: 768px) {
+  .od-disc-wa {
+    /* Share the dock's gutter so the two line up on the right edge. */
+    inset-inline-end: clamp(1rem, 3vw, 1.75rem);
+    inset-block-end: calc(clamp(1rem, 2.5vw, 1.5rem) + 4.75rem);
+  }
+}
+
 @media (min-width: 1024px) {
   .od-disc-wa {
-    inset-block-end: clamp(1.5rem, 4vw, 2.5rem);
+    inset-inline-end: 1.5rem;
+    inset-block-end: calc(1.5rem + 4.75rem);
   }
 }
 
@@ -3285,4 +3395,92 @@
 
 .od-disc-consult--compact .od-disc-consult__benefits {
   margin-bottom: 24px;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* About — why the two verticals share one name                               */
+/* -------------------------------------------------------------------------- */
+
+.od-disc-about__lede {
+  margin-top: 1rem;
+  max-width: 62ch;
+}
+
+/*
+ * Two columns on desktop, stacked on mobile, separated by a hairline rather
+ * than boxed. Two boxed cards side by side would read as a comparison table —
+ * "pick one" — and these are not alternatives to weigh up so much as two doors.
+ */
+.od-disc-about__grid {
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 2.75rem);
+  margin-top: clamp(2rem, 5vw, 3rem);
+}
+
+@media (min-width: 48rem) {
+  .od-disc-about__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .od-disc-about__grid--one {
+    grid-template-columns: minmax(0, 34rem);
+  }
+
+  .od-disc-about__item + .od-disc-about__item {
+    padding-left: clamp(1.5rem, 4vw, 2.75rem);
+    border-left: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  }
+}
+
+.od-disc-about__item h3 {
+  margin: 0 0 0.6rem;
+  font-size: clamp(1.15rem, 2.4vw, 1.4rem);
+  font-weight: 600;
+}
+
+.od-disc-about__item p {
+  margin: 0;
+  max-width: 46ch;
+  line-height: 1.6;
+  color: color-mix(in srgb, currentColor 78%, transparent);
+}
+
+.od-disc-about__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+}
+
+.od-disc-why__cta {
+  margin-top: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Anchor destinations                                                        */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * `#about` and `#contact` are linked from every public page's menu, and the
+ * header is sticky — without this the heading lands underneath it and the
+ * visitor sees the middle of a paragraph.
+ */
+#about,
+#contact {
+  scroll-margin-top: calc(var(--dc-nav-h, 60px) + 24px);
+}
+
+/*
+ * `#consultation` is an alias for the same closing band, kept because
+ * `/portfolio/[slug]` and the Shop nav link to it. It is a zero-size marker, so
+ * it carries the offset itself.
+ */
+.od-disc-anchor-alias {
+  display: block;
+  height: 0;
+  scroll-margin-top: calc(var(--dc-nav-h, 60px) + 24px);
 }

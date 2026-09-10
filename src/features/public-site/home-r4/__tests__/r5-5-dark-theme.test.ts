@@ -82,9 +82,19 @@ describe("R5.5 homepage light-band removal", () => {
     assert.match(faq, /--od-bg-raised|--pm-ivory/);
   });
 
-  test("homepage loads featured portfolio preview without force-dynamic", () => {
+  test("homepage renders the interiors page without force-dynamic", () => {
+    /*
+     * THE ROOT IS THE INTERIORS PAGE NOW.
+     *
+     * It renders `InteriorsConversionPage` — the same component `/interiors`
+     * used to, and `/interiors` is a 308 to here. The portfolio preview that
+     * this assertion used to require belonged to the common homepage that the
+     * Interiors page replaced; the route reads no commerce or portfolio data
+     * at all any more, which is the point rather than an omission.
+     */
     const source = read(page);
-    assert.match(source, /getFeaturedProjects/);
+    assert.match(source, /InteriorsConversionPage/);
+    assert.doesNotMatch(source, /getFeaturedProjects/);
     assert.doesNotMatch(source, /force-dynamic/);
   });
 });

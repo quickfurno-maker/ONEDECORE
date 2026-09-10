@@ -139,21 +139,24 @@ describe("Phase 10 consultation conversion path", () => {
     /*
      * THE SHAPE CHANGED WITH THE CONSOLIDATION.
      *
-     * Service, scope, budget and timeline are answered on the guided steps
-     * BEFORE this one; the brief owns only the contact fields, the optional
-     * Pune area, the optional message and the single consent. It therefore
-     * neither reads `PM_PLANNER` nor sets a service — and it must never touch
-     * `property`, which the v4 contract does not carry at all.
+     * The single-panel redesign moved scope, budget and timeline into this
+     * component, so it now owns the whole visible form: the requirement, the
+     * optional Pune area, the contact fields, the optional message and the
+     * single consent. It sets the service only by DERIVING it from the chosen
+     * scope, and it must never touch `property`, which the v4 contract does
+     * not carry at all.
      */
     const capture = readFileSync(
       join(root, "src/features/lead-intake/public/UnifiedLeadBrief.tsx"),
       "utf8"
     );
-    assert.match(capture, /Where should we send the plan\?/);
+    assert.match(capture, /Your requirement/);
+    assert.match(capture, /Your details/);
     assert.match(capture, /Area in Pune/);
     assert.match(capture, /plan\.setContact/);
     assert.doesNotMatch(capture, /plan\.setProperty/);
-    assert.doesNotMatch(capture, /plan\.setService/);
+    // Derived from the scope, never asked for directly.
+    assert.match(capture, /serviceForProjectScope\(scope\)/);
     /*
      * Comment-stripped: the docblock uses "silently" in prose about drift and
      * about the anti-bot window. The rule is about CODE that fabricates a

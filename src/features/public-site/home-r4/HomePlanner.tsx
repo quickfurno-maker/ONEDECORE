@@ -1,22 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
-import {
-  PM_PLANNER,
-  type PmServiceId,
-  type PmStep,
-  type PmTimelineId,
-} from "./content";
+import { useEffect, useId, useRef } from "react";
+import { PM_PLANNER } from "./content";
 import { usePlan } from "./PlanContext";
-import { homeStepComplete } from "./plan-state";
-import {
-  budgetRangesForProjectScope,
-  LEAD_PROJECT_SCOPE_CODES,
-  PROJECT_SCOPE_LABELS,
-  SERVICE_BY_PROJECT_SCOPE,
-  type LeadProjectScopeCode,
-} from "../../lead-intake/project-scope";
-import { v4RequiresScope } from "../../lead-intake/contracts";
 import { UnifiedLeadBrief } from "../../lead-intake/public/UnifiedLeadBrief";
 import { LeadSubmissionSuccess } from "../../lead-intake/public/LeadSubmissionSuccess";
 import { useLeadConsultation } from "../../lead-intake/public/LeadConsultationHost";
@@ -44,168 +30,6 @@ function CloseIcon() {
   );
 }
 
-function CheckIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="14"
-      height="14"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M5 12.5l4.2 4.2L19 7"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ArrowIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M4 12h14m0 0l-5.5-5.5M18 12l-5.5 5.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** Animated progress rail plus per-step status dots. */
-function PlanProgress({ compact = false }: { readonly compact?: boolean }) {
-  const plan = usePlan();
-  const { step, progress, setStep, service, timeline } = plan;
-
-  /*
-   * V4 FACTS ONLY.
-   *
-   * This used to ask whether `property` was set -- a `home-r4-v1` field that
-   * step 2 no longer collects. Under v4 the Home step is a project scope plus a
-   * budget band from that scope's ladder, and `custom-wardrobes` skips it
-   * entirely. Reading the old field meant the rail's step buttons stayed
-   * disabled for every visitor: the form worked forwards and was frozen
-   * backwards, so nobody could return to an answered step.
-   *
-   * `homeStepComplete` is the same predicate the Continue button and the
-   * request adapter use, so the rail cannot disagree with either.
-   */
-  const homeDone = homeStepComplete(plan);
-
-  const reached = (target: PmStep): boolean => {
-    if (target === 1) return true;
-    if (target === 2) return Boolean(service);
-    if (target === 3) return Boolean(service) && homeDone;
-    return Boolean(service) && homeDone && Boolean(timeline);
-  };
-
-  return (
-    <div className="pm-progress" data-compact={compact ? "" : undefined}>
-      <div
-        className="pm-progress__rail"
-        role="progressbar"
-        aria-label={PM_PLANNER.progressLabel}
-        aria-valuenow={progress}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <span
-          className="pm-progress__fill"
-          style={{ transform: `scaleX(${progress / 100})` }}
-        />
-      </div>
-      <ol className="pm-progress__steps">
-        {PM_PLANNER.steps.map((entry) => {
-          const id = entry.id as PmStep;
-          const isCurrent = id === step;
-          const isDone = reached(id) && id < step;
-          return (
-            <li key={entry.id}>
-              <button
-                type="button"
-                className="pm-progress__step"
-                data-current={isCurrent ? "" : undefined}
-                data-done={isDone ? "" : undefined}
-                aria-current={isCurrent ? "step" : undefined}
-                disabled={!reached(id)}
-                onClick={() => setStep(id)}
-              >
-                <span className="pm-progress__dot" aria-hidden="true">
-                  {isDone ? <CheckIcon /> : entry.id}
-                </span>
-                <span className="pm-progress__label">{entry.short}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-    </div>
-  );
-}
-
-interface OptionListProps {
-  readonly name: string;
-  readonly legend: string;
-  readonly options: readonly { readonly id: string; readonly label: string }[];
-  readonly selected: string | null;
-  readonly onSelect: (id: string) => void;
-  readonly columns?: "auto" | "two";
-}
-
-function OptionList({
-  name,
-  legend,
-  options,
-  selected,
-  onSelect,
-  columns = "auto",
-}: OptionListProps) {
-  return (
-    <fieldset className="pm-fieldset">
-      <legend className="pm-legend">{legend}</legend>
-      <div className="pm-options" data-columns={columns}>
-        {options.map((option, index) => {
-          const isSelected = selected === option.id;
-          return (
-            <label
-              key={option.id}
-              className="pm-option"
-              data-selected={isSelected ? "" : undefined}
-              style={{ "--pm-option-index": index } as React.CSSProperties}
-            >
-              <input
-                type="radio"
-                name={name}
-                value={option.id}
-                checked={isSelected}
-                onChange={() => onSelect(option.id)}
-              />
-              <span className="pm-option__tick" aria-hidden="true">
-                <CheckIcon />
-              </span>
-              <span className="pm-option__label">{option.label}</span>
-            </label>
-          );
-        })}
-      </div>
-    </fieldset>
-  );
-}
-
 /* ------------------------------------------------------------------- body */
 
 interface PlannerBodyProps {
@@ -222,41 +46,8 @@ interface PlannerBodyProps {
  * - nesting the brief inside another form would be invalid HTML and would let
  * Enter on a radio button reach the wrong submit handler.
  */
-function PlannerBody({ idPrefix, onClose, compactHeader }: PlannerBodyProps) {
+function PlannerBody({ onClose, compactHeader }: PlannerBodyProps) {
   const plan = usePlan();
-  const [errors, setErrors] = useState<readonly string[]>([]);
-  const errorRef = useRef<HTMLDivElement | null>(null);
-
-  const scopeAsked = plan.service != null && v4RequiresScope(plan.service);
-  const scopeOptions = plan.service
-    ? LEAD_PROJECT_SCOPE_CODES.filter(
-        (scope) => SERVICE_BY_PROJECT_SCOPE[scope] === plan.service,
-      )
-    : LEAD_PROJECT_SCOPE_CODES;
-  const budgetOptions = budgetRangesForProjectScope(plan.projectScope);
-
-  const handleContinue = () => {
-    if (plan.step === 1 && !plan.service) {
-      setErrors(["Choose a service to continue."]);
-      return;
-    }
-    if (plan.step === 2 && !homeStepComplete(plan)) {
-      setErrors(
-        plan.projectScope
-          ? ["Choose a budget range to continue."]
-          : ["Choose the size of your home to continue."],
-      );
-      return;
-    }
-    if (plan.step === 3 && !plan.timeline) {
-      setErrors(["Choose a timeline to continue."]);
-      return;
-    }
-    setErrors([]);
-    plan.goNext();
-  };
-
-  const legend = PM_PLANNER.steps[plan.step - 1]!.legend;
 
   /*
    * ONCE THE LEAD IS ACCEPTED, THE STEPS ARE OVER.
@@ -297,15 +88,30 @@ function PlannerBody({ idPrefix, onClose, compactHeader }: PlannerBodyProps) {
     );
   }
 
+  /*
+   * ONE PANEL, NOT FOUR STEPS.
+   *
+   * The sheet used to walk a visitor through service -> home -> timeline ->
+   * brief, with a progress rail and Back/Continue. Every one of those screens
+   * asked a single question, so the flow spent four transitions collecting what
+   * fits on one screen — and each transition is somewhere to abandon.
+   *
+   * The questions are unchanged and so is the contract behind them: the same
+   * plan state, the same adapter, the same submission. What changed is that
+   * they are all visible at once, in reading order, which is what a short form
+   * should be. `PlanProgress`, `OptionList` and the step machinery in
+   * `PlanContext` are left in place rather than ripped out — this is a UI pass,
+   * and removing them is a cleanup lane of its own.
+   */
   return (
-    <div className="pm-planner__form">
+    <div className="pm-planner__form od-lead">
       <header
         className="pm-planner__head"
         data-compact={compactHeader ? "" : undefined}
       >
         <div>
           <p className="pm-planner__title">{PM_PLANNER.title}</p>
-          <p className="pm-planner__hint">{legend}</p>
+          <p className="pm-planner__hint">{PM_PLANNER.entryHint}</p>
         </div>
         {onClose ? (
           <button
@@ -319,161 +125,13 @@ function PlannerBody({ idPrefix, onClose, compactHeader }: PlannerBodyProps) {
         ) : null}
       </header>
 
-      <PlanProgress />
-
-      {errors.length > 0 ? (
-        <div ref={errorRef} className="pm-errors" role="alert" tabIndex={-1}>
-          <p className="pm-errors__title">{PM_PLANNER.errorSummaryTitle}</p>
-          <ul>
-            {errors.map((error) => (
-              <li key={error}>{error}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {/* key forces the enter animation on every step change */}
-      <div className="pm-planner__panel" key={plan.step} data-step={plan.step}>
-        {plan.step === 1 ? (
-          <OptionList
-            name={`${idPrefix}-service`}
-            legend={PM_PLANNER.steps[0]!.legend}
-            options={PM_PLANNER.services}
-            selected={plan.service}
-            onSelect={(id) => {
-              plan.setService(id as PmServiceId);
-              setErrors([]);
-            }}
-          />
-        ) : null}
-
-        {plan.step === 2 ? (
-          scopeAsked ? (
-            <>
-              <OptionList
-                name={`${idPrefix}-scope`}
-                legend={PM_PLANNER.scopeLegend}
-                options={scopeOptions.map((scope) => ({
-                  id: scope,
-                  label: PROJECT_SCOPE_LABELS[scope],
-                }))}
-                selected={plan.projectScope}
-                columns="two"
-                onSelect={(id) => {
-                  plan.setProjectScope(id as LeadProjectScopeCode);
-                  setErrors([]);
-                }}
-              />
-              {/*
-                The budget ladder is per-scope, so it cannot be shown before the
-                scope is chosen: there is no generic ladder to fall back to, and
-                offering one scope's bands under another's heading would put a
-                pairing on screen that the contract refuses.
-              */}
-              {plan.projectScope ? (
-                <OptionList
-                  name={`${idPrefix}-budget`}
-                  legend={PM_PLANNER.budgetRangeLegend}
-                  options={budgetOptions.map((option) => ({
-                    id: option.code,
-                    label: option.label,
-                  }))}
-                  selected={plan.budgetRange}
-                  columns="two"
-                  onSelect={(id) => {
-                    plan.setBudgetRange(id);
-                    setErrors([]);
-                  }}
-                />
-              ) : (
-                <p className="pm-planner__hint">
-                  {PM_PLANNER.budgetRangeLockedHint}
-                </p>
-              )}
-            </>
-          ) : (
-            /*
-              CUSTOM WARDROBES ASK NOTHING HERE, AND THAT IS DELIBERATE.
-
-              No scope on this form describes a wardrobe job, and there is no
-              owner-approved wardrobe budget ladder. The honest answer is to say
-              so and move on; inventing a band would put a number in CRM that
-              nobody quoted and nobody chose.
-            */
-            <p className="pm-planner__hint">{PM_PLANNER.wardrobeScopeNote}</p>
-          )
-        ) : null}
-
-        {plan.step === 3 ? (
-          /*
-            Rooms used to be collected here too. `public-consult-v4` forbids the
-            field, so the control is gone rather than hidden: a question whose
-            answer the contract refuses is a question we should not be asking.
-          */
-          <OptionList
-            name={`${idPrefix}-timeline`}
-            legend={PM_PLANNER.steps[2]!.legend}
-            options={PM_PLANNER.timelines}
-            selected={plan.timeline}
-            columns="two"
-            onSelect={(id) => {
-              plan.setTimeline(id as PmTimelineId);
-              setErrors([]);
-            }}
-          />
-        ) : null}
-
-        {plan.step === 4 ? (
-          <UnifiedLeadBrief onSubmitted={plan.markSubmitted} />
-        ) : null}
-      </div>
-
-      <p className="pm-planner__reassurance">{PM_PLANNER.reassurance}</p>
-
-      {/*
-        The submit control belongs to the brief's own form, so this row carries
-        Back and Continue only. On step 4 there is nothing left to continue to.
-      */}
-      <div className="pm-planner__actions">
-        {plan.step > 1 ? (
-          <button
-            type="button"
-            className="dc-btn dc-btn--ghost"
-            onClick={() => {
-              setErrors([]);
-              plan.goBack();
-            }}
-          >
-            {PM_PLANNER.backLabel}
-          </button>
-        ) : (
-          <span />
-        )}
-
-        {plan.step < 4 ? (
-          <button
-            type="button"
-            className="dc-btn dc-btn--primary pm-btn--sheen"
-            onClick={handleContinue}
-          >
-            {PM_PLANNER.continueLabel}
-            <ArrowIcon />
-          </button>
-        ) : (
-          <span />
-        )}
+      <div className="pm-planner__panel" data-step="single">
+        <UnifiedLeadBrief onSubmitted={plan.markSubmitted} />
       </div>
     </div>
   );
 }
 
-/* --------------------------------------------------------------- overlay */
-
-/**
- * Sheet behaviour: scroll lock, focus trap, Escape, focus restoration.
- * Depends only on `open` and the stable `closePlanner`, so typing inside the
- * sheet never re-runs the effect and never steals focus back to the first field.
- */
 function useSheetOverlay(open: boolean, closePlanner: () => void) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const restoreTo = useRef<HTMLElement | null>(null);

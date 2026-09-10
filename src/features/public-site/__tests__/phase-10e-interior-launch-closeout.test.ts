@@ -134,8 +134,12 @@ describe("Phase 10E — interior launch closeout", () => {
       assert.doesNotMatch(inactive, term);
     }
     assert.match(inactive, /Coming soon/);
-    // Still routes the visitor to the launch conversion path.
-    assert.match(inactive, /href="\/interiors"/);
+    /*
+     * Still routes the visitor to the launch conversion path — which is the
+     * site root now that the Interiors page is the homepage. Linking to
+     * `/interiors` here would send them through a 308 to reach it.
+     */
+    assert.match(inactive, /href="\/"/);
     assert.match(inactive, /href="\/portfolio"/);
   });
 

@@ -47,7 +47,15 @@ import {
   type ReactNode,
 } from "react";
 import { SINGLE_CONSENT_CONCISE_COPY } from "../../legal/consent-registry.ts";
-import { SUBMIT_LABEL } from "../project-scope.ts";
+import {
+  budgetRangesForProjectScope,
+  LEAD_PROJECT_SCOPE_CODES,
+  PROJECT_SCOPE_LABELS,
+  serviceForProjectScope,
+  SUBMIT_LABEL,
+  type LeadProjectScopeCode,
+} from "../project-scope.ts";
+import { PM_PLANNER } from "../../public-site/home-r4/content";
 import {
   usePlan,
   type LeadSubmissionResult,
@@ -89,9 +97,29 @@ import { unifiedLeadToRequest } from "./unified-lead-request.ts";
  * which are fields v4 forbids, and a key that cannot be produced here has no
  * business being reachable from here.
  */
-type BriefFieldKey = "name" | "mobile" | "consent";
+type BriefFieldKey =
+  | "scope"
+  | "budget"
+  | "timeline"
+  | "name"
+  | "mobile"
+  | "consent";
 
-const BRIEF_FIELD_ORDER: readonly BriefFieldKey[] = ["name", "mobile", "consent"];
+/**
+ * Validation order, which is also reading order.
+ *
+ * The first invalid control is the one that gets focus, so this list decides
+ * where a visitor is sent when they submit an incomplete form. Top to bottom is
+ * the only ordering that does not feel arbitrary.
+ */
+const BRIEF_FIELD_ORDER: readonly BriefFieldKey[] = [
+  "scope",
+  "budget",
+  "timeline",
+  "name",
+  "mobile",
+  "consent",
+];
 
 /*
  * THE OWNER-APPROVED WORDING, FROM THE ONE PLACE THAT HOLDS IT.
@@ -115,6 +143,29 @@ export interface UnifiedLeadBriefProps {
   readonly onSubmitted?: (result: LeadSubmissionResult) => void;
 }
 
+/** The one affordance a styled select needs: something that says "opens". */
+function ChevronIcon() {
+  return (
+    <svg
+      className="od-lead__chevron"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m6 9 6 6 6-6"
+      />
+    </svg>
+  );
+}
+
 function pulseInvalidHaptic(): void {
   if (typeof navigator === "undefined") return;
   if (typeof navigator.vibrate !== "function") return;
@@ -130,6 +181,9 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
   const { trustedContexts } = useLeadConsultation();
   const formId = useId();
 
+  const scopeRef = useRef<HTMLSelectElement>(null);
+  const budgetRef = useRef<HTMLSelectElement>(null);
+  const timelineRef = useRef<HTMLSelectElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const mobileRef = useRef<HTMLInputElement>(null);
   const consentRef = useRef<HTMLInputElement>(null);
@@ -157,7 +211,14 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
 
   const fieldRefs: Record<BriefFieldKey, React.RefObject<HTMLElement | null>> =
     useMemo(
-      () => ({ name: nameRef, mobile: mobileRef, consent: consentRef }),
+      () => ({
+        scope: scopeRef,
+        budget: budgetRef,
+        timeline: timelineRef,
+        name: nameRef,
+        mobile: mobileRef,
+        consent: consentRef,
+      }),
       []
     );
 
@@ -168,6 +229,37 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
       }
     };
   }, []);
+
+  /*
+   * THE VISIBLE QUESTION IS THE SCOPE; THE SERVICE IS DERIVED FROM IT.
+   *
+   * A visitor knows they have a 2 BHK. They do not know, and should not be
+   * asked, whether ONEDECORE files that under `complete-home-interiors` or
+   * `modular-kitchens` — that is our vocabulary, not theirs. So one dropdown
+   * asks the thing they can answer and `serviceForProjectScope` supplies the
+   * service code, which is the same mapping the server validator and the SQL
+   * both check the pair against. The request still carries both fields, and
+   * they agree by construction rather than by the visitor getting it right.
+   *
+   * Order matters in `chooseScope`: `setService` clears a scope belonging to a
+   * different service, so it has to run BEFORE the new scope is written, or it
+   * would immediately wipe what was just chosen.
+   */
+  const budgetOptions = budgetRangesForProjectScope(plan.projectScope);
+  const budgetUnlocked = budgetOptions.length > 0;
+
+  const chooseScope = (scope: LeadProjectScopeCode) => {
+    const service = serviceForProjectScope(scope);
+    if (service) plan.setService(service);
+    plan.setProjectScope(scope);
+    clearFieldError("scope");
+    /*
+     * A new scope brings a new ladder, and `setProjectScope` drops a band that
+     * does not belong to it. Clearing the budget error too keeps the form from
+     * showing a complaint about a control that has just been reset.
+     */
+    clearFieldError("budget");
+  };
 
   const isSubmitting = uxState === "submitting";
   const isSuccess =
@@ -246,6 +338,22 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
      * because the control that would show it lives on an earlier step.
      */
     const next: Partial<Record<BriefFieldKey, string>> = {};
+    /*
+     * The requirement answers are validated here now that they are asked here.
+     * The adapter still refuses a bad pairing on its own — this only decides
+     * which control the visitor is sent back to, and with what sentence.
+     */
+    if (!plan.projectScope) {
+      next.scope = "Choose what you need interiors for.";
+    }
+    if (!plan.budgetRange) {
+      next.budget = plan.projectScope
+        ? "Choose a budget range."
+        : "Choose a requirement first, then a budget.";
+    }
+    if (!plan.timeline) {
+      next.timeline = "Choose when you would like to start.";
+    }
     const trimmedName = name.trim();
     if (
       trimmedName.length < LEAD_FORM_FIELD_LIMITS.nameMin ||
@@ -409,8 +517,130 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
         </p>
       ) : null}
 
-      <fieldset className="pm-fieldset" disabled={isSubmitting}>
-        <legend className="pm-legend">Where should we send the plan?</legend>
+      <fieldset className="pm-fieldset od-lead__group" disabled={isSubmitting}>
+        <legend className="pm-legend od-lead__legend">Your requirement</legend>
+
+        <div className={fieldClass("scope")}>
+          <label htmlFor={`${formId}-scope`}>What do you need interiors for?</label>
+          <div className="od-lead__selectWrap">
+            <select
+              ref={scopeRef}
+              id={`${formId}-scope`}
+              name="projectScope"
+              className="od-lead__select"
+              required
+              value={plan.projectScope ?? ""}
+              aria-invalid={Boolean(fieldErrors.scope)}
+              aria-describedby={describedBy("scope")}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (value) chooseScope(value as LeadProjectScopeCode);
+              }}
+            >
+              <option value="" disabled>
+                Select your requirement
+              </option>
+              {LEAD_PROJECT_SCOPE_CODES.map((scope) => (
+                <option key={scope} value={scope}>
+                  {PROJECT_SCOPE_LABELS[scope]}
+                </option>
+              ))}
+            </select>
+            <ChevronIcon />
+          </div>
+          {errorText("scope")}
+        </div>
+
+        <div className={fieldClass("budget")}>
+          <label htmlFor={`${formId}-budget`}>What&rsquo;s your estimated budget?</label>
+          <div className="od-lead__selectWrap">
+            {/*
+              Disabled until a requirement is chosen, because there is no
+              generic ladder to fall back to: each scope has its own bands, and
+              showing one scope's under another's heading would put a pairing on
+              screen that the contract refuses.
+            */}
+            <select
+              ref={budgetRef}
+              id={`${formId}-budget`}
+              name="budgetRange"
+              className="od-lead__select"
+              required
+              disabled={!budgetUnlocked}
+              value={plan.budgetRange ?? ""}
+              aria-invalid={Boolean(fieldErrors.budget)}
+              aria-describedby={describedBy("budget")}
+              onChange={(event) => {
+                plan.setBudgetRange(event.target.value);
+                clearFieldError("budget");
+              }}
+            >
+              <option value="" disabled>
+                {budgetUnlocked ? "Select a budget range" : "Choose a requirement first"}
+              </option>
+              {budgetOptions.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronIcon />
+          </div>
+          {errorText("budget")}
+        </div>
+
+        <div className={fieldClass("timeline")}>
+          <label htmlFor={`${formId}-timeline`}>When would you like to start?</label>
+          <div className="od-lead__selectWrap">
+            <select
+              ref={timelineRef}
+              id={`${formId}-timeline`}
+              name="timeline"
+              className="od-lead__select"
+              required
+              value={plan.timeline ?? ""}
+              aria-invalid={Boolean(fieldErrors.timeline)}
+              aria-describedby={describedBy("timeline")}
+              onChange={(event) => {
+                plan.setTimeline(event.target.value as never);
+                clearFieldError("timeline");
+              }}
+            >
+              <option value="" disabled>
+                Select a timeline
+              </option>
+              {PM_PLANNER.timelines.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronIcon />
+          </div>
+          {errorText("timeline")}
+        </div>
+
+        <div className="pm-field">
+          <label htmlFor={`${formId}-locality`}>
+            Area in Pune <span className="pm-opt">optional</span>
+          </label>
+          <input
+            id={`${formId}-locality`}
+            name="locality"
+            type="text"
+            autoComplete="address-level2"
+            placeholder="e.g. Kharadi, Baner, Wakad"
+            maxLength={LEAD_FORM_FIELD_LIMITS.localityMax}
+            value={plan.locality}
+            onChange={(event) =>
+              plan.setContact({ locality: event.target.value })
+            }
+          />
+        </div>
+      </fieldset>
+
+      <fieldset className="pm-fieldset od-lead__group" disabled={isSubmitting}>
+        <legend className="pm-legend od-lead__legend">Your details</legend>
 
         <div className={fieldClass("name")}>
           <label htmlFor={`${formId}-name`}>Your name</label>
@@ -437,6 +667,16 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
 
         <div className={fieldClass("mobile")}>
           <label htmlFor={`${formId}-mobile`}>Mobile number</label>
+          {/*
+            The +91 is a static affix, not an editable field and not a country
+            picker. The form accepts Indian mobiles only, the normaliser already
+            strips a pasted +91, and a second place to type a prefix would be a
+            second thing to disagree with it.
+          */}
+          <div className="od-lead__phone">
+            <span className="od-lead__phonePrefix" aria-hidden="true">
+              +91
+            </span>
           <input
             ref={mobileRef}
             id={`${formId}-mobile`}
@@ -476,30 +716,19 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
               }
             }}
           />
+          </div>
           <p id={`${formId}-mobile-hint`} className="pm-planner__hint">
             {INDIAN_MOBILE_HELPER}
           </p>
           {errorText("mobile")}
         </div>
 
-        <div className="pm-field">
-          <label htmlFor={`${formId}-locality`}>
-            Area in Pune <span className="pm-opt">optional</span>
-          </label>
-          <input
-            id={`${formId}-locality`}
-            name="locality"
-            type="text"
-            autoComplete="address-level2"
-            placeholder="e.g. Kharadi"
-            maxLength={LEAD_FORM_FIELD_LIMITS.localityMax}
-            value={plan.locality}
-            onChange={(event) =>
-              plan.setContact({ locality: event.target.value })
-            }
-          />
-        </div>
-
+        {/*
+          Kept, and kept last, because CRM already receives it and dropping a
+          field is a data loss disguised as a tidy-up. It is the only control
+          here a visitor can safely ignore, so it sits after the ones they
+          cannot.
+        */}
         <div className="pm-field">
           <label htmlFor={`${formId}-message`}>
             Anything else we should know{" "}

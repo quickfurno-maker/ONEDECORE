@@ -127,6 +127,19 @@ export function HomePlan() {
       aria-labelledby="pm-close-title"
     >
       <span id={PM_SECTION_IDS.plan} />
+      {/*
+        `#contact` lands here, on the section that already IS the contact.
+
+        The menu's Contact destination has to resolve to something now that the
+        Interiors page is the homepage, and this closing band is where a visitor
+        actually reaches ONEDECORE — it opens the one planner, through the one
+        `LeadConsultationHost`. A second contact form to satisfy a menu item
+        would be a second lead path to keep in step with the first.
+
+        `#consultation` above is the same target under its older name, kept
+        because `/portfolio/[slug]` and the Shop nav already link to it.
+      */}
+      <span id="contact" className="od-disc-anchor-alias" aria-hidden="true" />
       <span className="pm-close__glow" aria-hidden="true" />
       <div className="dc-container pm-close__inner">
         <div className="pm-close__intro">

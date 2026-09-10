@@ -75,24 +75,31 @@ describe("home-r4 production guards", () => {
   });
 
   test("homepage remains indexable and loads portfolio preview + lead mode", () => {
+    /*
+     * THE ROOT IS THE INTERIORS PAGE NOW.
+     *
+     * It renders `InteriorsConversionPage` — the same component `/interiors`
+     * used to, and `/interiors` is a 308 to here. The portfolio preview that
+     * this assertion used to require belonged to the common homepage that the
+     * Interiors page replaced; the route reads no commerce or portfolio data
+     * at all any more, which is the point rather than an omission.
+     */
     const page = read(pagePath);
-    const interiors = read(join(root, "src/app/interiors/page.tsx"));
-    assert.match(page, /getFeaturedProjects/);
+    assert.match(page, /InteriorsConversionPage/);
+    assert.doesNotMatch(page, /getFeaturedProjects/);
     assert.doesNotMatch(page, /force-dynamic/);
-    assert.match(page, /DiscoveryHomePage/);
     assert.doesNotMatch(page, /loadConceptFeatured/);
     assert.doesNotMatch(page, /design-concepts/);
     assert.doesNotMatch(page, /noindex/);
     assert.match(page, /index:\s*true/);
-    assert.match(page, /Home Interiors, Modular Kitchens & Wardrobes in Pune/);
-    assert.match(interiors, /InteriorsConversionPage/);
     /*
-     * The route no longer threads a build-time form mode. It renders the page,
-     * which mounts the one consultation host; the host asks the running server
-     * whether a lead can be submitted. A NEXT_PUBLIC_ flag baked into HTML
-     * could not know that, and the disagreement lost a real enquiry.
+     * The homepage publishes the interiors metadata now, because it publishes
+     * the interiors page. The canonical is the site root: two URLs describing
+     * the same content would compete for the same queries.
      */
-    assert.doesNotMatch(interiors, /leadFormMode/);
+    assert.match(page, /Home Interiors & Modular Kitchens in Pune/);
+    assert.match(page, /canonical: SITE_CONFIG\.url/);
+    assert.doesNotMatch(page, /leadFormMode/);
   });
 
   test("homepage no longer mounts HomeProjects or project-preview copy", () => {

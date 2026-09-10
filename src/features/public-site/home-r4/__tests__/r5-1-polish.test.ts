@@ -160,14 +160,26 @@ describe("R5.1 tab semantics and wordmark", () => {
     for (const action of [
       "hero-start-plan",
       "service-start-plan",
-      "hero-estimate",
+      /*
+       * `hero-estimate` is gone: the hero carries one call to action now, and
+       * two buttons of equal weight above the fold asked a visitor to choose
+       * before they had read anything. The estimator SECTION is untouched and
+       * still emits `estimator-refine`, which is the hook that matters.
+       */
       "estimator-refine",
       "process-start-plan",
       "brief-copy",
-      "sticky-estimate",
+      /*
+       * `sticky-estimate` became `sticky-call`. The estimator is still on the
+       * page and still emits `estimator-refine`; what left
+       * the sticky bar was a scroll shortcut, and its slot went to the one
+       * action a visitor cannot perform from the page at all.
+       */
+      "sticky-call",
     ]) {
       assert.match(blob, new RegExp(action));
     }
+    assert.doesNotMatch(blob, /sticky-estimate/);
   });
 
   test("noscript fallbacks present for interactive R5.3 sections", () => {

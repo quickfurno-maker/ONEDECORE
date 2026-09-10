@@ -313,8 +313,12 @@ describe("custom-wardrobes asks for no scope, and may not carry one", () => {
     assert.equal(v4RequiresScope("custom-wardrobes"), false);
     assert.equal(v4RequiresScope("modular-kitchens"), true);
     assert.equal(v4RequiresScope("complete-home-interiors"), true);
-    // The form, the adapter and the plan state all ask this function.
-    for (const file of [ADAPTER, PLANNER, CTA]) {
+    /*
+     * The adapter and the plan state still ask this function. The form no
+     * longer does: its only visible options are the five scopes, so a service
+     * that takes no scope cannot be chosen there in the first place.
+     */
+    for (const file of [ADAPTER, CTA]) {
       assert.match(code(read(file)), /v4RequiresScope/, file);
     }
   });
@@ -576,19 +580,51 @@ describe("the same enquiry twice is one enquiry", () => {
 /* ========================================================================== */
 
 describe("the form and the contract ask the same questions", () => {
-  test("the planner collects service, scope, budget and timeline — and no more", () => {
-    const planner = code(read(PLANNER));
-    assert.match(planner, /PM_PLANNER\.services/);
-    assert.match(planner, /PROJECT_SCOPE_LABELS/);
-    assert.match(planner, /budgetRangesForProjectScope/);
-    assert.match(planner, /PM_PLANNER\.timelines/);
+  test("the form collects scope, budget and timeline — and no more", () => {
+    /*
+     * THE CONTROLS MOVED INTO THE BRIEF WITH THE SINGLE-PANEL REDESIGN.
+     *
+     * They used to live on steps 1-3 of the sheet. The questions and the
+     * contract behind them are unchanged; they are simply all on one screen
+     * now, which is why this asserts against the brief rather than the planner.
+     *
+     * The service is no longer asked at all — it is derived from the scope by
+     * `serviceForProjectScope`, the same mapping the server validator and the
+     * SQL check the pair against.
+     */
+    const brief = code(read(BRIEF));
+    assert.match(brief, /PROJECT_SCOPE_LABELS/);
+    assert.match(brief, /budgetRangesForProjectScope/);
+    assert.match(brief, /PM_PLANNER\.timelines/);
+    assert.match(brief, /serviceForProjectScope/);
     /*
      * The controls for the fields v4 forbids are GONE, not hidden. A question
      * whose answer the contract refuses is a question we should not be asking.
      */
-    assert.doesNotMatch(planner, /PM_PLANNER\.properties/);
-    assert.doesNotMatch(planner, /PM_PLANNER\.rooms/);
-    assert.doesNotMatch(planner, /budgetComfortOptions/);
+    for (const source of [brief, code(read(PLANNER))]) {
+      assert.doesNotMatch(source, /PM_PLANNER\.properties/);
+      assert.doesNotMatch(source, /PM_PLANNER\.rooms/);
+      assert.doesNotMatch(source, /budgetComfortOptions/);
+    }
+  });
+
+  test("the sheet is one panel, not a four-step walk", () => {
+    /*
+     * Four screens each asking one question spent three transitions collecting
+     * what fits on one, and every transition is somewhere to abandon. The step
+     * machinery stays in `PlanContext` — this was a UI pass — but the sheet no
+     * longer renders a progress rail or Back/Continue.
+     */
+    const planner = code(read(PLANNER));
+    assert.doesNotMatch(planner, /<PlanProgress/);
+    assert.doesNotMatch(planner, /plan\.step === 1|plan\.step === 2|plan\.step === 3/);
+    assert.doesNotMatch(planner, /backLabel|continueLabel/);
+    assert.match(planner, /<UnifiedLeadBrief onSubmitted=\{plan\.markSubmitted\} \/>/);
+    assert.equal(
+      (planner.match(/<UnifiedLeadBrief/g) ?? []).length,
+      1,
+      "exactly one form is mounted"
+    );
   });
 
   test("the submit button carries the owner-approved wording, from one place", () => {
@@ -601,7 +637,12 @@ describe("the form and the contract ask the same questions", () => {
      */
     assert.equal(SUBMIT_LABEL, "Get Free Quote");
     const brief = code(read(BRIEF));
-    assert.match(brief, /import \{ SUBMIT_LABEL \} from "\.\.\/project-scope\.ts"/);
+    /*
+     * Imported alongside the scope and budget helpers from the same module —
+     * the approved wording lives beside the approved ladders, which is why one
+     * import now brings all of them.
+     */
+    assert.match(brief, /SUBMIT_LABEL,\s+type LeadProjectScopeCode,\s+\} from "\.\.\/project-scope\.ts"/);
     assert.match(brief, /UNIFIED_BRIEF_SUBMITTING_LABEL : SUBMIT_LABEL/);
     // No local restatement of the approved wording.
     assert.doesNotMatch(brief, /"Get Free Quote"/);

@@ -2,22 +2,74 @@
 
 import Image from "next/image";
 import { useCallback, useId, useRef, useState } from "react";
+import { useCountUp } from "@/features/public-site/motion/useCountUp";
 import { HOME_PUNE_AREAS } from "./claims";
 import {
   PM_ASSETS,
   PM_CREDIBILITY,
   PM_HERO,
-  PM_SECTION_IDS,
+  pmCredibilityText,
+  type PmCredibilityItem,
 } from "./content";
 import { usePlan } from "./PlanContext";
-import { scrollToHomeSection } from "./scroll-to-section";
 
 const HERO = PM_ASSETS.hero;
 
-function scrollToEstimate() {
-  scrollToHomeSection(
-    PM_SECTION_IDS.estimate,
-    "button, input, select, [href]"
+/**
+ * One credibility cell — counted if it is a number, printed if it is a word.
+ *
+ * THE ACCESSIBLE TEXT IS THE FINAL VALUE, ALWAYS
+ *
+ * The counting digits live in an `aria-hidden` span and the real figure sits
+ * beside them in a visually hidden one. A screen reader therefore reads
+ * "1000+ Projects Delivered" once, rather than being handed a new number on
+ * every animation frame — and it reads the same sentence whether the animation
+ * ran, was skipped for reduced motion, or never started because the cell was
+ * off screen.
+ *
+ * `useCountUp` seeds at the target, so the server HTML, the pre-hydration
+ * paint and every no-JS visitor already show the true value. It counts once,
+ * when the cell comes into view, and never replays.
+ */
+function CredibilityCell({ item }: { readonly item: PmCredibilityItem }) {
+  if (item.kind === "static") {
+    return (
+      <div className="pm-hero__credItem">
+        <span className="pm-hero__credStat">{item.stat}</span>
+        <span className="pm-hero__credLabel">{item.label}</span>
+      </div>
+    );
+  }
+  return <CountedCredibilityCell item={item} />;
+}
+
+function CountedCredibilityCell({
+  item,
+}: {
+  readonly item: Extract<PmCredibilityItem, { kind: "count" }>;
+}) {
+  const { value, ref } = useCountUp(item.value);
+  const finalText = pmCredibilityText(item);
+
+  return (
+    <div className="pm-hero__credItem" ref={ref}>
+      <span className="od-sr-only">
+        {finalText} {item.label}
+      </span>
+      <span className="pm-hero__credStat" aria-hidden="true">
+        {/*
+          Only the digits move. The prefix and suffix are words — a "+" that
+          counted up to itself, or a "-Year" that assembled letter by letter,
+          would read as a rendering fault rather than as emphasis.
+        */}
+        {item.prefix ?? ""}
+        {value}
+        {item.suffix ?? ""}
+      </span>
+      <span className="pm-hero__credLabel" aria-hidden="true">
+        {item.label}
+      </span>
+    </div>
   );
 }
 
@@ -103,24 +155,23 @@ export function HomeHero() {
             >
               {PM_HERO.primaryCta}
             </button>
-            <button
-              type="button"
-              className="dc-btn dc-btn--ghost pm-btn--lg"
-              data-conversion-action="hero-estimate"
-              onClick={scrollToEstimate}
-            >
-              {PM_HERO.secondaryCta}
-            </button>
+            {/*
+              ONE CALL TO ACTION IN THE HERO.
+
+              "Get Price Estimate" used to sit beside it, and two buttons of
+              equal prominence at the top of the page ask a visitor to choose
+              before they have read anything. The estimator itself is untouched
+              and still reachable — from the sticky bar's journey, the service
+              sections and its own anchor — so what was removed is the fork in
+              the road, not the road.
+            */}
           </div>
 
           <p className="pm-hero__reassurance">{PM_HERO.reassurance}</p>
 
           <div className="pm-hero__credibility" aria-label="ONEDECORE credibility">
             {PM_CREDIBILITY.map((item) => (
-              <div key={item.id} className="pm-hero__credItem">
-                <span className="pm-hero__credStat">{item.stat}</span>
-                <span className="pm-hero__credLabel">{item.label}</span>
-              </div>
+              <CredibilityCell key={item.id} item={item} />
             ))}
           </div>
 

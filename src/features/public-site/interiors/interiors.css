@@ -37,3 +37,276 @@
     align-items: center;
   }
 }
+
+/* ========================================================================== */
+/* Promotional rail — one 5:8 format, more cards as the viewport grows        */
+/* ========================================================================== */
+
+/*
+ * THE SECTION CLIPS; THE RAIL SCROLLS.
+ *
+ * `overflow: clip` on the section is what keeps six off-screen cards from
+ * widening the document. It is `clip` rather than `hidden` deliberately:
+ * `hidden` makes the element a scroll container, so a focus landing inside an
+ * off-screen card would scroll the section itself and leave it out of step
+ * with the rail.
+ */
+.od-int-promo {
+  position: relative;
+  overflow: clip;
+  padding-block: clamp(0.75rem, 3vw, 1.5rem) clamp(0.5rem, 2vw, 1rem);
+}
+
+/*
+ * `[data-public-home-r4]` is on the selector because the interiors shell resets
+ * `ul { padding: 0 }` at `[data-public-home-r4] ul` (0-1-1 in
+ * `home-foundation.css`). A bare `.od-int-promo__rail` (0-1-0) loses, and the
+ * side inset silently disappears: the first card sits flush against the edge of
+ * the screen with no gutter at all.
+ */
+[data-public-home-r4] .od-int-promo__rail {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  padding: 0 16px;
+  list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline-start: 16px;
+  /* The rail is the only thing that scrolls sideways, and it does so silently. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.od-int-promo__rail::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * ONE CARD DOMINANT, THE NEXT ONE PEEKING.
+ *
+ * The width has settled at 74vw. What changed here is the RATIO: 5:8 rather
+ * than 9:16. At the same width that is about 50px shorter on a 390px phone,
+ * and the difference goes straight to the hero underneath — the card had been
+ * tall enough that the page below it was still a scroll away.
+ *
+ * 5:8 (0.625) is a portrait promotional card. 9:16 (0.5625) is the shape of a
+ * phone screen, which is why a rail built from it kept reading as a story
+ * viewer no matter how much width came off it.
+ *
+ * BOTH LIMITS ARE WIDTHS, BECAUSE HEIGHT CANNOT BE CAPPED SAFELY.
+ *
+ * A `max-height` on a box with `aspect-ratio` is satisfied by shrinking both
+ * axes or by cropping, and either one stops the frame being 5:8 — the one
+ * thing the artwork depends on. So the 60vh ceiling is expressed as the width
+ * that produces it, `60vh * 5/8`, and `min()` takes whichever limit binds
+ * first. The ratio then falls out exactly, at every viewport.
+ *
+ * On a tall phone 74vw wins; on a short or landscape one the height term does,
+ * and the card simply gets smaller rather than distorted.
+ */
+.od-int-promo__card {
+  flex: 0 0 min(74vw, calc(60vh * 5 / 8));
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.od-int-promo__frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  /* The authored format, exactly, at every breakpoint. */
+  aspect-ratio: 5 / 8;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--od-bg-deepest, #0b0908);
+  text-decoration: none;
+}
+
+.od-int-promo__img {
+  object-fit: cover;
+}
+
+/* ------------------------------------------------------ review-only frame */
+
+/*
+ * The empty slot.
+ *
+ * A charcoal surface and a hairline — no dashed border, no image glyph, no
+ * instructions. Anything that reads as an uploader invites feedback about the
+ * uploader instead of about the frame, and the frame is the only thing this
+ * build is asking about.
+ */
+.od-int-promo__empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--od-gold, #e9c877) 16%, transparent);
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--od-text-primary, #fff9f0) 4%, transparent),
+    transparent 60%
+  );
+}
+
+.od-int-promo__emptyLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--od-text-primary, #fff9f0) 46%, transparent);
+}
+
+/* --------------------------------------------------------------- controls */
+
+.od-int-promo__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding-block-start: clamp(0.6rem, 2.5vw, 0.9rem);
+}
+
+/*
+ * Arrows are a pointer affordance. A thumb has the whole card to swipe, and
+ * two more 40px targets beside the dots would only crowd a 360px row.
+ */
+.od-int-promo__arrow {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--od-line, rgba(255, 249, 240, 0.16));
+  background: transparent;
+  color: var(--od-text-secondary, rgba(255, 249, 240, 0.72));
+  cursor: pointer;
+  transition:
+    border-color 160ms var(--dc-ease, ease),
+    color 160ms var(--dc-ease, ease);
+}
+
+.od-int-promo__arrow:hover,
+.od-int-promo__arrow:focus-visible {
+  border-color: var(--od-gold, #e9c877);
+  color: var(--od-gold-light, #f0d9a8);
+}
+
+.od-int-promo__dots {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/*
+ * The dot is 8px; the button around it is 32px. An 8px tap target fails on a
+ * phone, so the hit area is padding and the dot is only what you see.
+ */
+.od-int-promo__dot {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.od-int-promo__dot::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 249, 240, 0.3);
+  transition:
+    background 200ms var(--dc-ease, ease),
+    width 200ms var(--dc-ease, ease);
+}
+
+.od-int-promo__dot[aria-pressed="true"]::before {
+  width: 22px;
+  background: var(--od-gold, #e9c877);
+}
+
+/* ------------------------------------------------------- tablet and above */
+
+@media (min-width: 48rem) {
+  /*
+   * MORE CARDS, NOT A BIGGER CARD.
+   *
+   * The banner does not become a landscape billboard on a wider screen — it
+   * stays the same 5:8 artwork and the rail simply fits more of them. That is
+   * what lets one exported file serve every device.
+   *
+   * The clamp keeps a card in the 300-360px band the design system wants; the
+   * `vh` term is the same ratio-preserving height guard as on mobile.
+   *
+   * 70vh IS THE CARD COUNT, NOT JUST A HEIGHT.
+   *
+   * The cap is unchanged at 70vh, and it now rarely binds: at 5:8 the width
+   * clamp reaches its limit first on most desktops, so the shorter ratio does
+   * the height reduction on its own. It stays because on a short laptop it is
+   * still the thing that keeps the rail off the fold.
+   *
+   * When it was tried tighter, sweeping against the built page showed how much
+   * fits is a step function of card width, and every value from 58vh to 65vh
+   * moved 1280 and 1440 from three
+   * cards to four — a different layout from the approved one, arrived at by
+   * changing a number that looks like it only controls height.
+   *
+   *   58/60/62/63vh -> 3 4 4 4 4      (1024 / 1280 / 1440 / 1600 / 1920)
+   *   65vh          -> 3 3 4 4 4, and 1280's fourth card is 98% visible
+   *   67vh          -> 3 3 3 4 4, but the peek grows to ~88% — a card cut by
+   *                    a tenth reads as four cards, not as three and a hint
+   *   70vh          -> 3 3 3 4 4 with a clean 69-71% partial
+   *
+   * 67vh would have saved 27px at 1440 — under 4% — and spent the clean peek
+   * to do it. So the desktop rail keeps the geometry that was signed off, and
+   * the height reduction in this pass is the mobile one, which is where the
+   * complaint actually was.
+   */
+  .od-int-promo__card {
+    flex: 0 0 min(clamp(300px, 26vw, 360px), calc(70vh * 5 / 8));
+  }
+
+  .od-int-promo__frame {
+    border-radius: 24px;
+  }
+
+  [data-public-home-r4] .od-int-promo__rail {
+    gap: 22px;
+    padding-inline: 4%;
+    scroll-padding-inline-start: 4%;
+  }
+
+  .od-int-promo__arrow {
+    display: inline-flex;
+  }
+
+  .od-int-promo__emptyLabel {
+    font-size: 0.76rem;
+  }
+}
+
+/* ---------------------------------------------------------- reduced motion */
+
+/*
+ * Autoplay is already off in the component. This turns off the SLIDING too, so
+ * pressing a dot swaps the banner immediately instead of panning several
+ * hundred pixels across the screen.
+ */
+@media (prefers-reduced-motion: reduce) {
+  [data-public-home-r4] .od-int-promo__rail {
+    scroll-behavior: auto;
+  }
+
+  .od-int-promo__dot::before,
+  .od-int-promo__arrow {
+    transition: none;
+  }
+}

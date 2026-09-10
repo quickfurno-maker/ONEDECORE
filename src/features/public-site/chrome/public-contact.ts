@@ -33,6 +33,9 @@
  *
  * Step 4 is the one that matters. The other three can all appear to succeed
  * while the bundle is unchanged.
+ *
+ * The same three-step rule governs `NEXT_PUBLIC_ONEDECORE_PHONE_E164`, which
+ * publishes the voice line further down this file.
  */
 
 /** The prefilled first message. Service enquiry, never marketing. */
@@ -47,11 +50,12 @@ export const PUBLIC_WHATSAPP_E164_ENV = "NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164";
 /**
  * The digits of a valid E.164 number, or `null`.
  *
- * E.164 is `+` then 8–15 digits, first digit non-zero. `wa.me` wants the digits
- * without the `+`, so the check happens on the configured form and the
- * normalisation happens once, here, rather than at each call site.
+ * E.164 is `+` then 8–15 digits, first digit non-zero. Consumers want the
+ * digits in different shapes — `wa.me` takes them bare, `tel:` wants the `+`
+ * back — so the validation happens once, here, and each caller re-assembles
+ * what it needs rather than re-deriving the rule.
  */
-export function normalizeWhatsAppE164(raw: string | null | undefined): string | null {
+export function normalizeE164Digits(raw: string | null | undefined): string | null {
   if (typeof raw !== "string") {
     return null;
   }
@@ -61,6 +65,17 @@ export function normalizeWhatsAppE164(raw: string | null | undefined): string | 
     return null;
   }
   return trimmed.slice(1);
+}
+
+/**
+ * The WhatsApp number's digits, or `null`.
+ *
+ * Kept as its own exported name because call sites and tests already use it.
+ * It is now a thin alias over the shared validator rather than a second copy
+ * of the rule.
+ */
+export function normalizeWhatsAppE164(raw: string | null | undefined): string | null {
+  return normalizeE164Digits(raw);
 }
 
 /**
@@ -89,4 +104,55 @@ export function isPublicWhatsAppConfigured(
   configured?: string | null
 ): boolean {
   return getPublicWhatsAppHref(configured) !== null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Voice — a separate channel that happens to share a number today             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The call button's copy.
+ *
+ * "Call Now" rather than the number itself. A rendered number invites someone
+ * to read and re-dial it on a second device, and it goes stale in a screenshot;
+ * the label states the action and the anchor carries the destination.
+ */
+export const PUBLIC_PHONE = {
+  label: "Call Now",
+  ariaLabel: "Call ONEDECORE",
+} as const;
+
+export const PUBLIC_PHONE_E164_ENV = "NEXT_PUBLIC_ONEDECORE_PHONE_E164";
+
+/**
+ * The `tel:` URL for the published phone line, or `null`.
+ *
+ * DELIBERATELY NOT DERIVED FROM THE WHATSAPP VARIABLE
+ *
+ * Both are the same number today. Reading one from the other would encode that
+ * coincidence as a rule, and the day the business publishes a landline for
+ * calls while keeping a mobile on WhatsApp, the calling CTA would silently
+ * dial the wrong line. They are two channels; they get two variables.
+ *
+ * `tel:` keeps the leading `+` — the international prefix is what lets a phone
+ * dial the number from outside India — where `wa.me` wants the bare digits.
+ *
+ * The member expression on `process.env` is required rather than stylistic:
+ * `NEXT_PUBLIC_*` inlining is a textual substitution, so `process.env[name]`
+ * would never be replaced and the button would never appear.
+ */
+export function getPublicPhoneHref(
+  configured: string | null | undefined = process.env
+    .NEXT_PUBLIC_ONEDECORE_PHONE_E164
+): string | null {
+  const digits = normalizeE164Digits(configured);
+  if (!digits) {
+    return null;
+  }
+  return `tel:+${digits}`;
+}
+
+/** True when a valid phone number is configured. */
+export function isPublicPhoneConfigured(configured?: string | null): boolean {
+  return getPublicPhoneHref(configured) !== null;
 }

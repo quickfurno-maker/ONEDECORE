@@ -234,45 +234,113 @@ export const PM_HERO = {
  * reading "Many" where "500+" used to be is the same unsourced claim with worse
  * copy. What remains states how ONEDECORE works, which needs no measurement.
  */
-export const PM_CREDIBILITY = [
+/**
+ * A cell is either a counted number or a word, and it says which.
+ *
+ * WHY THE NUMBER IS A FIELD AND NOT A SUBSTRING
+ *
+ * These cells used to be display strings — "1000+", "10-Year", "Own", "End To
+ * End". Animating them meant a regex fishing digits out of marketing copy, and
+ * that regex would have counted the 10 in "10-Year", the nothing in "Own", and
+ * eventually something wrong in whatever cell got added next. Worse, it would
+ * have failed silently: a mis-parsed cell still renders, just with the wrong
+ * number climbing in it.
+ *
+ * So the numeric cells carry `value` with its `prefix`/`suffix` beside it, and
+ * `kind` says which sort of cell this is. `stat` is derived for the static ones
+ * and composed for the counted ones, and nothing has to guess.
+ *
+ * The claim gates are untouched. A cell that `canQuotePublicClaim` rejects is
+ * still absent, not softened, and giving the survivors a typed number does not
+ * make any new figure quotable.
+ */
+export type PmCredibilityItem =
+  | {
+      readonly kind: "static";
+      readonly id: string;
+      readonly stat: string;
+      readonly label: string;
+    }
+  | {
+      readonly kind: "count";
+      readonly id: string;
+      readonly value: number;
+      readonly prefix?: string;
+      readonly suffix?: string;
+      readonly label: string;
+    };
+
+/** The full text of a cell, counted or not. Never assembled at a call site. */
+export function pmCredibilityText(item: PmCredibilityItem): string {
+  return item.kind === "static"
+    ? item.stat
+    : `${item.prefix ?? ""}${item.value}${item.suffix ?? ""}`;
+}
+
+export const PM_CREDIBILITY: readonly PmCredibilityItem[] = [
   ...(canQuotePublicClaim("projects-delivered")
     ? [
         {
+          kind: "count" as const,
           id: "projects",
-          stat: `${HOME_CLAIMS.projectsDelivered}+`,
+          value: HOME_CLAIMS.projectsDelivered,
+          suffix: "+",
           label: "Projects Delivered",
         },
       ]
     : []),
+  /*
+   * The rating stays a static cell even when it becomes quotable.
+   *
+   * It is 4.9, and `useCountUp` floors its intermediate values — counting it
+   * would show 0, 1, 2, 3, 4 and land on 4 unless the hook grew decimal
+   * support. A rating that animates to the wrong number is worse than one that
+   * simply appears, so this cell is typed static on purpose rather than by
+   * omission.
+   */
   ...(canQuotePublicClaim("average-rating")
-    ? [{ id: "rating", stat: `${HOME_CLAIMS.rating}/5`, label: "Average Rating" }]
+    ? [
+        {
+          kind: "static" as const,
+          id: "rating",
+          stat: `${HOME_CLAIMS.rating}/5`,
+          label: "Average Rating",
+        },
+      ]
     : []),
   {
+    kind: "static",
     id: "manufacturing",
     stat: "Own",
     label: "Manufacturing Unit",
   },
+  canQuotePublicClaim("warranty-years")
+    ? {
+        kind: "count" as const,
+        id: "warranty",
+        value: HOME_CLAIMS.warrantyYears,
+        suffix: "-Year",
+        label: "Warranty",
+      }
+    : {
+        kind: "static" as const,
+        id: "warranty",
+        stat: "Covered",
+        label: "Approved Scopes",
+      },
   {
-    id: "warranty",
-    stat: canQuotePublicClaim("warranty-years")
-      ? `${HOME_CLAIMS.warrantyYears}-Year`
-      : "Covered",
-    label: canQuotePublicClaim("warranty-years")
-      ? "Warranty"
-      : "Approved Scopes",
-  },
-  {
+    kind: "static",
     id: "process",
     stat: "End To End",
     label: "Design To Installation",
   },
-] as const;
+];
 
 /* ----------------------------------------------------------------- planner */
 
 export const PM_PLANNER = {
   title: "Tell us about your home",
-  entryHint: "Choose a service to begin — about a minute.",
+  entryHint: "Six quick answers — about a minute.",
   progressLabel: "Interior plan progress",
   steps: [
     { id: 1, legend: "What are you planning?", short: "Service" },
@@ -1068,10 +1136,18 @@ export const PM_CLOSE = {
     "We could not copy automatically. Select and copy the brief manually.",
 } as const;
 
+/*
+ * `estimate` left this bar and did not leave the page.
+ *
+ * The sticky is two actions wide on a phone, and the second slot was spending
+ * itself on a scroll shortcut to a section the visitor reaches anyway. Calling
+ * is the thing a person cannot do from the page at all, and it is the one they
+ * reach for when a form is more commitment than the question deserves.
+ *
+ * `HomeBudgetEstimator` still renders in full — only the shortcut is gone.
+ */
 export const PM_STICKY = {
   plan: PM_CTA.openShort,
-  estimate: "Estimate",
-  estimateHref: `#${PM_SECTION_IDS.estimate}`,
   projects: PM_CTA.projects,
   projectsHref: "/portfolio",
 } as const;

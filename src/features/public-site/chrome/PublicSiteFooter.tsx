@@ -23,7 +23,7 @@ export function PublicSiteFooter({
       <div className="od-site-footer__top">
         <div className="od-site-footer__brand">
           <OneDecoreWordmark size="footer" />
-          <p>Premium interiors for homes across Pune — design to installation.</p>
+          <p>Home interiors and furniture for complete homes across Pune.</p>
           <Link href={PUBLIC_CONSULTATION.href} className="od-site-footer__cta">
             {PUBLIC_CONSULTATION.label}
           </Link>

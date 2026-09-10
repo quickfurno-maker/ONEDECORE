@@ -213,26 +213,40 @@ describe("the projects count is displayed without being called verified", () => 
     assert.match(read(STRIP), /isClaimDisplayable\(metric\.claimId\)/);
 
     /*
-     * THE STRIP MOVED, BY OWNER DIRECTION.
+     * THE STRIP IS NOW MOUNTED NOWHERE, BY OWNER DIRECTION.
      *
-     * It used to sit second on the homepage. It now opens `/interiors`, where
-     * the visitor has already chosen to read about the work rather than being
-     * shown four animated figures before being told what the company does. The
-     * evidence model is untouched by the move — the assertions above still hold
-     * — so what changes here is only WHERE it is mounted.
+     * It opened `/interiors` for a while, directly under a hero that already
+     * carries a credibility row. Two numeric proof blocks within one screen of
+     * each other do not double the proof — they make a visitor ask which of the
+     * two is the real number. The hero's row survived because it is part of the
+     * hero's argument; the strip did not.
+     *
+     * The component and its evidence model are deliberately untouched: the
+     * assertions above still run against it, and it stays available for a
+     * surface that has no credibility row of its own.
      */
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     assert.doesNotMatch(page, /DiscoveryProofStrip/);
 
-    const interiors = read(
-      "src/features/public-site/interiors/InteriorsConversionPage.tsx"
+    // Comment-stripped: the page explains in prose why the strip left, and
+    // that explanation names it.
+    const interiors = code(
+      read("src/features/public-site/interiors/InteriorsConversionPage.tsx")
     );
-    assert.ok(
-      interiors.indexOf("<HomeHero") < interiors.indexOf("<DiscoveryProofStrip"),
-      "the proof strip must come after the hero"
-    );
+    assert.doesNotMatch(interiors, /DiscoveryProofStrip/);
     // And NOT inside the hero.
     assert.doesNotMatch(read(HERO), /DiscoveryProofStrip|DiscoveryHeroTrustBar/);
+
+    /*
+     * The hook did not become unused when the strip was unmounted — the
+     * INTERIORS hero's credibility row drives it now, which is the whole point
+     * of there being one counter engine. (`HERO` above is the homepage slider,
+     * a different component.)
+     */
+    assert.match(
+      read("src/features/public-site/home-r4/HomeHero.tsx"),
+      /useCountUp\(item\.value\)/
+    );
   });
 
   test("the proof strip quotes no suppressed figure", () => {
@@ -289,14 +303,22 @@ describe("the hero carries images, dots and no words", () => {
   const hero = read(HERO);
   const heroCode = code(hero);
 
-  test("no headline, kicker, lede, badge, CTA or trust bar", () => {
+  test("no rotating headline, kicker, badge or trust bar layered on the slides", () => {
+    /*
+     * L1.1 stripped the hero to photography because five layered elements were
+     * competing with it. The gateway hero brought back ONE block — an eyebrow,
+     * the H1, a sentence and two buttons — because a page offering two journeys
+     * has to name them on the first screen.
+     *
+     * What must not return is the rest: a headline that changes with the slide,
+     * a badge, the panel/layout scaffolding, and the trust bar. The copy is
+     * fixed and belongs to the page, not to whichever image is showing.
+     */
     for (const gone of [
       "od-disc-hero__headline",
       "od-disc-kicker",
-      "od-disc-hero__lede",
       "od-disc-hero__badge",
       "od-disc-hero__panel",
-      "od-disc-hero__copy",
       "od-disc-hero__layout",
       "DiscoveryHeroTrustBar",
       "slide.headline",
@@ -323,11 +345,18 @@ describe("the hero carries images, dots and no words", () => {
     assert.match(heroCode, /alt=""/);
   });
 
-  test("a visually hidden H1 keeps the page's identity", () => {
-    assert.match(hero, /<h1 id="od-disc-hero-title" className="od-sr-only">/);
-    assert.match(hero, /DISCOVERY_HERO_PAGE_TITLE/);
+  test("one visible H1 carries the brand", () => {
+    /*
+     * The H1 was visually hidden while the hero was pure decoration for an
+     * interiors page. As the gateway to two verticals it is on screen: a
+     * visitor cannot choose between journeys the first screen never names.
+     */
+    assert.match(hero, /<h1 id="od-disc-hero-title">\{DISCOVERY_GATEWAY_TITLE\}<\/h1>/);
+    assert.doesNotMatch(hero, /<h1[^>]*od-sr-only/);
+    assert.equal((hero.match(/<h1/g) ?? []).length, 1, "exactly one H1");
     const copy = read("src/features/public-site/discovery/discovery-copy.ts");
-    assert.match(copy, /export const DISCOVERY_HERO_PAGE_TITLE/);
+    assert.match(copy, /export const DISCOVERY_GATEWAY_TITLE/);
+    assert.match(copy, /export const DISCOVERY_GATEWAY_LEDE/);
   });
 
   test("autoplay is 5-6 seconds and reduced motion still pauses it", () => {
