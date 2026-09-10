@@ -188,6 +188,18 @@ describe("R5.4 navigation and FAQ", () => {
     const source = read("scroll-to-section.ts");
     assert.match(source, /prefers-reduced-motion/);
     assert.match(source, /behavior: reduced \? "auto" : "smooth"/);
-    assert.match(read("HomeHero.tsx"), /scrollToHomeSection/);
+    /*
+     * NO CALLER IS ASSERTED, BECAUSE THERE IS NONE RIGHT NOW.
+     *
+     * The hero's "Get Price Estimate" button was this helper's only caller,
+     * and that button was removed with the CTA hierarchy change. The module is
+     * kept rather than deleted: it is the one place that gets in-page scrolling
+     * right for `prefers-reduced-motion`, and the next anchor CTA should reach
+     * for it instead of writing `scrollIntoView` again.
+     *
+     * What this test protects is that behaviour, which is worth keeping true
+     * whether or not anything is calling it today.
+     */
+    assert.match(source, /prefers-reduced-motion/);
   });
 });

@@ -2700,6 +2700,32 @@
   opacity: 0.85;
 }
 
+/*
+ * THE BAR MUST NOT GROW A SECOND LINE.
+ *
+ * At 320px "Free Consultation" wrapped inside its button, which took the bar
+ * from 71px to 92px — and the WhatsApp FAB sits at a fixed clearance above it,
+ * so the taller bar slid 8px underneath the button. The collision looked like
+ * a stacking bug and was really a text-wrapping one.
+ *
+ * Tightening the type and the padding at the narrowest widths keeps both
+ * labels on one line, which keeps the bar the height every other rule already
+ * assumes. `nowrap` is the guarantee; the smaller type is what makes it fit
+ * rather than clip.
+ */
+@media (max-width: 22.5rem) {
+  [data-public-home-r4] .pm-sticky__btn {
+    padding-inline: 10px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  [data-public-home-r4] .pm-sticky {
+    gap: 8px;
+    padding-inline: 12px;
+  }
+}
+
 @media (min-width: 1080px) {
   [data-public-home-r4] .pm-sticky {
     display: none;
@@ -4575,4 +4601,321 @@
 
 [data-public-home-r4] .pm-planner__actions--brief {
   justify-content: flex-end;
+}
+
+/* ========================================================================== */
+/* Public lead form — one panel                                               */
+/* ========================================================================== */
+
+/*
+ * The form is one column with a steady rhythm, not a set of boxes.
+ *
+ * It sits inside `.pm-sheet__panel`, which already provides the surface, the
+ * radius and the shadow. Wrapping the fields in another card would be a card
+ * inside a card, and the second one always looks like a mistake — so the groups
+ * here are separated by space and one hairline, and carry no background of
+ * their own.
+ */
+[data-public-home-r4] .od-lead .pm-planner__panel {
+  display: grid;
+  gap: 0;
+}
+
+[data-public-home-r4] .od-lead__group {
+  display: grid;
+  gap: 18px;
+  margin: 0;
+  padding: 0 0 22px;
+  border: 0;
+  border-bottom: 1px solid var(--pm-line, rgba(255, 249, 240, 0.1));
+}
+
+[data-public-home-r4] .od-lead__group + .od-lead__group {
+  padding-top: 22px;
+}
+
+/* The last group before consent carries no rule: the consent block has its own. */
+[data-public-home-r4] .od-lead .pm-fieldset:last-of-type {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+/*
+ * A quiet group label, not a heading.
+ *
+ * These name two short groups of fields; at heading weight they would compete
+ * with the sheet title directly above them and make a six-field form look like
+ * a document.
+ */
+[data-public-home-r4] .od-lead__legend {
+  padding: 0;
+  margin-bottom: 2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--pm-ivory-2, #fff9f0) 52%, transparent);
+}
+
+/* ------------------------------------------------------------- selects --- */
+
+/*
+ * A styled select, not a replacement for one.
+ *
+ * `appearance: none` plus a drawn chevron gets the look; the element stays a
+ * real `<select>`, so it keeps the native option list, the platform keyboard
+ * behaviour, the screen-reader semantics and — on a phone — the OS wheel, which
+ * no custom listbox matches for one-handed use.
+ */
+[data-public-home-r4] .od-lead__selectWrap {
+  position: relative;
+  display: block;
+}
+
+/*
+ * `height`, not `min-height`.
+ *
+ * A select sizes itself from its font metrics, so `min-height` left it two
+ * pixels short of the inputs beside it — enough to make the column look
+ * slightly out of true without it being obvious why.
+ */
+[data-public-home-r4] .od-lead__select {
+  width: 100%;
+  height: 52px;
+  padding: 14px 44px 14px 15px;
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: var(--pm-r-sm, 12px);
+  border: 1px solid var(--pm-line-strong, rgba(255, 249, 240, 0.18));
+  background: var(--pm-ink-2, rgba(255, 249, 240, 0.04));
+  color: var(--pm-ivory, #fff9f0);
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    border-color 160ms var(--pm-ease, ease),
+    background 160ms var(--pm-ease, ease);
+}
+
+[data-public-home-r4] .od-lead__select:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--pm-accent, #c9a962) 55%, transparent);
+}
+
+[data-public-home-r4] .od-lead__select:focus-visible {
+  outline: 2px solid var(--pm-accent, #c9a962);
+  outline-offset: 2px;
+  border-color: var(--pm-accent, #c9a962);
+}
+
+/*
+ * The budget select before a requirement is chosen.
+ *
+ * Dimmed and not-allowed rather than hidden: a control that vanishes and
+ * reappears makes the form jump under the reader's eye, and a visitor who can
+ * see the next question knows how much is left.
+ */
+[data-public-home-r4] .od-lead__select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* The native list is drawn by the OS; only the closed control is ours. */
+[data-public-home-r4] .od-lead__select option {
+  background: var(--pm-panel, #14100d);
+  color: var(--pm-ivory, #fff9f0);
+}
+
+[data-public-home-r4] .od-lead__chevron {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 15px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: color-mix(in srgb, var(--pm-ivory, #fff9f0) 55%, transparent);
+}
+
+[data-public-home-r4] .od-lead__select:disabled + .od-lead__chevron {
+  opacity: 0.4;
+}
+
+/* --------------------------------------------------------------- phone --- */
+
+/*
+ * +91 is an affix, not a field.
+ *
+ * It shares one bordered row with the input so the pair reads as a single
+ * control. The border lives on the wrapper and the input inside is stripped of
+ * its own, which is what stops the "box inside a box" look that a prefixed
+ * input usually gets.
+ */
+[data-public-home-r4] .od-lead__phone {
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--pm-r-sm, 12px);
+  border: 1px solid var(--pm-line-strong, rgba(255, 249, 240, 0.18));
+  background: var(--pm-ink-2, rgba(255, 249, 240, 0.04));
+  overflow: hidden;
+  transition: border-color 160ms var(--pm-ease, ease);
+}
+
+[data-public-home-r4] .od-lead__phone:focus-within {
+  border-color: var(--pm-accent, #c9a962);
+  outline: 2px solid var(--pm-accent, #c9a962);
+  outline-offset: 2px;
+}
+
+[data-public-home-r4] .od-lead__phonePrefix {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 15px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--pm-ivory, #fff9f0) 70%, transparent);
+  border-inline-end: 1px solid var(--pm-line, rgba(255, 249, 240, 0.1));
+  background: rgba(255, 249, 240, 0.03);
+  user-select: none;
+}
+
+[data-public-home-r4] .od-lead__phone input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  min-height: 52px;
+}
+
+[data-public-home-r4] .od-lead__phone input:focus,
+[data-public-home-r4] .od-lead__phone input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------- fields ---- */
+
+/* One height for every control, so the column has a single rhythm. */
+[data-public-home-r4] .od-lead .pm-field input,
+[data-public-home-r4] .od-lead .pm-field textarea {
+  min-height: 52px;
+  border-radius: var(--pm-r-sm, 12px);
+}
+
+[data-public-home-r4] .od-lead .pm-field textarea {
+  min-height: 84px;
+}
+
+[data-public-home-r4] .od-lead .pm-field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--pm-ivory-2, #fff9f0);
+}
+
+/*
+ * "optional" is a note, not a control.
+ *
+ * The shared `.pm-opt` chip has a pill border, which beside a real input reads
+ * as a small button the visitor might be supposed to press. Here it drops the
+ * border and the box and becomes what it is: quieter text next to the label.
+ */
+[data-public-home-r4] .od-lead .pm-opt {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  font-style: italic;
+  color: color-mix(in srgb, var(--pm-ivory, #fff9f0) 40%, transparent);
+}
+
+[data-public-home-r4] .od-lead .pm-field__error {
+  font-size: 0.78rem;
+}
+
+/* ------------------------------------------------------------- consent --- */
+
+/*
+ * The whole row is the label, so the text is part of the target rather than
+ * decoration beside it. On a phone that turns an 18px checkbox into a
+ * two-line-tall tap area, which is the difference between "fiddly" and "done".
+ */
+[data-public-home-r4] .od-lead .pm-consent {
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--pm-r-sm, 12px);
+  border: 1px solid var(--pm-line, rgba(255, 249, 240, 0.1));
+  background: rgba(255, 249, 240, 0.02);
+  cursor: pointer;
+  font-size: 0.84rem;
+}
+
+[data-public-home-r4] .od-lead .pm-consent:hover {
+  border-color: color-mix(in srgb, var(--pm-accent, #c9a962) 40%, transparent);
+}
+
+[data-public-home-r4] .od-lead .pm-consent input {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.08rem;
+}
+
+[data-public-home-r4] .od-lead .pm-consent--invalid {
+  border-color: var(--pm-danger, #e5736b);
+}
+
+/* -------------------------------------------------------------- submit --- */
+
+[data-public-home-r4] .od-lead .pm-planner__actions--brief {
+  margin-top: 4px;
+}
+
+/*
+ * Full width, and the only button on the screen.
+ *
+ * Nothing competes with it: there is no Back, no secondary action and no second
+ * call to action anywhere in the panel, so it does not need to shout to be
+ * found.
+ */
+[data-public-home-r4] .od-lead .pm-planner__actions--brief .dc-btn {
+  width: 100%;
+  min-height: 54px;
+  font-size: 0.98rem;
+}
+
+[data-public-home-r4] .od-lead .pm-planner__actions--brief .dc-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------ desktop ---- */
+
+@media (min-width: 40rem) {
+  /*
+   * The form stops widening well before the panel does.
+   *
+   * A 640px-wide text input looks like a spreadsheet cell, and the eye has to
+   * travel the whole width to check what it typed. The panel can be generous;
+   * the column inside it should not be.
+   */
+  [data-public-home-r4] .od-lead .pm-planner__panel {
+    max-width: 30rem;
+    margin-inline: auto;
+  }
+
+  [data-public-home-r4] .od-lead .pm-planner__head {
+    max-width: 30rem;
+    margin-inline: auto;
+  }
+}
+
+/* ------------------------------------------------------ reduced motion --- */
+
+@media (prefers-reduced-motion: reduce) {
+  [data-public-home-r4] .od-lead__select,
+  [data-public-home-r4] .od-lead__phone {
+    transition: none;
+  }
 }

@@ -309,11 +309,10 @@ describe("the components are wired to those transitions", () => {
 
   test("the step chrome is gone once the enquiry is accepted", () => {
     // No progress rail, no Back, no submit control beside a confirmation.
+    // The confirmation branch runs to the start of the normal return below it.
     const branch = planner.slice(
       planner.indexOf("if (plan.submitted)"),
-      planner.indexOf("const legend = ") > planner.indexOf("if (plan.submitted)")
-        ? planner.indexOf("const legend = ")
-        : planner.indexOf("return (\n    <div className=\"pm-planner__form\">")
+      planner.indexOf('return (\n    <div className="pm-planner__form od-lead">')
     );
     assert.doesNotMatch(branch, /<PlanProgress/);
     assert.doesNotMatch(branch, /backLabel|continueLabel/);

@@ -8,21 +8,12 @@ import {
   PM_ASSETS,
   PM_CREDIBILITY,
   PM_HERO,
-  PM_SECTION_IDS,
   pmCredibilityText,
   type PmCredibilityItem,
 } from "./content";
 import { usePlan } from "./PlanContext";
-import { scrollToHomeSection } from "./scroll-to-section";
 
 const HERO = PM_ASSETS.hero;
-
-function scrollToEstimate() {
-  scrollToHomeSection(
-    PM_SECTION_IDS.estimate,
-    "button, input, select, [href]"
-  );
-}
 
 /**
  * One credibility cell — counted if it is a number, printed if it is a word.
@@ -164,14 +155,16 @@ export function HomeHero() {
             >
               {PM_HERO.primaryCta}
             </button>
-            <button
-              type="button"
-              className="dc-btn dc-btn--ghost pm-btn--lg"
-              data-conversion-action="hero-estimate"
-              onClick={scrollToEstimate}
-            >
-              {PM_HERO.secondaryCta}
-            </button>
+            {/*
+              ONE CALL TO ACTION IN THE HERO.
+
+              "Get Price Estimate" used to sit beside it, and two buttons of
+              equal prominence at the top of the page ask a visitor to choose
+              before they have read anything. The estimator itself is untouched
+              and still reachable — from the sticky bar's journey, the service
+              sections and its own anchor — so what was removed is the fork in
+              the road, not the road.
+            */}
           </div>
 
           <p className="pm-hero__reassurance">{PM_HERO.reassurance}</p>

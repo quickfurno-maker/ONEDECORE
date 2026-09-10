@@ -340,7 +340,7 @@ export const PM_CREDIBILITY: readonly PmCredibilityItem[] = [
 
 export const PM_PLANNER = {
   title: "Tell us about your home",
-  entryHint: "Choose a service to begin — about a minute.",
+  entryHint: "Six quick answers — about a minute.",
   progressLabel: "Interior plan progress",
   steps: [
     { id: 1, legend: "What are you planning?", short: "Service" },

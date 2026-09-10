@@ -346,3 +346,110 @@ describe("the WhatsApp FAB is one component, mounted once per surface", () => {
     assert.doesNotMatch(css, /inset-block-end: clamp\(1\.5rem, 4vw, 2\.5rem\)/);
   });
 });
+
+/* -------------------------------------------------------------------------- */
+/* 8. The homepage CTA hierarchy                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Three surfaces, one action each — and none of them duplicated.
+ *
+ *   hero          Get Free Consultation
+ *   floating      WhatsApp
+ *   sticky bottom Free Consultation | Call Now
+ *
+ * The failure this locks is not a crash. It is the page quietly growing a
+ * second competing button, or losing one of the three, and nobody noticing
+ * until conversions move.
+ */
+describe("the homepage offers one action per surface", () => {
+  const HERO = "src/features/public-site/home-r4/HomeHero.tsx";
+  const STICKY = "src/features/public-site/home-r4/HomeStickyActions.tsx";
+
+  test("the hero carries exactly one call to action", () => {
+    const hero = code(read(HERO));
+    assert.match(hero, /data-conversion-action="hero-start-plan"/);
+    assert.match(hero, /\{PM_HERO\.primaryCta\}/);
+    /*
+     * "Get Price Estimate" is gone from the hero. Two buttons of equal weight
+     * above the fold ask a visitor to choose before they have read anything.
+     */
+    assert.doesNotMatch(hero, /hero-estimate/);
+    assert.doesNotMatch(hero, /PM_HERO\.secondaryCta/);
+    assert.doesNotMatch(hero, /Get Price Estimate/);
+    // One button in the actions row, so no empty slot is left behind.
+    const actions = /<div className="pm-hero__actions">([\s\S]*?)<\/div>/.exec(hero);
+    assert.ok(actions, "the hero actions row must exist");
+    assert.equal(
+      (actions[1].match(/<button/g) ?? []).length,
+      1,
+      "exactly one hero CTA"
+    );
+  });
+
+  test("the estimator itself was not removed with the button", () => {
+    /*
+     * Only the hero shortcut went. The section, its anchor and its own
+     * conversion hook are untouched — the road stayed, the fork went.
+     */
+    const page = code(read(INTERIORS));
+    assert.match(page, /<HomeBudgetEstimator \/>/);
+    assert.match(
+      code(read("src/features/public-site/home-r4/HomeBudgetEstimator.tsx")),
+      /estimator-refine/
+    );
+  });
+
+  test("the sticky bar carries exactly Free Consultation and Call Now", () => {
+    const sticky = code(read(STICKY));
+    assert.match(sticky, /data-conversion-action="sticky-continue"/);
+    assert.match(sticky, /data-conversion-action="sticky-call"/);
+    assert.doesNotMatch(sticky, /sticky-estimate/);
+    // Both actions come from shared config, not from a literal in the markup.
+    assert.match(sticky, /PM_CTA\.continuePlan : PM_STICKY\.plan/);
+    assert.match(sticky, /PUBLIC_PHONE\.label/);
+    assert.match(sticky, /href=\{callHref\}/);
+    assert.doesNotMatch(sticky, /tel:\+\d/);
+  });
+
+  test("the sticky bar opens the canonical form, not a second one", () => {
+    const sticky = code(read(STICKY));
+    assert.match(sticky, /openPlanner\(getNextIncompleteStep\(\)\)/);
+    assert.doesNotMatch(sticky, /<form|LeadConsultationHost/);
+    // The hero opens the same planner through the same context.
+    assert.match(code(read(HERO)), /openPlanner\(getNextIncompleteStep\(\)\)/);
+    // And the page mounts exactly one host.
+    assert.equal(
+      (code(read(INTERIORS)).match(/<LeadConsultationHost>/g) ?? []).length,
+      1
+    );
+  });
+
+  test("both contact destinations come from the central config", () => {
+    const contact = read("src/features/public-site/chrome/public-contact.ts");
+    assert.match(contact, /NEXT_PUBLIC_ONEDECORE_PHONE_E164/);
+    assert.match(contact, /NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164/);
+    // Neither number is written into a component.
+    for (const rel of [
+      "src/features/public-site/home-r4/HomeStickyActions.tsx",
+      "src/features/public-site/discovery/DiscoveryWhatsAppFab.tsx",
+      "src/features/public-site/home-r4/HomeHero.tsx",
+    ]) {
+      assert.doesNotMatch(read(rel), /\+91\d|wa\.me\/\d/, rel);
+    }
+  });
+
+  test("the narrow sticky bar keeps its labels on one line", () => {
+    /*
+     * At 320px "Free Consultation" wrapped inside its button, taking the bar
+     * from 71px to 92px — and the WhatsApp FAB sits at a fixed clearance above
+     * it, so the taller bar slid underneath the button. The collision looked
+     * like a stacking bug and was a text-wrapping one.
+     */
+    const css = read("src/features/public-site/home-r4/styles/home-r4.css");
+    assert.match(
+      css,
+      /@media \(max-width: 22\.5rem\) \{[\s\S]*?\.pm-sticky__btn \{[\s\S]*?white-space: nowrap/
+    );
+  });
+});

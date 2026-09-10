@@ -583,7 +583,6 @@ describe("/interiors composition", () => {
       "PM_HERO.lede",
       "pm-hero__media",
       "hero-start-plan",
-      "hero-estimate",
       "pm-hero__credibility",
       "pm-hero__areas",
       "HOME_PUNE_AREAS",
