@@ -177,12 +177,35 @@ describe("the hero keeps its eyebrow, headline and one CTA", () => {
     assert.doesNotMatch(hero, /hero-estimate|Get Price Estimate|PM_HERO\.secondaryCta/);
   });
 
-  test("the background image and its priority hint are untouched", () => {
+  test("the background is art-directed and still loads as the LCP image", () => {
+    /*
+     * The hero used to be one `<Image fill priority>`. The launch image pack
+     * ships TWO crops — 1600x900 landscape and 900x1600 portrait — and `sizes`
+     * cannot choose between two FILES, only between widths of one. So the hero
+     * is a native <picture> fed by `getImageProps`, which is the documented
+     * Next 16 recipe and the only shape that downloads just the crop it uses.
+     *
+     * `priority` goes with it, because it is an `<Image>` prop. What has to
+     * survive is the BEHAVIOUR it stood for, and that is what is asserted:
+     * eager, high fetch priority, and both crops reaching the browser through
+     * the image optimizer rather than as raw files.
+     */
     const hero = code(read(HERO));
     assert.match(hero, /className="pm-hero__media"/);
-    assert.match(hero, /priority/);
+    assert.match(hero, /getImageProps/, "both crops must go through the optimizer");
+    assert.match(hero, /<picture>/);
+    assert.match(hero, /media=\{HERO_DESKTOP_MEDIA\}/);
     assert.match(hero, /fetchPriority="high"/);
-    assert.match(hero, /objectPosition: HERO\.focalPoint/);
+    assert.match(hero, /loading="eager"/);
+    assert.doesNotMatch(hero, /loading="lazy"/, "the hero is the LCP image");
+
+    /*
+     * Focal points still come from the asset registry rather than being typed
+     * into the component — one per crop now, handed to CSS as custom
+     * properties because a single <img> cannot carry two inline values.
+     */
+    assert.match(hero, /HERO_DESKTOP\.focalPoint/);
+    assert.match(hero, /HERO_MOBILE\.focalPoint/);
   });
 });
 

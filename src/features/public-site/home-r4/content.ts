@@ -201,6 +201,170 @@ export const PM_ASSETS = {
     provenanceCategory: "C",
     depictsCompletedProject: false,
   },
+  /* --------------------------------------------- final launch image pack --
+
+   * Added by the owner's ONEDECORE_FINAL_WEBSITE_IMAGE_PACK. Category C like
+   * everything above: ONEDECORE marketing artwork, never presented as a
+   * photograph of a completed project.
+   *
+   * These are ADDITIONS, not replacements. The entries above still serve the
+   * discovery pages, the Open Graph card and `InteriorsServiceBlocks`, and
+   * repointing them would have changed pictures on surfaces this task was not
+   * asked to touch.
+   */
+
+  /*
+   * The hero is art-directed: two different crops, not one image at two sizes.
+   * `HomeHero` feeds both through `getImageProps` into a native <picture>, so
+   * the browser downloads exactly the one its media query selects.
+   */
+  heroHomeDesktop: {
+    path: "/assets/onedecore/home/hero-home-desktop.webp",
+    width: 1600,
+    height: 900,
+    alt: "",
+    /*
+     * Focal points were chosen after measuring text contrast at every approved
+     * viewport, not by eye. The seating and the kitchen sit right of centre;
+     * pulling the frame right keeps them out from under the headline while the
+     * quieter plaster wall carries the copy.
+     */
+    focalPoint: "62% 52%",
+    mobileFocalPoint: "62% 52%",
+    bytes: 221362,
+    provenanceCategory: "C",
+    depictsCompletedProject: false,
+  },
+  heroHomeMobile: {
+    path: "/assets/onedecore/home/hero-home-mobile.webp",
+    width: 900,
+    height: 1600,
+    alt: "",
+    /*
+     * Biased downward. The top third of this crop is an empty cream ceiling —
+     * the brightest part of the frame and exactly where the headline sits, so
+     * the frame is pulled down to put the sofa and the kitchen behind the
+     * counter row instead.
+     */
+    focalPoint: "50% 68%",
+    mobileFocalPoint: "50% 68%",
+    bytes: 158578,
+    provenanceCategory: "C",
+    depictsCompletedProject: false,
+  },
+
+  /*
+   * Service and room artwork.
+   *
+   * `interiorModularKitchen` and `interiorWardrobes` each back TWO surfaces —
+   * a service card and a room panel. That is not an oversight: the supplied
+   * pack ships those pairs as byte-identical files (verified by sha256), so
+   * storing them once and referencing them twice ships the owner's intent
+   * without 277KB of duplicate bytes.
+   */
+  interiorCompleteHome: {
+    path: "/assets/onedecore/home/interior-complete-home.webp",
+    width: 1200,
+    height: 900,
+    alt: "Open-plan living and dining space with boucle seating, a round travertine table, a curved mirror and a timber-lined kitchen beyond",
+    focalPoint: "50% 50%",
+    mobileFocalPoint: "50% 48%",
+    bytes: 219438,
+    provenanceCategory: "C",
+    depictsCompletedProject: false,
+  },
+  interiorModularKitchen: {
+    path: "/assets/onedecore/home/interior-modular-kitchen.webp",
+    width: 1200,
+    height: 900,
+    alt: "Modular kitchen with timber cabinetry, a veined stone island and breakfast stools, lit by three stone pendant lights",
+    focalPoint: "50% 52%",
+    mobileFocalPoint: "52% 50%",
+    bytes: 134522,
+    provenanceCategory: "C",
+    depictsCompletedProject: false,
+  },
+  interiorWardrobes: {
+    path: "/assets/onedecore/home/interior-wardrobes.webp",
+    width: 1200,
+    height: 900,
+    alt: "Floor-to-ceiling wardrobe run with glazed centre doors, internal lighting, folded storage and an adjoining dresser",
+    focalPoint: "52% 50%",
+    mobileFocalPoint: "54% 48%",
+    bytes: 142796,
+    provenanceCategory: "C",
+    depictsCompletedProject: false,
+  },
+  interiorRenovation: {
+    path: "/assets/onedecore/home/interior-renovation-civil-work.webp",
+    width: 1200,
+    height: 900,
+    alt: "Apartment mid-renovation with a stepladder, paint pails, rolled drawings and a toolbox in front of part-finished plaster and a cove-lit ceiling",
+    focalPoint: "48% 54%",
+    mobileFocalPoint: "46% 54%",
+    bytes: 118548,
+    provenanceCategory: "C",
+    depictsCompletedProject: false,
+  },
+  interiorLivingRoom: {
+    path: "/assets/onedecore/home/interior-living-room.webp",
+    width: 1200,
+    height: 900,
+    alt: "Living room with a curved boucle sofa, round travertine coffee table and stone pendant lights, opening onto a terrace",
+    focalPoint: "54% 54%",
+    mobileFocalPoint: "56% 52%",
+    bytes: 174550,
+    provenanceCategory: "C",
+    depictsCompletedProject: false,
+  },
+  interiorBedroom: {
+    path: "/assets/onedecore/home/interior-bedroom.webp",
+    width: 1200,
+    height: 900,
+    alt: "Bedroom with an upholstered bed, timber-panelled headboard wall, cove lighting and a boucle bench at the foot",
+    focalPoint: "52% 50%",
+    mobileFocalPoint: "54% 48%",
+    bytes: 207266,
+    provenanceCategory: "C",
+    depictsCompletedProject: false,
+  },
+
+  /*
+   * REPRESENTATIVE, AND THE CODE SAYS SO IN TWO PLACES.
+   *
+   * This is not a photograph of ONEDECORE's facility and must never be
+   * presented as one. The alt text says "representative" and the section
+   * renders `FACTORY_IMAGERY_NOTE` beneath it. Replace this file with
+   * authentic factory photography and both statements have to be revisited
+   * together — that is deliberate friction.
+   */
+  manufacturingReference: {
+    path: "/assets/onedecore/home/manufacturing-reference.webp",
+    width: 1600,
+    height: 900,
+    alt: "Representative joinery workshop: a panel saw, stacked sheet material on pallets and finish samples laid out on a stone-topped bench",
+    focalPoint: "48% 54%",
+    mobileFocalPoint: "46% 56%",
+    bytes: 229826,
+    provenanceCategory: "C",
+    depictsCompletedProject: false,
+  },
+
+  /*
+   * The homepage's way in to /portfolio, and nothing more. It carries no
+   * project name, locality, client or date, because it is not a project.
+   */
+  portfolioEntry: {
+    path: "/assets/onedecore/home/portfolio-entry.webp",
+    width: 1600,
+    height: 900,
+    alt: "Open-plan living room and kitchen in warm neutrals, with boucle seating, a travertine table and a city view beyond the terrace",
+    focalPoint: "52% 54%",
+    mobileFocalPoint: "54% 52%",
+    bytes: 238292,
+    provenanceCategory: "C",
+    depictsCompletedProject: false,
+  },
 } as const satisfies Record<string, PmAsset>;
 
 /* -------------------------------------------------------------------- hero */

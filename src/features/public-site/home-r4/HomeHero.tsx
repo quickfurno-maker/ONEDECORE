@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { getImageProps } from "next/image";
 import { useCountUp } from "@/features/public-site/motion/useCountUp";
 import {
   PM_ASSETS,
@@ -11,7 +11,64 @@ import {
 } from "./content";
 import { usePlan } from "./PlanContext";
 
-const HERO = PM_ASSETS.hero;
+const HERO_DESKTOP = PM_ASSETS.heroHomeDesktop;
+const HERO_MOBILE = PM_ASSETS.heroHomeMobile;
+
+/**
+ * The hero image is ART-DIRECTED, which is why this is a <picture> and not
+ * `<Image fill>`.
+ *
+ * The two files are different crops, not one picture at two sizes: 1600x900
+ * landscape for desktop and tablet, 900x1600 portrait for a phone. `sizes`
+ * cannot express that — it picks a WIDTH from one srcset. `<source media>` is
+ * the only mechanism that picks a FILE, and it is the only one that downloads
+ * just the one it picked. Two `<Image>` elements toggled with `display: none`
+ * was the obvious alternative and the wrong one: Chrome fetches a hidden `img`
+ * anyway, so a phone would have paid for the desktop crop as well.
+ *
+ * `getImageProps` is the documented Next 16 recipe for this. The srcsets still
+ * come from the image optimizer, so nothing about formats, widths or quality
+ * changes — only which of the two the browser is allowed to ask for.
+ *
+ * WHAT IS LOST, AND WHY IT IS ACCEPTABLE
+ *
+ * `priority` also injects `<link rel="preload">`, and that does not survive the
+ * move to `<picture>`; a media-conditional preload would have to restate both
+ * srcsets in the head and would then be a second place to keep in step. What
+ * actually drives the LCP here is that the `<img>` is in the server-rendered
+ * HTML, above everything else, with `fetchpriority="high"` and `loading="eager"`
+ * — the preload scanner reaches it in the first chunk either way.
+ */
+const HERO_IMAGE_QUALITY = 75;
+
+const { props: heroDesktopProps } = getImageProps({
+  alt: "",
+  src: HERO_DESKTOP.path,
+  width: HERO_DESKTOP.width,
+  height: HERO_DESKTOP.height,
+  quality: HERO_IMAGE_QUALITY,
+  sizes: "100vw",
+});
+
+const { props: heroMobileProps } = getImageProps({
+  alt: "",
+  src: HERO_MOBILE.path,
+  width: HERO_MOBILE.width,
+  height: HERO_MOBILE.height,
+  quality: HERO_IMAGE_QUALITY,
+  sizes: "100vw",
+});
+
+const { srcSet: heroDesktopSrcSet } = heroDesktopProps;
+const { srcSet: heroMobileSrcSet, ...heroFallbackProps } = heroMobileProps;
+
+/**
+ * The switch point.
+ *
+ * 768px, so tablets get the landscape crop as the asset map asks. Below it the
+ * portrait crop has the room a phone actually has.
+ */
+const HERO_DESKTOP_MEDIA = "(min-width: 768px)";
 
 /**
  * One credibility cell — counted if it is a number, printed if it is a word.
@@ -99,25 +156,53 @@ export function HomeHero() {
       <span className="pm-hero__glow" aria-hidden="true" />
       <span className="pm-hero__grid" aria-hidden="true" />
 
-      <div className="pm-hero__media" aria-hidden="true">
-        <Image
-          src={HERO.path}
-          alt=""
-          fill
-          priority
-          fetchPriority="high"
-          sizes="100vw"
-          /*
-           * 75 is what is actually served. `images.qualities` defaults to
-           * [75], so an 80 here was dropped from the emitted srcset and only
-           * produced a warning on every dev boot. Matching the configured
-           * value changes no pixel and removes a message that read like a
-           * broken image.
-           */
-          quality={75}
-          className="pm-hero__mediaImg"
-          style={{ objectPosition: HERO.focalPoint }}
-        />
+      <div
+        className="pm-hero__media"
+        aria-hidden="true"
+        /*
+         * Focal points travel as custom properties rather than as an inline
+         * `object-position`, because the two crops need different ones and a
+         * single element can only carry one inline value. The numbers stay in
+         * the asset registry where they are reviewed; the breakpoint that
+         * chooses between them stays in the stylesheet, next to the same
+         * 768px used by the <source> above.
+         */
+        style={
+          {
+            "--pm-hero-focal-desktop": HERO_DESKTOP.focalPoint,
+            "--pm-hero-focal-mobile": HERO_MOBILE.focalPoint,
+          } as React.CSSProperties
+        }
+      >
+        <picture>
+          <source
+            media={HERO_DESKTOP_MEDIA}
+            srcSet={heroDesktopSrcSet}
+            sizes="100vw"
+            width={HERO_DESKTOP.width}
+            height={HERO_DESKTOP.height}
+          />
+          <source
+            srcSet={heroMobileSrcSet}
+            sizes="100vw"
+            width={HERO_MOBILE.width}
+            height={HERO_MOBILE.height}
+          />
+          {/*
+            The fallback, and the element every browser actually paints. It
+            carries the mobile file because a browser old enough to ignore
+            <source> is a phone often enough that the portrait crop is the
+            safer default.
+          */}
+          <img
+            {...heroFallbackProps}
+            alt=""
+            className="pm-hero__mediaImg"
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
+          />
+        </picture>
         <span className="pm-hero__mediaScrim" />
       </div>
 

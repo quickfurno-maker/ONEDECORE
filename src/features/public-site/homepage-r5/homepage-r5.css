@@ -430,6 +430,45 @@
 }
 
 /* ========================================================================== */
+/* Factory figure                                                             */
+/* ========================================================================== */
+
+/*
+ * A <figure>, because the caption below the picture is ABOUT the picture.
+ *
+ * `FACTORY_IMAGERY_NOTE` says the workshop shown is representative and not
+ * ONEDECORE's own facility. Marking that up as a stray paragraph would leave a
+ * screen reader to infer the association from reading order; figure/figcaption
+ * states it. The visual treatment stays the quiet `.r5-note` used elsewhere on
+ * the page, so the disclosure reads as a caption rather than as a warning.
+ */
+[data-public-home-r4] .r5-factoryFigure {
+  margin: 0 0 var(--r5-head-gap);
+}
+
+.r5-factoryMedia {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--r5-radius);
+  background: var(--od-bg-deepest, #0b0908);
+}
+
+.r5-factoryMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*
+ * A caption sits under its own image, so it does not take the 18px that
+ * separates `.r5-note` from unrelated content above it.
+ */
+[data-public-home-r4] .r5-note--figure {
+  margin-top: 10px;
+}
+
+/* ========================================================================== */
 /* Proof grid (Why / Factory)                                                 */
 /* ========================================================================== */
 

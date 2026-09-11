@@ -3,6 +3,8 @@ import Link from "next/link";
 import { PM_ASSETS } from "@/features/public-site/home-r4/content";
 import { R5_PORTFOLIO_COPY, REFERENCE_IMAGERY_NOTE } from "../content";
 
+const PORTFOLIO_IMAGE = PM_ASSETS.portfolioEntry;
+
 /**
  * Portfolio — one door, not a second gallery.
  *
@@ -38,14 +40,21 @@ export function R5Portfolio() {
           data-conversion-action="portfolio-view"
         >
           <div className="r5-portfolio__media">
+            {/*
+              The owner's supplied entry visual. It carries no project name,
+              locality, client or date, and it is not going to acquire one:
+              this is a door to /portfolio, and the projects behind it are
+              where approved photography and real captions belong.
+            */}
             <Image
-              src={PM_ASSETS.dusk.path}
-              alt=""
-              width={1440}
-              height={900}
+              src={PORTFOLIO_IMAGE.path}
+              alt={PORTFOLIO_IMAGE.alt}
+              width={PORTFOLIO_IMAGE.width}
+              height={PORTFOLIO_IMAGE.height}
               sizes="(min-width: 1240px) 1200px, 92vw"
               loading="lazy"
               quality={75}
+              style={{ objectPosition: PORTFOLIO_IMAGE.focalPoint }}
             />
             {/*
               The scrim carries the call to action, so the link has a visible

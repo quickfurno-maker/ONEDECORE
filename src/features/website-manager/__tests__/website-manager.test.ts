@@ -970,6 +970,75 @@ describe("the action re-derives what the client sent", () => {
     assert.match(actions, /newTab: linkType === "external" && banner\.newTab === true/);
   });
 
+  test("next/image is allowed to load the banner bucket", () => {
+    /*
+     * THE DEFECT THIS LOCKS, WHICH SHIPPED SILENTLY.
+     *
+     * Banner artwork is a remote Supabase Storage URL, and `next/image` refuses
+     * any remote host not listed in `images.remotePatterns`. `website-banners`
+     * was never added — only `portfolio-public` and `commerce-product-public`
+     * were — so every creative uploaded through the Website Manager would have
+     * rendered as a broken image on the live homepage.
+     *
+     * Nothing caught it because the six slots had been empty since the CMS
+     * shipped. An empty slot draws a placeholder frame, and a placeholder frame
+     * never asks the optimizer for anything. The failure needed real artwork to
+     * appear, which is precisely when it would have been most expensive.
+     *
+     * The production host must be covered, and so must local Supabase, or the
+     * next person to load banners locally re-discovers this the hard way.
+     */
+    const config = read("next.config.ts");
+    const patterns = /remotePatterns:\s*\[([\s\S]*?)\n {4}\]/.exec(config);
+    assert.ok(patterns, "images.remotePatterns must exist");
+
+    const bucketEntries = [...patterns[1]!.matchAll(/\{([^{}]*website-banners[^{}]*)\}/g)].map(
+      (m) => m[1]!
+    );
+    assert.ok(
+      bucketEntries.length >= 3,
+      "the banner bucket needs the production host and both local hostnames"
+    );
+
+    const hosts = bucketEntries.map((entry) => /hostname:\s*"([^"]+)"/.exec(entry)?.[1]);
+    assert.ok(
+      hosts.some((h) => h && h.endsWith(".supabase.co")),
+      "the production Supabase host must be allowlisted for banners"
+    );
+    for (const local of ["127.0.0.1", "localhost"]) {
+      assert.ok(hosts.includes(local), `${local} must be allowlisted for banners`);
+    }
+
+    // And the path must be scoped to the bucket, never a bare wildcard host.
+    for (const entry of bucketEntries) {
+      assert.match(
+        entry,
+        /pathname:\s*"\/storage\/v1\/object\/public\/website-banners\/\*\*"/,
+        "a banner pattern must be scoped to the bucket"
+      );
+    }
+  });
+
+  test("the local-IP escape hatch can never be on in production", () => {
+    /*
+     * Local Supabase serves banners from 127.0.0.1, and Next 16 refuses to
+     * optimize a private IP without `dangerouslyAllowLocalIP`. The flag is
+     * genuinely needed to see the slider work on a developer machine — and it
+     * is an SSRF primitive if it ever reaches a deployment.
+     *
+     * So it must be derived from NODE_ENV rather than from anything a
+     * deployment can set. `next build` pins NODE_ENV=production.
+     */
+    const config = read("next.config.ts");
+    const line = /dangerouslyAllowLocalIP:\s*([^,\n]+)/.exec(config);
+    assert.ok(line, "the flag must be declared, so its value is reviewable");
+    assert.equal(
+      line[1]!.trim(),
+      'process.env.NODE_ENV !== "production"',
+      "the flag must be derived from NODE_ENV and nothing else"
+    );
+  });
+
   test("alt text is required server-side once there is an image", () => {
     const actions = code(read(ACTIONS));
     assert.match(actions, /if \(image && !alt\)/);
