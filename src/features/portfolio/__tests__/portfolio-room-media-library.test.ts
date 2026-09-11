@@ -136,7 +136,7 @@ describe("alt text is fast to supply and never a filename", () => {
      * uploader must not reach for the file's name.
      */
     const uploader = code(read(UPLOADER));
-    assert.match(uploader, /defaultLibraryAltText\(roomCode\)/);
+    assert.match(uploader, /defaultLibraryAltText\(item\.roomCode\)/);
     assert.doesNotMatch(
       uploader,
       /append\("altText",\s*[a-zA-Z.]*file\.name/,
@@ -234,7 +234,7 @@ describe("the uploader is a real bulk tool", () => {
   test("the room is chosen once, then applied to every file in the batch", () => {
     const uploader = code(read(UPLOADER));
     assert.match(uploader, /name="library-room"/, "one radio group, not one per file");
-    assert.match(uploader, /body\.append\("roomCategoryCode", roomCode\)/);
+    assert.match(uploader, /body\.append\("roomCategoryCode", item\.roomCode\)/);
   });
 
   test("many files can be selected in one action", () => {
@@ -316,8 +316,115 @@ describe("the uploader is a real bulk tool", () => {
     assert.match(code(read(UPLOADER)), /item\.status !== "failed"/);
   });
 
-  test("object URLs are revoked, so a fifty-image batch is not a leak", () => {
-    assert.match(code(read(UPLOADER)), /URL\.revokeObjectURL/);
+  test("object URLs are tracked in a ref, not captured from a stale render", () => {
+    /*
+     * THE BUG THIS LOCKS.
+     *
+     * The first version was an unmount effect with `[]` dependencies closing
+     * over `items`. It captured the array as it was on the FIRST render —
+     * empty — so every preview created afterwards leaked for the life of the
+     * page. On a fifty-image batch that is fifty blobs held forever.
+     *
+     * The obvious repair is worse: adding `items` to the dependency list makes
+     * the cleanup run on every queue change and revoke URLs that are still
+     * painting visible thumbnails.
+     *
+     * A ref holds the live set. Asserted structurally because neither failure
+     * mode throws — one leaks silently, the other blanks a thumbnail.
+     */
+    const uploader = code(read(UPLOADER));
+    assert.match(uploader, /const objectUrls = useRef<Set<string>>\(new Set\(\)\)/);
+    assert.match(uploader, /objectUrls\.current\.add\(previewUrl\)/);
+    assert.match(uploader, /objectUrls\.current\.delete\(url\)/);
+
+    // The unmount effect reads the ref, and its dependency list stays empty.
+    assert.match(uploader, /const live = objectUrls\.current;[\s\S]{0,220}for \(const url of live\) URL\.revokeObjectURL\(url\)/);
+
+    /*
+     * And `items` must not be a dependency of any effect — that is the exact
+     * shape of the "revoke URLs still in use" regression.
+     */
+    assert.doesNotMatch(uploader, /useEffect\([\s\S]{0,400}\}, \[items\]\)/);
+
+    // Removing one item releases only that item's URL.
+    assert.match(uploader, /releaseUrl\(item\.previewUrl\)/);
+    assert.match(uploader, /for \(const item of failed\) releaseUrl\(item\.previewUrl\)/);
+  });
+
+  test("the same file cannot be queued twice in one open batch", () => {
+    /*
+     * WHY THE SERVER CHECK IS NOT ENOUGH ON ITS OWN.
+     *
+     * The server refuses a checksum already stored, and that stays
+     * authoritative for anything previously uploaded. It cannot help WITHIN a
+     * batch: three uploads run concurrently, so the same file queued twice can
+     * have both requests read `portfolio_media_sources` before either writes
+     * its row — and both then pass.
+     *
+     * The UI simply never sends the same local file twice in one queue. That
+     * is the case the owner actually hits (a folder dragged in, then dragged
+     * in again), and it costs one Set rather than a lock or a checksum table.
+     */
+    const uploader = code(read(UPLOADER));
+    assert.match(uploader, /function fileIdentity\(file: File\)/);
+    assert.match(
+      uploader,
+      /file\.name.*file\.size.*file\.lastModified.*file\.type/,
+      "identity is name + size + lastModified + type"
+    );
+    assert.match(uploader, /const seen = new Set\(current\.map\(\(item\) => item\.identity\)\)/);
+    assert.match(uploader, /if \(seen\.has\(identity\)\) \{[\s\S]{0,80}continue;/);
+
+    // The suppression is visible to the owner, and is not dressed as a failure.
+    assert.match(uploader, /already selected/i);
+    assert.match(uploader, /setAlreadySelected\(repeats\)/);
+
+    /*
+     * And the server's own duplicate answer is untouched: a file already in
+     * the library still comes back 409 and still shows as "Duplicate".
+     */
+    assert.match(uploader, /status === 409 \|\| code === "DUPLICATE_IMAGE"/);
+    assert.match(uploader, /status: "duplicate"/);
+  });
+
+  test("a queued row is uploaded and labelled with the room it was queued under", () => {
+    /*
+     * THE UX LIE THIS PREVENTS.
+     *
+     * Rows used to render the live `room` state. After a batch finished,
+     * changing the selector relabelled already-uploaded rows to a category the
+     * server never stored them in — the panel telling the owner something
+     * false about data already written.
+     *
+     * Each item now carries its own `roomCode`, the request sends that, and
+     * the selector locks once anything is queued.
+     */
+    const uploader = code(read(UPLOADER));
+    assert.match(uploader, /readonly roomCode: PortfolioRoomCode;/);
+    assert.match(uploader, /roomCode: room,/, "the item snapshots the room at queue time");
+    assert.match(
+      uploader,
+      /body\.append\("roomCategoryCode", item\.roomCode\)/,
+      "the request sends the item's room, not the live selector"
+    );
+    assert.match(
+      uploader,
+      /defaultLibraryAltText\(item\.roomCode\)/,
+      "and the alt text matches the room actually sent"
+    );
+    assert.match(
+      uploader,
+      /PORTFOLIO_ROOM_LABELS\[item\.roomCode\]/,
+      "the row displays the room it was queued under"
+    );
+    assert.match(
+      uploader,
+      /disabled=\{running \|\| items\.length > 0\}/,
+      "the room selector locks once anything is queued"
+    );
+
+    // The live `room` is still what a NEW selection is queued under.
+    assert.match(uploader, /\[room\]\s*\);/);
   });
 });
 

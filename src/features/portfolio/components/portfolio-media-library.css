@@ -637,6 +637,17 @@
   color: var(--od-text-2, #b7bdc5);
 }
 
+/* A suppressed repeat is information, not a failure — amber, not red. */
+.od-lib-uploader__repeat {
+  color: var(--od-warning, #e2a83b);
+}
+
+/* A locked room selector must look locked, not merely be locked. */
+.od-lib-uploader__room:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .od-lib-uploader__queue {
   display: grid;
   gap: 8px;

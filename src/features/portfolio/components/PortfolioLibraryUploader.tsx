@@ -49,11 +49,34 @@ type ItemStatus = "queued" | "uploading" | "processing" | "uploaded" | "duplicat
 
 interface QueueItem {
   readonly key: string;
+  /**
+   * Local identity: name + size + lastModified + type.
+   *
+   * Two picks of the same file produce two different `File` objects, so object
+   * identity cannot detect a repeat. These four fields are what the browser
+   * actually knows about a file without reading it, and together they are
+   * enough to say "you already chose this one" before a byte is uploaded.
+   */
+  readonly identity: string;
   readonly file: File;
+  /**
+   * The room this item was QUEUED under, not the one currently selected.
+   *
+   * The server stores the room sent with the request. If the row rendered the
+   * live `room` state instead, changing the selector after a batch finished
+   * would relabel already-uploaded rows to a category they are not in — the UI
+   * would be telling the owner something false about stored data.
+   */
+  readonly roomCode: PortfolioRoomCode;
   status: ItemStatus;
   progress: number;
   error?: string;
   previewUrl: string;
+}
+
+/** Stable local identity for a picked file. */
+function fileIdentity(file: File): string {
+  return `${file.name}::${file.size}::${file.lastModified}::${file.type}`;
 }
 
 const STATUS_LABEL: Readonly<Record<ItemStatus, string>> = {
@@ -85,56 +108,114 @@ export function PortfolioLibraryUploader({
   const [items, setItems] = useState<QueueItem[]>([]);
   const [running, setRunning] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [alreadySelected, setAlreadySelected] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  /*
-   * Object URLs are a manual resource. Without this the panel leaks one blob
-   * per file for the lifetime of the page, which on a fifty-image batch is
-   * every one of those images still held in memory after they are uploaded.
+  /**
+   * Every object URL this panel has created and not yet revoked.
+   *
+   * A REF, NOT STATE, AND NOT THE `items` ARRAY.
+   *
+   * The first version was an unmount effect with an empty dependency array
+   * that closed over `items`. It captured the array as it was on the first
+   * render — empty — so every preview created afterwards leaked. Adding
+   * `items` to the dependency list is the obvious repair and a worse bug: the
+   * cleanup would then run on every queue change and revoke URLs that are
+   * still painting visible thumbnails.
+   *
+   * A ref is the right shape. It is mutable without re-rendering, it is not
+   * captured by a stale closure, and it holds exactly the live set — a URL is
+   * added when it is created and removed the moment it is revoked.
    */
-  useEffect(() => {
-    return () => {
-      for (const item of items) URL.revokeObjectURL(item.previewUrl);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const objectUrls = useRef<Set<string>>(new Set());
+
+  const releaseUrl = useCallback((url: string) => {
+    if (!url || !objectUrls.current.has(url)) return;
+    URL.revokeObjectURL(url);
+    objectUrls.current.delete(url);
   }, []);
 
-  const addFiles = useCallback((fileList: FileList | null) => {
-    if (!fileList) return;
-    const next: QueueItem[] = [];
-    for (const file of Array.from(fileList)) {
-      if (!ACCEPTED.split(",").includes(file.type)) {
-        next.push({
-          key: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
-          file,
-          status: "failed",
-          progress: 0,
-          error: "Only JPEG, PNG and WebP are accepted.",
-          previewUrl: "",
-        });
-        continue;
-      }
-      if (file.size > MAX_FILE_SIZE_BYTES) {
-        next.push({
-          key: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
-          file,
-          status: "failed",
-          progress: 0,
-          error: "Larger than the 20 MB limit.",
-          previewUrl: "",
-        });
-        continue;
-      }
-      next.push({
-        key: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
-        file,
-        status: "queued",
-        progress: 0,
-        previewUrl: URL.createObjectURL(file),
-      });
-    }
-    setItems((current) => [...current, ...next]);
+  /*
+   * Unmount only. The ref is read at teardown, so this sees every URL that
+   * still exists rather than the ones that existed when the effect was set up.
+   */
+  useEffect(() => {
+    const live = objectUrls.current;
+    return () => {
+      for (const url of live) URL.revokeObjectURL(url);
+      live.clear();
+    };
   }, []);
+
+  const addFiles = useCallback(
+    (fileList: FileList | null) => {
+      if (!fileList) return;
+
+      setItems((current) => {
+        /*
+         * QUEUE-LEVEL DUPLICATE SUPPRESSION.
+         *
+         * The server refuses a photograph already stored in the library, by
+         * checksum, and that remains the authority for anything previously
+         * uploaded. It cannot help WITHIN one batch: three uploads run at
+         * once, so the same file queued twice can have both requests read the
+         * sources table before either writes its row, and both then pass.
+         *
+         * Rather than reach for a lock or a checksum table, the UI simply does
+         * not send the same local file twice in one open queue. That is the
+         * case the owner actually hits — a folder dragged in, then dragged in
+         * again — and suppressing it here costs one Set.
+         */
+        const seen = new Set(current.map((item) => item.identity));
+        const next: QueueItem[] = [];
+        let repeats = 0;
+
+        for (const file of Array.from(fileList)) {
+          const identity = fileIdentity(file);
+          if (seen.has(identity)) {
+            repeats += 1;
+            continue;
+          }
+          seen.add(identity);
+
+          const base = {
+            key: `${identity}::${Math.random()}`,
+            identity,
+            file,
+            roomCode: room,
+            progress: 0,
+          };
+
+          if (!ACCEPTED_UPLOAD_MIME_TYPES.includes(file.type as never)) {
+            next.push({
+              ...base,
+              status: "failed",
+              error: "Only JPEG, PNG and WebP are accepted.",
+              previewUrl: "",
+            });
+            continue;
+          }
+          if (file.size > MAX_FILE_SIZE_BYTES) {
+            next.push({
+              ...base,
+              status: "failed",
+              error: "Larger than the 20 MB limit.",
+              previewUrl: "",
+            });
+            continue;
+          }
+
+          const previewUrl = URL.createObjectURL(file);
+          objectUrls.current.add(previewUrl);
+          next.push({ ...base, status: "queued", previewUrl });
+        }
+
+        setAlreadySelected(repeats);
+        return next.length > 0 ? [...current, ...next] : current;
+      });
+    },
+    [room]
+  );
 
   const update = useCallback((key: string, patch: Partial<QueueItem>) => {
     setItems((current) =>
@@ -150,12 +231,17 @@ export function PortfolioLibraryUploader({
    * uploader without per-file progress is a spinner with extra steps.
    */
   const uploadOne = useCallback(
-    (item: QueueItem, roomCode: PortfolioRoomCode) =>
+    (item: QueueItem) =>
       new Promise<void>((resolve) => {
+        /*
+         * `item.roomCode`, never the live `room` state. The row was queued
+         * under one room and must be sent under that same room, or the label
+         * the owner read and the category the server stored diverge.
+         */
         const body = new FormData();
         body.append("file", item.file);
-        body.append("roomCategoryCode", roomCode);
-        body.append("altText", defaultLibraryAltText(roomCode));
+        body.append("roomCategoryCode", item.roomCode);
+        body.append("altText", defaultLibraryAltText(item.roomCode));
 
         const xhr = new XMLHttpRequest();
         xhr.open("POST", "/api/admin/portfolio/media/library");
@@ -243,7 +329,7 @@ export function PortfolioLibraryUploader({
         while (cursor < pending.length) {
           const item = pending[cursor++];
           if (!item) break;
-          await uploadOne(item, room);
+          await uploadOne(item);
         }
       };
 
@@ -256,7 +342,7 @@ export function PortfolioLibraryUploader({
       // grid behind this panel is now out of date.
       router.refresh();
     },
-    [items, room, uploadOne, router]
+    [items, uploadOne, router]
   );
 
   const queued = items.filter((item) => item.status === "queued");
@@ -286,7 +372,16 @@ export function PortfolioLibraryUploader({
                     name="library-room"
                     value={code}
                     checked={room === code}
-                    disabled={running}
+                    /*
+                     * LOCKED ONCE ANYTHING IS QUEUED.
+                     *
+                     * Each item already carries the room it was queued under,
+                     * so a mid-batch switch could not mislabel a stored image
+                     * — but it could still produce one panel listing two
+                     * different rooms under a heading that names one. Locking
+                     * the choice keeps the batch a batch.
+                     */
+                    disabled={running || items.length > 0}
                     onChange={() => setRoom(code)}
                   />
                   <span>{PORTFOLIO_ROOM_LABELS[code]}</span>
@@ -296,6 +391,9 @@ export function PortfolioLibraryUploader({
             <p className="od-lib-uploader__hint">
               Every image in this batch is filed under {PORTFOLIO_ROOM_LABELS[room]}. You can move
               images to another room afterwards.
+              {items.length > 0
+                ? " Close this panel to start a batch for a different room."
+                : null}
             </p>
           </fieldset>
 
@@ -348,6 +446,11 @@ export function PortfolioLibraryUploader({
                 {uploaded.length > 0 ? <span>{uploaded.length} uploaded</span> : null}
                 {duplicates.length > 0 ? <span>{duplicates.length} duplicate</span> : null}
                 {failed.length > 0 ? <span>{failed.length} failed</span> : null}
+                {alreadySelected > 0 ? (
+                  <span className="od-lib-uploader__repeat">
+                    {alreadySelected} already selected
+                  </span>
+                ) : null}
               </div>
 
               <ul className="od-lib-uploader__queue">
@@ -364,7 +467,7 @@ export function PortfolioLibraryUploader({
                         {item.file.name}
                       </p>
                       <p className="od-lib-uploader__sub">
-                        {formatSize(item.file.size)} · {PORTFOLIO_ROOM_LABELS[room]}
+                        {formatSize(item.file.size)} · {PORTFOLIO_ROOM_LABELS[item.roomCode]}
                       </p>
                       {item.error ? (
                         <p className="od-lib-uploader__error">{item.error}</p>
@@ -384,7 +487,7 @@ export function PortfolioLibraryUploader({
                         type="button"
                         className="od-lib-uploader__remove"
                         onClick={() => {
-                          URL.revokeObjectURL(item.previewUrl);
+                          releaseUrl(item.previewUrl);
                           setItems((current) => current.filter((x) => x.key !== item.key));
                         }}
                         aria-label={`Remove ${item.file.name}`}
@@ -409,7 +512,7 @@ export function PortfolioLibraryUploader({
                 type="button"
                 className="od-btn-ghost"
                 onClick={() => {
-                  for (const item of failed) URL.revokeObjectURL(item.previewUrl);
+                  for (const item of failed) releaseUrl(item.previewUrl);
                   setItems((current) => current.filter((item) => item.status !== "failed"));
                 }}
               >
