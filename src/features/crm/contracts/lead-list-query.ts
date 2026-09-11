@@ -27,6 +27,34 @@ export const LEAD_LIST_FOLLOW_UP_DUE_FILTERS = [
 export type LeadListFollowUpDueFilter =
   (typeof LEAD_LIST_FOLLOW_UP_DUE_FILTERS)[number];
 
+/**
+ * How a cohort is ordered, when the caller asks.
+ *
+ * OMITTING THIS KEEPS TODAY'S BEHAVIOUR. A `null` sort means received order —
+ * newest enquiry first — which is what `/admin/crm/leads` deliberately became
+ * and must stay: it is an inbox, and an inbox that hides the newest item is not
+ * one. Every existing caller sends nothing and is unaffected.
+ *
+ * The Owner app asks a different question of the same cohort. It opens Smart
+ * Leads to decide who to call next, so it opts into `priority` explicitly. Two
+ * surfaces, two questions, one read model — the same split that already exists
+ * between this page and the pipeline.
+ *
+ *   priority     canonical sales-priority ranking, from `sortSegmentedLeads`
+ *   newest       received order, newest first (the default)
+ *   oldest       received order, oldest first
+ *   next_action  soonest primary next action first, unscheduled last
+ *   score        system score, highest first
+ */
+export const LEAD_LIST_SORTS = [
+  "priority",
+  "newest",
+  "oldest",
+  "next_action",
+  "score",
+] as const;
+export type LeadListSort = (typeof LEAD_LIST_SORTS)[number];
+
 export interface LeadListQuery {
   readonly q: string | null;
   readonly status: LeadStageCode | null;
@@ -40,6 +68,17 @@ export interface LeadListQuery {
    * mutates the other.
    */
   readonly bucket: CrmLeadSalesBucket | null;
+  /**
+   * Only leads a person has classified by hand.
+   *
+   * The bucket filter answers "how hot is this", which a lead can reach either
+   * by someone's judgement or by the score engine. This answers the different
+   * question of which ones a human actually decided, and it is how an owner
+   * reviews their own overrides.
+   */
+  readonly manualOnly: boolean;
+  /** Null means received order — see `LEAD_LIST_SORTS`. */
+  readonly sort: LeadListSort | null;
   /** Received-month cohort, Asia/Kolkata. Defaults to the current IST month. */
   readonly month: LeadMonthCohort;
   readonly page: number;
@@ -157,6 +196,16 @@ export function parseLeadListQuery(
     : null;
 
   const bucket = parseLeadSalesBucketParam(firstParam(searchParams.bucket));
+
+  const sortRaw = firstParam(searchParams.sort);
+  // An unrecognised sort falls back to received order rather than being
+  // refused: a stale client must not be able to empty the owner's list.
+  const sort = LEAD_LIST_SORTS.includes(sortRaw as LeadListSort)
+    ? (sortRaw as LeadListSort)
+    : null;
+
+  // Only the exact string enables it, so a typo narrows nothing.
+  const manualOnly = firstParam(searchParams.manualOnly) === "true";
   // An unrecognised month falls back to the CURRENT IST month, never to
   // all-time: a typo must not quietly widen a scoped view into a full scan.
   const month = parseLeadMonthParam(firstParam(searchParams.month), nowMs);
@@ -176,6 +225,8 @@ export function parseLeadListQuery(
     assigneeId: parseUuid(firstParam(searchParams.assigneeId)),
     followUpDue,
     bucket,
+    manualOnly,
+    sort,
     month,
     page,
     pageSize,
@@ -190,9 +241,17 @@ export function hasLeadListActiveFilters(query: LeadListQuery): boolean {
       query.assignment ||
       query.assigneeId ||
       query.followUpDue ||
-      query.bucket
+      query.bucket ||
+      query.manualOnly
   );
 }
+
+/*
+ * `sort` is deliberately absent above. Ordering a list is not filtering it —
+ * a sorted view still shows every matching lead — and counting it as an active
+ * filter would light up the "clear filters" affordance over a cohort nothing
+ * had been removed from.
+ */
 
 /**
  * Builds a Leads list URL with one filter optionally cleared.
