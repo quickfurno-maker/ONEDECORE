@@ -1,0 +1,828 @@
+/*
+ * Portfolio Media Library admin styles.
+ *
+ * THE OPS SUITE IS DARK, AND THESE ARE ITS TOKENS.
+ *
+ * Every colour here resolves from a `--od-*` variable that actually exists in
+ * `admin-ops/tokens.css`, each with a dark fallback that matches rather than
+ * contradicts it. The Website Manager's first draft invented an `--ops-*`
+ * family that existed nowhere, so every declaration fell back to a LIGHT
+ * palette — white cards inside a dark shell, with near-white text on them. It
+ * photographed fine and was unreadable in use.
+ *
+ * WHAT THIS SCREEN HAS TO DO
+ *
+ * Show a lot of thumbnails densely enough to manage in bulk, make the
+ * published/unpublished distinction obvious at a glance across forty-eight
+ * tiles, and stay usable at 390px where selection gives way to uploading.
+ */
+
+.od-lib {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------------ head */
+
+.od-lib__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: var(--od-radius, 12px);
+  background: var(--od-surface, #10151b);
+}
+
+.od-lib__title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-lib__sub {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+/* --------------------------------------------------------------- filters */
+
+.od-lib__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.od-lib__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: 999px;
+  background: var(--od-surface, #10151b);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--od-text-2, #b7bdc5);
+  text-decoration: none;
+}
+
+.od-lib__chip:hover {
+  background: var(--od-hover, #18202a);
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-lib__chip--on {
+  border-color: var(--od-gold, #d7a529);
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-lib__chipCount {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--od-elevated, #141a21);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--od-muted, #747d88);
+}
+
+/* ---------------------------------------------------------------- notice */
+
+.od-lib__notice {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-left: 3px solid var(--od-positive, #35c98c);
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-surface, #10151b);
+  font-size: 0.86rem;
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-lib__notice--bad {
+  border-left-color: var(--od-danger, #ea6666);
+}
+
+/* ------------------------------------------------------- selection / bar */
+
+.od-lib__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-surface, #10151b);
+}
+
+.od-lib__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--od-gold, #d7a529);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.od-lib__link:hover {
+  color: var(--od-gold-hover, #e6b948);
+}
+
+.od-lib__count {
+  margin-inline-end: auto;
+  font-size: 0.84rem;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-lib__save {
+  margin-inline-start: auto;
+}
+
+.od-lib__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--od-gold, #d7a529);
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+}
+
+.od-lib__actions button,
+.od-lib__actions select {
+  padding: 7px 13px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-surface, #10151b);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--od-text, #f5f3ee);
+  cursor: pointer;
+}
+
+.od-lib__actions button:hover:not(:disabled),
+.od-lib__actions select:hover {
+  background: var(--od-hover, #18202a);
+}
+
+.od-lib__actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.od-lib__move {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-lib__danger {
+  border-color: var(--od-danger, #ea6666) !important;
+  color: var(--od-danger, #ea6666) !important;
+}
+
+/* ------------------------------------------------------------------ grid */
+
+.od-lib__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.od-lib__card {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-surface, #10151b);
+  overflow: hidden;
+}
+
+/*
+ * The published state is carried by a border as well as by the badge.
+ *
+ * Across forty-eight tiles a small text label is not scannable; a coloured edge
+ * is. The label stays because colour alone is not an accessible distinction.
+ */
+.od-lib__card[data-published="true"] {
+  border-color: rgba(53, 201, 140, 0.45);
+}
+
+.od-lib__media {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  background: var(--od-bg, #090c10);
+}
+
+.od-lib__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.od-lib__imgMissing {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.78rem;
+  color: var(--od-muted, #747d88);
+}
+
+.od-lib__pick {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(9, 12, 16, 0.72);
+  cursor: pointer;
+}
+
+.od-lib__pick input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--od-gold, #d7a529);
+  cursor: pointer;
+}
+
+.od-lib__badge,
+.od-lib__state {
+  position: absolute;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(9, 12, 16, 0.78);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-lib__badge {
+  top: 8px;
+  right: 8px;
+}
+
+.od-lib__state {
+  bottom: 8px;
+  left: 8px;
+}
+
+.od-lib__state--on {
+  color: var(--od-positive, #35c98c);
+}
+
+.od-lib__foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+}
+
+.od-lib__edit {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--od-text-2, #b7bdc5);
+  cursor: pointer;
+}
+
+.od-lib__edit:hover:not(:disabled) {
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-lib__dot {
+  width: 6px;
+  height: 6px;
+  margin-inline-start: auto;
+  border-radius: 50%;
+  background: var(--od-blue, #3e8ef7);
+}
+
+.od-lib__reorder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-lib__reorder button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 6px;
+  background: var(--od-elevated, #141a21);
+  color: var(--od-text, #f5f3ee);
+  cursor: pointer;
+}
+
+.od-lib__reorder button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ----------------------------------------------------------- empty/pager */
+
+.od-lib__empty {
+  display: grid;
+  gap: 8px;
+  padding: 40px 20px;
+  border: 1px dashed var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius, 12px);
+  text-align: center;
+}
+
+.od-lib__empty h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-lib__empty p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-lib__pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-lib__pager a {
+  font-weight: 600;
+  color: var(--od-gold, #d7a529);
+  text-decoration: none;
+}
+
+/* ----------------------------------------------------------------- modal */
+
+.od-lib-modal,
+.od-lib-uploader {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(9, 12, 16, 0.78);
+  overflow-y: auto;
+}
+
+.od-lib-modal__panel,
+.od-lib-uploader__panel {
+  display: grid;
+  gap: 16px;
+  width: min(100%, 520px);
+  max-height: 92vh;
+  padding: 20px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius, 12px);
+  background: var(--od-surface, #10151b);
+  overflow-y: auto;
+}
+
+.od-lib-modal__panel--wide {
+  width: min(100%, 820px);
+}
+
+.od-lib-modal__panel h2,
+.od-lib-uploader__head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-lib-modal__panel p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-lib-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.od-lib-modal__actions button {
+  padding: 8px 16px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--od-text, #f5f3ee);
+  cursor: pointer;
+}
+
+.od-lib-modal__actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------ edit */
+
+.od-lib-edit {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 700px) {
+  .od-lib-edit {
+    grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.od-lib-edit__preview {
+  display: grid;
+  gap: 6px;
+}
+
+.od-lib-edit__preview img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-bg, #090c10);
+}
+
+.od-lib-edit__hint,
+.od-lib-uploader__hint {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--od-muted, #747d88);
+}
+
+.od-lib-edit__fields {
+  display: grid;
+  gap: 14px;
+}
+
+.od-lib-edit__fields label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-lib-edit__fields textarea,
+.od-lib-edit__fields input[type="text"] {
+  padding: 9px 11px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-bg, #090c10);
+  font: inherit;
+  font-weight: 400;
+  color: var(--od-text, #f5f3ee);
+  resize: vertical;
+}
+
+.od-lib-edit__fields input[type="range"] {
+  accent-color: var(--od-gold, #d7a529);
+}
+
+.od-lib-edit__fields small {
+  font-weight: 400;
+  color: var(--od-muted, #747d88);
+}
+
+.od-lib-edit__optional {
+  font-weight: 400;
+  color: var(--od-muted, #747d88);
+}
+
+/* -------------------------------------------------------------- uploader */
+
+.od-lib-uploader__panel {
+  width: min(100%, 720px);
+}
+
+.od-lib-uploader__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.od-lib-uploader__head button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--od-elevated, #141a21);
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--od-text, #f5f3ee);
+  cursor: pointer;
+}
+
+.od-lib-uploader__body {
+  display: grid;
+  gap: 16px;
+}
+
+.od-lib-uploader__step {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: var(--od-radius-sm, 8px);
+}
+
+.od-lib-uploader__step legend {
+  padding: 0 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-lib-uploader__rooms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.od-lib-uploader__room {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--od-text-2, #b7bdc5);
+  cursor: pointer;
+}
+
+.od-lib-uploader__room:has(input:checked) {
+  border-color: var(--od-gold, #d7a529);
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-lib-uploader__room input {
+  accent-color: var(--od-gold, #d7a529);
+}
+
+.od-lib-uploader__drop {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 28px 16px;
+  border: 1px dashed var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  text-align: center;
+}
+
+.od-lib-uploader__drop--over {
+  border-color: var(--od-gold, #d7a529);
+  background: var(--od-hover, #18202a);
+}
+
+.od-lib-uploader__dropTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-lib-uploader__dropOr {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--od-muted, #747d88);
+}
+
+.od-lib-uploader__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-lib-uploader__queue {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.od-lib-uploader__item {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+}
+
+.od-lib-uploader__thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--od-bg, #090c10);
+}
+
+.od-lib-uploader__thumb--none {
+  display: block;
+}
+
+.od-lib-uploader__meta {
+  min-width: 0;
+}
+
+.od-lib-uploader__name {
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--od-text, #f5f3ee);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.od-lib-uploader__sub {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  color: var(--od-muted, #747d88);
+}
+
+.od-lib-uploader__error {
+  margin: 3px 0 0;
+  font-size: 0.74rem;
+  color: var(--od-danger, #ea6666);
+}
+
+.od-lib-uploader__progress {
+  width: 100%;
+  height: 4px;
+  margin-top: 5px;
+}
+
+.od-lib-uploader__status {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--od-muted, #747d88);
+}
+
+.od-lib-uploader__item[data-status="uploaded"] .od-lib-uploader__status {
+  color: var(--od-positive, #35c98c);
+}
+
+.od-lib-uploader__item[data-status="duplicate"] .od-lib-uploader__status {
+  color: var(--od-warning, #e2a83b);
+}
+
+.od-lib-uploader__item[data-status="failed"] .od-lib-uploader__status {
+  color: var(--od-danger, #ea6666);
+}
+
+.od-lib-uploader__remove {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.76rem;
+  color: var(--od-muted, #747d88);
+  cursor: pointer;
+}
+
+.od-lib-uploader__foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.od-lib-uploader__foot button {
+  padding: 9px 16px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--od-text, #f5f3ee);
+  cursor: pointer;
+}
+
+.od-lib-uploader__foot button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.od-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/*
+ * The primary action is gold in both the modal and the uploader footer, so the
+ * one button that commits is never ambiguous among three that do not.
+ */
+.od-lib-modal__actions .od-btn-primary,
+.od-lib-uploader__foot .od-btn-primary,
+.od-lib__head .od-btn-primary {
+  border-color: var(--od-gold, #d7a529);
+  background: var(--od-gold, #d7a529);
+  color: #17120a;
+}
+
+.od-lib__head .od-btn-primary {
+  padding: 9px 16px;
+  border: 1px solid var(--od-gold, #d7a529);
+  border-radius: var(--od-radius-sm, 8px);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.od-lib-modal__actions .od-btn-ghost,
+.od-lib-uploader__foot .od-btn-ghost,
+.od-lib-uploader__drop .od-btn-ghost {
+  padding: 8px 16px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--od-text, #f5f3ee);
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------- mobile */
+
+/*
+ * At phone width the grid drops to two columns and the bulk bar wraps. Upload
+ * stays fully usable — it is the action most likely to happen away from a
+ * desk — while bulk selection simply becomes a longer scroll rather than a
+ * different interaction.
+ */
+@media (max-width: 520px) {
+  .od-lib__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .od-lib__actions button,
+  .od-lib__actions select {
+    flex: 1 1 auto;
+  }
+
+  .od-lib-uploader__item {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+  }
+
+  .od-lib-uploader__remove {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+}

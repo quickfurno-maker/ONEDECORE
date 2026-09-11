@@ -847,7 +847,7 @@ describe("containment", () => {
     const migrations = readdirSync(join(root, "supabase/migrations")).filter(
       (name) => name.endsWith(".sql")
     );
-    assert.equal(migrations.length, 71);
+    assert.equal(migrations.length, 72);
     // CRM SLA admin settings itself added no migration; the 50th is
     // Workforce V1 attendance lifecycle.
     assert.ok(

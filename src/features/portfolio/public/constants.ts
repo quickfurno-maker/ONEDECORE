@@ -33,6 +33,15 @@ export const PUBLIC_ROOM_GALLERY_LIMIT = 48;
 export const PUBLIC_STORAGE_BUCKET = "portfolio-public";
 
 /**
+ * The first path segment of standalone room-library objects.
+ *
+ * A project uuid can never equal this literal, so the two namespaces cannot
+ * collide and a path can be classified by looking at its first segment alone.
+ * That is what lets one validator serve both shapes without guessing.
+ */
+export const ROOM_LIBRARY_PATH_PREFIX = "room-library";
+
+/**
  * The only derivative filenames the media pipeline writes to the public bucket.
  * Kept in sync with src/app/api/admin/portfolio/media/route.ts.
  */

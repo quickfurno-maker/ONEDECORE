@@ -88,6 +88,7 @@
     "src/features/marketing/__tests__/phase-9a-m31-runtime.test.ts",
     "src/features/marketing/__tests__/phase-9c-b-execution-foundation.test.ts",
     "src/features/marketing/__tests__/phase-9c-c-providers-feedback-metrics.test.ts",
+    "src/features/portfolio/__tests__/portfolio-room-media-library.test.ts",
     "src/features/portfolio/public/__tests__/portfolio-multi-category.test.ts",
     "src/features/portfolio/public/__tests__/portfolio-not-found-status.test.ts",
     "src/features/portfolio/public/__tests__/portfolio-room-browse.test.ts",

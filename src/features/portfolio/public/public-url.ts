@@ -1,4 +1,9 @@
-import { PUBLIC_STORAGE_BUCKET, PUBLIC_DERIVATIVE_FILENAMES } from "./constants.ts";
+import {
+  PUBLIC_STORAGE_BUCKET,
+  PUBLIC_DERIVATIVE_FILENAMES,
+  ROOM_LIBRARY_PATH_PREFIX,
+} from "./constants.ts";
+import { PORTFOLIO_ROOM_CODES } from "./portfolio-rooms.ts";
 
 /**
  * PostgreSQL renders uuid values as lowercase canonical 8-4-4-4-12 hex.
@@ -12,9 +17,17 @@ const ALLOWED_DERIVATIVE_FILENAMES: ReadonlySet<string> = new Set(
 );
 
 export interface StoragePathValidationOptions {
-  expectedProjectUuid?: string;
+  /**
+   * The owning project. Pass `null` for standalone room-library media, which
+   * has no project — NOT `undefined`, which means "do not check".
+   */
+  expectedProjectUuid?: string | null;
   expectedMediaUuid?: string;
+  /** The room a standalone object must sit under. */
+  expectedRoomCode?: string;
 }
+
+const ROOM_CODE_SET: ReadonlySet<string> = new Set(PORTFOLIO_ROOM_CODES);
 
 /**
  * Validates a stored `public_object_path` against the exact public derivative
@@ -48,17 +61,54 @@ export function validatePublicStoragePath(
   }
 
   const segments = publicObjectPath.split("/");
+
+  /*
+   * TWO SHAPES, TOLD APART BY THE FIRST SEGMENT.
+   *
+   *   project   <project_uuid>/<media_uuid>/<derivative>
+   *   library   room-library/<room-code>/<media_uuid>/<derivative>
+   *
+   * A uuid can never be the literal "room-library", so the classification is
+   * unambiguous and neither shape can be spelled to look like the other. Each
+   * is then validated on its own terms rather than by a loosened rule that
+   * would accept both and a few things besides.
+   */
+  if (segments[0] === ROOM_LIBRARY_PATH_PREFIX) {
+    if (segments.length !== 4) return false;
+
+    const [, roomCode, mediaUuid, fileName] = segments;
+
+    if (!ROOM_CODE_SET.has(roomCode!)) return false;
+    if (!CANONICAL_UUID_REGEX.test(mediaUuid!)) return false;
+    if (!ALLOWED_DERIVATIVE_FILENAMES.has(fileName!)) return false;
+
+    // A caller that named a project cannot be describing a library object.
+    if (options?.expectedProjectUuid) return false;
+    if (options?.expectedMediaUuid && mediaUuid !== options.expectedMediaUuid) return false;
+    if (options?.expectedRoomCode && roomCode !== options.expectedRoomCode) return false;
+
+    return true;
+  }
+
   if (segments.length !== 3) {
     return false;
   }
 
   const [projectUuid, mediaUuid, fileName] = segments;
 
-  if (!CANONICAL_UUID_REGEX.test(projectUuid) || !CANONICAL_UUID_REGEX.test(mediaUuid)) {
+  if (!CANONICAL_UUID_REGEX.test(projectUuid!) || !CANONICAL_UUID_REGEX.test(mediaUuid!)) {
     return false;
   }
 
-  if (!ALLOWED_DERIVATIVE_FILENAMES.has(fileName)) {
+  if (!ALLOWED_DERIVATIVE_FILENAMES.has(fileName!)) {
+    return false;
+  }
+
+  /*
+   * `null` is an assertion, not an absence: it says "this row has no project",
+   * so a path that names one is wrong. `undefined` still means "unchecked".
+   */
+  if (options?.expectedProjectUuid === null) {
     return false;
   }
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getClaims } from "@/server/auth/claims";
 import { createClient } from "@/lib/supabase/server";
 import { PORTFOLIO_SERVICE_LABELS, type PortfolioServiceCode } from "@/features/portfolio/domain/portfolio-service";
+import { PortfolioAdminNav } from "@/features/portfolio/components/PortfolioAdminNav";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,8 @@ export default async function AdminPortfolioListPage({ searchParams }: SearchPar
 
   return (
     <div className="space-y-6">
+      <PortfolioAdminNav current="projects" />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-serif font-bold text-[#1A1A1A]">Portfolio Management</h1>

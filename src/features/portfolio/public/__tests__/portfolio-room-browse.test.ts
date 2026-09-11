@@ -63,6 +63,16 @@ const HOME_NAV = "src/features/public-site/discovery/DiscoveryPortfolioCategorie
 const MANAGER = "src/features/portfolio/components/PortfolioMediaManager.tsx";
 const MEDIA_ACTIONS = "src/features/portfolio/server/portfolio-media-actions.ts";
 const UPLOAD = "src/app/api/admin/portfolio/media/route.ts";
+/**
+ * The shared upload processor.
+ *
+ * Validation, sanitisation, checksum, both buckets and the compensation unwind
+ * used to be inline in the route above. They moved here when the room-library
+ * endpoint needed the same steps, because the alternative was two copies of the
+ * cleanup ordering. The behaviour is unchanged, so these assertions follow it
+ * rather than being deleted.
+ */
+const UPLOAD_PIPELINE = "src/features/portfolio/server/portfolio-media-upload.ts";
 const QUERIES = "src/features/portfolio/public/public-portfolio-queries.ts";
 const PIPELINE = "src/features/portfolio/server/portfolio-image-pipeline.ts";
 
@@ -266,9 +276,9 @@ describe("a room view returns media, not project cards", () => {
     const photo = mapRoomPhoto(roomRow());
     assert.ok(photo);
     assert.equal(photo!.roomCode, "bedroom");
-    assert.equal(photo!.projectSlug, "a-real-pune-home");
-    assert.equal(photo!.projectTitle, "A Real Pune Home");
-    assert.equal(photo!.projectLocationLabel, "Kharadi");
+    assert.equal(photo!.project?.slug, "a-real-pune-home");
+    assert.equal(photo!.project?.title, "A Real Pune Home");
+    assert.equal(photo!.project?.locationLabel, "Kharadi");
     assert.equal(photo!.image.focalX, 30);
     assert.equal(photo!.image.focalY, 70);
   });
@@ -304,11 +314,56 @@ describe("a room view returns media, not project cards", () => {
     assert.equal(mapRoomPhoto(roomRow({ room_category_code: "hall" })), null);
   });
 
-  test("every photograph keeps a route back to its project", () => {
+  test("a project photograph keeps a route back to its project", () => {
     const gallery = read(GALLERY);
-    assert.match(gallery, /\/portfolio\/\$\{photo\.projectSlug\}/);
+    assert.match(gallery, /\/portfolio\/\$\{photo\.project\.slug\}/);
     assert.match(gallery, /View Full Project/);
-    assert.match(gallery, /photo\.projectTitle/);
+    assert.match(gallery, /photo\.project\.title/);
+  });
+
+  test("a project-less photograph is rendered without inventing one", () => {
+    /*
+     * THE FAILURE THIS PREVENTS.
+     *
+     * Room views now also carry standalone library photographs, which have no
+     * project at all. The tempting shortcuts are both wrong: a placeholder
+     * title claims a case study that does not exist, and an unguarded
+     * `/portfolio/${photo.project.slug}` renders `/portfolio/undefined` — a
+     * link straight to a 404 from the middle of the gallery.
+     *
+     * So every project-dependent element sits behind the same null check, and
+     * that is asserted here rather than trusted.
+     */
+    const gallery = read(GALLERY);
+
+    /*
+     * Every project-dependent element is behind a `photo.project ?` guard. The
+     * count is the assertion: the tile's caption strip, the dialog label, the
+     * lightbox title and the lightbox CTA are four separate places a null
+     * project would otherwise be dereferenced, and guarding three of them is
+     * the bug this test exists to catch.
+     */
+    const guards = gallery.match(/photo\.project \?/g) ?? [];
+    assert.ok(
+      guards.length >= 4,
+      `expected every project-dependent element to be guarded, found ${guards.length}`
+    );
+
+    /*
+     * And no unguarded dereference anywhere. `photo.project.slug` is only ever
+     * legal inside one of those guards, so any occurrence outside a ternary
+     * would be a runtime TypeError on a library photograph.
+     */
+    assert.doesNotMatch(
+      gallery,
+      /photo\.project!\./,
+      "a non-null assertion would silence the very case this feature added"
+    );
+    assert.doesNotMatch(
+      gallery,
+      /photo\.project\?\.slug/,
+      "optional chaining in an href yields /portfolio/undefined, not no link"
+    );
   });
 
   test("the gallery is images, not project cards", () => {
@@ -556,22 +611,37 @@ describe("the upload pipeline is unchanged where it matters", () => {
   });
 
   test("the same file twice in one project is refused", () => {
-    const upload = read(UPLOAD);
-    assert.match(upload, /checksum_sha256/);
-    assert.match(upload, /DUPLICATE_IMAGE/);
-    assert.match(upload, /status: 409/);
-    // Scoped to the project, not a global ban.
-    assert.match(upload, /parent\?\.project_id === projectId/);
+    const pipeline = read(UPLOAD_PIPELINE);
+    assert.match(pipeline, /checksum_sha256/);
+    assert.match(pipeline, /DUPLICATE_IMAGE/);
+    assert.match(pipeline, /409/);
+    /*
+     * Scoped to the project, not a global ban: the same supplier photograph
+     * legitimately appearing in two homes is not an error anyone asked us to
+     * prevent, and a global rule would eventually refuse a real upload.
+     */
+    assert.match(pipeline, /parent\.project_id === scope\.projectId/);
   });
 
   test("sanitisation and metadata stripping still run before storage", () => {
-    const upload = read(UPLOAD);
-    assert.match(upload, /createSanitisedMaster/);
-    assert.match(upload, /validateImageMetadata/);
-    assert.match(upload, /portfolio-originals/);
-    assert.match(upload, /portfolio_media_sources/);
+    const pipeline = read(UPLOAD_PIPELINE);
+    assert.match(pipeline, /createSanitisedMaster/);
+    assert.match(pipeline, /validateImageMetadata/);
+    assert.match(pipeline, /portfolio-originals/);
+    assert.match(pipeline, /portfolio_media_sources/);
     // The sanitiser rotates and re-encodes, which is what drops EXIF and GPS.
     assert.match(read(PIPELINE), /\.rotate\(\)/);
+
+    /*
+     * And the route still refuses the request before any of it runs. The
+     * processor deliberately does not authenticate — a function that could be
+     * called without a permission check is one somebody eventually calls
+     * without a permission check — so the gate has to be asserted where it is.
+     */
+    const upload = read(UPLOAD);
+    assert.match(upload, /portfolio\.manage/);
+    assert.match(upload, /checkSameOrigin\(request\)/);
+    assert.doesNotMatch(read(UPLOAD_PIPELINE), /getClaims/);
   });
 
   test("a room and focal point may travel with the upload, validated", () => {

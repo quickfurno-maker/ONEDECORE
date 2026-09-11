@@ -4373,10 +4373,11 @@ export type Database = {
           id: string
           media_role: string
           mime_type: string | null
-          project_id: string
+          project_id: string | null
           public_bucket: string
           public_object_path: string | null
           room_category_code: string | null
+          room_gallery_published: boolean
           sort_order: number
           status: string
           updated_at: string
@@ -4395,10 +4396,11 @@ export type Database = {
           id?: string
           media_role?: string
           mime_type?: string | null
-          project_id: string
+          project_id?: string | null
           public_bucket?: string
           public_object_path?: string | null
           room_category_code?: string | null
+          room_gallery_published?: boolean
           sort_order?: number
           status?: string
           updated_at?: string
@@ -4417,10 +4419,11 @@ export type Database = {
           id?: string
           media_role?: string
           mime_type?: string | null
-          project_id?: string
+          project_id?: string | null
           public_bucket?: string
           public_object_path?: string | null
           room_category_code?: string | null
+          room_gallery_published?: boolean
           sort_order?: number
           status?: string
           updated_at?: string
@@ -9207,6 +9210,38 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      reorder_portfolio_library_media: {
+        Args: { requested_media_ids: string[]; requested_room_code: string }
+        Returns: {
+          alt_text: string
+          caption: string | null
+          created_at: string
+          created_by: string
+          file_size_bytes: number | null
+          focal_x: number
+          focal_y: number
+          height_px: number | null
+          id: string
+          media_role: string
+          mime_type: string | null
+          project_id: string | null
+          public_bucket: string
+          public_object_path: string | null
+          room_category_code: string | null
+          room_gallery_published: boolean
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string
+          width_px: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "portfolio_media"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       reorder_portfolio_project_media: {
         Args: { requested_media_ids: string[]; requested_project_id: string }
         Returns: {
@@ -9221,10 +9256,11 @@ export type Database = {
           id: string
           media_role: string
           mime_type: string | null
-          project_id: string
+          project_id: string | null
           public_bucket: string
           public_object_path: string | null
           room_category_code: string | null
+          room_gallery_published: boolean
           sort_order: number
           status: string
           updated_at: string
@@ -9749,6 +9785,70 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_portfolio_library_publication: {
+        Args: { requested_media_ids: string[]; requested_published: boolean }
+        Returns: {
+          alt_text: string
+          caption: string | null
+          created_at: string
+          created_by: string
+          file_size_bytes: number | null
+          focal_x: number
+          focal_y: number
+          height_px: number | null
+          id: string
+          media_role: string
+          mime_type: string | null
+          project_id: string | null
+          public_bucket: string
+          public_object_path: string | null
+          room_category_code: string | null
+          room_gallery_published: boolean
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string
+          width_px: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "portfolio_media"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      set_portfolio_library_room_category: {
+        Args: { requested_media_ids: string[]; requested_room_code: string }
+        Returns: {
+          alt_text: string
+          caption: string | null
+          created_at: string
+          created_by: string
+          file_size_bytes: number | null
+          focal_x: number
+          focal_y: number
+          height_px: number | null
+          id: string
+          media_role: string
+          mime_type: string | null
+          project_id: string | null
+          public_bucket: string
+          public_object_path: string | null
+          room_category_code: string | null
+          room_gallery_published: boolean
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string
+          width_px: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "portfolio_media"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       set_portfolio_media_room_category: {
         Args: {
           requested_media_ids: string[]
@@ -9767,10 +9867,11 @@ export type Database = {
           id: string
           media_role: string
           mime_type: string | null
-          project_id: string
+          project_id: string | null
           public_bucket: string
           public_object_path: string | null
           room_category_code: string | null
+          room_gallery_published: boolean
           sort_order: number
           status: string
           updated_at: string
@@ -9798,10 +9899,11 @@ export type Database = {
           id: string
           media_role: string
           mime_type: string | null
-          project_id: string
+          project_id: string | null
           public_bucket: string
           public_object_path: string | null
           room_category_code: string | null
+          room_gallery_published: boolean
           sort_order: number
           status: string
           updated_at: string

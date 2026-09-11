@@ -6,11 +6,13 @@ import {
   PUBLIC_ROOM_GALLERY_LIMIT,
 } from "./constants.ts";
 import {
+  mapLibraryRoomPhoto,
   mapProjectToCard,
   mapProjectToDetail,
   mapRoomPhoto,
   type CardMediaFields,
   type CardServiceFields,
+  type LibraryRoomPhotoFields,
   type RoomPhotoFields,
 } from "./public-portfolio-mapper.ts";
 import type {
@@ -18,6 +20,7 @@ import type {
   PublicPortfolioPaginatedCards,
   PublicPortfolioProject,
   PublicPortfolioRoomGallery,
+  PublicPortfolioRoomPhoto,
   PublicSitemapEntry,
 } from "./types.ts";
 import type { PortfolioRoomCode } from "./portfolio-rooms.ts";
@@ -56,6 +59,20 @@ export const MEDIA_COLUMNS =
  */
 export const ROOM_PHOTO_SELECT =
   "id, project_id, media_role, status, public_object_path, width_px, height_px, alt_text, caption, sort_order, created_at, room_category_code, focal_x, focal_y, portfolio_projects!inner(slug, title, status, location_label)";
+
+/**
+ * Standalone room-library rows. No project embed, because there is no project.
+ *
+ * This cannot be a variant of the select above: that one uses `!inner`, and an
+ * inner join on a table the row does not reference excludes every standalone
+ * row by construction. Switching it to a left join would be worse than a second
+ * query — PostgREST applies an embedded filter by NULLING the embed rather than
+ * dropping the row, so `portfolio_projects.status = published` would silently
+ * stop excluding draft projects. Two explicit queries keep both contracts
+ * intact and each one readable.
+ */
+export const LIBRARY_ROOM_PHOTO_SELECT =
+  "id, project_id, media_role, status, public_object_path, width_px, height_px, alt_text, caption, sort_order, created_at, room_category_code, focal_x, focal_y, room_gallery_published";
 
 /**
  * Listing projections.
@@ -342,30 +359,77 @@ export async function queryRoomGallery(
   supabase: PublicSupabaseClient,
   room: PortfolioRoomCode
 ): Promise<PublicPortfolioRoomGallery> {
-  const { data, error } = await supabase
-    .from("portfolio_media")
-    .select(ROOM_PHOTO_SELECT)
-    .eq("room_category_code", room)
-    .eq("status", "ready")
-    .eq("portfolio_projects.status", "published")
-    .not("public_object_path", "is", null)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true })
-    .order("id", { ascending: true })
-    .limit(PUBLIC_ROOM_GALLERY_LIMIT);
+  /*
+   * TWO SOURCES, ONE GALLERY.
+   *
+   * Project media reaches a visitor through its published parent; library media
+   * has no parent and reaches them through its own publication flag. They are
+   * fetched separately because their eligibility rules have nothing in common
+   * and one query cannot express both without weakening the stricter one.
+   *
+   * Both are issued at once: they are independent reads and the room view
+   * should not cost two sequential round trips. The result is cached as a unit.
+   */
+  const [projectResult, libraryResult] = await Promise.all([
+    supabase
+      .from("portfolio_media")
+      .select(ROOM_PHOTO_SELECT)
+      .eq("room_category_code", room)
+      .eq("status", "ready")
+      .eq("portfolio_projects.status", "published")
+      .not("public_object_path", "is", null)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(PUBLIC_ROOM_GALLERY_LIMIT),
+    supabase
+      .from("portfolio_media")
+      .select(LIBRARY_ROOM_PHOTO_SELECT)
+      .eq("room_category_code", room)
+      .eq("status", "ready")
+      .is("project_id", null)
+      .eq("room_gallery_published", true)
+      .not("public_object_path", "is", null)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(PUBLIC_ROOM_GALLERY_LIMIT),
+  ]);
 
-  if (error || !data || data.length === 0) {
-    if (error) logRedacted("ROOM_GALLERY_QUERY_FAILED");
-    return { room, photos: [] };
-  }
+  if (projectResult.error) logRedacted("ROOM_GALLERY_QUERY_FAILED");
+  if (libraryResult.error) logRedacted("ROOM_LIBRARY_QUERY_FAILED");
 
-  const photos = [];
-  for (const row of data as unknown as RoomPhotoFields[]) {
+  const photos: PublicPortfolioRoomPhoto[] = [];
+
+  for (const row of (projectResult.data ?? []) as unknown as RoomPhotoFields[]) {
     const photo = mapRoomPhoto(row);
     if (photo) photos.push(photo);
   }
 
-  return { room, photos };
+  for (const row of (libraryResult.data ?? []) as unknown as LibraryRoomPhotoFields[]) {
+    const photo = mapLibraryRoomPhoto(row);
+    if (photo) photos.push(photo);
+  }
+
+  /*
+   * One deterministic order across both sources.
+   *
+   * `sort_order` first, because that is the sequence the owner arranged and it
+   * is the only field either source lets them control. Then `created_at`, so
+   * newer work surfaces above older work at the same rank, then the id, so the
+   * result never depends on which query returned first. Without that last
+   * tiebreak two visitors could be served different orders from the same data.
+   */
+  photos.sort((a, b) => {
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+    if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
+    return a.mediaId < b.mediaId ? -1 : 1;
+  });
+
+  // The limit applies to the gallery, not to each source: a room with fifty
+  // project photographs must not be able to push the library off the page by
+  // filling the window twice over.
+  return { room, photos: photos.slice(0, PUBLIC_ROOM_GALLERY_LIMIT) };
 }
 
 /**

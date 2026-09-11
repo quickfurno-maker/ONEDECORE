@@ -45,14 +45,35 @@ export type PublicPortfolioImage = {
  * gallery is a mood board and the visitor cannot get from an image they like to
  * the project that produced it.
  */
+/**
+ * One photograph in a room view.
+ *
+ * `project` IS NULLABLE, AND THAT IS THE WHOLE SHAPE OF THE FEATURE.
+ *
+ * A room view now draws from two sources: photographs belonging to a published
+ * project, and standalone library images that belong to no project at all. The
+ * second kind has no slug, no title and no locality, so those fields are
+ * grouped into one nullable object rather than left as three independently
+ * nullable strings — which would let a renderer read a title while the slug was
+ * null and produce a card linking nowhere.
+ *
+ * Null here means "there is no project", not "we failed to load one". A
+ * renderer must show the image without project chrome, never invent an href.
+ */
+export type PublicPortfolioRoomPhotoProject = {
+  slug: string;
+  title: string;
+  locationLabel: string | null;
+};
+
 export type PublicPortfolioRoomPhoto = {
   mediaId: string;
   roomCode: PortfolioRoomCode;
   image: PublicPortfolioImage;
-  projectSlug: string;
-  projectTitle: string;
-  projectLocationLabel: string | null;
+  project: PublicPortfolioRoomPhotoProject | null;
   sortOrder: number;
+  /** Ordering tiebreak across the two sources. */
+  createdAt: string;
 };
 
 export type PublicPortfolioRoomGallery = {
