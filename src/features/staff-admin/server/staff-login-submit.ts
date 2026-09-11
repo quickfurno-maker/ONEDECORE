@@ -342,6 +342,17 @@ export async function handleStaffLoginSubmit(
    */
   const pendingCookies: PendingAuthCookie[] = [];
 
+  /**
+   * The request's cookie state as it stands RIGHT NOW, not as it arrived.
+   *
+   * Seeded from the incoming request and then kept in step with every write the
+   * Supabase client makes, so a later call in the same request observes the
+   * earlier one. See the adapter below for what went wrong without it.
+   */
+  const cookieJar = new Map<string, string>(
+    request.cookies.getAll().map((cookie) => [cookie.name, cookie.value])
+  );
+
   /*
    * The response headers @supabase/ssr hands us alongside those cookies.
    *
@@ -354,6 +365,16 @@ export async function handleStaffLoginSubmit(
   const pendingHeaders: Record<string, string> = {};
 
   const applyCookies = (response: NextResponse): NextResponse => {
+    /*
+     * In order, so the LAST mutation for a name wins.
+     *
+     * `response.cookies.set` replaces by name, and the mutations arrive in the
+     * order the library made them. A sign-in followed by a sign-out therefore
+     * ends as a deletion, which is the behaviour a rejected login depends on.
+     * Sorting, de-duplicating or filtering this list would break that ordering
+     * — and filtering Set-Cookie headers after the fact would be guessing at
+     * the library's chunk scheme rather than honouring it.
+     */
     for (const cookie of pendingCookies) {
       // Options are passed through verbatim: path, sameSite, secure, httpOnly,
       // maxAge/expires and the chunking `@supabase/ssr` may apply are its
@@ -448,9 +469,58 @@ export async function handleStaffLoginSubmit(
   }
 
   const supabase = createClientWithCookies({
-    getAll: () => request.cookies.getAll(),
+    /*
+     * THE JAR IS MUTABLE, AND THAT IS THE WHOLE POINT.
+     *
+     * This used to be `() => request.cookies.getAll()` — the incoming request's
+     * cookies, frozen for the life of the request — while `setAll` only
+     * appended to `pendingCookies`. The two halves never met, and the
+     * consequence was a security defect rather than an inconvenience:
+     *
+     *   1. `signInWithPassword()` writes the session through `setAll`.
+     *   2. A rejected entitlement calls `signOut()`.
+     *   3. `signOut()` calls `getAll()` to find the session it must revoke —
+     *      and got the ORIGINAL request jar, which does not contain the cookie
+     *      written moments earlier.
+     *   4. Seeing no session, it emitted NO deletion cookie at all. It returned
+     *      success, because from its point of view there was nothing to do.
+     *   5. The response therefore carried the sign-in cookie and nothing to
+     *      cancel it: a rejected login handed the browser a live 400-day
+     *      session while telling the visitor the credentials were invalid.
+     *
+     * Instrumenting @supabase/ssr v0.12.3 against a real local Supabase showed
+     * exactly that — three `getAll` calls returning `[]`, one `setAll` with a
+     * 2,573-byte session, then one final `getAll` still returning `[]` and no
+     * further `setAll`. With the jar below, that last `getAll` returns the
+     * session and the library emits the deletion that was always intended.
+     *
+     * WHY THIS ALSO FIXES CHUNKING
+     *
+     * The library decides which cookies to delete from what `getAll` shows it.
+     * A session split into `name.0`/`name.1` is revoked correctly for the same
+     * reason a single cookie is: it can finally see its own chunks. Normalising
+     * chunk names by hand here would be a second implementation of the
+     * library's own scheme, and would drift from it.
+     */
+    getAll: () =>
+      [...cookieJar.entries()].map(([name, value]) => ({ name, value })),
     setAll: (cookiesToSet, headers) => {
-      pendingCookies.push(...cookiesToSet);
+      for (const cookie of cookiesToSet) {
+        pendingCookies.push(cookie);
+
+        /*
+         * A deletion is an empty value or `maxAge: 0` — the two shapes
+         * `@supabase/ssr` uses. Removing the entry rather than storing an empty
+         * string matters: a later `getAll` must report the cookie as ABSENT, or
+         * the library would try to parse "" as a session.
+         */
+        const isDeletion =
+          cookie.value === "" ||
+          (cookie.options as { maxAge?: number } | undefined)?.maxAge === 0;
+
+        if (isDeletion) cookieJar.delete(cookie.name);
+        else cookieJar.set(cookie.name, cookie.value);
+      }
       Object.assign(pendingHeaders, headers ?? {});
     },
   });
@@ -496,9 +566,17 @@ export async function handleStaffLoginSubmit(
        * Unlike the staff branch there is no /auth/forbidden here. Landing on a
        * "you are signed in but not permitted" page would confirm that the
        * address and password were both correct, which is precisely the fact
-       * this portal must not disclose. signOut() emits deletion cookies through
-       * the same capture, so `fail()` actively clears the session it just
-       * created rather than leaving a usable one in the browser.
+       * this portal must not disclose.
+       *
+       * THE COOKIE IS PART OF THAT DISCLOSURE, AND IT USED TO LEAK.
+       *
+       * Hiding the outcome in the redirect while handing back a working session
+       * cookie tells an attacker the credentials were valid just as plainly as
+       * an error message would — and leaves them holding a usable session. That
+       * is what happened until the cookie adapter above was given a live jar:
+       * `signOut()` could not see the session sign-in had created, so it
+       * emitted nothing and the 303 carried a 400-day token. It can see it now,
+       * and `fail()` really does clear it.
        */
       await supabase.auth.signOut();
       return fail();
@@ -546,9 +624,15 @@ export async function handleStaffLoginSubmit(
       : null;
 
   if (accessState === "revoked") {
-    // signOut() emits deletion cookies through the same setAll capture, so the
-    // redirect below actively clears the session rather than leaving a usable
-    // one behind. Applying them is what makes the revocation real in the browser.
+    /*
+     * The password was correct and the account is revoked, so the session that
+     * sign-in just created must not survive this response.
+     *
+     * `signOut()` can only revoke a session it can SEE, which is why the cookie
+     * adapter above keeps a live jar rather than replaying the incoming request.
+     * With that in place it emits a deletion for every chunk it wrote, and
+     * `applyCookies` lets the deletion win because it came last.
+     */
     await supabase.auth.signOut();
     return fail();
   }
