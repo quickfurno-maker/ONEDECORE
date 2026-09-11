@@ -1,4 +1,9 @@
 import sharp, { type Metadata } from "sharp";
+import {
+  MAX_FILE_SIZE_BYTES,
+  MAX_DIMENSION_PX,
+  MAX_PIXELS_TOTAL,
+} from "../domain/portfolio-media.ts";
 
 export type SupportedImageFormat = "jpeg" | "png" | "webp";
 
@@ -29,9 +34,19 @@ export const FORMAT_DETAILS: Record<
   },
 };
 
-export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MiB
-export const MAX_DIMENSION_PX = 12000;
-export const MAX_PIXELS_TOTAL = 50000000; // 50 MP
+/*
+ * Re-exported, not redefined.
+ *
+ * These are shared with the browser (see the note in `domain/portfolio-media`),
+ * and this module imports `sharp` — so a client component importing the limits
+ * from here would pull a native module into the browser bundle and fail the
+ * build. Server code keeps importing them from here, unchanged.
+ */
+export {
+  MAX_FILE_SIZE_BYTES,
+  MAX_DIMENSION_PX,
+  MAX_PIXELS_TOTAL,
+} from "../domain/portfolio-media.ts";
 
 export interface ImageValidationResult {
   valid: boolean;
@@ -221,6 +236,35 @@ export function generateMediaPath(
     throw new Error("Invalid UUID format for media path generation");
   }
   return `${projectId}/${mediaId}/${filename}`;
+}
+
+/**
+ * Storage path for standalone room-library media.
+ *
+ * `room-library/<room>/<media_uuid>/<filename>` — four segments against the
+ * project shape's three, and a literal first segment that no project uuid can
+ * ever equal. That is deliberate: the namespaces are distinguishable by
+ * inspection, so `validatePublicStoragePath` can classify a stored path without
+ * being told which kind it is, and neither kind can be spelled to impersonate
+ * the other.
+ *
+ * The room is in the path as well as in the row. It is not load-bearing — the
+ * database column is the truth, and a retag does not move objects — but it
+ * makes the bucket browsable by a human, which matters the first time somebody
+ * has to reconcile storage against rows.
+ */
+export function generateLibraryMediaPath(
+  roomCode: string,
+  mediaId: string,
+  filename: string
+): string {
+  if (!isValidUuid(mediaId)) {
+    throw new Error("Invalid UUID format for media path generation");
+  }
+  if (!/^[a-z]+(?:-[a-z]+)*$/.test(roomCode)) {
+    throw new Error("Invalid room code for media path generation");
+  }
+  return `room-library/${roomCode}/${mediaId}/${filename}`;
 }
 
 /**

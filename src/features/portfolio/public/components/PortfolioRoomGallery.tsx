@@ -20,11 +20,19 @@ import type { PublicPortfolioRoomPhoto } from "../types.ts";
  * splitting one delivered home into fake room-level "projects" — is to show the
  * photographs themselves.
  *
- * EVERY IMAGE STILL LEADS SOMEWHERE
+ * TWO KINDS OF PHOTOGRAPH, AND ONLY ONE OF THEM LEADS SOMEWHERE
  *
- * A gallery whose images go nowhere is a mood board. Each photograph names its
- * parent project and offers the way through to it, both from the tile and from
- * the lightbox.
+ * A photograph from a delivered home names its project and offers the way
+ * through to it, from the tile and from the lightbox.
+ *
+ * A room-library photograph has no project. It is real photography the owner
+ * uploaded by room, and there is nothing behind it to link to — so it renders
+ * as a plain image with no name, no locality and no call to action. Inventing a
+ * title, or emitting a link to `/portfolio/undefined`, would both be worse than
+ * the honest absence: the first is a lie and the second is a broken page.
+ *
+ * `photo.project === null` is the discriminator, and it is checked once per
+ * surface rather than three times per field.
  *
  * THE FOCAL POINT DOES THE CROPPING
  *
@@ -92,16 +100,23 @@ export function PortfolioRoomGallery({
                 }}
                 loading="lazy"
               />
-              <span className="od-room-gallery__meta">
-                <span className="od-room-gallery__project">
-                  {photo.projectTitle}
-                </span>
-                {photo.projectLocationLabel ? (
-                  <span className="od-room-gallery__where">
-                    {photo.projectLocationLabel}
+              {/*
+                The caption strip belongs to project photography. A library
+                image renders without it rather than with an empty one: a blank
+                gradient band under a picture reads as a loading failure.
+              */}
+              {photo.project ? (
+                <span className="od-room-gallery__meta">
+                  <span className="od-room-gallery__project">
+                    {photo.project.title}
                   </span>
-                ) : null}
-              </span>
+                  {photo.project.locationLabel ? (
+                    <span className="od-room-gallery__where">
+                      {photo.project.locationLabel}
+                    </span>
+                  ) : null}
+                </span>
+              ) : null}
             </button>
           </li>
         ))}
@@ -194,7 +209,9 @@ function PortfolioLightbox({
         className="od-lightbox__panel"
         role="dialog"
         aria-modal="true"
-        aria-label={`${photo.projectTitle} — ${roomLabel}`}
+        aria-label={
+          photo.project ? `${photo.project.title} — ${roomLabel}` : `${roomLabel} photograph`
+        }
       >
         <button
           type="button"
@@ -220,17 +237,27 @@ function PortfolioLightbox({
         />
 
         <div className="od-lightbox__foot">
-          <p className="od-lightbox__title">{photo.projectTitle}</p>
+          {/*
+            The room is always true and always shown. The project title and the
+            way through to it exist only when there is a project — a library
+            photograph gets the room and its caption, and nothing that implies a
+            case study it is not part of.
+          */}
+          {photo.project ? (
+            <p className="od-lightbox__title">{photo.project.title}</p>
+          ) : null}
           <p className="od-lightbox__room">{roomLabel}</p>
           {photo.image.caption ? (
             <p className="od-lightbox__caption">{photo.image.caption}</p>
           ) : null}
-          <Link
-            href={`/portfolio/${photo.projectSlug}`}
-            className="od-btn-primary od-lightbox__cta"
-          >
-            View Full Project
-          </Link>
+          {photo.project ? (
+            <Link
+              href={`/portfolio/${photo.project.slug}`}
+              className="od-btn-primary od-lightbox__cta"
+            >
+              View Full Project
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>

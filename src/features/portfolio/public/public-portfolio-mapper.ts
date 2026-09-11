@@ -117,6 +117,11 @@ export type RoomPhotoFields = CardMediaFields & {
   } | null;
 };
 
+/** A standalone library row, which has no embedded project to join. */
+export type LibraryRoomPhotoFields = CardMediaFields & {
+  room_gallery_published: boolean;
+};
+
 /**
  * One media row -> one room-gallery photograph, or null.
  *
@@ -161,10 +166,70 @@ export function mapRoomPhoto(
       focalX: normaliseFocalValue(media.focal_x ?? FOCAL_DEFAULT),
       focalY: normaliseFocalValue(media.focal_y ?? FOCAL_DEFAULT),
     },
-    projectSlug: project.slug,
-    projectTitle: project.title,
-    projectLocationLabel: project.location_label ?? null,
+    project: {
+      slug: project.slug,
+      title: project.title,
+      locationLabel: project.location_label ?? null,
+    },
     sortOrder: media.sort_order ?? 0,
+    createdAt: media.created_at,
+  };
+}
+
+/**
+ * One STANDALONE library row -> one room-gallery photograph, or null.
+ *
+ * The guards mirror `mapRoomPhoto`, minus the project and plus the two things
+ * that replace it: the row must genuinely have no project, and it must be
+ * explicitly published into the room gallery. Both are already enforced by RLS,
+ * and both are checked again here — this mapper is the last place that can stop
+ * an unpublished photograph reaching a page, and it costs two comparisons.
+ *
+ * `project: null` is returned deliberately rather than a placeholder. There is
+ * no project, and the renderer has to be told that rather than being handed a
+ * plausible-looking object with empty strings in it.
+ */
+export function mapLibraryRoomPhoto(
+  media: LibraryRoomPhotoFields
+): PublicPortfolioRoomPhoto | null {
+  if (media.project_id !== null) return null;
+  if (media.room_gallery_published !== true) return null;
+  if (media.status !== "ready") return null;
+  if (media.media_role !== "gallery") return null;
+  if (!isPortfolioRoomCode(media.room_category_code)) return null;
+  if (!media.public_object_path) return null;
+  if (!media.width_px || media.width_px <= 0) return null;
+  if (!media.height_px || media.height_px <= 0) return null;
+
+  const url = buildPublicStorageUrl(media.public_object_path, {
+    expectedProjectUuid: null,
+    expectedMediaUuid: media.id,
+    expectedRoomCode: media.room_category_code,
+  });
+  if (!url) return null;
+
+  const altText = media.alt_text?.trim();
+  // No project title to fall back on here, so an empty alt is fatal rather
+  // than merely poor. The upload route guarantees one; this is the backstop.
+  if (!altText) return null;
+
+  return {
+    mediaId: media.id,
+    roomCode: media.room_category_code,
+    image: {
+      url,
+      altText,
+      caption: media.caption ?? null,
+      width: media.width_px,
+      height: media.height_px,
+      role: "gallery",
+      roomCode: media.room_category_code,
+      focalX: normaliseFocalValue(media.focal_x ?? FOCAL_DEFAULT),
+      focalY: normaliseFocalValue(media.focal_y ?? FOCAL_DEFAULT),
+    },
+    project: null,
+    sortOrder: media.sort_order ?? 0,
+    createdAt: media.created_at,
   };
 }
 

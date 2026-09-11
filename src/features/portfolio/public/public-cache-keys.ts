@@ -69,6 +69,26 @@ export function publicPortfolioTagsFor(slug: string): string[] {
   ];
 }
 
+/**
+ * Every tag a standalone room-library mutation must expire.
+ *
+ * No project tag, because there is no project — and no SITEMAP tag either: the
+ * sitemap lists project URLs, and a library photograph creates none. Expiring
+ * it anyway would be harmless but would say something untrue about what this
+ * mutation can reach.
+ *
+ * LIST is included because the portfolio index renders the room tabs and their
+ * empty states, so a first publication into an empty room changes that page.
+ */
+export function publicRoomLibraryTags(): string[] {
+  return [PUBLIC_CACHE_TAGS.ROOMS, PUBLIC_CACHE_TAGS.LIST];
+}
+
+/** Every rendered path a standalone room-library mutation must refresh. */
+export function publicRoomLibraryPaths(): string[] {
+  return ["/portfolio"];
+}
+
 /** Every rendered path a Portfolio mutation must refresh. */
 export function publicPortfolioPathsFor(slug: string): string[] {
   return ["/", "/portfolio", `/portfolio/${slug}`, "/sitemap.xml"];
