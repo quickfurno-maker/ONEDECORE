@@ -11,6 +11,7 @@
   "application": [
     "src/config/__tests__/dependency-security.test.ts",
     "src/config/__tests__/env-contract.test.ts",
+    "src/config/__tests__/production-deploy-contract.test.ts",
     "src/config/__tests__/env-key-scanner.test.ts",
     "src/config/__tests__/http-security.test.ts",
     "src/features/admin-ops/__tests__/ops-suite-correction.test.ts",
