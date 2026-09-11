@@ -74,6 +74,7 @@ function navFlags(overrides: Partial<OpsNavFlags> = {}): OpsNavFlags {
     landingLab: false,
     commerce: false,
     portfolio: false,
+    website: false,
     staff: false,
     attendance: false,
     leave: false,

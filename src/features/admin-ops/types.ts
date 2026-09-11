@@ -15,6 +15,13 @@ export interface OpsNavFlags {
    * `portfolio.manage`. Everyone without the permission saw a link to a wall.
    */
   readonly portfolio: boolean;
+  /**
+   * Website Manager.
+   *
+   * Its own flag, from its own permission. Sharing `portfolio` would put the
+   * homepage behind a decision that was made about a photo gallery.
+   */
+  readonly website: boolean;
   readonly staff: boolean;
   readonly attendance: boolean;
   readonly leave: boolean;

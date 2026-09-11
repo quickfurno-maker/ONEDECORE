@@ -72,6 +72,10 @@ export const resolveOpsNavFlags = cache(async (): Promise<OpsNavFlags> => {
     commerce: showCommerceLink,
     portfolio:
       claims?.isActive === true && claims.permissions.includes("portfolio.manage"),
+    // The same claim set the Website Manager page checks, so the link and the
+    // page cannot disagree about who may open it.
+    website:
+      claims?.isActive === true && claims.permissions.includes("website.manage"),
     staff: showStaffLink,
     attendance: showAttendanceLink,
     leave: showLeaveLink,

@@ -111,8 +111,12 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
     );
     assert.equal(
       sorted[sorted.length - 1],
-      "20260910130000_drop_redundant_shadow_indexes.sql",
-      "the newest migration drops three indexes a unique constraint already covered"
+      "20260911120000_website_manager_cms.sql",
+      "the newest migration adds the Website Manager CMS"
+    );
+    assert.ok(
+      sorted.includes("20260910130000_drop_redundant_shadow_indexes.sql"),
+      "the shadow-index cleanup must still be present"
     );
     // M55 and M56 are still present and untouched by name.
     assert.ok(files.includes("20260904140000_interior_room_wise_quotation.sql"));

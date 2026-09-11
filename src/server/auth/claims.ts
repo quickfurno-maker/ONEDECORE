@@ -56,6 +56,19 @@ export async function getClaims(): Promise<VerifiedClaims | null> {
     requested_permission: "sources.read",
   });
 
+  /*
+   * Website Manager.
+   *
+   * This list is an explicit probe set rather than "every permission the user
+   * holds", so a new permission is invisible here until it is added. That is
+   * the failure this line fixes: `website.manage` was granted in the database
+   * and enforced by every policy, and the admin page still refused the owner
+   * because the claim set it checks never contained the string.
+   */
+  const { data: hasWebsiteManage } = await supabase.rpc("authorize", {
+    requested_permission: "website.manage",
+  });
+
   const { data: hasCrmActivitiesRead } = await supabase.rpc("authorize", {
     requested_permission: "crm.activities.read",
   });
@@ -67,6 +80,7 @@ export async function getClaims(): Promise<VerifiedClaims | null> {
   if (hasLeadsReadAssigned === true) permissions.push("leads.read_assigned");
   if (hasSourcesRead === true) permissions.push("sources.read");
   if (hasCrmActivitiesRead === true) permissions.push("crm.activities.read");
+  if (hasWebsiteManage === true) permissions.push("website.manage");
 
   return {
     userId: staff.userId,
