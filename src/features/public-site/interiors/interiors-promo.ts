@@ -15,24 +15,35 @@
  * saying different things, and nobody would notice until someone opened the
  * site on the other device.
  *
- * THE SLOTS ARE EMPTY ON PURPOSE
+ * THE SIX SLOTS ARE THE RAIL, ARTWORK OR NOT
  *
- * No `image` and no `href` on any of the six. The owner is designing the real
- * artwork, and this build exists to settle geometry — card size, ratio, gap,
- * radius, how many are visible, how the rail moves. Filling the slots with
- * borrowed photography would decide the composition before the artwork that
- * has to live in it exists, and every judgement made against it would be a
- * judgement about the wrong picture.
+ * `enabled` is what decides whether a slot is on the page. A slot that is on
+ * but has no `image` yet renders as an empty frame with a small `Banner N`
+ * label — a real 5:8 card in the real rail, just without its picture.
  *
- * So each slot renders an empty frame with a small `Banner N` label. It is a
- * frame preview, not an uploader and not a mockup.
+ * This is a deliberate, owner-held decision and it has been taken twice, in
+ * both directions, so it is worth writing down rather than rediscovering.
  *
- * ADDING A CAMPAIGN LATER
+ * A previous pass made artwork the gate: no `image`, no card, and with all six
+ * empty the section vanished. That is the right behaviour for a rail whose
+ * campaigns come and go — a half-built promotion should never reach a
+ * visitor — but it is the wrong behaviour for THIS moment. The six-slot
+ * slider is itself the thing being reviewed and signed off, and a section that
+ * renders nothing cannot be reviewed. So the empty frames are back.
  *
- *   { id: "diwali-2026", enabled: true, image: "/assets/.../banner-1.webp" }
+ * What that costs, stated plainly: while the slots are empty, a visitor sees
+ * six labelled placeholders. They are not mistakes and they are not stock
+ * photography — they are the frames the artwork will land in — but they are
+ * unfinished, and they are visible. Filling the slots is what closes that.
  *
- * and optionally an `href` to make the whole card a link. That is the entire
- * change — the carousel needs no edit at all.
+ * ADDING A CAMPAIGN
+ *
+ *   { id: "promo-1", enabled: true, image: "/assets/.../banner-1.webp",
+ *     imageAlt: "…" }
+ *
+ * and optionally an `href` to make the whole card a link. The card swaps its
+ * empty frame for the picture; nothing else changes. To take a slot off the
+ * rail entirely, set `enabled: false`.
  */
 export interface InteriorsPromoSlide {
   readonly id: string;
@@ -40,7 +51,9 @@ export interface InteriorsPromoSlide {
   /**
    * The 5:8 artwork. Absent means the slot renders as an empty frame.
    *
-   * One path, not two: the same file is used at every breakpoint.
+   * One path, not two: the same file is used at every breakpoint. Whether a
+   * value counts as artwork is `hasInteriorsPromoCreative`, not a bare
+   * truthiness check.
    */
   readonly image?: string | null;
   /**
@@ -77,9 +90,17 @@ export const INTERIORS_PROMO_RATIO = "5 / 8" as const;
 /** Autoplay dwell. Long enough to read a banner without hurrying. */
 export const INTERIORS_PROMO_AUTOPLAY_MS = 5500;
 
-/** Review-only label prefix; deleted with the empty-frame branch. */
+/** Label prefix for a slot that has no artwork yet: `Banner 1`…`Banner 6`. */
 export const INTERIORS_PROMO_PLACEHOLDER_PREFIX = "Banner";
 
+/**
+ * The six slots. All on, none filled yet.
+ *
+ * `enabled` and artwork are two different switches on purpose. `enabled: false`
+ * takes a slot off the rail completely — a campaign that has ended, kept in
+ * place so it can be turned back on. A missing `image` leaves the slot on the
+ * rail as an empty frame. Only the first removes a card.
+ */
 export const INTERIORS_PROMO_SLIDES: readonly InteriorsPromoSlide[] = [
   { id: "promo-1", enabled: true },
   { id: "promo-2", enabled: true },
@@ -89,7 +110,27 @@ export const INTERIORS_PROMO_SLIDES: readonly InteriorsPromoSlide[] = [
   { id: "promo-6", enabled: true },
 ];
 
-/** The slides that actually run. Order is the array order. */
+/**
+ * Does this slot have a picture, or does it render as an empty frame?
+ *
+ * This decides the CARD's contents, not whether the card exists. The
+ * blank-string check is not defensive padding: `image: ""` is what a cleared
+ * config field or a half-finished edit looks like, and it is the one value
+ * that reads as "no artwork" to a person and as a usable src to
+ * `<Image>`, which would issue a broken request instead of rendering nothing.
+ * One predicate, so "has a creative" has a single definition.
+ */
+export function hasInteriorsPromoCreative(slide: InteriorsPromoSlide): boolean {
+  return typeof slide.image === "string" && slide.image.trim().length > 0;
+}
+
+/**
+ * The slides on the rail. Order is the array order.
+ *
+ * Artwork is deliberately NOT part of this filter — see the note at the top of
+ * the file. An empty result (every slot disabled) still renders nothing at
+ * all, which is the guard that keeps a zero-card rail off the page.
+ */
 export function getEnabledInteriorsPromoSlides(
   slides: readonly InteriorsPromoSlide[] = INTERIORS_PROMO_SLIDES
 ): readonly InteriorsPromoSlide[] {

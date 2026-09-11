@@ -13,6 +13,7 @@ import {
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import {
   getEnabledInteriorsPromoSlides,
+  hasInteriorsPromoCreative,
   INTERIORS_PROMO_AUTOPLAY_MS,
   INTERIORS_PROMO_PLACEHOLDER_PREFIX,
   type InteriorsPromoSlide,
@@ -235,7 +236,12 @@ export function InteriorsPromoCarousel() {
 
   /*
    * Every slot disabled, so there is no rail. An empty section would leave a
-   * banner-height hole above the hero and push the page down for nothing.
+   * banner-height hole between the hero and the service sections and push the
+   * page down for nothing.
+   *
+   * Note what this does NOT test: artwork. Six enabled-but-unfilled slots are
+   * six cards — that is the reviewed state of this rail, and the reasoning is
+   * at the top of `interiors-promo.ts`.
    */
   if (slideCount === 0) {
     return null;
@@ -344,7 +350,7 @@ function Chevron({ direction }: { readonly direction: "left" | "right" }) {
 }
 
 /**
- * One 5:8 slot: artwork if configured, an empty frame if not.
+ * One 5:8 slot: artwork if it has any, an empty frame if not.
  *
  * THE WHOLE CARD IS THE LINK, OR NOTHING IS
  *
@@ -367,9 +373,15 @@ function PromoCard({
 }) {
   const label = `${INTERIORS_PROMO_PLACEHOLDER_PREFIX} ${index + 1}`;
 
-  const body: ReactNode = slide.image ? (
+  /*
+   * `hasInteriorsPromoCreative`, not `slide.image`, decides the branch. A
+   * blank string is the one value a bare truthiness check gets wrong in a way
+   * that shows: `<Image src="">` issues a broken request instead of falling
+   * through to the frame.
+   */
+  const body: ReactNode = hasInteriorsPromoCreative(slide) ? (
     <Image
-      src={slide.image}
+      src={slide.image!}
       alt={slide.imageAlt ?? ""}
       fill
       /*
@@ -384,12 +396,12 @@ function PromoCard({
     />
   ) : (
     /*
-     * REVIEW-ONLY EMPTY FRAME.
+     * THE EMPTY FRAME.
      *
      * A charcoal surface, a hairline, and a small label. Deliberately not a
-     * dashed drop-zone or an image glyph: this is a preview of the frame the
-     * artwork will sit in, and anything that looks like an uploader invites
-     * the wrong feedback. Delete this branch when the slots are filled.
+     * dashed drop-zone or an image glyph: this is the frame the artwork will
+     * sit in, and anything that looks like an uploader invites feedback about
+     * the uploader. Delete this branch once all six slots are filled.
      */
     <span className="od-int-promo__empty">
       <span className="od-int-promo__emptyLabel">{label}</span>

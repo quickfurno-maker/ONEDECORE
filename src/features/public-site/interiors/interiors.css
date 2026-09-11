@@ -128,15 +128,13 @@
   object-fit: cover;
 }
 
-/* ------------------------------------------------------ review-only frame */
+/* ----------------------------------------------------- the empty slot */
 
 /*
- * The empty slot.
- *
  * A charcoal surface and a hairline — no dashed border, no image glyph, no
  * instructions. Anything that reads as an uploader invites feedback about the
- * uploader instead of about the frame, and the frame is the only thing this
- * build is asking about.
+ * uploader instead of about the frame, and the frame is what is being
+ * reviewed.
  */
 .od-int-promo__empty {
   position: absolute;
