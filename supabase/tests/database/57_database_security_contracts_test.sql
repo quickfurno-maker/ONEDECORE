@@ -71,6 +71,11 @@ select set_eq(
     'accept_quotation_by_capability(text,text,text)',
     'check_public_commerce_pincode(text)',
     'get_public_commerce_product(text)',
+    -- Website Manager. Returns the PUBLISHED homepage configuration only:
+    -- ordered section keys and ordered enabled banners. No draft, no archived
+    -- revision, no version id, no internal name and no actor. Reviewed as a
+    -- public entry point when the CMS was added.
+    'get_published_homepage_config()',
     'get_quotation_by_capability(text)',
     'list_public_commerce_categories()',
     'list_public_commerce_sitemap()',

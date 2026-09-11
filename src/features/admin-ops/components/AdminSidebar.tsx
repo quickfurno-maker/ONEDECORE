@@ -139,12 +139,20 @@ function buildGroups(flags: OpsNavFlags, hrefs: AdminSidebarProps["hrefs"]): rea
 
   // Permission-derived, like every other group. It was unconditional, so staff
   // without `portfolio.manage` were shown a link to an Access Denied page.
+  //
+  // Website Manager sits beside Portfolio under Content but is gated on its
+  // OWN permission: the two are different jobs with different blast radii, and
+  // someone trusted with the gallery is not automatically trusted with the
+  // front page.
+  const content: NavItem[] = [];
   if (flags.portfolio) {
-    groups.push({
-      id: "content",
-      label: "Content",
-      items: [{ href: "/admin/portfolio", label: "Portfolio CMS", icon: "portfolio" }],
-    });
+    content.push({ href: "/admin/portfolio", label: "Portfolio CMS", icon: "portfolio" });
+  }
+  if (flags.website) {
+    content.push({ href: "/admin/website", label: "Website Manager", icon: "landing" });
+  }
+  if (content.length > 0) {
+    groups.push({ id: "content", label: "Content", items: content });
   }
 
   const people: NavItem[] = [];

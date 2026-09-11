@@ -12,6 +12,13 @@ import {
 } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import {
+  bannerImageUrl,
+  bannerLinkRel,
+  type BannerLinkType,
+  type PublicBanner,
+} from "@/features/website-manager/banner-model";
+import { usePlan } from "@/features/public-site/home-r4/PlanContext";
+import {
   getEnabledInteriorsPromoSlides,
   hasInteriorsPromoCreative,
   INTERIORS_PROMO_AUTOPLAY_MS,
@@ -39,6 +46,29 @@ function usePrefersReducedMotion(): boolean {
 
 /** Treat sub-pixel scroll remainders as "already there". */
 const SCROLL_EPSILON = 2;
+
+/**
+ * A published banner, as this component's slide shape.
+ *
+ * The two models are kept separate on purpose. `InteriorsPromoSlide` is the
+ * code-owned fallback and carries an `enabled` flag it needs; `PublicBanner`
+ * arrives already filtered by the database, already ordered, and with its link
+ * expressed as a type rather than a bare href. This function is the only place
+ * the two meet.
+ */
+function toSlides(banners: readonly PublicBanner[]): readonly InteriorsPromoSlide[] {
+  return banners.map((banner) => ({
+    id: banner.id,
+    enabled: true,
+    image: bannerImageUrl(banner.image),
+    imageAlt: banner.alt,
+    href: banner.linkType === "internal" || banner.linkType === "external"
+      ? banner.linkValue
+      : null,
+    linkType: banner.linkType,
+    newTab: banner.newTab,
+  }));
+}
 
 /**
  * The promotional rail above the Interiors hero.
@@ -79,8 +109,21 @@ const SCROLL_EPSILON = 2;
  * every five seconds is unusable; the cards are all in the DOM and reachable,
  * and a visitor moves through them when they choose to.
  */
-export function InteriorsPromoCarousel() {
-  const slides = getEnabledInteriorsPromoSlides();
+export interface InteriorsPromoCarouselProps {
+  /**
+   * Published banners from the Website Manager.
+   *
+   * `null` means "no config" — a database outage, or a render that predates the
+   * CMS — and falls back to the code-defined slots so the rail keeps its shape.
+   * An EMPTY ARRAY is different and means the owner has published a homepage
+   * with no banners: the section renders nothing at all. Collapsing those two
+   * cases would make "remove every banner" impossible to express.
+   */
+  readonly banners?: readonly PublicBanner[] | null;
+}
+
+export function InteriorsPromoCarousel({ banners = null }: InteriorsPromoCarouselProps = {}) {
+  const slides = banners === null ? getEnabledInteriorsPromoSlides() : toSlides(banners);
   const railRef = useRef<HTMLUListElement | null>(null);
   const dotRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [active, setActive] = useState(0);
@@ -94,6 +137,19 @@ export function InteriorsPromoCarousel() {
   const [pointerDown, setPointerDown] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
   const labelId = useId();
+  /*
+   * THE SAME PLANNER THE HERO OPENS.
+   *
+   * A banner whose action is "Open Consultation" calls into the existing
+   * `LeadConsultationHost` through this context — the identical path the hero
+   * CTA and the sticky bar use. Not a link to `#contact`, not a second form,
+   * not a new endpoint. One host means one validation, one consent record and
+   * one submission client.
+   */
+  const { openPlanner, getNextIncompleteStep } = usePlan();
+  const openConsultation = useCallback(() => {
+    openPlanner(getNextIncompleteStep());
+  }, [openPlanner, getNextIncompleteStep]);
 
   const slideCount = slides.length;
   const paused = reducedMotion || hovered || focusWithin || pointerDown;
@@ -278,6 +334,7 @@ export function InteriorsPromoCarousel() {
              * delay the one banner anybody sees.
              */
             priority={index === 0}
+            onConsultation={openConsultation}
           />
         ))}
       </ul>
@@ -365,11 +422,13 @@ function PromoCard({
   index,
   total,
   priority,
+  onConsultation,
 }: {
   readonly slide: InteriorsPromoSlide;
   readonly index: number;
   readonly total: number;
   readonly priority: boolean;
+  readonly onConsultation: () => void;
 }) {
   const label = `${INTERIORS_PROMO_PLACEHOLDER_PREFIX} ${index + 1}`;
 
@@ -409,7 +468,25 @@ function PromoCard({
   );
 
   const frameClass = "od-int-promo__frame";
+  const linkClass = `${frameClass} od-int-promo__frame--link`;
+  const linkType: BannerLinkType = slide.linkType ?? (slide.href ? "internal" : "none");
 
+  /*
+   * THREE WAYS TO BE CLICKABLE, AND EXACTLY ONE CONTROL EITHER WAY.
+   *
+   *   internal      -> `<Link>`, client-side navigation, same tab
+   *   external      -> plain `<a>` with https, optionally a new tab with a
+   *                    `rel` that severs `window.opener`
+   *   consultation  -> `<button>` that opens the SAME planner the hero and the
+   *                    sticky bar open. Not a link to an anchor, not a second
+   *                    form — `usePlan` is the one canonical host.
+   *   none          -> `<article>`: no handler, nothing focusable, nothing for
+   *                    a screen reader to announce as interactive.
+   *
+   * The whole card is the control in every case. There is never a button
+   * inside the artwork as well, because that would be two things to press for
+   * one intention and two things for assistive technology to read.
+   */
   return (
     <li
       className="od-int-promo__card"
@@ -417,11 +494,33 @@ function PromoCard({
       aria-label={`${index + 1} of ${total}`}
       aria-roledescription="slide"
     >
-      {slide.href ? (
+      {linkType === "consultation" ? (
+        <button
+          type="button"
+          className={`${linkClass} od-int-promo__frame--action`}
+          data-conversion-action={`promo-${slide.id}`}
+          data-promo-link="consultation"
+          onClick={onConsultation}
+        >
+          {body}
+        </button>
+      ) : linkType === "external" && slide.href ? (
+        <a
+          href={slide.href}
+          className={linkClass}
+          data-conversion-action={`promo-${slide.id}`}
+          data-promo-link="external"
+          target={slide.newTab ? "_blank" : undefined}
+          rel={bannerLinkRel("external", slide.newTab === true)}
+        >
+          {body}
+        </a>
+      ) : slide.href ? (
         <Link
           href={slide.href}
-          className={`${frameClass} od-int-promo__frame--link`}
+          className={linkClass}
           data-conversion-action={`promo-${slide.id}`}
+          data-promo-link="internal"
         >
           {body}
         </Link>

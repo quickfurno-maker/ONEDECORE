@@ -73,6 +73,15 @@ export interface InteriorsPromoSlide {
    * picture is unusable without it. Meaningless while the slots are empty.
    */
   readonly imageAlt?: string | null;
+  /**
+   * Set only on slides that came from the Website Manager.
+   *
+   * `consultation` is a link type with no href: the card opens the canonical
+   * lead form in place rather than navigating. `href` stays null for it, which
+   * is what keeps the `<Link>` branch from firing.
+   */
+  readonly linkType?: "none" | "internal" | "external" | "consultation";
+  readonly newTab?: boolean;
 }
 
 /**

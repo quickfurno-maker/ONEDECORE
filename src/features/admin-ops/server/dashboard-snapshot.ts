@@ -51,6 +51,7 @@ export function crmOverviewNavFlags(
     commerce: false,
     // The CRM overview shell offers no Content group.
     portfolio: false,
+    website: false,
     staff: false,
     attendance: false,
     leave: false,

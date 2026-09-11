@@ -1,0 +1,507 @@
+/*
+ * Website Manager admin styles.
+ *
+ * THE OPS SUITE IS DARK, AND THESE ARE ITS TOKENS.
+ *
+ * `--od-*` on `.od-ops` -- the same variables the sidebar, the CRM tables and
+ * every other admin surface read. The first draft of this file invented an
+ * `--ops-*` family that existed nowhere, so every declaration silently fell
+ * back to a LIGHT palette: white panels inside a dark shell, and section
+ * titles that inherited the shell's near-white text onto a white card. The
+ * page looked plausible in a screenshot and the row titles were invisible.
+ *
+ * Every colour here now comes from a token that exists, with a dark fallback
+ * that matches it rather than contradicting it.
+ *
+ * Nothing else here is clever: a manager page is read in a hurry, often on a
+ * phone in a site office, and the job of this stylesheet is to keep sixteen
+ * section rows and twenty banner rows scannable at 390px.
+ */
+
+.od-wm {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------------ head */
+
+.od-wm__head {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--od-border, rgba(255,255,255,0.07));
+  border-radius: 12px;
+  background: var(--od-surface, #10151b);
+}
+
+.od-wm__title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-wm__sub {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-wm__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.od-wm__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(53, 201, 140, 0.14);
+  color: var(--od-positive, #35c98c);
+}
+
+/* The unsaved marker has to be legible at a glance — it is the difference
+   between "my edit is safe" and "my edit is one tab-close from gone". */
+.od-wm__chip--dirty {
+  background: rgba(226, 168, 59, 0.16);
+  color: var(--od-warning, #e2a83b);
+}
+
+.od-wm__meta {
+  font-size: 0.78rem;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-wm__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+.od-wm__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--od-border, rgba(255,255,255,0.07));
+  background: var(--od-elevated, #141a21);
+  color: var(--od-text, #f5f3ee);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.od-wm__btn:hover:not(:disabled) {
+  border-color: var(--od-gold, #d7a529);
+}
+
+.od-wm__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.od-wm__btn--primary {
+  background: var(--od-gold, #d7a529);
+  border-color: var(--od-gold, #d7a529);
+  color: #10151b;
+}
+
+.od-wm__btn--quiet {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 0.8rem;
+}
+
+.od-wm__btn--danger {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 0.8rem;
+  color: var(--od-danger, #ea6666);
+  border-color: rgba(234, 102, 102, 0.32);
+}
+
+.od-wm__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--od-border, rgba(255,255,255,0.07));
+  background: var(--od-elevated, #141a21);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.od-wm__icon:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------ toast */
+
+.od-wm__toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.86rem;
+}
+
+.od-wm__toast button {
+  border: 0;
+  background: transparent;
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.od-wm__toast--ok { background: rgba(53, 201, 140, 0.14); color: var(--od-positive, #35c98c); }
+.od-wm__toast--warn { background: rgba(226, 168, 59, 0.16); color: var(--od-warning, #e2a83b); }
+.od-wm__toast--error { background: rgba(234, 102, 102, 0.14); color: var(--od-danger, #ea6666); }
+
+/* ------------------------------------------------------------------- tabs */
+
+.od-wm__tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--od-border, rgba(255,255,255,0.07));
+}
+
+.od-wm__tab {
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--od-text-2, #b7bdc5);
+  cursor: pointer;
+}
+
+.od-wm__tab--on {
+  color: var(--od-text, #f5f3ee);
+  border-bottom-color: var(--od-gold, #d7a529);
+}
+
+.od-wm__count {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--od-border, rgba(255,255,255,0.07));
+  font-size: 0.72rem;
+}
+
+/* ------------------------------------------------------------------ panel */
+
+.od-wm__panel {
+  border: 1px solid var(--od-border, rgba(255,255,255,0.07));
+  border-radius: 12px;
+  background: var(--od-surface, #10151b);
+  padding: 14px;
+}
+
+.od-wm__panelHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.od-wm__hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--od-text-2, #b7bdc5);
+  max-width: 60ch;
+}
+
+.od-wm__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.od-wm__row {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid var(--od-border, rgba(255,255,255,0.07));
+  border-radius: 10px;
+}
+
+.od-wm__row--banner {
+  grid-template-columns: 28px 44px 1fr;
+}
+
+.od-wm__rowIndex {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--od-text-2, #b7bdc5);
+  padding-top: 2px;
+}
+
+.od-wm__rowMain {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.od-wm__rowTitle {
+  /* Explicit, not inherited: inheriting from `.od-ops` is what made these
+     invisible when the panel was the wrong colour. */
+  color: var(--od-text, #f5f3ee);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.od-wm__rowDesc {
+  font-size: 0.79rem;
+  color: var(--od-text-2, #b7bdc5);
+  overflow-wrap: anywhere;
+}
+
+.od-wm__rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  grid-column: 1 / -1;
+}
+
+.od-wm__badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.od-wm__badge--on { background: rgba(53, 201, 140, 0.14); color: var(--od-positive, #35c98c); }
+.od-wm__badge--off { background: rgba(255,255,255,0.06); color: var(--od-muted, #747d88); }
+.od-wm__badge--lock { background: rgba(62, 142, 247, 0.14); color: var(--od-blue, #3e8ef7); }
+
+.od-wm__thumb {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 64px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--od-bg, #090c10);
+}
+
+.od-wm__thumb img { object-fit: cover; width: 100%; height: 100%; }
+
+.od-wm__thumbEmpty {
+  font-size: 0.58rem;
+  text-align: center;
+  color: rgba(255, 249, 240, 0.5);
+}
+
+/* ------------------------------------------------------------ empty state */
+
+.od-wm__empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 36px 16px;
+  text-align: center;
+}
+
+.od-wm__emptyTitle { margin: 0; font-weight: 700; color: var(--od-text, #f5f3ee); }
+.od-wm__emptyBody { margin: 0; font-size: 0.85rem; color: var(--od-text-2, #b7bdc5); }
+
+/* ----------------------------------------------------------------- drawer */
+
+/*
+ * A right-side sheet on a desktop, a full-height sheet on a phone. It is
+ * `position: fixed` with its own scroll so a long banner form does not scroll
+ * the list behind it and lose the editor's place.
+ */
+.od-wm__drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(440px, 100vw);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--od-surface, #10151b);
+  border-left: 1px solid var(--od-border, rgba(255,255,255,0.07));
+  box-shadow: -12px 0 48px rgba(0, 0, 0, 0.55);
+  z-index: 60;
+}
+
+.od-wm__drawerHead,
+.od-wm__drawerFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--od-border, rgba(255,255,255,0.07));
+}
+
+.od-wm__drawerFoot {
+  border-bottom: 0;
+  border-top: 1px solid var(--od-border, rgba(255,255,255,0.07));
+}
+
+.od-wm__drawerHead h2 { margin: 0; font-size: 1rem; color: var(--od-text, #f5f3ee); }
+
+.od-wm__drawerBody {
+  overflow-y: auto;
+  padding: 14px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.od-wm__field { display: grid; gap: 6px; }
+
+.od-wm__label { font-size: 0.82rem; font-weight: 700; color: var(--od-text, #f5f3ee); }
+
+.od-wm__help { font-size: 0.76rem; color: var(--od-text-2, #b7bdc5); }
+
+.od-wm__input {
+  background: var(--od-bg, #090c10);
+  color: var(--od-text, #f5f3ee);
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--od-border, rgba(255,255,255,0.07));
+  border-radius: 8px;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.od-wm__radio,
+.od-wm__check {
+  color: var(--od-text, #f5f3ee);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  min-height: 34px;
+}
+
+.od-wm__suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.od-wm__chipBtn {
+  color: var(--od-text-2, #b7bdc5);
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--od-border, rgba(255,255,255,0.07));
+  background: var(--od-elevated, #141a21);
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.od-wm__preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.od-wm__previewActions { display: grid; gap: 6px; }
+
+.od-wm__error { margin: 0; font-size: 0.78rem; color: var(--od-danger, #ea6666); }
+.od-wm__warn { margin: 0; font-size: 0.78rem; color: var(--od-warning, #e2a83b); }
+
+/* ------------------------------------------------------------------ modal */
+
+.od-wm__modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(3, 5, 8, 0.66);
+  z-index: 70;
+}
+
+.od-wm__modalBox {
+  width: min(440px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--od-surface, #10151b);
+}
+
+.od-wm__modalBox h2 { margin: 0 0 12px; font-size: 1.05rem; color: var(--od-text, #f5f3ee); }
+
+.od-wm__summary {
+  color: var(--od-text-2, #b7bdc5);
+  margin: 0 0 12px;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.od-wm__modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* ------------------------------------------------------------- responsive */
+
+@media (min-width: 48rem) {
+  .od-wm { padding: 24px; }
+
+  .od-wm__head {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .od-wm__status { grid-column: 1; }
+  .od-wm__actions { grid-column: 2; grid-row: 1 / span 2; justify-content: flex-end; }
+
+  .od-wm__row {
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+  }
+
+  .od-wm__row--banner {
+    grid-template-columns: 28px 44px 1fr auto;
+  }
+
+  .od-wm__rowActions {
+    grid-column: auto;
+    flex-wrap: nowrap;
+  }
+}
+
+/*
+ * At phone width the action row already wraps onto its own line above; this
+ * keeps the buttons from becoming 28px-wide slivers when six of them wrap.
+ */
+@media (max-width: 26rem) {
+  .od-wm__btn--quiet,
+  .od-wm__btn--danger { flex: 1 0 auto; }
+}

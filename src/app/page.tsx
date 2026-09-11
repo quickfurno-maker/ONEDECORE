@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SITE_CONFIG } from "@/config/site";
 import { publicSiteFontVariables } from "@/features/public-site/fonts";
 import { InteriorsConversionPage } from "@/features/public-site/interiors/InteriorsConversionPage";
+import { getPublishedHomepageConfig } from "@/features/website-manager/public/public-homepage-config";
 
 /**
  * The homepage is the Interiors experience.
@@ -56,10 +57,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
+/**
+ * The homepage reads its structure from the Website Manager, and stays static.
+ *
+ * `getPublishedHomepageConfig` is an anonymous, cookie-free, tag-cached read —
+ * see the long note in `public-homepage-config.ts`. It is awaited here because
+ * a Server Component may await; what it must never do is touch `cookies()` or
+ * `headers()`, either of which would flip this route from `○` to `ƒ` and give
+ * every visitor a server round trip.
+ *
+ * A null config is not an error path to log loudly. It is the ordinary
+ * fallback: `InteriorsConversionPage` renders the code-defined approved
+ * homepage, exactly as it did before this feature existed.
+ */
+export default async function HomePage() {
+  const config = await getPublishedHomepageConfig();
+
   return (
     <div className={publicSiteFontVariables}>
-      <InteriorsConversionPage />
+      <InteriorsConversionPage config={config} />
     </div>
   );
 }

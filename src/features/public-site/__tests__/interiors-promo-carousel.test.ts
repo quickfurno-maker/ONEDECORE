@@ -319,14 +319,23 @@ describe("an unfilled slot renders as a frame, not as finished content", () => {
 /* -------------------------------------------------------------------------- */
 
 describe("a banner links as a whole card or not at all", () => {
-  test("href present makes the card a real link; absent makes it inert", () => {
+  test("each link type gets one control, and no link makes the card inert", () => {
+    /*
+     * The Website Manager added two more ways for a card to be clickable —
+     * an https anchor and a button that opens the canonical planner — so this
+     * now checks the whole set rather than just the internal `<Link>`. The
+     * invariant is unchanged: the WHOLE CARD is the control, and there is
+     * never a second one painted inside the artwork.
+     */
     const carousel = code(read(CAROUSEL));
-    assert.match(carousel, /slide\.href \? \(/);
     assert.match(carousel, /<Link\s+href=\{slide\.href\}/);
+    assert.match(carousel, /linkType === "external" && slide\.href \? \(/);
+    assert.match(carousel, /linkType === "consultation" \? \(/);
     assert.match(carousel, /<article className=\{frameClass\}>\{body\}<\/article>/);
-    // No click-div pretending to be a link, and no button inside a banner.
+    // No click-div pretending to be a link.
     assert.doesNotMatch(carousel, /<div[^>]*onClick/);
-    assert.doesNotMatch(carousel, /<button[^>]*promo-\$\{/);
+    // The only button IS the card; nothing is nested inside the frame.
+    assert.doesNotMatch(carousel, /\{body\}\s*<button/);
   });
 
   test("a linked banner will have an accessible name", () => {
@@ -666,9 +675,15 @@ describe("/interiors composition", () => {
   });
 
   test("the carousel logic did not leak into the page file", () => {
+    /*
+     * The page grew a section map and a config prop when the Website Manager
+     * arrived, so the line budget moved. What it must still not contain is
+     * CAROUSEL logic — scroll measurement, observers, autoplay state. The page
+     * composes; the rail behaves.
+     */
     const page = code(read(PAGE));
     assert.doesNotMatch(page, /useState|useEffect|ResizeObserver|scrollTo/);
-    assert.ok(page.split("\n").length < 90, "the page should stay a running order");
+    assert.ok(page.split("\n").length < 160, "the page should stay a running order");
   });
 
   test("the hero kept its identity through the reorder and the cleanup", () => {
@@ -836,13 +851,15 @@ describe("interiors is the homepage, at exactly one URL", () => {
      * nobody remembers to make twice.
      */
     const route = code(read(ROOT));
-    assert.match(route, /<InteriorsConversionPage \/>/);
+    // It now receives the published Website Manager config; it is still one
+    // mount of one shared component.
+    assert.match(route, /<InteriorsConversionPage config=\{config\} \/>/);
     assert.match(
       route,
       /from "@\/features\/public-site\/interiors\/InteriorsConversionPage"/
     );
     assert.equal(
-      (route.match(/<InteriorsConversionPage \/>/g) ?? []).length,
+      (route.match(/<InteriorsConversionPage /g) ?? []).length,
       1,
       "exactly one mount"
     );

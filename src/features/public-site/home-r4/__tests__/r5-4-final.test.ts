@@ -36,7 +36,14 @@ describe("R5.4 static homepage", () => {
      * at all any more, which is the point rather than an omission.
      */
     const page = readFileSync(pagePath, "utf8");
-    assert.match(page, /<InteriorsConversionPage \/>/);
+    /*
+     * The route now passes the published Website Manager config into the page.
+     * It is still the same component and still no fetch of commerce or
+     * portfolio data -- the config read is anonymous and tag-cached precisely
+     * so this route can stay static, which the assertions below still check.
+     */
+    assert.match(page, /<InteriorsConversionPage config=\{config\} \/>/);
+    assert.match(page, /getPublishedHomepageConfig\(\)/);
     assert.doesNotMatch(page, /getFeaturedProjects/);
     assert.doesNotMatch(page, /force-dynamic/);
     /*

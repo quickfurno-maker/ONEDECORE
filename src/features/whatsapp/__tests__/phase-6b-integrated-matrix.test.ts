@@ -97,7 +97,7 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 69, "Migration count must be exactly 69");
+    assert.equal(files.length, 70, "Migration count must be exactly 70");
 
     // Workforce V1 attendance lifecycle. Still no payment M38.
     const workforce = files.filter((f) => f.startsWith("20260902160000"));
@@ -240,6 +240,11 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
         // Removes redundancy only: creates nothing and no COD or payment
         // surface of any kind.
         "20260910130000_drop_redundant_shadow_indexes.sql",
+        // Website Manager: homepage section order, visibility and promotional
+        // banners, with their own permission and a versioned draft/publish
+        // model. Public marketing content only — it creates no COD, order or
+        // payment surface of any kind.
+        "20260911120000_website_manager_cms.sql",
       ],
       "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, CRM 2A-7, CRM 2C cadences, CRM 2D commercial read models, the lead_notes INSERT privilege redrift repair, CRM 2E management analytics, the WhatsApp lead-link repair, and the Workforce V1 attendance lifecycle may follow 9D-D1 COD order foundation"
     );

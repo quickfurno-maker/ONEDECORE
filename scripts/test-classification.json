@@ -148,6 +148,8 @@
     "src/features/staff-attendance/__tests__/workforce-attendance-v1.test.ts",
     "src/features/staff-leave/__tests__/phase-6d-c-leave-holiday.test.ts",
     "src/features/staff-salary/__tests__/workforce-salary-v1.test.ts",
+    "src/features/website-manager/__tests__/local-admin-provisioning.test.ts",
+    "src/features/website-manager/__tests__/website-manager.test.ts",
     "src/features/whatsapp/__tests__/phase-6a-meta-webhook.test.ts",
     "src/features/whatsapp/__tests__/phase-6b-b1-send-intent-foundation.test.ts",
     "src/features/whatsapp/__tests__/phase-6b-b2-inbox-read-model.test.ts",

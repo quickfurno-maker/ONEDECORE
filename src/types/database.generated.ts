@@ -6603,6 +6603,165 @@ export type Database = {
           },
         ]
       }
+      website_homepage_banners: {
+        Row: {
+          alt_text: string | null
+          banner_id: string
+          created_at: string
+          created_by: string | null
+          desktop_image_path: string | null
+          id: string
+          internal_name: string
+          is_enabled: boolean
+          link_type: string
+          link_value: string | null
+          mobile_image_path: string | null
+          open_in_new_tab: boolean
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+          version_id: string
+        }
+        Insert: {
+          alt_text?: string | null
+          banner_id: string
+          created_at?: string
+          created_by?: string | null
+          desktop_image_path?: string | null
+          id?: string
+          internal_name: string
+          is_enabled?: boolean
+          link_type?: string
+          link_value?: string | null
+          mobile_image_path?: string | null
+          open_in_new_tab?: boolean
+          sort_order: number
+          updated_at?: string
+          updated_by?: string | null
+          version_id: string
+        }
+        Update: {
+          alt_text?: string | null
+          banner_id?: string
+          created_at?: string
+          created_by?: string | null
+          desktop_image_path?: string | null
+          id?: string
+          internal_name?: string
+          is_enabled?: boolean
+          link_type?: string
+          link_value?: string | null
+          mobile_image_path?: string | null
+          open_in_new_tab?: boolean
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_homepage_banners_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "website_homepage_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_homepage_publication: {
+        Row: {
+          id: boolean
+          published_at: string | null
+          published_by: string | null
+          published_version_id: string | null
+        }
+        Insert: {
+          id?: boolean
+          published_at?: string | null
+          published_by?: string | null
+          published_version_id?: string | null
+        }
+        Update: {
+          id?: boolean
+          published_at?: string | null
+          published_by?: string | null
+          published_version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_homepage_publication_published_version_id_fkey"
+            columns: ["published_version_id"]
+            isOneToOne: false
+            referencedRelation: "website_homepage_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_homepage_sections: {
+        Row: {
+          is_visible: boolean
+          section_key: string
+          sort_order: number
+          version_id: string
+        }
+        Insert: {
+          is_visible?: boolean
+          section_key: string
+          sort_order: number
+          version_id: string
+        }
+        Update: {
+          is_visible?: boolean
+          section_key?: string
+          sort_order?: number
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_homepage_sections_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "website_homepage_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_homepage_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          published_at: string | null
+          published_by: string | null
+          state: string
+          updated_at: string
+          updated_by: string | null
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          published_at?: string | null
+          published_by?: string | null
+          state: string
+          updated_at?: string
+          updated_by?: string | null
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          published_at?: string | null
+          published_by?: string | null
+          state?: string
+          updated_at?: string
+          updated_by?: string | null
+          version_number?: number
+        }
+        Relationships: []
+      }
       whatsapp_business_accounts: {
         Row: {
           created_at: string
@@ -8577,6 +8736,7 @@ export type Database = {
         Returns: Json
       }
       get_public_commerce_product: { Args: { p_slug: string }; Returns: Json }
+      get_published_homepage_config: { Args: never; Returns: Json }
       get_quotation_by_capability: {
         Args: { p_capability_token: string }
         Returns: Json
@@ -8587,6 +8747,7 @@ export type Database = {
         Args: { p_staff_id: string }
         Returns: Json
       }
+      get_website_homepage_draft: { Args: never; Returns: Json }
       has_active_role: { Args: { p_role_code: string }; Returns: boolean }
       hold_project_design: {
         Args: {
@@ -8841,6 +9002,10 @@ export type Database = {
           p_id: string
           p_idempotency_key: string
         }
+        Returns: Json
+      }
+      publish_website_homepage: {
+        Args: { p_expected_draft_id?: string }
         Returns: Json
       }
       quote_public_commerce_cart: {
@@ -9473,6 +9638,14 @@ export type Database = {
           p_idempotency_key?: string
           p_quotation_id: string
           p_sections: Json
+        }
+        Returns: Json
+      }
+      save_website_homepage_draft: {
+        Args: {
+          p_banners?: Json
+          p_expected_version_id?: string
+          p_sections?: Json
         }
         Returns: Json
       }

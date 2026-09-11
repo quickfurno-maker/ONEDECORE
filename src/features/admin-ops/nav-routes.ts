@@ -11,6 +11,10 @@ export function buildOpsCommandRoutes(flags: OpsNavFlags): readonly OpsCommandRo
     routes.push({ href: "/admin/portfolio", label: "Portfolio CMS", group: "Content" });
   }
 
+  if (flags.website) {
+    routes.push({ href: "/admin/website", label: "Website Manager", group: "Content" });
+  }
+
   if (flags.crm) {
     routes.push({ href: "/admin/crm", label: "CRM Overview", group: "Sales & CRM" });
     routes.push({ href: "/admin/crm/leads", label: "Leads", group: "Sales & CRM" });
