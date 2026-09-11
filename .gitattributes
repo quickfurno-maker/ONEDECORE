@@ -1,0 +1,7 @@
+# Shell scripts must be LF on every platform.
+#
+# A CRLF checkout of a .sh file fails on Linux with a confusing
+# "bad interpreter: /usr/bin/env bash^M", and the production deploy script is
+# the worst possible place to discover that. Git currently normalises this by
+# accident via core.autocrlf; this makes it a property of the repository.
+*.sh text eol=lf
