@@ -153,10 +153,16 @@ select ok(
 );
 
 -- The seeded homepage is live and readable anonymously.
+--
+-- Twelve, not the sixteen this file originally asserted. The seed inserted
+-- sixteen; `20260912120000_homepage_section_registry_r5.sql` then retired five
+-- sections and added one. Both migrations have run by the time this test does,
+-- so twelve is what a reader of the live config sees. The R5 migration's own
+-- test file asserts WHICH twelve and in what order.
 select is(
   jsonb_array_length(public.get_published_homepage_config() -> 'sections'),
-  16,
-  'the published config carries all sixteen seeded sections'
+  12,
+  'the published config carries the current registry sections'
 );
 
 select is(

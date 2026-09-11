@@ -25,7 +25,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
-import { PM_CREDIBILITY, PM_HERO, pmCredibilityText } from "../home-r4/content.ts";
+import { PM_CREDIBILITY, PM_FAQS, PM_HERO, pmCredibilityText } from "../home-r4/content.ts";
+import { R5_FAQ_IDS } from "../homepage-r5/content.ts";
 import { HOME_PUNE_AREAS } from "../home-r4/claims.ts";
 import {
   getEnabledInteriorsPromoSlides,
@@ -310,24 +311,53 @@ describe("the Pune area list lives in one place, and it is not the hero", () => 
     }
   });
 
-  test("the dedicated section lower on the page carries all 26 localities", () => {
+  test("the locality answer survives the hero chips, now in the FAQ", () => {
     /*
-     * THE REASON THE HERO BLOCK COULD SIMPLY BE DELETED.
+     * WHY THE HERO BLOCK COULD SIMPLY BE DELETED, AND WHERE THE ANSWER WENT.
      *
-     * `InteriorsServiceAreas` already existed and already rendered the full
-     * list — the hero was showing the first six of the same array behind an
-     * expander. Nothing had to be moved; the duplicate went.
+     * The hero showed the first six of `HOME_PUNE_AREAS` behind an expander
+     * while `InteriorsServiceAreas` rendered the full list lower down, so the
+     * chips were a duplicate and the duplicate went.
+     *
+     * The R5 redesign then took the standalone locality section out of the
+     * homepage flow as well. That is a product decision, not an accident — but
+     * it means this suite can no longer point at a section as the survivor. The
+     * survivor is the `areas` FAQ entry, and it is asserted here rather than
+     * only in the FAQ suite because THIS is the file that authorised deleting
+     * the chips. If the answer ever stops being reachable, the deletion this
+     * file defends becomes a loss of information, and that must fail here.
      */
-    const blocks = code(read(BLOCKS));
-    assert.match(blocks, /export function InteriorsServiceAreas/);
-    assert.match(blocks, /HOME_PUNE_AREAS\.map\(\(area\) => \(/);
-    assert.match(blocks, /Interior execution across Pune/);
     assert.equal(HOME_PUNE_AREAS.length, 26);
 
-    // And it is still composed into the homepage, in its established place.
+    const areas = (PM_FAQS as readonly { id: string; answer?: string }[]).find(
+      (entry) => entry.id === "areas"
+    );
+    assert.ok(areas, "the areas FAQ entry must exist");
+    assert.match(
+      areas.answer ?? "",
+      new RegExp(`\\b${HOME_PUNE_AREAS.length}\\b`),
+      "the answer must state how many areas are served"
+    );
+    for (const area of HOME_PUNE_AREAS.slice(0, 6)) {
+      assert.ok(
+        (areas.answer ?? "").includes(area),
+        `${area} must be named in the answer`
+      );
+    }
+
+    // And that entry is one the homepage FAQ actually renders.
+    assert.ok(
+      (R5_FAQ_IDS as readonly string[]).includes("areas"),
+      "the homepage FAQ must render the areas entry"
+    );
+
+    /*
+     * The old section is gone from the flow. Asserted as an absence so that
+     * re-adding it is a deliberate act with a failing test attached, rather
+     * than something that quietly reintroduces the duplication above.
+     */
     const page = code(read(PAGE));
-    assert.match(page, /<InteriorsServiceAreas \/>/);
-    assert.equal((page.match(/<InteriorsServiceAreas \/>/g) ?? []).length, 1);
+    assert.doesNotMatch(page, /<InteriorsServiceAreas \/>/);
   });
 
   test("no area names were invented while consolidating", () => {
@@ -429,7 +459,7 @@ describe("the six-slide rail renders even while the slots are empty", () => {
     assert.equal((page.match(/<InteriorsPromoCarousel \/>/g) ?? []).length, 1);
     const hero = page.indexOf("<HomeHero />");
     const promo = page.indexOf("<InteriorsPromoCarousel />");
-    const services = page.indexOf("<HomeServicesRooms />");
+    const services = page.indexOf("<R5Services />");
     assert.ok(hero < promo && promo < services);
   });
 });

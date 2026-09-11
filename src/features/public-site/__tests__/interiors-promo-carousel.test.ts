@@ -567,22 +567,25 @@ describe("/interiors composition", () => {
    * checks. A pairwise test passes happily while a section three places away
    * has moved.
    */
+  /*
+   * The R5 composition. Twelve sections, mapped by CMS key.
+   *
+   * The list shrank because three single-service sections, the materials
+   * explorer and the locality list left the homepage — see the registry's
+   * RETIRED_HOMEPAGE_SECTION_KEYS for what went where.
+   */
   const EXPECTED_COMPOSITION = [
     "<HomeHero />",
     "<InteriorsPromoCarousel />",
-    "<HomeServicesRooms />",
-    "<InteriorsKitchenFeature />",
-    "<InteriorsWardrobes />",
-    "<InteriorsRenovation />",
-    "<HomeWhy />",
-    "<HomeFactory />",
-    "<HomeBudgetEstimator />",
-    "<InteriorsPortfolioBridge />",
-    "<HomeMaterials />",
-    "<HomeProcess />",
-    "<InteriorsServiceAreas />",
+    "<R5Services />",
+    "<R5RoomExplorer />",
+    "<R5Why />",
+    "<R5Process />",
+    "<R5Factory />",
+    "<R5Budget />",
+    "<R5Portfolio />",
     "<HomeReviews />",
-    "<HomeFaq />",
+    "<R5Faq />",
     "<HomePlan />",
   ] as const;
 
@@ -590,7 +593,7 @@ describe("/interiors composition", () => {
     const page = code(read(PAGE));
     const hero = page.indexOf("<HomeHero />");
     const promo = page.indexOf("<InteriorsPromoCarousel />");
-    const services = page.indexOf("<HomeServicesRooms />");
+    const services = page.indexOf("<R5Services />");
     assert.ok(hero > 0 && promo > 0 && services > 0);
     assert.ok(hero < promo, "the hero must come before the rail");
     assert.ok(promo < services, "the rail must come before the service sections");
@@ -818,7 +821,7 @@ describe("the earlier contact work still holds", () => {
   });
 
   test("the estimator survived the reorder", () => {
-    assert.match(code(read(PAGE)), /<HomeBudgetEstimator \/>/);
+    assert.match(code(read(PAGE)), /<R5Budget \/>/);
   });
 });
 
@@ -964,7 +967,8 @@ describe("interiors is the homepage, at exactly one URL", () => {
     assert.match(nav, /href: "\/#about"/);
     assert.match(nav, /href: "\/#contact"/);
 
-    const why = read("src/features/public-site/home-r4/HomeWhy.tsx");
+    // The About anchor moved with the section it lives in.
+    const why = read("src/features/public-site/homepage-r5/sections/R5Why.tsx");
     assert.match(why, /id="about"/);
     const plan = read("src/features/public-site/home-r4/HomePlan.tsx");
     assert.match(plan, /id="contact"/);
@@ -973,7 +977,7 @@ describe("interiors is the homepage, at exactly one URL", () => {
 
     // Both sections are composed into the page the root renders.
     const page = code(read(PAGE));
-    assert.match(page, /<HomeWhy \/>/);
+    assert.match(page, /<R5Why \/>/);
     assert.match(page, /<HomePlan \/>/);
 
     // And the anchors carry an offset so the sticky header does not cover them.

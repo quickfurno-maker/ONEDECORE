@@ -111,7 +111,7 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
     );
     assert.equal(
       sorted[sorted.length - 1],
-      "20260911120000_website_manager_cms.sql",
+      "20260912120000_homepage_section_registry_r5.sql",
       "the newest migration adds the Website Manager CMS"
     );
     assert.ok(

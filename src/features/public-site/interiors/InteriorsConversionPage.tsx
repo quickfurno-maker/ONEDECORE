@@ -4,28 +4,23 @@ import {
   type HomepageSectionKey,
 } from "@/features/website-manager/homepage-registry";
 import type { PublicHomepageConfig } from "@/features/website-manager/public/public-homepage-config";
-import { HomeBudgetEstimator } from "@/features/public-site/home-r4/HomeBudgetEstimator";
-import { HomeFactory } from "@/features/public-site/home-r4/HomeFactory";
-import { HomeFaq } from "@/features/public-site/home-r4/HomeFaq";
 import { HomeHero } from "@/features/public-site/home-r4/HomeHero";
-import { HomeMaterials } from "@/features/public-site/home-r4/HomeMaterials";
 import { HomePlan } from "@/features/public-site/home-r4/HomePlan";
-import { HomeProcess } from "@/features/public-site/home-r4/HomeProcess";
 import { HomeReviews } from "@/features/public-site/home-r4/HomeReviews";
-import { HomeServicesRooms } from "@/features/public-site/home-r4/HomeServicesRooms";
 import { HomeShell } from "@/features/public-site/home-r4/HomeShell";
-import { HomeWhy } from "@/features/public-site/home-r4/HomeWhy";
 import { LeadConsultationHost } from "@/features/lead-intake/public/LeadConsultationHost";
 import { DiscoveryWhatsAppFab } from "@/features/public-site/discovery/DiscoveryWhatsAppFab";
 import "@/features/public-site/discovery/discovery.css";
 import { InteriorsPromoCarousel } from "./InteriorsPromoCarousel";
-import {
-  InteriorsKitchenFeature,
-  InteriorsPortfolioBridge,
-  InteriorsRenovation,
-  InteriorsServiceAreas,
-  InteriorsWardrobes,
-} from "./InteriorsServiceBlocks";
+import { R5Budget } from "@/features/public-site/homepage-r5/sections/R5Budget";
+import { R5Faq } from "@/features/public-site/homepage-r5/sections/R5Faq";
+import { R5Factory } from "@/features/public-site/homepage-r5/sections/R5Factory";
+import { R5Portfolio } from "@/features/public-site/homepage-r5/sections/R5Portfolio";
+import { R5Process } from "@/features/public-site/homepage-r5/sections/R5Process";
+import { R5RoomExplorer } from "@/features/public-site/homepage-r5/sections/R5RoomExplorer";
+import { R5Services } from "@/features/public-site/homepage-r5/sections/R5Services";
+import { R5Why } from "@/features/public-site/homepage-r5/sections/R5Why";
+import "@/features/public-site/homepage-r5/homepage-r5.css";
 import "./interiors.css";
 
 /*
@@ -82,19 +77,24 @@ export const INTERIORS_SECTION_ORDER = [
 const SECTION_COMPONENTS: Record<HomepageSectionKey, () => ReactElement> = {
   hero: () => <HomeHero />,
   "promo-carousel": () => <InteriorsPromoCarousel />,
-  "complete-interiors": () => <HomeServicesRooms />,
-  "modular-kitchen": () => <InteriorsKitchenFeature />,
-  wardrobes: () => <InteriorsWardrobes />,
-  renovation: () => <InteriorsRenovation />,
-  why: () => <HomeWhy />,
-  factory: () => <HomeFactory />,
-  estimator: () => <HomeBudgetEstimator />,
-  portfolio: () => <InteriorsPortfolioBridge />,
-  materials: () => <HomeMaterials />,
-  process: () => <HomeProcess />,
-  "service-areas": () => <InteriorsServiceAreas />,
+  "complete-interiors": () => <R5Services />,
+  "room-explorer": () => <R5RoomExplorer />,
+  why: () => <R5Why />,
+  process: () => <R5Process />,
+  factory: () => <R5Factory />,
+  estimator: () => <R5Budget />,
+  portfolio: () => <R5Portfolio />,
+  /*
+   * The reviews section keeps its existing component deliberately.
+   *
+   * `HOME_VERIFIED_REVIEWS` is empty and `HOME_REVIEW_SOURCE_URL` is null, so
+   * there is no approved review content to show. `HomeReviews` already handles
+   * exactly that: it renders process copy instead of a rating rather than
+   * inventing one. Rebuilding it would have meant reimplementing those claim
+   * gates, which is how a fabricated testimonial reaches a live page.
+   */
   testimonials: () => <HomeReviews />,
-  faq: () => <HomeFaq />,
+  faq: () => <R5Faq />,
   consultation: () => <HomePlan />,
 };
 
