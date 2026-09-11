@@ -640,10 +640,38 @@
   z-index: 0;
 }
 
-[data-public-home-r4] .pm-hero__mediaImg {
-  object-fit: cover;
+/*
+ * The hero image is now a <picture> (see HomeHero for why), so the fill
+ * geometry `<Image fill>` used to apply inline lives here instead.
+ */
+[data-public-home-r4] .pm-hero__media picture {
+  display: block;
+  position: absolute;
+  inset: 0;
 }
 
+[data-public-home-r4] .pm-hero__mediaImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /*
+   * Mobile crop by default; the desktop focal point takes over at the same
+   * 768px the <source media> switches on. Both values come from the asset
+   * registry via custom properties set on `.pm-hero__media`.
+   */
+  object-position: var(--pm-hero-focal-mobile, 50% 50%);
+}
+
+@media (min-width: 768px) {
+  [data-public-home-r4] .pm-hero__mediaImg {
+    object-position: var(--pm-hero-focal-desktop, 50% 50%);
+  }
+}
+
+/*
+ * The base scrim. NOT the one the homepage hero uses — see the `--qf` override
+ * further down, which is where the launch readability tuning lives.
+ */
 [data-public-home-r4] .pm-hero__mediaScrim {
   position: absolute;
   inset: 0;
@@ -657,6 +685,7 @@
   );
   pointer-events: none;
 }
+
 
 [data-public-home-r4] .pm-hero__glow {
   position: absolute;
@@ -929,6 +958,13 @@
     padding-bottom: clamp(36px, 4vw, 64px);
   }
 
+  /*
+   * Left as it was. This rule looks like it hides the desktop hero image, and
+   * it would — except `.pm-hero--qf .pm-hero__media` further down scores 0-3-0
+   * against this rule's 0-2-0 and sets `display: block` for the hero the
+   * homepage actually renders. Changing it here would move nothing and would
+   * suggest to the next reader that it does.
+   */
   [data-public-home-r4] .pm-hero__media {
     display: none;
   }
@@ -3753,6 +3789,14 @@
   display: block;
 }
 
+/*
+ * THE READABILITY SCRIM THE HOMEPAGE ACTUALLY USES.
+ *
+ * Horizontal, because from 768px up the copy sits in the left column and the
+ * photograph should stay a photograph on the right. Measured against the
+ * launch hero crop it holds comfortably: 5.3-6.4:1 on the eyebrow and
+ * 5.3-5.5:1 on the headline at 1440 and 1920, so it is left alone.
+ */
 [data-public-home-r4] .pm-hero--qf .pm-hero__mediaScrim {
   background: linear-gradient(
     90deg,
@@ -3761,6 +3805,46 @@
     rgba(11, 9, 8, 0.28) 68%,
     rgba(11, 9, 8, 0.12) 100%
   );
+}
+
+/*
+ * ON A PHONE THE SAME GRADIENT IS THE WRONG SHAPE.
+ *
+ * There is no left column below 768px — the copy runs the full width — so a
+ * horizontal ramp leaves the right-hand end of every line sitting on 0.12 of
+ * scrim. Over the old dark hero that was survivable. Over the launch crop,
+ * whose brightest region is a sunlit ceiling directly behind the headline, it
+ * is not. Measured on the rendered page with the copy hidden:
+ *
+ *     eyebrow 1.28:1   headline 2.36:1   counter label 4.14:1
+ *     (thresholds 4.5, 3.0, 4.5)
+ *
+ * So the phone gets a VERTICAL gradient shaped to where the text is. The copy
+ * occupies 17%-94% of the hero here, and the stops track it: heaviest across
+ * the eyebrow and headline, easing through the gap where nothing is written,
+ * closing again behind the counter row.
+ *
+ * The stops below are the measured requirement, not taste, and they are as
+ * light as the measurements allow: the eyebrow and the counter row carry their
+ * own translucent panels, so the gradient only has to do the work for the
+ * headline, which sits directly on the picture. Re-measured after the change:
+ *
+ *     eyebrow 8.9:1   headline 3.5:1   counter figure 7.2:1   label 8.5:1
+ *
+ * The photograph is still legible as a photograph, which was the point of
+ * shipping one.
+ */
+@media (max-width: 767px) {
+  [data-public-home-r4] .pm-hero--qf .pm-hero__mediaScrim {
+    background: linear-gradient(
+      180deg,
+      rgba(11, 9, 8, 0.62) 0%,
+      rgba(11, 9, 8, 0.52) 22%,
+      rgba(11, 9, 8, 0.52) 48%,
+      rgba(11, 9, 8, 0.58) 72%,
+      rgba(11, 9, 8, 0.86) 100%
+    );
+  }
 }
 
 /*

@@ -40,9 +40,10 @@ import {
   R5_PROCESS,
   R5_ROOMS,
   R5_SERVICES,
+  FACTORY_IMAGERY_NOTE,
   REFERENCE_IMAGERY_NOTE,
 } from "../homepage-r5/content.ts";
-import { PM_FAQS } from "../home-r4/content.ts";
+import { PM_ASSETS, PM_FAQS } from "../home-r4/content.ts";
 import {
   BUDGET_RANGES_BY_PROJECT_SCOPE,
   PROJECT_SCOPE_LABELS,
@@ -191,19 +192,54 @@ describe("every claim resolves from reviewed data", () => {
       );
     }
     /*
-     * A room with no approved photograph gets type, not a borrowed picture from
-     * another room — the provenance model in one assertion.
+     * THE RULE OUTLIVES THE CURRENT SET OF FILES.
+     *
+     * Every room has a photograph now that the launch pack has landed, so there
+     * is no longer a fixture exercising the image-less path. That does NOT make
+     * the path removable: the rule it enforces is that a room with no approved
+     * picture shows type rather than borrowing another room's, and the next
+     * room added will arrive without a picture exactly as Bedroom did.
+     *
+     * So the assertion moves from the data to the component. The branch and the
+     * placeholder it renders must both still be there.
      */
-    assert.ok(
-      R5_ROOMS.some((room) => room.image === null),
-      "the fixture must keep at least one image-less room, or this stops testing anything"
-    );
-    assert.match(code(read(`${SECTIONS}/R5RoomExplorer.tsx`)), /r5-panel__placeholder/);
+    const rooms = code(read(`${SECTIONS}/R5RoomExplorer.tsx`));
+    assert.match(rooms, /r5-panel__placeholder/, "the image-less branch must survive");
+    assert.match(rooms, /room\.image \?/, "the panel must still test for a missing image");
+    for (const room of R5_ROOMS) {
+      if (room.image === null) {
+        assert.equal(room.imageAlt, "", "an image-less room carries no alt text");
+      } else {
+        assert.ok(room.imageAlt.length > 10, `${room.id} needs real alt text`);
+      }
+    }
   });
 
-  test("the factory section shows no manufacturing photography", () => {
+  test("the factory visual is labelled as representative, not as ONEDECORE's plant", () => {
+    /*
+     * THE SECTION NOW HAS A PICTURE, AND THAT RAISES THE STAKES.
+     *
+     * It sits under the heading "Built in our own manufacturing unit", which
+     * makes the obvious reading "this is their factory". It is not — the asset
+     * pack is explicit that the file is representative artwork — so the claim
+     * has to be answered where it is made.
+     *
+     * Three things are asserted together because any one of them alone is
+     * defeatable: the caption exists, it is rendered by the section, and it
+     * says the specific thing (not the generic reference-imagery line, which
+     * answers a different question about completed projects).
+     */
     const factory = code(read(`${SECTIONS}/R5Factory.tsx`));
-    assert.doesNotMatch(factory, /next\/image|<img/, "there is no approved factory media");
+    assert.match(factory, /FACTORY_IMAGERY_NOTE/, "the picture must carry its caption");
+    assert.match(factory, /<figcaption/, "the caption must be tied to the figure");
+    assert.match(FACTORY_IMAGERY_NOTE, /[Rr]epresentative/);
+    assert.match(FACTORY_IMAGERY_NOTE, /not a photograph/i);
+    assert.match(FACTORY_IMAGERY_NOTE, /ONEDECORE/);
+
+    // And the alt text must not describe it as ONEDECORE's own facility either.
+    const alt = PM_ASSETS.manufacturingReference.alt;
+    assert.match(alt, /^Representative/, "the alt text leads with what it is");
+    assert.doesNotMatch(alt, /ONEDECORE|our |their /i);
   });
 });
 

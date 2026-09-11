@@ -76,12 +76,16 @@ export const R5_SERVICES_COPY = {
 } as const;
 
 /**
- * Four cards, and the fourth deliberately has no photograph.
+ * Four cards, four photographs, one visual family.
  *
- * The repository holds nine images and none of them shows civil work. Dropping
- * a stock photograph of somebody else's site into a card labelled ONEDECORE is
- * the exact failure the provenance model exists to prevent, so Renovation is a
- * typographic card instead. It looks intentional because it is.
+ * Renovation was a typographic card until the owner's final image pack landed:
+ * the repository held nine images and not one showed civil work, and inventing
+ * a site photograph is the failure the provenance model exists to prevent. The
+ * pack supplies a real renovation scene — ladder, pails, rolled drawings,
+ * part-finished plaster — so the card now says what it sells.
+ *
+ * All four are category C artwork, and the section's reference-imagery note
+ * says so once beneath the rail rather than four times inside it.
  */
 export const R5_SERVICES: readonly ServiceCard[] = [
   {
@@ -89,8 +93,8 @@ export const R5_SERVICES: readonly ServiceCard[] = [
     title: "Complete Home Interiors",
     description: "One coordinated team for design, manufacturing and installation.",
     tags: ["Design", "Manufacturing", "Installation"],
-    image: PM_ASSETS.completeHomeInteriors.path,
-    imageAlt: PM_ASSETS.completeHomeInteriors.alt,
+    image: PM_ASSETS.interiorCompleteHome.path,
+    imageAlt: PM_ASSETS.interiorCompleteHome.alt,
     href: null,
   },
   {
@@ -98,8 +102,8 @@ export const R5_SERVICES: readonly ServiceCard[] = [
     title: "Modular Kitchens",
     description: "Storage, workflow and finishes planned around how you cook.",
     tags: ["Smart storage", "Easy workflow", "Factory finish"],
-    image: PM_ASSETS.modularKitchens.path,
-    imageAlt: PM_ASSETS.modularKitchens.alt,
+    image: PM_ASSETS.interiorModularKitchen.path,
+    imageAlt: PM_ASSETS.interiorModularKitchen.alt,
     href: null,
   },
   {
@@ -107,8 +111,8 @@ export const R5_SERVICES: readonly ServiceCard[] = [
     title: "Wardrobes",
     description: "Made-to-fit storage planned around your room and daily routine.",
     tags: ["Internal zoning", "Lofts", "Premium hardware"],
-    image: PM_ASSETS.customWardrobes.path,
-    imageAlt: PM_ASSETS.customWardrobes.alt,
+    image: PM_ASSETS.interiorWardrobes.path,
+    imageAlt: PM_ASSETS.interiorWardrobes.alt,
     href: null,
   },
   {
@@ -116,8 +120,8 @@ export const R5_SERVICES: readonly ServiceCard[] = [
     title: "Renovation & Civil Work",
     description: "Layout changes, ceilings, electrical and civil work managed together.",
     tags: ["Civil work", "False ceiling", "Electrical"],
-    image: null,
-    imageAlt: "",
+    image: PM_ASSETS.interiorRenovation.path,
+    imageAlt: PM_ASSETS.interiorRenovation.alt,
     href: null,
   },
 ];
@@ -148,9 +152,16 @@ export const R5_ROOMS_COPY = {
  * read. It is also what stops this section drifting back into the "room
  * priorities" paragraphs it replaced.
  *
- * Bedroom has no photograph for the same reason Renovation does not: there is
- * no approved bedroom asset. The panel degrades to a typographic layout rather
- * than borrowing the wardrobe image and implying it is a bedroom.
+ * Every room now has its own photograph, Bedroom included — it was typographic
+ * only because no bedroom asset existed, never as a design choice. The panel's
+ * image-less branch stays in `R5RoomExplorer` and stays tested: the rule it
+ * enforces is that a room without an approved picture shows type rather than
+ * borrowing another room's, and that rule has to outlive this particular set
+ * of files.
+ *
+ * Kitchen and Wardrobes share their file with the matching service card. The
+ * supplied pack ships those pairs as byte-identical images, so this is the
+ * owner's mapping rendered faithfully, not an accident.
  */
 export const R5_ROOMS: readonly RoomOption[] = [
   {
@@ -158,32 +169,32 @@ export const R5_ROOMS: readonly RoomOption[] = [
     label: "Living Room",
     title: "Living Room",
     priorities: ["Comfortable layout flow", "TV and storage planning", "Layered lighting"],
-    image: PM_ASSETS.completeHomeInteriors.path,
-    imageAlt: PM_ASSETS.completeHomeInteriors.alt,
+    image: PM_ASSETS.interiorLivingRoom.path,
+    imageAlt: PM_ASSETS.interiorLivingRoom.alt,
   },
   {
     id: "kitchen",
     label: "Kitchen",
     title: "Kitchen",
     priorities: ["Efficient work flow", "Storage zones", "Durable finishes"],
-    image: PM_ASSETS.modularKitchens.path,
-    imageAlt: PM_ASSETS.modularKitchens.alt,
+    image: PM_ASSETS.interiorModularKitchen.path,
+    imageAlt: PM_ASSETS.interiorModularKitchen.alt,
   },
   {
     id: "bedroom",
     label: "Bedroom",
     title: "Bedroom",
     priorities: ["Restful layout", "Wardrobe planning", "Practical lighting"],
-    image: null,
-    imageAlt: "",
+    image: PM_ASSETS.interiorBedroom.path,
+    imageAlt: PM_ASSETS.interiorBedroom.alt,
   },
   {
     id: "wardrobes",
     label: "Wardrobes",
     title: "Wardrobes",
     priorities: ["Internal storage zoning", "Loft and accessory options", "Reliable hardware"],
-    image: PM_ASSETS.customWardrobes.path,
-    imageAlt: PM_ASSETS.customWardrobes.alt,
+    image: PM_ASSETS.interiorWardrobes.path,
+    imageAlt: PM_ASSETS.interiorWardrobes.alt,
   },
 ];
 
@@ -274,6 +285,25 @@ export const R5_PROCESS: readonly ProcessStage[] = [
 /* ========================================================================== */
 /* 5. Own Factory                                                             */
 /* ========================================================================== */
+
+/**
+ * The factory caption, and why it is not REFERENCE_IMAGERY_NOTE.
+ *
+ * The generic note says approved project photography lives on the portfolio.
+ * That is the right sentence for a service card and the wrong one here: the
+ * question a visitor has under the heading "Built in our own manufacturing
+ * unit" is not "is this a finished project" but "is this YOUR factory".
+ *
+ * It is not. The supplied file is representative workshop artwork, and the
+ * asset pack is explicit that it must never be presented as documentary
+ * photography of the facility. So the caption answers the question that is
+ * actually being asked, in the sentence directly beneath the picture.
+ *
+ * Replace the file with authentic ONEDECORE factory photography and this
+ * constant has to change with it.
+ */
+export const FACTORY_IMAGERY_NOTE =
+  "Representative manufacturing visual, not a photograph of ONEDECORE’s facility.";
 
 export const R5_FACTORY_COPY = {
   eyebrow: "Our manufacturing",

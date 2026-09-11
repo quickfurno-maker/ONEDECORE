@@ -1,27 +1,38 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
-import { R5_FACTORY, R5_FACTORY_COPY } from "../content";
+import { PM_ASSETS } from "@/features/public-site/home-r4/content";
+import { FACTORY_IMAGERY_NOTE, R5_FACTORY, R5_FACTORY_COPY } from "../content";
+
+const FACTORY_IMAGE = PM_ASSETS.manufacturingReference;
 
 /**
- * Own Factory — three capabilities, and deliberately no factory photograph.
+ * Own Factory — three capabilities and one clearly-labelled representative
+ * visual.
  *
- * THE MISSING PICTURE IS THE DESIGN DECISION
+ * THE PICTURE IS CAPTIONED, NOT IMPLIED
  *
- * The brief asks for "one strong factory visual ONLY if real approved factory
- * media exists". It does not. The repository holds nine images — a hero, three
- * service interiors, three material studies, a consultant portrait and a dusk
- * detail — and every one is `provenanceCategory: "C"`, documented as
- * "ONEDECORE marketing artwork. Never presented as project photography."
+ * This section had no image at all, because the repository had no factory
+ * media and a stock photograph of an anonymous CNC machine under the heading
+ * "Built in our own manufacturing unit" reads to every visitor as a photograph
+ * of ONEDECORE's factory. That is the claim this repository has spent several
+ * lanes refusing to make.
  *
- * A stock photograph of an anonymous CNC machine placed under the heading
- * "Built in our own manufacturing unit" would read to every visitor as a
- * photograph of ONEDECORE's factory. That is the claim this repository has
- * spent several lanes refusing to make, so the section is built from type and a
- * selection state instead.
+ * The owner's image pack supplies a workshop visual and is explicit that it is
+ * representative artwork, not documentary photography of the facility. The
+ * launch brief allows it on one condition: that the existing caption system can
+ * say so honestly without looking like a dev placeholder. It can, so the
+ * picture is here and `FACTORY_IMAGERY_NOTE` sits immediately beneath it —
+ * under the image, not at the foot of the section, because a disclosure a
+ * reader scrolls past is not a disclosure.
  *
- * When real factory media arrives, it drops in above the cards and the copy
- * does not have to change.
+ * The note is deliberately specific. The generic reference-imagery sentence
+ * answers "is this a finished project"; the question here is "is this YOUR
+ * factory", and the answer is no.
+ *
+ * When authentic factory photography arrives, the file and the note change
+ * together. The copy does not.
  *
  * WHAT THE CARDS DO NOT SAY
  *
@@ -43,6 +54,24 @@ export function R5Factory() {
           </h2>
           <p className="r5-supporting">{R5_FACTORY_COPY.supporting}</p>
         </header>
+
+        <figure className="r5-factoryFigure">
+          <div className="r5-factoryMedia">
+            <Image
+              src={FACTORY_IMAGE.path}
+              alt={FACTORY_IMAGE.alt}
+              width={FACTORY_IMAGE.width}
+              height={FACTORY_IMAGE.height}
+              sizes="(min-width: 1100px) 1040px, (min-width: 768px) 92vw, 100vw"
+              /* Below the fold by definition — the hero, the rail and four
+                 sections sit above it. */
+              loading="lazy"
+              quality={75}
+              style={{ objectPosition: FACTORY_IMAGE.focalPoint }}
+            />
+          </div>
+          <figcaption className="r5-note r5-note--figure">{FACTORY_IMAGERY_NOTE}</figcaption>
+        </figure>
 
         <ul className="r5-proof r5-proof--three">
           {R5_FACTORY.map((item) => {
