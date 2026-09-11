@@ -37,6 +37,7 @@ import {
 import {
   HOMEPAGE_SECTION_KEYS,
   HOMEPAGE_SECTION_REGISTRY,
+  RETIRED_HOMEPAGE_SECTION_KEYS,
   defaultHomepageSections,
   getHomepageSection,
   isHomepageSectionKey,
@@ -49,6 +50,14 @@ const code = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 const MIGRATION = "supabase/migrations/20260911120000_website_manager_cms.sql";
+/**
+ * The follow-up migration that brings seeded configurations onto the R5
+ * registry. The seed above is applied and therefore frozen, so the CURRENT
+ * approved order is whatever the two of them produce together.
+ */
+const R5_MIGRATION =
+  "supabase/migrations/20260912120000_homepage_section_registry_r5.sql";
+
 const PAGE = "src/features/public-site/interiors/InteriorsConversionPage.tsx";
 const CAROUSEL = "src/features/public-site/interiors/InteriorsPromoCarousel.tsx";
 const ROOT_ROUTE = "src/app/page.tsx";
@@ -56,6 +65,39 @@ const ACTIONS = "src/features/website-manager/server/website-actions.ts";
 const CONFIG_READER = "src/features/website-manager/public/public-homepage-config.ts";
 const ADMIN_PAGE = "src/app/admin/website/page.tsx";
 const PREVIEW_PAGE = "src/app/admin/website/preview/page.tsx";
+
+/**
+ * The section keys the CMS seed inserted, in the order it inserted them.
+ *
+ * Hard-coded on purpose. This is the one list in the suite that must NOT be
+ * derived from anything, because it records a fact about a migration that has
+ * already run: change the seed and this fails, which is the point.
+ */
+const LEGACY_SEEDED_ORDER = [
+  "hero",
+  "promo-carousel",
+  "complete-interiors",
+  "modular-kitchen",
+  "wardrobes",
+  "renovation",
+  "why",
+  "factory",
+  "estimator",
+  "portfolio",
+  "materials",
+  "process",
+  "service-areas",
+  "testimonials",
+  "faq",
+  "consultation",
+];
+
+/** The seed's `v_keys` array, read out of the applied migration. */
+const seededKeys = (): string[] => {
+  const seed = /do \$\$[\s\S]*?v_keys text\[\] := array\[([\s\S]*?)\];/.exec(read(MIGRATION));
+  assert.ok(seed, "the seed must list its section keys");
+  return [...seed[1]!.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]!);
+};
 
 /* -------------------------------------------------------------------------- */
 /* 1. The section registry is the only place a key means a component           */
@@ -152,16 +194,12 @@ describe("the homepage section registry", () => {
         "hero",
         "promo-carousel",
         "complete-interiors",
-        "modular-kitchen",
-        "wardrobes",
-        "renovation",
+        "room-explorer",
         "why",
+        "process",
         "factory",
         "estimator",
         "portfolio",
-        "materials",
-        "process",
-        "service-areas",
         "testimonials",
         "faq",
         "consultation",
@@ -245,7 +283,7 @@ describe("resolving a stored config into a renderable homepage", () => {
       { key: "consultation", order: 1, visible: true },
     ]);
     assert.equal(resolved.length, HOMEPAGE_SECTION_KEYS.length);
-    assert.ok(resolved.some((s) => s.key === "materials"));
+    assert.ok(resolved.some((s) => s.key === "room-explorer"));
   });
 
   test("ordering is deterministic when the stored orders tie", () => {
@@ -789,18 +827,119 @@ describe("draft, publish and the pointer", () => {
     assert.match(save[0], /revalidatePath\("\/admin\/website"\)/);
   });
 
-  test("the seed reproduces the approved homepage exactly", () => {
+  test("the seed still matches the order it was written against", () => {
+    /*
+     * The seed is frozen, so this asserts what it WAS, not what the homepage is
+     * now. The value is in the next test: if this list ever changes, an applied
+     * migration has been edited and the composition below is fiction.
+     */
+    const keys = seededKeys();
+    assert.deepEqual(keys, LEGACY_SEEDED_ORDER);
+    assert.equal(new Set(keys).size, keys.length, "no key is seeded twice");
+
     const migration = read(MIGRATION);
-    const seed = /do \$\$[\s\S]*?v_keys text\[\] := array\[([\s\S]*?)\];/.exec(migration);
-    assert.ok(seed, "the seed must list its section keys");
-    const keys = [...seed[1]!.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]!);
-    assert.deepEqual(
-      keys,
-      defaultHomepageSections().map((s) => s.key),
-      "the seeded order must match the code-defined approved order"
-    );
     assert.match(migration, /for i in 1\.\.6 loop/, "six banner slots are seeded");
     assert.match(migration, /'Banner ' \|\| i/);
+  });
+
+  test("the seed plus the R5 migration reproduce the approved homepage exactly", () => {
+    /*
+     * WHY THIS IS A COMPOSITION AND NOT A SINGLE LIST.
+     *
+     * The seed shipped a 16-section homepage. The redesign retired five of those
+     * sections, added `room-explorer` and moved `process`, and the seed cannot be
+     * edited to say so — it is applied, in production, and rewriting applied
+     * migrations is how two databases end up disagreeing about their own history.
+     *
+     * So the approved order is what the two migrations produce TOGETHER, and that
+     * is what has to equal `defaultHomepageSections()`. Replaying the second
+     * migration's stated intent here — rather than reading its final array — is
+     * deliberate: it checks that the described transform actually lands on the
+     * registry, so a migration that renumbers without reordering fails even
+     * though its own constant would have matched.
+     */
+    const r5 = read(R5_MIGRATION);
+
+    // The keys the migration deletes, read out of the delete statement itself.
+    const deleteClause = /section_key in \(([\s\S]*?)\)/.exec(r5);
+    assert.ok(deleteClause, "the migration must name the keys it retires");
+    const removed = new Set(
+      [...deleteClause[1]!.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]!)
+    );
+    assert.deepEqual(
+      [...removed].sort(),
+      [...RETIRED_HOMEPAGE_SECTION_KEYS].sort(),
+      "the migration must retire exactly the keys the registry retired"
+    );
+
+    /*
+     * Replay: drop the retired keys, then adopt the registry order for the
+     * sections that remain plus the ones the registry has since added. That is
+     * precisely the `v_current = v_legacy` branch, which is the branch every
+     * seeded version takes because nothing has reordered them.
+     */
+    const survivors = seededKeys().filter((key) => !removed.has(key));
+    const approved = defaultHomepageSections().map((s) => s.key);
+
+    assert.deepEqual(
+      [...survivors].sort(),
+      approved.filter((key) => survivors.includes(key)).sort(),
+      "every surviving seeded key must still be a registry key"
+    );
+    assert.deepEqual(
+      approved.filter((key) => !survivors.includes(key)),
+      ["room-explorer"],
+      "room-explorer is the only section the migration adds"
+    );
+
+    /*
+     * And the migration's own order array must be that same approved order. The
+     * SQL cannot import the registry, so this is the seam where the two can
+     * drift; it is the reason the array carries a comment pointing here.
+     */
+    const r5Order = /v_r5 constant text\[\] := array\[([\s\S]*?)\];/.exec(r5);
+    assert.ok(r5Order, "the migration must declare the order it applies");
+    assert.deepEqual(
+      [...r5Order[1]!.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]!),
+      approved,
+      "the migration's order must match the code-defined approved order"
+    );
+
+    // The legacy array it compares against must be the seed, verbatim.
+    const r5Legacy = /v_legacy constant text\[\] := array\[([\s\S]*?)\];/.exec(r5);
+    assert.ok(r5Legacy, "the migration must declare the order it recognises");
+    assert.deepEqual(
+      [...r5Legacy[1]!.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]!),
+      seededKeys(),
+      "a mismatch here would make every version look editor-reordered"
+    );
+  });
+
+  test("an editor's own ordering is not overwritten", () => {
+    /*
+     * The branch that matters for anyone who has actually used the admin.
+     * Reordering sections is the product; a migration that silently reverts it
+     * would be a data loss reported as "the page changed by itself".
+     */
+    const r5 = read(R5_MIGRATION);
+    assert.match(r5, /if v_current = v_legacy then/);
+    assert.match(r5, /else/);
+    assert.match(
+      r5,
+      /row_number\(\) over \(order by sort_order, section_key\)/,
+      "the preserved branch renumbers rather than reorders"
+    );
+  });
+
+  test("archived versions are left immutable", () => {
+    const r5 = read(R5_MIGRATION);
+    const targets = [...r5.matchAll(/state in \(([^)]*)\)/g)].map((m) => m[1]!);
+    assert.ok(targets.length > 0, "the migration must scope the versions it edits");
+    for (const target of targets) {
+      assert.doesNotMatch(target, /archived/, "archived snapshots must stay as published");
+      assert.match(target, /'published'/);
+      assert.match(target, /'draft'/);
+    }
   });
 });
 

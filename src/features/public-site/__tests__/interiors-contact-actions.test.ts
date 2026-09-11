@@ -210,8 +210,13 @@ describe("the Interiors sticky bar offers consultation and a call", () => {
     const sticky = code(read(STICKY));
     assert.doesNotMatch(sticky, /sticky-estimate/);
     assert.doesNotMatch(sticky, /estimateHref/);
-    // The estimator section itself still renders on /interiors.
-    assert.match(code(read(INTERIORS)), /<HomeBudgetEstimator \/>/);
+    /*
+     * The estimator section itself still renders on /interiors. It is `R5Budget`
+     * since the retention redesign — the shortcut was removed because the
+     * section is reachable by scrolling, and that reasoning only holds while
+     * some budget section is on the page.
+     */
+    assert.match(code(read(INTERIORS)), /<R5Budget \/>/);
   });
 
   test("the primary consultation action is untouched", () => {
@@ -393,10 +398,12 @@ describe("the homepage offers one action per surface", () => {
      * conversion hook are untouched — the road stayed, the fork went.
      */
     const page = code(read(INTERIORS));
-    assert.match(page, /<HomeBudgetEstimator \/>/);
+    // The estimator became the Budget Explorer; the section still exists and
+    // still opens the one canonical planner.
+    assert.match(page, /<R5Budget \/>/);
     assert.match(
-      code(read("src/features/public-site/home-r4/HomeBudgetEstimator.tsx")),
-      /estimator-refine/
+      code(read("src/features/public-site/homepage-r5/sections/R5Budget.tsx")),
+      /openPlanner\(getNextIncompleteStep\(\)\)/
     );
   });
 

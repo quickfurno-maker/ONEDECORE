@@ -39,20 +39,52 @@ export const HOMEPAGE_SECTION_KEYS = [
   "hero",
   "promo-carousel",
   "complete-interiors",
-  "modular-kitchen",
-  "wardrobes",
-  "renovation",
+  "room-explorer",
   "why",
+  "process",
   "factory",
   "estimator",
   "portfolio",
-  "materials",
-  "process",
-  "service-areas",
   "testimonials",
   "faq",
   "consultation",
 ] as const;
+
+/**
+ * Keys that were once managed and are not any more.
+ *
+ * They are listed rather than deleted because stored configurations still
+ * mention them. A published version from before the redesign carries
+ * `materials` and `service-areas`, and a resolver that merely did not
+ * RECOGNISE them would be indistinguishable from one that had a typo. Naming
+ * them says: this was removed on purpose, drop it quietly.
+ *
+ *   modular-kitchen, wardrobes, renovation
+ *       Three long single-service sections that repeated, at length, what the
+ *       four Interactive Services cards now say in a sentence each.
+ *
+ *   materials
+ *       Removed from the public flow by owner decision. The materials DATA and
+ *       its imagery are untouched and still used elsewhere.
+ *
+ *   service-areas
+ *       The 26-locality list. Its answer survives as the `areas` FAQ entry,
+ *       which is why that entry is one of the five the FAQ shows.
+ */
+export const RETIRED_HOMEPAGE_SECTION_KEYS = [
+  "modular-kitchen",
+  "wardrobes",
+  "renovation",
+  "materials",
+  "service-areas",
+] as const;
+
+export type RetiredHomepageSectionKey =
+  (typeof RETIRED_HOMEPAGE_SECTION_KEYS)[number];
+
+export function isRetiredHomepageSectionKey(value: string): boolean {
+  return (RETIRED_HOMEPAGE_SECTION_KEYS as readonly string[]).includes(value);
+}
 
 export type HomepageSectionKey = (typeof HOMEPAGE_SECTION_KEYS)[number];
 
@@ -99,104 +131,73 @@ export const HOMEPAGE_SECTION_REGISTRY: readonly HomepageSectionDefinition[] = [
   {
     key: "complete-interiors",
     label: "What We Do",
-    description: "Everything your home needs, under one roof — the four service cards.",
+    description: "The four interactive service cards: interiors, kitchens, wardrobes, renovation.",
     defaultOrder: 2,
     pin: null,
     canHide: true,
   },
   {
-    key: "modular-kitchen",
-    label: "Modular Kitchens",
-    description: "The kitchen feature block.",
+    key: "room-explorer",
+    label: "Room Explorer",
+    description: "Tabs that show the three planning priorities for each room.",
     defaultOrder: 3,
-    pin: null,
-    canHide: true,
-  },
-  {
-    key: "wardrobes",
-    label: "Wardrobes",
-    description: "The custom wardrobe block.",
-    defaultOrder: 4,
-    pin: null,
-    canHide: true,
-  },
-  {
-    key: "renovation",
-    label: "Renovation",
-    description: "The full-home renovation block.",
-    defaultOrder: 5,
     pin: null,
     canHide: true,
   },
   {
     key: "why",
     label: "Why ONEDECORE",
-    description: "One team, complete responsibility. Also the target of the About menu link.",
-    defaultOrder: 6,
+    description: "Four proof panels. Also the target of the About menu link.",
+    defaultOrder: 4,
+    pin: null,
+    canHide: true,
+  },
+  {
+    key: "process",
+    label: "How It Works",
+    description: "The four-stage journey from consultation to handover.",
+    defaultOrder: 5,
     pin: null,
     canHide: true,
   },
   {
     key: "factory",
     label: "Own Manufacturing",
-    description: "The manufacturing capability block.",
-    defaultOrder: 7,
+    description: "Three manufacturing capability cards.",
+    defaultOrder: 6,
     pin: null,
     canHide: true,
   },
   {
     key: "estimator",
-    label: "Budget Estimator",
-    description: "The indicative planning-range calculator.",
-    defaultOrder: 8,
+    label: "Budget Explorer",
+    description: "Home-type tabs showing the planning ranges, with one consultation CTA.",
+    defaultOrder: 7,
     pin: null,
     canHide: true,
   },
   {
     key: "portfolio",
-    label: "Portfolio Bridge",
-    description: "See finished ONEDECORE homes — the link across to the portfolio.",
-    defaultOrder: 9,
-    pin: null,
-    canHide: true,
-  },
-  {
-    key: "materials",
-    label: "Materials & Finishes",
-    description: "Stone, timber, texture and light.",
-    defaultOrder: 10,
-    pin: null,
-    canHide: true,
-  },
-  {
-    key: "process",
-    label: "Our Process",
-    description: "The four-stage journey from design to handover.",
-    defaultOrder: 11,
-    pin: null,
-    canHide: true,
-  },
-  {
-    key: "service-areas",
-    label: "Pune Service Areas",
-    description: "All 26 localities ONEDECORE installs in. The only place these are listed.",
-    defaultOrder: 12,
+    label: "Portfolio Link",
+    description: "One visual that links straight to the portfolio page.",
+    defaultOrder: 8,
     pin: null,
     canHide: true,
   },
   {
     key: "testimonials",
-    label: "Reviews",
-    description: "Client reviews, subject to the published-claim gates.",
-    defaultOrder: 13,
+    label: "Client Reviews",
+    description:
+      "Shows verified reviews when approved review content exists. Currently none, so it renders process copy instead of a score.",
+    defaultOrder: 9,
     pin: null,
     canHide: true,
   },
   {
     key: "faq",
     label: "FAQ",
-    description: "The ten most-asked questions.",
-    defaultOrder: 14,
+    description: "Five approved questions in an accordion.",
+    defaultOrder: 10,
     pin: null,
     canHide: true,
   },
@@ -205,7 +206,7 @@ export const HOMEPAGE_SECTION_REGISTRY: readonly HomepageSectionDefinition[] = [
     label: "Final Consultation",
     description:
       "The closing call to action, and the target of the Contact menu link. Always last.",
-    defaultOrder: 15,
+    defaultOrder: 11,
     pin: "last",
     canHide: false,
   },

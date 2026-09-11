@@ -1,0 +1,834 @@
+/*
+ * The interactive homepage.
+ *
+ * WHAT THIS IS CORRECTING
+ *
+ * The previous homepage was congested rather than badly designed: every
+ * section was a bordered card containing bordered cards, section padding was
+ * tighter than the content inside it, and the eye never got a rest between one
+ * dark rounded rectangle and the next. Adding margin would not have fixed it —
+ * the problem was that nothing was ALLOWED to be plain.
+ *
+ * So the rules here are mostly subtractive:
+ *
+ *   - one border per element, never a border inside a border
+ *   - tonal surfaces instead of outlines wherever an edge is only separating
+ *   - gold reserved for state and emphasis, never for decoration
+ *   - photography does the visual work; type stays quiet
+ *
+ * The spacing scale is the FOUNDATION's, not a new one. `--dc-gutter` and
+ * `--dc-section-y` already resolve to 20px/88px on a phone and 32px/112px from
+ * 768px, which is exactly the rhythm this redesign wanted; inventing a parallel
+ * set of tokens would have produced two systems that disagree at one
+ * breakpoint and nobody would notice for months.
+ */
+
+[data-public-home-r4] {
+  /* Rhythm inside a section head. Small, deliberate, shared by every section. */
+  --r5-eyebrow-gap: 10px;
+  --r5-heading-gap: 14px;
+  --r5-head-gap: 28px;
+
+  --r5-card-gap: 12px;
+  --r5-card-pad: 20px;
+  --r5-radius: 16px;
+
+  /* One tonal surface and one hairline. Everything else is whitespace. */
+  --r5-surface: rgba(255, 249, 240, 0.035);
+  --r5-surface-hover: rgba(255, 249, 240, 0.06);
+  --r5-line: rgba(255, 249, 240, 0.1);
+  --r5-line-strong: rgba(255, 249, 240, 0.16);
+}
+
+@media (min-width: 768px) {
+  [data-public-home-r4] {
+    --r5-head-gap: 36px;
+    --r5-card-gap: 20px;
+    --r5-card-pad: 26px;
+    --r5-radius: 18px;
+  }
+}
+
+/* ========================================================================== */
+/* Section scaffolding                                                        */
+/* ========================================================================== */
+
+.r5-section {
+  position: relative;
+  padding-block: var(--dc-section-y);
+}
+
+/*
+ * Alternate sections get a barely-there tonal ground rather than a border.
+ *
+ * At 3.5% over the page ink this is almost subliminal, which is the point: it
+ * separates one section from the next without drawing a line, and a line is
+ * what made the old page feel like a stack of boxes.
+ */
+.r5-section--tinted {
+  background: rgba(255, 249, 240, 0.022);
+}
+
+.r5-head {
+  display: grid;
+  justify-items: start;
+  max-width: 34rem;
+  margin-bottom: var(--r5-head-gap);
+}
+
+/*
+ * WHY THE RULES BELOW CARRY [data-public-home-r4].
+ *
+ * `home-foundation.css` resets `[data-public-home-r4] p, ul, ol, h1..h4` to
+ * `margin: 0`. That selector is 0-1-1; a bare `.r5-thing` is 0-1-0, so it
+ * LOSES -- silently, with the declaration sitting right there in the file
+ * looking correct. Every margin marked this way was written, shipped and then
+ * measured at 0px in the browser before this was caught; what spacing survived
+ * was leading, not design.
+ *
+ * The rule for this stylesheet: a non-zero margin on a p, ul, ol or heading
+ * must carry the attribute prefix. Anything a flex or grid parent lays out
+ * should use `gap` instead and never raise the question.
+ */
+[data-public-home-r4] .r5-eyebrow {
+  margin: 0 0 var(--r5-eyebrow-gap);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pm-bronze-light, #e6c477);
+}
+
+.r5-heading {
+  margin: 0;
+  font-size: clamp(1.85rem, 1.15rem + 3.1vw, 2.9rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--pm-ivory, #fff9f0);
+  text-wrap: balance;
+}
+
+[data-public-home-r4] .r5-supporting {
+  margin: var(--r5-heading-gap) 0 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--pm-stone, #b9b0a5);
+  max-width: 32rem;
+}
+
+/* A small caption, never a paragraph. See REFERENCE_IMAGERY_NOTE. */
+[data-public-home-r4] .r5-note {
+  margin: 18px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: rgba(255, 249, 240, 0.42);
+}
+
+/* ========================================================================== */
+/* Shared card surface                                                        */
+/* ========================================================================== */
+
+.r5-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--r5-line);
+  border-radius: var(--r5-radius);
+  background: var(--r5-surface);
+  overflow: hidden;
+}
+
+.r5-card__media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--od-bg-deepest, #0b0908);
+}
+
+.r5-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 420ms var(--pm-ease-out, ease);
+}
+
+/*
+ * The only hover motion on the page: 1.03. Large enough to feel alive on a
+ * pointer, small enough that a thumb tapping it does not see the picture jump.
+ */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .r5-card:hover .r5-card__media img,
+  .r5-card:focus-within .r5-card__media img {
+    transform: scale(1.03);
+  }
+}
+
+.r5-card__body {
+  display: grid;
+  gap: 8px;
+  padding: var(--r5-card-pad);
+}
+
+.r5-card__title {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--pm-ivory, #fff9f0);
+}
+
+.r5-card__text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--pm-stone, #b9b0a5);
+}
+
+[data-public-home-r4] .r5-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.r5-tag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 249, 240, 0.055);
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: rgba(255, 249, 240, 0.72);
+}
+
+/* ========================================================================== */
+/* Horizontal rail (services, reviews)                                        */
+/* ========================================================================== */
+
+/*
+ * The rail scrolls; the section clips.
+ *
+ * `overflow: clip` rather than `hidden` so a focus landing on an off-screen
+ * card does not scroll the SECTION and leave it out of step with the rail —
+ * the same reasoning as the promotional slider above it.
+ */
+.r5-railWrap {
+  overflow: clip;
+}
+
+/*
+ * THE RAIL BLEEDS OUT OF ITS CONTAINER AND RE-APPLIES THE GUTTER ITSELF.
+ *
+ * `.r5-railHost` is a `.dc-container`, so it already pads by `--dc-gutter`.
+ * Padding the rail as well applied that gutter TWICE, which left 2.6px of the
+ * next card showing at 390px instead of the ~22px the peek below depends on —
+ * the affordance was, in practice, absent.
+ *
+ * Cancelling the host's padding instead would have worked on mobile and broken
+ * the 768px+ grid, which needs that same gutter. So the rail pulls itself back
+ * out to the viewport edge and supplies its own inset, and the grid at 768px
+ * hands the job back to the container.
+ */
+[data-public-home-r4] .r5-rail {
+  display: flex;
+  gap: var(--r5-card-gap);
+  margin-inline: calc(var(--dc-gutter) * -1);
+  margin-block: 0;
+  padding: 0 var(--dc-gutter);
+  list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline-start: var(--dc-gutter);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.r5-rail::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * 86vw leaves roughly 14% of the next card showing, which is the whole
+ * instruction: a card cut by a sliver reads as "there is more this way" without
+ * anyone having to be told.
+ */
+.r5-rail > li {
+  flex: 0 0 min(86vw, 22rem);
+  scroll-snap-align: start;
+}
+
+@media (min-width: 768px) {
+  /* Past tablet the rail becomes a grid: there is room, so nothing is hidden. */
+  [data-public-home-r4] .r5-rail {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* The container's gutter is the right one again once nothing bleeds. */
+    margin-inline: 0;
+    padding-inline: 0;
+    overflow: visible;
+  }
+
+  .r5-rail > li {
+    flex: initial;
+  }
+}
+
+@media (min-width: 1100px) {
+  [data-public-home-r4] .r5-rail {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* ========================================================================== */
+/* Room Explorer                                                              */
+/* ========================================================================== */
+
+[data-public-home-r4] .r5-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.r5-tab {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--r5-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pm-stone, #b9b0a5);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 200ms var(--pm-ease-out, ease),
+    color 200ms var(--pm-ease-out, ease),
+    background 200ms var(--pm-ease-out, ease);
+}
+
+.r5-tab[aria-selected="true"] {
+  border-color: var(--pm-bronze-light, #e6c477);
+  background: rgba(216, 162, 74, 0.1);
+  color: var(--pm-ivory, #fff9f0);
+  font-weight: 600;
+}
+
+.r5-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.r5-panel__media {
+  position: relative;
+  aspect-ratio: 16 / 11;
+  border-radius: var(--r5-radius);
+  overflow: hidden;
+  background: var(--od-bg-deepest, #0b0908);
+}
+
+.r5-panel__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*
+ * A room with no approved photograph gets type, not a borrowed picture.
+ *
+ * Reusing the wardrobe image for "Bedroom" would be a quiet lie of exactly the
+ * kind the provenance model exists to prevent.
+ */
+.r5-panel__placeholder {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 11;
+  border: 1px solid var(--r5-line);
+  border-radius: var(--r5-radius);
+  background: var(--r5-surface);
+  color: rgba(255, 249, 240, 0.34);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+[data-public-home-r4] .r5-panel__title {
+  margin: 0 0 12px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--pm-ivory, #fff9f0);
+}
+
+.r5-priorities {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.r5-priority {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.96rem;
+  line-height: 1.5;
+  color: var(--pm-ivory-2, #e8e0d5);
+}
+
+.r5-priority::before {
+  content: "";
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--pm-bronze-light, #e6c477);
+  transform: translateY(-2px);
+}
+
+/* The crossfade. 300ms, opacity only, and skipped entirely for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .r5-fade {
+    animation: r5-fade-in 300ms var(--pm-ease-out, ease) both;
+  }
+}
+
+@keyframes r5-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (min-width: 860px) {
+  .r5-panel {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+    gap: 40px;
+    align-items: center;
+  }
+
+  /*
+   * The image is capped, and it is capped as a WIDTH.
+   *
+   * Uncapped, a 1.15fr column at 1440 gave an 890px photograph opposite three
+   * bullet points, and the panel read as a picture with a caption lost beside
+   * it. A `max-height` would have been the obvious fix and the wrong one: on a
+   * box with `aspect-ratio` it shrinks BOTH axes, so the image would narrow as
+   * well and float in a column sized for something larger.
+   */
+  .r5-panel__media,
+  .r5-panel__placeholder {
+    width: 100%;
+    max-width: 620px;
+  }
+}
+
+/* ========================================================================== */
+/* Proof grid (Why / Factory)                                                 */
+/* ========================================================================== */
+
+.r5-proof {
+  display: grid;
+  gap: var(--r5-card-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 620px) {
+  .r5-proof {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .r5-proof--four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .r5-proof--three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/*
+ * Proof items are a tonal panel with no border.
+ *
+ * Four bordered boxes in a row is the pattern that made the old page feel like
+ * a spreadsheet. The tint alone is enough to group title and text.
+ */
+.r5-proofItem {
+  display: grid;
+  gap: 8px;
+  padding: var(--r5-card-pad);
+  border-radius: var(--r5-radius);
+  background: var(--r5-surface);
+}
+
+.r5-proofItem__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--pm-ivory, #fff9f0);
+}
+
+.r5-proofItem__text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--pm-stone, #b9b0a5);
+}
+
+/* Factory cards are selectable, so they get a state the proof cards do not. */
+.r5-proofItem--interactive {
+  border: 1px solid transparent;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 220ms var(--pm-ease-out, ease),
+    background 220ms var(--pm-ease-out, ease);
+}
+
+.r5-proofItem--interactive[aria-pressed="true"] {
+  border-color: var(--pm-bronze-light, #e6c477);
+  background: rgba(216, 162, 74, 0.08);
+}
+
+/* ========================================================================== */
+/* How It Works                                                               */
+/* ========================================================================== */
+
+.r5-stages {
+  display: grid;
+  gap: var(--r5-card-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: r5-stage;
+}
+
+@media (min-width: 860px) {
+  .r5-stages {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/*
+ * The progression line lives on the STAGE, not on a wrapper.
+ *
+ * A single line drawn behind four cards has to guess their positions; a rule on
+ * each item is always correct at every breakpoint, and simply turns vertical on
+ * a phone.
+ */
+.r5-stage {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 18px 0 18px 22px;
+  border-left: 2px solid var(--r5-line);
+}
+
+.r5-stage__number {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(255, 249, 240, 0.4);
+  transition: color 260ms var(--pm-ease-out, ease);
+}
+
+.r5-stage__title {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: var(--pm-ivory, #fff9f0);
+}
+
+.r5-stage__text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--pm-stone, #b9b0a5);
+}
+
+.r5-stage[data-active="true"] {
+  border-left-color: var(--pm-bronze-light, #e6c477);
+}
+
+.r5-stage[data-active="true"] .r5-stage__number {
+  color: var(--pm-bronze-light, #e6c477);
+}
+
+@media (min-width: 860px) {
+  .r5-stage {
+    padding: 22px 18px 0 0;
+    border-left: 0;
+    border-top: 2px solid var(--r5-line);
+  }
+
+  .r5-stage[data-active="true"] {
+    border-top-color: var(--pm-bronze-light, #e6c477);
+  }
+}
+
+/* ========================================================================== */
+/* Budget Explorer                                                            */
+/* ========================================================================== */
+
+/*
+ * Two up from the narrowest phone.
+ *
+ * Four ranges stacked in one column is most of a screen of scrolling to read
+ * eight words, and it reads as a list of offers rather than as a scale. Two
+ * columns put the whole scale in one glance, which is the only thing this
+ * section is for. `Above Rs 16 Lakh` wraps to two lines at 320px; a wrapped
+ * range is better than a range the visitor has to scroll to compare.
+ */
+[data-public-home-r4] .r5-bands {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--r5-card-gap);
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 1100px) {
+  [data-public-home-r4] .r5-bands {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.r5-band {
+  display: grid;
+  align-content: center;
+  min-height: 76px;
+  padding: 18px var(--r5-card-pad);
+  border-radius: var(--r5-radius);
+  background: var(--r5-surface);
+}
+
+.r5-band__value {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--pm-ivory, #fff9f0);
+  /* Tabular figures so the ranges align on the rupee sign across the grid. */
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 480px) {
+  .r5-band__value {
+    font-size: 1.2rem;
+  }
+}
+
+[data-public-home-r4] .r5-disclaimer {
+  margin: 0 0 24px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: rgba(255, 249, 240, 0.46);
+  max-width: 34rem;
+}
+
+/* ========================================================================== */
+/* Portfolio                                                                  */
+/* ========================================================================== */
+
+/*
+ * One visual, one destination, and the whole thing is the link.
+ *
+ * An earlier plan had a row of project thumbnails here, which would have been a
+ * second, worse portfolio that drifts from the real one — and every thumbnail
+ * would have been category-C artwork standing in for work that exists.
+ */
+.r5-portfolio {
+  position: relative;
+  display: block;
+  border-radius: var(--r5-radius);
+  overflow: hidden;
+  text-decoration: none;
+  background: var(--od-bg-deepest, #0b0908);
+}
+
+.r5-portfolio__media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+}
+
+.r5-portfolio__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 500ms var(--pm-ease-out, ease);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .r5-portfolio:hover .r5-portfolio__media img,
+  .r5-portfolio:focus-visible .r5-portfolio__media img {
+    transform: scale(1.03);
+  }
+}
+
+.r5-portfolio__scrim {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--r5-card-pad);
+  background: linear-gradient(
+    0deg,
+    rgba(11, 9, 8, 0.86) 0%,
+    rgba(11, 9, 8, 0.34) 52%,
+    rgba(11, 9, 8, 0.08) 100%
+  );
+}
+
+.r5-portfolio__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--pm-ivory, #fff9f0);
+}
+
+.r5-portfolio__arrow {
+  transition: transform 260ms var(--pm-ease-out, ease);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .r5-portfolio:hover .r5-portfolio__arrow {
+    transform: translateX(4px);
+  }
+}
+
+@media (min-width: 860px) {
+  .r5-portfolio__media {
+    aspect-ratio: 21 / 8;
+  }
+}
+
+/* ========================================================================== */
+/* FAQ                                                                        */
+/* ========================================================================== */
+
+.r5-faq {
+  display: grid;
+  gap: 0;
+  max-width: 48rem;
+}
+
+.r5-faq__item {
+  border-bottom: 1px solid var(--r5-line);
+}
+
+.r5-faq__item:first-child {
+  border-top: 1px solid var(--r5-line);
+}
+
+.r5-faq__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 56px;
+  padding: 18px 0;
+  border: 0;
+  background: transparent;
+  color: var(--pm-ivory, #fff9f0);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.r5-faq__sign {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  position: relative;
+  transition: transform 240ms var(--pm-ease-out, ease);
+}
+
+.r5-faq__sign::before,
+.r5-faq__sign::after {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto 0;
+  height: 1.5px;
+  background: var(--pm-bronze-light, #e6c477);
+}
+
+.r5-faq__sign::after {
+  transition: transform 240ms var(--pm-ease-out, ease);
+  transform: rotate(90deg);
+}
+
+.r5-faq__trigger[aria-expanded="true"] .r5-faq__sign::after {
+  transform: rotate(0deg);
+}
+
+/*
+ * `grid-template-rows` 0fr -> 1fr animates a panel of unknown height without
+ * measuring it in JavaScript, and collapses to nothing when closed.
+ */
+.r5-faq__panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 260ms var(--pm-ease-out, ease);
+}
+
+.r5-faq__panel[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.r5-faq__panelInner {
+  overflow: hidden;
+}
+
+.r5-faq__answer {
+  margin: 0;
+  padding: 0 0 20px;
+  font-size: 0.95rem;
+  line-height: 1.62;
+  color: var(--pm-stone, #b9b0a5);
+  max-width: 44rem;
+}
+
+/* ========================================================================== */
+/* Reduced motion                                                             */
+/* ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .r5-card__media img,
+  .r5-portfolio__media img,
+  .r5-portfolio__arrow,
+  .r5-faq__sign,
+  .r5-faq__sign::after,
+  .r5-faq__panel,
+  .r5-tab,
+  .r5-stage,
+  .r5-stage__number,
+  .r5-proofItem--interactive {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  /*
+   * The accordion still opens; it just stops sliding. Removing the transition
+   * without this would leave the panel stuck at 0fr.
+   */
+  .r5-faq__panel[data-open="true"] {
+    grid-template-rows: 1fr;
+  }
+}

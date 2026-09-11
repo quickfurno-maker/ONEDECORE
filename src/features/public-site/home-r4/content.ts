@@ -9,7 +9,7 @@
  * until public evidence URLs exist.
  */
 import { BUDGET_COMFORT_OPTIONS, type BudgetComfortId } from "./budget-config.ts";
-import { HOME_CLAIMS, canQuotePublicClaim } from "./claims.ts";
+import { HOME_CLAIMS, HOME_PUNE_AREAS, canQuotePublicClaim } from "./claims.ts";
 import { canShowAggregateReviewSummary } from "./reviews.ts";
 import {
   FEATURED_PORTFOLIO_COPY,
@@ -1050,10 +1050,26 @@ export const PM_FAQS = [
       "Yes. The initial design consultation is free and helps clarify the home, rooms, timeline, budget and service scope without obligation.",
   },
   {
+    /*
+     * THE ANSWER HAS TO STAND ON ITS OWN NOW.
+     *
+     * It used to say "the listed 26 service areas", which was accurate while a
+     * locality section sat lower on the same page. That section is out of the
+     * homepage flow, so "the listed" pointed at nothing a reader could see —
+     * and this entry became the only place the homepage answers "do you work in
+     * my part of the city". So it names the count and enough localities to be
+     * useful, and says what to do when a locality is not named.
+     *
+     * Count and names both come from `HOME_PUNE_AREAS`, the same array the old
+     * section rendered. Nothing here is typed by hand, so the answer cannot
+     * drift from the canonical list the way a transcribed copy would.
+     */
     id: "areas",
     question: "Which areas does ONEDECORE serve?",
-    answer:
-      "ONEDECORE serves homes across Pune, including the listed 26 service areas.",
+    answer: `ONEDECORE serves ${HOME_PUNE_AREAS.length} areas across Pune, including ${HOME_PUNE_AREAS.slice(
+      0,
+      6
+    ).join(", ")}. If your locality is not listed, ask during the free consultation.`,
   },
   {
     /*
