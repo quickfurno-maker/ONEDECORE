@@ -1,9 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useId, useRef, useState } from "react";
 import { useCountUp } from "@/features/public-site/motion/useCountUp";
-import { HOME_PUNE_AREAS } from "./claims";
 import {
   PM_ASSETS,
   PM_CREDIBILITY,
@@ -74,23 +72,27 @@ function CountedCredibilityCell({
 }
 
 /**
- * R5.3 conversion hero — full-bleed image, credibility strip, area disclosure.
+ * R5.3 conversion hero — full-bleed image, one CTA, credibility strip.
+ *
+ * FOUR ELEMENTS, AND THE COMPONENT HAS NO STATE
+ *
+ * Eyebrow, headline, button, credibility row. The service line, the
+ * descriptive paragraph and the CTA microcopy that used to sit between them
+ * are gone — see `PM_HERO` for why they were not replaced with shorter copy —
+ * and so is the Pune area disclosure, which was the only thing here that
+ * needed `useState`, a generated id and a focus-restoring toggle.
+ *
+ * That block is not lost: `InteriorsServiceAreas`, further down the same page,
+ * has always rendered ALL 26 localities as plain server HTML. The hero was
+ * showing six of them behind an expander, which is a second, worse copy of a
+ * section the visitor reaches anyway — and it was the reason this file needed
+ * a `<noscript>` fallback. Both are now the one section's job.
+ *
+ * What remains client-side is the counter, which is `useCountUp` inside the
+ * cells rather than anything this component holds.
  */
 export function HomeHero() {
   const { openPlanner, getNextIncompleteStep } = usePlan();
-  const [areasExpanded, setAreasExpanded] = useState(false);
-  const expandRef = useRef<HTMLButtonElement | null>(null);
-  const areasId = useId();
-
-  const toggleAreas = useCallback(() => {
-    setAreasExpanded((current) => {
-      const next = !current;
-      if (!next) {
-        queueMicrotask(() => expandRef.current?.focus());
-      }
-      return next;
-    });
-  }, []);
 
   return (
     <section className="pm-hero pm-hero--qf" aria-labelledby="pm-hero-title">
@@ -126,8 +128,6 @@ export function HomeHero() {
             {PM_HERO.eyebrow}
           </p>
 
-          <p className="pm-hero__serviceLine">{PM_HERO.serviceLine}</p>
-
           <h1 id="pm-hero-title" className="pm-hero__title">
             {PM_HERO.titleLines.map((line, index) => (
               <span
@@ -143,8 +143,6 @@ export function HomeHero() {
               </span>
             ))}
           </h1>
-
-          <p className="pm-hero__lede">{PM_HERO.lede}</p>
 
           <div className="pm-hero__actions">
             <button
@@ -167,60 +165,21 @@ export function HomeHero() {
             */}
           </div>
 
-          <p className="pm-hero__reassurance">{PM_HERO.reassurance}</p>
+          {/*
+            THE LAST THING IN THE HERO.
 
+            The four cells are unchanged — the counted figures, their claim
+            gates, the 2x2 grid that becomes a row at 768px, and the
+            screen-reader text that states the final value once. The only
+            difference is what follows them, which is now the page.
+          */}
           <div className="pm-hero__credibility" aria-label="ONEDECORE credibility">
             {PM_CREDIBILITY.map((item) => (
               <CredibilityCell key={item.id} item={item} />
             ))}
           </div>
-
-          <div className="pm-hero__areas">
-            <p className="pm-hero__areasLabel">{PM_HERO.areasLabel}</p>
-            <ul
-              id={areasId}
-              className="pm-hero__areasList"
-              data-expanded={areasExpanded ? "" : undefined}
-            >
-              {HOME_PUNE_AREAS.map((area, index) => (
-                <li key={area} className="pm-hero__area" data-index={index}>
-                  {area}
-                </li>
-              ))}
-            </ul>
-            <button
-              ref={expandRef}
-              type="button"
-              className="pm-textlink pm-hero__areasToggle"
-              aria-expanded={areasExpanded}
-              aria-controls={areasId}
-              onClick={toggleAreas}
-            >
-              <span className="pm-hero__areasToggleDesktop">
-                {areasExpanded
-                  ? PM_HERO.areasCollapseLabel
-                  : PM_HERO.areasExpandLabel}
-              </span>
-              <span className="pm-hero__areasToggleMobile">
-                {areasExpanded
-                  ? PM_HERO.areasCollapseLabel
-                  : PM_HERO.areasExpandMobileLabel}
-              </span>
-            </button>
-          </div>
         </div>
       </div>
-
-      <noscript>
-        <div className="dc-container pm-noscript pm-hero__noscript">
-          <p>{PM_HERO.areasLabel}</p>
-          <ul>
-            {HOME_PUNE_AREAS.map((area) => (
-              <li key={area}>{area}</li>
-            ))}
-          </ul>
-        </div>
-      </noscript>
     </section>
   );
 }

@@ -739,11 +739,30 @@
   max-width: 42ch;
 }
 
+/*
+ * THE COPY COLUMN'S RHYTHM IS NOT ONE GAP.
+ *
+ * `.pm-hero__copy` is a grid with a 14px gap, which spaced four paragraphs
+ * evenly when there were four paragraphs. With the stack down to eyebrow,
+ * headline, button and counter, an even gap reads as a list: the button sits
+ * as close to the headline as the headline does to its own eyebrow, and the
+ * group has no internal hierarchy.
+ *
+ * These margins are added ON TOP of the grid gap, so the intervals become
+ *
+ *   eyebrow -> headline   14px   (they are one label-and-title pair)
+ *   headline -> button    22px   (the button is a separate act)
+ *   button -> counter     18px   (related to the button, subordinate to it)
+ *
+ * Margin rather than per-row `row-gap`: the column's children are conditional
+ * enough that a `:nth-child` scheme would re-number the moment anything moved.
+ */
 [data-public-home-r4] .pm-hero__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   padding-top: 2px;
+  margin-block-start: 8px;
 }
 
 [data-public-home-r4] .pm-hero__assurances {
@@ -798,6 +817,49 @@
   display: none;
 }
 
+/* ==========================================================================
+   THE HERO ENTRANCE
+   --------------------------------------------------------------------------
+   Four elements, in reading order: eyebrow, headline lines, button, counter.
+
+   CSS ANIMATION, NOT AN OBSERVER.
+
+   The hero is above the fold on every device, so there is nothing to wait
+   for. `Reveal`/`RevealRuntime` — the repo's IntersectionObserver system — is
+   for sections a visitor scrolls to; pointing it at the hero would mean the
+   opening of the page depended on hydration, and a first paint of invisible
+   text is a worse failure than no animation. These run from the stylesheet, on
+   first paint, once. `forwards` holds the final frame, so nothing replays on
+   scroll and nothing re-enters on a resize.
+
+   OPACITY AND TRANSFORM ONLY.
+
+   Every element occupies its final layout box from the first frame: the
+   keyframes move `translate3d` and `opacity`, never height, margin or
+   font-size. No reflow, no CLS, and the compositor does the work.
+
+   THE TIMING IS THE READING ORDER, NOT A PATTERN.
+
+   Each step begins while the one before it is still settling, so the stack
+   arrives as one composed block rather than as four separate events:
+
+     eyebrow    60ms
+     headline   140ms + 90ms per line   (140 / 230 / 320 / 410)
+     button     520ms   — just after the last line starts
+     counter    620ms   — last, because it is the proof, not the pitch
+
+   The `--pm-line` custom property is set per line in `HomeHero`, so the
+   stagger is arithmetic rather than four hand-written delays that drift when a
+   line is added.
+
+   WHY THERE IS NO `lede` STEP ANY MORE.
+
+   There was one at 420ms, between the headline and the button. The paragraph
+   it animated was removed in the hero cleanup, and a delay pointing at an
+   element that does not exist is invisible until someone re-adds a paragraph
+   and finds it animating on a schedule nobody chose.
+   ========================================================================== */
+
 @media (prefers-reduced-motion: no-preference) {
   [data-public-home-r4] .pm-hero__mediaImg {
     animation: pm-settle 2200ms var(--pm-ease-out) 1 both;
@@ -805,23 +867,31 @@
 
   [data-public-home-r4] .pm-hero__eyebrow {
     opacity: 0;
-    animation: pm-rise 700ms var(--pm-ease-out) 60ms forwards;
+    animation: pm-rise 620ms var(--pm-ease-out) 60ms forwards;
   }
 
   [data-public-home-r4] .pm-hero__line {
     opacity: 0;
-    animation: pm-line-in 820ms var(--pm-ease-out) forwards;
-    animation-delay: calc(140ms + var(--pm-line, 0) * 100ms);
-  }
-
-  [data-public-home-r4] .pm-hero__lede {
-    opacity: 0;
-    animation: pm-rise 700ms var(--pm-ease-out) 420ms forwards;
+    animation: pm-line-in 680ms var(--pm-ease-out) forwards;
+    animation-delay: calc(140ms + var(--pm-line, 0) * 90ms);
   }
 
   [data-public-home-r4] .pm-hero__actions {
     opacity: 0;
-    animation: pm-rise 700ms var(--pm-ease-out) 520ms forwards;
+    animation: pm-rise 620ms var(--pm-ease-out) 520ms forwards;
+  }
+
+  /*
+   * The counter container, not the cells.
+   *
+   * One element fades the whole block in; `useCountUp` still drives the digits
+   * inside it on its own schedule. Animating the four cells individually would
+   * put a second, competing stagger on top of four numbers that are already
+   * moving, and the panel would arrive in pieces.
+   */
+  [data-public-home-r4] .pm-hero__credibility {
+    opacity: 0;
+    animation: pm-rise 620ms var(--pm-ease-out) 620ms forwards;
   }
 
   [data-public-home-r4] .pm-hero__entryWrap {
@@ -2794,10 +2864,18 @@
   }
 }
 
+/*
+ * The headline's line entrance. 20px, not the 28px it used to travel.
+ *
+ * The old distance was set when the headline sat above a paragraph and a chip
+ * list and had to announce itself over them. It is now the largest thing in a
+ * four-element hero, and a 28px lift on type this size reads as the text
+ * arriving from somewhere rather than settling into place.
+ */
 @keyframes pm-line-in {
   from {
     opacity: 0;
-    transform: translate3d(0, 28px, 0);
+    transform: translate3d(0, 20px, 0);
   }
   to {
     opacity: 1;
@@ -2913,10 +2991,20 @@
     transition-delay: 0ms !important;
   }
 
+  /*
+   * The hero's entrance, defeated twice over.
+   *
+   * The `opacity: 0` start states live inside `prefers-reduced-motion:
+   * no-preference`, so under `reduce` they are never applied and the text is
+   * simply there. This list is the second line of defence: if a start state is
+   * ever written outside that query, the content still renders immediately
+   * instead of waiting for an animation that `animation: none` just cancelled.
+   * That is the failure worth guarding — text stuck at zero opacity forever.
+   */
   [data-public-home-r4] .pm-hero__eyebrow,
   [data-public-home-r4] .pm-hero__line,
-  [data-public-home-r4] .pm-hero__lede,
   [data-public-home-r4] .pm-hero__actions,
+  [data-public-home-r4] .pm-hero__credibility,
   [data-public-home-r4] .pm-hero__assurances li,
   [data-public-home-r4] .pm-hero__entryWrap,
   [data-public-home-r4] .pm-hero__plannerWrap,
@@ -3619,9 +3707,46 @@
 
 /* --------------------------------------------------------- R5.3 QF hero */
 
+/*
+ * THE HERO IS NOW SIZED BY ITS CONTENT, NOT BY THE SCREEN.
+ *
+ * `min-height` was 92svh. That was set when the copy column held an eyebrow, a
+ * service line, a four-line headline, a paragraph, a button, microcopy, the
+ * counter and a chip list — content that overran 92svh anyway, so the value
+ * never actually decided anything.
+ *
+ * The cleanup removed four of those blocks, and the number stopped being
+ * inert: the hero kept its full-screen height while its content shrank by a
+ * third, and because this rule also sets `align-items: flex-end`, every pixel
+ * of the difference was dumped ABOVE the eyebrow. That is the "too much unused
+ * image area" in the owner's review — 163px of empty photograph between the
+ * header and the first word at 390px, with the copy stack pushed into the
+ * lower half of the screen.
+ *
+ * At 82svh the floor sits below the content height on a phone and just under
+ * it on a laptop, so the hero is as tall as what it contains and the copy
+ * starts at the padding, where it was designed to. The image is untouched:
+ * it is still full-bleed, still focal-point positioned, and there is still a
+ * band of it above the copy — about 100px rather than 163px.
+ *
+ * It stays a `min-height` rather than going away because a landscape phone or
+ * a short window would otherwise crush the hero to a letterbox.
+ *
+ * THIS RULE ONLY REACHES 768px AND UP. Below that, the "R5.4 mobile length
+ * compaction" block near the end of this file sets `.pm-hero` at the same
+ * specificity and much later, so it wins. Change both or change neither.
+ */
 [data-public-home-r4] .pm-hero--qf {
   align-items: flex-end;
-  min-height: min(92svh, 940px);
+  /*
+   * The 720px cap is the half that matters on a large monitor. `82svh` of a
+   * 1080px-tall window is 886px against roughly 725px of content, and with
+   * `flex-end` all 160px of the difference stacked above the eyebrow — the
+   * same fault as on the phone, just further down the breakpoint range and
+   * only visible on a screen most people do not review on. Capping at 720px
+   * lets the content size the hero from 1440 up, exactly as it does below.
+   */
+  min-height: min(82svh, 720px);
 }
 
 [data-public-home-r4] .pm-hero--qf .pm-hero__media {
@@ -3638,10 +3763,17 @@
   );
 }
 
+/*
+ * The counter sat 52px off the bottom of the hero: 28px of hero padding plus
+ * 24px from this inner padding, which was sized when a chip list ended the
+ * column and needed clearing. With the counter as the last element that
+ * doubled margin reads as the hero trailing off, so the inner contribution
+ * drops to 8px on a phone and the total lands at 36px.
+ */
 [data-public-home-r4] .pm-hero--qf .pm-hero__inner {
   grid-template-columns: minmax(0, 680px);
   align-items: end;
-  padding-bottom: clamp(24px, 4vw, 48px);
+  padding-bottom: clamp(8px, 2vw, 24px);
 }
 
 [data-public-home-r4] .pm-hero--qf .pm-hero__stage,
@@ -3651,29 +3783,16 @@
   display: none !important;
 }
 
-[data-public-home-r4] .pm-hero__serviceLine {
-  margin: 0;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--pm-ivory-2);
-}
-
 [data-public-home-r4] .pm-hero__line--gold {
   color: var(--pm-bronze-light);
-}
-
-[data-public-home-r4] .pm-hero__reassurance {
-  margin: 0;
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--pm-stone);
 }
 
 [data-public-home-r4] .pm-hero__credibility {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+  /* Adds to the copy column's 14px gap — see `.pm-hero__actions`. */
+  margin-block-start: 4px;
   width: 100%;
   max-width: 560px;
   padding: 14px;
@@ -3710,73 +3829,17 @@
   color: var(--pm-ivory-2);
 }
 
-[data-public-home-r4] .pm-hero__areas {
-  display: grid;
-  gap: 10px;
-  width: 100%;
-  max-width: 560px;
-}
-
-[data-public-home-r4] .pm-hero__areasLabel {
-  margin: 0;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--pm-stone);
-}
-
-[data-public-home-r4] .pm-hero__areasList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-[data-public-home-r4] .pm-hero__area {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 0 12px;
-  border: 1px solid var(--pm-line);
-  border-radius: 999px;
-  font-size: 0.78rem;
-  color: var(--pm-ivory-2);
-}
-
-[data-public-home-r4] .pm-hero__areasList:not([data-expanded]) .pm-hero__area:nth-child(n + 7) {
-  display: none;
-}
-
-@media (min-width: 768px) {
-  [data-public-home-r4] .pm-hero__areasList:not([data-expanded]) .pm-hero__area:nth-child(n + 7) {
-    display: inline-flex;
-  }
-
-  [data-public-home-r4] .pm-hero__areasList:not([data-expanded]) .pm-hero__area:nth-child(n + 9) {
-    display: none;
-  }
-}
-
-[data-public-home-r4] .pm-hero__areasToggleMobile {
-  display: inline;
-}
-
-[data-public-home-r4] .pm-hero__areasToggleDesktop {
-  display: none;
-}
-
-@media (min-width: 768px) {
-  [data-public-home-r4] .pm-hero__areasToggleMobile {
-    display: none;
-  }
-
-  [data-public-home-r4] .pm-hero__areasToggleDesktop {
-    display: inline;
-  }
-}
+/*
+ * The hero's Pune-area chips are gone, and so are their rules.
+ *
+ * They were a chip list, a six-item truncation, a different eight-item
+ * truncation at 768px, and two spans that swapped the toggle's wording by
+ * breakpoint — about sixty lines to show six of the 26 localities that
+ * `InteriorsServiceAreas` renders in full, lower on the same page. Nothing
+ * here has a second caller: the interiors section has its own `.od-int-areas`
+ * chips in `interiors.css`, so this block could only ever have styled the hero
+ * copy that no longer exists.
+ */
 
 [data-public-home-r4] .pm-metrics__strip {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4438,8 +4501,24 @@
     margin-bottom: clamp(16px, 3vw, 24px);
   }
 
+  /*
+   * THE MOBILE HERO HEIGHT LIVES HERE, NOT WITH THE REST OF THE HERO.
+   *
+   * This rule and `.pm-hero--qf` both score 0-2-0, and this one is ~750 lines
+   * further down the file, so on a phone THIS is the value that wins. Setting
+   * the height next to the other hero rules looks right and does nothing —
+   * which is exactly what happened on the first attempt at this change: the
+   * desktop got shorter and the phone did not move a pixel.
+   *
+   * 64svh is below the height of the hero's own content on every phone in the
+   * 320-430 band, so in practice the content sizes the hero and the copy
+   * starts at the padding rather than wherever a screen-fraction pushed it.
+   * It remains a floor for a landscape phone or a very short window.
+   *
+   * Keep in step with `.pm-hero--qf`, which does the same job from 768px up.
+   */
   [data-public-home-r4] .pm-hero {
-    min-height: min(78svh, 720px);
+    min-height: min(64svh, 600px);
   }
 
   [data-public-home-r4] .pm-reviews {

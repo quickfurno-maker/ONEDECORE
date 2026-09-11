@@ -17,8 +17,11 @@
  *     rail scrolls by a viewport, which skips three banners at a time and
  *     leaves a visitor wondering what they missed.
  *
- *  4. Empty meaning empty. No image requests, no invented copy, no CTA, no
- *     dead href — the slots exist to settle geometry, not to look finished.
+ *  4. Empty meaning UNFILLED, not absent. A slot with no artwork is still a
+ *     card: a 5:8 frame with a `Banner N` label, in the real rail, with a real
+ *     dot. What it must never be is invented content — no image request, no
+ *     copy, no CTA, no dead href. The gate for a card existing is `enabled`
+ *     and nothing else; this was briefly changed to artwork and reversed.
  *
  *  5. Everything the previous two commits established on this page.
  */
@@ -28,6 +31,7 @@ import { join } from "node:path";
 import { describe, test } from "node:test";
 import {
   getEnabledInteriorsPromoSlides,
+  hasInteriorsPromoCreative,
   INTERIORS_PROMO_AUTOPLAY_MS,
   INTERIORS_PROMO_PLACEHOLDER_PREFIX,
   INTERIORS_PROMO_RATIO,
@@ -130,17 +134,67 @@ describe("the rail is six configurable slots", () => {
     assert.doesNotMatch(css, /aspect-ratio: 12 \/ 5/);
   });
 
-  test("enabled filtering decides what renders", () => {
+  test("the six empty slots are six cards — enabled is the only gate", () => {
+    /*
+     * THE DECISION THIS LOCKS.
+     *
+     * It has been taken in both directions. A pass made artwork the gate, so
+     * the whole section vanished while the slots were empty; the owner asked
+     * for the six-slot slider back, because the slider itself is what is being
+     * reviewed and an absent section cannot be reviewed.
+     *
+     * So `enabled` decides whether a card exists and artwork decides only what
+     * is inside it. If this test starts failing because a filter gained an
+     * image check, that is the reversal, not a refactor.
+     */
     assert.equal(getEnabledInteriorsPromoSlides().length, 6);
-    const withOneOff = INTERIORS_PROMO_SLIDES.map((slide, index) =>
-      index === 2 ? { ...slide, enabled: false } : slide
-    );
-    const enabled = getEnabledInteriorsPromoSlides(withOneOff);
-    assert.equal(enabled.length, 5);
-    assert.ok(!enabled.some((slide) => slide.id === INTERIORS_PROMO_SLIDES[2]!.id));
+    for (const slide of getEnabledInteriorsPromoSlides()) {
+      assert.equal(
+        hasInteriorsPromoCreative(slide),
+        false,
+        `${slide.id} is on the rail with no artwork, which is the reviewed state`
+      );
+    }
   });
 
-  test("all slots disabled renders nothing at all", () => {
+  test("a disabled slot is the one thing that removes a card", () => {
+    const oneOff = INTERIORS_PROMO_SLIDES.map((slide, index) =>
+      index === 2 ? { ...slide, enabled: false } : slide
+    );
+    const enabled = getEnabledInteriorsPromoSlides(oneOff);
+    assert.equal(enabled.length, 5);
+    assert.ok(!enabled.some((slide) => slide.id === INTERIORS_PROMO_SLIDES[2]!.id));
+
+    // Artwork does not change the card count in either direction.
+    const withArt = INTERIORS_PROMO_SLIDES.map((slide) => ({
+      ...slide,
+      image: `/assets/promo/${slide.id}.webp`,
+    }));
+    assert.equal(getEnabledInteriorsPromoSlides(withArt).length, 6);
+  });
+
+  test("a blank image string falls to the empty frame, not to a broken image", () => {
+    /*
+     * `image: ""` is what a cleared config field looks like, and it is the one
+     * value a bare truthiness check gets wrong in a way that shows —
+     * `<Image src="">` issues a broken request instead of rendering the frame.
+     */
+    assert.equal(hasInteriorsPromoCreative({ id: "x", enabled: true }), false);
+    assert.equal(
+      hasInteriorsPromoCreative({ id: "x", enabled: true, image: null }),
+      false
+    );
+    assert.equal(
+      hasInteriorsPromoCreative({ id: "x", enabled: true, image: "   " }),
+      false
+    );
+    assert.equal(
+      hasInteriorsPromoCreative({ id: "x", enabled: true, image: "/a.webp" }),
+      true
+    );
+  });
+
+  test("only an all-disabled rail renders nothing", () => {
     const allOff = INTERIORS_PROMO_SLIDES.map((slide) => ({
       ...slide,
       enabled: false,
@@ -151,10 +205,10 @@ describe("the rail is six configurable slots", () => {
 });
 
 /* -------------------------------------------------------------------------- */
-/* 2. Empty frames — no images, no copy, no CTA                                */
+/* 2. Empty frames — a real card, without its picture yet                      */
 /* -------------------------------------------------------------------------- */
 
-describe("the empty slots look like frames, not like finished content", () => {
+describe("an unfilled slot renders as a frame, not as finished content", () => {
   test("a Banner N label and nothing else", () => {
     assert.equal(INTERIORS_PROMO_PLACEHOLDER_PREFIX, "Banner");
     const carousel = code(read(CAROUSEL));
@@ -163,6 +217,30 @@ describe("the empty slots look like frames, not like finished content", () => {
       /const label = `\$\{INTERIORS_PROMO_PLACEHOLDER_PREFIX\} \$\{index \+ 1\}`/
     );
     assert.match(carousel, /className="od-int-promo__emptyLabel">\{label\}/);
+  });
+
+  test("the empty frame has its own styles, and they are not an uploader", () => {
+    const css = read(CSS);
+    const block = /\.od-int-promo__empty \{[\s\S]*?\n\}/.exec(css);
+    assert.ok(block, "the empty frame needs its own rule");
+    assert.doesNotMatch(block[0], /dashed|dotted/, "no drop-zone border");
+    assert.match(css, /\.od-int-promo__emptyLabel \{/);
+    const carousel = code(read(CAROUSEL));
+    assert.doesNotMatch(carousel, /Upload|Drop |Choose file|placeholder\.(png|jpg)/i);
+  });
+
+  test("the card branches on the predicate, never on raw truthiness", () => {
+    /*
+     * `hasInteriorsPromoCreative(slide)`, not `slide.image ?`. One definition
+     * of "has a picture", so the filter, the card and any future caller cannot
+     * disagree about a blank string.
+     */
+    const carousel = code(read(CAROUSEL));
+    assert.match(carousel, /hasInteriorsPromoCreative\(slide\) \? \(/);
+    assert.doesNotMatch(carousel, /slide\.image \? \(/);
+    assert.match(carousel, /getEnabledInteriorsPromoSlides\(\)/);
+    assert.match(carousel, /<Image/);
+    assert.match(carousel, /src=\{slide\.image!\}/);
   });
 
   test("no promotional copy is rendered by the carousel", () => {
@@ -184,25 +262,43 @@ describe("the empty slots look like frames, not like finished content", () => {
     }
   });
 
-  test("no image element renders while the slots are empty", () => {
+  test("no image request is issued while every slot is empty", () => {
     /*
-     * The `<Image>` branch is retained so that adding a path is the only
-     * change a campaign needs — but it is behind `slide.image`, and no slot
-     * has one, so this build issues no image request at all.
+     * The six cards render, but as frames. Not one of them clears
+     * `hasInteriorsPromoCreative`, so the `<Image>` branch never mounts and the
+     * rail costs no image request at all in this state.
      */
-    const carousel = code(read(CAROUSEL));
-    assert.match(carousel, /slide\.image \? \(/);
-    assert.match(carousel, /<Image/);
-    assert.match(carousel, /src=\{slide\.image\}/);
+    for (const slide of getEnabledInteriorsPromoSlides()) {
+      assert.equal(hasInteriorsPromoCreative(slide), false);
+    }
+    assert.doesNotMatch(code(read(CAROUSEL)), /Upload|Drop |Choose file|placeholder\.(png|jpg)/i);
   });
 
-  test("the empty frame is not dressed up as an uploader", () => {
-    const css = read(CSS);
-    const block = /\.od-int-promo__empty \{[\s\S]*?\n\}/.exec(css);
-    assert.ok(block, "the empty frame needs its own rule");
-    assert.doesNotMatch(block[0], /dashed|dotted/, "no drop-zone border");
+  test("a filled slot swaps its frame for the artwork, and nothing else changes", () => {
+    /*
+     * The real-content path is the point of the empty frames: they are the
+     * same card, the same geometry and the same dot as the finished banner
+     * will be. Filling one is a config edit, not a component change.
+     */
+    const mixed = getEnabledInteriorsPromoSlides([
+      { id: "promo-1", enabled: true },
+      {
+        id: "diwali-2026",
+        enabled: true,
+        image: "/assets/promo/diwali-2026.webp",
+        imageAlt: "Diwali interior offer",
+        href: "/portfolio",
+      },
+    ]);
+    // Both are cards; only one has a picture.
+    assert.equal(mixed.length, 2);
+    assert.equal(hasInteriorsPromoCreative(mixed[0]!), false);
+    assert.equal(hasInteriorsPromoCreative(mixed[1]!), true);
+
     const carousel = code(read(CAROUSEL));
-    assert.doesNotMatch(carousel, /Upload|Drop |Choose file|placeholder\.(png|jpg)/i);
+    assert.match(carousel, /alt=\{slide\.imageAlt \?\? ""\}/);
+    assert.match(carousel, /priority=\{priority\}/);
+    assert.match(carousel, /slide\.href \? \(/);
   });
 
   test("no art-direction machinery is left behind", () => {
@@ -575,18 +671,22 @@ describe("/interiors composition", () => {
     assert.ok(page.split("\n").length < 90, "the page should stay a running order");
   });
 
-  test("the hero was moved, not redesigned", () => {
+  test("the hero kept its identity through the reorder and the cleanup", () => {
+    /*
+     * This test used to list the hero's text blocks as things that must
+     * survive. They were removed deliberately in the cleanup pass, so what it
+     * defends now is what the hero IS: its background image, its headline, its
+     * single CTA and its credibility row. The removals have their own suite in
+     * `hero-premium-cleanup.test.ts`.
+     */
     const hero = code(read(HERO));
     for (const kept of [
       "pm-hero__title",
-      "PM_HERO.serviceLine",
-      "PM_HERO.lede",
       "pm-hero__media",
       "hero-start-plan",
       "pm-hero__credibility",
-      "pm-hero__areas",
-      "HOME_PUNE_AREAS",
-      "<noscript>",
+      "PM_HERO.eyebrow",
+      "PM_HERO.primaryCta",
     ]) {
       assert.match(hero, new RegExp(kept.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     }

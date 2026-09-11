@@ -205,10 +205,33 @@ export const PM_ASSETS = {
 
 /* -------------------------------------------------------------------- hero */
 
+/**
+ * The hero says four things and stops.
+ *
+ * WHAT WAS REMOVED, AND WHY IT IS NOT COMING BACK AS SHORTER COPY
+ *
+ * This object used to carry a `serviceLine`, a `lede` and a `reassurance`
+ * strip, and the hero rendered all three between the headline and the CTA. On
+ * a phone that was four stacked paragraphs before the button — the page spent
+ * its first screen explaining itself instead of asking for the enquiry, and
+ * everything below the hero started a scroll and a half down.
+ *
+ * None of it was replaced with a tighter version. A one-line summary under a
+ * headline is still a line of text competing with the headline, and the three
+ * removed blocks were each saying what the eyebrow and the four credibility
+ * cells already say: what ONEDECORE does, where, and on what terms. The
+ * argument is not lost, it is made once.
+ *
+ * The services themselves are the `HomeServicesRooms` section directly below,
+ * which lists them with links rather than as a middot-separated line nobody
+ * can click, and the Pune coverage is `InteriorsServiceAreas` further down,
+ * which carries all 26 localities instead of the hero's six-plus-a-toggle.
+ *
+ * So the hero is: eyebrow, headline, one button, the credibility row. Adding a
+ * fifth element here means taking the same decision again.
+ */
 export const PM_HERO = {
   eyebrow: "Pune's Complete Interior Design & Build Company",
-  serviceLine:
-    "Complete Home Interiors · Modular Kitchens · Custom Wardrobes",
   titleLines: [
     { text: "Beautiful Homes.", emphasize: false },
     { text: "Designed, Built", emphasize: true },
@@ -216,15 +239,9 @@ export const PM_HERO = {
     { text: "One Team.", emphasize: false },
   ],
   titlePlain: "Beautiful Homes. Designed, Built & Delivered by One Team.",
-  lede: "From modular kitchens and custom wardrobes to complete home interiors, ONEDECORE manages design, manufacturing, installation and handover — so your entire home comes together with less stress.",
   primaryCta: PM_CTA.open,
   secondaryCta: PM_CTA.estimate,
   secondaryHref: `#${PM_SECTION_IDS.estimate}`,
-  reassurance: "Free initial consultation · No obligation · Edit your plan anytime",
-  areasLabel: "Serving homeowners across Pune",
-  areasExpandLabel: "View all 26 areas",
-  areasExpandMobileLabel: "View all 26 Pune areas",
-  areasCollapseLabel: "Show fewer areas",
 } as const;
 
 /**
