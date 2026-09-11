@@ -131,6 +131,7 @@
     "src/features/staff-admin/__tests__/phase-6d-a-staff-admin.test.ts",
     "src/features/staff-admin/__tests__/phase-6d-security-mutants.test.ts",
     "src/features/staff-admin/__tests__/staff-create-form-preservation.test.ts",
+    "src/features/staff-admin/__tests__/login-session-revocation.test.ts",
     "src/features/staff-admin/__tests__/staff-login-cookie-persistence.test.ts",
     "src/features/staff-admin/__tests__/staff-login-id-no-phone-provider.test.ts",
     "src/features/staff-admin/__tests__/staff-login-provisioning.test.ts",
