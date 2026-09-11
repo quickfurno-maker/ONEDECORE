@@ -346,9 +346,14 @@ describe("the uploader is a real bulk tool", () => {
      */
     assert.doesNotMatch(uploader, /useEffect\([\s\S]{0,400}\}, \[items\]\)/);
 
-    // Removing one item releases only that item's URL.
+    /*
+     * Removing an item releases only that item, and releases BOTH the URL and
+     * the queued identity — otherwise a removed file could never be re-added.
+     */
+    assert.match(uploader, /const forget = useCallback\(/);
     assert.match(uploader, /releaseUrl\(item\.previewUrl\)/);
-    assert.match(uploader, /for \(const item of failed\) releaseUrl\(item\.previewUrl\)/);
+    assert.match(uploader, /queuedIdentities\.current\.delete\(item\.identity\)/);
+    assert.match(uploader, /for \(const item of failed\) forget\(item\)/);
   });
 
   test("the same file cannot be queued twice in one open batch", () => {
@@ -372,12 +377,24 @@ describe("the uploader is a real bulk tool", () => {
       /file\.name.*file\.size.*file\.lastModified.*file\.type/,
       "identity is name + size + lastModified + type"
     );
-    assert.match(uploader, /const seen = new Set\(current\.map\(\(item\) => item\.identity\)\)/);
-    assert.match(uploader, /if \(seen\.has\(identity\)\) \{[\s\S]{0,80}continue;/);
+    assert.match(uploader, /const queuedIdentities = useRef<Set<string>>\(new Set\(\)\)/);
+    assert.match(uploader, /if \(queuedIdentities\.current\.has\(identity\)\) \{[\s\S]{0,60}continue;/);
 
-    // The suppression is visible to the owner, and is not dressed as a failure.
+    /*
+     * The suppression is visible to the owner, and it is counted OUTSIDE the
+     * `setItems` updater. Setting state from inside another updater is not
+     * supported — React may discard it — and that is exactly what happened
+     * first time round: the dedupe worked and the count never reached the
+     * screen, which is the worst of both.
+     */
     assert.match(uploader, /already selected/i);
-    assert.match(uploader, /setAlreadySelected\(repeats\)/);
+    assert.match(uploader, /setAlreadySelected\(repeats\);/);
+    assert.match(uploader, /if \(next\.length > 0\) setItems\(/);
+    assert.doesNotMatch(
+      uploader,
+      /setItems\(\(current\) => \{[\s\S]*?setAlreadySelected/,
+      "the repeat count must not be set from inside a state updater"
+    );
 
     /*
      * And the server's own duplicate answer is untouched: a file already in

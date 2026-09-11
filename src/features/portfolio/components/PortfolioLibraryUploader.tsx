@@ -147,74 +147,84 @@ export function PortfolioLibraryUploader({
     };
   }, []);
 
+  /**
+   * Identities currently in the queue.
+   *
+   * A ref beside the state, for the same reason `objectUrls` is one: `addFiles`
+   * needs to answer "have I already got this file?" SYNCHRONOUSLY, while it is
+   * building the new rows and deciding how many were repeats.
+   *
+   * The first version asked that question inside the `setItems` updater and
+   * called `setAlreadySelected` from in there. Suppression worked, but the
+   * count never reached the screen — React does not support setting state from
+   * inside another updater, and it is free to discard it. The dedupe was right
+   * and silent, which is the worst of both.
+   */
+  const queuedIdentities = useRef<Set<string>>(new Set());
+
   const addFiles = useCallback(
     (fileList: FileList | null) => {
       if (!fileList) return;
 
-      setItems((current) => {
-        /*
-         * QUEUE-LEVEL DUPLICATE SUPPRESSION.
-         *
-         * The server refuses a photograph already stored in the library, by
-         * checksum, and that remains the authority for anything previously
-         * uploaded. It cannot help WITHIN one batch: three uploads run at
-         * once, so the same file queued twice can have both requests read the
-         * sources table before either writes its row, and both then pass.
-         *
-         * Rather than reach for a lock or a checksum table, the UI simply does
-         * not send the same local file twice in one open queue. That is the
-         * case the owner actually hits — a folder dragged in, then dragged in
-         * again — and suppressing it here costs one Set.
-         */
-        const seen = new Set(current.map((item) => item.identity));
-        const next: QueueItem[] = [];
-        let repeats = 0;
+      /*
+       * QUEUE-LEVEL DUPLICATE SUPPRESSION.
+       *
+       * The server refuses a photograph already stored in the library, by
+       * checksum, and that stays authoritative for anything previously
+       * uploaded. It cannot help WITHIN one batch: three uploads run at once,
+       * so the same file queued twice can have both requests read the sources
+       * table before either writes its row, and both then pass.
+       *
+       * Rather than reach for a lock or a checksum table, the UI never sends
+       * the same local file twice in one open queue. That is the case the owner
+       * actually hits — a folder dragged in, then dragged in again.
+       */
+      const next: QueueItem[] = [];
+      let repeats = 0;
 
-        for (const file of Array.from(fileList)) {
-          const identity = fileIdentity(file);
-          if (seen.has(identity)) {
-            repeats += 1;
-            continue;
-          }
-          seen.add(identity);
+      for (const file of Array.from(fileList)) {
+        const identity = fileIdentity(file);
+        if (queuedIdentities.current.has(identity)) {
+          repeats += 1;
+          continue;
+        }
+        queuedIdentities.current.add(identity);
 
-          const base = {
-            key: `${identity}::${Math.random()}`,
-            identity,
-            file,
-            roomCode: room,
-            progress: 0,
-          };
+        const base = {
+          key: `${identity}::${Math.random()}`,
+          identity,
+          file,
+          roomCode: room,
+          progress: 0,
+        };
 
-          if (!ACCEPTED_UPLOAD_MIME_TYPES.includes(file.type as never)) {
-            next.push({
-              ...base,
-              status: "failed",
-              error: "Only JPEG, PNG and WebP are accepted.",
-              previewUrl: "",
-            });
-            continue;
-          }
-          if (file.size > MAX_FILE_SIZE_BYTES) {
-            next.push({
-              ...base,
-              status: "failed",
-              error: "Larger than the 20 MB limit.",
-              previewUrl: "",
-            });
-            continue;
-          }
-
-          const previewUrl = URL.createObjectURL(file);
-          objectUrls.current.add(previewUrl);
-          next.push({ ...base, status: "queued", previewUrl });
+        if (!ACCEPTED_UPLOAD_MIME_TYPES.includes(file.type as never)) {
+          next.push({ ...base, status: "failed", error: "Only JPEG, PNG and WebP are accepted.", previewUrl: "" });
+          continue;
+        }
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          next.push({ ...base, status: "failed", error: "Larger than the 20 MB limit.", previewUrl: "" });
+          continue;
         }
 
-        setAlreadySelected(repeats);
-        return next.length > 0 ? [...current, ...next] : current;
-      });
+        const previewUrl = URL.createObjectURL(file);
+        objectUrls.current.add(previewUrl);
+        next.push({ ...base, status: "queued", previewUrl });
+      }
+
+      setAlreadySelected(repeats);
+      if (next.length > 0) setItems((current) => [...current, ...next]);
     },
     [room]
+  );
+
+  /** Drops an item from the queue, releasing both its URL and its identity. */
+  const forget = useCallback(
+    (item: QueueItem) => {
+      releaseUrl(item.previewUrl);
+      queuedIdentities.current.delete(item.identity);
+    },
+    [releaseUrl]
   );
 
   const update = useCallback((key: string, patch: Partial<QueueItem>) => {
@@ -487,7 +497,7 @@ export function PortfolioLibraryUploader({
                         type="button"
                         className="od-lib-uploader__remove"
                         onClick={() => {
-                          releaseUrl(item.previewUrl);
+                          forget(item);
                           setItems((current) => current.filter((x) => x.key !== item.key));
                         }}
                         aria-label={`Remove ${item.file.name}`}
@@ -512,7 +522,7 @@ export function PortfolioLibraryUploader({
                 type="button"
                 className="od-btn-ghost"
                 onClick={() => {
-                  for (const item of failed) releaseUrl(item.previewUrl);
+                  for (const item of failed) forget(item);
                   setItems((current) => current.filter((item) => item.status !== "failed"));
                 }}
               >
