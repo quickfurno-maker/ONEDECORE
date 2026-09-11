@@ -3,7 +3,7 @@ import {
   MAX_FILE_SIZE_BYTES,
   MAX_DIMENSION_PX,
   MAX_PIXELS_TOTAL,
-} from "../domain/portfolio-media";
+} from "../domain/portfolio-media.ts";
 
 export type SupportedImageFormat = "jpeg" | "png" | "webp";
 
@@ -46,7 +46,7 @@ export {
   MAX_FILE_SIZE_BYTES,
   MAX_DIMENSION_PX,
   MAX_PIXELS_TOTAL,
-} from "../domain/portfolio-media";
+} from "../domain/portfolio-media.ts";
 
 export interface ImageValidationResult {
   valid: boolean;

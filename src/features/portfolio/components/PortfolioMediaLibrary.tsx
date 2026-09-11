@@ -10,10 +10,6 @@ import {
   isPortfolioRoomCode,
   type PortfolioRoomCode,
 } from "../public/portfolio-rooms";
-import type {
-  LibraryMediaItem,
-  LibraryMediaPage,
-} from "../server/portfolio-library-repository";
 import {
   deleteLibraryMediaAction,
   reorderLibraryMediaAction,
@@ -22,7 +18,12 @@ import {
   updateLibraryMediaAction,
 } from "../server/portfolio-library-actions";
 import { PortfolioLibraryUploader } from "./PortfolioLibraryUploader";
-import type { LibraryPublicationFilter, LibraryRoomFilter } from "../domain/portfolio-library";
+import type {
+  LibraryMediaItem,
+  LibraryMediaPage,
+  LibraryPublicationFilter,
+  LibraryRoomFilter,
+} from "../domain/portfolio-library";
 import "./portfolio-media-library.css";
 
 /**
@@ -326,14 +327,32 @@ export function PortfolioMediaLibrary({
                   )}
 
                   {mode === "browse" ? (
-                    <label className="od-lib__pick">
+                    /*
+                     * A span, not a label.
+                     *
+                     * The label was never doing label work: it wrapped nothing
+                     * but the checkbox, and the accessible name comes from
+                     * `aria-label` on the input. A label whose only content is
+                     * its own control also has an activation path back to that
+                     * control, which is a needless way for a click to be
+                     * counted twice. A plain box gives the same hit area with
+                     * none of that.
+                     *
+                     * Honest note on provenance: this was changed while chasing
+                     * a "selection does nothing" symptom that turned out to
+                     * have a different cause — see the QA notes about client
+                     * components under /admin/portfolio not hydrating. It is
+                     * kept because it is the better markup, not because it was
+                     * the fix.
+                     */
+                    <span className="od-lib__pick">
                       <input
                         type="checkbox"
                         checked={selected.has(item.id)}
                         onChange={() => toggle(item.id)}
                         aria-label={`Select ${item.altText}`}
                       />
-                    </label>
+                    </span>
                   ) : null}
 
                   <span className="od-lib__badge">{PORTFOLIO_ROOM_LABELS[item.roomCode]}</span>

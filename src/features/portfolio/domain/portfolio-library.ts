@@ -79,3 +79,46 @@ export type LibraryRoomFilter = "all" | PortfolioRoomCode;
 export function isLibraryRoomFilter(value: unknown): value is LibraryRoomFilter {
   return value === "all" || isPortfolioRoomCode(value);
 }
+
+/* ========================================================================== */
+/* The shapes the admin screen renders                                        */
+/* ========================================================================== */
+
+/**
+ * DEFINED HERE, NOT IN THE REPOSITORY THAT PRODUCES THEM.
+ *
+ * `portfolio-library-repository` opens with `import "server-only"`. Importing
+ * its types from a client component works today — `import type` erases — but it
+ * points the client module graph at a server-only file, and the day someone
+ * changes that import to a value import the failure is a build error at best
+ * and a confusing runtime one at worst.
+ *
+ * So the DTOs live in this pure module. The repository imports them to describe
+ * what it returns, and the browser imports them to describe what it receives.
+ * Neither side reaches across the boundary for a type.
+ */
+export interface LibraryMediaItem {
+  readonly id: string;
+  readonly roomCode: PortfolioRoomCode;
+  readonly thumbUrl: string | null;
+  readonly fullUrl: string | null;
+  readonly altText: string;
+  readonly caption: string | null;
+  readonly published: boolean;
+  readonly status: string;
+  readonly focalX: number;
+  readonly focalY: number;
+  readonly sortOrder: number;
+  readonly width: number | null;
+  readonly height: number | null;
+  readonly createdAt: string;
+}
+
+export interface LibraryMediaPage {
+  readonly items: readonly LibraryMediaItem[];
+  readonly total: number;
+  readonly page: number;
+  readonly pageSize: number;
+  readonly hasNextPage: boolean;
+  readonly counts: Readonly<Record<PortfolioRoomCode | "all" | "unpublished", number>>;
+}

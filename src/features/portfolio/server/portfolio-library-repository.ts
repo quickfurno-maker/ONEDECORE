@@ -9,6 +9,8 @@ import {
 } from "../public/portfolio-rooms";
 import {
   LIBRARY_PAGE_SIZE,
+  type LibraryMediaItem,
+  type LibraryMediaPage,
   type LibraryPublicationFilter,
   type LibraryRoomFilter,
 } from "../domain/portfolio-library";
@@ -31,31 +33,7 @@ import {
  * grid would download tens of megabytes to draw postage stamps.
  */
 
-export interface LibraryMediaItem {
-  readonly id: string;
-  readonly roomCode: PortfolioRoomCode;
-  readonly thumbUrl: string | null;
-  readonly fullUrl: string | null;
-  readonly altText: string;
-  readonly caption: string | null;
-  readonly published: boolean;
-  readonly status: string;
-  readonly focalX: number;
-  readonly focalY: number;
-  readonly sortOrder: number;
-  readonly width: number | null;
-  readonly height: number | null;
-  readonly createdAt: string;
-}
-
-export interface LibraryMediaPage {
-  readonly items: readonly LibraryMediaItem[];
-  readonly total: number;
-  readonly page: number;
-  readonly pageSize: number;
-  readonly hasNextPage: boolean;
-  readonly counts: Readonly<Record<PortfolioRoomCode | "all" | "unpublished", number>>;
-}
+export type { LibraryMediaItem, LibraryMediaPage } from "../domain/portfolio-library";
 
 const LIBRARY_SELECT =
   "id, room_category_code, public_object_path, alt_text, caption, room_gallery_published, status, focal_x, focal_y, sort_order, width_px, height_px, created_at";
