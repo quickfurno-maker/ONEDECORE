@@ -12,6 +12,7 @@ import {
   hasLeadListActiveFilters,
   type LeadListPageResult,
   type LeadListQuery,
+  type LeadListSort,
 } from "../contracts/lead-list-query.ts";
 import {
   mapLeadRowToListItem,
@@ -26,7 +27,14 @@ import {
   type CrmLeadSalesBucketCounts,
 } from "../contracts/lead-sales-bucket.ts";
 import { parseManualSalesTemperature } from "../contracts/lead-sales-temperature.ts";
-import { sortLeadsByReceivedNewestFirst } from "../contracts/lead-received-order.ts";
+import {
+  compareLeadsByReceivedNewestFirst,
+  sortLeadsByReceivedNewestFirst,
+} from "../contracts/lead-received-order.ts";
+import {
+  sortSegmentedLeads,
+  type CrmSortableLead,
+} from "../contracts/lead-segmentation-order.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 import { crmErrorFromPostgresMessage } from "./crm-errors.ts";
 import { chunkLeadIds } from "../contracts/lead-batch-chunking.ts";
@@ -785,23 +793,20 @@ export async function queryLeadListPage(
   const bucketCounts = countSalesBuckets(scored.map((item) => item.salesBucket));
   const countsExact = !cohort.truncated;
 
-  const filtered = query.bucket
+  const bucketed = query.bucket
     ? scored.filter((item) => item.salesBucket === query.bucket)
     : scored;
 
   /*
-   * NEWEST RECEIVED FIRST — this is an inbox, not a work queue.
-   *
-   * The ordering used to be the sales-priority comparator, which put an
-   * older HOT lead above a brand-new one. That is right for the pipeline and
-   * wrong here: the owner opens this page to see what just came in, and a
-   * fresh enquiry appearing below week-old leads reads as a lost enquiry.
-   *
-   * Ordering happens AFTER filtering and BEFORE the page slice, so a filter
-   * narrows the candidate set without ever changing the sort rule, and page 1
-   * always holds the newest matching rows.
+   * Both filters run over the WHOLE cohort, before the page is cut, so
+   * "3 manual HOT leads" means three in the month rather than three on the
+   * page the caller happened to ask for.
    */
-  const ordered = sortLeadsByReceivedNewestFirst(filtered);
+  const filtered = query.manualOnly
+    ? bucketed.filter((item) => item.manualSalesTemperature !== null)
+    : bucketed;
+
+  const ordered = orderLeadCohort(filtered, query.sort, now);
 
   const from = (query.page - 1) * query.pageSize;
   const items = ordered.slice(from, from + query.pageSize);
@@ -823,6 +828,74 @@ export async function queryLeadListPage(
   };
 }
 
+
+/**
+ * Applies the caller's chosen order to an already-filtered cohort.
+ *
+ * ORDERING HAPPENS AFTER FILTERING AND BEFORE THE PAGE SLICE, so a filter
+ * narrows the candidate set without ever changing the sort rule and page 1
+ * always holds the first matching rows under that rule.
+ *
+ * NULL IS RECEIVED ORDER, and that is the point. `/admin/crm/leads` is an
+ * inbox — a fresh enquiry appearing below week-old leads reads as a lost
+ * enquiry — and it sends no `sort`, so it keeps exactly the behaviour it has
+ * today. The Owner app's Smart Leads asks the selling question instead and
+ * opts into `priority` explicitly.
+ *
+ * NOTHING HERE INVENTS A RANKING. `priority` is `sortSegmentedLeads`, the same
+ * comparator the pipeline's urgency policy feeds; `newest` is the same
+ * received-order comparator as before. A second ranking written here would be a
+ * second intelligence engine, and it would drift the first time a weight moved.
+ */
+function orderLeadCohort<
+  T extends CrmSortableLead & { readonly createdAt: string },
+>(leads: readonly T[], sort: LeadListSort | null, now: number): readonly T[] {
+  switch (sort) {
+    case "priority":
+      return sortSegmentedLeads(leads, now);
+
+    case "oldest":
+      /* The exact inverse of received order, tie-break included, so the two
+       * are mirror images and neither can drop or repeat a row across pages. */
+      return [...leads].sort(
+        (left, right) => -compareLeadsByReceivedNewestFirst(left, right)
+      );
+
+    case "next_action":
+      return [...leads].sort((left, right) => {
+        const leftDue = left.primaryNextActionDueAt;
+        const rightDue = right.primaryNextActionDueAt;
+
+        /*
+         * A lead with nothing scheduled sorts LAST rather than first. Sorting
+         * by "when is the next action" and leading with the ones that have
+         * none would bury every action the owner opened the sort to find.
+         */
+        if (leftDue === null || rightDue === null) {
+          if (leftDue !== rightDue) {
+            return leftDue === null ? 1 : -1;
+          }
+        } else if (leftDue !== rightDue) {
+          return leftDue < rightDue ? -1 : 1;
+        }
+
+        return left.id.localeCompare(right.id);
+      });
+
+    case "score":
+      return [...leads].sort((left, right) => {
+        if (left.priorityScore !== right.priorityScore) {
+          return right.priorityScore - left.priorityScore;
+        }
+
+        return left.id.localeCompare(right.id);
+      });
+
+    case "newest":
+    default:
+      return sortLeadsByReceivedNewestFirst(leads);
+  }
+}
 
 /**
  * ONE lead's canonical intelligence, for a direct Lead Detail open.

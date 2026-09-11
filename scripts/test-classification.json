@@ -32,6 +32,7 @@
     "src/features/crm/__tests__/crm-activity-ui.test.ts",
     "src/features/crm/__tests__/crm-datetime-field.test.ts",
     "src/features/crm/__tests__/crm-lead-delete.test.ts",
+    "src/features/crm/__tests__/crm-lead-sort-manual-filter.test.ts",
     "src/features/crm/__tests__/crm-leads-latest-first.test.ts",
     "src/features/crm/__tests__/crm-manual-sales-temperature.test.ts",
     "src/features/crm/__tests__/crm-mobile-admin-contracts.test.ts",

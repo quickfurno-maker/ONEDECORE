@@ -1304,11 +1304,48 @@ describe("dashboard Recent Leads is genuinely recent", () => {
      */
     const src = read(QUERIES);
     assert.match(src, /const bucketCounts = countSalesBuckets\(scored\.map/);
-    assert.match(src, /sortLeadsByReceivedNewestFirst\(filtered\)/);
     assert.match(src, /ordered\.slice\(from, from \+ query\.pageSize\)/);
     assert.match(src, /fetchLeadScoreBatch\(leadIds(?:, db)?\)/);
-    // Priority ranking must not sneak back into this page's final order.
-    assert.doesNotMatch(src, /sortSegmentedLeads\(/);
+  });
+
+  test("priority ranking cannot sneak back into this page's order", () => {
+    /*
+     * This guard used to assert that `sortSegmentedLeads` appeared NOWHERE in
+     * the query module. M11 added an opt-in `sort` parameter so the Owner
+     * app's Smart Leads can ask the selling question, which put the symbol
+     * back in the file — but behind a parameter this page never sends.
+     *
+     * So the guard now pins the thing it was actually protecting: the DEFAULT
+     * is received order, and the Leads page does not ask for anything else.
+     * Asserting the symbol's absence would have blocked a second surface from
+     * asking a second question of the same cohort, which was never the point.
+     */
+    const src = read(QUERIES);
+
+    /* Null and `newest` both fall through to the received-order comparator. */
+    assert.match(
+      src.replace(/\s+/g, " "),
+      /case "newest": default: return sortLeadsByReceivedNewestFirst\(leads\);/
+    );
+
+    /* Priority is reachable only by explicitly asking for it. */
+    assert.match(
+      src.replace(/\s+/g, " "),
+      /case "priority": return sortSegmentedLeads\(leads, now\);/
+    );
+
+    /* And the page never does. */
+    const page = read([
+      "src",
+      "app",
+      "admin",
+      "crm",
+      "leads",
+      "page.tsx",
+    ].join("/"));
+
+    assert.doesNotMatch(page, /sort:\s*"priority"/);
+    assert.doesNotMatch(page, /sort=priority/);
   });
 });
 

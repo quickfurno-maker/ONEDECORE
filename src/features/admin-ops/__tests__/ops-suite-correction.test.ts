@@ -89,6 +89,8 @@ describe("Operations Suite correction contracts", () => {
         assigneeId: null,
         followUpDue: "overdue",
         bucket: null,
+        manualOnly: false,
+        sort: null,
         month: LEAD_MONTH_ALL_COHORT,
         page: 1,
         pageSize: 25,

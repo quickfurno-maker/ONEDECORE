@@ -45,6 +45,9 @@ export async function getLeadsForCurrentUser(): Promise<CrmLeadListItem[]> {
     assigneeId: null,
     followUpDue: null,
     bucket: null,
+    manualOnly: false,
+    // Received order, as this helper has always returned.
+    sort: null,
     // All-time: this helper backs snapshots and exports, not the month-scoped
     // workspace, so it must not silently inherit a current-month filter.
     month: LEAD_MONTH_ALL_COHORT,
