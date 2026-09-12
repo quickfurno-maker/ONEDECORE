@@ -62,6 +62,8 @@ const code = (src: string) =>
   src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 const TOKEN = "EAAG-fake-token-for-tests-only-not-real-0123456789";
+/** A request that carries an explicit, current advertising-consent grant. */
+const GRANTED_COOKIE = "onedecore_ad_tracking_consent=v1:granted";
 const PIXEL_ID = "1952479475419612";
 const EVENT_ID = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
 
@@ -126,11 +128,16 @@ describe("the pixel is an activation gate", () => {
     assert.equal(isMetaPixelConfigured(PIXEL_ID), true);
   });
 
-  test("the component refuses to initialise without id or route", () => {
+  test("the component refuses to initialise unless all three gates pass", () => {
     const pixel = read(PIXEL);
-    assert.match(pixel, /if \(!pixelId \|\| !trackable\) return;/);
+    assert.match(
+      pixel,
+      /const allowed =\s*Boolean\(pixelId\) && trackable && consent === "granted";/
+    );
+    assert.match(pixel, /if \(!allowed\) return;/);
     assert.match(pixel, /const pixelId = getMetaPixelId\(\);/);
     assert.match(pixel, /isMetaTrackablePath\(pathname\)/);
+    assert.match(pixel, /const consent = useAdConsent\(\);/);
   });
 });
 
@@ -235,7 +242,7 @@ describe("public pages are measured, once per navigation", () => {
     assert.match(pixel, /const lastReported = useRef<string \| null>\(null\);/);
     assert.match(pixel, /if \(lastReported\.current === pathname\) return;/);
     assert.match(pixel, /trackMetaPageView\(\);/);
-    assert.match(pixel, /\}, \[pathname, pixelId, trackable\]\);/);
+    assert.match(pixel, /\}, \[pathname, allowed\]\);/);
   });
 
   test("init carries no parameters, so advanced matching stays off", () => {
@@ -661,7 +668,7 @@ describe("a conversion report cannot fail a lead", () => {
     const result = await reportLeadConversion(
       {
         eventId: EVENT_ID,
-        cookieHeader: null,
+        cookieHeader: GRANTED_COOKIE,
         userAgent: null,
         forwardedFor: null,
         trustProxy: false,

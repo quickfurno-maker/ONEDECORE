@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AdConsentBanner } from "@/features/marketing/meta/AdConsentBanner";
 import { MetaPixel } from "@/features/marketing/meta/MetaPixel";
 import "./globals.css";
 import "@/features/public-site/theme/public-dark-theme.css";
@@ -33,11 +34,18 @@ export default function RootLayout({
           output — an internal page ships no third-party tag at all, rather than
           a tag that happens not to fire.
 
-          It renders null without `NEXT_PUBLIC_META_PIXEL_ID`, which is the
-          state of every environment until the owner sets it in a production
-          BUILD. Merging this PR does not start tracking anyone.
+          Three gates, all required: a public path, a configured pixel id, and
+          an explicit advertising consent. Production already carries the pixel
+          id and the Conversions API token, so the consent cookie is the gate
+          that actually protects a visitor — not the environment.
         */}
         <MetaPixel />
+        {/*
+          The choice itself, on the same public surfaces and behind the same
+          route gate. A page that may never be measured is never asked about
+          measurement either.
+        */}
+        <AdConsentBanner />
         {children}
       </body>
     </html>

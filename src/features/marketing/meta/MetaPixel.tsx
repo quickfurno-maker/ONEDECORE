@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { useAdConsent } from "./use-ad-consent.ts";
 import {
   getMetaPixelId,
   isMetaTrackablePath,
@@ -33,6 +34,13 @@ import { trackMetaPageView } from "./meta-pixel-events.ts";
  * `next/script` owns when the tag is inserted; this owns when the queue exists,
  * which is the part that has to happen first.
  *
+ * THREE GATES, ALL REQUIRED
+ *
+ * A trackable public path, a valid pixel id, AND an explicit advertising
+ * consent. The third is the one that holds in production: the pixel id and the
+ * Conversions API token are already set there, so "the env is unset" was never
+ * going to be the thing protecting anyone. Consent is.
+ *
  * WHAT IT DOES NOT DO
  *
  * No automatic advanced matching, and no `init` parameters at all. Meta's
@@ -44,12 +52,25 @@ export function MetaPixel() {
   const pathname = usePathname();
   const pixelId = getMetaPixelId();
   const trackable = isMetaTrackablePath(pathname);
+  const consent = useAdConsent();
+  const allowed = Boolean(pixelId) && trackable && consent === "granted";
 
   const initialised = useRef(false);
   const lastReported = useRef<string | null>(null);
 
+  /*
+   * Withdrawal takes effect within the page view, not at the next navigation.
+   *
+   * Clearing `lastReported` is what makes a later re-grant emit a PageView for
+   * the page the visitor is still standing on, rather than staying silent
+   * because that path was "already reported" before consent was withdrawn.
+   */
   useEffect(() => {
-    if (!pixelId || !trackable) return;
+    if (consent !== "granted") lastReported.current = null;
+  }, [consent]);
+
+  useEffect(() => {
+    if (!allowed) return;
     if (initialised.current) return;
     initialised.current = true;
 
@@ -106,7 +127,15 @@ export function MetaPixel() {
     } catch {
       // A blocked or stubbed global must not break the page.
     }
-  }, [pixelId, trackable]);
+    /*
+     * `allowed`, not `[pixelId, trackable]`.
+     *
+     * Consent is the input that changes DURING a page view. Depending on the
+     * other two would leave this effect un-rerun when a visitor grants — the
+     * script would load only at their next navigation, which is both a lost
+     * PageView and a confusing "nothing happened" after clicking Allow.
+     */
+  }, [allowed, pixelId]);
 
   /*
    * PageView on first paint and on every App Router navigation.
@@ -117,11 +146,11 @@ export function MetaPixel() {
    * the single source of PageView.
    */
   useEffect(() => {
-    if (!pixelId || !trackable || !pathname) return;
+    if (!allowed || !pathname) return;
     if (lastReported.current === pathname) return;
     lastReported.current = pathname;
     trackMetaPageView();
-  }, [pathname, pixelId, trackable]);
+  }, [pathname, allowed]);
 
   return null;
 }

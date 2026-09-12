@@ -12,8 +12,10 @@ import {
   LEGAL_EFFECTIVE_DATE_PLACEHOLDER,
   LEGAL_PUBLICATION_MODE,
   LEAD_INTAKE_ACTIVATION,
+  PRIVACY_NOTICE_ADVERTISING_AMENDMENT,
   PRIVACY_NOTICE_EFFECTIVE_DATE,
   PRIVACY_NOTICE_OWNER_APPROVAL,
+  PRIVACY_NOTICE_PREVIOUS_VERSION,
   PRIVACY_NOTICE_VERSION,
   TERMS_OF_USE_EFFECTIVE_DATE,
   TERMS_OF_USE_OWNER_APPROVAL,
@@ -66,10 +68,36 @@ describe("Phase 10 production lead-intake legal activation", () => {
   });
 
   test("Privacy Notice version and effective date", () => {
-    assert.equal(PRIVACY_NOTICE_VERSION, "privacy-notice-v1.0");
+    /*
+     * v1.1 adds the advertising-measurement disclosure. Additive — no earlier
+     * statement was withdrawn — but it names a new recipient and a new cookie,
+     * which is a material change and so a new version rather than a quiet edit.
+     *
+     * The v1.0 approval record is kept as history and the effective date is
+     * unchanged: the notice has been in force since activation, and the
+     * amendment describes something that cannot happen at all without the
+     * reader's own opt-in.
+     */
+    assert.equal(PRIVACY_NOTICE_VERSION, "privacy-notice-v1.1");
+    assert.equal(PRIVACY_NOTICE_PREVIOUS_VERSION, "privacy-notice-v1.0");
     assert.equal(PRIVACY_NOTICE_EFFECTIVE_DATE, ACTIVATION_DATE);
-    assert.equal(getPrivacyNoticeDisplayVersion(), "privacy-notice-v1.0");
+    assert.equal(getPrivacyNoticeDisplayVersion(), "privacy-notice-v1.1");
     assert.equal(getPrivacyNoticeEffectiveDateLabel(), ACTIVATION_DATE);
+  });
+
+  test("the v1.1 amendment records its own, unsigned, owner approval", () => {
+    /*
+     * An approval the authoring change grants itself records nothing. It stays
+     * null until the owner has read the section.
+     *
+     * It is a DISCLOSURE gate and not a tracking gate, and the two are kept
+     * apart deliberately: tracking is blocked by the consent cookie whatever
+     * this says, so an unsigned amendment never means somebody is measured
+     * without being told.
+     */
+    assert.equal(PRIVACY_NOTICE_ADVERTISING_AMENDMENT.version, "privacy-notice-v1.1");
+    assert.equal(PRIVACY_NOTICE_ADVERTISING_AMENDMENT.ownerApproval, null);
+    assert.equal(PRIVACY_NOTICE_ADVERTISING_AMENDMENT.counselApproval, null);
   });
 
   test("Terms version and effective date", () => {

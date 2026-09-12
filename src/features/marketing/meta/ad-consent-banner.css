@@ -1,0 +1,176 @@
+/*
+ * The cookie preference strip.
+ *
+ * ONEDECORE's dark language, not a generic CMP bar: warm ivory on the page
+ * ink, a single hairline, gold reserved for the one affirmative action.
+ *
+ * WHERE IT SITS, AND WHAT IT MUST NOT COVER
+ *
+ * Bottom of the viewport, above the page but BELOW the sticky conversion bar's
+ * stacking position in practice — it is offset by that bar's height on small
+ * screens so the "Get Free Consultation" button and the WhatsApp action stay
+ * reachable while a decision is pending. A consent strip that hides the
+ * conversion CTA would cost real enquiries to ask a question the visitor can
+ * answer later.
+ */
+
+.od-cookie {
+  position: fixed;
+  z-index: 70;
+  inset-inline: 0;
+  inset-block-end: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem clamp(1rem, 4vw, 2rem)
+    calc(1rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--od-line, rgba(255, 249, 240, 0.12));
+  background: rgba(11, 9, 8, 0.97);
+  color: var(--od-text-secondary, #e6d8c8);
+  box-shadow: 0 -18px 44px rgba(6, 4, 4, 0.5);
+}
+
+@supports (backdrop-filter: blur(4px)) {
+  .od-cookie {
+    background: rgba(11, 9, 8, 0.9);
+    backdrop-filter: blur(14px);
+  }
+}
+
+/*
+ * The sticky conversion bar owns the bottom of a phone screen. The strip sits
+ * above it rather than over it — measured against `.pm-sticky`'s own height,
+ * which is a 48px button plus its padding and the safe-area inset.
+ */
+@media (max-width: 1079px) {
+  .od-cookie {
+    inset-block-end: calc(68px + env(safe-area-inset-bottom));
+    padding-bottom: 1rem;
+  }
+}
+
+.od-cookie__body {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.od-cookie__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--od-text-primary, #fff9f0);
+}
+
+.od-cookie__text {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--od-text-muted, #b5a592);
+}
+
+.od-cookie__link {
+  color: var(--od-gold-light, #f2cd83);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/*
+ * Both buttons are the same size and the same shape.
+ *
+ * The only difference is fill, and the affirmative one is not the only one
+ * that looks like a button — that asymmetry is the commonest dark pattern in
+ * cookie banners and it is exactly what is avoided here.
+ */
+.od-cookie__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.od-cookie__btn {
+  flex: 1 1 auto;
+  min-width: 10rem;
+  min-height: 44px;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.od-cookie__btn--secondary {
+  border: 1px solid var(--od-line-strong, rgba(255, 249, 240, 0.2));
+  background: transparent;
+  color: var(--od-text-primary, #fff9f0);
+}
+
+.od-cookie__btn--secondary:hover {
+  border-color: var(--od-text-primary, #fff9f0);
+}
+
+.od-cookie__btn--primary {
+  border: 1px solid var(--od-gold-light, #f2cd83);
+  background: var(--od-gold-light, #f2cd83);
+  color: #1a120c;
+}
+
+.od-cookie__btn--primary:hover {
+  background: var(--od-gold, #d8a24a);
+  border-color: var(--od-gold, #d8a24a);
+}
+
+.od-cookie__btn:focus-visible,
+.od-cookie-reopen:focus-visible,
+.od-cookie__link:focus-visible {
+  outline: 2px solid var(--od-gold-light, #f2cd83);
+  outline-offset: 2px;
+}
+
+/*
+ * The way back. Small, quiet, permanent — withdrawal must be as easy as
+ * granting, and a decision a visitor cannot revisit is not really a choice.
+ */
+.od-cookie-reopen {
+  position: fixed;
+  z-index: 60;
+  inset-inline-start: 0.75rem;
+  inset-block-end: calc(0.75rem + env(safe-area-inset-bottom));
+  min-height: 34px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--od-line, rgba(255, 249, 240, 0.12));
+  border-radius: 999px;
+  background: rgba(11, 9, 8, 0.8);
+  color: var(--od-text-subtle, #9b8b79);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.od-cookie-reopen:hover {
+  color: var(--od-text-primary, #fff9f0);
+  border-color: var(--od-line-strong, rgba(255, 249, 240, 0.2));
+}
+
+/*
+ * Out of the way of the sticky bar and the WhatsApp action on a phone: the bar
+ * spans the width, the WhatsApp button sits bottom-right, so this sits
+ * bottom-LEFT above the bar.
+ */
+@media (max-width: 1079px) {
+  .od-cookie-reopen {
+    inset-block-end: calc(74px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-cookie__btn {
+    transition: none;
+  }
+}

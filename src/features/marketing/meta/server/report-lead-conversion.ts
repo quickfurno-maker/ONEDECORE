@@ -1,5 +1,6 @@
 import "server-only";
 
+import { readAdConsentFromHeader } from "../ad-consent.ts";
 import { isValidMetaEventId } from "../meta-pixel-events.ts";
 import { getMetaCapiConfig } from "./meta-capi-env.ts";
 import {
@@ -36,6 +37,19 @@ import {
  * lost enquiry. If `after()` is adopted later this function does not change —
  * only its call site does.
  *
+ * CONSENT IS CHECKED HERE TOO, NOT INHERITED
+ *
+ * The browser has its own gate, but the server cannot take the browser's word
+ * for it — the request is just a request, and a lead can reach this route
+ * without the page's JavaScript having run at all. The incoming `Cookie:`
+ * header is read directly, and anything that is not an explicit current grant
+ * means no event.
+ *
+ * Consent is NOT inferred from `_fbp`, `_fbc`, `fbclid`, UTM parameters or the
+ * form's own service-communication consent. Those say where someone came from
+ * or that they may be contacted about their enquiry; none of them is
+ * permission to report that enquiry to an advertising network.
+ *
  * IT CANNOT THROW
  *
  * Every branch returns a result. The caller is free to ignore it, and does.
@@ -62,6 +76,18 @@ export async function reportLeadConversion(
   }
 ): Promise<MetaCapiResult> {
   try {
+    /*
+     * Consent first, before config and before anything is built.
+     *
+     * Deliberately ahead of the config check so the ordering reads as the
+     * policy does: no advertising consent means no advertising event, whether
+     * or not a token happens to be present. In production both env values ARE
+     * present, so this is the gate that does the work.
+     */
+    if (readAdConsentFromHeader(input.cookieHeader) !== "granted") {
+      return { status: "skipped", reason: "no-ad-consent" };
+    }
+
     const config = (deps?.getConfig ?? getMetaCapiConfig)();
     if (!config) return { status: "not-configured" };
 

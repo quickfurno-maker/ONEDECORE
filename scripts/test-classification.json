@@ -83,6 +83,7 @@
     "src/features/legal/__tests__/phase-3a1-legal-foundation.test.ts",
     "src/features/manager-workspace/__tests__/sales-manager-control-plane.test.ts",
     "src/features/manager-workspace/__tests__/sales-manager-dashboard.test.ts",
+    "src/features/marketing/meta/__tests__/meta-ad-consent-gate.test.ts",
     "src/features/marketing/meta/__tests__/meta-pixel-capi-lead-tracking.test.ts",
     "src/features/marketing/__tests__/phase-9-p0-contracts.test.ts",
     "src/features/marketing/__tests__/phase-9a-campaign-governance.test.ts",

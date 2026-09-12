@@ -11,6 +11,7 @@
  * success path without becoming a way to lose a lead.
  */
 
+import { isAdConsentGranted, readConsentCookie } from "./ad-consent.ts";
 import { META_EVENT } from "./meta-tracking-config.ts";
 
 type Fbq = ((...args: readonly unknown[]) => void) & {
@@ -54,7 +55,24 @@ export function isValidMetaEventId(value: unknown): value is string {
   );
 }
 
+/**
+ * Consent, re-read at the moment of the event.
+ *
+ * Not captured once at module load or passed down from a component: a visitor
+ * can withdraw between opening the form and submitting it, and the decision
+ * that counts is the one in force when the event would fire.
+ *
+ * `fbq` existing is NOT evidence of consent. A visitor who granted, was
+ * initialised, then withdrew still has the global — so every event checks the
+ * cookie itself rather than inferring permission from the script's presence.
+ */
+function consentGranted(): boolean {
+  if (typeof document === "undefined") return false;
+  return isAdConsentGranted(readConsentCookie(document.cookie));
+}
+
 function safeTrack(eventName: string, eventId?: string): void {
+  if (!consentGranted()) return;
   const fbq = getFbq();
   if (!fbq) return;
   try {

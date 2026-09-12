@@ -242,26 +242,47 @@ describe("the measurement layer is one gated mount, and nothing else", () => {
     assert.match(layout, /<MetaPixel \/>/);
   });
 
-  test("the pixel is an activation gate, so merging enables nothing", () => {
+  test("consent is the gate, not the environment", () => {
     /*
-     * THE SEQUENCING THIS PROTECTS.
+     * WHAT THIS TEST USED TO SAY, AND WHY IT WAS WRONG.
      *
-     * The Privacy Notice has no cookies/tracking section and does not list
-     * Meta under Service providers. Until it does, no advertising cookie may
-     * be set on a visitor — and the only reason merging this is safe is that
-     * `NEXT_PUBLIC_META_PIXEL_ID` is unset everywhere, so nothing loads.
+     * It asserted "merging enables nothing" on the grounds that
+     * NEXT_PUBLIC_META_PIXEL_ID was unset everywhere. That was true of the
+     * development machines it was written on and false of production, which
+     * already carries both the pixel id and the Conversions API token. An env
+     * gate that is open in the only environment that matters protects nobody.
      *
-     * If this test ever fails because the pixel became unconditional, the
-     * disclosure work is the blocker, not the test.
+     * The gate that holds is the visitor's own decision. No advertising cookie
+     * is set and no event is sent — browser or server — until someone has
+     * explicitly allowed advertising cookies on that browser.
      */
-    const config = read(
-      "src/features/marketing/meta/meta-tracking-config.ts"
-    );
-    assert.match(config, /export function getMetaPixelId/);
-    assert.match(config, /if \(!\/\^\\d\{8,20\}\$\/\.test\(trimmed\)\) return null;/);
-
     const pixel = read("src/features/marketing/meta/MetaPixel.tsx");
-    assert.match(pixel, /if \(!pixelId \|\| !trackable\) return;/);
+    assert.match(pixel, /const consent = useAdConsent\(\);/);
+    assert.match(
+      pixel,
+      /const allowed =\s*Boolean\(pixelId\) && trackable && consent === "granted";/
+    );
+    assert.match(pixel, /if \(!allowed\) return;/);
+
+    // Browser events re-check the cookie themselves, per event.
+    const events = read("src/features/marketing/meta/meta-pixel-events.ts");
+    assert.match(events, /if \(!consentGranted\(\)\) return;/);
+
+    // And the server does not take the browser's word for it.
+    const report = read(
+      "src/features/marketing/meta/server/report-lead-conversion.ts"
+    );
+    assert.match(
+      report,
+      /if \(readAdConsentFromHeader\(input\.cookieHeader\) !== "granted"\)/
+    );
+    assert.match(report, /status: "skipped", reason: "no-ad-consent"/);
+
+    // The disclosure exists, so the choice is an informed one.
+    const privacy = read("src/features/legal/privacy-policy-content.ts");
+    assert.match(privacy, /id: "advertising-measurement"/);
+    assert.match(privacy, /Cookies and advertising measurement/);
+    assert.match(privacy, /Meta Platforms is used for advertising measurement only/);
 
     const registers = [
       read("src/features/legal/data-inventory.ts"),
@@ -276,8 +297,8 @@ describe("the measurement layer is one gated mount, and nothing else", () => {
     }
     assert.match(
       registers[1]!,
-      /OWNER_DECISION_REQUIRED before activation/,
-      "the processor register must carry the pre-activation obligation"
+      /CONSENT-DEPENDENT/,
+      "the processor register must record that Meta is consent-dependent"
     );
   });
 });

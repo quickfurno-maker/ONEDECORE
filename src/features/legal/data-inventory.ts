@@ -238,9 +238,9 @@ export const DATA_INVENTORY: readonly DataInventoryEntry[] = [
     risk: "low",
     accuracyRequirement: "Essential only",
     ownerDecision:
-      "Meta Pixel + Conversions API are implemented and activation-gated. Before NEXT_PUBLIC_META_PIXEL_ID is set in a production build, the Privacy Notice needs a cookies/tracking section and Meta listed under Service providers.",
+      "Advertising measurement runs only on explicit opt-in. The visitor's choice is stored in the first-party cookie onedecore_ad_tracking_consent (v1), and is not inferred from communication consent, _fbp, _fbc, fbclid or UTM parameters.",
     currentTruth:
-      "Meta Pixel and Conversions API are built and OFF: no pixel id is configured, so no advertising cookie is set and no event is sent. When enabled, Meta receives page URL, IP, user agent and the _fbp/_fbc advertising cookies. Automatic advanced matching stays off; no name, phone, email or enquiry content is sent.",
+      "Necessary cookies only, unless the visitor allows advertising cookies. With consent granted, Meta receives event name/time/id, the source page URL, action source, user agent, client IP where trusted-proxy rules permit, and _fbp/_fbc when present. Automatic advanced matching is off; no name, phone, email, budget, service selection, enquiry text, quotation or CRM data is sent. Withdrawal stops further events immediately and clears _fbp/_fbc from the browser; events already transmitted cannot be recalled.",
   },
   {
     category: "payment-data",
