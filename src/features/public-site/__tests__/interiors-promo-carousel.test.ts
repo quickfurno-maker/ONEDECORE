@@ -789,17 +789,12 @@ describe("hero credibility counts numbers and prints words", () => {
 describe("the earlier contact work still holds", () => {
   test("header CTA absent, sticky Call Now present, one FAB per surface", () => {
     /*
-     * The header CTA is absent by construction now rather than by a prop the
-     * shell passes: `PublicSiteHeader` renders no consultation pill on any
-     * surface. Asserting the component is the stronger statement — the old
-     * `showConsultation={false}` could only prove this one caller opted out.
+     * The header CTA is off HERE because this shell mounts the sticky bar; the
+     * shared header still supports the pill for surfaces that have no other
+     * conversion affordance.
      */
     const shell = code(read("src/features/public-site/home-r4/HomeShell.tsx"));
-    assert.doesNotMatch(shell, /showConsultation/);
-    assert.doesNotMatch(
-      code(read("src/features/public-site/chrome/PublicSiteHeader.tsx")),
-      /od-site-header__cta/
-    );
+    assert.match(shell, /showConsultation=\{false\}/);
 
     const sticky = code(
       read("src/features/public-site/home-r4/HomeStickyActions.tsx")

@@ -43,16 +43,20 @@ export function HomeShell({
         a 390px bar — to duplicate an action that is already pinned to the
         bottom of the screen, where a thumb actually is.
 
-        That used to be a prop this shell passed. The header now has no
-        consultation pill at all, on any surface, so there is nothing to pass:
-        Portfolio was the last page still carrying one and it gained the sticky
-        bar instead.
+        Portfolio reaches the same conclusion for the same reason and passes
+        the same `false`. Surfaces WITHOUT a sticky bar — the legal documents —
+        keep the pill, because there it is the only conversion affordance above
+        the footer.
 
         The header keeps the wordmark (the Home link), the navigation, Shop
         gating and current-page state. Only the redundant CTA is gone.
       */}
       {unifiedNav ? (
-        <PublicSiteHeader current="interiors" shopEnabled={shopEnabled} />
+        <PublicSiteHeader
+          current="interiors"
+          shopEnabled={shopEnabled}
+          showConsultation={false}
+        />
       ) : (
         <HomeNavigation />
       )}

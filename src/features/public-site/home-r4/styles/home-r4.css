@@ -94,13 +94,23 @@
 
 /* ------------------------------------------------------------- typography */
 
+/*
+ * The legacy section eyebrow, speaking the same language as `.r5-eyebrow`.
+ *
+ * It was 11.2px at 0.2em — a different size AND a different tracking from the
+ * eight r5 sections it sits between, so the two systems disagreed on what a
+ * section marker looks like within one scroll. The tokens are shared now; the
+ * inline-flex and the gap stay, because this variant carries a leading rule
+ * glyph the r5 one does not.
+ */
 [data-public-home-r4] .pm-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.2em;
+  font-size: var(--r5-eyebrow-size, 0.8125rem);
+  font-weight: var(--r5-eyebrow-weight, 700);
+  letter-spacing: var(--r5-eyebrow-track, 0.12em);
+  line-height: var(--r5-eyebrow-leading, 1.3);
   text-transform: uppercase;
   color: var(--pm-bronze-light);
 }
@@ -4625,9 +4635,12 @@
     min-height: min(64svh, 600px);
   }
 
-  [data-public-home-r4] .pm-reviews {
-    padding-block: clamp(32px, 5vw, 48px);
-  }
+  /*
+   * The block padding that used to live here is gone: major-section rhythm is
+   * now one rule in homepage-r5.css, and this override was the reason the
+   * reviews strip sat at 32px between two 88px neighbours. The compact inner
+   * spacing below is unchanged.
+   */
 
   [data-public-home-r4] .pm-reviews__aggregate {
     padding: 12px;

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useId, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { R5_ROOMS, R5_ROOMS_COPY, REFERENCE_IMAGERY_NOTE } from "../content";
@@ -25,6 +26,21 @@ import { R5_ROOMS, R5_ROOMS_COPY, REFERENCE_IMAGERY_NOTE } from "../content";
  * Selection is genuine state. It is also the whole of the state — the copy, the
  * images and the priorities are all props baked at build time, so the island is
  * small and the rest of the homepage stays server-rendered.
+ *
+ * IT IS A GATEWAY NOW, NOT A CUL-DE-SAC
+ *
+ * The section used to end where it began: a visitor could read three priorities
+ * for a kitchen and had nowhere to go with that. Every room now carries the
+ * link to its real gallery, and the rail carries the way to the case studies.
+ *
+ * "VIEW ALL PROJECTS" IS OUTSIDE THE TABLIST, DELIBERATELY
+ *
+ * It sits in the same rail and reads as the fourth control, but it is a link to
+ * another page — not a fourth room. Putting a link inside `role="tablist"`
+ * would make it a child the pattern does not allow, and the arrow keys would
+ * either skip it or "select" a tab that navigates away. So the tablist keeps
+ * its three tabs and its roving tabindex, and the link is a sibling with its
+ * own tab stop: one rail to look at, two correct semantics underneath.
  */
 export function R5RoomExplorer() {
   const [activeId, setActiveId] = useState(R5_ROOMS[0]!.id);
@@ -77,35 +93,46 @@ export function R5RoomExplorer() {
           <p className="r5-supporting">{R5_ROOMS_COPY.supporting}</p>
         </header>
 
-        <ul className="r5-tabs" role="tablist" aria-label="Choose a room">
-          {R5_ROOMS.map((option, index) => {
+        <div className="r5-rooms-rail">
+          <ul className="r5-tabs" role="tablist" aria-label="Choose a room">
+            {R5_ROOMS.map((option, index) => {
             const selected = option.id === activeId;
-            return (
-              <li key={option.id} role="presentation">
-                <button
-                  ref={(node) => {
-                    tabRefs.current[index] = node;
-                  }}
-                  type="button"
-                  role="tab"
-                  id={`${baseId}-tab-${option.id}`}
-                  aria-selected={selected}
-                  aria-controls={`${baseId}-panel-${option.id}`}
-                  /*
-                   * Roving tabindex: one stop for the whole group, so Tab moves
-                   * PAST the room picker rather than through four items.
-                   */
-                  tabIndex={selected ? 0 : -1}
-                  className="r5-tab"
-                  onClick={() => setActiveId(option.id)}
-                  onKeyDown={(event) => onKeyDown(event, index)}
-                >
-                  {option.label}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+              return (
+                <li key={option.id} role="presentation">
+                  <button
+                    ref={(node) => {
+                      tabRefs.current[index] = node;
+                    }}
+                    type="button"
+                    role="tab"
+                    id={`${baseId}-tab-${option.id}`}
+                    aria-selected={selected}
+                    aria-controls={`${baseId}-panel-${option.id}`}
+                    /*
+                     * Roving tabindex: one stop for the whole group, so Tab
+                     * moves PAST the room picker rather than through each room.
+                     */
+                    tabIndex={selected ? 0 : -1}
+                    className="r5-tab"
+                    onClick={() => setActiveId(option.id)}
+                    onKeyDown={(event) => onKeyDown(event, index)}
+                  >
+                    {option.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          <Link
+            href={R5_ROOMS_COPY.allProjectsHref}
+            className="r5-rooms-rail__all"
+            data-conversion-action="rooms-all-projects"
+          >
+            {R5_ROOMS_COPY.allProjectsLabel}
+            <span aria-hidden="true">&rarr;</span>
+          </Link>
+        </div>
 
         <div
           role="tabpanel"
@@ -121,7 +148,24 @@ export function R5RoomExplorer() {
         >
           <div className="r5-fade">
             {room.image ? (
-              <div className="r5-panel__media">
+              /*
+               * The picture is a shortcut to the gallery, and nothing more.
+               *
+               * `aria-hidden` with `tabIndex={-1}` because the visible
+               * "View <Room> Portfolio" link below already carries the same
+               * destination under a real name. Without that, a screen reader
+               * would meet the same link twice in a row — once named after the
+               * alt text of a reference photograph — and a keyboard user would
+               * tab through a duplicate. This is pointer sugar over a link that
+               * is announced properly once.
+               */
+              <Link
+                href={room.portfolioHref}
+                className="r5-panel__media"
+                aria-hidden="true"
+                tabIndex={-1}
+                data-conversion-action={`rooms-media-${room.id}`}
+              >
                 <Image
                   src={room.image}
                   alt={room.imageAlt}
@@ -131,7 +175,7 @@ export function R5RoomExplorer() {
                   loading="lazy"
                   quality={75}
                 />
-              </div>
+              </Link>
             ) : (
               /*
                * No approved bedroom photograph exists. Borrowing the wardrobe
@@ -151,6 +195,20 @@ export function R5RoomExplorer() {
                 </li>
               ))}
             </ul>
+            {/*
+              A text link, not another gold button. This section hands a visitor
+              over to the photography; a second full-size CTA here would compete
+              with the one pinned to the bottom of the screen, which is the
+              action that actually converts.
+            */}
+            <Link
+              href={room.portfolioHref}
+              className="r5-panel__portfolio"
+              data-conversion-action={`rooms-portfolio-${room.id}`}
+            >
+              {room.portfolioLabel}
+              <span aria-hidden="true">&rarr;</span>
+            </Link>
           </div>
         </div>
 

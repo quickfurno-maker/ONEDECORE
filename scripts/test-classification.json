@@ -105,6 +105,7 @@
     "src/features/projects/__tests__/phase-8c-execution.test.ts",
     "src/features/projects/__tests__/phase-8c-m30-runtime.test.ts",
     "src/features/public-site/__tests__/hero-premium-cleanup.test.ts",
+    "src/features/public-site/__tests__/homepage-hierarchy-portfolio-gateway.test.ts",
     "src/features/public-site/__tests__/homepage-r5-retention.test.ts",
     "src/features/public-site/__tests__/interiors-contact-actions.test.ts",
     "src/features/public-site/__tests__/interiors-promo-carousel.test.ts",

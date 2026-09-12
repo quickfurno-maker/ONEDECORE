@@ -118,6 +118,7 @@ export function DiscoveryHomePage({
         </a>
         <PublicSiteHeader
           current="home"
+          showConsultation={false}
           showShopSearch={shopLive}
           shopEnabled={shopLive}
         />

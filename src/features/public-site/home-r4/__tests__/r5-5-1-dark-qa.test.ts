@@ -75,11 +75,12 @@ describe("R5.5.1 PublicDarkShell a11y", () => {
     assert.match(source, /tabIndex=\{-1\}/);
     assert.match(source, /PublicSiteHeader/);
     /*
-     * The shell no longer configures a header CTA — there is none to
-     * configure. What it does own now is the opt-in conversion dock, which is
-     * how Portfolio gets the homepage's sticky bar and WhatsApp action.
+     * The shell decides the header CTA per surface — default on, off for the
+     * Shop boundary and for anything that opts out — and owns the opt-in
+     * conversion dock, which is how Portfolio gets the homepage's sticky bar
+     * and WhatsApp action instead of a header pill.
      */
-    assert.doesNotMatch(source, /showConsultation/);
+    assert.match(source, /showConsultation/);
     assert.match(source, /showConversionDock/);
     assert.match(source, /navCurrent = "portfolio"/);
   });

@@ -18,6 +18,15 @@ interface PublicDarkShellProps {
   /** Optional compact footer note (e.g. draft-review disclaimer). */
   readonly footerNote?: ReactNode;
   /**
+   * The header consultation pill.
+   *
+   * Defaults to the pre-existing contract — on everywhere except the Shop
+   * boundary, which has its own commerce actions. Portfolio passes `false`
+   * because it mounts the conversion dock instead; the legal documents, which
+   * have no sticky bar, keep the pill they always had.
+   */
+  readonly showConsultation?: boolean;
+  /**
    * Mount the homepage's sticky conversion bar and WhatsApp action.
    *
    * Opt-in rather than automatic. This shell also serves the legal documents
@@ -34,6 +43,7 @@ export function PublicDarkShell({
   showChrome = true,
   navCurrent = "portfolio",
   footerNote,
+  showConsultation,
   showConversionDock = false,
 }: PublicDarkShellProps) {
   const shopEnabled = isShopPublicEnabled();
@@ -52,6 +62,7 @@ export function PublicDarkShell({
       {showChrome ? (
         <PublicSiteHeader
           current={navCurrent}
+          showConsultation={showConsultation ?? navCurrent !== "shop"}
           shopEnabled={shopEnabled}
           showShopSearch={shopEnabled && navCurrent === "shop"}
         />

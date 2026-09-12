@@ -388,13 +388,13 @@ describe("no public page leaves the visitor without a next step", () => {
      */
     assert.equal(PUBLIC_CONSULTATION.href, "/#contact");
     /*
-     * The FOOTER is the header's replacement here. The header no longer
-     * carries a consultation pill on any surface — the sticky conversion bar
-     * owns that action, where a thumb actually is — so the footer is the
-     * chrome that still routes to the canonical anchor.
+     * Both still route to the canonical anchor. The header's pill is now
+     * per-surface — off where a sticky conversion bar exists, on elsewhere —
+     * so the reference lives behind that prop rather than unconditionally.
      */
-    assert.match(read(FOOTER), /PUBLIC_CONSULTATION\.href/);
-    assert.doesNotMatch(read(HEADER), /PUBLIC_CONSULTATION/);
+    for (const rel of [FOOTER, HEADER]) {
+      assert.match(read(rel), /PUBLIC_CONSULTATION\.href/, rel);
+    }
   });
 });
 

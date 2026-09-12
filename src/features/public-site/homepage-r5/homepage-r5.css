@@ -24,8 +24,34 @@
  */
 
 [data-public-home-r4] {
+  /*
+   * THE SECTION EYEBROW, AS ONE CONTRACT.
+   *
+   * It was 11.52px at weight 600 — measured, not estimated — which on a phone
+   * is a caption, not a section marker. A visitor scrolling past could not use
+   * it to tell where one section ended and the next began, which is half of
+   * why the page read as one continuous dark block.
+   *
+   * It is now ~13px rising to ~14px, at weight 700 with wider tracking. Still
+   * clearly subordinate to a 30px heading — the ratio is what keeps it an
+   * eyebrow rather than a second title — but legible as a landmark.
+   */
+  --r5-eyebrow-size: clamp(0.8125rem, 0.78rem + 0.18vw, 0.875rem);
+  --r5-eyebrow-weight: 700;
+  --r5-eyebrow-track: 0.12em;
+  --r5-eyebrow-leading: 1.3;
+
+  /*
+   * The hairline between major sections.
+   *
+   * Warm ivory at 7% over the page ink: visible as a boundary at arm's length,
+   * invisible as a line. A gold rule or a heavier neutral would turn the page
+   * into a stack of boxes, which is the thing the r5 redesign removed.
+   */
+  --r5-section-divider: rgba(255, 249, 240, 0.07);
+
   /* Rhythm inside a section head. Small, deliberate, shared by every section. */
-  --r5-eyebrow-gap: 10px;
+  --r5-eyebrow-gap: 14px;
   --r5-heading-gap: 14px;
   --r5-head-gap: 28px;
 
@@ -92,9 +118,10 @@
  */
 [data-public-home-r4] .r5-eyebrow {
   margin: 0 0 var(--r5-eyebrow-gap);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  font-size: var(--r5-eyebrow-size);
+  font-weight: var(--r5-eyebrow-weight);
+  letter-spacing: var(--r5-eyebrow-track);
+  line-height: var(--r5-eyebrow-leading);
   text-transform: uppercase;
   color: var(--pm-bronze-light, #e6c477);
 }
@@ -123,6 +150,47 @@
   font-size: 0.74rem;
   line-height: 1.45;
   color: rgba(255, 249, 240, 0.42);
+}
+
+/* ========================================================================== */
+/* Major-section rhythm — the whole homepage, not just the r5 sections         */
+/* ========================================================================== */
+
+/*
+ * TWO LEGACY SECTIONS WERE READING A DIFFERENT RHYTHM.
+ *
+ * Measured on the live page at 390px: every `.r5-section` had 88px of block
+ * padding, `.pm-reviews` had 32px and `.pm-close` 36px. At 1440 it was 136px
+ * against 79px. Those two are the reviews strip and the consultation band —
+ * both major sections — so the page's spacing stuttered twice on the way down
+ * and the eye lost the beat it had been given.
+ *
+ * They now take `--dc-section-y`, the same foundation token the r5 sections
+ * use. No new scale, and the seven sections that were already generous are
+ * untouched: the correction is that the page has ONE rhythm, not a bigger one.
+ */
+[data-public-home-r4] .pm-reviews,
+[data-public-home-r4] .pm-close {
+  padding-block: var(--dc-section-y);
+}
+
+/*
+ * AND ONE HAIRLINE WHERE EACH MAJOR SECTION BEGINS.
+ *
+ * Spacing alone was not the problem — 88px on a phone is already more than
+ * generous. What the page had no way to say was "this is a new section": the
+ * tonal alternation is 2.4% over the page ink, which is deliberately almost
+ * subliminal and cannot carry a boundary on its own.
+ *
+ * Adjacent-sibling so the first section after the hero and the promo rail do
+ * not get a stray line at the top of the page, and so a section that is hidden
+ * by the Website Manager takes its divider with it rather than leaving a rule
+ * floating above the next one.
+ */
+[data-public-home-r4]
+  :is(.od-int-promo, .r5-section, .pm-section)
+  + :is(.r5-section, .pm-section) {
+  border-top: 1px solid var(--r5-section-divider);
 }
 
 /* ========================================================================== */
@@ -286,6 +354,59 @@
 /* Room Explorer                                                              */
 /* ========================================================================== */
 
+/*
+ * ONE RAIL THAT SCROLLS, NOT TWO ROWS THAT WRAP.
+ *
+ * Four controls — three rooms and the way to the projects — do not fit across
+ * a 320px phone at a legible size, and wrapping put "View All Projects" alone
+ * on a second line where it read as a stray button rather than the fourth
+ * choice. The rail scrolls horizontally instead, which keeps the four in one
+ * line of sight and keeps every label at full size.
+ *
+ * The tablist and the link are separate elements inside it for ARIA reasons
+ * (see R5RoomExplorer) and `display: contents` makes the flex parent lay out
+ * the four children as if that wrapper were not there.
+ */
+[data-public-home-r4] .r5-rooms-rail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding-bottom: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+[data-public-home-r4] .r5-rooms-rail::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * A fade at the trailing edge, so the cut reads as "there is more" rather than
+ * as a clipped control.
+ *
+ * Measured at 320px: the three pills and the link need ~466px inside a 280px
+ * container, so something has to be off-screen whatever the layout. A scrolling
+ * rail is the owner's preferred answer over two cramped rows — this is what
+ * makes the scroll discoverable. `mask-image` rather than an overlaid gradient
+ * so nothing is painted over the last pill and nothing intercepts a tap.
+ *
+ * The fade is removed once everything fits, otherwise a full rail would sit
+ * there looking permanently truncated.
+ */
+@media (max-width: 620px) {
+  [data-public-home-r4] .r5-rooms-rail {
+    mask-image: linear-gradient(90deg, #000 calc(100% - 42px), transparent);
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 42px), transparent);
+  }
+}
+
+/*
+ * `.r5-tabs` is shared: the Budget estimator has its own tablist using the same
+ * class. It keeps the original wrapping flex row, because four home types do
+ * fit and nothing there needs to escape its parent.
+ */
 [data-public-home-r4] .r5-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -293,6 +414,103 @@
   margin: 0 0 20px;
   padding: 0;
   list-style: none;
+}
+
+/*
+ * Only INSIDE the room rail does the list dissolve, so the flex parent lays
+ * out the three tabs and the all-projects link as four siblings on one
+ * scrolling line. `display: contents` on the shared class would have done this
+ * to the estimator too, where the parent is not a flex container at all.
+ */
+[data-public-home-r4] .r5-rooms-rail .r5-tabs {
+  display: contents;
+  margin: 0;
+}
+
+[data-public-home-r4] .r5-rooms-rail .r5-tabs > li {
+  flex: 0 0 auto;
+}
+
+/*
+ * The fourth control. Deliberately NOT a pill: it is a link to another page,
+ * and dressing it as a tab would promise a preview that never arrives.
+ */
+[data-public-home-r4] .r5-rooms-rail__all {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 4px 0 10px;
+  color: var(--pm-bronze-light, #e6c477);
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color 200ms var(--pm-ease-out, ease);
+}
+
+[data-public-home-r4] .r5-rooms-rail__all:hover {
+  color: var(--pm-ivory, #fff9f0);
+}
+
+[data-public-home-r4] .r5-rooms-rail__all:focus-visible,
+[data-public-home-r4] .r5-panel__portfolio:focus-visible {
+  outline: 2px solid var(--pm-bronze-light, #e6c477);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/*
+ * The active room's way into its own gallery.
+ *
+ * A text link with a rule under it, not a second gold button: the button that
+ * converts is pinned to the bottom of the screen, and two of them on one
+ * screen makes neither look like the primary action.
+ */
+[data-public-home-r4] .r5-panel__portfolio {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--pm-bronze-light, #e6c477);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(230, 196, 119, 0.35);
+  transition:
+    color 200ms var(--pm-ease-out, ease),
+    border-color 200ms var(--pm-ease-out, ease);
+}
+
+[data-public-home-r4] .r5-panel__portfolio:hover {
+  color: var(--pm-ivory, #fff9f0);
+  border-color: var(--pm-ivory, #fff9f0);
+}
+
+[data-public-home-r4] .r5-panel__portfolio span {
+  transition: transform 200ms var(--pm-ease-out, ease);
+}
+
+[data-public-home-r4] .r5-panel__portfolio:hover span {
+  transform: translateX(3px);
+}
+
+/* The media is a link now; it must still lay out as the block it replaced. */
+[data-public-home-r4] a.r5-panel__media {
+  display: block;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-public-home-r4] .r5-panel__portfolio span {
+    transition: none;
+  }
+
+  [data-public-home-r4] .r5-panel__portfolio:hover span {
+    transform: none;
+  }
 }
 
 .r5-tab {

@@ -46,6 +46,39 @@
   gap: 0.65rem;
 }
 
+.od-site-header__cta {
+  color: #1a120c;
+  background: var(--od-gold-light);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.od-site-header__ctaShort {
+  display: none;
+}
+
+/* The drawer's copy of it: full width, below the destinations. */
+.od-site-header__drawerCta {
+  margin-top: 0.75rem;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--od-gold-light);
+  color: #1a120c;
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
 .od-site-header__toggle {
   min-width: 44px;
   min-height: 44px;
@@ -444,9 +477,18 @@
 @media (max-width: 1023px) {
   /*
    * Shop utilities stay out of the mobile bar; they are in the drawer instead.
-   * The consultation pill that used to collapse here is gone from the header
-   * entirely — see PublicSiteHeader.
+   * The consultation pill collapses to its short label rather than
+   * disappearing — where it renders at all, it is that page's only conversion
+   * affordance above the footer.
    */
+  .od-site-header__ctaFull {
+    display: none;
+  }
+
+  .od-site-header__ctaShort {
+    display: inline;
+  }
+
   .od-site-header__util {
     display: none;
   }

@@ -70,13 +70,13 @@ describe("Phase 10C — homepage launch UX", () => {
     const contact = read("src/features/public-site/chrome/public-contact.ts");
     const header = read("src/features/public-site/chrome/PublicSiteHeader.tsx");
     /*
-     * This used to assert the homepage passed `showConsultation={false}`. The
-     * prop is gone: no public header carries a consultation pill on any
-     * surface any more, so there is nothing left to switch off. The contract
-     * the assertion protected is stronger stated directly.
+     * The homepage switches the header pill off because its bottom dock owns
+     * conversion. The shared header keeps the capability for surfaces that
+     * have no dock — asserting both is what stops the next correction from
+     * deleting it globally again.
      */
-    assert.doesNotMatch(header, /od-site-header__cta/);
-    assert.doesNotMatch(page, /showConsultation/);
+    assert.match(header, /showConsultation = true/);
+    assert.match(page, /showConsultation=\{false\}/);
     assert.match(dock, /od-disc-dock/);
     /*
      * The dock's consultation control is a BUTTON now, not an anchor to

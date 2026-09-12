@@ -120,30 +120,39 @@ describe("the public menu is Portfolio | About, plus a gated Shop", () => {
 /* 2. One header, no pill                                                      */
 /* ========================================================================== */
 
-describe("no public header carries a consultation pill", () => {
-  test("the header renders no CTA and no longer takes the prop", () => {
+describe("the consultation pill is scoped per surface", () => {
+  /*
+   * This block first asserted the pill was gone from every header. That was
+   * the wrong shape: the ask was to remove it from PORTFOLIO, and deleting the
+   * capability took it off the legal documents too — pages with no sticky bar,
+   * where it was the only conversion affordance above the footer.
+   *
+   * The contract is: a prop, defaulted ON, and OFF exactly where a page mounts
+   * the sticky conversion dock.
+   */
+  test("the header supports it and defaults to on", () => {
     const header = read(HEADER);
-    assert.doesNotMatch(code(header), /od-site-header__cta/);
-    assert.doesNotMatch(code(header), /showConsultation/);
-    assert.doesNotMatch(code(header), /PUBLIC_CONSULTATION/);
+    assert.match(header, /showConsultation = true/);
+    assert.match(code(header), /od-site-header__cta/);
+    assert.match(code(header), /PUBLIC_CONSULTATION/);
   });
 
-  test("no caller passes it either", () => {
-    for (const rel of [DARK_SHELL, HOME_SHELL, INTERIORS_PAGE]) {
-      assert.doesNotMatch(code(read(rel)), /showConsultation/, rel);
+  test("the surfaces that own their conversion pass false", () => {
+    for (const rel of [HOME_SHELL, PORTFOLIO_LAYOUT]) {
+      assert.match(read(rel), /showConsultation=\{false\}/, rel);
     }
   });
 
-  test("the pill's styles went with it", () => {
+  test("the pill's styles exist to render with", () => {
     const css = read(CHROME_CSS).replace(/\/\*[\s\S]*?\*\//g, "");
-    assert.doesNotMatch(css, /\.od-site-header__cta\s*\{/);
-    assert.doesNotMatch(css, /\.od-site-header__ctaShort\s*\{/);
+    assert.match(css, /\.od-site-header__cta\s*\{/);
+    assert.match(css, /\.od-site-header__ctaShort\s*\{/);
   });
 
-  test("the drawer offers navigation, not a second CTA", () => {
+  test("the drawer follows the same decision rather than its own", () => {
     const header = read(HEADER);
     const drawer = header.slice(header.indexOf("od-site-header__drawerNav"));
-    assert.doesNotMatch(drawer, /PUBLIC_CONSULTATION/);
+    assert.match(drawer, /\{showConsultation \? \(/);
   });
 });
 

@@ -6,6 +6,7 @@ import { OneDecoreWordmark } from "@/features/public-site/home-r4/OneDecoreWordm
 import { ShopCartLink } from "@/features/commerce/public/components/ShopCartLink";
 import {
   getPublicNavDestinations,
+  PUBLIC_CONSULTATION,
   type PublicNavCurrent,
 } from "./public-nav";
 
@@ -42,14 +43,19 @@ function isCurrent(current: PublicNavCurrent, href: string): boolean {
 /**
  * The one public header.
  *
- * NO CONSULTATION PILL, ANYWHERE
+ * THE CONSULTATION PILL IS PER-SURFACE, NOT GLOBAL
  *
- * It used to be a prop, and the homepage already passed `false`: carrying a
- * full-size gold pill next to the wordmark and the menu button cost real width
- * in a 390px bar to duplicate an action that is pinned to the bottom of the
- * screen, where a thumb actually is. Every public surface now agrees, so there
- * is nothing left to configure — the conversion path is the sticky bar, the
- * WhatsApp action and the footer link.
+ * It is off where a page already owns the conversion: the homepage and
+ * Portfolio both mount the sticky bottom bar, and carrying a full-size gold
+ * pill next to the wordmark and the menu button costs real width in a 390px
+ * bar to duplicate an action pinned where a thumb actually is.
+ *
+ * It stays ON everywhere else. A legal page has no sticky bar and no WhatsApp
+ * action, so its header pill is the only conversion affordance above the
+ * footer — removing it there would have been a different page's decision
+ * applied to a page that never asked. That is why this is a prop with a `true`
+ * default rather than a deletion: the surfaces that own their conversion opt
+ * out, and the ones that do not keep what they had.
  *
  * THE OVERLAY IS A SIBLING OF THE BAR, NOT A CHILD
  *
@@ -67,10 +73,18 @@ function isCurrent(current: PublicNavCurrent, href: string): boolean {
  */
 export function PublicSiteHeader({
   current,
+  showConsultation = true,
   showShopSearch = false,
   shopEnabled = false,
 }: {
   readonly current: PublicNavCurrent;
+  /**
+   * The header consultation pill. Default ON.
+   *
+   * Pages that mount the sticky conversion dock pass `false` — the homepage
+   * and Portfolio — because the pill would be the same action twice.
+   */
+  readonly showConsultation?: boolean;
   readonly showShopSearch?: boolean;
   /** Fail-closed Shop nav — only true when public shop gate is ON. */
   readonly shopEnabled?: boolean;
@@ -197,6 +211,16 @@ export function PublicSiteHeader({
               </Link>
             ) : null}
             {showCart ? <ShopCartLink className="od-site-header__util" /> : null}
+            {showConsultation ? (
+              <Link href={PUBLIC_CONSULTATION.href} className="od-site-header__cta">
+                <span className="od-site-header__ctaFull">
+                  {PUBLIC_CONSULTATION.label}
+                </span>
+                <span className="od-site-header__ctaShort">
+                  {PUBLIC_CONSULTATION.shortLabel}
+                </span>
+              </Link>
+            ) : null}
             <button
               ref={toggleRef}
               type="button"
@@ -269,6 +293,15 @@ export function PublicSiteHeader({
           ) : null}
           {showCart ? (
             <ShopCartLink className="od-site-header__drawerCart" />
+          ) : null}
+          {showConsultation ? (
+            <Link
+              href={PUBLIC_CONSULTATION.href}
+              className="od-site-header__drawerCta"
+              onClick={() => setOpen(false)}
+            >
+              {PUBLIC_CONSULTATION.label}
+            </Link>
           ) : null}
         </nav>
       </div>
