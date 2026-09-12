@@ -131,7 +131,7 @@ Phase 8C: Project Execution Workspace ──────────────
   • OD8C-1–OD8C-12 / ADR-0026 / DEC-0075–DEC-0076; PR #61 true merge `8f4f3ecf…`; repository/managed M1–M30; pending NONE; production not activated
 Phase 9A: Campaign Consent, Audience & Approval Foundation ──────── COMPLETE
   • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077–DEC-0080; architecture PR #62 merged `caff9d0…`; M31 managed-applied immutable; PR #63 true merge `26e6346…`; production not activated
-Phase 9B: Landing Page Lab & Experimentation ─────────────────────── M32 MANAGED APPLIED
+Phase 9B: Landing Page Lab & Experimentation ──────────────── COMPLETE / PRODUCTION LIVE
   • DEC-0084; production Landing Lab OFF
 Phase 9C: Campaign Execution, Attribution & Conversion Feedback ──── COMPLETE
   • DEC-0088; managed M1–M34 at 9C closeout; production spend OFF
@@ -209,7 +209,7 @@ Phase 8C ──► Project Execution Workspace [COMPLETE]
 Phase 9A ──► Campaign Consent, Audience & Approval Foundation [COMPLETE]
     │         • OD9A-1–OD9A-6 / ADR-0027 / DEC-0077–DEC-0080; PR #62 merged; M31 managed-applied; PR #63 true merge `26e6346…`
     ▼
-Phase 9B ──► Landing Page Lab & Experimentation [M32 MANAGED APPLIED — PRODUCTION OFF]
+Phase 9B ──► Landing Page Lab & Experimentation [COMPLETE — PRODUCTION LIVE 2026-09-12]
     │         • Landing page factory; reusable structured blocks
     │         • Campaign-specific variants; preview/publish/pause/archive
     │         • A/B/C experiments; UTM attribution; fbclid/gclid preservation
@@ -243,7 +243,9 @@ Phase 10 ──► Security Hardening, Full E2E, Performance & Deployment
     │         • 10B: COD shop public activation when owner authorizes (DEC-0095)
 ```
 
-**Landing Page Lab principles (9B):** Structured blocks (not unrestricted drag-and-drop V1); optimize for qualified outcomes; public submissions reuse controlled intake architecture; no fabricated marketing consent; production use remains Phase 10 gated.
+**Landing Page Lab principles (9B):** Structured blocks, never unrestricted HTML; optimise for qualified outcomes; public submissions reuse the one controlled intake path; no fabricated marketing consent and no unevidenced claim in any template.
+
+**Status (2026-09-12):** complete and live. The no-code builder, premium public renderer, templates, experiment UI and analytics shipped in PR #183 with no additional migration. Public serving is controlled by `ONEDECORE_LANDING_LAB_PUBLIC_ENABLED` and signed by a dedicated `ONEDECORE_LANDING_LAB_HMAC_SECRET` that is never the lead hash secret. Owner guide: [docs/launch/landing-page-lab-operations.md](launch/landing-page-lab-operations.md).
 
 ---
 
