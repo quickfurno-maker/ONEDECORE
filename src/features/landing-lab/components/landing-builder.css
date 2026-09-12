@@ -1,0 +1,719 @@
+/*
+ * Landing Page Lab — the visual builder.
+ *
+ * TOKENS COME FROM THE OPS SUITE, AND ONLY FROM THERE.
+ *
+ * Every colour resolves from a `--od-*` variable that actually exists in
+ * `admin-ops/tokens.css`, each with a dark fallback that matches rather than
+ * contradicts it. Inventing a new variable family is not a cosmetic mistake
+ * here: an undefined custom property falls back to the literal, and a set of
+ * light literals inside a dark shell produces white cards with near-white text
+ * that photograph fine and cannot be read.
+ *
+ * THE LAYOUT PROBLEM THIS SOLVES.
+ *
+ * Three panels — what you can add, what the page currently is, and what the
+ * selected section contains — plus a preview that has to be believable at
+ * phone width. On a laptop that is four things competing for horizontal space,
+ * so the preview takes the middle and the two control columns are fixed and
+ * narrow. Below 1200px the inspector moves under the preview rather than
+ * shrinking both into uselessness.
+ */
+
+/*
+ * `minmax(0, 1fr)`, not `1fr`.
+ *
+ * A grid track sized `1fr` still refuses to go below its content's min-content
+ * width. The preview frame holds a whole landing page, so that min-content is
+ * large — and the entire admin page stretched to it, pushing the header 151px
+ * past the right edge at 390px. `minmax(0, …)` lets the track shrink and hands
+ * the overflow to `.od-lb__stage`, which is the element that actually has
+ * `overflow: auto` and is supposed to scroll.
+ */
+.od-lb {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px;
+  max-width: 1680px;
+  margin: 0 auto;
+  color: var(--od-text, #f5f3ee);
+}
+
+/* ------------------------------------------------------------------ head */
+
+.od-lb__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: var(--od-radius, 12px);
+  background: var(--od-surface, #10151b);
+}
+
+.od-lb__identity {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.od-lb__title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.od-lb__sub {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--od-muted, #747d88);
+  overflow-wrap: anywhere;
+}
+
+.od-lb__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.od-lb__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--od-text-2, #b7bdc5);
+  white-space: nowrap;
+}
+
+.od-lb__pill--draft {
+  border-color: rgba(226, 168, 59, 0.4);
+  color: var(--od-warning, #e2a83b);
+}
+
+.od-lb__pill--frozen {
+  border-color: rgba(62, 142, 247, 0.4);
+  color: var(--od-blue, #3e8ef7);
+}
+
+.od-lb__pill--live {
+  border-color: rgba(53, 201, 140, 0.4);
+  color: var(--od-positive, #35c98c);
+}
+
+.od-lb__pill--dirty {
+  border-color: rgba(226, 168, 59, 0.5);
+  background: rgba(226, 168, 59, 0.12);
+  color: var(--od-warning, #e2a83b);
+}
+
+.od-lb__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+/*
+ * The header stacks on a phone.
+ *
+ * `flex: 1 1 260px` on the identity is right on a laptop and wrong at 390px,
+ * where it claimed 260 of 358 available pixels and pushed the status pills and
+ * the action buttons off the right edge — 151px of horizontal overflow on the
+ * admin page itself. Below 720px the three groups each take a full row and the
+ * auto margin that pushed actions right is dropped.
+ */
+@media (max-width: 719px) {
+  .od-lb__head {
+    display: grid;
+    gap: 12px;
+  }
+
+  .od-lb__identity {
+    flex: none;
+  }
+
+  .od-lb__actions {
+    margin-inline-start: 0;
+  }
+
+  .od-lb__actions .od-lb__btn,
+  .od-lb__actions form {
+    flex: 1 1 auto;
+  }
+}
+
+/* --------------------------------------------------------------- buttons */
+
+.od-lb__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 9px 15px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+  color: var(--od-text, #f5f3ee);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.od-lb__btn:hover:not(:disabled) {
+  background: var(--od-hover, #18202a);
+  border-color: var(--od-gold, #d7a529);
+}
+
+.od-lb__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.od-lb__btn--primary {
+  background: var(--od-gold, #d7a529);
+  border-color: var(--od-gold, #d7a529);
+  color: #14100a;
+}
+
+.od-lb__btn--primary:hover:not(:disabled) {
+  background: var(--od-gold-hover, #e6b948);
+  border-color: var(--od-gold-hover, #e6b948);
+}
+
+.od-lb__btn--danger:hover:not(:disabled) {
+  border-color: var(--od-danger, #ea6666);
+  color: var(--od-danger, #ea6666);
+}
+
+.od-lb__btn--tiny {
+  min-height: 32px;
+  padding: 5px 9px;
+  font-size: 0.74rem;
+}
+
+/* ------------------------------------------------------------ workspace */
+
+.od-lb__grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+@media (min-width: 1200px) {
+  .od-lb__grid {
+    grid-template-columns: 268px minmax(0, 1fr) 350px;
+  }
+}
+
+.od-lb__panel {
+  min-width: 0; /* same reason: a panel must be allowed to be narrow */
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: var(--od-radius, 12px);
+  background: var(--od-surface, #10151b);
+  overflow: hidden;
+}
+
+.od-lb__panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-block-end: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+}
+
+.od-lb__panel-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-lb__panel-body {
+  padding: 12px 14px;
+}
+
+.od-lb__scroll {
+  max-height: min(58vh, 620px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* On a laptop the two side columns each scroll independently. */
+@media (min-width: 1200px) {
+  .od-lb__scroll {
+    max-height: calc(100vh - 260px);
+  }
+}
+
+/* --------------------------------------------------------------- palette */
+
+.od-lb__palette {
+  display: grid;
+  gap: 6px;
+}
+
+.od-lb__add {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+  color: var(--od-text, #f5f3ee);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.od-lb__add:hover:not(:disabled) {
+  border-color: var(--od-gold, #d7a529);
+  background: var(--od-hover, #18202a);
+}
+
+.od-lb__add:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.od-lb__add-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.od-lb__add-desc {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--od-muted, #747d88);
+}
+
+/* --------------------------------------------------------------- outline */
+
+.od-lb__outline {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.od-lb__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+}
+
+.od-lb__row[data-selected="true"] {
+  border-color: var(--od-gold, #d7a529);
+  background: var(--od-hover, #18202a);
+  box-shadow: inset 3px 0 0 var(--od-gold, #d7a529);
+}
+
+.od-lb__row[data-invalid="true"] {
+  border-color: var(--od-danger, #ea6666);
+}
+
+.od-lb__pick {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 2px 2px 2px 6px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.od-lb__pick-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.od-lb__pick-note {
+  font-size: 0.7rem;
+  color: var(--od-muted, #747d88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.od-lb__row-tools {
+  display: flex;
+  gap: 2px;
+}
+
+.od-lb__icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--od-text-2, #b7bdc5);
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.od-lb__icon:hover:not(:disabled) {
+  border-color: var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  background: var(--od-surface, #10151b);
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-lb__icon:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.od-lb__icon--danger:hover:not(:disabled) {
+  color: var(--od-danger, #ea6666);
+  border-color: var(--od-danger, #ea6666);
+}
+
+/* --------------------------------------------------------------- preview */
+
+.od-lb__preview-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-block-end: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+}
+
+.od-lb__viewports {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: 999px;
+  background: var(--od-bg, #090c10);
+}
+
+.od-lb__vp {
+  min-height: 32px;
+  padding: 5px 13px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--od-text-2, #b7bdc5);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.od-lb__vp[aria-pressed="true"] {
+  background: var(--od-gold, #d7a529);
+  color: #14100a;
+}
+
+.od-lb__stage {
+  display: grid;
+  justify-items: center;
+  padding: 16px;
+  background: var(--od-bg, #090c10);
+  max-height: min(74vh, 900px);
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+/*
+ * The preview frame.
+ *
+ * A fixed pixel width with the real components inside it, NOT a scaled
+ * screenshot: at 390px the page runs its genuine mobile rules, so what the
+ * author approves is what a phone renders. The frame scrolls vertically
+ * because a landing page is taller than any admin panel.
+ */
+/*
+ * No width or max-width here.
+ *
+ * The width is set inline from the chosen viewport (390 / 768 / 1280) and must
+ * survive: a `max-width: 100%` clamped the 1280px frame back to the width of
+ * its container, so the "Desktop" preview was rendering the tablet layout
+ * while the label said 1280px — exactly the lie this scaling exists to remove.
+ */
+.od-lb__frame {
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius, 12px);
+  overflow: hidden;
+  background: #0d0a09;
+}
+
+/*
+ * Selection highlight inside the preview.
+ *
+ * Scoped under `[data-preview-surface]`, which only the builder renders. The
+ * live page never sets `data-lp-selected` and never loads this stylesheet, so
+ * there is no path by which an editing affordance reaches a visitor.
+ *
+ * Drawn with an ::after overlay rather than a border or outline on the section
+ * itself: a border would add height and shift the layout being previewed, and
+ * an outline on a full-bleed hero would be clipped by its own overflow.
+ */
+[data-preview-surface] [data-lp-block-id] {
+  position: relative;
+  cursor: pointer;
+}
+
+[data-preview-surface] [data-lp-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  outline: 2px solid var(--od-gold, #d7a529);
+  outline-offset: -2px;
+  background: rgba(215, 165, 41, 0.07);
+}
+
+/*
+ * The preview is a picture of the page, not the page.
+ *
+ * Inside the frame the sticky bar would pin itself to the admin viewport and
+ * float over the builder chrome, and `min-height: 100dvh` would make a
+ * three-section draft as tall as the screen. Both are corrected here rather
+ * than by giving the shared components a "preview" mode to reason about.
+ */
+[data-preview-surface] .lp-sticky {
+  display: none;
+}
+
+[data-preview-surface] .lp-page {
+  min-height: 0;
+  padding-block-end: 0;
+}
+
+/* ------------------------------------------------------------- inspector */
+
+.od-lb__field {
+  display: grid;
+  gap: 5px;
+  margin-block-end: 14px;
+}
+
+.od-lb__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-lb__count {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--od-muted, #747d88);
+}
+
+.od-lb__count[data-over="true"] {
+  color: var(--od-danger, #ea6666);
+}
+
+.od-lb__input,
+.od-lb__textarea,
+.od-lb__select {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-bg, #090c10);
+  color: var(--od-text, #f5f3ee);
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.od-lb__textarea {
+  min-height: 78px;
+  resize: vertical;
+}
+
+.od-lb__input:focus-visible,
+.od-lb__textarea:focus-visible,
+.od-lb__select:focus-visible {
+  outline: none;
+  border-color: var(--od-gold, #d7a529);
+  box-shadow: 0 0 0 2px rgba(215, 165, 41, 0.22);
+}
+
+.od-lb__hint {
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--od-muted, #747d88);
+}
+
+.od-lb__error {
+  display: flex;
+  gap: 6px;
+  padding: 9px 11px;
+  border: 1px solid rgba(234, 102, 102, 0.4);
+  border-radius: var(--od-radius-sm, 8px);
+  background: rgba(234, 102, 102, 0.09);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #f3b6b6;
+}
+
+.od-lb__notice {
+  display: flex;
+  gap: 6px;
+  padding: 9px 11px;
+  border: 1px solid rgba(226, 168, 59, 0.35);
+  border-radius: var(--od-radius-sm, 8px);
+  background: rgba(226, 168, 59, 0.09);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #edcb8c;
+}
+
+.od-lb__ok {
+  display: flex;
+  gap: 6px;
+  padding: 9px 11px;
+  border: 1px solid rgba(53, 201, 140, 0.35);
+  border-radius: var(--od-radius-sm, 8px);
+  background: rgba(53, 201, 140, 0.09);
+  font-size: 0.78rem;
+  color: #9ee3c3;
+}
+
+/* ------------------------------------------------------ repeatable items */
+
+.od-lb__items {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.od-lb__item {
+  padding: 11px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+}
+
+.od-lb__item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-block-end: 9px;
+}
+
+.od-lb__item-n {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--od-muted, #747d88);
+}
+
+.od-lb__section-note {
+  margin: 0 0 12px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--od-muted, #747d88);
+}
+
+.od-lb__empty {
+  padding: 22px 14px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--od-muted, #747d88);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-lb *,
+  .od-lb *::before,
+  .od-lb *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+ * Wide tables scroll themselves.
+ *
+ * The analytics table is seven columns of counts. On a phone it either
+ * overflows the page or shrinks past legibility, and the first of those moves
+ * every other element on the screen. This is the one element allowed to be
+ * wider than the viewport, inside its own scroller.
+ */
+.od-lb__tablewrap {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.od-lb__tablewrap table {
+  min-width: 460px;
+}
+
+/*
+ * The preview is rendered at its true width and scaled to fit the stage.
+ *
+ * `transform` is used rather than letting the frame shrink, so the page inside
+ * runs the CSS a browser of that width would run. The wrapper carries the
+ * scaled height because a transformed element still occupies its original
+ * height in layout, which would otherwise leave a tall gap under the preview.
+ */
+.od-lb__fit {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+/*
+ * The frame is taken out of flow.
+ *
+ * As a flex item it was both the source of the wrapper's height AND
+ * constrained by it — the wrapper measured 1px, squeezed the frame to 1px, and
+ * the preview vanished. Positioned absolutely it keeps its own content height,
+ * the wrapper carries the scaled height computed from that, and neither
+ * depends on the other's layout.
+ */
+.od-lb__frame {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 50%;
+  transform-origin: top center;
+}

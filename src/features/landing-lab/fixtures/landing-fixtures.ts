@@ -105,7 +105,7 @@ export function buildSampleLandingBlocks(): readonly LandingBlock[] {
       blockId: "lead-form",
       type: "lead_form_placeholder",
       headline: "Tell us about your project",
-      helperText: "Prebuild preview only — submissions are disabled.",
+      helperText: "Share a few details and our design team will call you back.",
       submitLabel: "Submit enquiry (disabled)",
     },
     {

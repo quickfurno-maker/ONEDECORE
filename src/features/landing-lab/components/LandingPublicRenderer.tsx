@@ -1,7 +1,37 @@
-import type { LandingBlock } from "../contracts/blocks.ts";
-import { LandingLeadLauncher } from "../components/LandingLeadLauncher.tsx";
 import { LeadConsultationHost } from "@/features/lead-intake/public/LeadConsultationHost";
+import type { LandingBlock } from "../contracts/blocks.ts";
 import type { SignedPublicationContext } from "../contracts/publication-context.ts";
+import { LandingPageBody } from "../public/LandingPageBody.tsx";
+import { LandingLiveActions } from "../public/LandingLiveActions.tsx";
+import { resolveLandingPageProjects } from "../public/resolve-landing-projects.ts";
+
+/**
+ * The live campaign landing page.
+ *
+ * WHAT THIS COMPONENT IS RESPONSIBLE FOR, AND WHAT IT IS NOT.
+ *
+ * It owns the three things that only exist on the live page: the canonical
+ * lead host carrying the signed attribution contexts, real portfolio data
+ * resolved from the public read model, and the sticky phone CTA. The markup
+ * itself belongs to `LandingPageBody`, which the admin preview renders too —
+ * so what an author approves in the builder is the same component tree that
+ * gets published, not a second description of it.
+ *
+ * WHY IT STAYS A SERVER COMPONENT.
+ *
+ * Resolving portfolio slugs is a cached server read, and doing it here means
+ * the public HTML arrives complete: no client fetch, no layout shift as
+ * project cards appear, nothing for an ad-blocker or a slow connection to
+ * interrupt. The only client code on the page is the CTA behaviour and the
+ * consultation sheet.
+ *
+ * ATTRIBUTION IS CARRIED, NEVER CONSTRUCTED.
+ *
+ * `signedContext` is minted and verified server-side. This component only
+ * hands it to `LeadConsultationHost`, which holds it until a lead is actually
+ * submitted. Nothing here reads it, derives from it, or exposes it to page
+ * code.
+ */
 
 interface LandingPublicRendererProps {
   readonly blocks: readonly LandingBlock[];
@@ -9,150 +39,23 @@ interface LandingPublicRendererProps {
   readonly campaignExecutionContext?: unknown;
 }
 
-function PublicBlock({
-  block,
-  signedContext,
-  campaignExecutionContext,
-}: {
-  readonly block: LandingBlock;
-  readonly signedContext: SignedPublicationContext;
-  readonly campaignExecutionContext?: unknown;
-}) {
-  switch (block.type) {
-    case "hero":
-      return (
-        <section className="space-y-3">
-          <h1 className="font-serif text-4xl text-neutral-50">{block.headline}</h1>
-          {block.subheadline ? <p className="text-neutral-300">{block.subheadline}</p> : null}
-          <p className="text-amber-200">{block.primaryCtaLabel}</p>
-        </section>
-      );
-    case "trust_proof":
-      return (
-        <section>
-          <h2 className="text-lg font-medium text-neutral-100">{block.title}</h2>
-          <ul className="mt-3 grid gap-3 sm:grid-cols-3">
-            {block.items.map((item) => (
-              <li key={`${block.blockId}-${item.label}`} className="rounded border border-neutral-800 p-3">
-                <span className="block text-xs uppercase text-neutral-500">{item.label}</span>
-                <span className="text-neutral-100">{item.value}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      );
-    case "service_highlights":
-      return (
-        <section>
-          <h2 className="text-lg font-medium text-neutral-100">{block.title}</h2>
-          <ul className="mt-3 space-y-3">
-            {block.items.map((item) => (
-              <li key={`${block.blockId}-${item.title}`}>
-                <h3 className="font-medium text-neutral-100">{item.title}</h3>
-                <p className="text-sm text-neutral-400">{item.description}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      );
-    case "process":
-      return (
-        <section>
-          <h2 className="text-lg font-medium text-neutral-100">{block.title}</h2>
-          <ol className="mt-3 space-y-3">
-            {block.steps.map((step, index) => (
-              <li key={`${block.blockId}-${step.title}`}>
-                <p className="text-xs uppercase text-neutral-500">Step {index + 1}</p>
-                <h3 className="font-medium text-neutral-100">{step.title}</h3>
-                <p className="text-sm text-neutral-400">{step.description}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      );
-    case "portfolio_preview":
-      return (
-        <section>
-          <h2 className="text-lg font-medium text-neutral-100">{block.title}</h2>
-          <p className="mt-2 text-sm text-neutral-400">{block.projectSlugs.join(", ")}</p>
-          {block.ctaLabel ? <p className="mt-2 text-amber-200">{block.ctaLabel}</p> : null}
-        </section>
-      );
-    case "testimonials":
-      return (
-        <section>
-          <h2 className="text-lg font-medium text-neutral-100">{block.title}</h2>
-          <ul className="mt-3 space-y-3">
-            {block.items.map((item) => (
-              <li key={`${block.blockId}-${item.author}`} className="rounded border border-neutral-800 p-3">
-                <p className="text-neutral-200">{item.quote}</p>
-                <p className="mt-2 text-xs text-neutral-500">
-                  {item.author}
-                  {item.role ? ` · ${item.role}` : ""}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      );
-    case "faq":
-      return (
-        <section>
-          <h2 className="text-lg font-medium text-neutral-100">{block.title}</h2>
-          <dl className="mt-3 space-y-3">
-            {block.items.map((item) => (
-              <div key={`${block.blockId}-${item.question}`}>
-                <dt className="font-medium text-neutral-100">{item.question}</dt>
-                <dd className="text-sm text-neutral-400">{item.answer}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      );
-    case "offer_cta":
-      return (
-        <section className="rounded border border-amber-500/30 p-4">
-          <h2 className="text-lg font-medium text-neutral-100">{block.headline}</h2>
-          <p className="mt-2 text-sm text-neutral-300">{block.body}</p>
-          <p className="mt-2 text-amber-200">{block.ctaLabel}</p>
-        </section>
-      );
-    case "lead_form_placeholder":
-      /*
-       * A launcher, not a form. The signed contexts it needs are held by the
-       * `LeadConsultationHost` this renderer is wrapped in, so the block itself
-       * carries no lead state and no second contract.
-       */
-      return <LandingLeadLauncher block={block} />;
-    case "footer":
-      return (
-        <footer className="border-t border-neutral-800 pt-4 text-sm text-neutral-500">
-          <p>{block.legalLine}</p>
-          {block.contactEmail ? <p>{block.contactEmail}</p> : null}
-          {block.contactPhone ? <p>{block.contactPhone}</p> : null}
-        </footer>
-      );
-    default: {
-      const _exhaustive: never = block;
-      return _exhaustive;
-    }
-  }
-}
-
-/**
- * A published landing page, wrapped in the one canonical consultation host.
- *
- * The host is what makes "one form" true here: the page's lead block opens the
- * same guided v4 sheet the rest of the site opens, and the signed publication
- * and campaign contexts ride along in the host rather than in a form this
- * feature owns. Landing Lab therefore keeps its trusted attribution without
- * keeping a second lead implementation.
- */
-export function LandingPublicRenderer({
+export async function LandingPublicRenderer({
   blocks,
   signedContext,
   campaignExecutionContext,
 }: LandingPublicRendererProps) {
+  const projectsByBlockId = await resolveLandingPageProjects(blocks);
+
+  /*
+   * The sticky CTA reuses the enquiry block's own label, so the phone bar and
+   * the section it scrolls to never disagree. No enquiry block, no sticky bar.
+   */
+  const enquiryBlock = blocks.find(
+    (block) => block.type === "lead_form_placeholder"
+  );
+  const stickyCtaLabel =
+    enquiryBlock?.type === "lead_form_placeholder" ? enquiryBlock.submitLabel : null;
+
   return (
     <LeadConsultationHost
       trustedContexts={{
@@ -160,16 +63,13 @@ export function LandingPublicRenderer({
         campaignExecutionContext,
       }}
     >
-      <div className="space-y-10">
-        {blocks.map((block) => (
-          <PublicBlock
-            key={block.blockId}
-            block={block}
-            signedContext={signedContext}
-            campaignExecutionContext={campaignExecutionContext}
-          />
-        ))}
-      </div>
+      <LandingLiveActions>
+        <LandingPageBody
+          blocks={blocks}
+          projectsByBlockId={projectsByBlockId}
+          stickyCtaLabel={stickyCtaLabel}
+        />
+      </LandingLiveActions>
     </LeadConsultationHost>
   );
 }

@@ -1,0 +1,839 @@
+/*
+ * ONEDECORE campaign landing pages — public presentation.
+ *
+ * WHY THIS HAS ITS OWN TOKEN NAMESPACE.
+ *
+ * The same components render in two places: the live `/lp/<slug>` page, and
+ * the preview inside the admin builder. The admin shell is `.od-ops`, which
+ * redefines `--od-gold`, `--od-radius` and friends for the ops palette. A
+ * renderer that read `--od-*` directly would therefore look one way in
+ * production and a slightly different way in the preview that is supposed to
+ * be showing the author what they are about to publish — the single most
+ * useless kind of preview.
+ *
+ * So every value here resolves from `--lp-*`, declared on `.lp-page` itself
+ * and seeded from the public theme's `--od-*` tokens with a literal fallback.
+ * Wherever `.lp-page` is mounted, it carries its own palette.
+ *
+ * WHY IT IS NOT THE HOMEPAGE.
+ *
+ * A campaign page is not a smaller website. Paid traffic arrives with one
+ * question and a short attention span, so there is no site navigation to
+ * wander into, one clear action repeated at the points where intent peaks,
+ * and far fewer sections than the homepage. The visual language is shared;
+ * the structure deliberately is not.
+ *
+ * MOBILE IS THE DESIGN TARGET, NOT AN ADAPTATION.
+ * Most ad clicks are phones. Every rule here starts at the narrow end and
+ * widens; nothing relies on hover; every tap target clears 44px.
+ */
+
+.lp-page {
+  /* ---- palette, seeded from the public theme ---- */
+  --lp-bg: var(--od-bg-page, #0d0a09);
+  --lp-bg-deep: var(--od-bg-deepest, #080706);
+  --lp-bg-section: var(--od-bg-section, #120e0d);
+  --lp-bg-raised: var(--od-bg-raised, #181311);
+  --lp-bg-elevated: var(--od-bg-elevated, #201916);
+
+  --lp-text: var(--od-text-primary, #fff9f0);
+  --lp-text-2: var(--od-text-secondary, #e6d8c8);
+  --lp-muted: var(--od-text-muted, #b5a592);
+  --lp-subtle: var(--od-text-subtle, #9b8b79);
+
+  --lp-gold: var(--od-gold, #d8a24a);
+  --lp-gold-light: var(--od-gold-light, #f2cd83);
+  --lp-gold-soft: var(--od-gold-soft, rgba(216, 162, 74, 0.16));
+
+  --lp-line: var(--od-line, rgba(255, 249, 240, 0.1));
+  --lp-line-strong: var(--od-line-strong, rgba(255, 249, 240, 0.2));
+  --lp-glass: var(--od-surface-glass, rgba(255, 249, 240, 0.045));
+
+  --lp-radius: 18px;
+  --lp-radius-sm: 12px;
+  --lp-shadow: 0 24px 64px rgba(6, 4, 4, 0.52);
+
+  /*
+   * One fluid rhythm for the whole page.
+   *
+   * Section padding and the headline scale both interpolate with the
+   * viewport, so 320px and 1920px are two ends of one curve rather than a
+   * stack of breakpoint overrides that each need their own review.
+   */
+  --lp-gutter: clamp(20px, 5vw, 64px);
+  --lp-section-y: clamp(56px, 9vw, 128px);
+  --lp-measure: 68ch;
+  --lp-max: 1180px;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  margin: 0;
+  background: var(--lp-bg);
+  color: var(--lp-text);
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip; /* a stray wide child must never scroll the page sideways */
+}
+
+.lp-page *,
+.lp-page *::before,
+.lp-page *::after {
+  box-sizing: border-box;
+}
+
+.lp-page :focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--lp-bg), 0 0 0 4px var(--lp-gold);
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-page *,
+  .lp-page *::before,
+  .lp-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------------------- structure */
+
+.lp-section {
+  padding-block: var(--lp-section-y);
+  padding-inline: var(--lp-gutter);
+}
+
+.lp-section--tint {
+  background: var(--lp-bg-section);
+}
+
+.lp-section__inner {
+  max-width: var(--lp-max);
+  margin-inline: auto;
+}
+
+.lp-eyebrow {
+  margin: 0 0 14px;
+  font-size: clamp(0.68rem, 1.6vw, 0.76rem);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lp-gold);
+}
+
+.lp-h2 {
+  margin: 0;
+  font-size: clamp(1.55rem, 4.4vw, 2.6rem);
+  line-height: 1.14;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  color: var(--lp-text);
+  text-wrap: balance;
+}
+
+.lp-lede {
+  margin: 16px 0 0;
+  max-width: var(--lp-measure);
+  font-size: clamp(0.98rem, 2.1vw, 1.12rem);
+  line-height: 1.62;
+  color: var(--lp-muted);
+}
+
+/* ----------------------------------------------------------------- hero */
+
+/*
+ * The hero sizes itself to its content unless there is a photograph.
+ *
+ * `min-height: 92svh` exists so a hero IMAGE gets the screen it deserves.
+ * Applied unconditionally it left a page with no image opening on most of a
+ * phone screen of empty black above the headline — which reads as a broken
+ * page, not a restrained one. `:has()` makes the tall treatment conditional on
+ * there actually being something tall to show.
+ */
+.lp-hero {
+  position: relative;
+  display: grid;
+  align-content: end;
+  min-height: auto;
+  padding: var(--lp-gutter);
+  padding-block-start: clamp(72px, 18vw, 160px);
+  padding-block-end: clamp(40px, 8vw, 88px);
+  overflow: hidden;
+  background: var(--lp-bg-deep);
+}
+
+.lp-hero:has(.lp-hero__media) {
+  min-height: min(92svh, 760px);
+}
+
+.lp-hero__media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.lp-hero__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 42%;
+}
+
+/*
+ * The readability treatment.
+ *
+ * A single flat scrim over a photograph either washes out the image or leaves
+ * the text unreadable over its bright regions. Two layers instead: a vertical
+ * ramp that is dense where the text sits and clear at the top, plus a gentle
+ * overall tint that holds contrast over an unpredictable photo. The page
+ * cannot know what the author uploads, so the treatment has to survive a
+ * white kitchen as well as a dark living room.
+ */
+.lp-hero__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(
+      to top,
+      rgba(8, 7, 6, 0.94) 0%,
+      rgba(8, 7, 6, 0.82) 28%,
+      rgba(8, 7, 6, 0.45) 58%,
+      rgba(8, 7, 6, 0.28) 100%
+    ),
+    linear-gradient(to right, rgba(8, 7, 6, 0.5), rgba(8, 7, 6, 0.12));
+}
+
+.lp-hero__inner {
+  position: relative;
+  z-index: 2;
+  max-width: var(--lp-max);
+  width: 100%;
+  margin-inline: auto;
+}
+
+.lp-hero__brand {
+  margin: 0 0 clamp(20px, 5vw, 40px);
+  font-size: clamp(0.72rem, 1.8vw, 0.82rem);
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--lp-text);
+}
+
+.lp-hero__title {
+  margin: 0;
+  max-width: 18ch;
+  font-size: clamp(2.1rem, 8.2vw, 4.4rem);
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  text-wrap: balance;
+  color: var(--lp-text);
+}
+
+.lp-hero__sub {
+  margin: clamp(16px, 3.5vw, 24px) 0 0;
+  max-width: 46ch;
+  font-size: clamp(1rem, 2.6vw, 1.22rem);
+  line-height: 1.55;
+  color: var(--lp-text-2);
+}
+
+.lp-hero__actions {
+  margin-block-start: clamp(26px, 6vw, 40px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* --------------------------------------------------------------- button */
+
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 14px 26px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.lp-btn--primary {
+  background: var(--lp-gold);
+  color: #1a1206;
+}
+
+.lp-btn--secondary {
+  background: transparent;
+  border-color: var(--lp-line-strong);
+  color: var(--lp-text);
+}
+
+@media (hover: hover) {
+  .lp-btn--primary:hover {
+    background: var(--lp-gold-light);
+    transform: translateY(-1px);
+  }
+  .lp-btn--secondary:hover {
+    border-color: var(--lp-gold);
+    color: var(--lp-gold-light);
+  }
+}
+
+.lp-btn:active {
+  transform: translateY(0);
+}
+
+/* On the narrowest phones a 26px-padded pill can overflow; let it fill. */
+@media (max-width: 380px) {
+  .lp-hero__actions .lp-btn,
+  .lp-offer__actions .lp-btn,
+  .lp-enquiry__actions .lp-btn {
+    width: 100%;
+  }
+}
+
+/* ---------------------------------------------------------- trust proof */
+
+.lp-trust__grid {
+  display: grid;
+  gap: 12px;
+  margin-block-start: clamp(24px, 5vw, 40px);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 560px) {
+  .lp-trust__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .lp-trust__grid {
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  }
+}
+
+.lp-trust__item {
+  padding: clamp(18px, 3.5vw, 26px);
+  border: 1px solid var(--lp-line);
+  border-radius: var(--lp-radius-sm);
+  background: var(--lp-glass);
+}
+
+.lp-trust__label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lp-gold);
+}
+
+.lp-trust__value {
+  display: block;
+  margin-block-start: 8px;
+  font-size: clamp(1rem, 2.2vw, 1.12rem);
+  line-height: 1.45;
+  color: var(--lp-text);
+}
+
+/* ------------------------------------------------------------- services */
+
+.lp-services__grid {
+  display: grid;
+  gap: 14px;
+  margin-block-start: clamp(24px, 5vw, 44px);
+  grid-template-columns: 1fr;
+  list-style: none;
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .lp-services__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1000px) {
+  .lp-services__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.lp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: clamp(20px, 3.6vw, 30px);
+  border: 1px solid var(--lp-line);
+  border-radius: var(--lp-radius);
+  background: var(--lp-bg-raised);
+}
+
+.lp-card__icon {
+  align-self: flex-start;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--lp-gold-soft);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lp-gold-light);
+}
+
+.lp-card__title {
+  margin: 0;
+  font-size: clamp(1.08rem, 2.4vw, 1.24rem);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--lp-text);
+}
+
+.lp-card__body {
+  margin: 0;
+  font-size: 0.96rem;
+  line-height: 1.6;
+  color: var(--lp-muted);
+}
+
+/* -------------------------------------------------------------- process */
+
+.lp-process__list {
+  counter-reset: lp-step;
+  display: grid;
+  gap: 0;
+  margin-block-start: clamp(24px, 5vw, 44px);
+  padding: 0;
+  list-style: none;
+}
+
+.lp-process__item {
+  counter-increment: lp-step;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: clamp(16px, 3vw, 28px);
+  padding-block: clamp(20px, 3.4vw, 30px);
+  border-block-start: 1px solid var(--lp-line);
+}
+
+.lp-process__item:first-child {
+  border-block-start: none;
+  padding-block-start: 0;
+}
+
+.lp-process__num {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--lp-gold-soft);
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--lp-gold);
+}
+
+.lp-process__num::before {
+  content: counter(lp-step, decimal-leading-zero);
+}
+
+.lp-process__title {
+  margin: 0;
+  font-size: clamp(1.05rem, 2.3vw, 1.2rem);
+  font-weight: 600;
+  color: var(--lp-text);
+}
+
+.lp-process__body {
+  margin: 8px 0 0;
+  max-width: var(--lp-measure);
+  font-size: 0.96rem;
+  line-height: 1.6;
+  color: var(--lp-muted);
+}
+
+/* ------------------------------------------------------------ portfolio */
+
+.lp-projects__grid {
+  display: grid;
+  gap: 14px;
+  margin-block-start: clamp(24px, 5vw, 44px);
+  grid-template-columns: 1fr;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 620px) {
+  .lp-projects__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .lp-projects__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.lp-project {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--lp-line);
+  border-radius: var(--lp-radius);
+  background: var(--lp-bg-raised);
+}
+
+.lp-project__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.lp-project__media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  max-width: 100%;
+  overflow: hidden;
+  background: var(--lp-bg-elevated);
+}
+
+.lp-project__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 420ms ease;
+}
+
+@media (hover: hover) {
+  .lp-project__link:hover .lp-project__media img {
+    transform: scale(1.035);
+  }
+}
+
+.lp-project__body {
+  padding: clamp(14px, 2.6vw, 20px);
+}
+
+.lp-project__title {
+  margin: 0;
+  font-size: clamp(1rem, 2.1vw, 1.1rem);
+  font-weight: 600;
+  line-height: 1.32;
+  color: var(--lp-text);
+}
+
+.lp-project__meta {
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--lp-subtle);
+}
+
+.lp-projects__cta {
+  margin-block-start: clamp(22px, 4vw, 34px);
+}
+
+/* ---------------------------------------------------------- testimonials */
+
+.lp-quotes__grid {
+  display: grid;
+  gap: 14px;
+  margin-block-start: clamp(24px, 5vw, 44px);
+  grid-template-columns: 1fr;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 760px) {
+  .lp-quotes__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.lp-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(22px, 4vw, 34px);
+  border: 1px solid var(--lp-line);
+  border-radius: var(--lp-radius);
+  background: var(--lp-bg-raised);
+}
+
+.lp-quote__mark {
+  font-size: 2.2rem;
+  line-height: 0.6;
+  color: var(--lp-gold-soft);
+}
+
+.lp-quote__text {
+  margin: 0;
+  font-size: clamp(1rem, 2.2vw, 1.1rem);
+  line-height: 1.62;
+  color: var(--lp-text-2);
+}
+
+.lp-quote__by {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--lp-subtle);
+}
+
+.lp-quote__name {
+  color: var(--lp-text);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ faq */
+
+.lp-faq__list {
+  margin-block-start: clamp(24px, 5vw, 40px);
+  border-block-start: 1px solid var(--lp-line);
+}
+
+.lp-faq__item {
+  border-block-end: 1px solid var(--lp-line);
+}
+
+.lp-faq__q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 60px;
+  padding-block: 18px;
+  font-size: clamp(1rem, 2.2vw, 1.1rem);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--lp-text);
+  cursor: pointer;
+  list-style: none;
+}
+
+.lp-faq__q::-webkit-details-marker {
+  display: none;
+}
+
+.lp-faq__sign {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--lp-line-strong);
+  border-radius: 999px;
+  color: var(--lp-gold);
+  transition: transform 200ms ease;
+}
+
+.lp-faq__item[open] .lp-faq__sign {
+  transform: rotate(45deg);
+}
+
+.lp-faq__a {
+  margin: 0;
+  padding-block-end: 22px;
+  max-width: var(--lp-measure);
+  font-size: 0.98rem;
+  line-height: 1.66;
+  color: var(--lp-muted);
+}
+
+/* ---------------------------------------------------------------- offer */
+
+.lp-offer__inner {
+  max-width: var(--lp-max);
+  margin-inline: auto;
+  padding: clamp(30px, 6vw, 68px);
+  border: 1px solid var(--lp-gold-soft);
+  border-radius: var(--lp-radius);
+  background:
+    radial-gradient(120% 140% at 8% 0%, rgba(216, 162, 74, 0.14), transparent 62%),
+    var(--lp-bg-raised);
+}
+
+.lp-offer__title {
+  margin: 0;
+  max-width: 22ch;
+  font-size: clamp(1.7rem, 5vw, 2.8rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  text-wrap: balance;
+  color: var(--lp-text);
+}
+
+.lp-offer__body {
+  margin: 16px 0 0;
+  max-width: 52ch;
+  font-size: clamp(0.98rem, 2.1vw, 1.1rem);
+  line-height: 1.62;
+  color: var(--lp-text-2);
+}
+
+.lp-offer__actions {
+  margin-block-start: clamp(24px, 5vw, 36px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* -------------------------------------------------------------- enquiry */
+
+.lp-enquiry__inner {
+  max-width: 760px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.lp-enquiry__title {
+  margin: 0;
+  font-size: clamp(1.7rem, 5vw, 2.6rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  text-wrap: balance;
+  color: var(--lp-text);
+}
+
+.lp-enquiry__body {
+  margin: 16px auto 0;
+  max-width: 46ch;
+  font-size: clamp(0.98rem, 2.1vw, 1.1rem);
+  line-height: 1.62;
+  color: var(--lp-muted);
+}
+
+.lp-enquiry__actions {
+  margin-block-start: clamp(24px, 5vw, 34px);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* --------------------------------------------------------------- footer */
+
+.lp-footer {
+  padding-block: clamp(34px, 6vw, 56px);
+  padding-inline: var(--lp-gutter);
+  border-block-start: 1px solid var(--lp-line);
+  background: var(--lp-bg-deep);
+}
+
+.lp-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  align-items: center;
+  justify-content: space-between;
+  max-width: var(--lp-max);
+  margin-inline: auto;
+}
+
+.lp-footer__legal {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--lp-subtle);
+}
+
+.lp-footer__contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-footer__contact a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.9rem;
+  color: var(--lp-text-2);
+  text-decoration: none;
+  border-block-end: 1px solid transparent;
+}
+
+@media (hover: hover) {
+  .lp-footer__contact a:hover {
+    color: var(--lp-gold-light);
+    border-block-end-color: var(--lp-gold-soft);
+  }
+}
+
+/* --------------------------------------------------------- sticky action */
+
+/*
+ * The persistent phone CTA.
+ *
+ * Only below 1080px, where the hero button has scrolled away and there is no
+ * room for a second column. It sits above the safe-area inset, and the cookie
+ * banner — which owns the same corner of the screen — is offset above it by
+ * `ad-consent-banner.css`, so the two never stack on top of each other.
+ */
+.lp-sticky {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 40;
+  display: none;
+  padding: 10px var(--lp-gutter) calc(10px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--lp-bg-deep) 68%, rgba(8, 7, 6, 0));
+}
+
+/*
+ * The cookie banner wins that corner while it is up.
+ *
+ * `ad-consent-banner.css` lifts itself clear of a sticky bar by a fixed 68px,
+ * measured against the HOMEPAGE's `.pm-sticky`. This page's bar is a different
+ * element it knows nothing about, so the two overlapped at the bottom of the
+ * screen — the enquiry CTA half-hidden behind the consent choice.
+ *
+ * Rather than teach one file the other's height, the sticky CTA stands down
+ * while a decision is pending. It costs nothing: the visitor has just arrived,
+ * the hero CTA is still on screen, and the bar returns the moment they answer.
+ */
+body:has([data-od-cookie-banner]) .lp-sticky {
+  display: none;
+}
+
+@media (max-width: 1079px) {
+  .lp-sticky {
+    display: block;
+  }
+  /* Room for the bar, so the footer is never trapped underneath it. */
+  .lp-page {
+    padding-block-end: 84px;
+  }
+}
+
+.lp-sticky .lp-btn {
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------- print */
+
+@media print {
+  .lp-sticky {
+    display: none;
+  }
+}

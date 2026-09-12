@@ -53,7 +53,7 @@ export function PageBlockEditor({
           ) : null}
           {!readOnly ? (
             <p className="text-xs text-neutral-500">
-              Editing is limited to structured fields in prebuild. Raw HTML is not supported.
+              Editing is limited to structured fields. Raw HTML is not supported.
             </p>
           ) : (
             <p className="text-xs text-neutral-500">Frozen version — read only.</p>

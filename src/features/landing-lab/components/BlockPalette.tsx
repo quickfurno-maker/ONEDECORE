@@ -24,7 +24,7 @@ export function BlockPalette({ readOnly = false }: BlockPaletteProps) {
     <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4" data-testid="block-palette">
       <h2 className="text-sm font-medium text-neutral-100">Block palette</h2>
       <p className="mt-1 text-xs text-neutral-400">
-        Structured blocks only. Drag-and-drop is not enabled in prebuild.
+        Structured sections only. Raw HTML and scripts are never accepted.
       </p>
       <ul className="mt-3 space-y-2">
         {LANDING_BLOCK_TYPES.map((type) => (
