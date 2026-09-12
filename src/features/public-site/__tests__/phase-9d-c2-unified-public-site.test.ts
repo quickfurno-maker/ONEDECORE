@@ -143,14 +143,15 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(copy, /PUBLIC_CONSULTATION_BY_SERVICE\["modular-kitchens"\]/);
     assert.match(copy, /PUBLIC_CONSULTATION_BY_SERVICE\["custom-wardrobes"\]/);
     /*
-     * The Interiors experience is the site root now, so the nav item that
-     * used to point at `/interiors` points at `/`. What this test exists to
-     * prevent is unchanged: a SECOND consultation path living on the interiors
-     * URL, which is the assertion below.
+     * The Interiors nav item is gone entirely — it pointed at `/`, which is
+     * the wordmark's destination, so it was a repeated Home item wearing a
+     * category's name. What this test exists to prevent is unchanged: a SECOND
+     * consultation path living on the interiors URL, which is the assertion
+     * below.
      */
-    assert.match(
+    assert.doesNotMatch(
       read("src/features/public-site/chrome/public-nav.ts"),
-      /href: "\/"/
+      /href: "\/interiors"/
     );
     assert.doesNotMatch(copy, /\/interiors#consultation/);
     assert.doesNotMatch(copy, /\/interiors\?service=/);
@@ -212,11 +213,11 @@ describe("Public site simplification — discovery IA", () => {
     assert.match(nav, /getPublicNavDestinations/);
     assert.deepEqual(
       getPublicNavDestinations(false).map((row) => row.id),
-      ["interiors", "portfolio", "about", "contact"]
+      ["portfolio", "about"]
     );
     assert.deepEqual(
       getPublicNavDestinations(true).map((row) => row.id),
-      ["interiors", "shop", "portfolio", "about", "contact"]
+      ["portfolio", "about", "shop"]
     );
     assert.ok(!existsSync(join(root, "src/features/public-site/discovery/DiscoveryPuneCoverage.tsx")));
     assert.ok(HOME_PUNE_AREAS.includes("Kharadi"));
@@ -322,23 +323,29 @@ describe("Public site simplification — interiors and portfolio", () => {
 });
 
 describe("Public site simplification — nav seo and shop", () => {
-  test("locked nav is Interiors | Shop | Portfolio | About | Contact", () => {
+  test("locked nav is Portfolio | About, plus a gated Shop", () => {
     const nav = read("src/features/public-site/chrome/public-nav.ts");
     const header = read("src/features/public-site/chrome/PublicSiteHeader.tsx");
     /*
      * No Home item. The wordmark links to `/` and is the affordance every
      * visitor already expects; a menu slot spent repeating it is expensive on
      * mobile and buys nothing.
+     *
+     * INTERIORS AND CONTACT LEFT FOR THE SAME REASON, ONE STEP FURTHER ON.
+     *
+     * Interiors pointed at `/` — the wordmark's destination — so it WAS the
+     * repeated Home item, wearing a category's name. Contact pointed at
+     * `/#contact`, which the sticky consultation bar, the WhatsApp action and
+     * the footer link all already reach. Both were slots spent restating
+     * something adjacent, which on a 390px bar is the expensive kind of
+     * duplication.
+     *
+     * Neither destination was removed: `/` is the homepage, `/interiors` is
+     * still a 308 to it, and `#contact` is still the consultation band.
      */
     assert.doesNotMatch(nav, /label: "Home"/);
-    assert.match(nav, /label: "Contact"/);
-    /*
-     * Interiors keeps its label and takes the root as its destination. It
-     * names a business category — the other being Shop — where "Home" would
-     * name a position in the site, which the wordmark already covers.
-     */
-    assert.match(nav, /label: "Interiors"/);
-    assert.match(nav, /href: "\/"/);
+    assert.doesNotMatch(nav, /label: "Contact"/);
+    assert.doesNotMatch(nav, /label: "Interiors"/);
     assert.doesNotMatch(nav, /href: "\/interiors"/);
     assert.match(nav, /label: "Portfolio"/);
     assert.match(nav, /label: "About"/);

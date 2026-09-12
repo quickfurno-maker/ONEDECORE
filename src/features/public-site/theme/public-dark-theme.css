@@ -186,9 +186,13 @@ body:has([data-public-home-r4]) {
     display: inline;
   }
 
-  [data-public-dark-theme] .od-portfolio-chrome .od-wordmark__meta {
-    display: none;
-  }
+  /*
+   * The rule that used to hide the brand tagline here is gone. Nothing renders
+   * `.od-portfolio-chrome` any more — the shared header replaced it — so this
+   * was dead, but it was dead code that hid MADE FOR PUNE on narrow screens,
+   * which is precisely the bug the chrome pass was fixing elsewhere. Leaving it
+   * would have left a way for it to come back.
+   */
 
   [data-public-dark-theme] .od-portfolio-chrome .od-wordmark[data-size="nav"] .od-wordmark__one,
   [data-public-dark-theme] .od-portfolio-chrome .od-wordmark[data-size="nav"] .od-wordmark__decore {

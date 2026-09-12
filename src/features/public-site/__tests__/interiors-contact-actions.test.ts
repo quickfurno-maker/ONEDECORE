@@ -154,6 +154,12 @@ describe("the public phone number is configured, validated, or absent", () => {
 
 describe("the Interiors header carries navigation, not a second CTA", () => {
   test("the shell turns the consultation pill off rather than forking the header", () => {
+    /*
+     * The homepage mounts `HomeStickyActions`, whose primary button is the
+     * same consultation opener, so the header pill would be that action twice.
+     * It is switched off here rather than removed from the shared header:
+     * pages without a sticky bar still need theirs.
+     */
     const shell = code(read(SHELL));
     assert.match(shell, /showConsultation=\{false\}/);
     // Still the shared header, still the interiors current state, still gated.

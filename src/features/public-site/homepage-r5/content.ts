@@ -137,12 +137,19 @@ export interface RoomOption {
   readonly priorities: readonly [string, string, string];
   readonly image: string | null;
   readonly imageAlt: string;
+  /** The Portfolio gallery this room opens. */
+  readonly portfolioHref: string;
+  /** The link's visible text, e.g. "View Kitchen Portfolio". */
+  readonly portfolioLabel: string;
 }
 
 export const R5_ROOMS_COPY = {
   eyebrow: "Room by room",
   heading: "Explore your home, room by room",
   supporting: "Tap a space to see what matters most in planning it.",
+  /** The way out of the preview and into the real galleries. */
+  allProjectsLabel: "View All Projects",
+  allProjectsHref: "/portfolio?view=projects",
 } as const;
 
 /**
@@ -163,15 +170,28 @@ export const R5_ROOMS_COPY = {
  * supplied pack ships those pairs as byte-identical images, so this is the
  * owner's mapping rendered faithfully, not an accident.
  */
+/**
+ * The rooms, in the Portfolio's own public order, each pointing at its gallery.
+ *
+ * WARDROBES IS NOT HERE, AND THAT IS THE POINT
+ *
+ * It used to be the fourth option. There is no Wardrobes tab in the Portfolio
+ * — the taxonomy is Kitchen, Living Room, Bedroom and Projects — so the one
+ * room a visitor could pick that led nowhere was the one this section was
+ * inviting them to explore. Inventing `?view=wardrobes` to fix that would have
+ * minted a public URL for a category the database does not have; removing the
+ * option keeps the section honest about what it can actually show.
+ *
+ * Wardrobe planning did not disappear with it: it is still a priority under
+ * Bedroom, which is where a visitor plans one.
+ *
+ * THE ORDER IS THE PORTFOLIO'S ORDER
+ *
+ * Kitchen first, because that is what the Portfolio answers at `/portfolio`.
+ * A section that previews rooms in one order and hands off to galleries in
+ * another asks the visitor to re-find their place at the moment they arrive.
+ */
 export const R5_ROOMS: readonly RoomOption[] = [
-  {
-    id: "living-room",
-    label: "Living Room",
-    title: "Living Room",
-    priorities: ["Comfortable layout flow", "TV and storage planning", "Layered lighting"],
-    image: PM_ASSETS.interiorLivingRoom.path,
-    imageAlt: PM_ASSETS.interiorLivingRoom.alt,
-  },
   {
     id: "kitchen",
     label: "Kitchen",
@@ -179,6 +199,19 @@ export const R5_ROOMS: readonly RoomOption[] = [
     priorities: ["Efficient work flow", "Storage zones", "Durable finishes"],
     image: PM_ASSETS.interiorModularKitchen.path,
     imageAlt: PM_ASSETS.interiorModularKitchen.alt,
+    // Kitchen is the Portfolio's default view, so it carries no parameter.
+    portfolioHref: "/portfolio",
+    portfolioLabel: "View Kitchen Portfolio",
+  },
+  {
+    id: "living-room",
+    label: "Living Room",
+    title: "Living Room",
+    priorities: ["Comfortable layout flow", "TV and storage planning", "Layered lighting"],
+    image: PM_ASSETS.interiorLivingRoom.path,
+    imageAlt: PM_ASSETS.interiorLivingRoom.alt,
+    portfolioHref: "/portfolio?view=living-room",
+    portfolioLabel: "View Living Room Portfolio",
   },
   {
     id: "bedroom",
@@ -187,14 +220,8 @@ export const R5_ROOMS: readonly RoomOption[] = [
     priorities: ["Restful layout", "Wardrobe planning", "Practical lighting"],
     image: PM_ASSETS.interiorBedroom.path,
     imageAlt: PM_ASSETS.interiorBedroom.alt,
-  },
-  {
-    id: "wardrobes",
-    label: "Wardrobes",
-    title: "Wardrobes",
-    priorities: ["Internal storage zoning", "Loft and accessory options", "Reliable hardware"],
-    image: PM_ASSETS.interiorWardrobes.path,
-    imageAlt: PM_ASSETS.interiorWardrobes.alt,
+    portfolioHref: "/portfolio?view=bedroom",
+    portfolioLabel: "View Bedroom Portfolio",
   },
 ];
 

@@ -788,6 +788,11 @@ describe("hero credibility counts numbers and prints words", () => {
 
 describe("the earlier contact work still holds", () => {
   test("header CTA absent, sticky Call Now present, one FAB per surface", () => {
+    /*
+     * The header CTA is off HERE because this shell mounts the sticky bar; the
+     * shared header still supports the pill for surfaces that have no other
+     * conversion affordance.
+     */
     const shell = code(read("src/features/public-site/home-r4/HomeShell.tsx"));
     assert.match(shell, /showConsultation=\{false\}/);
 
@@ -925,19 +930,23 @@ describe("interiors is the homepage, at exactly one URL", () => {
     assert.match(sitemap, /url: SITE_CONFIG\.url/);
   });
 
-  test("Interiors navigates straight to the root, not through the 308", () => {
+  test("nothing in the menu routes through the /interiors 308", () => {
+    /*
+     * The Interiors item used to be here, pointing at `/` so it would not send
+     * every visitor through the redirect. It has since left the menu entirely
+     * — it pointed at the wordmark's own destination — so what remains to
+     * assert is that no menu entry reintroduces the redirect, and that no Home
+     * item appears in its place.
+     */
     const nav = read("src/features/public-site/chrome/public-nav.ts");
-    assert.match(
-      nav,
-      /id: "interiors",\s+label: "Interiors",\s+href: "\/",/
-    );
+    assert.doesNotMatch(nav, /label: "Interiors"/);
     assert.doesNotMatch(nav, /href: "\/interiors"/);
     // Still no Home item; the wordmark is the home affordance.
     assert.doesNotMatch(nav, /label: "Home"/);
-    // And the header knows the root is where Interiors is current.
-    assert.match(
+    // And no menu entry points at the site root either.
+    assert.doesNotMatch(
       code(read("src/features/public-site/chrome/PublicSiteHeader.tsx")),
-      /current === "interiors" && href === "\/"/
+      /href === "\/"/
     );
   });
 

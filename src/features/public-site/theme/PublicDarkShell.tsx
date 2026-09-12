@@ -4,6 +4,7 @@ import { publicSiteFontVariables } from "@/features/public-site/fonts";
 import { PublicSiteFooter } from "@/features/public-site/chrome/PublicSiteFooter";
 import { PublicSiteHeader } from "@/features/public-site/chrome/PublicSiteHeader";
 import type { PublicNavCurrent } from "@/features/public-site/chrome/public-nav";
+import { PublicConversionDock } from "@/features/public-site/chrome/PublicConversionDock";
 import "@/features/public-site/theme/public-dark-theme.css";
 import "@/features/public-site/chrome/public-site-chrome.css";
 
@@ -16,6 +17,24 @@ interface PublicDarkShellProps {
   readonly navCurrent?: PublicChromeNavCurrent;
   /** Optional compact footer note (e.g. draft-review disclaimer). */
   readonly footerNote?: ReactNode;
+  /**
+   * The header consultation pill.
+   *
+   * Defaults to the pre-existing contract — on everywhere except the Shop
+   * boundary, which has its own commerce actions. Portfolio passes `false`
+   * because it mounts the conversion dock instead; the legal documents, which
+   * have no sticky bar, keep the pill they always had.
+   */
+  readonly showConsultation?: boolean;
+  /**
+   * Mount the homepage's sticky conversion bar and WhatsApp action.
+   *
+   * Opt-in rather than automatic. This shell also serves the legal documents
+   * and the Shop boundary, and a consultation bar pinned over a privacy notice
+   * or over a storefront's own checkout flow would be a different page's
+   * conversion path borrowed onto one that has its own.
+   */
+  readonly showConversionDock?: boolean;
 }
 
 /** Server-rendered public dark shell — no client theme runtime. */
@@ -24,6 +43,8 @@ export function PublicDarkShell({
   showChrome = true,
   navCurrent = "portfolio",
   footerNote,
+  showConsultation,
+  showConversionDock = false,
 }: PublicDarkShellProps) {
   const shopEnabled = isShopPublicEnabled();
 
@@ -41,7 +62,7 @@ export function PublicDarkShell({
       {showChrome ? (
         <PublicSiteHeader
           current={navCurrent}
-          showConsultation={navCurrent !== "shop"}
+          showConsultation={showConsultation ?? navCurrent !== "shop"}
           shopEnabled={shopEnabled}
           showShopSearch={shopEnabled && navCurrent === "shop"}
         />
@@ -52,6 +73,8 @@ export function PublicDarkShell({
       </div>
 
       {showChrome ? <PublicSiteFooter note={footerNote} shopEnabled={shopEnabled} /> : null}
+
+      {showConversionDock ? <PublicConversionDock /> : null}
     </div>
   );
 }

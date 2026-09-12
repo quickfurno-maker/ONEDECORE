@@ -346,9 +346,25 @@ describe("the interactive sections follow the patterns they claim", () => {
     assert.equal(new Set(R5_PROCESS.map((s) => s.id)).size, 4);
   });
 
-  test("the services rail and the room explorer cover the same four offerings", () => {
+  test("the services rail covers four offerings; the rooms mirror the Portfolio", () => {
+    /*
+     * These two lists used to be the same length, and that was read as them
+     * being the same taxonomy. They are not, and the coincidence hid a defect:
+     * the room explorer offered Wardrobes, which has no Portfolio gallery, so
+     * the one room a visitor could pick led nowhere.
+     *
+     * Services is what ONEDECORE sells — four things, including wardrobes.
+     * Rooms is what the Portfolio can show — Kitchen, Living Room, Bedroom —
+     * and it now links straight into those galleries, so it has to agree with
+     * the Portfolio rather than with the services rail.
+     */
     assert.equal(R5_SERVICES.length, 4);
-    assert.equal(R5_ROOMS.length, 4);
+    assert.equal(R5_ROOMS.length, 3);
+    assert.deepEqual(R5_ROOMS.map((r) => r.label), [
+      "Kitchen",
+      "Living Room",
+      "Bedroom",
+    ]);
   });
 });
 

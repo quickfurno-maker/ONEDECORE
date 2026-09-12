@@ -30,31 +30,52 @@ describe("Phase 10C — homepage launch UX", () => {
      * No Home item: the wordmark links to `/` and is the home affordance every
      * visitor already expects. A separate entry spends a menu slot — expensive
      * on mobile — on something the logo already does.
+     *
+     * Interiors turned out to BE that entry. It pointed at `/`, the wordmark's
+     * own destination, under a category's name. Contact pointed at
+     * `/#contact`, which the sticky consultation bar, the WhatsApp action and
+     * the footer all reach already. Both are gone from the menu; both
+     * destinations still work.
      */
     const ids = getPublicNavDestinations(false).map((row) => row.id);
-    assert.deepEqual(ids, ["interiors", "portfolio", "about", "contact"]);
-    assert.ok(!ids.includes("shop"));
-    // "home" is not even a valid nav id any more; the deepEqual above is the
-    // assertion, and the type system now refuses the string.
+    assert.deepEqual(ids, ["portfolio", "about"]);
+    /*
+     * Cast because TypeScript has already proved half of this: "interiors" and
+     * "contact" are no longer members of the id union, so `includes` refuses
+     * them at compile time. The runtime assertion is kept anyway — the union
+     * is derived from the same literal this test is guarding, and a future
+     * edit that re-adds the item would restore the type along with it.
+     */
+    const present = ids as readonly string[];
+    assert.ok(!present.includes("shop"));
+    assert.ok(!present.includes("interiors"));
+    assert.ok(!present.includes("contact"));
   });
 
-  test("Shop takes second position when the gate is on, not last", () => {
-    // It is one of the two verticals, not an appendix. Appending it read as an
-    // afterthought bolted onto an interiors site.
+  test("Shop is appended when the gate is on", () => {
+    /*
+     * It used to sit SECOND, ahead of Portfolio, because Interiors sat first
+     * and the two were the brand's verticals — leading with Shop said "the
+     * other half of the business, not an appendix". With Interiors out of the
+     * menu that pairing no longer exists to lead: what remains is the proof
+     * and the brand, and Shop reads correctly after them.
+     */
     const ids = getPublicNavDestinations(true).map((row) => row.id);
-    assert.deepEqual(ids, [
-      "interiors",
-      "shop",
-      "portfolio",
-      "about",
-      "contact",
-    ]);
+    assert.deepEqual(ids, ["portfolio", "about", "shop"]);
   });
 
   test("homepage header omits consultation CTA; bottom dock owns conversion", () => {
     const page = read("src/features/public-site/discovery/DiscoveryHomePage.tsx");
     const dock = read("src/features/public-site/discovery/DiscoveryStickyCta.tsx");
     const contact = read("src/features/public-site/chrome/public-contact.ts");
+    const header = read("src/features/public-site/chrome/PublicSiteHeader.tsx");
+    /*
+     * The homepage switches the header pill off because its bottom dock owns
+     * conversion. The shared header keeps the capability for surfaces that
+     * have no dock — asserting both is what stops the next correction from
+     * deleting it globally again.
+     */
+    assert.match(header, /showConsultation = true/);
     assert.match(page, /showConsultation=\{false\}/);
     assert.match(dock, /od-disc-dock/);
     /*
@@ -82,7 +103,6 @@ describe("Phase 10C — homepage launch UX", () => {
     assert.match(contact, /NEXT_PUBLIC_ONEDECORE_WHATSAPP_E164/);
     assert.doesNotMatch(contact, /wa\.me\/\d/);
     assert.doesNotMatch(contact, /\+\d{8,}/);
-    assert.doesNotMatch(page, /showConsultation=\{true\}/);
   });
 
   test("canonical consultation CTA uses Get Free Design Consultation", () => {

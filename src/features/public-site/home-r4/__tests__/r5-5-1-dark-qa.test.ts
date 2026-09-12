@@ -74,7 +74,14 @@ describe("R5.5.1 PublicDarkShell a11y", () => {
     assert.match(source, /id="public-content"/);
     assert.match(source, /tabIndex=\{-1\}/);
     assert.match(source, /PublicSiteHeader/);
-    assert.match(source, /Get Free Consultation|showConsultation/);
+    /*
+     * The shell decides the header CTA per surface — default on, off for the
+     * Shop boundary and for anything that opts out — and owns the opt-in
+     * conversion dock, which is how Portfolio gets the homepage's sticky bar
+     * and WhatsApp action instead of a header pill.
+     */
+    assert.match(source, /showConsultation/);
+    assert.match(source, /showConversionDock/);
     assert.match(source, /navCurrent = "portfolio"/);
   });
 });
