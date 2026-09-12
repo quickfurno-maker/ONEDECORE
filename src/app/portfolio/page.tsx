@@ -12,8 +12,8 @@ import {
 import { parseListingParams } from "@/features/portfolio/public/public-request-validation";
 import { PORTFOLIO_SERVICE_LABELS } from "@/features/portfolio/public/constants";
 import {
-  PORTFOLIO_DEFAULT_VIEW,
   PORTFOLIO_ROOM_LABELS,
+  portfolioViewHref,
   roomForView,
   type PortfolioViewCode,
 } from "@/features/portfolio/public/portfolio-rooms";
@@ -33,11 +33,19 @@ interface PortfolioPageProps {
   }>;
 }
 
-/** Canonical URL for a view. The default view carries no query parameter. */
+/**
+ * Canonical URL for a view. The default view carries no query parameter.
+ *
+ * Built from the same `portfolioViewHref` the tabs use, so the canonical tag
+ * and the link a visitor followed can never name two different addresses for
+ * one listing.
+ */
 function canonicalForView(view: PortfolioViewCode): string {
-  return view === PORTFOLIO_DEFAULT_VIEW
-    ? absoluteUrl("portfolio")
-    : `${absoluteUrl("portfolio")}?view=${view}`;
+  const path = portfolioViewHref(view);
+  const query = path.slice(path.indexOf("?") + 1);
+  return path.includes("?")
+    ? `${absoluteUrl("portfolio")}?${query}`
+    : absoluteUrl("portfolio");
 }
 
 function titleForView(view: PortfolioViewCode): string {
@@ -155,11 +163,7 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
    * redirect would keep both addresses alive in the index indefinitely.
    */
   if (raw.category !== undefined) {
-    permanentRedirect(
-      parsed.view === PORTFOLIO_DEFAULT_VIEW
-        ? "/portfolio"
-        : `/portfolio?view=${parsed.view}`
-    );
+    permanentRedirect(portfolioViewHref(parsed.view));
   }
 
   const room = roomForView(parsed.view);
@@ -173,18 +177,28 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
             ? `${PORTFOLIO_ROOM_LABELS[room]} interiors we’ve delivered across Pune.`
             : "Interiors we’ve delivered across Pune."}
         </h1>
-        <p className="od-portfolio-lede">
-          {room
-            ? `Photographs from completed ONEDECORE homes. Every image opens the project it came from.`
-            : parsed.service
+        {/*
+          NO LEDE ON A ROOM VIEW.
+          The sentence that used to sit here — "Every image opens the project it
+          came from" — stopped being true the moment the room library shipped:
+          a bulk-uploaded room photograph has no project to open. Rather than
+          replace one paragraph of explanation with another, the room views
+          carry none at all. A grid of photographs under a heading that names
+          the room does not need to be explained; the projects listing does,
+          because "Projects" alone does not say what a card will be.
+        */}
+        {room ? null : (
+          <p className="od-portfolio-lede">
+            {parsed.service
               ? `Showing projects for ${PORTFOLIO_SERVICE_LABELS[parsed.service]}`
               : "Complete home interiors, modular kitchens and custom wardrobes — photographed as delivered."}
-        </p>
+          </p>
+        )}
       </header>
 
       <PortfolioViewTabs activeView={parsed.view} />
 
-      <Suspense fallback={<PortfolioSkeleton />}>
+      <Suspense fallback={<PortfolioSkeleton variant={room ? "room" : "projects"} />}>
         {room ? (
           <PortfolioRoomResults view={room} />
         ) : (

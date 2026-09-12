@@ -19,7 +19,7 @@ import {
  * — the same file the portfolio page reads — so a chip here and a tab there can
  * never disagree about what "Bedroom" means or where it goes.
  *
- * PROJECTS | LIVING ROOM | BEDROOM | KITCHEN
+ * KITCHEN | LIVING ROOM | BEDROOM | PROJECTS
  *
  * There is no Hall. It read as "Hall / Living Room", which asked a visitor to
  * decide which word described their own room; Living Room is now the single

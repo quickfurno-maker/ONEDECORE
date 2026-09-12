@@ -812,8 +812,15 @@ describe("what a visitor sees", () => {
 
   test("the gallery renders a project-less photograph without inventing one", () => {
     const gallery = read(GALLERY);
+    /*
+     * The closed tile stopped naming a project when the room grid became an
+     * Instagram-style gallery — the caption strip was the fourth guard and it
+     * is gone, along with the possibility of the leak it guarded against. The
+     * three that remain are the dialog label, the lightbox title and the
+     * lightbox CTA.
+     */
     const guards = gallery.match(/photo\.project \?/g) ?? [];
-    assert.ok(guards.length >= 4, "every project-dependent element is guarded");
+    assert.ok(guards.length >= 3, "every project-dependent element is guarded");
     assert.doesNotMatch(gallery, /photo\.project!\./);
     assert.doesNotMatch(gallery, /photo\.project\?\.slug/);
   });

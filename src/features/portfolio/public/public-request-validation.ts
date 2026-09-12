@@ -6,6 +6,7 @@ import {
 } from "./portfolio-categories.ts";
 import {
   PORTFOLIO_DEFAULT_VIEW,
+  PORTFOLIO_PROJECTS_VIEW,
   isPortfolioViewCode,
   isPortfolioRoomCode,
   type PortfolioViewCode,
@@ -15,7 +16,7 @@ export type PortfolioListingParams = {
   page: number;
   service: PortfolioServiceKey | null;
   category: PortfolioCategoryId | null;
-  /** Resolved browse view. Absent `?view=` resolves to `projects`. */
+  /** Resolved browse view. Absent `?view=` resolves to the default, Kitchen. */
   view: PortfolioViewCode;
 };
 
@@ -67,17 +68,34 @@ export function parseCategoryParam(
 /**
  * `?view=` is the canonical public navigation.
  *
- * Absent means Projects, which is why the default view carries no query
- * parameter at all — one canonical URL for the default listing rather than
- * `/portfolio` and `/portfolio?view=projects` both answering.
+ * Absent means the default view, which is why the default carries no query
+ * parameter at all — one canonical URL for it rather than two addresses
+ * answering with the same listing.
+ *
+ * The default is Kitchen. `?view=kitchen` is still accepted, so links minted
+ * before Kitchen became the default keep working; `/portfolio` is the
+ * canonical spelling and the one the page advertises.
  */
 export function parseViewParam(
   raw: string | undefined
 ): PortfolioViewCode | "invalid" {
-  if (raw === undefined || raw.trim().length === 0) {
+  if (!hasViewParam(raw)) {
     return PORTFOLIO_DEFAULT_VIEW;
   }
   return isPortfolioViewCode(raw) ? raw : "invalid";
+}
+
+/**
+ * Whether the caller actually spelled a `?view=`.
+ *
+ * `parseViewParam` cannot answer this — it resolves absence to the default, so
+ * "absent" and "explicitly the default" come back identical. The legacy
+ * `?category=` reconciliation below needs the difference, and inferring it by
+ * comparing against `PORTFOLIO_DEFAULT_VIEW` was only ever right by accident:
+ * it made the conflict rule depend on which view happened to be the default.
+ */
+function hasViewParam(raw: string | undefined): raw is string {
+  return raw !== undefined && raw.trim().length > 0;
 }
 
 export function isValidPortfolioSlug(slug: string | undefined): boolean {
@@ -137,10 +155,10 @@ export function parseListingParams(params: {
    */
   if (category !== null) {
     const legacyView = legacyCategoryAsView(category);
-    if (view !== PORTFOLIO_DEFAULT_VIEW && view !== legacyView) {
+    if (hasViewParam(params.view) && view !== legacyView) {
       return null;
     }
-    return { page, service, category, view: legacyView ?? view };
+    return { page, service, category, view: legacyView };
   }
 
   return { page, service, category, view };
@@ -150,12 +168,17 @@ export function parseListingParams(params: {
  * The view a legacy `?category=` value meant.
  *
  * `complete-interiors` was the whole-home facet, which is what Projects is, so
- * it maps to the default view. The room categories map to their room views.
- * Hall is gone from the category vocabulary entirely — the migration translated
- * it to living-room — so there is nothing here to translate.
+ * it maps to Projects — NAMED, not spelled as "the default view". Those were
+ * the same value until Kitchen became the default, and had this kept deferring
+ * to the default, every `?category=complete-interiors` link in the wild would
+ * have silently started answering with kitchen photographs.
+ *
+ * The room categories map to their room views. Hall is gone from the category
+ * vocabulary entirely — the migration translated it to living-room — so there
+ * is nothing here to translate.
  */
 export function legacyCategoryAsView(
   category: PortfolioCategoryId
 ): PortfolioViewCode {
-  return isPortfolioRoomCode(category) ? category : PORTFOLIO_DEFAULT_VIEW;
+  return isPortfolioRoomCode(category) ? category : PORTFOLIO_PROJECTS_VIEW;
 }

@@ -80,12 +80,22 @@ describe("R5.5.1 PublicDarkShell a11y", () => {
 });
 
 describe("R5.5.1 filters and cards", () => {
-  test("filters use labelled nav and aria-current", () => {
-    const source = read(join(components, "PortfolioGrid.tsx"));
-    assert.match(source, /aria-label="Filter Portfolio by category"/);
-    assert.match(source, /aria-current=\{!activeService \? "page" : undefined\}/);
-    assert.match(source, /aria-current=\{isActive \? "page" : undefined\}/);
-    assert.match(source, /href=\{buildUrl\(1, null\)\}/);
+  test("the one public rail is a labelled nav with aria-current", () => {
+    /*
+     * The labelled-nav contract moved rather than disappeared. It used to be
+     * checked on PortfolioGrid's category rail; that rail was the duplicate
+     * second row and is gone, so the assertion now names the row that
+     * survived — the view tabs, which are the public portfolio navigation.
+     */
+    const tabs = read(
+      join(components, "PortfolioViewTabs.tsx")
+    );
+    assert.match(tabs, /aria-label="Portfolio views"/);
+    assert.match(tabs, /aria-current=\{isActive \? "page" : undefined\}/);
+    assert.match(tabs, /href=\{view\.href\}/);
+
+    const grid = read(join(components, "PortfolioGrid.tsx"));
+    assert.doesNotMatch(grid, /aria-label="Filter Portfolio by category"/);
   });
 
   test("card has sizes and no empty meta span", () => {

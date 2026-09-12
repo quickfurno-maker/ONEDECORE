@@ -289,15 +289,23 @@ describe("Public Portfolio — Route-Level Request Validation", () => {
   });
 
   test("Route validation resolves listing params without any Proxy involvement", () => {
+    // Absent `?view=` resolves to the default view, which is Kitchen.
     assert.deepEqual(parseListingParams({}), {
       page: 1,
       service: null,
       category: null,
-      view: "projects",
+      view: "kitchen",
     });
     assert.deepEqual(parseListingParams({ page: "2", service: "custom_wardrobes" }), {
       page: 2,
       service: "custom_wardrobes",
+      category: null,
+      view: "kitchen",
+    });
+    // The project listing is addressed, and pagination keeps naming it.
+    assert.deepEqual(parseListingParams({ view: "projects", page: "2" }), {
+      page: 2,
+      service: null,
       category: null,
       view: "projects",
     });

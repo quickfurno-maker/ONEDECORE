@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  PORTFOLIO_PROJECTS_HREF,
   PORTFOLIO_ROOM_LABELS,
   focalObjectPosition,
   type PortfolioRoomCode,
@@ -11,7 +12,19 @@ import {
 import type { PublicPortfolioRoomPhoto } from "../types.ts";
 
 /**
- * A room view: real photographs, each still owned by a real project.
+ * The thumbnail's share of the viewport, matching the grid it sits in.
+ *
+ * Three columns on a phone, four on a tablet, five on a desktop — so the
+ * browser is told 33vw / 25vw / 20vw and downloads a thumbnail-sized
+ * derivative. This was 50/33/25vw when the tiles were half a phone wide, and
+ * leaving it there would have had every phone fetch an image roughly twice the
+ * width it renders at, twelve times over.
+ */
+const ROOM_THUMBNAIL_SIZES =
+  "(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 20vw";
+
+/**
+ * A room view: a dense grid of photographs, and nothing else.
  *
  * WHAT THIS IS NOT
  *
@@ -20,26 +33,38 @@ import type { PublicPortfolioRoomPhoto } from "../types.ts";
  * splitting one delivered home into fake room-level "projects" — is to show the
  * photographs themselves.
  *
- * TWO KINDS OF PHOTOGRAPH, AND ONLY ONE OF THEM LEADS SOMEWHERE
+ * THE CLOSED TILE IS THE PHOTOGRAPH, FULL STOP
  *
- * A photograph from a delivered home names its project and offers the way
- * through to it, from the tile and from the lightbox.
+ * No title, no locality, no room label, no gradient, no call to action. Two
+ * reasons, and the second is the load-bearing one.
  *
- * A room-library photograph has no project. It is real photography the owner
- * uploaded by room, and there is nothing behind it to link to — so it renders
- * as a plain image with no name, no locality and no call to action. Inventing a
- * title, or emitting a link to `/portfolio/undefined`, would both be worse than
- * the honest absence: the first is a lie and the second is a broken page.
+ * The first is that this is a gallery: a visitor scanning twelve tiles is
+ * reading pictures, and a caption strip on each one is furniture between them
+ * and the work.
  *
- * `photo.project === null` is the discriminator, and it is checked once per
- * surface rather than three times per field.
+ * The second is that the captions could not be honest. Half of these
+ * photographs are room-library uploads with no project at all, so a metadata
+ * band could only render on some tiles — and a grid where some pictures carry a
+ * name and some do not invites the reading that the unnamed ones are somehow
+ * lesser, or still loading. Removing it from every tile makes the two sources
+ * indistinguishable, which is what they should be here: they are equally real
+ * photographs of equally real work.
+ *
+ * The project, where there is one, is named in the lightbox. That is the moment
+ * a visitor has asked about one specific picture, and it is the right moment to
+ * answer.
+ *
+ * `photo.project === null` remains the discriminator; it now decides only what
+ * the opened view offers, never what the grid shows.
  *
  * THE FOCAL POINT DOES THE CROPPING
  *
- * Tiles are 4:5. The owner uploads one original and marks the point of
+ * Tiles are square. The owner uploads one original and marks the point of
  * interest; `object-position` honours it, so a subject that sits left of centre
  * survives the crop without anyone re-exporting the file. An unadjusted
- * photograph is 50/50, which is what the browser would have done anyway.
+ * photograph is 50/50, which is what the browser would have done anyway. The
+ * square is a display crop only — the file is untouched and the lightbox shows
+ * it at its natural ratio.
  */
 export function PortfolioRoomGallery({
   room,
@@ -53,6 +78,21 @@ export function PortfolioRoomGallery({
 
   const close = useCallback(() => setOpenIndex(null), []);
 
+  /*
+   * Wrap rather than clamp. Reaching the end of a room and being returned to
+   * its start is the behaviour of every gallery a visitor has used; a dead
+   * arrow at each end is a thing to discover instead.
+   */
+  const step = useCallback(
+    (delta: number) =>
+      setOpenIndex((current) =>
+        current === null || photos.length === 0
+          ? current
+          : (current + delta + photos.length) % photos.length
+      ),
+    [photos.length]
+  );
+
   if (photos.length === 0) {
     return (
       <div className="od-empty" id="portfolio-room-empty-state">
@@ -63,7 +103,12 @@ export function PortfolioRoomGallery({
           would do with your {roomLabel.toLowerCase()} is to talk to us about
           it.
         </p>
-        <Link href="/portfolio" className="od-btn-ghost">
+        {/*
+          The projects listing by name. A bare `/portfolio` would now return
+          the visitor to Kitchen — for someone standing in an empty Kitchen,
+          to the page they are already on.
+        */}
+        <Link href={PORTFOLIO_PROJECTS_HREF} className="od-btn-ghost">
           View all projects
         </Link>
       </div>
@@ -90,7 +135,7 @@ export function PortfolioRoomGallery({
                 alt={photo.image.altText}
                 width={photo.image.width}
                 height={photo.image.height}
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                sizes={ROOM_THUMBNAIL_SIZES}
                 className="od-room-gallery__image"
                 style={{
                   objectPosition: focalObjectPosition(
@@ -100,23 +145,6 @@ export function PortfolioRoomGallery({
                 }}
                 loading="lazy"
               />
-              {/*
-                The caption strip belongs to project photography. A library
-                image renders without it rather than with an empty one: a blank
-                gradient band under a picture reads as a loading failure.
-              */}
-              {photo.project ? (
-                <span className="od-room-gallery__meta">
-                  <span className="od-room-gallery__project">
-                    {photo.project.title}
-                  </span>
-                  {photo.project.locationLabel ? (
-                    <span className="od-room-gallery__where">
-                      {photo.project.locationLabel}
-                    </span>
-                  ) : null}
-                </span>
-              ) : null}
             </button>
           </li>
         ))}
@@ -126,7 +154,9 @@ export function PortfolioRoomGallery({
         <PortfolioLightbox
           photo={photos[openIndex]!}
           roomLabel={roomLabel}
+          position={{ index: openIndex, total: photos.length }}
           onClose={close}
+          onStep={photos.length > 1 ? step : undefined}
         />
       ) : null}
     </>
@@ -139,19 +169,45 @@ export function PortfolioRoomGallery({
  * What a lightbox has to get right is not the animation: it is Escape, a real
  * focus trap, restoring focus to whatever opened it, and not letting the page
  * behind it scroll. That is a few dozen lines against the platform, and a
- * package would be a larger surface for the same behaviour.
+ * package would be a larger surface for the same behaviour. Previous/Next is
+ * two more buttons and two more key cases, which is not a reason to take on a
+ * carousel library either.
+ *
+ * WHY THE FOCUS EFFECT DOES NOT DEPEND ON `onStep`
+ *
+ * Stepping replaces the photograph inside a lightbox that stays open. If the
+ * mount effect re-ran on every step it would re-snapshot `restoreTo` from
+ * whatever is focused NOW — the Next button — and closing would then restore
+ * focus into a dialog that no longer exists instead of to the tile the visitor
+ * opened. The keyboard handler needs the current `onStep`, so it reads it from
+ * a ref rather than by re-subscribing.
  */
 function PortfolioLightbox({
   photo,
   roomLabel,
+  position,
   onClose,
+  onStep,
 }: {
   readonly photo: PublicPortfolioRoomPhoto;
   readonly roomLabel: string;
+  readonly position: { readonly index: number; readonly total: number };
   readonly onClose: () => void;
+  readonly onStep?: (delta: number) => void;
 }) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const restoreTo = useRef<HTMLElement | null>(null);
+  const stepRef = useRef(onStep);
+
+  /*
+   * Its own effect, not an assignment during render. Writing a ref while
+   * rendering is a side effect in the render phase — it makes the component
+   * impure and the React Compiler rejects it. `useRef(onStep)` already seeds
+   * the first value, so this only tracks later ones.
+   */
+  useEffect(() => {
+    stepRef.current = onStep;
+  }, [onStep]);
 
   useEffect(() => {
     restoreTo.current = document.activeElement as HTMLElement | null;
@@ -166,6 +222,13 @@ function PortfolioLightbox({
       if (event.key === "Escape") {
         event.stopPropagation();
         onClose();
+        return;
+      }
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        if (!stepRef.current) return;
+        event.preventDefault();
+        event.stopPropagation();
+        stepRef.current(event.key === "ArrowLeft" ? -1 : 1);
         return;
       }
       if (event.key !== "Tab" || !panelRef.current) return;
@@ -223,9 +286,9 @@ function PortfolioLightbox({
         </button>
 
         {/*
-          Natural ratio here, not a crop. The tile was 4:5 because a grid needs
-          one shape; the lightbox is where the photograph is finally shown as it
-          was taken.
+          Natural ratio here, not a crop. The tile was square because a grid
+          needs one shape; the lightbox is where the photograph is finally shown
+          as it was taken.
         */}
         <Image
           src={photo.image.url}
@@ -235,6 +298,35 @@ function PortfolioLightbox({
           sizes="(max-width: 900px) 92vw, 76vw"
           className="od-lightbox__image"
         />
+
+        {onStep ? (
+          <>
+            <button
+              type="button"
+              className="od-lightbox__nav od-lightbox__nav--prev"
+              onClick={() => onStep(-1)}
+              aria-label="Previous image"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className="od-lightbox__nav od-lightbox__nav--next"
+              onClick={() => onStep(1)}
+              aria-label="Next image"
+            >
+              ›
+            </button>
+            {/*
+              Spoken, not drawn. A visitor can see where they are in the strip;
+              somebody on a screen reader is told, and the polite live region
+              means each step is announced without interrupting.
+            */}
+            <p className="od-sr-only" aria-live="polite">
+              Image {position.index + 1} of {position.total}
+            </p>
+          </>
+        ) : null}
 
         <div className="od-lightbox__foot">
           {/*

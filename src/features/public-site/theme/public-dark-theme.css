@@ -255,47 +255,12 @@ body:has([data-public-home-r4]) {
   color: var(--od-text-muted);
 }
 
-.od-portfolio-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding-bottom: 18px;
-  margin-bottom: 28px;
-  border-bottom: 1px solid var(--od-line);
-}
-
-.od-filter {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 16px;
-  border-radius: 12px;
-  border: 1px solid var(--od-line);
-  background: var(--od-bg-raised);
-  color: var(--od-text-muted);
-  font-size: 0.86rem;
-  font-weight: 700;
-  text-decoration: none;
-  transition:
-    border-color 160ms ease,
-    background-color 160ms ease,
-    color 160ms ease;
-}
-
-.od-filter:hover {
-  border-color: var(--od-line-strong);
-  color: var(--od-text-primary);
-  background: var(--od-bg-elevated);
-}
-
-.od-filter[data-active] {
-  border-color: var(--od-gold);
-  background: rgba(216, 162, 74, 0.16);
-  background: var(--od-gold-soft);
-  color: var(--od-gold-light);
-  box-shadow: inset 0 0 0 1px rgba(216, 162, 74, 0.28);
-  box-shadow: inset 0 0 0 1px var(--od-gold-strong);
-}
+/*
+ * `.od-portfolio-filters` / `.od-filter` are gone with the second category
+ * rail. The public portfolio carries ONE navigation row — `.od-portfolio-views`
+ * further down — and leaving the styles behind would only let the rail grow
+ * back without anybody noticing it was a second one.
+ */
 
 .od-portfolio-grid {
   display: grid;
@@ -906,22 +871,41 @@ body:has([data-public-home-r4]) {
   color: var(--od-gold-light);
 }
 
-.od-loading__header {
-  display: grid;
-  gap: 12px;
-  max-width: 36rem;
-}
-
-.od-loading__filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
 .od-loading__grid {
   display: grid;
   gap: 24px;
   grid-template-columns: 1fr;
+}
+
+/*
+ * The room-view skeleton. Same column counts and same gap as
+ * `.od-room-gallery`, so the photographs land exactly where the placeholders
+ * were and the swap costs no layout shift.
+ */
+.od-loading__tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+}
+
+@media (min-width: 641px) {
+  .od-loading__tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .od-loading__tiles {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+  }
+}
+
+.od-skeleton--tile {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
 }
 
 @media (min-width: 640px) {
@@ -950,27 +934,6 @@ body:has([data-public-home-r4]) {
   display: block;
   border-radius: 10px;
   background: var(--od-bg-elevated);
-}
-
-.od-skeleton--eyebrow {
-  width: 8rem;
-  height: 0.7rem;
-}
-
-.od-skeleton--title {
-  width: min(100%, 22rem);
-  height: 2rem;
-}
-
-.od-skeleton--lede {
-  width: min(100%, 28rem);
-  height: 1rem;
-}
-
-.od-skeleton--filter {
-  width: 7.5rem;
-  height: 2.75rem;
-  border-radius: 12px;
 }
 
 .od-skeleton--media {
@@ -1017,7 +980,6 @@ body:has([data-public-home-r4]) {
 @media (prefers-reduced-motion: reduce) {
   .od-card,
   .od-card__media img,
-  .od-filter,
   .od-page-btn,
   .od-portfolio-chrome__link,
   .od-btn-primary,
@@ -1062,38 +1024,14 @@ button.od-btn-primary {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Portfolio page — category chips on mobile                                   */
+/* Portfolio page — one navigation row                                          */
 /* -------------------------------------------------------------------------- */
 
 /*
- * Five chips will not fit across a 390px screen, and wrapping them into two
- * ragged rows reads as a mistake. They scroll horizontally instead, with the
- * row bleeding to the edge so the last chip is visibly cut rather than
- * mysteriously absent.
+ * The mobile category-chip rail lived here. It scrolled a second row of five
+ * chips under the four view tabs; both rows are now one row, and the scrolling
+ * behaviour it needed belongs to `.od-portfolio-views__rail` instead.
  */
-@media (max-width: 48rem) {
-  .od-portfolio-filters {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 0.5rem;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 0.25rem;
-  }
-
-  .od-portfolio-filters::-webkit-scrollbar {
-    display: none;
-  }
-
-  .od-portfolio-filters .od-filter {
-    flex: 0 0 auto;
-    min-height: 40px;
-    display: inline-flex;
-    align-items: center;
-    white-space: nowrap;
-  }
-}
 
 /* ==========================================================================
    Portfolio browsing — Projects | Living Room | Bedroom | Kitchen
@@ -1160,27 +1098,65 @@ button.od-btn-primary {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Room gallery — photographs, 4:5                                             */
+/* Room gallery — an Instagram-profile grid of square thumbnails                */
 /* -------------------------------------------------------------------------- */
 
+/*
+ * FIXED COLUMN COUNTS, NOT `auto-fill`.
+ *
+ * `auto-fill` with a minimum width gives whatever number of columns happens to
+ * fit, which is how a phone ended up with two enormous tiles. The owner asked
+ * for three across on a phone and three is what the visitor gets at every phone
+ * width, because "three across" is the look — it is what makes a wall of
+ * photographs read as a body of work rather than as a feed to be scrolled.
+ *
+ * The gap is 3px and does not grow with the viewport. Instagram's grid works
+ * because the pictures nearly touch; a gutter that scales turns the same grid
+ * into separated cards at desktop width.
+ */
 .od-room-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
-  gap: clamp(0.6rem, 1.6vw, 1rem);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+@media (min-width: 641px) {
+  .od-room-gallery {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .od-room-gallery {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+  }
+}
+
+.od-room-gallery__item {
+  /*
+   * A grid item's default `min-width: auto` refuses to shrink below its
+   * content, which a wide image would make wider than its column — that is the
+   * usual cause of a grid that overflows sideways on a phone.
+   */
+  min-width: 0;
 }
 
 .od-room-gallery__tile {
   position: relative;
   display: block;
   width: 100%;
-  /* The card ratio. One original, cropped by focal point, not re-exported. */
-  aspect-ratio: 4 / 5;
+  /* Square. One original, cropped by focal point, not re-exported. */
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
   padding: 0;
   border: 0;
-  border-radius: var(--od-radius, 14px);
+  /* No card radius. Rounded corners are what made these read as feed cards. */
+  border-radius: 0;
   overflow: hidden;
   background: var(--od-bg-raised, #1c1916);
   cursor: pointer;
@@ -1190,41 +1166,23 @@ button.od-btn-primary {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
 }
 
 .od-room-gallery__tile:hover .od-room-gallery__image {
-  transform: scale(1.03);
+  transform: scale(1.04);
+  opacity: 0.92;
 }
 
+/*
+ * Inset, because the tiles nearly touch. An outward offset would be drawn on
+ * top of the neighbouring photograph rather than in a gutter.
+ */
 .od-room-gallery__tile:focus-visible {
   outline: 2px solid var(--od-gold, #c9a962);
-  outline-offset: 3px;
-}
-
-/* The project name sits on the image, so it needs its own ground to be read. */
-.od-room-gallery__meta {
-  position: absolute;
-  inset-inline: 0;
-  inset-block-end: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  padding: 2.25rem 0.85rem 0.75rem;
-  text-align: left;
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.78));
-}
-
-.od-room-gallery__project {
-  font-size: 0.86rem;
-  color: var(--od-text-primary, #fff);
-}
-
-.od-room-gallery__where {
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--od-text-muted, rgba(255, 255, 255, 0.6));
+  outline-offset: -2px;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1286,7 +1244,41 @@ button.od-btn-primary {
   cursor: pointer;
 }
 
+/*
+ * Previous / Next. Same 44px target as Close, vertically centred on the image
+ * rather than pinned to the panel edge, so on a phone they sit over the
+ * photograph where a thumb already is.
+ */
+.od-lightbox__nav {
+  position: absolute;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--od-line, rgba(255, 255, 255, 0.14));
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--od-text-primary, #fff);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.od-lightbox__nav--prev {
+  inset-inline-start: 0.5rem;
+}
+
+.od-lightbox__nav--next {
+  inset-inline-end: 0.5rem;
+}
+
+.od-lightbox__nav:hover {
+  background: rgba(0, 0, 0, 0.72);
+  border-color: var(--od-gold, #c9a962);
+}
+
 .od-lightbox__close:focus-visible,
+.od-lightbox__nav:focus-visible,
 .od-lightbox__cta:focus-visible {
   outline: 2px solid var(--od-gold, #c9a962);
   outline-offset: 2px;

@@ -109,19 +109,38 @@ function roomRow(over: Partial<RoomPhotoFields> = {}): RoomPhotoFields {
 /* 1. The locked vocabulary                                                    */
 /* ========================================================================== */
 
-describe("Projects | Living Room | Bedroom | Kitchen", () => {
+describe("Kitchen | Living Room | Bedroom | Projects", () => {
   test("the four views are exactly these, in this order", () => {
     assert.deepEqual(
       PORTFOLIO_VIEWS.map((v) => v.label),
-      ["Projects", "Living Room", "Bedroom", "Kitchen"]
+      ["Kitchen", "Living Room", "Bedroom", "Projects"]
     );
     assert.deepEqual([...PORTFOLIO_VIEW_CODES], [
+      "kitchen",
+      "living-room",
+      "bedroom",
       "projects",
+    ]);
+    assert.equal(PORTFOLIO_DEFAULT_VIEW, "kitchen");
+  });
+
+  test("the PUBLIC order did not come from reordering the ROOM vocabulary", () => {
+    /*
+     * `PORTFOLIO_ROOM_CODES` is read by the admin selector, the bulk uploader,
+     * the project-detail filter and the storage path validator. Moving Kitchen
+     * to the front of the public tabs by editing that constant would have
+     * reordered all four of those as a side effect, which is why the public
+     * sequence is its own literal and this test pins the vocabulary in place.
+     */
+    assert.deepEqual([...PORTFOLIO_ROOM_CODES], [
       "living-room",
       "bedroom",
       "kitchen",
     ]);
-    assert.equal(PORTFOLIO_DEFAULT_VIEW, "projects");
+    assert.deepEqual(
+      PORTFOLIO_ROOM_SELECT_OPTIONS.map((o) => o.label),
+      ["Unclassified", "Living Room", "Bedroom", "Kitchen"]
+    );
   });
 
   test("HALL IS ABSENT from every public surface", () => {
@@ -173,21 +192,26 @@ describe("Projects | Living Room | Bedroom | Kitchen", () => {
 /* ========================================================================== */
 
 describe("?view= is canonical and ?category= is legacy", () => {
-  test("no view means Projects, and Projects carries no parameter", () => {
+  test("no view means Kitchen, and Kitchen carries no parameter", () => {
     const parsed = parseListingParams({});
     assert.ok(parsed);
-    assert.equal(parsed!.view, "projects");
+    assert.equal(parsed!.view, "kitchen");
+    assert.equal(PORTFOLIO_VIEWS[0]!.id, "kitchen");
     assert.equal(PORTFOLIO_VIEWS[0]!.href, "/portfolio");
   });
 
-  test("each room view has its own canonical URL", () => {
-    for (const room of PORTFOLIO_ROOM_CODES) {
-      const parsed = parseListingParams({ view: room });
-      assert.ok(parsed, room);
-      assert.equal(parsed!.view, room);
+  test("?view=kitchen still resolves, for links minted before the change", () => {
+    assert.equal(parseListingParams({ view: "kitchen" })!.view, "kitchen");
+  });
+
+  test("every non-default view has its own canonical URL, Projects included", () => {
+    for (const view of ["living-room", "bedroom", "projects"] as const) {
+      const parsed = parseListingParams({ view });
+      assert.ok(parsed, view);
+      assert.equal(parsed!.view, view);
       assert.equal(
-        PORTFOLIO_VIEWS.find((v) => v.id === room)!.href,
-        `/portfolio?view=${room}`
+        PORTFOLIO_VIEWS.find((v) => v.id === view)!.href,
+        `/portfolio?view=${view}`
       );
     }
   });
@@ -205,7 +229,14 @@ describe("?view= is canonical and ?category= is legacy", () => {
       parseListingParams({ category: "living-room" })!.view,
       "living-room"
     );
-    // The whole-home facet is what Projects is.
+    /*
+     * The whole-home facet is what Projects is — and it must resolve to
+     * Projects BY NAME, not to "whatever the default view happens to be".
+     * Those were the same answer until Kitchen became the default; had the
+     * mapping kept deferring to the default, every old
+     * `?category=complete-interiors` link would have started answering with
+     * kitchen photographs.
+     */
     assert.equal(
       parseListingParams({ category: "complete-interiors" })!.view,
       "projects"
@@ -226,6 +257,17 @@ describe("?view= is canonical and ?category= is legacy", () => {
     assert.equal(
       parseListingParams({ view: "kitchen", category: "kitchen" })!.view,
       "kitchen"
+    );
+    /*
+     * And the conflict rule no longer depends on which view is the default. It
+     * used to read `view !== PORTFOLIO_DEFAULT_VIEW` as a proxy for "the caller
+     * did not spell a view" — so the moment Kitchen became the default, an
+     * explicit `?view=kitchen&category=bedroom` would have been silently
+     * resolved as bedroom instead of refused.
+     */
+    assert.equal(
+      parseListingParams({ view: "kitchen", category: "bedroom" }),
+      null
     );
   });
 
@@ -338,14 +380,14 @@ describe("a room view returns media, not project cards", () => {
 
     /*
      * Every project-dependent element is behind a `photo.project ?` guard. The
-     * count is the assertion: the tile's caption strip, the dialog label, the
-     * lightbox title and the lightbox CTA are four separate places a null
-     * project would otherwise be dereferenced, and guarding three of them is
-     * the bug this test exists to catch.
+     * closed tile no longer names a project at all — see the Instagram-grid
+     * suite — so the three that remain are the dialog label, the lightbox
+     * title and the lightbox CTA. Guarding two of them is the bug this test
+     * exists to catch.
      */
     const guards = gallery.match(/photo\.project \?/g) ?? [];
     assert.ok(
-      guards.length >= 4,
+      guards.length >= 3,
       `expected every project-dependent element to be guarded, found ${guards.length}`
     );
 
@@ -391,17 +433,20 @@ describe("one original, several crops", () => {
     assert.equal(normaliseFocalValue(33.6), 34);
   });
 
-  test("the three display ratios are the locked ones", () => {
+  test("the display ratios are the locked ones", () => {
     assert.equal(PORTFOLIO_ASPECT_RATIOS.card, "4 / 5");
     assert.equal(PORTFOLIO_ASPECT_RATIOS.mobileFeature, "9 / 16");
     assert.equal(PORTFOLIO_ASPECT_RATIOS.hero, "16 / 9");
+    assert.equal(PORTFOLIO_ASPECT_RATIOS.roomThumbnail, "1 / 1");
   });
 
-  test("room tiles crop to 4:5 and honour the focal point", () => {
+  test("room tiles crop to a square and honour the focal point", () => {
     const gallery = read(GALLERY);
     assert.match(gallery, /objectPosition: focalObjectPosition\(/);
     const css = read("src/features/public-site/theme/public-dark-theme.css");
-    assert.match(css, /\.od-room-gallery__tile[\s\S]{0,400}aspect-ratio: 4 \/ 5/);
+    assert.match(css, /\.od-room-gallery__tile[\s\S]{0,400}aspect-ratio: 1 \/ 1/);
+    // The crop is a DISPLAY crop. The stored file keeps its own shape.
+    assert.match(css, /\.od-room-gallery__image[\s\S]{0,200}object-fit: cover/);
   });
 
   test("the lightbox shows the photograph uncropped", () => {
@@ -473,7 +518,7 @@ describe("the project gallery filters by room", () => {
 /* 7. Homepage navigation                                                      */
 /* ========================================================================== */
 
-describe("the homepage offers the same four views", () => {
+describe("the homepage offers the same four views, in the same order", () => {
   test("it reads the shared vocabulary, not its own list", () => {
     const nav = read(HOME_NAV);
     assert.match(nav, /PORTFOLIO_VIEWS/);
@@ -488,7 +533,7 @@ describe("the homepage offers the same four views", () => {
         "/portfolio",
         "/portfolio?view=living-room",
         "/portfolio?view=bedroom",
-        "/portfolio?view=kitchen",
+        "/portfolio?view=projects",
       ]
     );
   });

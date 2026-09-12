@@ -3,8 +3,8 @@
  *
  * WHAT THIS IS NOW
  *
- * Public browsing moved to `portfolio-rooms.ts`: `Projects | Living Room |
- * Bedroom | Kitchen`, where the three room views list PHOTOGRAPHS tagged with
+ * Public browsing moved to `portfolio-rooms.ts`: `Kitchen | Living Room |
+ * Bedroom | Projects`, where the three room views list PHOTOGRAPHS tagged with
  * `portfolio_media.room_category_code`. A visitor who clicks "Bedroom" wants to
  * look at bedrooms, and a project-level facet answers a different question.
  *
@@ -21,6 +21,11 @@
  * 20260908160000 translated stored `hall` values and removed it from both
  * database allowlists, so it cannot return through the CMS either.
  */
+
+import {
+  PORTFOLIO_PROJECTS_HREF,
+  portfolioViewHref,
+} from "./portfolio-rooms.ts";
 
 export type PortfolioCategoryId =
   | "complete-interiors"
@@ -96,6 +101,6 @@ export const DEFAULT_PORTFOLIO_CATEGORY: PortfolioCategoryId = "complete-interio
  */
 export function portfolioCategoryHref(category: PortfolioCategory): string {
   return category.id === "complete-interiors"
-    ? "/portfolio"
-    : `/portfolio?view=${category.id}`;
+    ? PORTFOLIO_PROJECTS_HREF
+    : portfolioViewHref(category.id);
 }
