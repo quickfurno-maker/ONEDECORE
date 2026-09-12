@@ -193,8 +193,8 @@ describe("the homepage section registry", () => {
       [
         "hero",
         "promo-carousel",
-        "complete-interiors",
         "room-explorer",
+        "complete-interiors",
         "why",
         "process",
         "factory",
@@ -893,16 +893,52 @@ describe("draft, publish and the pointer", () => {
     );
 
     /*
-     * And the migration's own order array must be that same approved order. The
-     * SQL cannot import the registry, so this is the seam where the two can
-     * drift; it is the reason the array carries a comment pointing here.
+     * The migration's array is a HISTORICAL order, not the current one.
+     *
+     * It records what was approved on the day it was applied. It is applied, in
+     * production, and rewriting it is how two databases end up disagreeing
+     * about their own history — so when the approved order later changes, the
+     * registry moves and this array stays put.
+     *
+     * What still has to hold is that the two describe the same SET of sections:
+     * a key appearing in one and not the other means a section was added or
+     * retired without the other side being told, which is the drift this seam
+     * exists to catch. Positions may differ only where a later reorder is
+     * recorded below, with its reason.
      */
     const r5Order = /v_r5 constant text\[\] := array\[([\s\S]*?)\];/.exec(r5);
     assert.ok(r5Order, "the migration must declare the order it applies");
+    const migrationOrder = [...r5Order[1]!.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]!);
+
     assert.deepEqual(
-      [...r5Order[1]!.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]!),
-      approved,
-      "the migration's order must match the code-defined approved order"
+      [...migrationOrder].sort(),
+      [...approved].sort(),
+      "the migration and the registry must describe the same set of sections"
+    );
+
+    /*
+     * Reorders made after this migration was applied.
+     *
+     * Each entry is a deliberate change to the approved order that the applied
+     * SQL predates. An unlisted position difference still fails, so an
+     * accidental reorder cannot slip through behind this allowance.
+     */
+    const REORDERS_SINCE_MIGRATION: ReadonlyArray<{
+      readonly key: string;
+      readonly why: string;
+    }> = [
+      {
+        key: "room-explorer",
+        why: "Owner-approved 2026-09-12: Room by Room moves directly under the banner rail, ahead of What We Do.",
+      },
+      { key: "complete-interiors", why: "Displaced by the move above." },
+    ];
+
+    const moved = approved.filter((key, index) => migrationOrder[index] !== key);
+    assert.deepEqual(
+      [...moved].sort(),
+      REORDERS_SINCE_MIGRATION.map((entry) => entry.key).sort(),
+      "a section changed position without being recorded as a deliberate reorder"
     );
 
     // The legacy array it compares against must be the seed, verbatim.

@@ -729,30 +729,6 @@
   max-width: 640px;
 }
 
-[data-public-home-r4] .pm-hero__eyebrowDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--pm-bronze-light);
-  box-shadow: 0 0 0 4px rgba(216, 162, 74, 0.16);
-}
-
-[data-public-home-r4] .pm-hero__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 14px 7px 11px;
-  border-radius: var(--dc-radius-pill);
-  border: 1px solid var(--pm-line-strong);
-  background: rgba(16, 13, 12, 0.45);
-  backdrop-filter: blur(10px);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--pm-ivory-2);
-}
-
 [data-public-home-r4] .pm-hero__title {
   font-size: clamp(1.85rem, 1.05rem + 4.2vw, 4.1rem);
   font-weight: 800;
@@ -902,11 +878,6 @@
 @media (prefers-reduced-motion: no-preference) {
   [data-public-home-r4] .pm-hero__mediaImg {
     animation: pm-settle 2200ms var(--pm-ease-out) 1 both;
-  }
-
-  [data-public-home-r4] .pm-hero__eyebrow {
-    opacity: 0;
-    animation: pm-rise 620ms var(--pm-ease-out) 60ms forwards;
   }
 
   [data-public-home-r4] .pm-hero__line {
@@ -3047,7 +3018,6 @@
    * instead of waiting for an animation that `animation: none` just cancelled.
    * That is the failure worth guarding — text stuck at zero opacity forever.
    */
-  [data-public-home-r4] .pm-hero__eyebrow,
   [data-public-home-r4] .pm-hero__line,
   [data-public-home-r4] .pm-hero__actions,
   [data-public-home-r4] .pm-hero__credibility,
@@ -3811,8 +3781,13 @@
    * same fault as on the phone, just further down the breakpoint range and
    * only visible on a screen most people do not review on. Capping at 720px
    * lets the content size the hero from 1440 up, exactly as it does below.
+   *
+   * Reduced by ~42px with the eyebrow badge, because the copy it hangs from
+   * got ~42px shorter (a 28px pill plus the 14px column gap). Leaving the
+   * reservation alone would have kept that height as empty frame above the
+   * headline — the badge's space without the badge.
    */
-  min-height: min(82svh, 720px);
+  min-height: min(78svh, 678px);
 }
 
 [data-public-home-r4] .pm-hero--qf .pm-hero__media {
@@ -4630,9 +4605,14 @@
    * It remains a floor for a landscape phone or a very short window.
    *
    * Keep in step with `.pm-hero--qf`, which does the same job from 768px up.
+   *
+   * Reduced by ~42px with the eyebrow badge, for the reason given there. At
+   * 320-390 the content already sizes the hero and this floor is not reached,
+   * so the change is only visible on the taller phones (412, 430) where the
+   * floor was still winning and holding 42px of empty frame open.
    */
   [data-public-home-r4] .pm-hero {
-    min-height: min(64svh, 600px);
+    min-height: min(60svh, 558px);
   }
 
   /*
