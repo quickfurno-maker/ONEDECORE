@@ -12,8 +12,11 @@ import {
   LEGAL_EFFECTIVE_DATE_PLACEHOLDER,
   LEGAL_PUBLICATION_MODE,
   LEAD_INTAKE_ACTIVATION,
+  PRIVACY_NOTICE_ADVERTISING_AMENDMENT,
   PRIVACY_NOTICE_EFFECTIVE_DATE,
+  PRIVACY_NOTICE_PREVIOUS_EFFECTIVE_DATE,
   PRIVACY_NOTICE_OWNER_APPROVAL,
+  PRIVACY_NOTICE_PREVIOUS_VERSION,
   PRIVACY_NOTICE_VERSION,
   TERMS_OF_USE_EFFECTIVE_DATE,
   TERMS_OF_USE_OWNER_APPROVAL,
@@ -44,6 +47,8 @@ const root = process.cwd();
 const secret = "x".repeat(32);
 const MANAGED = "https://lpurlfmpvriyvpkujvyl.supabase.co";
 const ACTIVATION_DATE = "2026-08-25";
+/** When the owner approved the v1.1 advertising amendment. */
+const AMENDMENT_DATE = "2026-09-12";
 
 function enabledEnv(
   overrides: Record<string, string | undefined> = {}
@@ -66,10 +71,62 @@ describe("Phase 10 production lead-intake legal activation", () => {
   });
 
   test("Privacy Notice version and effective date", () => {
-    assert.equal(PRIVACY_NOTICE_VERSION, "privacy-notice-v1.0");
-    assert.equal(PRIVACY_NOTICE_EFFECTIVE_DATE, ACTIVATION_DATE);
-    assert.equal(getPrivacyNoticeDisplayVersion(), "privacy-notice-v1.0");
-    assert.equal(getPrivacyNoticeEffectiveDateLabel(), ACTIVATION_DATE);
+    /*
+     * v1.1 adds the advertising-measurement disclosure. Additive — no earlier
+     * statement was withdrawn — but it names a new recipient and a new cookie,
+     * which is a material change and so a new version rather than a quiet edit.
+     *
+     * The v1.0 approval record and activation date are both kept as history,
+     * but the PUBLISHED effective date moves with the published version. The
+     * page prints the two together, so leaving it at the v1.0 date would tell
+     * a reader the advertising disclosure had been in force since 2026-08-25,
+     * weeks before it was written.
+     *
+     * Terms of Use keeps the original activation date, because Terms were not
+     * amended — which is also what stops this test passing on a global
+     * find-and-replace of the date.
+     */
+    assert.equal(PRIVACY_NOTICE_VERSION, "privacy-notice-v1.1");
+    assert.equal(PRIVACY_NOTICE_PREVIOUS_VERSION, "privacy-notice-v1.0");
+    assert.equal(PRIVACY_NOTICE_EFFECTIVE_DATE, AMENDMENT_DATE);
+    assert.equal(PRIVACY_NOTICE_PREVIOUS_EFFECTIVE_DATE, ACTIVATION_DATE);
+    assert.equal(getPrivacyNoticeDisplayVersion(), "privacy-notice-v1.1");
+    assert.equal(getPrivacyNoticeEffectiveDateLabel(), AMENDMENT_DATE);
+
+    // The v1.0 approval record is untouched history.
+    assert.equal(PRIVACY_NOTICE_OWNER_APPROVAL.approvedAt, ACTIVATION_DATE);
+    assert.match(PRIVACY_NOTICE_OWNER_APPROVAL.reference, /PR #92/);
+  });
+
+  test("the v1.1 amendment records a real owner approval, and no counsel approval", () => {
+    /*
+     * Approved by the owner on 2026-09-12, in a commit separate from the one
+     * that wrote the section — an approval an author grants itself in the same
+     * breath as the copy records nothing.
+     *
+     * `counselApproval` stays null. No external legal counsel reviewed this,
+     * and this file's only job is to be accurate about who agreed to what.
+     */
+    const amendment = PRIVACY_NOTICE_ADVERTISING_AMENDMENT;
+    assert.equal(amendment.version, "privacy-notice-v1.1");
+    assert.equal(amendment.supersedes, "privacy-notice-v1.0");
+
+    assert.ok(amendment.ownerApproval, "the amendment must carry an approval");
+    assert.equal(amendment.ownerApproval.approvedBy, "ONEDECORE owner");
+    assert.equal(amendment.ownerApproval.approvedAt, AMENDMENT_DATE);
+    assert.match(amendment.ownerApproval.reference, /proceed merge and deployment/);
+    assert.match(amendment.ownerApproval.reference, /2026-09-12/);
+
+    assert.equal(amendment.counselApproval, null);
+    assert.equal(BUSINESS_IDENTITY.legalCounselApprovalReference, null);
+    assert.doesNotMatch(
+      amendment.ownerApproval.reference,
+      /counsel|solicitor|advocate|lawyer/i,
+      "the approval reference must not imply legal review that did not happen"
+    );
+
+    // The approval is dated no earlier than the version it approves.
+    assert.ok(amendment.ownerApproval.approvedAt >= PRIVACY_NOTICE_PREVIOUS_EFFECTIVE_DATE);
   });
 
   test("Terms version and effective date", () => {

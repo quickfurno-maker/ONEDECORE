@@ -237,8 +237,10 @@ export const DATA_INVENTORY: readonly DataInventoryEntry[] = [
     deletionTrigger: "Session end or logout",
     risk: "low",
     accuracyRequirement: "Essential only",
-    ownerDecision: "Future tracking cookie review separate",
-    currentTruth: "No analytics, Meta Pixel, advertising cookies or fingerprinting approved.",
+    ownerDecision:
+      "Advertising measurement runs only on explicit opt-in. The visitor's choice is stored in the first-party cookie onedecore_ad_tracking_consent (v1), and is not inferred from communication consent, _fbp, _fbc, fbclid or UTM parameters.",
+    currentTruth:
+      "Necessary cookies only, unless the visitor allows advertising cookies. With consent granted, Meta receives event name/time/id, the source page URL, action source, user agent, client IP where trusted-proxy rules permit, and _fbp/_fbc when present. Automatic advanced matching is off; no name, phone, email, budget, service selection, enquiry text, quotation or CRM data is sent. Withdrawal stops further events immediately and clears _fbp/_fbc from the browser; events already transmitted cannot be recalled.",
   },
   {
     category: "payment-data",

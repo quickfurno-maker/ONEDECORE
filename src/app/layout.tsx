@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { AdConsentBanner } from "@/features/marketing/meta/AdConsentBanner";
+import { MetaPixel } from "@/features/marketing/meta/MetaPixel";
 import "./globals.css";
 import "@/features/public-site/theme/public-dark-theme.css";
 import "@/features/public-site/chrome/public-site-chrome.css";
@@ -22,6 +24,28 @@ export default function RootLayout({
         <noscript>
           <style>{`[data-dc-reveal]{opacity:1!important;transform:none!important}`}</style>
         </noscript>
+        {/*
+          The ONLY measurement mount point on the site.
+
+          This layout wraps the admin console and the manager workspace as well
+          as the public site, so the component is gated rather than trusted:
+          `isMetaTrackablePath` is deny-by-default and must say yes before any
+          script is requested. Nothing is added to this file's server-rendered
+          output — an internal page ships no third-party tag at all, rather than
+          a tag that happens not to fire.
+
+          Three gates, all required: a public path, a configured pixel id, and
+          an explicit advertising consent. Production already carries the pixel
+          id and the Conversions API token, so the consent cookie is the gate
+          that actually protects a visitor — not the environment.
+        */}
+        <MetaPixel />
+        {/*
+          The choice itself, on the same public surfaces and behind the same
+          route gate. A page that may never be measured is never asked about
+          measurement either.
+        */}
+        <AdConsentBanner />
         {children}
       </body>
     </html>

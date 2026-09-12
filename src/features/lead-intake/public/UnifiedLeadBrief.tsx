@@ -88,6 +88,7 @@ import {
   shouldReuseOnError,
 } from "./lead-form-idempotency.ts";
 import { submitLeadIntake } from "./lead-intake-client.ts";
+import { trackMetaLead } from "../../marketing/meta/meta-pixel-events.ts";
 import { useLeadConsultation } from "./LeadConsultationHost";
 import { unifiedLeadToRequest } from "./unified-lead-request.ts";
 
@@ -422,6 +423,22 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
       result.kind === "success-created" ||
       result.kind === "success-duplicate"
     ) {
+      /*
+       * The one place a browser Lead may fire.
+       *
+       * The backend has accepted and persisted this enquiry — not opened, not
+       * typed into, not merely submitted. Every earlier moment would teach Meta
+       * to optimise for people who start a form and leave.
+       *
+       * `idempotencyKey` is the same value the server sends as the Conversions
+       * API `event_id`, so the pair arrive as one conversion. It is a random
+       * UUID: no phone number, no email, nothing derived from the customer.
+       *
+       * `trackMetaLead` cannot throw and does nothing when the pixel is absent
+       * or blocked, so this line cannot turn an accepted lead into a failure.
+       * It runs BEFORE `resetAfterSuccess()` clears the key.
+       */
+      trackMetaLead(idempotencyKey);
       resetAfterSuccess();
       setSubmissionReference(result.submissionReference);
       setUxState(mapClientResultToUxState(result));

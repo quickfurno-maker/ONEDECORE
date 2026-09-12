@@ -127,26 +127,55 @@ describe("what the production policy must never contain", () => {
     assert.ok(!(parsed.get("script-src") ?? []).includes("data:"));
   });
 
-  test("no third-party origin beyond the OneDecore Supabase project", () => {
-    // The application loads no tag manager, analytics or font CDN. If one is
-    // ever added, this test is where the decision surfaces.
-    const external = [...parsed.values()]
-      .flat()
-      .filter((source) => source.startsWith("http"))
-      .filter((source) => source !== MANAGED_SUPABASE_ORIGIN);
-    assert.deepEqual(external, []);
+  test("the external origins are exactly Supabase and the two Meta hosts", () => {
+    /*
+     * This test used to assert there were NO third-party origins at all, and
+     * said "if one is ever added, this test is where the decision surfaces".
+     * This is that decision, surfaced.
+     *
+     * Three origins, each named exactly and each for one reason:
+     *   - the managed Supabase project, for storage media and the REST API
+     *   - connect.facebook.net, which serves fbevents.js and nothing else
+     *   - www.facebook.com, where the Pixel posts its beacons
+     *
+     * No wildcards. `*.facebook.net` would admit every host Meta operates on
+     * that domain, now and in future, which is a much larger promise than
+     * "this site loads the Pixel". `graph.facebook.com` is deliberately absent:
+     * the Conversions API is server-to-server and no browser ever calls it.
+     */
+    const external = [
+      ...new Set(
+        [...parsed.values()]
+          .flat()
+          .filter((source) => source.startsWith("http"))
+      ),
+    ].sort();
+    assert.deepEqual(external, [
+      "https://connect.facebook.net",
+      "https://lpurlfmpvriyvpkujvyl.supabase.co",
+      "https://www.facebook.com",
+    ]);
+    assert.ok(
+      external.every((origin) => !origin.includes("*")),
+      "no wildcard origin may enter the policy"
+    );
   });
 });
 
 describe("what the production policy must contain", () => {
   const expectations: ReadonlyArray<readonly [string, readonly string[]]> = [
     ["default-src", ["'self'"]],
-    ["script-src", ["'self'", "'unsafe-inline'"]],
+    ["script-src", ["'self'", "'unsafe-inline'", "https://connect.facebook.net"]],
     ["script-src-attr", ["'none'"]],
     ["style-src", ["'self'", "'unsafe-inline'"]],
-    ["img-src", ["'self'", "data:", "blob:", MANAGED_SUPABASE_ORIGIN]],
+    // www.facebook.com is where the Pixel posts an image beacon.
+    [
+      "img-src",
+      ["'self'", "data:", "blob:", MANAGED_SUPABASE_ORIGIN, "https://www.facebook.com"],
+    ],
     ["font-src", ["'self'", "data:"]],
-    ["connect-src", ["'self'", MANAGED_SUPABASE_ORIGIN]],
+    // ...and where it falls back to fetch when an image beacon will not do.
+    ["connect-src", ["'self'", MANAGED_SUPABASE_ORIGIN, "https://www.facebook.com"]],
     ["object-src", ["'none'"]],
     ["base-uri", ["'self'"]],
     ["form-action", ["'self'"]],
@@ -162,14 +191,21 @@ describe("what the production policy must contain", () => {
     });
   }
 
-  test("scripts may come from this origin and nowhere else", () => {
-    // The `'unsafe-inline'` here is load-bearing for the JSON-LD blocks on the
-    // portfolio and product pages, and is the acknowledged limit of a
-    // static-compatible policy. What it does NOT do is admit a remote script.
+  test("exactly one remote script origin, and it is the Meta Pixel", () => {
+    /*
+     * The `'unsafe-inline'` here is load-bearing for the JSON-LD blocks on the
+     * portfolio and product pages, and is the acknowledged limit of a
+     * static-compatible policy.
+     *
+     * What changed is that the policy now admits ONE remote script origin. It
+     * is enumerated rather than merely counted so that adding a second — a tag
+     * manager, an analytics vendor, a chat widget — fails here and has to be
+     * argued for.
+     */
     const scriptSources = parsed.get("script-src") ?? [];
     assert.deepEqual(
       scriptSources.filter((source) => source.startsWith("http")),
-      []
+      ["https://connect.facebook.net"]
     );
   });
 

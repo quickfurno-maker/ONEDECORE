@@ -186,7 +186,11 @@ export const PROCESSOR_REGISTER: readonly ProcessorRegisterEntry[] = [
     incidentContact: null,
     approval: null,
     notes: [
-      "No analytics, Meta Pixel or non-essential tracking approved on current website.",
+      "Provider: Meta Platforms. Purpose: advertising measurement and campaign attribution for onedecore.in — the Meta Pixel in the browser and the Conversions API server-side.",
+      "CONSENT-DEPENDENT. Nothing is loaded or sent unless the visitor has explicitly allowed advertising cookies (first-party cookie onedecore_ad_tracking_consent, version v1). Unknown, denied, malformed and stale-version values all read as no consent. Consent is never inferred from communication consent, _fbp, _fbc, fbclid or UTM parameters.",
+      "Data categories: event name, event time, event id, source page URL, action source, browser user agent, client IP where trusted-proxy rules permit, and the _fbp/_fbc advertising cookies when present.",
+      "Never sent: name, phone, email, postal address, date of birth, gender, budget, service selection, project scope, enquiry text, quotation data, CRM identifiers. Automatic advanced matching is OFF.",
+      "Disclosure: Privacy Notice v1.1, section 'Cookies and advertising measurement'; Meta is named under Service providers. Owner sign-off of the v1.1 amendment is tracked by PRIVACY_NOTICE_ADVERTISING_AMENDMENT.ownerApproval and is a disclosure-governance item, not a tracking gate — no visitor can be measured without their own explicit opt-in either way.",
     ],
   },
 ] as const;

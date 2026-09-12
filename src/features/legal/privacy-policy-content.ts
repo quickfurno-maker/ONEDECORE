@@ -10,20 +10,87 @@ import {
   type LegalPublicationMode,
 } from "./legal-publication.ts";
 
-/** Owner-approved production version — effective 2026-08-25. */
-export const PRIVACY_NOTICE_VERSION = "privacy-notice-v1.0" as const;
+/**
+ * Published version.
+ *
+ * v1.1 adds the advertising-measurement disclosure. The change is additive —
+ * no existing statement was withdrawn or weakened — but it describes a new
+ * recipient and a new cookie, which is a material change and therefore a new
+ * version rather than a quiet edit to v1.0.
+ *
+ * The v1.0 approval record below is kept as history; v1.1 carries its own in
+ * `PRIVACY_NOTICE_ADVERTISING_AMENDMENT.ownerApproval`, signed by the owner on
+ * 2026-09-12. Neither record blocks a visitor either way: the advertising
+ * section renders regardless, and no Meta cookie can be set without an
+ * explicit grant from the person reading it.
+ */
+export const PRIVACY_NOTICE_VERSION = "privacy-notice-v1.1" as const;
+
+/** The version this amendment supersedes. Retained for audit. */
+export const PRIVACY_NOTICE_PREVIOUS_VERSION = "privacy-notice-v1.0" as const;
 
 /** @deprecated Alias kept for call sites that referenced the proposed id. */
 export const PRIVACY_NOTICE_PROPOSED_PRODUCTION_VERSION = PRIVACY_NOTICE_VERSION;
 
-/** Owner-authorized production activation date (YYYY-MM-DD). */
-export const PRIVACY_NOTICE_EFFECTIVE_DATE: string | null = "2026-08-25";
+/**
+ * The date the CURRENTLY PUBLISHED version took effect (YYYY-MM-DD).
+ *
+ * WHY THIS MOVED WITH THE VERSION.
+ *
+ * The public page prints `PRIVACY_NOTICE_VERSION` beside this date. Leaving it
+ * at the v1.0 activation date would have published "v1.1, effective
+ * 2026-08-25" — telling a reader the advertising-measurement disclosure had
+ * been in force for weeks before it was written. That is the one thing an
+ * effective date exists to state truthfully.
+ *
+ * Nothing historical is rewritten: the v1.0 activation date is kept below, as
+ * is its own approval record, and Terms of Use keeps its own unchanged date
+ * because Terms were not amended.
+ */
+export const PRIVACY_NOTICE_EFFECTIVE_DATE: string | null = "2026-09-12";
+
+/** When v1.0 took effect. Retained so the amendment does not erase it. */
+export const PRIVACY_NOTICE_PREVIOUS_EFFECTIVE_DATE = "2026-08-25" as const;
 
 export const PRIVACY_NOTICE_OWNER_APPROVAL = {
   approvedBy: "ONEDECORE owner",
   approvedAt: "2026-08-25",
   reference:
     "PR #92 owner APPROVE of published-mode package at 2609bbca1ba661989fd0e8f468b0724a47adcd5d",
+  counselApproval: null,
+} as const;
+
+/**
+ * The v1.1 advertising amendment, and its approval state.
+ *
+ * `ownerApproval` was null while the copy was being written — an approval an
+ * author grants themselves records nothing — and was set by the owner on
+ * 2026-09-12, in a separate commit from the one that wrote the section.
+ *
+ * `counselApproval` stays null. No external legal counsel has reviewed this,
+ * and recording otherwise would be a false statement in the one file whose
+ * purpose is to be accurate about who agreed to what.
+ *
+ * This is a DISCLOSURE gate, not a tracking gate. The two are separate so that
+ * neither can be mistaken for the other: tracking is blocked by the consent
+ * cookie whatever this says, and this being unapproved never meant a visitor
+ * could be tracked without being told.
+ */
+export const PRIVACY_NOTICE_ADVERTISING_AMENDMENT = {
+  version: PRIVACY_NOTICE_VERSION,
+  supersedes: PRIVACY_NOTICE_PREVIOUS_VERSION,
+  summary:
+    "Adds the advertising-measurement section and names Meta as a recipient when the visitor allows advertising cookies.",
+  ownerApproval: {
+    approvedBy: "ONEDECORE owner",
+    approvedAt: "2026-09-12",
+    reference:
+      "ONEDECORE owner instruction on 2026-09-12: proceed merge and deployment after review of Privacy Notice v1.1 advertising-measurement amendment",
+  } as null | {
+    readonly approvedBy: string;
+    readonly approvedAt: string;
+    readonly reference: string;
+  },
   counselApproval: null,
 } as const;
 
@@ -189,6 +256,32 @@ export const PRIVACY_POLICY_CONTENT: readonly LegalContentSection[] = [
     body: [
       "ONEDECORE uses service providers to operate the website and CRM, including Supabase for managed database/authentication services and Hostinger-hosted infrastructure for the website. These providers may process limited personal or technical data necessary to provide their services. Details may be updated as our service-provider arrangements change.",
       "Supabase project region: Mumbai, India (ap-south-1).",
+      "Meta Platforms is used for advertising measurement only, and only if you allow advertising cookies. What it receives, and what it never receives, is set out under 'Cookies and advertising measurement' below.",
+    ],
+  },
+  {
+    /*
+     * The advertising-measurement disclosure.
+     *
+     * Placed immediately after Service providers because that is where a
+     * reader looking for "who else sees my data" will already be, and because
+     * the Meta entry in that section points here.
+     *
+     * Every sentence describes what the code actually does. The field list is
+     * the exact `user_data` allow-list from `meta-capi-signals.ts`, and the
+     * "we do not send" list is the exact set the tests assert absent. Nothing
+     * here promises a retention period or a legal-entity fact that is not
+     * already recorded in the business identity.
+     */
+    id: "advertising-measurement",
+    title: "Cookies and advertising measurement",
+    body: [
+      "Necessary cookies keep the website working — for example your session, security, and remembering a preference you have set. These are not used for advertising.",
+      "Optional advertising measurement uses the Meta Pixel and Meta's Conversions API to tell us which advertising led to a real enquiry. It runs only if you choose 'Allow advertising cookies'. If you choose 'Necessary only', or make no choice at all, no Meta script is loaded, no Meta cookie is set and no event is sent.",
+      "When you allow it, Meta may receive: the event name, event time and an event identifier; the page address the event happened on; that it happened on a website; your browser's user-agent string; your IP address where our hosting rules allow us to read it; and the Meta advertising cookies _fbp and _fbc when they are present.",
+      "We do not send Meta your name, phone number, email address, postal address, date of birth, gender, budget, service selection, project details, enquiry message, quotation data or any CRM record. Meta's automatic advanced matching is switched off.",
+      "The event identifier is a random one-time value used only so that the browser report and our server report of the same enquiry are counted once rather than twice. It is not derived from your contact details.",
+      "You can change your choice at any time using the 'Cookie preferences' control on any public page. Choosing 'Necessary only' stops further events immediately and removes the _fbp and _fbc cookies from this browser. Events already sent to Meta before you changed your choice cannot be recalled by us.",
     ],
   },
   {

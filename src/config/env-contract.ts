@@ -59,6 +59,7 @@ export type EnvSubsystem =
   | "whatsapp"
   | "campaign"
   | "meta-ads"
+  | "meta-tracking"
   | "google-ads"
   | "kriti";
 
@@ -446,6 +447,55 @@ export const ONEDECORE_ENV_CONTRACT: readonly EnvKeyContract[] = [
     subsystem: "meta-ads",
     purpose:
       "Legacy pixel identifier. Used only as a fallback when no conversions dataset id is set.",
+    inEnvExample: true,
+  },
+
+  // ------------------------------------------------------- meta-tracking ---
+  /*
+   * Website measurement, which is a different subsystem from `meta-ads`.
+   *
+   * `meta-ads` credentials drive the Marketing API — creating and reading
+   * campaigns. These two drive the Pixel and the Conversions API, which report
+   * what happened on onedecore.in. They share a vendor and nothing else, and
+   * merging them would let one activation decision silently turn on the other.
+   */
+  {
+    name: "NEXT_PUBLIC_META_PIXEL_ID",
+    scope: "public",
+    sensitivity: "public",
+    lifecycle: "activation-gated",
+    subsystem: "meta-tracking",
+    purpose:
+      "Meta Pixel / dataset id. Absent means no pixel is loaded on any page — the whole browser measurement layer is off, not degraded.",
+    inEnvExample: true,
+  },
+  {
+    name: "META_CONVERSIONS_API_ACCESS_TOKEN",
+    scope: "server",
+    sensitivity: "secret",
+    lifecycle: "activation-gated",
+    subsystem: "meta-tracking",
+    purpose:
+      "Server-to-server Conversions API token. Absent means no server event is attempted. Never public-scoped: it can write events into the dataset.",
+    inEnvExample: true,
+  },
+  {
+    name: "META_CONVERSIONS_API_GRAPH_VERSION",
+    scope: "server",
+    sensitivity: "config",
+    lifecycle: "optional",
+    subsystem: "meta-tracking",
+    purpose: "Pins the Graph API version for CAPI; a default applies when unset.",
+    inEnvExample: true,
+  },
+  {
+    name: "META_CONVERSIONS_API_TEST_EVENT_CODE",
+    scope: "server",
+    sensitivity: "config",
+    lifecycle: "optional",
+    subsystem: "meta-tracking",
+    purpose:
+      "Routes server events to Meta's Test Events view during certification. Blank in normal production, or real conversions stop counting.",
     inEnvExample: true,
   },
 
