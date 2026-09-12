@@ -46,24 +46,6 @@
   gap: 0.65rem;
 }
 
-.od-site-header__cta {
-  color: #1a120c;
-  background: var(--od-gold-light);
-  text-decoration: none;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  min-height: 44px;
-  padding: 0 0.9rem;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-}
-
-.od-site-header__ctaShort {
-  display: none;
-}
-
 .od-site-header__toggle {
   min-width: 44px;
   min-height: 44px;
@@ -73,62 +55,179 @@
   border-radius: 10px;
 }
 
+/* ========================================================================== */
+/* The menu overlay                                                           */
+/*                                                                            */
+/* Both of these are SIBLINGS of `.od-site-header`, never children. The header */
+/* carries `backdrop-filter`, which makes it the containing block for fixed-   */
+/* position descendants, so a scrim inside it resolved `inset: 0` against the  */
+/* 390x64 bar instead of the viewport: the backdrop was a strip hidden behind  */
+/* the header and every tap below it reached the page. Their z-index has to    */
+/* clear the header's 50 for the same reason it used to be implicit.           */
+/* ========================================================================== */
+
 .od-site-header__scrim {
-  display: none;
   position: fixed;
   inset: 0;
-  background: rgba(8, 7, 6, 0.55);
+  z-index: 60;
+  /* A button, so it is reset rather than inherited. */
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: rgba(8, 7, 6, 0.62);
+  backdrop-filter: blur(2px);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 200ms ease,
+    visibility 0s linear 200ms;
+  visibility: hidden;
 }
 
 .od-site-header__scrim[data-open] {
-  display: block;
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  transition:
+    opacity 200ms ease,
+    visibility 0s;
 }
 
+/*
+ * A DRAWER, NOT A TAKEOVER.
+ *
+ * `min(80vw, 340px)` leaves a real strip of page showing at every phone width
+ * — 64px at 320, 78px at 390 — which is both the visual cue that this is a
+ * panel over a page and the tap target that dismisses it. The previous
+ * `min(22rem, 92vw)` left 26px at 320: not obviously a backdrop, and not
+ * comfortably a target.
+ */
 .od-site-header__drawer {
   position: fixed;
   top: 0;
   right: 0;
+  z-index: 61;
   box-sizing: border-box;
-  width: min(22rem, 92vw);
+  width: min(80vw, 340px);
   max-width: 100vw;
-  height: 100dvh;
-  padding: 1.25rem;
+  /*
+   * AS TALL AS ITS CONTENTS, NOT AS TALL AS THE SCREEN.
+   *
+   * Two menu items in a 100dvh panel is three-quarters of a phone screen of
+   * empty brown, which is the other half of "too large and basic" — it was not
+   * only the width. The panel now ends under the last item and the page shows
+   * below it, so the backdrop is a strip down the side AND a band underneath:
+   * more of the page visible, and more of it tappable to dismiss.
+   *
+   * The cap keeps it scrollable rather than clipped if Shop and the commerce
+   * utilities are ever all switched on at once on a short screen.
+   */
+  height: auto;
+  max-height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  border-left: 1px solid var(--od-line);
+  border-bottom: 1px solid var(--od-line);
+  border-end-start-radius: 16px;
   background: var(--od-bg-raised);
+  box-shadow: -18px 18px 48px rgba(6, 4, 4, 0.5);
   visibility: hidden;
   opacity: 0;
+  transform: translateX(12px);
   pointer-events: none;
   transition:
-    opacity 180ms ease,
-    visibility 0s linear 180ms;
-  z-index: 60;
+    opacity 200ms ease,
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 200ms;
 }
 
 .od-site-header__drawer[data-open] {
   visibility: visible;
   opacity: 1;
+  transform: none;
   pointer-events: auto;
   transition:
-    opacity 180ms ease,
+    opacity 200ms ease,
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
     visibility 0s;
 }
 
-.od-site-header__drawerNav {
+.od-site-header__drawerHead {
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin-top: 1.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--od-line);
 }
 
-.od-site-header__drawerNav a,
 .od-site-header__drawerClose {
+  flex: 0 0 auto;
+  min-width: 44px;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  border: 1px solid var(--od-line);
+  border-radius: 10px;
+  background: none;
   color: var(--od-text-primary);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.od-site-header__drawerClose:hover {
+  border-color: var(--od-gold);
+  color: var(--od-gold-light);
+}
+
+/*
+ * Compact rhythm. Two or three items in a 340px panel do not need 2rem of air
+ * between them — that is what made the old menu read as an empty full-screen
+ * page with a few words on it.
+ */
+.od-site-header__drawerNav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.85rem;
+}
+
+.od-site-header__drawerNav a {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 0.65rem;
+  border-radius: 10px;
+  color: var(--od-text-secondary);
   text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   background: none;
   border: 0;
-  font: inherit;
+  font-family: inherit;
+}
+
+.od-site-header__drawerNav a:hover {
+  background: var(--od-surface-glass);
+  color: var(--od-text-primary);
+}
+
+.od-site-header__drawerNav a[aria-current="page"] {
+  color: var(--od-gold-light);
+  background: var(--od-gold-soft);
+}
+
+.od-site-header__drawerMark {
+  min-height: 0;
 }
 
 .od-site-footer {
@@ -343,22 +442,24 @@
 }
 
 @media (max-width: 1023px) {
-  .od-site-header__ctaFull {
-    display: none;
-  }
-
-  .od-site-header__ctaShort {
-    display: inline;
-  }
-
+  /*
+   * Shop utilities stay out of the mobile bar; they are in the drawer instead.
+   * The consultation pill that used to collapse here is gone from the header
+   * entirely — see PublicSiteHeader.
+   */
   .od-site-header__util {
     display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .od-site-header__drawer {
+  .od-site-header__drawer,
+  .od-site-header__scrim {
     transition: none;
+  }
+
+  .od-site-header__drawer {
+    transform: none;
   }
 }
 

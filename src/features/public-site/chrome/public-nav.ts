@@ -1,10 +1,30 @@
 /**
  * The public information architecture, in one place.
  *
- * ONEDECORE is one brand with two customer journeys — designing a home, and
- * furnishing one — and the menu is where that decision is first offered. So the
- * order is deliberate: Interiors and Shop are the two verticals, Portfolio is
- * the proof, About and Contact are the brand and the way in.
+ * TWO DESTINATIONS, NOT FIVE
+ *
+ * `Portfolio | About`, plus Shop when its gate is on. That is the whole menu.
+ *
+ * WHY INTERIORS LEFT
+ *
+ * It pointed at `/`, which is exactly where the wordmark beside it already
+ * goes. Two controls a thumb's width apart, with different words, doing the
+ * same thing — and on the homepage itself the item was marked current while
+ * naming a place the visitor was already standing. It cost a menu slot to
+ * restate the logo.
+ *
+ * WHY CONTACT LEFT
+ *
+ * It pointed at `/#contact`, and every public page already carries at least
+ * two live routes to that section: the sticky conversion bar with its
+ * consultation button and call link, the WhatsApp action, and the footer's
+ * consultation link. A menu entry was a fourth path to the same band, spending
+ * the scarcest slot on the smallest screen on something three other controls
+ * were already doing better.
+ *
+ * NOTHING BEHIND EITHER WAS REMOVED. `/` is the homepage, `/interiors` is
+ * still a 308 to it, `#contact` is still the consultation band and still the
+ * target of `PUBLIC_CONSULTATION`. This list decides what the MENU shows.
  *
  * THERE IS NO "HOME" ITEM
  *
@@ -14,24 +34,6 @@
  *
  * Header, mobile drawer and footer all read this list. They used to drift.
  */
-
-/**
- * Interiors points at the site root, because that is where it lives now.
- *
- * The label stays "Interiors" rather than becoming "Home". It names the
- * business category a visitor is choosing between — the other being Shop — and
- * "Home" would name a position in the site instead, which the wordmark already
- * covers. So the wordmark and this item share a destination and say different
- * things: one is the way back, one is the vertical.
- *
- * `/interiors` is a 308 to `/`. Linking to it here would send every visitor
- * through a redirect to reach a page the menu could have pointed at directly.
- */
-export const PUBLIC_NAV_INTERIORS = {
-  id: "interiors",
-  label: "Interiors",
-  href: "/",
-} as const;
 
 export const PUBLIC_NAV_SHOP = {
   id: "shop",
@@ -51,12 +53,6 @@ export const PUBLIC_NAV_ABOUT = {
   href: "/#about",
 } as const;
 
-export const PUBLIC_NAV_CONTACT = {
-  id: "contact",
-  label: "Contact",
-  href: "/#contact",
-} as const;
-
 /**
  * The menu when Shop is not publicly enabled.
  *
@@ -64,28 +60,25 @@ export const PUBLIC_NAV_CONTACT = {
  * dead end wearing a menu item's clothes.
  */
 export const PUBLIC_NAV_CORE = [
-  PUBLIC_NAV_INTERIORS,
   PUBLIC_NAV_PORTFOLIO,
   PUBLIC_NAV_ABOUT,
-  PUBLIC_NAV_CONTACT,
 ] as const;
 
 /**
  * Locked public IA destinations.
  *
- * Shop takes SECOND position when the fail-closed gate is on — it is one of the
- * two verticals, not an appendix. It used to be appended last, which read as an
- * afterthought bolted onto an interiors site.
+ * Shop is APPENDED, not inserted second.
+ *
+ * It used to sit second because Interiors sat first and the two were the
+ * brand's two verticals — Shop ahead of Portfolio and About said "this is the
+ * other half of the business, not an afterthought". Interiors is gone from the
+ * menu, so that pairing no longer exists to lead: the remaining two items are
+ * the proof and the brand, and Shop reads correctly after them as the third
+ * destination rather than jumping the queue ahead of the work.
  */
 export function getPublicNavDestinations(shopEnabled: boolean) {
   return shopEnabled
-    ? ([
-        PUBLIC_NAV_INTERIORS,
-        PUBLIC_NAV_SHOP,
-        PUBLIC_NAV_PORTFOLIO,
-        PUBLIC_NAV_ABOUT,
-        PUBLIC_NAV_CONTACT,
-      ] as const)
+    ? ([PUBLIC_NAV_PORTFOLIO, PUBLIC_NAV_ABOUT, PUBLIC_NAV_SHOP] as const)
     : PUBLIC_NAV_CORE;
 }
 
@@ -95,10 +88,14 @@ export const PUBLIC_NAV_DESTINATIONS = getPublicNavDestinations(true);
 /**
  * Canonical public consultation target.
  *
- * `#contact` is the homepage's closing section and the Contact menu
- * destination: one band, one purpose, one anchor. `#consultation` remains a
- * live alias on that same section — `/portfolio/[slug]` and the Shop nav link
- * to it, and breaking an anchor to save a word would be a poor trade.
+ * `#contact` is the homepage's closing section: one band, one purpose, one
+ * anchor. `#consultation` remains a live alias on that same section —
+ * `/portfolio/[slug]` and the Shop nav link to it, and breaking an anchor to
+ * save a word would be a poor trade.
+ *
+ * This anchor OUTLIVED the Contact menu item, and is now the whole reason
+ * removing that item cost nothing: the sticky conversion bar, the WhatsApp
+ * action and the footer all still arrive here.
  */
 export const PUBLIC_CONSULTATION = {
   label: "Get Free Design Consultation",

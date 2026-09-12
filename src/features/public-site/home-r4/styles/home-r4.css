@@ -3639,14 +3639,34 @@
   letter-spacing: 0.24em;
 }
 
+/*
+ * MADE FOR PUNE STAYS ON, AT EVERY WIDTH.
+ *
+ * This block used to hide the tagline below 421px. The header it applies to is
+ * shared with Portfolio, which carries only `data-public-dark-theme` — so the
+ * same wordmark, in the same bar, showed the tagline on Portfolio at 390px and
+ * hid it on the homepage. One logo behaving two ways at the same screen size
+ * is the "sometimes shows MADE FOR PUNE and sometimes not" the owner reported.
+ *
+ * The tagline is part of the brand lockup, so the fix is to make it FIT rather
+ * than to drop it: the wordmark and rule shrink a little at the narrowest
+ * widths and the tagline comes with them. Measured at 320px it sits well
+ * inside the bar with the menu button.
+ */
 @media (max-width: 420px) {
-  [data-public-home-r4] .od-wordmark[data-size="nav"] .od-wordmark__tag {
-    display: none;
-  }
   [data-public-home-r4] .od-wordmark[data-size="nav"] .od-wordmark__one,
   [data-public-home-r4] .od-wordmark[data-size="nav"] .od-wordmark__decore {
     font-size: 0.95rem;
     letter-spacing: 0.14em;
+  }
+
+  [data-public-home-r4] .od-wordmark[data-size="nav"] .od-wordmark__rule {
+    width: 1.15rem;
+  }
+
+  [data-public-home-r4] .od-wordmark[data-size="nav"] .od-wordmark__tag {
+    font-size: 0.5rem;
+    letter-spacing: 0.1em;
   }
 }
 

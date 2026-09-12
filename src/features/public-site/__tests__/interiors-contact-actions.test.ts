@@ -153,19 +153,26 @@ describe("the public phone number is configured, validated, or absent", () => {
 /* -------------------------------------------------------------------------- */
 
 describe("the Interiors header carries navigation, not a second CTA", () => {
-  test("the shell turns the consultation pill off rather than forking the header", () => {
+  test("the shell uses the shared header rather than forking it", () => {
+    /*
+     * This used to assert `showConsultation={false}`. The prop is gone: no
+     * public header carries the pill on any surface, so the shell has nothing
+     * to switch off. Portfolio was the last page still showing one, and it got
+     * the sticky conversion bar instead.
+     */
     const shell = code(read(SHELL));
-    assert.match(shell, /showConsultation=\{false\}/);
+    assert.doesNotMatch(shell, /showConsultation/);
     // Still the shared header, still the interiors current state, still gated.
     assert.match(shell, /<PublicSiteHeader/);
     assert.match(shell, /current="interiors"/);
     assert.match(shell, /shopEnabled=\{shopEnabled\}/);
   });
 
-  test("the header still supports the control it is being given", () => {
+  test("no header anywhere renders a consultation pill", () => {
     const header = code(read("src/features/public-site/chrome/PublicSiteHeader.tsx"));
-    assert.match(header, /showConsultation = true/);
-    assert.match(header, /showConsultation \?/);
+    assert.doesNotMatch(header, /showConsultation/);
+    assert.doesNotMatch(header, /od-site-header__cta/);
+    assert.doesNotMatch(header, /PUBLIC_CONSULTATION/);
   });
 
   test("wordmark, navigation and drawer are untouched", () => {

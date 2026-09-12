@@ -231,15 +231,19 @@ describe("the storefront stays contained while the funnel is interiors-only", ()
     );
     assert.deepEqual([...off], [...PUBLIC_NAV_CORE]);
     /*
-     * Shop takes SECOND position rather than last. It is one of ONEDECORE's
-     * two verticals, and appending it read as an afterthought bolted onto an
-     * interiors site.
+     * Shop is APPENDED now, not inserted second.
+     *
+     * It sat second while Interiors sat first: the two were the brand's two
+     * verticals and Shop ahead of Portfolio said "the other half of the
+     * business, not an afterthought". Interiors has left the menu, so that
+     * pairing no longer exists to lead — the remaining items are the proof and
+     * the brand, and Shop reads correctly after them.
      */
     assert.equal(on.length, PUBLIC_NAV_CORE.length + 1);
-    assert.deepEqual(on[1], PUBLIC_NAV_SHOP);
+    assert.deepEqual(on.at(-1), PUBLIC_NAV_SHOP);
     assert.deepEqual(
       on.map((item) => item.id),
-      ["interiors", "shop", "portfolio", "about", "contact"]
+      ["portfolio", "about", "shop"]
     );
   });
 
@@ -383,9 +387,14 @@ describe("no public page leaves the visitor without a next step", () => {
      * the same section for the links that already point at it.
      */
     assert.equal(PUBLIC_CONSULTATION.href, "/#contact");
-    for (const rel of [FOOTER, HEADER]) {
-      assert.match(read(rel), /PUBLIC_CONSULTATION\.href/, rel);
-    }
+    /*
+     * The FOOTER is the header's replacement here. The header no longer
+     * carries a consultation pill on any surface — the sticky conversion bar
+     * owns that action, where a thumb actually is — so the footer is the
+     * chrome that still routes to the canonical anchor.
+     */
+    assert.match(read(FOOTER), /PUBLIC_CONSULTATION\.href/);
+    assert.doesNotMatch(read(HEADER), /PUBLIC_CONSULTATION/);
   });
 });
 
