@@ -96,7 +96,7 @@ above exists.
 | CRM first-contact SLA | **ACTIVATED** — 60 business minutes, Asia/Kolkata, Mon–Sat 09:00–19:00, non-retroactive |
 | Shop / COD storefront | **OFF / FAIL-CLOSED** |
 | Online payments | **DEFERRED** — no migration on `main`, none managed |
-| Landing Lab public route | **OFF / FAIL-CLOSED** |
+| Landing Lab public route | **LIVE** — activated 2026-09-12 (PR #183). Still fail-closed: `ONEDECORE_LANDING_LAB_PUBLIC_ENABLED=false` disables every `/lp/*` page immediately. |
 | Campaign live spend | **OFF / FAIL-CLOSED** — see note below |
 | Meta WhatsApp webhook / outbound | **OFF / FAIL-CLOSED** |
 | Kriti provider | **OFF / FAIL-CLOSED** |
@@ -305,7 +305,7 @@ ONEDECORE is an integrated operating system spanning multiple product domains. *
 | Designer assignment & design collaboration (migration 29) | Managed-applied 2026-08-16 (Phase 8B M29); PR #59 **MERGED** `6b31052973cf9e50e25803b232ce446308c1fa3a` |
 | Project execution workspace (migration 30) | Managed-applied 2026-08-17 (Phase 8C M30); PR #61 **MERGED** `8f4f3ecf082450e82ab15f02703c951e50f0817e` |
 | Campaign consent, audience & approval foundation (migration 31) | Managed-applied 2026-08-18 (Phase 9A M31); PR #63 **MERGED** `26e6346ef6722b7c6ff5908c12f208854b513ad6`; architecture PR #62 **MERGED** `caff9d0864e1546dff38646df4355dafa851a473` |
-| Landing Page Lab foundation (migration 32) | Managed-applied 2026-08-19 (Phase 9B M32); production Landing Lab **OFF**; DEC-0084 |
+| Landing Page Lab foundation (migration 32) | Managed-applied 2026-08-19 (Phase 9B M32); DEC-0084. Product completed and production-activated 2026-09-12 — PR #183 **MERGED** `e986892e0de2c9eb0caeca06d424fee00231cded`, **no further migration** |
 | Campaign execution foundation (migration 33) | Managed-applied 2026-08-20 after M32 (Phase 9C-B M33); production execution **OFF**; DEC-0088 |
 | Campaign metrics & conversion feedback foundation (migration 34) | Managed-applied 2026-08-20 immediately after M33 (Phase 9C-C M34); DEC-0088 |
 | Commerce catalogue & inventory foundation (migration 35) | Managed-applied and certified 2026-08-23 (9D-B closeout); 11 commerce tables; all RLS + FORCE RLS |
