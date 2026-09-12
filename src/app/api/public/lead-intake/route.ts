@@ -4,6 +4,8 @@ import { handleLeadIntakeRequest, safeLeadIntakeLog } from "../../../../features
 import { LeadIntakeError } from "../../../../features/lead-intake/server/lead-intake-errors.ts";
 import { getLeadIntakeMode } from "../../../../config/server-env.ts";
 import { readBoundedRequestBody } from "../../../../features/lead-intake/server/bounded-request-body.ts";
+import { reportLeadConversion } from "../../../../features/marketing/meta/server/report-lead-conversion.ts";
+import { safeMetaCapiLog } from "../../../../features/marketing/meta/server/meta-capi-client.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,17 +66,43 @@ export async function POST(request: Request): Promise<Response> {
       nodeEnv: process.env.NODE_ENV,
     });
 
+    /*
+     * CONVERSION REPORTING, AFTER THE LEAD IS DURABLE AND NEVER BEFORE.
+     *
+     * `result.conversion` is populated only for an accepted lead, so there is
+     * no branch here that could report a rejected or rate-limited submission —
+     * the runtime simply does not hand this route the means to.
+     *
+     * Awaited, but bounded at 1.5s and incapable of throwing: the worst case is
+     * a slower response, never a failed enquiry. The result is used for one
+     * sanitized log field and for nothing else, which is why it is not checked.
+     */
+    let metaLog: Record<string, unknown> = {};
+    if (result.conversion) {
+      const capi = await reportLeadConversion({
+        eventId: result.conversion.eventId,
+        cookieHeader: request.headers.get("cookie"),
+        userAgent: request.headers.get("user-agent"),
+        forwardedFor: request.headers.get("x-forwarded-for"),
+        trustProxy: result.conversion.trustProxy,
+        landingPath: result.conversion.landingPath,
+        fbclid: result.conversion.fbclid,
+      });
+      metaLog = safeMetaCapiLog(capi);
+    }
+
     console.info(
       "[lead-intake]",
-      JSON.stringify(
-        safeLeadIntakeLog({
+      JSON.stringify({
+        ...safeLeadIntakeLog({
           correlationId: result.correlationId,
           outcome: result.outcome,
           durationMs: Date.now() - started,
           mode,
           duplicate: result.duplicate,
-        })
-      )
+        }),
+        ...metaLog,
+      })
     );
 
     const headers: Record<string, string> = {};

@@ -38,6 +38,10 @@
  */
 
 import { ONEDECORE_MANAGED_SUPABASE_HOST } from "../lib/supabase/runtime-target.ts";
+import {
+  META_PIXEL_BEACON_ORIGIN,
+  META_PIXEL_SCRIPT_ORIGIN,
+} from "../features/marketing/meta/meta-tracking-config.ts";
 
 /** One header, in the shape `next.config.ts` wants. */
 export interface HttpSecurityHeader {
@@ -105,10 +109,22 @@ export function buildContentSecurityPolicy(
     // Everything not named below falls back to same-origin.
     ["default-src", "'self'"],
 
-    // See the file header: inline is load-bearing for JSON-LD. No `eval`, and
-    // no external script origin at all — the application loads no third-party
-    // script, tag manager or analytics.
-    ["script-src", "'self'", "'unsafe-inline'"],
+    /*
+     * Inline is load-bearing for JSON-LD (see the file header). No `eval`.
+     *
+     * ONE external script origin: `connect.facebook.net`, which serves
+     * `fbevents.js` and nothing else. Named exactly rather than as
+     * `*.facebook.net` — a wildcard would also admit every other host Meta
+     * operates on that domain, present and future, which is a larger promise
+     * than "this site loads the Pixel".
+     *
+     * The origin is allowed whether or not a pixel id is configured. A CSP is a
+     * static response header and cannot depend on a build-time gate without
+     * two policies to keep in step; the gate that decides whether anything is
+     * actually loaded is `isMetaTrackablePath` plus the pixel id, in
+     * `MetaPixel.tsx`.
+     */
+    ["script-src", "'self'", "'unsafe-inline'", META_PIXEL_SCRIPT_ORIGIN],
 
     // Event-handler attributes (`onclick="..."`) are never legitimate here.
     // This is the part of inline scripting that CAN be forbidden without
@@ -125,15 +141,23 @@ export function buildContentSecurityPolicy(
      * (`URL.createObjectURL`), and the managed Supabase origin for public
      * portfolio and product media served straight from storage.
      */
-    ["img-src", "'self'", "data:", "blob:", supabaseOrigin],
+    ["img-src", "'self'", "data:", "blob:", supabaseOrigin, META_PIXEL_BEACON_ORIGIN],
 
     // `next/font` self-hosts the Google faces at build time; nothing is
     // fetched from a font CDN at runtime.
     ["font-src", "'self'", "data:"],
 
-    // The Supabase REST/auth endpoints. No websocket scheme: the application
-    // subscribes to no realtime channel.
-    ["connect-src", "'self'", supabaseOrigin],
+    /*
+     * The Supabase REST/auth endpoints. No websocket scheme: the application
+     * subscribes to no realtime channel.
+     *
+     * `www.facebook.com` is where the Pixel posts its beacons — as an image
+     * when it can and via `fetch` when it cannot, which is why the origin
+     * appears under both `img-src` and here. The Conversions API is a
+     * server-to-server call to `graph.facebook.com` and needs no CSP entry at
+     * all: a browser never makes it.
+     */
+    ["connect-src", "'self'", supabaseOrigin, META_PIXEL_BEACON_ORIGIN],
 
     ["object-src", "'none'"],
     ["base-uri", "'self'"],

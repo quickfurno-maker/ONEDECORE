@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { MetaPixel } from "@/features/marketing/meta/MetaPixel";
 import "./globals.css";
 import "@/features/public-site/theme/public-dark-theme.css";
 import "@/features/public-site/chrome/public-site-chrome.css";
@@ -22,6 +23,21 @@ export default function RootLayout({
         <noscript>
           <style>{`[data-dc-reveal]{opacity:1!important;transform:none!important}`}</style>
         </noscript>
+        {/*
+          The ONLY measurement mount point on the site.
+
+          This layout wraps the admin console and the manager workspace as well
+          as the public site, so the component is gated rather than trusted:
+          `isMetaTrackablePath` is deny-by-default and must say yes before any
+          script is requested. Nothing is added to this file's server-rendered
+          output — an internal page ships no third-party tag at all, rather than
+          a tag that happens not to fire.
+
+          It renders null without `NEXT_PUBLIC_META_PIXEL_ID`, which is the
+          state of every environment until the owner sets it in a production
+          BUILD. Merging this PR does not start tracking anyone.
+        */}
+        <MetaPixel />
         {children}
       </body>
     </html>

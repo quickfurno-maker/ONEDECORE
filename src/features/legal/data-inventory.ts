@@ -237,8 +237,10 @@ export const DATA_INVENTORY: readonly DataInventoryEntry[] = [
     deletionTrigger: "Session end or logout",
     risk: "low",
     accuracyRequirement: "Essential only",
-    ownerDecision: "Future tracking cookie review separate",
-    currentTruth: "No analytics, Meta Pixel, advertising cookies or fingerprinting approved.",
+    ownerDecision:
+      "Meta Pixel + Conversions API are implemented and activation-gated. Before NEXT_PUBLIC_META_PIXEL_ID is set in a production build, the Privacy Notice needs a cookies/tracking section and Meta listed under Service providers.",
+    currentTruth:
+      "Meta Pixel and Conversions API are built and OFF: no pixel id is configured, so no advertising cookie is set and no event is sent. When enabled, Meta receives page URL, IP, user agent and the _fbp/_fbc advertising cookies. Automatic advanced matching stays off; no name, phone, email or enquiry content is sent.",
   },
   {
     category: "payment-data",

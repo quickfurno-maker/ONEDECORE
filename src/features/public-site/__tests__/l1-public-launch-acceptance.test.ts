@@ -171,22 +171,33 @@ describe("public marketing HTML is not frozen for a year", () => {
 /* 2. No tags before L2                                                        */
 /* ========================================================================== */
 
-describe("no analytics, Pixel or tag manager exists yet", () => {
+describe("the measurement layer is one gated mount, and nothing else", () => {
   /*
-   * `data-inventory.ts` and `processor-register.ts` currently state, in
-   * published legal copy, that no analytics, Meta Pixel or advertising cookie
-   * is approved. Until L2 corrects that copy, adding a tag would make the
-   * published Privacy Notice false. This is the guard on that ordering.
+   * WHAT THIS BLOCK USED TO SAY, AND WHY IT CHANGED.
+   *
+   * It asserted that no analytics, Pixel or tag manager existed anywhere,
+   * because `data-inventory.ts` and `processor-register.ts` recorded that none
+   * was approved — so adding one would have made the internal record false.
+   *
+   * A Meta Pixel and Conversions API now exist. Both registers have been
+   * updated to state exactly what they do and that they are OFF, and this
+   * block now guards the shape of that integration rather than its absence:
+   *
+   *   - exactly one mount point, gated, in the root layout
+   *   - no tag literal on any other surface
+   *   - no tag manager, no analytics vendor, no second script origin
+   *   - the pixel id is an activation gate, so merging turns nothing on
+   *
+   * The sequencing obligation did not go away, it moved: the Privacy Notice
+   * still has no cookies/tracking section and does not list Meta as a service
+   * provider. That is why the gate matters — see the final test here.
    */
   const FORBIDDEN_TAGS = [
     "googletagmanager",
-    "connect.facebook.net",
     "www.google-analytics.com",
     "gtag(",
-    "fbq(",
     "dataLayer",
     "GTM-",
-    "next/script",
   ] as const;
 
   const SURFACES = [
@@ -199,21 +210,75 @@ describe("no analytics, Pixel or tag manager exists yet", () => {
   ] as const;
 
   for (const rel of SURFACES) {
-    test(`${rel} loads no third-party tag`, () => {
+    test(`${rel} loads no tag manager or analytics vendor`, () => {
       const source = read(rel);
       for (const tag of FORBIDDEN_TAGS) {
-        assert.ok(
-          !source.includes(tag),
-          `${rel} must not reference ${tag} before L2/L3`
-        );
+        assert.ok(!source.includes(tag), `${rel} must not reference ${tag}`);
       }
     });
   }
 
-  test("the root layout still ships no third-party script at all", () => {
+  test("only the Pixel component may name Meta's script or call fbq", () => {
+    /*
+     * The literals live in ONE component and one events module. A surface that
+     * starts calling `fbq` directly has bypassed the route gate, which is the
+     * only thing keeping the script off `/admin`.
+     */
+    for (const rel of SURFACES) {
+      const source = code(read(rel));
+      assert.ok(
+        !source.includes("connect.facebook.net"),
+        `${rel} must not name the Meta script origin`
+      );
+      assert.ok(!source.includes("fbq("), `${rel} must not call fbq directly`);
+    }
+  });
+
+  test("the root layout ships no script tag of its own", () => {
     const layout = code(read(ROOT_LAYOUT));
     assert.doesNotMatch(layout, /<script/i);
     assert.doesNotMatch(layout, /<Script/);
+    // The one mount is a component, gated inside itself.
+    assert.match(layout, /<MetaPixel \/>/);
+  });
+
+  test("the pixel is an activation gate, so merging enables nothing", () => {
+    /*
+     * THE SEQUENCING THIS PROTECTS.
+     *
+     * The Privacy Notice has no cookies/tracking section and does not list
+     * Meta under Service providers. Until it does, no advertising cookie may
+     * be set on a visitor — and the only reason merging this is safe is that
+     * `NEXT_PUBLIC_META_PIXEL_ID` is unset everywhere, so nothing loads.
+     *
+     * If this test ever fails because the pixel became unconditional, the
+     * disclosure work is the blocker, not the test.
+     */
+    const config = read(
+      "src/features/marketing/meta/meta-tracking-config.ts"
+    );
+    assert.match(config, /export function getMetaPixelId/);
+    assert.match(config, /if \(!\/\^\\d\{8,20\}\$\/\.test\(trimmed\)\) return null;/);
+
+    const pixel = read("src/features/marketing/meta/MetaPixel.tsx");
+    assert.match(pixel, /if \(!pixelId \|\| !trackable\) return;/);
+
+    const registers = [
+      read("src/features/legal/data-inventory.ts"),
+      read("src/features/legal/processor-register.ts"),
+    ];
+    for (const register of registers) {
+      assert.doesNotMatch(
+        register,
+        /No analytics, Meta Pixel/,
+        "the register must no longer claim no pixel exists"
+      );
+    }
+    assert.match(
+      registers[1]!,
+      /OWNER_DECISION_REQUIRED before activation/,
+      "the processor register must carry the pre-activation obligation"
+    );
   });
 });
 

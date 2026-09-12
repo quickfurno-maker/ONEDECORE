@@ -32,6 +32,28 @@ export interface LeadIntakeRuntimeRequest {
   readonly nodeEnv: string | undefined;
 }
 
+/**
+ * What a route needs to report an accepted lead to a conversions API.
+ *
+ * Present ONLY when the lead was accepted and durable. That is the whole
+ * contract: a route cannot report a conversion for a rejected, rate-limited or
+ * conflicted submission because it is never handed the means to.
+ *
+ * It carries no customer data — an idempotency key, a same-site path, a click
+ * id and one boolean — so it can cross into the marketing feature without
+ * carrying the lead with it.
+ */
+export interface LeadConversionSignals {
+  /** The validated idempotency key, reused as the dedup event id. */
+  readonly eventId: string;
+  /** Validated same-site path the form was submitted from. */
+  readonly landingPath: string | null;
+  /** Meta click id, when the visitor arrived on one. */
+  readonly fbclid: string | null;
+  /** Whether this deployment trusts forwarded client addresses. */
+  readonly trustProxy: boolean;
+}
+
 export interface LeadIntakeRuntimeDeps {
   readonly getEnv?: typeof getLeadIntakeServerEnv;
   readonly createAdminClient?: typeof createAdminClient;
@@ -160,7 +182,12 @@ function assertLocalTestHost(host: string | null): void {
 export async function handleLeadIntakeRequest(
   request: LeadIntakeRuntimeRequest,
   deps: LeadIntakeRuntimeDeps = {}
-): Promise<LeadIntakeServiceResult & { correlationId: string }> {
+): Promise<
+  LeadIntakeServiceResult & {
+    correlationId: string;
+    conversion?: LeadConversionSignals;
+  }
+> {
   const correlationId = newCorrelationId();
   const started = (deps.now ?? Date.now)();
 
@@ -348,7 +375,42 @@ export async function handleLeadIntakeRequest(
   );
 
   void started;
-  return { ...result, correlationId };
+  return {
+    ...result,
+    correlationId,
+    conversion: buildConversionSignals(result, intakeValue, env.trustProxy),
+  };
+}
+
+/**
+ * Conversion signals, or undefined.
+ *
+ * `created` is a new durable lead. `idempotent_replay` is the SAME lead
+ * arriving again — the conversion is reported for it too, deliberately: both
+ * carry the same event id, so a conversions API deduplicates them into one,
+ * and a replay is precisely the case where the first report may have been the
+ * thing that was lost. Reporting twice costs nothing; reporting never loses a
+ * conversion the business paid for.
+ *
+ * Every other outcome — conflict, rate limit, validation rejection, disabled —
+ * yields undefined, so no route can report what did not happen.
+ */
+function buildConversionSignals(
+  result: LeadIntakeServiceResult,
+  validated: ValidatedLeadIntake,
+  trustProxy: boolean
+): LeadConversionSignals | undefined {
+  if (result.outcome !== "created" && result.outcome !== "idempotent_replay") {
+    return undefined;
+  }
+  const landingPath = validated.attribution.landingPath;
+  const fbclid = validated.attribution.fbclid;
+  return {
+    eventId: validated.idempotencyKey,
+    landingPath: typeof landingPath === "string" ? landingPath : null,
+    fbclid: typeof fbclid === "string" ? fbclid : null,
+    trustProxy,
+  };
 }
 
 /** Safe structured log fields only — never PII or secrets. */

@@ -186,7 +186,9 @@ export const PROCESSOR_REGISTER: readonly ProcessorRegisterEntry[] = [
     incidentContact: null,
     approval: null,
     notes: [
-      "No analytics, Meta Pixel or non-essential tracking approved on current website.",
+      "Meta Pixel and Conversions API are implemented behind activation gates and are currently OFF: NEXT_PUBLIC_META_PIXEL_ID and META_CONVERSIONS_API_ACCESS_TOKEN are unset, so no script loads and no event is sent.",
+      "Enabling them makes Meta a recipient of visitor page URLs, IP address, user agent and the _fbp/_fbc advertising cookies. Automatic advanced matching is off and no customer-identifying field is sent.",
+      "OWNER_DECISION_REQUIRED before activation: Privacy Notice cookies/tracking disclosure, Meta listed under Service providers, and a consent decision for advertising cookies.",
     ],
   },
 ] as const;

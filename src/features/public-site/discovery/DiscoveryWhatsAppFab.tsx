@@ -4,6 +4,7 @@ import {
   getPublicWhatsAppHref,
   PUBLIC_WHATSAPP,
 } from "@/features/public-site/chrome/public-contact";
+import { trackMetaContact } from "@/features/marketing/meta/meta-pixel-events";
 
 function WhatsAppGlyph() {
   return (
@@ -59,6 +60,14 @@ export function DiscoveryWhatsAppFab() {
   }
 
   const onTap = () => {
+    /*
+     * Contact: a deliberate move to a human channel.
+     *
+     * Browser-only, and reached only from a real tap on a real link. It cannot
+     * throw and does nothing when the pixel is absent or blocked, so it can sit
+     * ahead of the haptic without either of them being able to stop the link.
+     */
+    trackMetaContact();
     try {
       // Feature-detected, short, and only ever reached from a real tap.
       navigator.vibrate?.(25);

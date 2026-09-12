@@ -5,6 +5,7 @@ import {
   getPublicPhoneHref,
   PUBLIC_PHONE,
 } from "@/features/public-site/chrome/public-contact";
+import { trackMetaContact } from "@/features/marketing/meta/meta-pixel-events";
 import { PM_CTA, PM_STICKY } from "./content";
 import { usePlan } from "./PlanContext";
 
@@ -115,6 +116,13 @@ export function HomeStickyActions() {
           className="dc-btn dc-btn--ghost pm-sticky__btn pm-sticky__call"
           data-conversion-action="sticky-call"
           aria-label={PUBLIC_PHONE.ariaLabel}
+          /*
+           * Contact, on a real tap. No `preventDefault` and no async work: the
+           * browser hands the `tel:` URL to the OS immediately, and the event
+           * is fire-and-forget by design. If the pixel is blocked this does
+           * nothing at all and the call still places.
+           */
+          onClick={() => trackMetaContact()}
         >
           <PhoneGlyph />
           {PUBLIC_PHONE.label}

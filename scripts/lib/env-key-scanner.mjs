@@ -36,11 +36,16 @@ import ts from "typescript";
  * provider credentials live under `ONEDECORE_META_ADS_*` and
  * `ONEDECORE_GOOGLE_ADS_*`, while bare `META_*` names in the source are
  * provider error codes.
+ *
+ * `META_CONVERSIONS_API_` is listed for the same reason `META_WHATSAPP_` is:
+ * a specific, whole-subsystem prefix rather than the bare `META_` that would
+ * sweep those error codes back in.
  */
 const ENV_PREFIXES = [
   "ONEDECORE_",
   "NEXT_PUBLIC_",
   "META_WHATSAPP_",
+  "META_CONVERSIONS_API_",
   "SUPABASE_",
 ];
 

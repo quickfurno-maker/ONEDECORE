@@ -381,7 +381,18 @@ describe("one host mounts the sheet, once", () => {
      */
     assert.ok(checkboxes.length <= 2, "unexpected extra checkbox in the brief");
     assert.match(brief, /SINGLE_CONSENT_CONCISE_COPY/);
-    assert.doesNotMatch(code(brief), /whatsappService|marketing|serviceEmail/i);
+    /*
+     * Import specifiers are stripped before this last check.
+     *
+     * The rule is about CONSENT FIELDS — that `whatsappService`, `marketing`
+     * and `serviceEmail` did not come back as separate boxes. Matching the
+     * whole file also matched a module PATH: the browser Meta event helper
+     * lives under `features/marketing/`, and importing it read as a marketing
+     * consent field returning. Narrowing to the component body keeps the rule
+     * exactly as strict about the thing it is actually guarding.
+     */
+    const body = code(brief).replace(/^import[\s\S]*?;$/gm, "");
+    assert.doesNotMatch(body, /whatsappService|marketing|serviceEmail/i);
   });
 
   test("the final submit carries the owner-approved label", () => {
