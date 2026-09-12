@@ -1,13 +1,37 @@
 import Link from "next/link";
 import { PortfolioCard } from "./PortfolioCard";
 import { PublicPortfolioPaginatedCards } from "../types";
-import { PORTFOLIO_CATEGORIES } from "../portfolio-categories";
+import { PORTFOLIO_PROJECTS_HREF } from "../portfolio-rooms";
 import { PUBLIC_CONSULTATION } from "@/features/public-site/chrome/public-nav";
 
 export interface PortfolioGridProps {
   data: PublicPortfolioPaginatedCards;
 }
 
+/**
+ * The Projects listing: real published case studies, and nothing else.
+ *
+ * ONE PUBLIC NAVIGATION ROW, NOT TWO
+ *
+ * This component used to render its own category rail — `All Projects |
+ * Complete Interiors | Kitchen | Living Room | Bedroom` — directly beneath the
+ * `Kitchen | Living Room | Bedroom | Projects` tabs. Two rows, three shared
+ * labels, and no way for a visitor to tell what the difference between the two
+ * "Kitchen"s was, because there was not a meaningful one: the rooms are browsed
+ * from the tabs above. The rail is gone from the page.
+ *
+ * Nothing behind it was deleted. `portfolio_category_code`, the classification
+ * and `?category=` parsing all still work — an old link is still honoured and
+ * still redirects to its canonical `?view=` address. What is gone is the second
+ * visible control, not the data model underneath it.
+ *
+ * EVERY URL THIS BUILDS NAMES ITS VIEW
+ *
+ * `/portfolio` means Kitchen now. A pagination link that dropped back to the
+ * bare path would therefore send a visitor on page 2 of the projects listing
+ * into the kitchen photographs, so `view=projects` is set unconditionally
+ * rather than only when some other parameter happens to be present.
+ */
 export function PortfolioGrid({ data }: PortfolioGridProps) {
   const { cards, page, hasNextPage, activeService, activeCategory } = data;
 
@@ -17,6 +41,7 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
     category?: string | null
   ) => {
     const params = new URLSearchParams();
+    params.set("view", "projects");
     if (service) {
       params.set("service", service);
     }
@@ -26,52 +51,11 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
     if (targetPage > 1) {
       params.set("page", targetPage.toString());
     }
-    const query = params.toString();
-    return query ? `/portfolio?${query}` : "/portfolio";
+    return `/portfolio?${params.toString()}`;
   };
 
   return (
     <div id="portfolio-grid-container" className="space-y-8">
-      {/*
-        * The four owner-approved categories, from the same config the homepage
-        * cards read, filtering on the real `portfolio_category_code` column.
-        *
-        * "All Projects" stays first. It is the unfiltered canonical URL, the
-        * reset target of the empty state, and — until every project has been
-        * classified — the only view that shows unclassified work. Removing it
-        * would hide projects rather than organise them.
-        */}
-      <nav
-        id="portfolio-filter-tabs"
-        className="od-portfolio-filters"
-        aria-label="Filter Portfolio by category"
-      >
-        <Link
-          id="portfolio-filter-all"
-          href={buildUrl(1, null)}
-          className="od-filter"
-          data-active={!activeService ? "" : undefined}
-          aria-current={!activeService ? "page" : undefined}
-        >
-          All Projects
-        </Link>
-        {PORTFOLIO_CATEGORIES.map((category) => {
-          const isActive = activeCategory === category.id;
-          return (
-            <Link
-              key={category.id}
-              id={`portfolio-filter-${category.id}`}
-              href={buildUrl(1, null, category.id)}
-              className="od-filter"
-              data-active={isActive ? "" : undefined}
-              aria-current={isActive ? "page" : undefined}
-            >
-              {category.label}
-            </Link>
-          );
-        })}
-      </nav>
-
       {cards.length > 0 ? (
         <div id="portfolio-cards-grid" className="od-portfolio-grid">
           {cards.map((card, idx) => (
@@ -99,7 +83,7 @@ export function PortfolioGrid({ data }: PortfolioGridProps) {
               <div>
                 <Link
                   id="portfolio-empty-reset-button"
-                  href="/portfolio"
+                  href={PORTFOLIO_PROJECTS_HREF}
                   className="od-empty__action"
                 >
                   View All Projects

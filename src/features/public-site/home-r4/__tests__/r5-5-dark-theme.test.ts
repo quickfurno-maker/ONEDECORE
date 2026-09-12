@@ -113,11 +113,17 @@ describe("R5.5 Portfolio always-dark presentation", () => {
     assert.match(source, /od-card/);
   });
 
-  test("PortfolioGrid filters use always-dark classes", () => {
+  test("PortfolioGrid uses always-dark classes and no second filter rail", () => {
     const source = read(grid);
     assert.doesNotMatch(source, /bg-white|dark:|bg-neutral-100|bg-neutral-900/);
-    assert.match(source, /od-filter/);
+    assert.match(source, /od-portfolio-grid/);
     assert.match(source, /od-empty/);
+    /*
+     * `od-filter` was the second public navigation row. It is gone, and so are
+     * its styles — asserting its ABSENCE here is what stops it being restyled
+     * back into existence by a future dark-theme pass.
+     */
+    assert.doesNotMatch(source, /od-filter/);
   });
 
   test("PortfolioGallery has no light figure surfaces", () => {

@@ -17,47 +17,68 @@
  * Suspense boundary around the part that actually waits on data. The skeleton
  * still covers the fetch; it just no longer covers the decision.
  *
- * The markup is unchanged, including its accessibility contract: one spoken
- * status message OUTSIDE the busy region, everything decorative hidden, and no
- * explicit live-region attribute — `role="status"` already announces once, and
- * declaring a live region as well would announce it twice.
+ * The accessibility contract is unchanged: one spoken status message OUTSIDE
+ * the busy region, everything decorative hidden, and no explicit live-region
+ * attribute — `role="status"` already announces once, and declaring a live
+ * region as well would announce it twice.
+ *
+ * IT COVERS THE RESULTS, AND ONLY THE RESULTS
+ *
+ * The heading and the tab rail render immediately, outside the Suspense
+ * boundary, so a skeleton eyebrow/title/filter row underneath them drew a
+ * SECOND set of the same furniture for as long as the fetch took — which after
+ * the navigation was reduced to one rail is exactly the duplicate row this
+ * change set out to remove, reappearing on every load. The skeleton now stands
+ * in for the grid alone.
+ *
+ * TWO GRIDS, TWO SHAPES
+ *
+ * Projects are 4:5 cards with two lines of text under them; a room view is a
+ * dense grid of square thumbnails with no text at all. One skeleton for both
+ * would guarantee a layout shift on at least one of them, so the variant picks
+ * the geometry the real results will use.
  */
-export function PortfolioSkeleton() {
+export function PortfolioSkeleton({
+  variant = "projects",
+}: {
+  readonly variant?: "projects" | "room";
+}) {
+  const isRoom = variant === "room";
+
   return (
     <>
       <p role="status" className="od-sr-only">
-        Loading ONEDECORE Portfolio projects.
+        {isRoom
+          ? "Loading ONEDECORE Portfolio photographs."
+          : "Loading ONEDECORE Portfolio projects."}
       </p>
       <div
-        className="od-portfolio-main od-loading"
+        className="od-loading"
         aria-busy="true"
         aria-label="Loading Portfolio"
+        data-od-loading={variant}
       >
         <p className="od-loading__label" aria-hidden="true">
           Loading Portfolio
         </p>
 
-        <div className="od-loading__header" aria-hidden="true">
-          <span className="od-skeleton od-skeleton--eyebrow" />
-          <span className="od-skeleton od-skeleton--title" />
-          <span className="od-skeleton od-skeleton--lede" />
-        </div>
-
-        <div className="od-loading__filters" aria-hidden="true">
-          {Array.from({ length: 4 }, (_, index) => (
-            <span key={index} className="od-skeleton od-skeleton--filter" />
-          ))}
-        </div>
-
-        <div className="od-loading__grid" aria-hidden="true">
-          {Array.from({ length: 6 }, (_, index) => (
-            <div key={index} className="od-skeleton-card">
-              <span className="od-skeleton od-skeleton--media" />
-              <span className="od-skeleton od-skeleton--line" />
-              <span className="od-skeleton od-skeleton--line od-skeleton--short" />
-            </div>
-          ))}
-        </div>
+        {isRoom ? (
+          <div className="od-loading__tiles" aria-hidden="true">
+            {Array.from({ length: 12 }, (_, index) => (
+              <span key={index} className="od-skeleton od-skeleton--tile" />
+            ))}
+          </div>
+        ) : (
+          <div className="od-loading__grid" aria-hidden="true">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div key={index} className="od-skeleton-card">
+                <span className="od-skeleton od-skeleton--media" />
+                <span className="od-skeleton od-skeleton--line" />
+                <span className="od-skeleton od-skeleton--line od-skeleton--short" />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

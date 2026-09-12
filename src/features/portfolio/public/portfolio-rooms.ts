@@ -1,7 +1,7 @@
 /**
  * The four public portfolio views, declared once.
  *
- * `Projects | Living Room | Bedroom | Kitchen`
+ * `Kitchen | Living Room | Bedroom | Projects`
  *
  * TWO BROWSE MODES, NOT FOUR CATEGORIES
  *
@@ -27,7 +27,17 @@
  * other and they must not be merged.
  */
 
-/** Rooms a photograph can be tagged with. Matches the DB check constraint. */
+/**
+ * Rooms a photograph can be tagged with. Matches the DB check constraint.
+ *
+ * THIS ORDER IS NOT THE PUBLIC ORDER.
+ *
+ * It is the vocabulary, and it is read by the admin room selector, the bulk
+ * uploader, the project-detail room filter and the storage path validator. The
+ * public tab sequence is a presentation decision and lives in
+ * `PORTFOLIO_PUBLIC_VIEW_ORDER` below; reordering this constant to move a tab
+ * would silently reorder the CMS as well.
+ */
 export const PORTFOLIO_ROOM_CODES = [
   "living-room",
   "bedroom",
@@ -44,15 +54,52 @@ export const PORTFOLIO_ROOM_LABELS: Readonly<
   kitchen: "Kitchen",
 };
 
-/** The `?view=` values. `projects` is the default and is omitted from the URL. */
-export const PORTFOLIO_VIEW_CODES = [
+export type PortfolioViewCode = PortfolioRoomCode | "projects";
+
+/**
+ * THE PUBLIC TAB SEQUENCE, WRITTEN OUT.
+ *
+ * `Kitchen | Living Room | Bedroom | Projects`
+ *
+ * Declared as a literal rather than derived from `PORTFOLIO_ROOM_CODES`,
+ * because the two answer different questions. That constant is the vocabulary
+ * the CMS writes and the database constrains; this is the order a visitor meets
+ * the work in, and the business reason Kitchen leads has nothing to do with how
+ * a room code is stored. Deriving one from the other is what makes a public
+ * presentation change quietly reorder the admin uploader.
+ *
+ * Kitchen leads because it is what most visitors arrive wanting to see, so it
+ * is also the bare `/portfolio` answer. Projects is last: it is the deeper
+ * read — whole-home case studies — for a visitor who has already looked.
+ */
+export const PORTFOLIO_PUBLIC_VIEW_ORDER = [
+  "kitchen",
+  "living-room",
+  "bedroom",
   "projects",
-  ...PORTFOLIO_ROOM_CODES,
-] as const;
+] as const satisfies readonly PortfolioViewCode[];
 
-export type PortfolioViewCode = (typeof PORTFOLIO_VIEW_CODES)[number];
+/** The view that answers a bare `/portfolio`. */
+export const PORTFOLIO_DEFAULT_VIEW: PortfolioViewCode = "kitchen";
 
-export const PORTFOLIO_DEFAULT_VIEW: PortfolioViewCode = "projects";
+/** The whole-home case-study listing. Never the default, always addressed. */
+export const PORTFOLIO_PROJECTS_VIEW: PortfolioViewCode = "projects";
+
+/**
+ * The canonical URL of a view.
+ *
+ * The default view is the ONLY one without a query parameter, so there is one
+ * address per listing. Everything else — Projects included — is addressed
+ * explicitly, which is why `PORTFOLIO_PROJECTS_HREF` exists: nothing may mint
+ * a bare `/portfolio` meaning "all projects" any more, because bare
+ * `/portfolio` now means Kitchen.
+ */
+export function portfolioViewHref(view: PortfolioViewCode): string {
+  return view === PORTFOLIO_DEFAULT_VIEW ? "/portfolio" : `/portfolio?view=${view}`;
+}
+
+/** `/portfolio?view=projects` — the project listing, page 1. */
+export const PORTFOLIO_PROJECTS_HREF = portfolioViewHref(PORTFOLIO_PROJECTS_VIEW);
 
 export interface PortfolioViewOption {
   readonly id: PortfolioViewCode;
@@ -63,20 +110,20 @@ export interface PortfolioViewOption {
   readonly isRoomView: boolean;
 }
 
-export const PORTFOLIO_VIEWS: readonly PortfolioViewOption[] = [
-  {
-    id: "projects",
-    label: "Projects",
-    href: "/portfolio",
-    isRoomView: false,
-  },
-  ...PORTFOLIO_ROOM_CODES.map((room) => ({
-    id: room as PortfolioViewCode,
-    label: PORTFOLIO_ROOM_LABELS[room],
-    href: `/portfolio?view=${room}`,
-    isRoomView: true,
-  })),
-];
+export const PORTFOLIO_VIEWS: readonly PortfolioViewOption[] =
+  PORTFOLIO_PUBLIC_VIEW_ORDER.map((id) => ({
+    id,
+    label: isPortfolioRoomCode(id) ? PORTFOLIO_ROOM_LABELS[id] : "Projects",
+    href: portfolioViewHref(id),
+    isRoomView: isPortfolioRoomCode(id),
+  }));
+
+/**
+ * The `?view=` values. Derived from the public order so the vocabulary and the
+ * tab rail cannot disagree about which views exist.
+ */
+export const PORTFOLIO_VIEW_CODES: readonly PortfolioViewCode[] =
+  PORTFOLIO_PUBLIC_VIEW_ORDER;
 
 export function isPortfolioRoomCode(
   value: unknown
@@ -134,6 +181,12 @@ export const PORTFOLIO_ROOM_SELECT_OPTIONS: readonly {
 export const PORTFOLIO_ASPECT_RATIOS = {
   /** Project and portfolio cards. */
   card: "4 / 5",
+  /**
+   * Room-gallery thumbnails. Square, because a dense grid of photographs only
+   * reads as a grid when every tile is the same shape — and the square is the
+   * shape that wastes the least of a phone's width at three columns.
+   */
+  roomThumbnail: "1 / 1",
   /** Mobile vertical feature, where a tall frame earns its place. */
   mobileFeature: "9 / 16",
   /** Project detail hero. */
