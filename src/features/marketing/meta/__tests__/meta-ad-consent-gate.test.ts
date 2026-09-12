@@ -22,6 +22,8 @@ import {
   PRIVACY_POLICY_CONTENT,
   PRIVACY_NOTICE_ADVERTISING_AMENDMENT,
   PRIVACY_NOTICE_VERSION,
+  PRIVACY_NOTICE_EFFECTIVE_DATE,
+  PRIVACY_NOTICE_PREVIOUS_EFFECTIVE_DATE,
 } from "../../../legal/privacy-policy-content.ts";
 import { PROCESSOR_REGISTER } from "../../../legal/processor-register.ts";
 
@@ -647,9 +649,37 @@ describe("the Privacy Notice describes what was consented to", () => {
     );
   });
 
-  test("the amendment is versioned and its approval is honestly unsigned", () => {
+  test("the amendment is versioned, owner-approved, and honest about counsel", () => {
+    /*
+     * The approval is the owner's own, recorded in a commit separate from the
+     * one that wrote the copy. `counselApproval` stays null: no external legal
+     * counsel reviewed this, and claiming otherwise in the file whose whole
+     * purpose is recording who agreed to what would be the worst place to be
+     * loose about it.
+     */
     assert.equal(PRIVACY_NOTICE_VERSION, "privacy-notice-v1.1");
-    assert.equal(PRIVACY_NOTICE_ADVERTISING_AMENDMENT.ownerApproval, null);
+    const approval = PRIVACY_NOTICE_ADVERTISING_AMENDMENT.ownerApproval;
+    assert.ok(approval, "the published amendment must carry an owner approval");
+    assert.equal(approval.approvedBy, "ONEDECORE owner");
+    assert.match(approval.approvedAt, /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(PRIVACY_NOTICE_ADVERTISING_AMENDMENT.counselApproval, null);
+    assert.doesNotMatch(approval.reference, /counsel|solicitor|lawyer/i);
+  });
+
+  test("the published date belongs to the published version", () => {
+    /*
+     * The page prints version and effective date together. v1.1 carrying the
+     * v1.0 activation date would tell a reader the advertising disclosure had
+     * been in force before it was written.
+     */
+    assert.notEqual(PRIVACY_NOTICE_EFFECTIVE_DATE, PRIVACY_NOTICE_PREVIOUS_EFFECTIVE_DATE);
+    assert.ok(PRIVACY_NOTICE_EFFECTIVE_DATE);
+    assert.ok(PRIVACY_NOTICE_EFFECTIVE_DATE >= PRIVACY_NOTICE_PREVIOUS_EFFECTIVE_DATE);
+    assert.equal(
+      PRIVACY_NOTICE_EFFECTIVE_DATE,
+      PRIVACY_NOTICE_ADVERTISING_AMENDMENT.ownerApproval?.approvedAt,
+      "published on the day it was approved, not before"
+    );
   });
 
   test("the processor register records the consent dependency", () => {

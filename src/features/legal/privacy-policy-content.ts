@@ -18,9 +18,9 @@ import {
  * recipient and a new cookie, which is a material change and therefore a new
  * version rather than a quiet edit to v1.0.
  *
- * The v1.0 approval record below is kept as history; v1.1 carries its own,
- * and `PRIVACY_NOTICE_ADVERTISING_AMENDMENT.ownerApproval` is null until the
- * owner signs it off. Nothing about that blocks a visitor: the advertising
+ * The v1.0 approval record below is kept as history; v1.1 carries its own in
+ * `PRIVACY_NOTICE_ADVERTISING_AMENDMENT.ownerApproval`, signed by the owner on
+ * 2026-09-12. Neither record blocks a visitor either way: the advertising
  * section renders regardless, and no Meta cookie can be set without an
  * explicit grant from the person reading it.
  */
@@ -32,8 +32,25 @@ export const PRIVACY_NOTICE_PREVIOUS_VERSION = "privacy-notice-v1.0" as const;
 /** @deprecated Alias kept for call sites that referenced the proposed id. */
 export const PRIVACY_NOTICE_PROPOSED_PRODUCTION_VERSION = PRIVACY_NOTICE_VERSION;
 
-/** Owner-authorized production activation date (YYYY-MM-DD). */
-export const PRIVACY_NOTICE_EFFECTIVE_DATE: string | null = "2026-08-25";
+/**
+ * The date the CURRENTLY PUBLISHED version took effect (YYYY-MM-DD).
+ *
+ * WHY THIS MOVED WITH THE VERSION.
+ *
+ * The public page prints `PRIVACY_NOTICE_VERSION` beside this date. Leaving it
+ * at the v1.0 activation date would have published "v1.1, effective
+ * 2026-08-25" — telling a reader the advertising-measurement disclosure had
+ * been in force for weeks before it was written. That is the one thing an
+ * effective date exists to state truthfully.
+ *
+ * Nothing historical is rewritten: the v1.0 activation date is kept below, as
+ * is its own approval record, and Terms of Use keeps its own unchanged date
+ * because Terms were not amended.
+ */
+export const PRIVACY_NOTICE_EFFECTIVE_DATE: string | null = "2026-09-12";
+
+/** When v1.0 took effect. Retained so the amendment does not erase it. */
+export const PRIVACY_NOTICE_PREVIOUS_EFFECTIVE_DATE = "2026-08-25" as const;
 
 export const PRIVACY_NOTICE_OWNER_APPROVAL = {
   approvedBy: "ONEDECORE owner",
@@ -46,21 +63,30 @@ export const PRIVACY_NOTICE_OWNER_APPROVAL = {
 /**
  * The v1.1 advertising amendment, and its approval state.
  *
- * `ownerApproval` is null on purpose and must not be filled in by the change
- * that writes the copy — an approval an author grants themselves records
- * nothing. The owner sets it when they have read the section.
+ * `ownerApproval` was null while the copy was being written — an approval an
+ * author grants themselves records nothing — and was set by the owner on
+ * 2026-09-12, in a separate commit from the one that wrote the section.
+ *
+ * `counselApproval` stays null. No external legal counsel has reviewed this,
+ * and recording otherwise would be a false statement in the one file whose
+ * purpose is to be accurate about who agreed to what.
  *
  * This is a DISCLOSURE gate, not a tracking gate. The two are separate so that
  * neither can be mistaken for the other: tracking is blocked by the consent
- * cookie whatever this says, and this being unapproved never means a visitor
- * is tracked without being told.
+ * cookie whatever this says, and this being unapproved never meant a visitor
+ * could be tracked without being told.
  */
 export const PRIVACY_NOTICE_ADVERTISING_AMENDMENT = {
   version: PRIVACY_NOTICE_VERSION,
   supersedes: PRIVACY_NOTICE_PREVIOUS_VERSION,
   summary:
     "Adds the advertising-measurement section and names Meta as a recipient when the visitor allows advertising cookies.",
-  ownerApproval: null as null | {
+  ownerApproval: {
+    approvedBy: "ONEDECORE owner",
+    approvedAt: "2026-09-12",
+    reference:
+      "ONEDECORE owner instruction on 2026-09-12: proceed merge and deployment after review of Privacy Notice v1.1 advertising-measurement amendment",
+  } as null | {
     readonly approvedBy: string;
     readonly approvedAt: string;
     readonly reference: string;

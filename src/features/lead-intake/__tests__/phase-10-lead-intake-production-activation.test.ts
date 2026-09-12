@@ -129,8 +129,21 @@ describe("Phase 10 lead-intake activation source", () => {
       join(root, "src/features/legal/privacy-policy-content.ts"),
       "utf8"
     );
+    /*
+     * A real YYYY-MM-DD, not a placeholder — that is what "published" means
+     * here. The literal date is deliberately NOT pinned: it moves with each
+     * published version, and pinning it would turn every honest amendment into
+     * a test failure in a file that is not about amendments.
+     *
+     * v1.0 must still appear, because the amendment supersedes it rather than
+     * erasing it.
+     */
     assert.match(privacy, /privacy-notice-v1\.0/);
-    assert.match(privacy, /PRIVACY_NOTICE_EFFECTIVE_DATE:\s*string\s*\|\s*null\s*=\s*"2026-08-25"/);
+    assert.match(
+      privacy,
+      /PRIVACY_NOTICE_EFFECTIVE_DATE:\s*string\s*\|\s*null\s*=\s*"\d{4}-\d{2}-\d{2}"/
+    );
+    assert.doesNotMatch(privacy, /PRIVACY_NOTICE_EFFECTIVE_DATE[^;]*placeholder/i);
   });
 });
 
