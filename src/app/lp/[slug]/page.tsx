@@ -12,8 +12,19 @@ interface LandingPublicPageProps {
 
 export async function generateMetadata({ params }: LandingPublicPageProps): Promise<Metadata> {
   const { slug } = await params;
+  const view = await loadLiveLandingPageView(slug);
+
+  /*
+   * Campaign pages stay out of the index.
+   *
+   * A landing page is bought traffic for one campaign; it duplicates the real
+   * site's content, often exists in two variants at once, and is retired when
+   * the campaign ends. Indexing it would compete with the pages meant to rank
+   * and would leave dead results behind. The title is the page's own, because
+   * it names the browser tab and any link a visitor shares by hand.
+   */
   return {
-    title: "ONEDECORE",
+    title: view?.title ? `${view.title} — ONEDECORE` : "ONEDECORE",
     robots: { index: false, follow: false, nocache: true },
     other: { slug },
   };
@@ -45,8 +56,17 @@ export default async function LandingPublicPage({
     }
   }
 
+  /*
+   * No wrapper styling here on purpose.
+   *
+   * This route previously constrained the page to `max-w-3xl` with its own
+   * padding and background, which made a full-bleed hero impossible and left
+   * every campaign page looking like a narrow document. The landing page owns
+   * its own layout — `.lp-page` sets the background, the gutters and the
+   * fluid rhythm — so the route's job is to resolve and mount it, nothing more.
+   */
   return (
-    <main className="mx-auto min-h-screen max-w-3xl bg-neutral-950 px-4 py-12 text-neutral-100">
+    <main data-public-dark-theme="">
       <LandingPublicRenderer
         blocks={view.blocks}
         signedContext={view.signedContext}

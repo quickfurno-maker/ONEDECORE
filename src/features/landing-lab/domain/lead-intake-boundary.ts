@@ -1,5 +1,6 @@
 /**
- * Phase 9B migration-independent — landing lead intake boundary (prebuild only).
+ * Landing lead intake boundary — the seam between a campaign page and the
+ * one canonical lead pipeline.
  */
 
 import type { AttributionTouchpoint } from "../contracts/attribution.ts";
@@ -141,7 +142,7 @@ export function assertNoFabricatedMarketingConsent(
     return "Service enquiry consent is required; marketing consent must not be fabricated.";
   }
   if (consent.marketing === true || consent.marketingEmail === true) {
-    return "MARKETING consent cannot be fabricated for landing lab prebuild.";
+    return "MARKETING consent cannot be fabricated for a landing page.";
   }
   if (consent.serviceEnquiry !== true) {
     return "Service enquiry consent must be explicitly true.";

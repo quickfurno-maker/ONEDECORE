@@ -17,12 +17,50 @@ export const LANDING_BLOCK_TYPES = [
 
 export type LandingBlockType = (typeof LANDING_BLOCK_TYPES)[number];
 
-const MAX_SHORT_TEXT = 120;
-const MAX_MEDIUM_TEXT = 280;
-const MAX_LONG_TEXT = 600;
-const MAX_ITEMS = 12;
-const MAX_FAQ_ITEMS = 20;
-const BLOCK_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{2,48}$/i;
+/*
+ * The limits, exported.
+ *
+ * WHY THESE ARE PUBLIC NOW.
+ *
+ * The visual builder shows live character counters and disables "add item"
+ * at the cap. It can only do that against the same numbers the validator
+ * uses. Private constants would have meant the editor carrying its own copy
+ * of "280" — and the day one of them moved, the builder would cheerfully
+ * accept text the contract rejects, with the save failing on a message that
+ * names no field.
+ *
+ * Exported as values, not duplicated as literals. There is one 280 in this
+ * codebase.
+ */
+export const LANDING_TEXT_LIMITS = {
+  short: 120,
+  medium: 280,
+  long: 600,
+  url: 512,
+} as const;
+
+/** Most repeatable lists cap at 12; FAQ is the exception at 20. */
+export const LANDING_ITEM_LIMITS = {
+  default: 12,
+  faq: 20,
+} as const;
+
+/** A page must have at least one block and at most this many. */
+export const LANDING_MAX_BLOCKS = 32;
+
+/** Block types a page must always contain to be publishable. */
+export const LANDING_REQUIRED_BLOCK_TYPES = [
+  "lead_form_placeholder",
+  "footer",
+] as const satisfies readonly LandingBlockType[];
+
+const MAX_SHORT_TEXT = LANDING_TEXT_LIMITS.short;
+const MAX_MEDIUM_TEXT = LANDING_TEXT_LIMITS.medium;
+const MAX_LONG_TEXT = LANDING_TEXT_LIMITS.long;
+const MAX_ITEMS = LANDING_ITEM_LIMITS.default;
+const MAX_FAQ_ITEMS = LANDING_ITEM_LIMITS.faq;
+export const LANDING_BLOCK_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{2,48}$/i;
+const BLOCK_ID_PATTERN = LANDING_BLOCK_ID_PATTERN;
 const SAFE_URL_PATTERN =
   /^(https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9._~:/?#[\]@!$&'()*+,;=%]*|\/[a-zA-Z0-9][-a-zA-Z0-9._~:/?#[\]@!$&'()*+,;=%]*|#[a-zA-Z][-a-zA-Z0-9._~-]*)$/;
 const UNSAFE_TEXT_PATTERN = /<|>|javascript:|on\w+\s*=/i;
@@ -374,7 +412,7 @@ export function validateLandingBlock(block: unknown): string | null {
 export function validateLandingPageBlocks(blocks: readonly unknown[]): string | null {
   if (!Array.isArray(blocks)) return "Blocks must be an array.";
   if (blocks.length === 0) return "At least one block is required.";
-  if (blocks.length > 32) return "Page exceeds maximum block count.";
+  if (blocks.length > LANDING_MAX_BLOCKS) return "Page exceeds maximum block count.";
 
   const seenIds = new Set<string>();
   let hasLeadForm = false;
@@ -394,4 +432,112 @@ export function validateLandingPageBlocks(blocks: readonly unknown[]): string | 
   if (!hasLeadForm) return "Page must include a lead_form_placeholder block.";
   if (!hasFooter) return "Page must include a footer block.";
   return null;
+}
+
+/**
+ * The same rules, reported per block instead of as one bare string.
+ *
+ * WHY THIS EXISTS ALONGSIDE `validateLandingPageBlocks`.
+ *
+ * That function short-circuits on the first problem and returns a message with
+ * no block attached — correct for a server guard, useless for an editor. A
+ * thirty-block page that reports "answer exceeds 600 characters." leaves the
+ * author hunting. This runs every block, so the builder can put the message on
+ * the block that caused it and keep the rest of the page editable.
+ *
+ * It is a REPORTING view, never a second gate. `validateLandingPageBlocks`
+ * stays the only thing that decides what may be saved, and the server calls it
+ * again regardless of anything the browser believes.
+ */
+export interface LandingBlockValidationReport {
+  /** Message per offending blockId, in page order. */
+  readonly blockErrors: ReadonlyArray<{
+    readonly blockId: string;
+    readonly index: number;
+    readonly message: string;
+  }>;
+  /** Problems that belong to the page rather than any one block. */
+  readonly pageErrors: readonly string[];
+  readonly valid: boolean;
+}
+
+export function reportLandingPageBlockValidation(
+  blocks: readonly unknown[]
+): LandingBlockValidationReport {
+  const blockErrors: Array<{ blockId: string; index: number; message: string }> = [];
+  const pageErrors: string[] = [];
+
+  if (!Array.isArray(blocks)) {
+    return { blockErrors: [], pageErrors: ["Blocks must be an array."], valid: false };
+  }
+  if (blocks.length === 0) pageErrors.push("At least one block is required.");
+  if (blocks.length > LANDING_MAX_BLOCKS) {
+    pageErrors.push(
+      `A page can hold at most ${LANDING_MAX_BLOCKS} sections. Remove one before adding another.`
+    );
+  }
+
+  const seenIds = new Set<string>();
+  const presentTypes = new Set<string>();
+
+  blocks.forEach((block, index) => {
+    const blockId = String(
+      (block as { blockId?: unknown } | null)?.blockId ?? `block-${index + 1}`
+    );
+    const message = validateLandingBlock(block);
+    if (message) blockErrors.push({ blockId, index, message });
+
+    if (seenIds.has(blockId)) {
+      blockErrors.push({
+        blockId,
+        index,
+        message: `Duplicate block id: ${blockId}.`,
+      });
+    }
+    seenIds.add(blockId);
+
+    const type = (block as { type?: unknown } | null)?.type;
+    if (typeof type === "string") presentTypes.add(type);
+  });
+
+  for (const required of LANDING_REQUIRED_BLOCK_TYPES) {
+    if (!presentTypes.has(required)) {
+      pageErrors.push(
+        required === "lead_form_placeholder"
+          ? "The page needs an enquiry section — that is the only way it can collect a lead."
+          : "The page needs a footer section."
+      );
+    }
+  }
+
+  return {
+    blockErrors,
+    pageErrors,
+    valid: blockErrors.length === 0 && pageErrors.length === 0,
+  };
+}
+
+/**
+ * Why a block cannot be removed, or null when it can.
+ *
+ * The contract requires an enquiry section and a footer. Rather than let the
+ * author delete one and discover it at save time behind a message that names
+ * no field, the builder asks first and shows the reason on the button.
+ */
+export function explainBlockRemovalBlocked(
+  blocks: readonly LandingBlock[],
+  blockId: string
+): string | null {
+  const target = blocks.find((block) => block.blockId === blockId);
+  if (!target) return null;
+  if (!LANDING_REQUIRED_BLOCK_TYPES.includes(target.type as never)) return null;
+
+  const remaining = blocks.filter(
+    (block) => block.type === target.type && block.blockId !== blockId
+  ).length;
+  if (remaining > 0) return null;
+
+  return target.type === "lead_form_placeholder"
+    ? "This is the page's only enquiry section. Without it the page cannot collect a lead, so it cannot be removed."
+    : "This is the page's only footer. Add another before removing this one.";
 }

@@ -7,7 +7,7 @@ import { CreateLandingPageForm } from "@/features/landing-lab/components/CreateL
 
 export const metadata = {
   title: "Landing Pages | OneDecore Admin",
-  description: "Phase 9B Landing Page Lab",
+  description: "Campaign landing pages",
 };
 
 export default async function AdminLandingPagesPage() {
@@ -26,7 +26,7 @@ export default async function AdminLandingPagesPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-100">Landing pages</h1>
         <p className="mt-1 text-xs text-neutral-400">
-          Structured Landing Lab — production public serving stays gated off until Phase 10.
+          Build, preview and publish campaign landing pages. Public serving is controlled by ONEDECORE_LANDING_LAB_PUBLIC_ENABLED.
         </p>
       </div>
       {permissions.canManage ? <CreateLandingPageForm /> : null}

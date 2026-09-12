@@ -20,7 +20,7 @@ export function HumanWinnerControl({
     >
       <h2 className="text-sm font-medium text-neutral-100">Human winner selection</h2>
       <p className="mt-1 text-xs text-neutral-400">
-        Owner-approved winner only. No automatic promotion in prebuild.
+        Owner-approved winner only. Nothing is promoted automatically.
       </p>
       <fieldset className="mt-4 space-y-2" disabled={disabled}>
         <legend className="sr-only">Select winning variant</legend>

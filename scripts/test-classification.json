@@ -65,6 +65,7 @@
     "src/features/kriti/__tests__/phase-6c-k1-provider-core.test.ts",
     "src/features/kriti/__tests__/phase-6c-k2-context-safety.test.ts",
     "src/features/kriti/__tests__/phase-6c-k3-ui.test.ts",
+    "src/features/landing-lab/__tests__/landing-builder-completion.test.ts",
     "src/features/landing-lab/__tests__/landing-hmac-secret-domain.test.ts",
     "src/features/landing-lab/__tests__/phase-9b-landing-lab.test.ts",
     "src/features/landing-lab/__tests__/phase-9b-m32-implementation.test.ts",
