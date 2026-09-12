@@ -38,8 +38,11 @@
 export const HOMEPAGE_SECTION_KEYS = [
   "hero",
   "promo-carousel",
-  "complete-interiors",
+  // Room by room comes straight after the banner rail: a visitor who has just
+  // scrolled past photographs of finished spaces is looking for their own
+  // room, not a list of services. "What we do" answers the next question.
   "room-explorer",
+  "complete-interiors",
   "why",
   "process",
   "factory",
@@ -128,18 +131,29 @@ export const HOMEPAGE_SECTION_REGISTRY: readonly HomepageSectionDefinition[] = [
     pin: null,
     canHide: true,
   },
+  /*
+   * Room by room sits directly under the banner rail, ahead of What We Do.
+   *
+   * A visitor who has just scrolled past photographs of finished rooms is
+   * looking for their own room, not for a list of service categories. "What we
+   * do" answers the question that comes after.
+   *
+   * `defaultOrder` is what actually sorts the page (`defaultHomepageSections`
+   * sorts on it), so the numbers move with the entries rather than the array
+   * position alone.
+   */
   {
-    key: "complete-interiors",
-    label: "What We Do",
-    description: "The four interactive service cards: interiors, kitchens, wardrobes, renovation.",
+    key: "room-explorer",
+    label: "Room Explorer",
+    description: "Tabs that show the three planning priorities for each room.",
     defaultOrder: 2,
     pin: null,
     canHide: true,
   },
   {
-    key: "room-explorer",
-    label: "Room Explorer",
-    description: "Tabs that show the three planning priorities for each room.",
+    key: "complete-interiors",
+    label: "What We Do",
+    description: "The four interactive service cards: interiors, kitchens, wardrobes, renovation.",
     defaultOrder: 3,
     pin: null,
     canHide: true,

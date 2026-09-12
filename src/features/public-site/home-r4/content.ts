@@ -391,11 +391,19 @@ export const PM_ASSETS = {
  * can click, and the Pune coverage is `InteriorsServiceAreas` further down,
  * which carries all 26 localities instead of the hero's six-plus-a-toggle.
  *
- * So the hero is: eyebrow, headline, one button, the credibility row. Adding a
- * fifth element here means taking the same decision again.
+ * So the hero is: headline, one button, the credibility row. Adding a fourth
+ * element here means taking the same decision again.
+ *
+ * THE EYEBROW IS GONE, ON PURPOSE.
+ *
+ * It read "Pune's Complete Interior Design & Build Company" — a second,
+ * smaller, all-caps restatement of what the headline underneath it already
+ * says, sitting between the visitor and the one sentence the hero exists to
+ * deliver. Removed rather than reworded: the headline does not need an
+ * introduction, and replacing it with a different badge would reintroduce the
+ * same layer under a new name.
  */
 export const PM_HERO = {
-  eyebrow: "Pune's Complete Interior Design & Build Company",
   titleLines: [
     { text: "Beautiful Homes.", emphasize: false },
     { text: "Designed, Built", emphasize: true },

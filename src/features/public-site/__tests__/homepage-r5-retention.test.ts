@@ -71,8 +71,8 @@ describe("the homepage flow the owner approved", () => {
       [
         "hero",
         "promo-carousel",
-        "complete-interiors",
         "room-explorer",
+        "complete-interiors",
         "why",
         "process",
         "factory",

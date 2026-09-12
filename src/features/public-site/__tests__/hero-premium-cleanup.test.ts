@@ -131,8 +131,6 @@ describe("the hero lost its text blocks", () => {
       [
         "pm-hero__actions",
         "pm-hero__credibility",
-        "pm-hero__eyebrow",
-        "pm-hero__eyebrowDot",
         "pm-hero__title",
       ].sort(),
       "the hero copy column grew or lost an element"
@@ -144,10 +142,38 @@ describe("the hero lost its text blocks", () => {
 /* 2. What the hero must still say                                             */
 /* -------------------------------------------------------------------------- */
 
-describe("the hero keeps its eyebrow, headline and one CTA", () => {
-  test("the eyebrow is unchanged", () => {
-    assert.equal(PM_HERO.eyebrow, "Pune's Complete Interior Design & Build Company");
-    assert.match(code(read(HERO)), /\{PM_HERO\.eyebrow\}/);
+describe("the hero keeps its headline and one CTA", () => {
+  test("the eyebrow badge is gone, and nothing replaced it", () => {
+    /*
+     * IT READ "PUNE'S COMPLETE INTERIOR DESIGN & BUILD COMPANY".
+     *
+     * A second, smaller, all-caps restatement of the headline directly beneath
+     * it — occupying the top of the first screen a visitor sees, above the one
+     * sentence the hero exists to deliver.
+     *
+     * Removed at source, not hidden: the constant, the markup and every CSS
+     * rule that styled or animated it are all gone. This test asserts nothing
+     * took its place, because the obvious way to undo this change is to add a
+     * different badge and call it something else.
+     */
+    assert.ok(
+      !("eyebrow" in PM_HERO),
+      "PM_HERO must not carry an eyebrow any more"
+    );
+    const hero = code(read(HERO));
+    assert.doesNotMatch(hero, /pm-hero__eyebrow/);
+    assert.doesNotMatch(hero, /PM_HERO\.eyebrow/);
+
+    // No replacement label, badge, pill or kicker above the headline.
+    const beforeTitle = hero.slice(0, hero.indexOf("pm-hero__title"));
+    assert.doesNotMatch(
+      beforeTitle,
+      /className="pm-hero__(eyebrow|badge|kicker|label|pill|tagline)/,
+      "something new was added where the eyebrow used to be"
+    );
+
+    const css = read(HOME_CSS);
+    assert.doesNotMatch(css, /pm-hero__eyebrow/, "dead eyebrow CSS remains");
   });
 
   test("the headline is unchanged, all four lines of it", () => {
@@ -575,7 +601,7 @@ describe("the hero copy enters once, in reading order, without moving the page",
     assert.doesNotMatch(code(read(HERO)), /Reveal|framer|gsap/);
   });
 
-  test("eyebrow, headline, CTA and counter each have a step, in that order", () => {
+  test("headline, CTA and counter each have a step, in that order", () => {
     const block = entranceBlock();
     const delayOf = (selector: string) => {
       const rule = new RegExp(
@@ -587,7 +613,6 @@ describe("the hero copy enters once, in reading order, without moving the page",
       return Number(rule[1]);
     };
 
-    const eyebrow = delayOf("pm-hero__eyebrow");
     const actions = delayOf("pm-hero__actions");
     const credibility = delayOf("pm-hero__credibility");
 
@@ -601,7 +626,6 @@ describe("the hero copy enters once, in reading order, without moving the page",
     )!;
     const lastLine = Number(base) + 3 * Number(step);
 
-    assert.ok(eyebrow < Number(base), "the eyebrow leads the headline");
     assert.ok(Number(step) >= 70 && Number(step) <= 110, `stagger ${step}ms must be 70-110ms`);
     assert.ok(actions >= lastLine, "the button follows the last headline line");
     assert.ok(credibility > actions, "the counter enters last");
@@ -678,7 +702,6 @@ describe("the hero copy enters once, in reading order, without moving the page",
     assert.ok(reduce, "the global reduced-motion kill-switch must exist");
     const reduceBlock = [reduce];
     for (const selector of [
-      "pm-hero__eyebrow",
       "pm-hero__line",
       "pm-hero__actions",
       "pm-hero__credibility",

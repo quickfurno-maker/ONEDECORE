@@ -694,8 +694,8 @@ describe("/interiors composition", () => {
      * This test used to list the hero's text blocks as things that must
      * survive. They were removed deliberately in the cleanup pass, so what it
      * defends now is what the hero IS: its background image, its headline, its
-     * single CTA and its credibility row. The removals have their own suite in
-     * `hero-premium-cleanup.test.ts`.
+     * single CTA and its credibility row. The eyebrow badge left in the same
+     * spirit and is asserted gone in `hero-premium-cleanup.test.ts`.
      */
     const hero = code(read(HERO));
     for (const kept of [
@@ -703,7 +703,6 @@ describe("/interiors composition", () => {
       "pm-hero__media",
       "hero-start-plan",
       "pm-hero__credibility",
-      "PM_HERO.eyebrow",
       "PM_HERO.primaryCta",
     ]) {
       assert.match(hero, new RegExp(kept.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));

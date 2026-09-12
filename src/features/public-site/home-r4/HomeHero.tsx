@@ -208,11 +208,6 @@ export function HomeHero() {
 
       <div className="dc-container pm-hero__inner">
         <div className="pm-hero__copy">
-          <p className="pm-hero__eyebrow">
-            <span className="pm-hero__eyebrowDot" aria-hidden="true" />
-            {PM_HERO.eyebrow}
-          </p>
-
           <h1 id="pm-hero-title" className="pm-hero__title">
             {PM_HERO.titleLines.map((line, index) => (
               <span
