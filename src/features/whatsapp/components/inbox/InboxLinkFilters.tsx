@@ -1,25 +1,20 @@
 import Link from "next/link";
-import type { InboxLinkFilter, InboxListQuery } from "../../contracts/inbox-list-query.ts";
+import {
+  buildInboxListHref,
+  type InboxLinkFilter,
+  type InboxListQuery,
+} from "../../contracts/inbox-list-query.ts";
 
 interface InboxLinkFiltersProps {
   readonly query: InboxListQuery;
   readonly showUnlinkedTriage: boolean;
+  readonly basePath: string;
 }
-
-function buildHref(query: InboxListQuery, linkFilter: InboxLinkFilter): string {
-  const params = new URLSearchParams();
-  if (query.q) params.set("q", query.q);
-  if (linkFilter !== "all") params.set("link", linkFilter);
-  if (query.pageSize !== 25) params.set("pageSize", String(query.pageSize));
-  const value = params.toString();
-  return value ? `/admin/whatsapp/inbox?${value}` : "/admin/whatsapp/inbox";
-}
-
-
 
 export function InboxLinkFilters({
   query,
   showUnlinkedTriage,
+  basePath,
 }: InboxLinkFiltersProps) {
   const tabs: Array<{ id: InboxLinkFilter; label: string }> = [
     { id: "all", label: "All" },
@@ -38,7 +33,8 @@ export function InboxLinkFilters({
       {tabs.map((tab) => (
         <Link
           key={tab.id}
-          href={buildHref(query, tab.id)}
+          /* Search and attention ride along; the page resets to 1. */
+          href={buildInboxListHref(basePath, query, { linkFilter: tab.id })}
           className="od-wa__tab"
           /*
             `aria-current` is also what the stylesheet keys the active tab

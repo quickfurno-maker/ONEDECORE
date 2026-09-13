@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { InboxAttentionFilters } from "./InboxAttentionFilters.tsx";
 import { InboxConversationList } from "./InboxConversationList.tsx";
 import { InboxLinkFilters } from "./InboxLinkFilters.tsx";
 import { InboxListPagination } from "./InboxListPagination.tsx";
@@ -21,9 +22,15 @@ import type { SendingStatusView } from "../../contracts/sending-status.ts";
  *
  * Below 1024px the stylesheet hides whichever pane the route is not about, so
  * the same markup serves the phone as one screen at a time.
+ *
+ * `basePath` is the surface it is mounted on. The pane never assumes /admin:
+ * every link it draws — filters, pages, conversations, the search form — is
+ * built from it, so another staff surface can mount the same pane.
  */
 
 interface InboxListPaneProps {
+  /** Where this inbox lives, e.g. `WHATSAPP_ADMIN_INBOX_BASE_PATH`. */
+  readonly basePath: string;
   readonly items: readonly InboxConversationListItem[];
   readonly query: InboxListQuery;
   readonly pagination: InboxListPaginationMeta;
@@ -38,6 +45,7 @@ interface InboxListPaneProps {
 }
 
 export function InboxListPane({
+  basePath,
   items,
   query,
   pagination,
@@ -81,8 +89,13 @@ export function InboxListPane({
         </p>
       ) : null}
 
-      <InboxSearchForm query={query} />
-      <InboxLinkFilters query={query} showUnlinkedTriage={showUnlinkedTriage} />
+      <InboxSearchForm query={query} basePath={basePath} />
+      <InboxAttentionFilters query={query} basePath={basePath} />
+      <InboxLinkFilters
+        query={query}
+        showUnlinkedTriage={showUnlinkedTriage}
+        basePath={basePath}
+      />
 
       {items.length === 0 ? (
         <div className="od-wa__empty">
@@ -94,6 +107,12 @@ export function InboxListPane({
               ? "No conversation matches this search or filter. Clear them to see everything you have access to."
               : "Conversations appear here when a customer messages the ONEDECORE WhatsApp number, and once you are assigned the matching lead."}
           </p>
+          {pagination.totalPages > 0 && pagination.page > pagination.totalPages ? (
+            <p className="od-wa__empty-note">
+              This page is past the end of the list, which is now {pagination.totalPages}{" "}
+              {pagination.totalPages === 1 ? "page" : "pages"} long.
+            </p>
+          ) : null}
         </div>
       ) : (
         <>
@@ -102,10 +121,11 @@ export function InboxListPane({
               items={items}
               selectedId={selectedId}
               listQueryString={listQueryString}
+              basePath={basePath}
             />
           </div>
           <div style={{ flex: "none", padding: "8px 12px" }}>
-            <InboxListPagination query={query} pagination={pagination} />
+            <InboxListPagination query={query} pagination={pagination} basePath={basePath} />
           </div>
         </>
       )}

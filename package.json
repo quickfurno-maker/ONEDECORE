@@ -37,6 +37,7 @@
     "test:phase-7-lane-d": "node --experimental-strip-types --test src/features/quotations/__tests__/phase-7-c0-contracts.test.ts src/features/quotations/__tests__/phase-7-lane-d-ui.test.ts",
     "test:whatsapp-inbox-ui": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/whatsapp/__tests__/whatsapp-premium-inbox.test.ts",
     "test:wm-0": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/whatsapp-marketing/__tests__/wm-0-control-plane-contracts.test.ts",
+    "test:wm-1": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/whatsapp/__tests__/wm-1-inbox-completeness.test.ts",
     "test:phase-6c-k0": "node --experimental-strip-types --test src/features/kriti/__tests__/phase-6c-k0-contracts.test.ts",
     "test:phase-6c-k1": "node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/kriti/__tests__/phase-6c-k0-contracts.test.ts src/features/kriti/__tests__/phase-6c-k1-provider-core.test.ts",
     "test:phase-6c-k2": "node --experimental-strip-types --test src/features/kriti/__tests__/phase-6c-k0-contracts.test.ts src/features/kriti/__tests__/phase-6c-k2-context-safety.test.ts",

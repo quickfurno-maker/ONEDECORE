@@ -6,16 +6,22 @@ import { ConversationHeader } from "@/features/whatsapp/components/inbox/Convers
 import { InboxComposerSection } from "@/features/whatsapp/components/inbox/InboxComposerSection";
 import { InboxListPane } from "@/features/whatsapp/components/inbox/InboxListPane";
 import { InboxManualRefreshButton } from "@/features/whatsapp/components/inbox/InboxManualRefreshButton";
+import { InboxReadAcknowledger } from "@/features/whatsapp/components/inbox/InboxReadAcknowledger";
 import { InboxThread } from "@/features/whatsapp/components/inbox/InboxThread";
 import { WhatsappAccessDenied } from "@/features/whatsapp/components/states/WhatsappAccessDenied";
 import "@/features/whatsapp/components/whatsapp-workspace.css";
 import {
+  buildInboxListHref,
   buildInboxListQueryString,
   hasInboxListActiveFilters,
   parseInboxListQuery,
   parseInboxMessageListQuery,
   toInboxListPaginationMeta,
 } from "@/features/whatsapp/contracts/inbox-list-query";
+import {
+  buildInboxConversationHref,
+  WHATSAPP_ADMIN_INBOX_BASE_PATH,
+} from "@/features/whatsapp/contracts/inbox-surface";
 import { presentServiceWindow } from "@/features/whatsapp/contracts/message-presentation";
 import { getWhatsappInboxAccessContext } from "@/features/whatsapp/server/whatsapp-auth";
 import { getWhatsappSendingStatus } from "@/features/whatsapp/server/whatsapp-sending-status";
@@ -76,13 +82,14 @@ export default async function WhatsappConversationPage({
   const listPage = await getInboxConversationListPageForCurrentUser(listQuery);
   const pagination = toInboxListPaginationMeta(listPage);
   const listQueryString = buildInboxListQueryString(listQuery);
-  const backHref = listQueryString
-    ? `/admin/whatsapp/inbox?${listQueryString}`
-    : "/admin/whatsapp/inbox";
-  const conversationPath = `/admin/whatsapp/inbox/${conversationId}`;
-  const conversationHref = listQueryString
-    ? `${conversationPath}?${listQueryString}`
-    : conversationPath;
+  // q, link, attention, page and pageSize all survive the trip back.
+  const backHref = buildInboxListHref(WHATSAPP_ADMIN_INBOX_BASE_PATH, listQuery);
+  const conversationPath = buildInboxConversationHref(WHATSAPP_ADMIN_INBOX_BASE_PATH, conversationId);
+  const conversationHref = buildInboxConversationHref(
+    WHATSAPP_ADMIN_INBOX_BASE_PATH,
+    conversationId,
+    listQueryString
+  );
   const detailsParams = new URLSearchParams(listQueryString);
   detailsParams.set("details", "1");
   const detailsHref = `${conversationPath}?${detailsParams.toString()}`;
@@ -105,6 +112,7 @@ export default async function WhatsappConversationPage({
       data-conversation-open="true"
     >
       <InboxListPane
+        basePath={WHATSAPP_ADMIN_INBOX_BASE_PATH}
         items={listPage.items}
         query={listQuery}
         pagination={pagination}
@@ -122,6 +130,16 @@ export default async function WhatsappConversationPage({
           serviceWindow={serviceWindow}
           backHref={backHref}
           detailsHref={detailsHref}
+        />
+
+        {/*
+          Staff read state advances from the browser, after this thread has
+          mounted — never from this Server Component, which a prefetch can
+          render without anyone opening the conversation.
+        */}
+        <InboxReadAcknowledger
+          conversationId={conversationId}
+          lastMessageAt={detail.lastMessageAt}
         />
 
         <InboxThread

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { InboxConversationListItem } from "../../contracts/conversation-dtos.ts";
+import { buildInboxConversationHref } from "../../contracts/inbox-surface.ts";
 
 /**
  * The conversation list.
@@ -12,14 +13,19 @@ import type { InboxConversationListItem } from "../../contracts/conversation-dto
  * conversation click used to be a full document load, which in a persistent
  * workspace throws away the list scroll position and re-renders the shell.
  *
- * WHAT IS DELIBERATELY ABSENT.
+ * THE UNREAD DOT IS NOW EVIDENCE, AND THERE IS STILL NO COUNT.
  *
- * No unread dot and no unread count. Nothing in `whatsapp_conversations`
- * records what a member of staff has read — there is no `read_at`, no
- * `last_seen_at`, no per-user marker anywhere in the schema. A blue dot here
- * would be decoration that survives a refresh by accident and disappears by
- * accident, and an inbox that lies about what you have dealt with is worse
- * than one that stays quiet. It is listed as a backend gap instead.
+ * WM-1 gave the database a per-staff read watermark
+ * (`whatsapp_conversation_staff_state`). `item.unread` is true only when a
+ * customer message is newer than the moment THIS reader last opened the
+ * thread, so the dot survives a refresh because it is true, and clears because
+ * the reader opened the conversation — not by accident. It is a boolean, so it
+ * is drawn as a dot: there is no per-conversation message tally to print, and
+ * inventing one would be decoration again.
+ *
+ * One quiet cue beside it, "Needs reply", when the customer spoke last.
+ * Waiting, Follow-up and Recent are queues, reached from the filter strip, not
+ * badges repeated on every row.
  */
 
 interface InboxConversationListProps {
@@ -27,6 +33,8 @@ interface InboxConversationListProps {
   readonly selectedId?: string | null;
   /** Carried through so returning to the list keeps the reader's place. */
   readonly listQueryString?: string;
+  /** The surface this inbox is mounted on. */
+  readonly basePath: string;
 }
 
 const TIME = new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
@@ -67,9 +75,8 @@ export function InboxConversationList({
   items,
   selectedId = null,
   listQueryString = "",
+  basePath,
 }: InboxConversationListProps) {
-  const suffix = listQueryString ? `?${listQueryString}` : "";
-
   return (
     <ul className="od-wa__list" data-testid="whatsapp-conversation-list">
       {items.map((item) => {
@@ -79,10 +86,11 @@ export function InboxConversationList({
         return (
           <li key={item.id}>
             <Link
-              href={`/admin/whatsapp/inbox/${item.id}${suffix}`}
+              href={buildInboxConversationHref(basePath, item.id, listQueryString)}
               className="od-wa__row"
               aria-current={selected}
               data-conversation-id={item.id}
+              data-unread={item.unread ? "true" : undefined}
             >
               <span className="od-wa__avatar" aria-hidden="true">
                 {conversationInitials(item.displayNameSnapshot, item.customerE164)}
@@ -91,7 +99,14 @@ export function InboxConversationList({
               <span style={{ minWidth: 0 }}>
                 <span className="od-wa__row-top">
                   <span className="od-wa__row-name">{name}</span>
-                  <span className="od-wa__row-time">{activityLabel(item.lastMessageAt)}</span>
+                  <span className="od-wa__row-status">
+                    {item.unread === true ? (
+                      <span className="od-wa__unread-dot">
+                        <span className="sr-only">Unread</span>
+                      </span>
+                    ) : null}
+                    <span className="od-wa__row-time">{activityLabel(item.lastMessageAt)}</span>
+                  </span>
                 </span>
 
                 <span className="od-wa__row-preview">
@@ -112,10 +127,15 @@ export function InboxConversationList({
                     {item.isLinked ? "Linked" : "Unlinked"}
                   </span>
                   <span className="od-wa__row-time">
-                    {item.isLinked && item.linkedLeadName
-                      ? item.linkedLeadName
-                      : item.customerE164}
+                    {item.linkState === "tombstoned"
+                      ? "Lead deleted · read only"
+                      : item.isLinked && item.linkedLeadName
+                        ? item.linkedLeadName
+                        : item.customerE164}
                   </span>
+                  {item.needsReply ? (
+                    <span className="od-wa__row-cue">Needs reply</span>
+                  ) : null}
                 </span>
               </span>
             </Link>

@@ -3,7 +3,8 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { WhatsappInboxAccessContext } from "../contracts/inbox-access.ts";
 import {
-  escapeIlikePattern,
+  INBOX_ATTENTION_DEFAULT,
+  INBOX_RECENT_WINDOW_DAYS_DEFAULT,
   type InboxListPageResult,
   type InboxListQuery,
   type InboxMessageListQuery,
@@ -11,95 +12,88 @@ import {
 import {
   mapConversationRowToListItem,
   mapMessageRowToItem,
-  truncatePreviewText,
+  parseInboxConversationListPayload,
   type InboxConversationListItem,
-  type InboxConversationListRow,
   type InboxMessageItem,
   type InboxMessageRow,
 } from "../contracts/conversation-dtos.ts";
 import { whatsappInboxErrorFromPostgresMessage } from "./whatsapp-inbox-errors.ts";
 
-const CONVERSATION_LIST_SELECT =
-  "id, customer_e164, display_name_snapshot, lead_id, contact_id, last_message_at, last_inbound_at, leads!whatsapp_conversations_lead_id_fkey(submitted_name, assigned_to)";
+/*
+ * SURFACE-INDEPENDENT BY CONSTRUCTION.
+ *
+ * Nothing in this file knows which route mounted the inbox. Every read goes
+ * through the caller's own cookie session, and scope is decided by the
+ * database — `private.whatsapp_inbox_can_view_conversation` via RLS and via the
+ * WM-1 read model — so the admin workspace and a future Sales Representative
+ * dashboard get the same rows for the same person without either filtering
+ * anything itself. There is no service-role client here and there must never be
+ * one: a broad read filtered in TypeScript is exactly the second ownership
+ * system ADR-0034 forbids.
+ */
 
-async function fetchLatestPreviewByConversationIds(
-  conversationIds: readonly string[]
-): Promise<Map<string, string | null>> {
-  const previews = new Map<string, string | null>();
-  if (conversationIds.length === 0) {
-    return previews;
-  }
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("whatsapp_messages")
-    .select("conversation_id, body_text, provider_timestamp")
-    .in("conversation_id", [...conversationIds])
-    .order("provider_timestamp", { ascending: false });
-
-  if (error) {
-    throw whatsappInboxErrorFromPostgresMessage(error.message, "RPC_FAILED");
-  }
-
-  for (const row of data ?? []) {
-    if (!previews.has(row.conversation_id)) {
-      previews.set(row.conversation_id, truncatePreviewText(row.body_text));
-    }
-  }
-
-  return previews;
-}
-
+/**
+ * One page of the inbox list, derived entirely in SQL.
+ *
+ * `public.list_whatsapp_inbox_conversations` applies scope, search, link filter,
+ * attention derivation, the attention filter and offset paging before any row
+ * leaves the database, and returns the latest message preview with each row, so
+ * no message history is fetched to build a list.
+ */
 export async function queryInboxConversationListPage(
   _context: WhatsappInboxAccessContext,
   query: InboxListQuery
 ): Promise<InboxListPageResult<InboxConversationListItem>> {
   const supabase = await createClient();
-  const from = (query.page - 1) * query.pageSize;
-  const to = from + query.pageSize - 1;
-
-  let builder = supabase
-    .from("whatsapp_conversations")
-    .select(CONVERSATION_LIST_SELECT, { count: "exact" })
-    .order("last_message_at", { ascending: false, nullsFirst: false })
-    .range(from, to);
-
-  if (query.linkFilter === "linked") {
-    builder = builder.not("lead_id", "is", null);
-  } else if (query.linkFilter === "unlinked") {
-    builder = builder.is("lead_id", null);
-  }
-
-  if (query.q) {
-    const pattern = `%${escapeIlikePattern(query.q)}%`;
-    builder = builder.or(
-      `display_name_snapshot.ilike.${pattern},customer_e164.ilike.${pattern}`
-    );
-  }
-
-  const { data, error, count } = await builder;
+  const { data, error } = await supabase.rpc("list_whatsapp_inbox_conversations", {
+    p_attention: query.attention,
+    p_link_filter: query.linkFilter,
+    p_search: query.q ?? undefined,
+    p_page: query.page,
+    p_page_size: query.pageSize,
+    p_recent_window_days: INBOX_RECENT_WINDOW_DAYS_DEFAULT,
+  });
 
   if (error) {
     throw whatsappInboxErrorFromPostgresMessage(error.message, "RPC_FAILED");
   }
 
-  const rows = (data ?? []) as InboxConversationListRow[];
-  const previews = await fetchLatestPreviewByConversationIds(
-    rows.map((row) => row.id)
-  );
-
-  const totalCount = count ?? 0;
+  const payload = parseInboxConversationListPayload(data);
+  const totalCount = payload.totalCount;
   const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / query.pageSize);
 
   return {
-    items: rows.map((row) =>
-      mapConversationRowToListItem(row, previews.get(row.id) ?? null)
-    ),
+    items: payload.rows.map(mapConversationRowToListItem),
     page: query.page,
     pageSize: query.pageSize,
     totalCount,
     totalPages,
   };
+}
+
+/**
+ * The header row for one conversation, from the same read model and the same
+ * scope as the list. Refused and missing are both `null`.
+ */
+export async function fetchConversationListItemById(
+  conversationId: string
+): Promise<InboxConversationListItem | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_whatsapp_inbox_conversations", {
+    p_attention: INBOX_ATTENTION_DEFAULT,
+    p_link_filter: "all",
+    p_page: 1,
+    p_page_size: 1,
+    p_recent_window_days: INBOX_RECENT_WINDOW_DAYS_DEFAULT,
+    p_conversation_id: conversationId,
+  });
+
+  if (error) {
+    throw whatsappInboxErrorFromPostgresMessage(error.message, "RPC_FAILED");
+  }
+
+  const row = parseInboxConversationListPayload(data).rows[0];
+  return row ? mapConversationRowToListItem(row) : null;
 }
 
 export async function queryConversationMessagesPage(
@@ -156,19 +150,25 @@ export async function canCurrentUserAccessConversation(
   return data === true;
 }
 
-export async function fetchConversationListRowById(
+/**
+ * Advance the CURRENT staff member's internal read watermark.
+ *
+ * ONEDECORE state only: the RPC never calls Meta and never writes provider
+ * message status. Returns `false` for a conversation the actor cannot view —
+ * the database answers missing and refused identically, and so does this.
+ */
+export async function markConversationReadForCurrentUser(
   conversationId: string
-): Promise<InboxConversationListRow | null> {
+): Promise<boolean> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("whatsapp_conversations")
-    .select(CONVERSATION_LIST_SELECT)
-    .eq("id", conversationId)
-    .maybeSingle();
+  const { error } = await supabase.rpc("mark_whatsapp_conversation_read", {
+    p_conversation_id: conversationId,
+  });
 
   if (error) {
+    if (error.code === "P0002") return false;
     throw whatsappInboxErrorFromPostgresMessage(error.message, "RPC_FAILED");
   }
 
-  return (data as InboxConversationListRow | null) ?? null;
+  return true;
 }

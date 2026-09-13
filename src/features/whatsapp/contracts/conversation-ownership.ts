@@ -55,8 +55,9 @@ export const WHATSAPP_MANAGE_SCOPE_ROLES = [
 
 /**
  * Locked owner policy (ADR-0034 §B.6) for a conversation whose linked lead is
- * tombstoned. Use/send already conforms (lead tombstone migration); read/view
- * is implemented by WM-1 in a forward-only migration with pgTAP coverage.
+ * tombstoned. Use/send conforms since the lead tombstone migration; read/view
+ * conforms since WM-1 (20260913130000_whatsapp_inbox_staff_state_attention.sql,
+ * pgTAP 64_whatsapp_inbox_staff_state_attention_test.sql).
  */
 export const WHATSAPP_TOMBSTONED_LEAD_CONVERSATION_POLICY = {
   /** Sales Executive and legacy sales, including the former assignee. */

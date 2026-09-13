@@ -98,15 +98,17 @@ describe("the conversation list is scannable and honest", () => {
     assert.match(read(LIST), /listQueryString/);
   });
 
-  test("no unread badge is invented", () => {
+  test("the unread marker is the database's per-staff boolean, never a count", () => {
     /*
-     * Nothing in `whatsapp_conversations` records what a member of staff has
-     * read — no read_at, no last_seen_at, no per-user marker. An unread dot
-     * would be decoration that appears and clears by accident.
+     * WM-1 replaced "no unread marker at all" (there was no staff read state
+     * to base one on) with a dot driven by `item.unread`, which the read model
+     * derives from this reader's own watermark. It is still never a number.
      */
     const list = code(read(LIST));
-    assert.doesNotMatch(list, /unread/i);
-    assert.doesNotMatch(code(read(PANE)), /unread/i);
+    assert.match(list, /\{item\.unread === true \? \(/);
+    assert.match(list, /<span className="sr-only">Unread<\/span>/);
+    assert.doesNotMatch(list, /unreadCount|unread_count|\{item\.unread\}/);
+    assert.doesNotMatch(code(read(PANE)), /unreadCount|unread_count/);
   });
 
   test("the list pane offers real empty states", () => {

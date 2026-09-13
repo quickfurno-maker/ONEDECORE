@@ -2,6 +2,7 @@
 
 - **Architecture:** [ADR-0034](../ADR/ADR-0034-complete-whatsapp-marketing-control-plane-and-crm-owned-conversation-access.md) · **Decision:** DEC-0100
 - **Phase:** WM-0 architecture freeze (this document). WM-1…WM-7 implement it.
+- **Implementation status:** WM-1 implemented in repository (migration `20260913130000_whatsapp_inbox_staff_state_attention.sql`, pgTAP `64_whatsapp_inbox_staff_state_attention_test.sql`, `npm run test:wm-1`; audit [wm-1-whatsapp-inbox-completeness](../audits/wm-1-whatsapp-inbox-completeness.md)). Not applied to any managed database; not deployed.
 - **Baseline:** `origin/main` `9a782ad5bed148d4e0ee92b26c76193d4fe5a995` (PR #186 premium inbox merged)
 - **Code twin:** `src/features/whatsapp-marketing/contracts/*`, `src/features/whatsapp/contracts/{conversation-ownership,template-registry,staff-conversation-state}.ts`
 - **Contract tests:** `npm run test:wm-0`
@@ -18,13 +19,13 @@ No secret value appears in this document.
 | Webhook ingestion | HMAC-verified, hash/event-key idempotent, cross-WABA fail-closed; `event_kind` in `inbound_message`, `message_status`, `unsupported` | M18 `20260804150000`, `src/app/api/webhooks/meta/whatsapp/route.ts`, `src/features/whatsapp/server/meta-webhook-*` |
 | Canonical history | `whatsapp_conversations` (phone number + customer E.164 unique; nullable `contact_id`, `lead_id`), `whatsapp_messages` (unique `provider_message_id`, `context_provider_message_id`), append-only `whatsapp_message_status_events` | M18 |
 | Template registry | `whatsapp_templates` exists, **metadata only, never synced, never sent** (unique business account + name + language; `status` default `unknown`) | M18 |
-| Inbox access | `private.whatsapp_inbox_can_view_conversation` / `…can_use_conversation` / `…actor_can_use_conversation`: lead-linked → `leads.assigned_to = auth.uid()` or manage scope; unlinked → manage scope only. **Use/send** predicates are tombstone-hardened; the **read/view** predicate is not (known gap, closed in WM-1 per §7.1) | M19, M21, lead tombstone `20260906180000` |
+| Inbox access | `private.whatsapp_inbox_can_view_conversation` / `…can_use_conversation` / `…actor_can_use_conversation`: lead-linked → `leads.assigned_to = auth.uid()` or manage scope; unlinked → manage scope only. **Use/send** predicates are tombstone-hardened; the **read/view** predicate was not at WM-0 (known gap) and **is since WM-1** (§7.1) | M19, M21, lead tombstone `20260906180000`, WM-1 `20260913130000` |
 | Read model | Authenticated SELECT policies on conversations/messages through the view predicate; repository uses the cookie client (`createClient`), not the service role | M20, `whatsapp-inbox-queries.ts` |
 | Service send | `whatsapp_send_intents` CHECK `purpose_code = 'WHATSAPP_SERVICE'`; `create_whatsapp_service_send_intent` → `…_impl_v2` raises `denied_purpose`; DNC/contact/channel/consent/service-window eligibility; `template_required` outside 24h fails closed | M19, M26, lead link repair `20260902140000` |
 | Dispatch | Service-role-only claim/bind/outcome/reconcile; `whatsapp_provider_dispatch_attempts`; ambiguous → reconcile; kill switch `ONEDECORE_WHATSAPP_OUTBOUND_MODE` | M21, `whatsapp-dispatch-service.ts` |
 | Provider port | `WhatsappProviderAdapter.dispatchTextMessage` only; single Graph `/messages` call site in `whatsapp-meta-provider-adapter.ts` | 6B-B4 |
 | Lead link | Single deterministic writer `private.crm_apply_whatsapp_conversation_lead_link`; ambiguous identities stay unlinked | `20260902140000` |
-| Premium inbox | `/admin/whatsapp/inbox`, honest (no fake unread), list + thread + details + composer | PR #186 |
+| Premium inbox | `/admin/whatsapp/inbox`, honest (no fake unread), list + thread + details + composer. WM-1 adds the attention strip and a per-staff unread dot backed by database state | PR #186, WM-1 |
 | Campaign governance | `campaigns`, `campaign_versions` (`intended_channels`, `targeting_mode`), `campaign_audience_rule_versions`, append-only `campaign_approvals`; SM self-approval denied in DB; permissions `campaigns.read/draft/request_approval/approve`, `marketing_consents.manage` (SA/SM) | M31 |
 | Paid-ads execution | `campaign_runs` (CHECK `provider_channel in ('meta_ads','google_ads')`), `campaign_run_targets`, `campaign_run_operations`, `campaign_execution_events`; `campaigns.execute/pause/metrics.read` (SA/SM); `whatsapp`/`email` are "deferred channels" | M33, M34 |
 | Consent | Append-only `consent_events` with `MARKETING` purpose; public form records only `SERVICE_ENQUIRY` + `SERVICE_COMMUNICATION` | lead intake data plane, M31 |
@@ -33,8 +34,8 @@ No secret value appears in this document.
 
 **Audit findings carried into WM-1:**
 
-1. `private.whatsapp_inbox_can_view_conversation` was **not** redefined by the lead tombstone migration, while `…can_use_conversation` was. A former assignee (and manage scope) can therefore still *read* a conversation whose lead is tombstoned. The owner policy is now **locked** (§7.1, ADR-0034 §B.6): salesperson roles lose read, manage scope keeps historical read-only, nobody sends. **WM-1 implements it** in a forward-only migration with pgTAP coverage; WM-0 makes no database change.
-2. The inbox has no per-staff read state, so Unread and Needs Reply cannot yet be shown truthfully. PR #186 correctly shows neither.
+1. `private.whatsapp_inbox_can_view_conversation` was **not** redefined by the lead tombstone migration, while `…can_use_conversation` was. A former assignee (and manage scope) can therefore still *read* a conversation whose lead is tombstoned. The owner policy is now **locked** (§7.1, ADR-0034 §B.6): salesperson roles lose read, manage scope keeps historical read-only, nobody sends. **WM-1 implements it** in a forward-only migration with pgTAP coverage; WM-0 makes no database change. *(Resolved in WM-1.)*
+2. The inbox has no per-staff read state, so Unread and Needs Reply cannot yet be shown truthfully. PR #186 correctly shows neither. *(Resolved in WM-1: `whatsapp_conversation_staff_state` + SQL attention read model.)*
 3. `whatsapp_webhook_events.event_kind` has no template status, Flow or referral kinds. Those payloads are recorded as `unsupported` today.
 4. `META_WHATSAPP_GRAPH_API_VERSION` defaults to `v22.0` in `provider-dispatch.ts`. That is a fallback default, not a requirement. Each provider-capability phase re-verifies it against current Meta documentation.
 
@@ -384,8 +385,8 @@ Bounds (engineering, not business): max attempts 3, claim TTL 120s, batch ≤ 50
 
 - Evidence (conversation, messages, status events, lead link) is retained; nothing is deleted.
 - A future governed lead restore resumes ordinary current-assignment access; no access is copied or cached in the meantime.
-- **Current state:** use/send already conforms (tombstone migration `20260906180000`). Read/view does **not**: `private.whatsapp_inbox_can_view_conversation` still lets the assignee of a tombstoned lead read.
-- **WM-1 backlog:** forward-only migration redefining `…can_view_conversation` so a tombstoned lead yields manage-scope read only; pgTAP covering SE / legacy sales / former assignee denied (list, detail and messages), manage-scope read allowed, send denied for every role, restore resuming assignee access. Code twin: `WHATSAPP_TOMBSTONED_LEAD_CONVERSATION_POLICY` in `conversation-ownership.ts`.
+- **Current state (WM-1):** use/send conforms since the tombstone migration `20260906180000`; read/view conforms since WM-1 `20260913130000`, which redefines `private.whatsapp_inbox_can_view_conversation` with three explicit shapes — unlinked → manage scope; live lead → manage scope or current assignee; tombstoned lead → manage scope historical read only, no assignee branch. An unresolvable lead link fails closed. The SELECT policies on conversations, messages and send intents inherit the repair unchanged.
+- **Proved by** `supabase/tests/database/64_whatsapp_inbox_staff_state_attention_test.sql`: former assignee, other Sales Executive and legacy `sales` denied SELECT on conversation and messages, the view predicate, the access check, the read model and mark-read (with the same not-found signal as a nonexistent id); Sales Manager, legacy `management` and Super Admin read history and are denied use and send. Running the suite against the pre-WM-1 predicate fails 8 assertions. Restore is covered at predicate level only (clearing `deleted_at` re-enters the live branch); no governed restore RPC exists yet to exercise end to end. Code twin: `WHATSAPP_TOMBSTONED_LEAD_CONVERSATION_POLICY` in `conversation-ownership.ts`.
 
 ---
 
@@ -463,8 +464,10 @@ All new tables: RLS enabled **and forced**, no anon grants, least-privilege auth
 
 | Phase | Object | Key shape (indicative) | Append-only |
 | --- | --- | --- | :-: |
-| WM-1 | `whatsapp_conversation_staff_state` | PK (conversation_id, staff_user_id); last_read_message_id, last_read_message_at, last_opened_at; RLS: own row + can_view | — |
-| WM-1 | read-model RPC(s) for attention filters | SQL over RLS scope; keyset pagination | — |
+| WM-1 ✅ | `whatsapp_conversation_staff_state` | PK (conversation_id, staff_user_id); last_read_message_id, last_read_message_at, last_opened_at; RLS enabled + forced: own row + can_view; no browser write grant; guard trigger (same-conversation cursor, watermark copied from the message, never backwards, identity immutable) | — |
+| WM-1 ✅ | `mark_whatsapp_conversation_read` (INVOKER) → `…_impl` (DEFINER) | view-scoped, idempotent, monotonic; never calls Meta or writes provider status | — |
+| WM-1 ✅ | `list_whatsapp_inbox_conversations` | SQL over the view predicate; search + link + attention + **bounded offset** paging (not keyset); returns `{total_count, items}` | — |
+| WM-1 ✅ | index `idx_whatsapp_messages_conversation_direction_timestamp` | latest inbound / outbound per conversation in one probe | — |
 | WM-2 | `whatsapp_templates` + columns | provider_status_raw, category_raw, quality_rating, parameter_format, synced_at, rejected_reason (bounded) | — |
 | WM-2 | `whatsapp_template_snapshots` | template_id, components jsonb (≤16KB), components_hash unique per template, variable_schema, category, captured_at | ✓ |
 | WM-2 | `whatsapp_template_status_events` | template_id, source (sync/webhook), status, category, event_key unique | ✓ |
@@ -513,6 +516,7 @@ Each phase with a migration must also run `db:reset`, `db:lint`, `db:test`, `ver
 5. Lead context panel reads CRM through existing CRM permissions (notes, follow-ups, stage transitions, quotations only where the actor already holds them).
 6. Kriti/AI drafts are inserted into the composer for a human to edit and send; never auto-sent.
 7. No visual design is frozen in WM-0.
+8. **Mount contract (WM-1, implemented).** A surface supplies a route-level guard (`WhatsappInboxRouteGuard`: current path + login destination; `ADMIN_WHATSAPP_INBOX_ROUTE_GUARD` for `/admin`) and a `basePath` passed to `InboxListPane`; every filter, page, search and conversation link is built from it (`inbox-surface.ts`, `buildInboxListHref`). It supplies no scope: the repository resolves the current actor and the database decides which rows exist. Read acknowledgement is mounted by the conversation route as `<InboxReadAcknowledger>`. No `/sales/...` route exists yet.
 
 ### 12.1 Sales Representative chat capabilities (assigned lead only)
 
@@ -521,9 +525,9 @@ Every row is scoped by `can_view` / `can_use` over `leads.assigned_to`. "Exists"
 | Capability | Status at WM-0 | Phase | Governing rule |
 | --- | --- | --- | --- |
 | Authorised conversation history | exists | — | RLS view predicate; no existence oracle |
-| Search / link filters / pagination | exists (search, linked/unlinked, offset pages) | WM-1 adds attention filters | SQL within scope, never React-side filtering |
-| True unread state | not built | WM-1 | `whatsapp_conversation_staff_state`, never provider read |
-| Needs Reply / Waiting on Customer / Follow-up Due / Recently Active | not built | WM-1 | `WHATSAPP_INBOX_ATTENTION_FILTER_DEFINITIONS`, implemented in SQL |
+| Search / link filters / pagination | exists (search, linked/unlinked, offset pages) | WM-1 adds attention filters — **built** | SQL within scope, never React-side filtering |
+| True unread state | not built at WM-0 — **built in WM-1** (boolean dot, no count) | WM-1 | `whatsapp_conversation_staff_state`, never provider read |
+| Needs Reply / Waiting on Customer / Follow-up Due / Recently Active | not built at WM-0 — **built in WM-1** (queue filters) | WM-1 | `WHATSAPP_INBOX_ATTENTION_FILTER_DEFINITIONS`, implemented in SQL |
 | Service-window text reply | exists | — | `WHATSAPP_SERVICE` intent; `template_required` outside 24h fails closed |
 | Approved template insertion + send | not built | WM-2 (UTILITY); MARKETING after WM-3 policy exists | §11; category re-read at send |
 | Saved replies / snippets | not built | WM-2 | a snippet is text, never a template substitute |
@@ -532,11 +536,11 @@ Every row is scoped by `can_view` / `can_use` over `leads.assigned_to`. "Exists"
 | Governed outbound media | not built | **unphased — the only open owner decision** (§3.4; recommended: its own PR after WM-2) | typed `dispatchMediaMessage`; evidence + idempotency |
 | Secure inbound media viewing | metadata shown, content not retrievable | **unphased — open owner decision** (same PR as above) | server proxy, server-only token, type/size limits, SSRF allowlist |
 | Kriti / AI draft assist | not built in inbox | after WM-2 | draft inserted into composer; human edits and clicks Send; never auto-send |
-| Lead context (name, service, scope/BHK, budget, locality, stage, source, owner, activities, follow-up, quotations) | summary + Open lead exist via `getLeadDetailForCurrentUser` | WM-1 widens read model | existing CRM access context; hidden when CRM read is refused |
-| Add note / create or update follow-up / transition stage | available in CRM lead page, not inline in inbox | WM-1 or later (inline) | existing CRM RPCs and permissions only |
+| Lead context (name, service, scope/BHK, budget, locality, stage, source, owner, activities, follow-up, quotations) | summary + Open lead exist via `getLeadDetailForCurrentUser` | WM-1 widened only the list row (lead name via CRM visibility, follow-up-due flag); the wider panel is carried forward | existing CRM access context; hidden when CRM read is refused |
+| Add note / create or update follow-up / transition stage | available in CRM lead page, not inline in inbox | not in WM-1 as executed; later (inline) | existing CRM RPCs and permissions only |
 | Open lead / existing quotation flow | Open lead exists; quotation via CRM | — | existing quotation permissions and secure delivery |
 | Campaign / template origin context | not built | WM-4 (attribution) / WM-5 (drilldown) | only when actor may view the conversation; no global campaign read |
-| DNC / opt-out / send-eligibility display | service eligibility enforced server-side; not yet surfaced as a panel | WM-1 display, WM-3 marketing eligibility | display only; no override control exists for any role |
+| DNC / opt-out / send-eligibility display | service eligibility enforced server-side; not yet surfaced as a panel | not in WM-1 as executed; display carried forward, WM-3 marketing eligibility | display only; no override control exists for any role |
 | Record customer opt-out | not built | WM-3 | `whatsapp.opt_out.record`, restrictive only |
 
 A Sales Representative never gains, through any row above: bulk draft/approve/execute, global contact or audience export, segment management, consent grant/clear, or suppression override.
@@ -564,7 +568,7 @@ Triggers: lead created/assigned, stage changed, consultation scheduled, follow-u
 | Phase | Delivers | Explicitly out of scope |
 | --- | --- | --- |
 | **WM-0** | ADR-0034, this plan, truth-sync, migration-independent contracts, contract tests | migrations, routes, UI, provider calls, Meta template creation, sends, env or production changes |
-| **WM-1** | Staff read state; Unread / Needs Reply / Waiting / Follow-up Due / Recently Active in SQL; route-independent inbox read models; implement the locked tombstoned-lead read policy (§7.1) in a forward-only migration + pgTAP; reassignment pgTAP + app tests | templates, marketing, sales dashboard visual design |
+| **WM-1** ✅ repository | Staff read state; Unread / Needs Reply / Waiting / Follow-up Due / Recently Active in SQL; route-independent inbox read models; implement the locked tombstoned-lead read policy (§7.1) in a forward-only migration + pgTAP; reassignment pgTAP + app tests | templates, marketing, sales dashboard visual design |
 | **WM-2** | Template registry sync, snapshots, status events, Studio (list/sync/draft/submit), template drawer, official template send 1:1 (UTILITY via service; MARKETING blocked until WM-3 policy exists) | bulk, segments, preferences, automations |
 | **WM-3** | Contact workspace, MARKETING consent view, preference events, opt-out classifier wired to webhook, send policy, segment builder, eligibility preview | run execution |
 | **WM-4** | Spec, run, recipients, preflight, test send, scheduler, dispatcher, pause/resume/cancel, reconciliation, canonical binding | click tracking, automations |

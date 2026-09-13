@@ -8,6 +8,7 @@ import {
   hasWhatsappInboxReadAccess,
   type WhatsappInboxAccessContext,
 } from "../contracts/inbox-access.ts";
+import { WHATSAPP_ADMIN_INBOX_BASE_PATH } from "../contracts/inbox-surface.ts";
 import { probeWhatsappInboxPermissions } from "./whatsapp-permissions.ts";
 import {
   DEFAULT_LOGIN_PORTAL,
@@ -62,16 +63,34 @@ export async function getWhatsappInboxAccessContext(): Promise<WhatsappInboxAcce
   return resolution.kind === "granted" ? resolution.context : null;
 }
 
+/**
+ * What a route wrapper decides, and the inbox domain does not.
+ *
+ * `resolveWhatsappInboxAccess()` above is surface-agnostic: it asks who the
+ * caller is and what the database lets them do. Where an anonymous visitor is
+ * sent, and which path they come back to, belongs to the surface that mounted
+ * the inbox — the admin workspace today, a Sales Representative dashboard
+ * later — so it is passed in rather than assumed.
+ */
+export type WhatsappInboxRouteGuard = {
+  readonly currentPath: string;
+  readonly loginHref: (currentPath: string) => string;
+};
+
+export const ADMIN_WHATSAPP_INBOX_ROUTE_GUARD: WhatsappInboxRouteGuard = {
+  currentPath: WHATSAPP_ADMIN_INBOX_BASE_PATH,
+  // The Super Admin portal, with a return path that must stay under /admin.
+  loginHref: (currentPath) =>
+    loginPortalHref(DEFAULT_LOGIN_PORTAL, getSafeAdminRedirect(currentPath)),
+};
+
 export async function requireWhatsappInboxReadAccess(
-  currentPath: string = "/admin/whatsapp/inbox"
+  guard: WhatsappInboxRouteGuard = ADMIN_WHATSAPP_INBOX_ROUTE_GUARD
 ): Promise<WhatsappInboxAccessContext> {
   const resolution = await resolveWhatsappInboxAccess();
 
   if (resolution.kind === "unauthenticated") {
-    const safeNext = getSafeAdminRedirect(currentPath);
-    // The Super Admin portal: this guard only ever protects /admin.
-    const loginUrl = loginPortalHref(DEFAULT_LOGIN_PORTAL, safeNext);
-    redirect(loginUrl);
+    redirect(guard.loginHref(guard.currentPath));
   }
 
   if (resolution.kind === "inactive" || resolution.kind === "denied") {
@@ -82,9 +101,9 @@ export async function requireWhatsappInboxReadAccess(
 }
 
 export async function requireWhatsappInboxUseAccess(
-  currentPath: string = "/admin/whatsapp/inbox"
+  guard: WhatsappInboxRouteGuard = ADMIN_WHATSAPP_INBOX_ROUTE_GUARD
 ): Promise<WhatsappInboxAccessContext> {
-  const context = await requireWhatsappInboxReadAccess(currentPath);
+  const context = await requireWhatsappInboxReadAccess(guard);
   if (!context.canUse) {
     redirect("/auth/forbidden");
   }
