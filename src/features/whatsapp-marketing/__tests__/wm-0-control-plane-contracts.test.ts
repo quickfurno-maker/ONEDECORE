@@ -884,5 +884,30 @@ describe("governance documents exist and point at each other", () => {
     assert.match(read(adr), /Complete WhatsApp Marketing Control Plane and CRM-Owned Conversation Access/);
     assert.match(read(plan), /ADR-0034/);
     assert.match(read("docs/08-whatsapp-and-n8n-boundary.md"), /ADR-0034/);
+    assert.match(read("docs/product/crm-whatsapp-launch-certification.md"), /ADR-0034/);
+  });
+
+  test("the master plan freezes sales representative chat capabilities without bulk authority", () => {
+    const plan = read("docs/product/whatsapp-marketing-control-plane.md");
+    const start = plan.indexOf("### 12.1 Sales Representative chat capabilities");
+    assert.ok(start !== -1, "§12.1 present");
+    const section = plan.slice(start, plan.indexOf("\n## ", start));
+    for (const capability of [
+      "True unread state",
+      "Approved template insertion",
+      "Saved replies",
+      "Reply-to",
+      "Delivery / read / failed evidence",
+      "inbound media",
+      "Kriti / AI draft assist",
+      "Lead context",
+      "Campaign / template origin context",
+      "send-eligibility",
+    ]) {
+      assert.ok(section.includes(capability), capability);
+    }
+    assert.match(section, /never auto-send/);
+    assert.match(section, /no override control exists for any role/);
+    assert.match(section, /never gains[^\n]*bulk draft\/approve\/execute/);
   });
 });

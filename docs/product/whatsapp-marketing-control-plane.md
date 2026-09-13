@@ -123,7 +123,7 @@ Existing codes are reused; new codes are inserted only by the phase migration na
 | `whatsapp.automations.read` / `.manage` | planned | WM-6 | SA, SM | activation via approval |
 | `whatsapp.flows.read` / `.manage` | planned | WM-6 | SA, SM | |
 
-**Open owner decisions (defaults above apply unless changed):** (a) whether legacy `management`/`sales` roles receive the new WM codes (M19 mirrored them; M31 did not; default: canonical five roles only); (b) whether Sales Manager may execute WhatsApp runs or only Super Admin (default: SM may, as in 9C, because SM cannot approve their own version).
+**Open owner decisions (defaults above apply unless changed):** (a) whether legacy `management`/`sales` roles receive the new WM codes (M19 mirrored them; M31 did not; default: canonical five roles only); (b) whether Sales Manager may execute WhatsApp runs or only Super Admin (default: SM may, as in 9C, because SM cannot approve their own version); (c) which phase carries governed outbound media and secure inbound media viewing (not named in the locked WM-1…WM-7 roadmap; recommended: its own PR after WM-2, see §12.1).
 
 ---
 
@@ -480,6 +480,33 @@ Each phase with a migration must also run `db:reset`, `db:lint`, `db:test`, `ver
 6. Kriti/AI drafts are inserted into the composer for a human to edit and send; never auto-sent.
 7. No visual design is frozen in WM-0.
 
+### 12.1 Sales Representative chat capabilities (assigned lead only)
+
+Every row is scoped by `can_view` / `can_use` over `leads.assigned_to`. "Exists" means present on `main` at the WM-0 baseline (PR #186); it is not a claim of production activation.
+
+| Capability | Status at WM-0 | Phase | Governing rule |
+| --- | --- | --- | --- |
+| Authorised conversation history | exists | — | RLS view predicate; no existence oracle |
+| Search / link filters / pagination | exists (search, linked/unlinked, offset pages) | WM-1 adds attention filters | SQL within scope, never React-side filtering |
+| True unread state | not built | WM-1 | `whatsapp_conversation_staff_state`, never provider read |
+| Needs Reply / Waiting on Customer / Follow-up Due / Recently Active | not built | WM-1 | `WHATSAPP_INBOX_ATTENTION_FILTER_DEFINITIONS`, implemented in SQL |
+| Service-window text reply | exists | — | `WHATSAPP_SERVICE` intent; `template_required` outside 24h fails closed |
+| Approved template insertion + send | not built | WM-2 (UTILITY); MARKETING after WM-3 policy exists | §11; category re-read at send |
+| Saved replies / snippets | not built | WM-2 | a snippet is text, never a template substitute |
+| Reply-to a specific message | display of inbound quoted context exists; outbound reply-to send not built | WM-2 | official `context.message_id`; same service/marketing path as the body |
+| Delivery / read / failed evidence | exists (latest provider status on outbound) | WM-5 adds analytics | webhook status events only; browser status never trusted |
+| Governed outbound media | not built | **unphased — open owner decision** (recommended: its own PR after WM-2) | typed `dispatchMediaMessage`; evidence + idempotency |
+| Secure inbound media viewing | metadata shown, content not retrievable | **unphased — open owner decision** (same PR as above) | server proxy, server-only token, type/size limits, SSRF allowlist |
+| Kriti / AI draft assist | not built in inbox | after WM-2 | draft inserted into composer; human edits and clicks Send; never auto-send |
+| Lead context (name, service, scope/BHK, budget, locality, stage, source, owner, activities, follow-up, quotations) | summary + Open lead exist via `getLeadDetailForCurrentUser` | WM-1 widens read model | existing CRM access context; hidden when CRM read is refused |
+| Add note / create or update follow-up / transition stage | available in CRM lead page, not inline in inbox | WM-1 or later (inline) | existing CRM RPCs and permissions only |
+| Open lead / existing quotation flow | Open lead exists; quotation via CRM | — | existing quotation permissions and secure delivery |
+| Campaign / template origin context | not built | WM-4 (attribution) / WM-5 (drilldown) | only when actor may view the conversation; no global campaign read |
+| DNC / opt-out / send-eligibility display | service eligibility enforced server-side; not yet surfaced as a panel | WM-1 display, WM-3 marketing eligibility | display only; no override control exists for any role |
+| Record customer opt-out | not built | WM-3 | `whatsapp.opt_out.record`, restrictive only |
+
+A Sales Representative never gains, through any row above: bulk draft/approve/execute, global contact or audience export, segment management, consent grant/clear, or suppression override.
+
 ---
 
 ## 13. Analytics, clicks, replies, conversions (WM-5)
@@ -492,7 +519,7 @@ Triggers: lead created/assigned, stage changed, consultation scheduled, follow-u
 
 ## 15. Provider and webhook evolution
 
-- Port additions (typed, server-only): `dispatchTemplateMessage` (WM-2), `listTemplates`/`getTemplate`/`createTemplate`/`editTemplate` (WM-2), `dispatchMediaMessage`/`fetchMedia` (media phase), Flow operations (WM-6), health reads (WM-7).
+- Port additions (typed, server-only): `dispatchTemplateMessage` (WM-2), `listTemplates`/`getTemplate`/`createTemplate`/`editTemplate` (WM-2), `dispatchMediaMessage`/`fetchMedia` (governed media PR — unphased, open owner decision, see §12.1), Flow operations (WM-6), health reads (WM-7).
 - Inbound media: official media endpoint through a server proxy with server-only token, content-type and size validation, host allowlist (SSRF), no token or signed provider URL in the browser.
 - Webhook: add template status, Flow reply, referral context and account/phone events as subscribed; each idempotent via existing event-key hashing; unknown kinds remain `unsupported`. Browser-reported status is never trusted.
 
