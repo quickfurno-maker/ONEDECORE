@@ -17,7 +17,7 @@
 ONEDECORE already holds a governed WhatsApp service channel:
 
 - signed, idempotent Meta webhook ingestion (M18) into `whatsapp_conversations`, `whatsapp_messages`, `whatsapp_message_status_events`;
-- a shared inbox whose RLS scope is the **current** CRM assignment (M19–M20, hardened by the lead link repair and the lead tombstone migration);
+- a shared inbox whose RLS scope is the **current** CRM assignment (M19–M20, hardened by the lead link repair). The lead tombstone migration (`20260906180000`) hardened the **use/send** predicates (`…can_use_conversation`, `…actor_can_use_conversation`) against tombstoned leads, but **not** the **read/view** predicate `private.whatsapp_inbox_can_view_conversation`. That read gap is known; WM-1 closes it under the locked policy in §2.B.6;
 - durable `WHATSAPP_SERVICE` send intents, a server-only Meta adapter with an outbound kill switch, claim/bind/outcome/reconcile RPCs (M21);
 - the premium inbox workspace (PR #186).
 
@@ -42,8 +42,16 @@ The owner has decided to build a complete in-house WhatsApp environment. Built w
 1. **`public.leads.assigned_to` is the only authority** for which Sales Executive may see and act on a lead-linked conversation. No `whatsapp_conversations.assigned_sales_rep` or equivalent field may be added, cached or denormalised onto a read model as authority.
 2. A Sales Executive reaches **only** conversations linked to a live lead currently assigned to them. Unrelated conversations are indistinguishable from non-existent ones (no existence oracle).
 3. **Reassignment is immediate by construction**: the old assignee loses access, the new assignee gains it, the conversation's lead link and history do not change, and manage scope is unaffected.
-4. Unlinked and ambiguous conversations are manager / Super Admin triage only.
+4. Unlinked and ambiguous conversations are manage-scope triage only (Super Admin, Sales Manager, and legacy `management` through its existing M19 `whatsapp.inbox.manage` grant).
 5. Access is enforced by authenticated RLS and `SECURITY DEFINER` predicates with `set search_path = ''`. User-facing reads never use the service role to widen staff scope, and never fetch broadly then filter in React.
+6. **Tombstoned (deleted) lead conversations — locked owner policy.** For a conversation whose linked CRM lead is tombstoned:
+   - Sales Executive and legacy `sales`: **no read, no use/send, no existence leak** — indistinguishable from a conversation that does not exist, including for the former assignee;
+   - manage-scope actors (Super Admin, Sales Manager, legacy `management` via its existing M19 manage grant): **historical read-only**;
+   - **nobody sends** while the lead is tombstoned (already enforced by the use predicates);
+   - conversation, message and status evidence is **retained**, never deleted;
+   - a future governed lead restore resumes ordinary current-assignment access.
+
+   Current state: use/send already conforms; read/view does not (see §1). **WM-1** implements the read side in a forward-only migration with pgTAP coverage. WM-0 makes no database change.
 
 ### C. Service path stays non-marketing
 
@@ -96,12 +104,25 @@ Per-staff `whatsapp_conversation_staff_state` (last read message, last opened) d
 
 | Actor | Frozen authority |
 | :--- | :--- |
-| Super Admin | Everything below, subject to permission; unlinked triage; settings; cancel runs; exports |
-| Sales Manager / management | Broad sales conversations and unlinked triage; templates; segments; campaign drafting; approval **except own versions**; execute runs approved by someone else; pause |
-| Sales Executive | Assigned-lead conversations only; service replies; approved template use in assigned chats; opt-out recording in scope; CRM actions per existing CRM permissions. **No** bulk draft/approve/execute/pause, global contacts, segments, exports, settings, or consent grant/clear |
+| Super Admin | Everything below, subject to permission; unlinked triage; historical read of tombstoned-lead chats. **Super Admin only:** cancel a run, per-recipient export, send-policy / execution-gate settings management |
+| Sales Manager | Broad sales conversations and unlinked triage; historical read of tombstoned-lead chats; templates; segments; campaign drafting and approval request; approval **except own versions**; **execute / schedule / pause / resume** a WhatsApp run under the locked conditions in §J.1. No cancel, no per-recipient export, no settings management |
+| Legacy `management` | **Only** its existing M19 inbox grants (`whatsapp.inbox.read`, `.use`, `.manage`): broad and unlinked inbox scope, historical read of tombstoned-lead chats. **No new WM permission** — no template, contact, opt-out, segment, campaign, analytics, export, automation, Flow or settings code |
+| Sales Executive | Assigned-lead conversations only; service replies; approved template use in assigned chats (WM-2); restrictive opt-out recording in scope (WM-3); CRM actions per existing CRM permissions. No tombstoned-lead chat access. **No** bulk draft/approve/execute/pause, global contacts, segments, exports, settings, or consent grant/clear |
+| Legacy `sales` | **Only** its existing M19 assigned-inbox grants (`whatsapp.inbox.read`, `.use`) under the same current-assignment rule. No tombstoned-lead chat access. **No new WM permission**, including no template use and no opt-out recording |
 | Project Manager / Designer | None |
 | Kriti / AI | Draft assistance only; never sends, approves, or mutates authoritative state |
 | n8n | Notification relay after persistence; never consent, approval, retry, attribution or delivery truth |
+
+**J.1 Sales Manager run execution — locked owner decision.** A Sales Manager may execute, schedule, pause or resume a WhatsApp campaign run only when **all** hold:
+
+1. the campaign version is `approved`;
+2. the Sales Manager is **not** the approver of that version (independent approval; the Phase 9A database rule already denies self-approval);
+3. the Sales Manager holds the dedicated `whatsapp.campaigns.execute` code (generic `campaigns.execute` is paid-ads only and never sufficient), plus `campaigns.pause` to pause;
+4. every compliance and provider gate passes for starting or resuming sends — outbound kill switch open, marketing execution gate open, frozen spec, approved template snapshot — and every recipient still passes JIT eligibility at dispatch. Pausing is safety-increasing and is never blocked by a sending gate.
+
+Cancel run, per-recipient export and settings / execution-gate management are **Super Admin only**.
+
+**J.2 Legacy roles — locked owner decision.** WM migrations grant new codes to canonical roles only. Legacy `management` and legacy `sales` keep exactly their existing M19 inbox grants and receive no WM code in any phase.
 
 The full permission matrix (existing codes reused, new codes and their phases) is frozen in the master plan and in `src/features/whatsapp-marketing/contracts/capability-matrix.ts`. New codes are inserted only by their phase's migration.
 
@@ -114,7 +135,7 @@ The full permission matrix (existing codes reused, new codes and their phases) i
 
 ### L. Phasing
 
-WM-0 architecture freeze → WM-1 CRM ownership + inbox completeness → WM-2 template studio + one-to-one template messaging → WM-3 contacts/consent/preferences/segments → WM-4 bulk campaign engine → WM-5 analytics/clicks/replies/conversion → WM-6 automations/Flows/CTWA → WM-7 production certification. Each phase is its own PR, its own forward-only migration where needed, and stops for review.
+WM-0 architecture freeze → WM-1 CRM ownership + inbox completeness (including the tombstoned-lead read policy of §B.6) → WM-2 template studio + one-to-one template messaging → WM-3 contacts/consent/preferences/segments → WM-4 bulk campaign engine → WM-5 analytics/clicks/replies/conversion → WM-6 automations/Flows/CTWA → WM-7 production certification. Each phase is its own PR, its own forward-only migration where needed, and stops for review.
 
 **Repository build is not activation.** Production Meta callback/token/outbound activation remains owner-gated (P9 in [docs/11](../11-accelerated-closeout-roadmap.md)). Every WM capability ships fail-closed.
 

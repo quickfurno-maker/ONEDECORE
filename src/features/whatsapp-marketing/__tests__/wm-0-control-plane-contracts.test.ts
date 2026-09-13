@@ -30,6 +30,7 @@ import {
   FORBIDDEN_CONVERSATION_OWNER_COLUMNS,
   WHATSAPP_CONVERSATION_OWNERSHIP_AUTHORITY,
   WHATSAPP_REASSIGNMENT_RULES,
+  WHATSAPP_TOMBSTONED_LEAD_CONVERSATION_POLICY,
 } from "../../whatsapp/contracts/conversation-ownership.ts";
 import {
   isWhatsappTemplateStatusSendable,
@@ -81,10 +82,15 @@ import {
   WHATSAPP_MARKETING_DISPATCH_OUTCOMES,
 } from "../contracts/dispatch-outcome.ts";
 import {
+  evaluateWhatsappCampaignRunOperatorAuthority,
   SALES_EXECUTIVE_FORBIDDEN_WHATSAPP_CODES,
   WHATSAPP_BULK_AUTHORITY_ROLES,
+  WHATSAPP_CAMPAIGN_RUN_OPERATOR_ACTIONS,
   WHATSAPP_CONTROL_PLANE_PERMISSIONS,
+  WHATSAPP_LEGACY_ROLE_EXISTING_CODES,
+  WHATSAPP_SUPER_ADMIN_ONLY_RUN_ACTIONS,
   whatsappControlPlaneCodesForRole,
+  type WhatsappCampaignRunOperatorEvidence,
 } from "../contracts/capability-matrix.ts";
 import {
   PAID_ADS_EXECUTION_TABLES_NOT_FOR_WHATSAPP,
@@ -234,6 +240,40 @@ describe("2 — Sales Executive target matrix holds no bulk or global authority"
     }
   });
 
+  test("legacy management holds no planned WM code, only its existing M19 inbox grants", () => {
+    const planned = WHATSAPP_CONTROL_PLANE_PERMISSIONS.filter((e) => e.status === "planned");
+    for (const entry of planned) {
+      assert.equal(entry.grantedTo.includes("management"), false, entry.code);
+    }
+    assert.deepEqual(
+      [...whatsappControlPlaneCodesForRole("management")].sort(),
+      [...WHATSAPP_LEGACY_ROLE_EXISTING_CODES.management].sort()
+    );
+    assert.deepEqual(
+      [...whatsappControlPlaneCodesForRole("management", "existing")].sort(),
+      [...whatsappControlPlaneCodesForRole("management", "target")].sort()
+    );
+  });
+
+  test("legacy sales holds no planned WM code, only its existing M19 assigned-inbox grants", () => {
+    for (const entry of WHATSAPP_CONTROL_PLANE_PERMISSIONS.filter((e) => e.status === "planned")) {
+      assert.equal(entry.grantedTo.includes("sales"), false, entry.code);
+    }
+    assert.deepEqual(
+      [...whatsappControlPlaneCodesForRole("sales")].sort(),
+      [...WHATSAPP_LEGACY_ROLE_EXISTING_CODES.sales].sort()
+    );
+    assert.equal(whatsappControlPlaneCodesForRole("sales").has("whatsapp.templates.use"), false);
+    assert.equal(whatsappControlPlaneCodesForRole("sales").has("whatsapp.opt_out.record"), false);
+  });
+
+  test("sales_executive holds no bulk-risk code", () => {
+    const codes = whatsappControlPlaneCodesForRole("sales_executive");
+    for (const entry of WHATSAPP_CONTROL_PLANE_PERMISSIONS.filter((e) => e.risk === "bulk")) {
+      assert.equal(codes.has(entry.code), false, entry.code);
+    }
+  });
+
   test("project manager and designer hold no WhatsApp control-plane code", () => {
     assert.equal(whatsappControlPlaneCodesForRole("project_manager").size, 0);
     assert.equal(whatsappControlPlaneCodesForRole("designer").size, 0);
@@ -292,6 +332,83 @@ describe("2 — Sales Executive target matrix holds no bulk or global authority"
   });
 });
 
+describe("2b — locked Sales Manager run execution authority", () => {
+  const sm: WhatsappCampaignRunOperatorEvidence = {
+    role: "sales_manager",
+    permissions: whatsappControlPlaneCodesForRole("sales_manager"),
+    action: "execute",
+    versionStatus: "approved",
+    actorApprovedVersion: false,
+    sendingGatesOpen: true,
+  };
+  const sa: WhatsappCampaignRunOperatorEvidence = {
+    ...sm,
+    role: "super_admin",
+    permissions: whatsappControlPlaneCodesForRole("super_admin"),
+  };
+
+  test("Sales Manager may execute, schedule, pause and resume an independently approved version", () => {
+    for (const action of ["execute", "schedule", "pause", "resume"] as const) {
+      assert.deepEqual(evaluateWhatsappCampaignRunOperatorAuthority({ ...sm, action }), { allowed: true }, action);
+    }
+  });
+
+  test("Sales Manager is refused when not approved, self-approved, gates closed or code missing", () => {
+    for (const action of ["execute", "schedule", "pause", "resume"] as const) {
+      assert.deepEqual(
+        evaluateWhatsappCampaignRunOperatorAuthority({ ...sm, action, versionStatus: "pending_approval" }),
+        { allowed: false, reason: "version_not_approved" },
+        action
+      );
+      assert.deepEqual(
+        evaluateWhatsappCampaignRunOperatorAuthority({ ...sm, action, actorApprovedVersion: true }),
+        { allowed: false, reason: "approved_by_actor" },
+        action
+      );
+      const withoutDedicated = new Set([...sm.permissions].filter((c) => c !== "whatsapp.campaigns.execute"));
+      withoutDedicated.add("campaigns.execute");
+      assert.deepEqual(
+        evaluateWhatsappCampaignRunOperatorAuthority({ ...sm, action, permissions: withoutDedicated }),
+        { allowed: false, reason: "missing_permission" },
+        `${action}: generic campaigns.execute is not sufficient`
+      );
+    }
+    for (const action of ["execute", "schedule", "resume"] as const) {
+      assert.deepEqual(
+        evaluateWhatsappCampaignRunOperatorAuthority({ ...sm, action, sendingGatesOpen: false }),
+        { allowed: false, reason: "sending_gates_closed" },
+        action
+      );
+    }
+    assert.deepEqual(evaluateWhatsappCampaignRunOperatorAuthority({ ...sm, action: "pause", sendingGatesOpen: false }), {
+      allowed: true,
+    });
+  });
+
+  test("cancel, per-recipient export and settings are Super Admin only", () => {
+    for (const action of WHATSAPP_SUPER_ADMIN_ONLY_RUN_ACTIONS) {
+      assert.deepEqual(evaluateWhatsappCampaignRunOperatorAuthority({ ...sm, action }), {
+        allowed: false,
+        reason: "super_admin_only",
+      });
+      assert.deepEqual(evaluateWhatsappCampaignRunOperatorAuthority({ ...sa, action }), { allowed: true });
+    }
+  });
+
+  test("every other role is refused every run action, even holding codes by mistake", () => {
+    const everything = new Set(WHATSAPP_CONTROL_PLANE_PERMISSIONS.map((e) => e.code));
+    for (const role of ["management", "sales", "sales_executive", "project_manager", "designer"] as const) {
+      for (const action of WHATSAPP_CAMPAIGN_RUN_OPERATOR_ACTIONS) {
+        assert.deepEqual(
+          evaluateWhatsappCampaignRunOperatorAuthority({ ...sm, role, action, permissions: everything }),
+          { allowed: false, reason: "role_not_authorised" },
+          `${role} ${action}`
+        );
+      }
+    }
+  });
+});
+
 /* ========================================================================== */
 /* 3. leads.assigned_to is the only conversation owner                        */
 /* ========================================================================== */
@@ -333,6 +450,22 @@ describe("3 — leads.assigned_to remains canonical conversation ownership", () 
         column
       );
     }
+  });
+
+  test("tombstoned-lead chats: manage scope read-only, salesperson invisible, nobody sends", () => {
+    const policy = WHATSAPP_TOMBSTONED_LEAD_CONVERSATION_POLICY;
+    assert.deepEqual(policy.assignedScope, { read: false, use: false, existenceVisible: false });
+    assert.deepEqual(policy.manageScope, { read: "historical_read_only", use: false, existenceVisible: true });
+    assert.equal(policy.evidenceRetained, true);
+    assert.equal(policy.governedRestoreResumesAssignmentAccess, true);
+    assert.equal(policy.readSideImplementedIn, "WM-1");
+  });
+
+  test("the use/send predicate is already tombstone-hardened", () => {
+    assert.match(
+      latestFunctionDefinition("private.whatsapp_inbox_can_use_conversation"),
+      /from public\.leads where deleted_at is null/
+    );
   });
 
   test("no WhatsApp source invents a competing owner field", () => {
@@ -885,6 +1018,24 @@ describe("governance documents exist and point at each other", () => {
     assert.match(read(plan), /ADR-0034/);
     assert.match(read("docs/08-whatsapp-and-n8n-boundary.md"), /ADR-0034/);
     assert.match(read("docs/product/crm-whatsapp-launch-certification.md"), /ADR-0034/);
+  });
+
+  test("role, execution and tombstone decisions are locked, not open, in the ADR and master plan", () => {
+    const adr = read(
+      "docs/ADR/ADR-0034-complete-whatsapp-marketing-control-plane-and-crm-owned-conversation-access.md"
+    );
+    const plan = read("docs/product/whatsapp-marketing-control-plane.md");
+    for (const [name, doc] of [["ADR", adr], ["plan", plan]] as const) {
+      assert.doesNotMatch(doc, /Sales Manager \/ management/, `${name} groups SM with legacy management`);
+      assert.doesNotMatch(doc, /must decide|tombstone view decision/i, `${name} leaves tombstone open`);
+      assert.doesNotMatch(doc, /whether legacy|whether Sales Manager may execute/i, `${name} leaves a decision open`);
+    }
+    for (const actor of ["| Sales Manager |", "| Legacy `management` |", "| Sales Executive |", "| Legacy `sales` |"]) {
+      assert.ok(adr.includes(actor), `ADR authority row ${actor}`);
+    }
+    assert.doesNotMatch(adr, /hardened by the lead link repair and the lead tombstone migration/);
+    assert.match(adr, /hardened the \*\*use\/send\*\* predicates/);
+    assert.match(plan, /### 3\.4 Open owner decision\r?\n\r?\nOnly one remains: which phase carries governed outbound media/);
   });
 
   test("the master plan freezes sales representative chat capabilities without bulk authority", () => {

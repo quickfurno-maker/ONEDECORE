@@ -54,6 +54,21 @@ export const WHATSAPP_MANAGE_SCOPE_ROLES = [
 ] as const;
 
 /**
+ * Locked owner policy (ADR-0034 §B.6) for a conversation whose linked lead is
+ * tombstoned. Use/send already conforms (lead tombstone migration); read/view
+ * is implemented by WM-1 in a forward-only migration with pgTAP coverage.
+ */
+export const WHATSAPP_TOMBSTONED_LEAD_CONVERSATION_POLICY = {
+  /** Sales Executive and legacy sales, including the former assignee. */
+  assignedScope: { read: false, use: false, existenceVisible: false },
+  /** Super Admin, Sales Manager and legacy management via existing M19 manage scope. */
+  manageScope: { read: "historical_read_only", use: false, existenceVisible: true },
+  evidenceRetained: true,
+  governedRestoreResumesAssignmentAccess: true,
+  readSideImplementedIn: "WM-1",
+} as const;
+
+/**
  * Reassignment semantics, frozen. Every item is a consequence of reading
  * `leads.assigned_to` live, not a behaviour anyone has to remember to build.
  */

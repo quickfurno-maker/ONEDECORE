@@ -147,7 +147,7 @@ export const WHATSAPP_CONTROL_PLANE_PERMISSIONS: readonly WhatsappControlPlanePe
     status: "existing",
     source: "20260820140000_campaign_execution_foundation.sql",
     grantedTo: SA_SM,
-    note: "Reused for WhatsApp run pause/resume (safety-increasing).",
+    note: "Reused for WhatsApp run pause (safety-increasing). A Sales Manager also needs whatsapp.campaigns.execute and independent approval; resume is governed as execution.",
   },
   {
     code: "campaigns.metrics.read",
@@ -247,7 +247,7 @@ export const WHATSAPP_CONTROL_PLANE_PERMISSIONS: readonly WhatsappControlPlanePe
     status: "planned",
     source: "WM-4",
     grantedTo: SA_SM,
-    note: "Create/schedule a WhatsApp run from a version approved by someone else.",
+    note: "Execute/schedule/resume a WhatsApp run of an approved version the actor did not approve, with every gate open.",
   },
   {
     code: "whatsapp.campaigns.test_send",
@@ -351,6 +351,91 @@ export const SALES_EXECUTIVE_FORBIDDEN_WHATSAPP_CODES = [
 /** The only roles that may hold a code whose risk is `bulk`. */
 export const WHATSAPP_BULK_AUTHORITY_ROLES = ["super_admin", "sales_manager"] as const;
 
+/**
+ * Locked owner decision: legacy roles keep exactly their existing M19 inbox
+ * grants and never receive a `planned` WM code, in any phase. WM migrations
+ * grant new codes to canonical roles only.
+ */
+export const WHATSAPP_LEGACY_ROLE_EXISTING_CODES = {
+  management: ["whatsapp.inbox.read", "whatsapp.inbox.use", "whatsapp.inbox.manage"],
+  sales: ["whatsapp.inbox.read", "whatsapp.inbox.use"],
+} as const satisfies Partial<Record<CrmOperationalRoleCode, readonly string[]>>;
+
+/** Actions on a WhatsApp campaign run whose authority is locked by ADR-0034 §J.1. */
+export const WHATSAPP_CAMPAIGN_RUN_OPERATOR_ACTIONS = [
+  "execute",
+  "schedule",
+  "pause",
+  "resume",
+  "cancel",
+  "export_recipients",
+  "manage_settings",
+] as const;
+
+export type WhatsappCampaignRunOperatorAction =
+  (typeof WHATSAPP_CAMPAIGN_RUN_OPERATOR_ACTIONS)[number];
+
+/** Never delegated below Super Admin. */
+export const WHATSAPP_SUPER_ADMIN_ONLY_RUN_ACTIONS = [
+  "cancel",
+  "export_recipients",
+  "manage_settings",
+] as const satisfies readonly WhatsappCampaignRunOperatorAction[];
+
+export interface WhatsappCampaignRunOperatorEvidence {
+  readonly role: CrmOperationalRoleCode;
+  readonly permissions: ReadonlySet<string>;
+  readonly action: WhatsappCampaignRunOperatorAction;
+  readonly versionStatus: "draft" | "pending_approval" | "approved" | "rejected";
+  /** The actor recorded the approving decision on this version. */
+  readonly actorApprovedVersion: boolean;
+  /** Kill switch, execution gate, frozen spec and approved template snapshot. */
+  readonly sendingGatesOpen: boolean;
+}
+
+export type WhatsappCampaignRunOperatorDenial =
+  | "role_not_authorised"
+  | "super_admin_only"
+  | "missing_permission"
+  | "version_not_approved"
+  | "approved_by_actor"
+  | "sending_gates_closed";
+
+/**
+ * Locked owner decision (ADR-0034 §J.1). A Sales Manager may execute, schedule,
+ * pause or resume only an approved version they did not approve, holding the
+ * dedicated `whatsapp.campaigns.execute`; starting or resuming sends also needs
+ * every sending gate open. Pause is never blocked by a sending gate. Cancel,
+ * per-recipient export and settings are Super Admin only. Per-recipient JIT
+ * eligibility is still re-checked at dispatch; passing here sends nothing.
+ */
+export function evaluateWhatsappCampaignRunOperatorAuthority(
+  evidence: WhatsappCampaignRunOperatorEvidence
+): { readonly allowed: true } | { readonly allowed: false; readonly reason: WhatsappCampaignRunOperatorDenial } {
+  const deny = (reason: WhatsappCampaignRunOperatorDenial) => ({ allowed: false, reason }) as const;
+  const { role, permissions, action } = evidence;
+
+  if (role !== "super_admin" && role !== "sales_manager") return deny("role_not_authorised");
+
+  if ((WHATSAPP_SUPER_ADMIN_ONLY_RUN_ACTIONS as readonly string[]).includes(action)) {
+    if (role !== "super_admin") return deny("super_admin_only");
+    const required =
+      action === "cancel"
+        ? "whatsapp.campaigns.cancel"
+        : action === "export_recipients"
+          ? "whatsapp.reports.export"
+          : "whatsapp.settings.manage";
+    return permissions.has(required) ? { allowed: true } : deny("missing_permission");
+  }
+
+  if (!permissions.has("whatsapp.campaigns.execute")) return deny("missing_permission");
+  if (action === "pause" && !permissions.has("campaigns.pause")) return deny("missing_permission");
+  if (evidence.versionStatus !== "approved") return deny("version_not_approved");
+  if (role === "sales_manager" && evidence.actorApprovedVersion) return deny("approved_by_actor");
+  if (action !== "pause" && !evidence.sendingGatesOpen) return deny("sending_gates_closed");
+  return { allowed: true };
+}
+
 export function whatsappControlPlaneCodesForRole(
   role: CrmOperationalRoleCode,
   include: "existing" | "target" = "target"
@@ -367,7 +452,8 @@ export function whatsappControlPlaneCodesForRole(
 /**
  * Permission is necessary, never sufficient. A WhatsApp run additionally
  * requires an approved WhatsApp-only version whose approver is not the actor
- * when the actor is a Sales Manager (DB-enforced self-approval rule).
+ * when the actor is a Sales Manager; see
+ * `evaluateWhatsappCampaignRunOperatorAuthority`.
  */
 export const WHATSAPP_RUN_EXECUTION_REQUIRES = [
   "whatsapp.campaigns.execute",

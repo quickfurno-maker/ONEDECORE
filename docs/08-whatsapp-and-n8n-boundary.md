@@ -171,6 +171,9 @@ This section extends §1–§3 and the Phase 9B/9C notes above; it does not rewr
 - Campaign messages bind into canonical `whatsapp_conversations` / `whatsapp_messages`, so the assigned salesperson sees them under the same ownership rule.
 - Per-staff read state is separate from provider read status.
 - Sales Executives: assigned chats, service replies, approved template use in assigned chats, opt-out recording only. No bulk draft/approve/execute, global contacts, segments, exports or consent grant.
+- Legacy `management` and legacy `sales` keep only their existing M19 inbox grants and receive no new WM permission (locked).
+- Sales Manager may execute/schedule/pause/resume a WhatsApp run only for an approved version they did not approve, with `whatsapp.campaigns.execute` and every gate open. Cancel, per-recipient export and settings are Super Admin only (locked).
+- Tombstoned-lead conversations: salesperson roles get no read, use or existence; manage scope gets historical read-only; nobody sends; evidence retained (locked). Use/send already conforms; the read side is implemented in WM-1.
 
 **n8n** remains a notification relay after persistence. It is never consent, approval, retry, delivery, attribution or conversion truth for any WM phase. **Kriti** remains draft-only and never sends.
 
