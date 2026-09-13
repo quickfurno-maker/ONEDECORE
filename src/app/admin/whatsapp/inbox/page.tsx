@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-import { InboxConversationList } from "@/features/whatsapp/components/inbox/InboxConversationList";
-import { InboxLinkFilters } from "@/features/whatsapp/components/inbox/InboxLinkFilters";
-import { InboxListPagination } from "@/features/whatsapp/components/inbox/InboxListPagination";
+import { InboxListPane } from "@/features/whatsapp/components/inbox/InboxListPane";
+import { WhatsappAccessDenied } from "@/features/whatsapp/components/states/WhatsappAccessDenied";
 import { InboxManualRefreshButton } from "@/features/whatsapp/components/inbox/InboxManualRefreshButton";
-import { InboxSearchForm } from "@/features/whatsapp/components/inbox/InboxSearchForm";
-import { WhatsappPageHeader } from "@/features/whatsapp/components/shell/WhatsappPageHeader";
+import "@/features/whatsapp/components/whatsapp-workspace.css";
 import {
+  buildInboxListQueryString,
   hasInboxListActiveFilters,
   parseInboxListQuery,
   toInboxListPaginationMeta,
 } from "@/features/whatsapp/contracts/inbox-list-query";
 import { getWhatsappInboxAccessContext } from "@/features/whatsapp/server/whatsapp-auth";
+import { getWhatsappSendingStatus } from "@/features/whatsapp/server/whatsapp-sending-status";
 import { getInboxConversationListPageForCurrentUser } from "@/features/whatsapp/server/whatsapp-inbox-repository";
 
 export const dynamic = "force-dynamic";
@@ -32,44 +32,51 @@ export default async function WhatsappInboxPage({
   const query = parseInboxListQuery(resolvedSearchParams);
   const context = await getWhatsappInboxAccessContext();
 
+  /*
+   * Unreachable in practice — the layout resolves access first and returns the
+   * denied state before this page runs — but `null` would paint a blank screen
+   * if that ever changed, and a blank screen reads as a broken deployment.
+   */
   if (!context) {
-    return null;
+    return <WhatsappAccessDenied />;
   }
 
   const page = await getInboxConversationListPageForCurrentUser(query);
   const pagination = toInboxListPaginationMeta(page);
   const filtered = hasInboxListActiveFilters(query);
 
+  /*
+   * The list route renders the workspace with the chat pane empty.
+   *
+   * Above 1024px that is the real three-pane frame with a "pick a
+   * conversation" prompt in the middle; below it the stylesheet shows only the
+   * list, which is the whole screen on a phone. One markup, two behaviours,
+   * decided by CSS rather than by a second page.
+   */
+  const listQueryString = buildInboxListQueryString(query);
+  const sending = getWhatsappSendingStatus();
+
   return (
-    <div className="space-y-6">
-      <WhatsappPageHeader
-        title="Conversations"
-        description="Role-scoped WhatsApp inbox with current lead assignment enforcement. Manual refresh only in V1."
-        actions={<InboxManualRefreshButton />}
-      />
-
-      <InboxLinkFilters
+    <div className="od-wa" data-testid="whatsapp-workspace">
+      <InboxListPane
+        items={page.items}
         query={query}
+        pagination={pagination}
         showUnlinkedTriage={context.canManage}
+        hasActiveFilters={filtered}
+        listQueryString={listQueryString}
+        accountNote={<InboxManualRefreshButton />}
+        sending={sending}
       />
 
-      <InboxSearchForm query={query} />
-
-      {page.items.length === 0 ? (
-        <section
-          aria-label="Empty inbox"
-          className="rounded-lg border border-neutral-800 bg-neutral-900/40 px-4 py-10 text-center text-sm text-neutral-400"
-        >
-          {filtered
-            ? "No conversations match your filters."
-            : "No conversations are visible in your authorized scope."}
-        </section>
-      ) : (
-        <>
-          <InboxConversationList items={page.items} />
-          <InboxListPagination query={query} pagination={pagination} />
-        </>
-      )}
+      <div className="od-wa__pane od-wa__pane--chat od-wa__pane--placeholder">
+        <div className="od-wa__empty">
+          <p className="od-wa__empty-title">Select a conversation</p>
+          <p className="od-wa__empty-note">
+            Choose someone on the left to read the conversation and reply.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

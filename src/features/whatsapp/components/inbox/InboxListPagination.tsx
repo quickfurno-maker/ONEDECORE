@@ -30,14 +30,16 @@ export function InboxListPagination({
   return (
     <nav
       aria-label="Inbox pagination"
-      className="flex items-center justify-between gap-3 border-t border-neutral-800 pt-4"
+      className="od-wa__pager"
     >
-      <p className="text-sm text-neutral-400">Page {pagination.page}</p>
-      <div className="flex gap-2">
+      <p className="od-wa__pager-label">
+        Page {pagination.page} of {pagination.totalPages}
+      </p>
+      <div className="od-wa__pager-actions">
         {pagination.hasPreviousPage ? (
           <Link
             href={buildPageHref(query, pagination.page - 1)}
-            className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            className="od-wa__btn od-wa__btn--quiet"
           >
             Previous
           </Link>
@@ -45,7 +47,7 @@ export function InboxListPagination({
         {pagination.hasNextPage ? (
           <Link
             href={buildPageHref(query, pagination.page + 1)}
-            className="inline-flex min-h-11 items-center rounded-md border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            className="od-wa__btn od-wa__btn--quiet"
           >
             Next
           </Link>

@@ -1,5 +1,5 @@
 /**
- * Phase 6B â€” integrated local matrix (repository schema M1â€“M21).
+ * Phase 6B — integrated local matrix (repository schema M1–M21).
  * Complements pgTAP 13/14/15 with orchestration-level dispatch tests.
  */
 
@@ -51,7 +51,7 @@ function mockAdmin(rpcImpl: (name: string, args: Record<string, unknown>) => Pro
   };
 }
 
-describe("Phase 6B integrated â€” frozen migration ledger", () => {
+describe("Phase 6B integrated — frozen migration ledger", () => {
   test("M19/M20/M21/M22 frozen hashes match protected baseline freeze", () => {
     assert.equal(
       sha256File(
@@ -93,7 +93,7 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
     assert.equal(m23Blob, FROZEN_HASHES.M23_GIT_BLOB);
   });
 
-  test("repository has M1â€“M37 COD, timeline v2, notes repair, CRM 2A-1/2A-2/2A-3/2A-6/2A-7; payment M38 fail-closed", () => {
+  test("repository has M1–M37 COD, timeline v2, notes repair, CRM 2A-1/2A-2/2A-3/2A-6/2A-7; payment M38 fail-closed", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
@@ -263,7 +263,7 @@ describe("Phase 6B integrated â€” frozen migration ledger", () => {
   });
 });
 
-describe("Phase 6B integrated â€” consent/purpose", () => {
+describe("Phase 6B integrated — consent/purpose", () => {
   test("MARKETING purpose is rejected on service path", () => {
     assert.throws(() => rejectMarketingPurpose("MARKETING"), /MARKETING/);
     assert.doesNotThrow(() =>
@@ -272,7 +272,7 @@ describe("Phase 6B integrated â€” consent/purpose", () => {
   });
 });
 
-describe("Phase 6B integrated â€” outbound modes", () => {
+describe("Phase 6B integrated — outbound modes", () => {
   test("defaults to disabled; local-test forbidden in production NODE_ENV", () => {
     assert.equal(getWhatsappOutboundMode({}), "disabled");
     assert.equal(
@@ -285,7 +285,7 @@ describe("Phase 6B integrated â€” outbound modes", () => {
   });
 });
 
-describe("Phase 6B integrated â€” dispatch orchestration", () => {
+describe("Phase 6B integrated — dispatch orchestration", () => {
   const envBackup = { ...process.env };
 
   before(() => {
@@ -520,7 +520,7 @@ describe("Phase 6B integrated â€” dispatch orchestration", () => {
   });
 });
 
-describe("Phase 6B integrated â€” security contracts", () => {
+describe("Phase 6B integrated — security contracts", () => {
   test("Meta adapter source references graph API version only in enabled adapter module", () => {
     const meta = readFileSync(
       join(root, "src/features/whatsapp/server/whatsapp-meta-provider-adapter.ts"),

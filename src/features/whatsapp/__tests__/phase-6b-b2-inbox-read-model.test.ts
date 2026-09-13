@@ -76,14 +76,24 @@ describe("Phase 6B-B2 DTO safety", () => {
       id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       direction: "inbound",
       normalized_message_type: "text",
+      provider_message_type: "text",
+      provider_message_id: "wamid.TEST1",
       body_text: "Hi",
+      content: { body: "Hi" },
+      context_provider_message_id: null,
       provider_timestamp: "2026-08-07T10:00:00.000Z",
       latest_status: null,
     });
     for (const key of INBOX_MESSAGE_PUBLIC_KEYS) {
       assert.ok(key in item);
     }
+    /*
+     * The raw provider payload stops here. `content` is Meta's own per-type
+     * object; the mapper derives a bounded `presentation` from it and the
+     * component never sees the original.
+     */
     assert.equal("content" in item, false);
+    assert.equal(item.presentation.kind, "text");
   });
 
   test("preview truncation is bounded", () => {
