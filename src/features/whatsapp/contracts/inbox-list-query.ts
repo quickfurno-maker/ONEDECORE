@@ -126,3 +126,25 @@ export function toInboxListPaginationMeta(
     hasNextPage: result.page < result.totalPages,
   };
 }
+
+/**
+ * The list query as a URL query string.
+ *
+ * Carried on every conversation link so opening a conversation and coming back
+ * lands on the same search, filter and page. Without it a manager who searched,
+ * paged to 3 and opened a conversation returns to an unfiltered page 1 — which
+ * is how a triage queue gets worked twice.
+ *
+ * Defaults are omitted rather than written out, so a plain visit keeps a clean
+ * URL instead of `?link=all&page=1&pageSize=25`.
+ */
+export function buildInboxListQueryString(query: InboxListQuery): string {
+  const params = new URLSearchParams();
+  if (query.q) params.set("q", query.q);
+  if (query.linkFilter !== "all") params.set("link", query.linkFilter);
+  if (query.page > 1) params.set("page", String(query.page));
+  if (query.pageSize !== INBOX_LIST_PAGE_SIZE_DEFAULT) {
+    params.set("pageSize", String(query.pageSize));
+  }
+  return params.toString();
+}

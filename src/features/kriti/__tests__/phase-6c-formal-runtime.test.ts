@@ -30,9 +30,13 @@ function sampleConversationDetail(): InboxConversationDetail {
         id: "m1",
         direction: "inbound",
         normalizedMessageType: "text",
+        providerMessageType: "text",
         bodyText: "Need pricing for modular kitchen",
         providerTimestamp: "2026-08-08T10:00:00Z",
         latestStatus: null,
+        presentation: { kind: "text", body: "Need pricing for modular kitchen" },
+        providerMessageId: "wamid.SAMPLE1",
+        contextProviderMessageId: null,
       },
     ],
   };

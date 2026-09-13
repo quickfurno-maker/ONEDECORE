@@ -113,7 +113,7 @@ export async function queryConversationMessagesPage(
   const { data, error, count } = await supabase
     .from("whatsapp_messages")
     .select(
-      "id, direction, normalized_message_type, body_text, provider_timestamp, latest_status",
+      "id, direction, normalized_message_type, provider_message_type, provider_message_id, body_text, content, context_provider_message_id, provider_timestamp, latest_status",
       { count: "exact" }
     )
     .eq("conversation_id", query.conversationId)

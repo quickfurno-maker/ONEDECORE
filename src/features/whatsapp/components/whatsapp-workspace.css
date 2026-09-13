@@ -1,0 +1,1231 @@
+/*
+ * WhatsApp operations workspace.
+ *
+ * TOKENS COME FROM THE OPS SUITE, AND ONLY FROM THERE.
+ *
+ * Every colour resolves from a `--od-*` variable that exists in
+ * `admin-ops/tokens.css`, each with a dark fallback that matches rather than
+ * contradicts it. An invented variable family is not a cosmetic slip here: an
+ * undefined custom property falls back to its literal, and a set of light
+ * literals inside this dark shell produces white panels with near-white text.
+ *
+ * WHY THE WORKSPACE OWNS ITS HEIGHT.
+ *
+ * A messaging console is not a document. The list, the thread and the details
+ * panel each scroll on their own, and the composer stays where the user last
+ * saw it — none of which works if the page itself is the scroller. The shell
+ * gives us a 64px sticky top bar and 24px of vertical main padding, so the
+ * workspace takes exactly what is left and distributes it internally.
+ *
+ * WHY GREEN IS USED SPARINGLY.
+ *
+ * WhatsApp's green is the interaction cue people already know, and outbound
+ * bubbles read instantly because of it. It is not ONEDECORE's brand, so it
+ * appears on outbound bubbles and the send control and nowhere else. The
+ * surrounding chrome stays ops-suite neutral with the usual gold accent.
+ */
+
+.od-wa {
+  /* 64px top bar + 24px main padding top and bottom. */
+  --od-wa-chrome: 112px;
+  --od-wa-h: calc(100dvh - var(--od-wa-chrome));
+
+  --od-wa-list-w: 340px;
+  --od-wa-details-w: 320px;
+
+  /* The one green in the file, plus the surfaces derived from it. */
+  --od-wa-out: #0f3b31;
+  --od-wa-out-line: rgba(37, 211, 102, 0.22);
+  --od-wa-accent: #25d366;
+  --od-wa-accent-dim: rgba(37, 211, 102, 0.14);
+
+  --od-wa-in: var(--od-elevated, #141a21);
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  height: var(--od-wa-h);
+  min-height: 480px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: var(--od-radius, 12px);
+  background: var(--od-surface, #10151b);
+  overflow: hidden;
+  color: var(--od-text, #f5f3ee);
+}
+
+/*
+ * `minmax(0, …)` on every track, deliberately.
+ *
+ * A grid track sized `1fr` still refuses to shrink below its content's
+ * min-content width, and a long unbroken message id or URL in the thread is
+ * exactly that. Without this the whole workspace stretches and the admin page
+ * scrolls sideways.
+ */
+@media (min-width: 1024px) {
+  .od-wa {
+    grid-template-columns: var(--od-wa-list-w) minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .od-wa--with-details {
+    grid-template-columns:
+      var(--od-wa-list-w)
+      minmax(0, 1fr)
+      var(--od-wa-details-w);
+  }
+}
+
+.od-wa__pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0; /* lets the inner scroller actually scroll */
+  background: var(--od-surface, #10151b);
+}
+
+.od-wa__pane + .od-wa__pane {
+  border-inline-start: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+}
+
+.od-wa__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+/* ------------------------------------------------------------------ heads */
+
+.od-wa__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-block-end: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  background: var(--od-surface, #10151b);
+}
+
+.od-wa__head-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  /*
+   * One line, truncated. A long customer name used to wrap and push the phone
+   * number underneath the reply-window badge, so the two overlapped in the one
+   * place a reader looks to confirm who they are talking to.
+   */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.od-wa__head-sub {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--od-muted, #747d88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The badge and the actions keep their size; the identity yields. */
+.od-wa__head > .od-wa__badge,
+.od-wa__head > button,
+.od-wa__head > a {
+  flex: none;
+}
+
+/* The refresh control keeps its size too — it is a header action. */
+.od-wa__head > .od-wa__refresh {
+  flex: none;
+}
+
+/* ---------------------------------------------------------------- refresh */
+
+.od-wa__refresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.od-wa__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /*
+   * 44px like every other target here: the checkbox itself is small, so the
+   * label carries the height and the whole thing is tappable.
+   */
+  min-height: 44px;
+  padding-inline: 4px;
+  font-size: 0.75rem;
+  color: var(--od-muted, #747d88);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.od-wa__toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--od-accent, #2f9e6f);
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------ sending mode */
+
+/*
+ * The row that says a reply will not arrive.
+ *
+ * Drawn only when that is true, so it is never background noise. The dot is
+ * decoration: the label and the sentence carry the meaning, because a colour
+ * alone says nothing to a screen reader or to anyone who cannot separate the
+ * two hues.
+ */
+.od-wa__mode {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border-block-end: 1px solid var(--od-border, #23262b);
+  background: var(--od-surface-2, #16181c);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--od-muted, #747d88);
+}
+
+.od-wa__mode strong {
+  color: var(--od-text, #e6e8eb);
+  font-weight: 600;
+}
+
+.od-wa__mode-dot {
+  align-self: center;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--od-muted, #747d88);
+}
+
+.od-wa__mode[data-tone="off"] .od-wa__mode-dot {
+  background: var(--od-danger, #d05b5b);
+}
+
+.od-wa__mode[data-tone="test"] .od-wa__mode-dot {
+  background: var(--od-warning, #d0a45b);
+}
+
+.od-wa__mode[data-tone="live"] .od-wa__mode-dot {
+  background: var(--od-accent, #2f9e6f);
+}
+
+.od-wa__panel-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+/* --------------------------------------------------------------- controls */
+
+.od-wa__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+  color: var(--od-text, #f5f3ee);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.od-wa__btn:hover:not(:disabled) {
+  background: var(--od-hover, #18202a);
+  border-color: var(--od-gold, #d7a529);
+}
+
+.od-wa__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/*
+ * A secondary button. Same size and same target, less shout: applying a
+ * filter is not the important action in a pane whose job is the list below
+ * it, and the accent colour belongs to Send.
+ */
+.od-wa__btn--quiet {
+  font-weight: 500;
+  color: var(--od-muted, #747d88);
+}
+
+.od-wa__btn--quiet:hover:not(:disabled) {
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-wa__btn--send {
+  background: var(--od-wa-accent);
+  border-color: var(--od-wa-accent);
+  color: #06281c;
+}
+
+.od-wa__btn--send:hover:not(:disabled) {
+  background: #3ee07a;
+  border-color: #3ee07a;
+}
+
+/* A 44px icon-only control. */
+.od-wa__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid transparent;
+  border-radius: var(--od-radius-sm, 8px);
+  background: none;
+  color: var(--od-text-2, #b7bdc5);
+  font: inherit;
+  cursor: pointer;
+}
+
+.od-wa__icon:hover:not(:disabled) {
+  background: var(--od-hover, #18202a);
+  border-color: var(--od-border, rgba(255, 255, 255, 0.07));
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-wa :focus-visible {
+  outline: 2px solid var(--od-gold, #d7a529);
+  outline-offset: 1px;
+  border-radius: 6px;
+}
+
+/* ------------------------------------------------------------------ chips */
+
+.od-wa__chips {
+  display: flex;
+  gap: 6px;
+  padding: 0 14px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.od-wa__chips::-webkit-scrollbar {
+  display: none;
+}
+
+.od-wa__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 13px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: 999px;
+  background: var(--od-elevated, #141a21);
+  color: var(--od-text-2, #b7bdc5);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.od-wa__chip[aria-current="true"] {
+  border-color: var(--od-gold, #d7a529);
+  background: rgba(215, 165, 41, 0.14);
+  color: var(--od-gold, #d7a529);
+}
+
+/* ------------------------------------------------------------------ search */
+
+.od-wa__search {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+/* The field takes the room; the button takes what it needs. */
+.od-wa__search .od-wa__input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.od-wa__search .od-wa__btn {
+  flex: none;
+}
+
+.od-wa__input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-bg, #090c10);
+  color: var(--od-text, #f5f3ee);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.od-wa__input::placeholder {
+  color: var(--od-muted, #747d88);
+}
+
+/* ---------------------------------------------------------------- filters */
+
+.od-wa__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding-inline: 10px;
+  border-block-end: 1px solid var(--od-border, #23262b);
+}
+
+.od-wa__tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 10px;
+  border-block-end: 2px solid transparent;
+  color: var(--od-muted, #747d88);
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.od-wa__tab:hover {
+  color: var(--od-text, #f5f3ee);
+}
+
+/*
+ * Keyed off `aria-current`, the same attribute the screen reader announces,
+ * so the two cannot drift apart.
+ */
+.od-wa__tab[aria-current="page"] {
+  border-block-end-color: var(--od-wa-accent);
+  color: var(--od-text, #f5f3ee);
+  font-weight: 600;
+}
+
+/* -------------------------------------------------------------- pagination */
+
+.od-wa__pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  /* Flush against the list, not floating under it. */
+  padding: 10px 14px;
+  border-block-start: 1px solid var(--od-border, #23262b);
+}
+
+.od-wa__pager-label {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--od-muted, #747d88);
+}
+
+.od-wa__pager-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ------------------------------------------------------- conversation row */
+
+.od-wa__list {
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+}
+
+.od-wa__row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 11px;
+  align-items: start;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: var(--od-radius-sm, 8px);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.od-wa__row:hover {
+  background: var(--od-hover, #18202a);
+}
+
+.od-wa__row[aria-current="true"] {
+  background: var(--od-hover, #18202a);
+  border-color: var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  box-shadow: inset 3px 0 0 var(--od-wa-accent);
+}
+
+.od-wa__avatar {
+  display: grid;
+  place-items: center;
+  flex: none; /* or the flex header squashes it into an oval */
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--od-elevated, #141a21);
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-wa__avatar--lg {
+  width: 52px;
+  height: 52px;
+  font-size: 1rem;
+}
+
+.od-wa__row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.od-wa__row-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.od-wa__row-time {
+  flex: none;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--od-muted, #747d88);
+}
+
+.od-wa__row-preview {
+  margin: 3px 0 0;
+  font-size: 0.79rem;
+  line-height: 1.4;
+  color: var(--od-muted, #747d88);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.od-wa__row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-block-start: 5px;
+}
+
+/* ------------------------------------------------------------------ badges */
+
+.od-wa__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--od-text-2, #b7bdc5);
+  white-space: nowrap;
+}
+
+.od-wa__badge--linked {
+  border-color: rgba(53, 201, 140, 0.35);
+  color: var(--od-positive, #35c98c);
+}
+
+.od-wa__badge--unlinked {
+  border-color: rgba(226, 168, 59, 0.35);
+  color: var(--od-warning, #e2a83b);
+}
+
+.od-wa__badge--open {
+  border-color: rgba(53, 201, 140, 0.35);
+  color: var(--od-positive, #35c98c);
+}
+
+.od-wa__badge--closed {
+  border-color: rgba(226, 168, 59, 0.35);
+  color: var(--od-warning, #e2a83b);
+}
+
+/* ----------------------------------------------------------------- thread */
+
+.od-wa__thread {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 16px 16px 20px;
+}
+
+.od-wa__daysep {
+  align-self: center;
+  margin: 14px 0 10px;
+  padding: 4px 12px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: 999px;
+  background: var(--od-elevated, #141a21);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--od-muted, #747d88);
+}
+
+.od-wa__msg {
+  display: flex;
+  max-width: min(78%, 560px);
+}
+
+.od-wa__msg--in {
+  align-self: flex-start;
+}
+
+.od-wa__msg--out {
+  align-self: flex-end;
+}
+
+/* A run of messages from the same side sits tighter than a change of speaker. */
+.od-wa__msg + .od-wa__msg {
+  margin-block-start: 2px;
+}
+
+.od-wa__msg--turn {
+  margin-block-start: 12px;
+}
+
+.od-wa__bubble {
+  position: relative;
+  width: 100%;
+  padding: 9px 12px 7px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: 14px;
+  font-size: 0.87rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.od-wa__msg--in .od-wa__bubble {
+  background: var(--od-wa-in);
+  border-start-start-radius: 5px;
+}
+
+.od-wa__msg--out .od-wa__bubble {
+  background: var(--od-wa-out);
+  border-color: var(--od-wa-out-line);
+  border-end-end-radius: 5px;
+}
+
+.od-wa__text {
+  margin: 0;
+  /* Author line breaks are content; they are preserved, not collapsed. */
+  white-space: pre-wrap;
+}
+
+.od-wa__bubble a {
+  color: var(--od-wa-accent);
+  text-underline-offset: 2px;
+}
+
+.od-wa__meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-block-start: 3px;
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--od-muted, #747d88);
+}
+
+.od-wa__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.od-wa__status--read {
+  color: #53bdeb;
+}
+
+.od-wa__status--failed {
+  color: var(--od-danger, #ea6666);
+}
+
+/* ------------------------------------------------------- message payloads */
+
+.od-wa__attach {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  margin: 2px 0 6px;
+  padding: 9px 11px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.od-wa__attach-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--od-hover, #18202a);
+  font-size: 0.95rem;
+}
+
+.od-wa__attach-name {
+  display: block; /* name and note are separate lines, not one run */
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+ * "Open in maps" is a standalone action, not a link inside a sentence, so it
+ * gets a real target. The links inside message text stay inline and stay the
+ * size of the text around them — pushing those to 44px would break up the
+ * paragraph they belong to, and an inline link in running text is exempt for
+ * exactly that reason.
+ */
+/*
+ * The customer's number in the chat header.
+ *
+ * Padded to 44px and pulled back out of the flow with a negative margin, so
+ * the target grows without the header getting taller. Everything around it is
+ * text, so nothing else is in the way of the extra height.
+ */
+.od-wa__tel {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-block: -14px;
+  padding-inline-end: 4px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.od-wa__tel:hover,
+.od-wa__tel:focus-visible {
+  color: var(--od-text, #e6e8eb);
+  text-decoration: underline;
+}
+
+.od-wa__maps {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 44px;
+  padding-inline: 2px;
+  font-size: 0.78rem;
+  color: var(--od-accent, #2f9e6f);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.od-wa__attach-note {
+  display: block;
+  margin: 2px 0 0;
+  font-size: 0.71rem;
+  line-height: 1.35;
+  color: var(--od-muted, #747d88);
+}
+
+.od-wa__caption {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+}
+
+/* A quoted message above the bubble body, and above the composer. */
+.od-wa__quote {
+  display: block;
+  margin-block-end: 6px;
+  padding: 6px 9px;
+  border-inline-start: 3px solid var(--od-wa-accent);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.od-wa__quote-who {
+  display: block;
+  font-weight: 700;
+  color: var(--od-wa-accent);
+}
+
+.od-wa__quote-text {
+  display: block;
+  margin-block-start: 1px;
+  color: var(--od-text-2, #b7bdc5);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------- composer */
+
+.od-wa__composer {
+  flex: none;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  border-block-start: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  background: var(--od-surface, #10151b);
+}
+
+.od-wa__composer-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.od-wa__textarea {
+  flex: 1 1 auto;
+  min-height: 44px;
+  max-height: 168px;
+  padding: 11px 13px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 22px;
+  background: var(--od-bg, #090c10);
+  color: var(--od-text, #f5f3ee);
+  font: inherit;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  resize: none;
+  overflow-y: auto;
+}
+
+.od-wa__composer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-block-start: 6px;
+  font-size: 0.71rem;
+  color: var(--od-muted, #747d88);
+}
+
+.od-wa__count[data-over="true"] {
+  color: var(--od-danger, #ea6666);
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------- notices */
+
+.od-wa__notice,
+.od-wa__error,
+.od-wa__ok {
+  display: flex;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: var(--od-radius-sm, 8px);
+  font-size: 0.79rem;
+  line-height: 1.45;
+}
+
+.od-wa__notice {
+  border: 1px solid rgba(226, 168, 59, 0.35);
+  background: rgba(226, 168, 59, 0.09);
+  color: #edcb8c;
+}
+
+.od-wa__error {
+  border: 1px solid rgba(234, 102, 102, 0.4);
+  background: rgba(234, 102, 102, 0.09);
+  color: #f3b6b6;
+}
+
+.od-wa__ok {
+  border: 1px solid rgba(53, 201, 140, 0.35);
+  background: rgba(53, 201, 140, 0.09);
+  color: #9ee3c3;
+}
+
+/* ---------------------------------------------------------------- details */
+
+.od-wa__section {
+  padding: 14px;
+  border-block-end: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+}
+
+.od-wa__dl {
+  display: grid;
+  gap: 9px;
+  margin: 10px 0 0;
+}
+
+.od-wa__dt {
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--od-muted, #747d88);
+}
+
+.od-wa__dd {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* ----------------------------------------------------------- empty states */
+
+.od-wa__empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 36px 20px;
+  text-align: center;
+}
+
+.od-wa__empty-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.od-wa__empty-note {
+  margin: 0;
+  max-width: 42ch;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--od-muted, #747d88);
+}
+
+/* ------------------------------------------------------------------ mobile */
+
+/*
+ * Below 1024px the workspace is one pane at a time.
+ *
+ * Three columns squeezed onto a phone is the failure this replaces: the list
+ * becomes unreadable, the thread becomes a column of single words, and the
+ * composer loses its width. The route decides which pane is showing; this only
+ * makes the chosen one full width and full height.
+ */
+@media (max-width: 1023px) {
+  .od-wa {
+    --od-wa-chrome: 96px;
+    border-radius: 0;
+    border-inline: none;
+  }
+
+  .od-wa__pane + .od-wa__pane {
+    border-inline-start: none;
+  }
+
+  .od-wa__msg {
+    max-width: 86%;
+  }
+
+  /*
+   * One pane at a time, chosen by the route.
+   *
+   * The conversation route marks itself `data-conversation-open`, so on a
+   * phone it shows the thread and the list steps aside; the list route has no
+   * such marker and shows the list. Without this both panes stack and the
+   * reader scrolls past the entire conversation list to reach the message they
+   * opened — which is what was happening.
+   */
+  .od-wa[data-conversation-open="true"] .od-wa__pane--list {
+    display: none;
+  }
+
+  .od-wa:not([data-conversation-open="true"]) .od-wa__pane--chat {
+    display: none;
+  }
+
+  /*
+   * The reply-window badge steps out of the phone header.
+   *
+   * Back, avatar, name, badge and Refresh do not fit in 390px, and the first
+   * thing to lose is the name — the one field that says who you are talking
+   * to. The same state is on the composer footer a thumb's width below, and in
+   * the details panel, so nothing is hidden from the reader.
+   */
+  .od-wa__pane--chat .od-wa__head > .od-wa__badge {
+    display: none;
+  }
+}
+
+@media (max-width: 1279px) {
+  /* The details pane is a route on tablet/mobile, never a squeezed column. */
+  .od-wa__pane--details {
+    display: none;
+  }
+
+  .od-wa--details-route .od-wa__pane--list,
+  .od-wa--details-route .od-wa__pane--chat {
+    display: none !important;
+  }
+
+  .od-wa--details-route .od-wa__pane--details {
+    display: flex;
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-wa *,
+  .od-wa *::before,
+  .od-wa *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+
+/*
+ * The Kriti strip.
+ *
+ * It is mounted between the thread and the composer, so whatever height it
+ * takes comes straight out of the messages. Capped and given its own scroll so
+ * a long suggestion cannot push the conversation off the screen — the thread
+ * is what the reader is here for.
+ */
+.od-wa__assist {
+  flex: none;
+  border-block-start: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+}
+
+.od-wa__assist-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--od-text-2, #b7bdc5);
+  cursor: pointer;
+  list-style: none;
+}
+
+.od-wa__assist-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.od-wa__assist-toggle::after {
+  content: "▾";
+  color: var(--od-muted, #747d88);
+  transition: transform 160ms ease;
+}
+
+.od-wa__assist[open] .od-wa__assist-toggle::after {
+  transform: rotate(180deg);
+}
+
+.od-wa__assist-hint {
+  margin-inline-start: auto;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--od-muted, #747d88);
+}
+
+/* Bounded, so a long suggestion scrolls instead of eating the thread. */
+.od-wa__assist-body {
+  max-height: 32vh;
+  overflow-y: auto;
+  padding: 0 12px 10px;
+  scrollbar-width: thin;
+}
+
+.od-wa__assist h2,
+.od-wa__assist h3 {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+/* --------------------------------------------------------------- skeleton */
+
+/*
+ * Placeholder blocks for the loading frame.
+ *
+ * One shared shimmer, and it stops for anyone who has asked for less motion —
+ * a pulsing rectangle is exactly the kind of ambient animation that rule is
+ * about.
+ */
+.od-wa__sk {
+  border-radius: 6px;
+  background: var(--od-surface-2, #16181c);
+  animation: od-wa-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes od-wa-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-wa__sk {
+    animation: none;
+  }
+}
+
+.od-wa__sk--title {
+  width: 110px;
+  height: 18px;
+}
+
+.od-wa__sk--sub {
+  width: 72px;
+  height: 11px;
+  margin-block-start: 6px;
+}
+
+.od-wa__sk--avatar {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+}
+
+.od-wa__sk--name {
+  width: 45%;
+  height: 13px;
+}
+
+.od-wa__sk--line {
+  width: 80%;
+  height: 11px;
+  margin-block-start: 7px;
+}
+
+.od-wa__sk-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-block-end: 1px solid var(--od-border, #23262b);
+}
+
+.od-wa__sk--bubble {
+  height: 44px;
+  max-width: 62%;
+}
+
+.od-wa__sk--in {
+  align-self: flex-start;
+  width: 260px;
+}
+
+.od-wa__sk--out {
+  align-self: flex-end;
+  width: 300px;
+}
+
+.od-wa__sk--short {
+  width: 150px;
+  height: 32px;
+}
+
+.od-wa__sk--composer {
+  height: 44px;
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------ states */
+
+/*
+ * Error, not-found and access-denied.
+ *
+ * Centred in the frame rather than pinned to the top-left, because each of
+ * these replaces the whole workspace and a message in the corner of an empty
+ * screen reads as a rendering failure rather than an answer.
+ */
+.od-wa__state {
+  display: grid;
+  place-content: center;
+  justify-items: start;
+  gap: 10px;
+  min-height: 60vh;
+  max-width: 46ch;
+  margin-inline: auto;
+  padding: 24px;
+  text-align: start;
+}
+
+.od-wa__state-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--od-text, #e6e8eb);
+}
+
+.od-wa__state-note {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--od-muted, #747d88);
+}
+
+.od-wa__state-detail {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--od-border, #23262b);
+  border-radius: 8px;
+  background: var(--od-surface-2, #16181c);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--od-muted, #747d88);
+  overflow-wrap: anywhere;
+}
+
+.od-wa__state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 4px;
+}

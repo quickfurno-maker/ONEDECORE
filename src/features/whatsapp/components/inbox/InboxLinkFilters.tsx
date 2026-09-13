@@ -15,11 +15,7 @@ function buildHref(query: InboxListQuery, linkFilter: InboxLinkFilter): string {
   return value ? `/admin/whatsapp/inbox?${value}` : "/admin/whatsapp/inbox";
 }
 
-function tabClass(active: boolean): string {
-  return active
-    ? "border-emerald-400 text-emerald-300"
-    : "border-transparent text-neutral-400 hover:text-neutral-200";
-}
+
 
 export function InboxLinkFilters({
   query,
@@ -37,13 +33,18 @@ export function InboxLinkFilters({
   return (
     <nav
       aria-label="Conversation link filters"
-      className="flex flex-wrap gap-2 border-b border-neutral-800"
+      className="od-wa__tabs"
     >
       {tabs.map((tab) => (
         <Link
           key={tab.id}
           href={buildHref(query, tab.id)}
-          className={`inline-flex min-h-11 items-center border-b-2 px-3 py-2 text-sm font-medium transition ${tabClass(query.linkFilter === tab.id)}`}
+          className="od-wa__tab"
+          /*
+            `aria-current` is also what the stylesheet keys the active tab
+            off, so the state cannot be shown to a sighted reader and withheld
+            from a screen reader, or the other way round.
+          */
           aria-current={query.linkFilter === tab.id ? "page" : undefined}
         >
           {tab.label}
