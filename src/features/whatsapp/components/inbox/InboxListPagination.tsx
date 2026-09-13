@@ -1,27 +1,20 @@
 import Link from "next/link";
-import type {
-  InboxListPaginationMeta,
-  InboxListQuery,
+import {
+  buildInboxListHref,
+  type InboxListPaginationMeta,
+  type InboxListQuery,
 } from "../../contracts/inbox-list-query.ts";
 
 interface InboxListPaginationProps {
   readonly query: InboxListQuery;
   readonly pagination: InboxListPaginationMeta;
-}
-
-function buildPageHref(query: InboxListQuery, page: number): string {
-  const params = new URLSearchParams();
-  if (query.q) params.set("q", query.q);
-  if (query.linkFilter !== "all") params.set("link", query.linkFilter);
-  if (query.pageSize !== 25) params.set("pageSize", String(query.pageSize));
-  if (page > 1) params.set("page", String(page));
-  const value = params.toString();
-  return value ? `/admin/whatsapp/inbox?${value}` : "/admin/whatsapp/inbox";
+  readonly basePath: string;
 }
 
 export function InboxListPagination({
   query,
   pagination,
+  basePath,
 }: InboxListPaginationProps) {
   if (!pagination.hasPreviousPage && !pagination.hasNextPage) {
     return null;
@@ -38,7 +31,7 @@ export function InboxListPagination({
       <div className="od-wa__pager-actions">
         {pagination.hasPreviousPage ? (
           <Link
-            href={buildPageHref(query, pagination.page - 1)}
+            href={buildInboxListHref(basePath, query, { page: pagination.page - 1 })}
             className="od-wa__btn od-wa__btn--quiet"
           >
             Previous
@@ -46,7 +39,7 @@ export function InboxListPagination({
         ) : null}
         {pagination.hasNextPage ? (
           <Link
-            href={buildPageHref(query, pagination.page + 1)}
+            href={buildInboxListHref(basePath, query, { page: pagination.page + 1 })}
             className="od-wa__btn od-wa__btn--quiet"
           >
             Next

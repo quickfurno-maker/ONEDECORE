@@ -396,6 +396,27 @@
   border-block-end: 1px solid var(--od-border, #23262b);
 }
 
+/*
+ * The attention strip has six queues. Wrapping them would stack two or three
+ * rows of tabs above the conversations on a phone, so it scrolls sideways on
+ * one line instead, with the scrollbar hidden and the tabs kept whole.
+ */
+.od-wa__tabs--scroll {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  border-block-end: 0;
+}
+
+.od-wa__tabs--scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.od-wa__tabs--scroll .od-wa__tab {
+  flex: none;
+}
+
 .od-wa__tab {
   display: inline-flex;
   align-items: center;
@@ -525,6 +546,40 @@
   font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
   color: var(--od-muted, #747d88);
+}
+
+/* Time and the unread dot share the right edge of the top line. */
+.od-wa__row-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+/*
+ * Unread is a dot, not a number: the database knows whether a customer wrote
+ * after this reader last opened the thread, not how many messages that was.
+ * The accessible name comes from the visually hidden "Unread" inside it.
+ */
+.od-wa__unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--od-wa-accent);
+}
+
+.od-wa__row[data-unread="true"] .od-wa__row-name {
+  color: var(--od-text, #f5f3ee);
+}
+
+/* A quiet word, not a badge — one cue per row is the budget. */
+.od-wa__row-cue {
+  flex: none;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--od-warning, #e2a83b);
+  white-space: nowrap;
 }
 
 .od-wa__row-preview {

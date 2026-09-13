@@ -1,4 +1,7 @@
-import type { InboxListQuery } from "../../contracts/inbox-list-query.ts";
+import {
+  INBOX_ATTENTION_DEFAULT,
+  type InboxListQuery,
+} from "../../contracts/inbox-list-query.ts";
 
 /**
  * Search by name or number.
@@ -21,17 +24,22 @@ import type { InboxListQuery } from "../../contracts/inbox-list-query.ts";
 
 interface InboxSearchFormProps {
   readonly query: InboxListQuery;
+  readonly basePath: string;
 }
 
-export function InboxSearchForm({ query }: InboxSearchFormProps) {
+export function InboxSearchForm({ query, basePath }: InboxSearchFormProps) {
   return (
-    <form action="/admin/whatsapp/inbox" method="get" className="od-wa__search">
+    <form action={basePath} method="get" className="od-wa__search">
       {/*
-        The link filter rides along, or applying a search would silently drop
-        it and widen the list the reader had deliberately narrowed.
+        The link and attention filters ride along, or applying a search would
+        silently drop them and widen the list the reader had deliberately
+        narrowed. `page` does not: a new search is a new list, from page 1.
       */}
       {query.linkFilter !== "all" ? (
         <input type="hidden" name="link" value={query.linkFilter} />
+      ) : null}
+      {query.attention !== INBOX_ATTENTION_DEFAULT ? (
+        <input type="hidden" name="attention" value={query.attention} />
       ) : null}
 
       <label className="sr-only" htmlFor="od-wa-search">

@@ -1,6 +1,10 @@
 /**
  * WM-0 (ADR-0034) — per-staff conversation state and truthful inbox filters.
- * Migration-independent; persistence arrives in WM-1.
+ *
+ * WM-1 implemented it: `public.whatsapp_conversation_staff_state` persists the
+ * watermark, `public.mark_whatsapp_conversation_read` is its only writer, and
+ * `public.list_whatsapp_inbox_conversations` derives every filter below in SQL
+ * (migration 20260913130000_whatsapp_inbox_staff_state_attention.sql).
  *
  * Two different "reads" exist and must never be merged:
  * - provider read: the customer's device reported our outbound message as read
@@ -49,9 +53,9 @@ export const WHATSAPP_INBOX_ATTENTION_FILTER_DEFINITIONS: Readonly<
   waiting_on_customer:
     "The latest governed outbound message is at or after the latest inbound message.",
   follow_up_due:
-    "The linked lead has an open CRM follow-up due at or before now, read from CRM follow-up truth, not inferred from WhatsApp.",
+    "The linked lead is live (not tombstoned) and has an open CRM follow-up due at or before now, read from CRM follow-up truth, not inferred from WhatsApp.",
   recently_active:
-    "last_message_at within a configured window, ordered by last_message_at descending.",
+    "last_message_at within the recent window (WM-1 default 7 days, passed to SQL as a parameter), ordered by last_message_at descending.",
 };
 
 export interface WhatsappConversationAttentionEvidence {

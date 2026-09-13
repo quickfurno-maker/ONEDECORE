@@ -175,6 +175,8 @@ This section extends §1–§3 and the Phase 9B/9C notes above; it does not rewr
 - Sales Manager may execute/schedule/pause/resume a WhatsApp run only for an approved version they did not approve, with `whatsapp.campaigns.execute` and every gate open. Cancel, per-recipient export and settings are Super Admin only (locked).
 - Tombstoned-lead conversations: salesperson roles get no read, use or existence; manage scope gets historical read-only; nobody sends; evidence retained (locked). Use/send already conforms; the read side is implemented in WM-1.
 
+**WM-1 implementation truth (repository; not applied to any managed database, not deployed):** migration `20260913130000_whatsapp_inbox_staff_state_attention.sql` closes the tombstoned-lead **read** gap in `private.whatsapp_inbox_can_view_conversation`, adds per-staff internal read state `whatsapp_conversation_staff_state` (never sent to Meta, never provider read), the `mark_whatsapp_conversation_read` RPC, and the SQL attention read model `list_whatsapp_inbox_conversations` (Unread, Needs reply, Waiting, Follow-up due, Recent). No provider call, template, marketing or media capability was added; the `WHATSAPP_SERVICE` send path is unchanged. Audit: [wm-1-whatsapp-inbox-completeness](audits/wm-1-whatsapp-inbox-completeness.md).
+
 **n8n** remains a notification relay after persistence. It is never consent, approval, retry, delivery, attribution or conversion truth for any WM phase. **Kriti** remains draft-only and never sends.
 
 **Activation:** unchanged. Production callback/token/outbound stays owner-gated (P9). Every WM capability ships fail-closed.

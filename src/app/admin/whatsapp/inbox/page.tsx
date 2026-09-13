@@ -9,6 +9,7 @@ import {
   parseInboxListQuery,
   toInboxListPaginationMeta,
 } from "@/features/whatsapp/contracts/inbox-list-query";
+import { WHATSAPP_ADMIN_INBOX_BASE_PATH } from "@/features/whatsapp/contracts/inbox-surface";
 import { getWhatsappInboxAccessContext } from "@/features/whatsapp/server/whatsapp-auth";
 import { getWhatsappSendingStatus } from "@/features/whatsapp/server/whatsapp-sending-status";
 import { getInboxConversationListPageForCurrentUser } from "@/features/whatsapp/server/whatsapp-inbox-repository";
@@ -56,9 +57,15 @@ export default async function WhatsappInboxPage({
   const listQueryString = buildInboxListQueryString(query);
   const sending = getWhatsappSendingStatus();
 
+  /*
+   * No read acknowledgement here. The list route shows rows; opening a row is
+   * what marks it read, and that happens in the conversation route's client
+   * bridge after the thread mounts.
+   */
   return (
     <div className="od-wa" data-testid="whatsapp-workspace">
       <InboxListPane
+        basePath={WHATSAPP_ADMIN_INBOX_BASE_PATH}
         items={page.items}
         query={query}
         pagination={pagination}

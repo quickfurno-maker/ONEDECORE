@@ -6792,6 +6792,58 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_conversation_staff_state: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          last_opened_at: string | null
+          last_read_message_at: string | null
+          last_read_message_id: string | null
+          staff_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          last_opened_at?: string | null
+          last_read_message_at?: string | null
+          last_read_message_id?: string | null
+          staff_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          last_opened_at?: string | null
+          last_read_message_at?: string | null
+          last_read_message_id?: string | null
+          staff_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_conversation_staff_state_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversation_staff_state_last_read_message_id_fkey"
+            columns: ["last_read_message_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversation_staff_state_staff_user_id_fkey"
+            columns: ["staff_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_conversations: {
         Row: {
           contact_id: string | null
@@ -8849,6 +8901,18 @@ export type Database = {
         Args: { p_limit?: number; p_staff_id?: string }
         Returns: Json
       }
+      list_whatsapp_inbox_conversations: {
+        Args: {
+          p_attention?: string
+          p_conversation_id?: string
+          p_link_filter?: string
+          p_page?: number
+          p_page_size?: number
+          p_recent_window_days?: number
+          p_search?: string
+        }
+        Returns: Json
+      }
       lock_sales_target: {
         Args: {
           p_expected_revision: number
@@ -8898,6 +8962,10 @@ export type Database = {
           p_pdf_id: string
           p_pdf_sha256: string
         }
+        Returns: Json
+      }
+      mark_whatsapp_conversation_read: {
+        Args: { p_conversation_id: string }
         Returns: Json
       }
       materialize_closed_won_project_internal: {

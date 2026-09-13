@@ -97,7 +97,7 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 72, "Migration count must be exactly 72");
+    assert.equal(files.length, 73, "Migration count must be exactly 73");
 
     // Workforce V1 attendance lifecycle. Still no payment M38.
     const workforce = files.filter((f) => f.startsWith("20260902160000"));
@@ -252,6 +252,10 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
         // exist without a project. Marketing media only; no COD or payment
         // surface is touched.
         "20260913120000_portfolio_standalone_room_media_library.sql",
+        // WM-1: tombstone-aware conversation READ predicate, per-staff internal
+        // read state, mark-read RPC and the attention read model. WhatsApp
+        // inbox only; no COD, order or payment surface of any kind.
+        "20260913130000_whatsapp_inbox_staff_state_attention.sql",
       ],
       "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, CRM 2A-7, CRM 2C cadences, CRM 2D commercial read models, the lead_notes INSERT privilege redrift repair, CRM 2E management analytics, the WhatsApp lead-link repair, and the Workforce V1 attendance lifecycle may follow 9D-D1 COD order foundation"
     );

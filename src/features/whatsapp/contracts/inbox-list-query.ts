@@ -2,6 +2,11 @@
  * WhatsApp inbox conversation list query parsing and pagination contracts.
  */
 
+import {
+  WHATSAPP_INBOX_ATTENTION_FILTERS,
+  type WhatsappInboxAttentionFilter,
+} from "./staff-conversation-state.ts";
+
 export const INBOX_LIST_PAGE_SIZE_DEFAULT = 25;
 export const INBOX_LIST_PAGE_SIZE_MAX = 50;
 export const INBOX_MESSAGE_PAGE_SIZE_DEFAULT = 50;
@@ -10,9 +15,21 @@ export const INBOX_MESSAGE_PAGE_SIZE_MAX = 100;
 export const INBOX_LINK_FILTERS = ["all", "linked", "unlinked"] as const;
 export type InboxLinkFilter = (typeof INBOX_LINK_FILTERS)[number];
 
+export const INBOX_ATTENTION_DEFAULT: WhatsappInboxAttentionFilter = "all_assigned";
+
+/**
+ * The Recently Active window WM-1 ships with.
+ *
+ * It travels to the database as a parameter rather than living in SQL, so a
+ * later settings phase can supply a configured window without a schema change.
+ * There is deliberately no setting for it yet.
+ */
+export const INBOX_RECENT_WINDOW_DAYS_DEFAULT = 7;
+
 export type InboxListQuery = {
   readonly q: string | null;
   readonly linkFilter: InboxLinkFilter;
+  readonly attention: WhatsappInboxAttentionFilter;
   readonly page: number;
   readonly pageSize: number;
 };
@@ -57,6 +74,15 @@ function parseLinkFilter(raw: string | undefined): InboxLinkFilter {
   return "all";
 }
 
+/** Anything unrecognised falls back to the unfiltered queue, never to an error. */
+export function parseInboxAttentionFilter(
+  raw: string | undefined
+): WhatsappInboxAttentionFilter {
+  return (WHATSAPP_INBOX_ATTENTION_FILTERS as readonly string[]).includes(raw ?? "")
+    ? (raw as WhatsappInboxAttentionFilter)
+    : INBOX_ATTENTION_DEFAULT;
+}
+
 export function parseInboxListQuery(
   searchParams: Record<string, string | string[] | undefined>
 ): InboxListQuery {
@@ -65,10 +91,15 @@ export function parseInboxListQuery(
     typeof qRaw === "string" && qRaw.trim().length > 0 ? qRaw.trim() : null;
   const linkRaw =
     typeof searchParams.link === "string" ? searchParams.link : undefined;
+  const attentionRaw =
+    typeof searchParams.attention === "string"
+      ? searchParams.attention
+      : undefined;
 
   return {
     q,
     linkFilter: parseLinkFilter(linkRaw),
+    attention: parseInboxAttentionFilter(attentionRaw),
     page: parsePositiveInt(
       typeof searchParams.page === "string" ? searchParams.page : undefined,
       1,
@@ -106,7 +137,11 @@ export function parseInboxMessageListQuery(
 }
 
 export function hasInboxListActiveFilters(query: InboxListQuery): boolean {
-  return query.q !== null || query.linkFilter !== "all";
+  return (
+    query.q !== null ||
+    query.linkFilter !== "all" ||
+    query.attention !== INBOX_ATTENTION_DEFAULT
+  );
 }
 
 export type InboxListPaginationMeta = {
@@ -142,9 +177,38 @@ export function buildInboxListQueryString(query: InboxListQuery): string {
   const params = new URLSearchParams();
   if (query.q) params.set("q", query.q);
   if (query.linkFilter !== "all") params.set("link", query.linkFilter);
+  if (query.attention !== INBOX_ATTENTION_DEFAULT) {
+    params.set("attention", query.attention);
+  }
   if (query.page > 1) params.set("page", String(query.page));
   if (query.pageSize !== INBOX_LIST_PAGE_SIZE_DEFAULT) {
     params.set("pageSize", String(query.pageSize));
   }
   return params.toString();
+}
+
+/**
+ * A list URL on whichever surface mounted the inbox.
+ *
+ * Changing search, link or attention is a different list, so it starts at
+ * page 1: staying on page 3 of "All" after switching to "Unread" lands on an
+ * empty page of a two-page queue. Only an explicit `page` keeps a position.
+ */
+export function buildInboxListHref(
+  basePath: string,
+  query: InboxListQuery,
+  change: Partial<Pick<InboxListQuery, "q" | "linkFilter" | "attention" | "page">> = {}
+): string {
+  const filterChanged =
+    ("q" in change && change.q !== query.q) ||
+    ("linkFilter" in change && change.linkFilter !== query.linkFilter) ||
+    ("attention" in change && change.attention !== query.attention);
+
+  const next: InboxListQuery = {
+    ...query,
+    ...change,
+    page: change.page ?? (filterChanged ? 1 : query.page),
+  };
+  const value = buildInboxListQueryString(next);
+  return value ? `${basePath}?${value}` : basePath;
 }

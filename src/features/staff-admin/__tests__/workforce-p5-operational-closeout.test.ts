@@ -111,8 +111,12 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
     );
     assert.equal(
       sorted[sorted.length - 1],
-      "20260913120000_portfolio_standalone_room_media_library.sql",
-      "the newest migration adds the Website Manager CMS"
+      "20260913130000_whatsapp_inbox_staff_state_attention.sql",
+      "the newest migration is WM-1 WhatsApp inbox staff state and attention"
+    );
+    assert.ok(
+      sorted.includes("20260913120000_portfolio_standalone_room_media_library.sql"),
+      "the portfolio room media library migration must still be present"
     );
     assert.ok(
       sorted.includes("20260910130000_drop_redundant_shadow_indexes.sql"),

@@ -52,23 +52,31 @@ describe("Phase 6B-B2 inbox list query", () => {
 
 describe("Phase 6B-B2 DTO safety", () => {
   test("conversation list mapper exposes only approved public keys", () => {
-    const item = mapConversationRowToListItem(
-      {
-        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-        customer_e164: "+919111222333",
-        display_name_snapshot: "Test",
-        lead_id: null,
-        contact_id: null,
-        last_message_at: "2026-08-07T10:00:00.000Z",
-        last_inbound_at: "2026-08-07T10:00:00.000Z",
-        leads: null,
-      },
-      "Hello"
-    );
+    const item = mapConversationRowToListItem({
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      customer_e164: "+919111222333",
+      display_name_snapshot: "Test",
+      lead_id: null,
+      contact_id: null,
+      link_state: "unlinked",
+      linked_lead_name: null,
+      last_message_at: "2026-08-07T10:00:00.000Z",
+      last_inbound_at: "2026-08-07T10:00:00.000Z",
+      last_outbound_at: null,
+      staff_last_read_message_at: null,
+      preview_body_text: "Hello",
+      unread: true,
+      needs_reply: true,
+      waiting_on_customer: false,
+      follow_up_due: false,
+    });
     for (const key of INBOX_CONVERSATION_LIST_PUBLIC_KEYS) {
       assert.ok(key in item);
     }
+    assert.deepEqual(Object.keys(item).sort(), [...INBOX_CONVERSATION_LIST_PUBLIC_KEYS].sort());
     assert.equal("provider_message_id" in item, false);
+    // WM-1: no staff profile id crosses the list boundary.
+    assert.equal("linkedLeadAssignedTo" in item, false);
   });
 
   test("message mapper exposes only approved public keys", () => {

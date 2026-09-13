@@ -15,6 +15,12 @@ export type ConversationAccessContext = {
   conversationId: string;
   leadId: string | null;
   assignedTo: string | null;
+  /**
+   * WM-1: the linked lead carries a tombstone (`leads.deleted_at` is set).
+   * Mirrors the database: manage scope keeps historical READ, nobody may USE,
+   * and the former assignee no longer passes through `assignedTo`.
+   */
+  leadDeleted?: boolean;
 };
 
 function hasManageScope(ctx: InboxAccessContext): boolean {
@@ -39,6 +45,9 @@ export function canViewWhatsappConversation(
   if (hasManageScope(actor)) {
     return true;
   }
+  if (conversation.leadDeleted === true) {
+    return false;
+  }
   return (
     conversation.assignedTo !== null && conversation.assignedTo === actor.actorId
   );
@@ -49,6 +58,10 @@ export function canUseWhatsappConversation(
   conversation: ConversationAccessContext
 ): boolean {
   if (!actor.isActiveStaff || !actor.permissions.has("whatsapp.inbox.use")) {
+    return false;
+  }
+  // Nobody sends into a deleted enquiry's conversation, manage scope included.
+  if (conversation.leadId !== null && conversation.leadDeleted === true) {
     return false;
   }
   if (conversation.leadId === null) {
