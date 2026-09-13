@@ -10,6 +10,17 @@ CRM (2A–2E) + WhatsApp operational path.
 
 No secret value appears in this document. Every credential is a placeholder.
 
+> **Current status (WM-0, September 13, 2026):** this certification stands as
+> evidence for its baseline and is not rewritten. Since then the premium inbox
+> merged (PR #186), and the complete WhatsApp control plane (templates, contacts
+> and consent, segments, bulk campaigns, analytics, automations, Flows, CTWA)
+> was architecture-frozen, not built, by
+> [ADR-0034](../ADR/ADR-0034-complete-whatsapp-marketing-control-plane-and-crm-owned-conversation-access.md)
+> / DEC-0100 ([master plan](whatsapp-marketing-control-plane.md)). Limit §2.1
+> (no template sending) is scheduled for WM-2; limit §2.3 (no in-product manual
+> link action) remains unscheduled. Activation below is unchanged and still
+> owner-gated (P9).
+
 ---
 
 ## 1. What is certified

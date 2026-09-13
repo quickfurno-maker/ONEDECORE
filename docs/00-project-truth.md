@@ -98,7 +98,7 @@ above exists.
 | Online payments | **DEFERRED** — no migration on `main`, none managed |
 | Landing Lab public route | **LIVE** — activated 2026-09-12 (PR #183). Still fail-closed: `ONEDECORE_LANDING_LAB_PUBLIC_ENABLED=false` disables every `/lp/*` page immediately. |
 | Campaign live spend | **OFF / FAIL-CLOSED** — see note below |
-| Meta WhatsApp webhook / outbound | **OFF / FAIL-CLOSED** |
+| Meta WhatsApp webhook / outbound | **OFF / FAIL-CLOSED** — premium inbox merged (PR #186); complete control plane architecture frozen, not built (WM-0, [ADR-0034](ADR/ADR-0034-complete-whatsapp-marketing-control-plane-and-crm-owned-conversation-access.md)) |
 | Kriti provider | **OFF / FAIL-CLOSED** |
 | n8n production automation | **DEFERRED** |
 
