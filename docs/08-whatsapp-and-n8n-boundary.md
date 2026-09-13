@@ -1,10 +1,11 @@
 # 08 — META WHATSAPP, GROQ AI AND N8N AUTOMATION BOUNDARY
 
-**Document Status:** Locked Integration Baseline (truth-synced through Phase 9C architecture freeze, August 19, 2026)
+**Document Status:** Locked Integration Baseline (truth-synced through Phase 9C architecture freeze, August 19, 2026; WhatsApp status section §7 synced at WM-0, September 13, 2026)
 **WhatsApp API:** Official Meta WhatsApp Cloud API Only
 **AI Provider:** Groq behind provider-independent adapter (planned Phase 6C)
 **n8n Role:** Stateless Async Event Bus & Notification Relay
 **Implementation Status:** **M18–M21 foundation managed** — **not production-activated** (no Meta callback/token/outbound; no n8n/Kriti runtime)
+**Current status (WM-0, September 13, 2026):** premium shared inbox merged (PR #186). Complete WhatsApp control plane architecture frozen by [ADR-0034](ADR/ADR-0034-complete-whatsapp-marketing-control-plane-and-crm-owned-conversation-access.md) / DEC-0100 — master plan [product/whatsapp-marketing-control-plane.md](product/whatsapp-marketing-control-plane.md). WM-0 adds **no** migration, route, provider call, template creation or send. See §7.
 
 ---
 
@@ -117,6 +118,8 @@ Do not conflate disabled intake with future WhatsApp or campaign capabilities.
 - [ADR-0021: Groq Copilot and WhatsApp Boundary](ADR/ADR-0021-groq-copilot-and-whatsapp-boundary.md)
 - [ADR-0027: Phase 9A Campaign Consent, Audience & Approval](ADR/ADR-0027-phase-9a-campaign-consent-audience-approval.md)
 - [ADR-0031: Phase 9C Campaign Execution Architecture Freeze](ADR/ADR-0031-phase-9c-campaign-execution-attribution-conversion-feedback.md)
+- [ADR-0034: Complete WhatsApp Marketing Control Plane and CRM-Owned Conversation Access](ADR/ADR-0034-complete-whatsapp-marketing-control-plane-and-crm-owned-conversation-access.md)
+- [WhatsApp Marketing Control Plane — master plan](product/whatsapp-marketing-control-plane.md)
 - [ADR-0028: Phase 9D Ready-Made Furniture E-commerce](ADR/ADR-0028-phase-9d-ready-made-furniture-ecommerce.md)
 - [ADR-0030: Phase 9D architecture freeze](ADR/ADR-0030-phase-9d-ready-made-furniture-ecommerce-architecture.md)
 - [Security, Privacy & RLS](06-security-privacy-and-rls.md)
@@ -145,3 +148,31 @@ WhatsApp MARKETING execution remains outside Phase 9B. Existing WHATSAPP_SERVICE
 
 n8n is not campaign-run, consent, provider-success, retry, or conversion truth. ONEDECORE server adapters own Meta Ads / Google Ads correctness (ADR-0031). WhatsApp MARKETING bulk-send remains **deferred** from 9C MVP. M19 `WHATSAPP_SERVICE` is unchanged. Live provider spend remains Phase 10 gated.
 <!-- PHASE_9C_ARCHITECTURE_FREEZE_END -->
+
+<!-- WM_0_ARCHITECTURE_FREEZE_START -->
+## 7. Complete WhatsApp Environment — WM-0 Architecture Freeze (ADR-0034)
+
+This section extends §1–§3 and the Phase 9B/9C notes above; it does not rewrite them. Where they say WhatsApp MARKETING is "deferred", ADR-0034 is now the design that deferral pointed to.
+
+**Current truth preserved:**
+
+- Official Meta Cloud API only. Unofficial WhatsApp Web automation remains prohibited.
+- `create_whatsapp_service_send_intent` and `whatsapp_send_intents` remain `WHATSAPP_SERVICE` only; MARKETING stays rejected on the service path. The service path is never widened into a bulk sender.
+- Conversation access is owned by `public.leads.assigned_to`, evaluated live. No conversation owner column exists or may be added. Reassignment moves access immediately; unlinked/ambiguous conversations stay manager / Super Admin triage.
+- `public.campaign_runs` remains paid-ads only (`meta_ads`, `google_ads`).
+- MARKETING consent remains append-only `consent_events`; DNC and channel suppression remain the suppression truth; nothing is inferred from service consent.
+
+**Frozen target (built in WM-1…WM-7, each its own gated PR):**
+
+- WhatsApp campaigns reuse Phase 9A campaign identity, versions, audience rules and approvals (Sales Manager self-approval still denied), and execute through new `whatsapp_campaign_specs` / `_runs` / `_recipients` / `_dispatch_jobs` / `_dispatch_events` tables.
+- Template registry extends existing `whatsapp_templates` with immutable snapshots; only `APPROVED` is sendable; MARKETING-category templates never use the service purpose.
+- Every marketing recipient is re-checked just in time (DNC, suppression, MARKETING consent, preference, variables, frequency cap, quiet hours). There is no override.
+- Ambiguous provider outcomes become `needs_reconcile` and are never auto-retried.
+- Campaign messages bind into canonical `whatsapp_conversations` / `whatsapp_messages`, so the assigned salesperson sees them under the same ownership rule.
+- Per-staff read state is separate from provider read status.
+- Sales Executives: assigned chats, service replies, approved template use in assigned chats, opt-out recording only. No bulk draft/approve/execute, global contacts, segments, exports or consent grant.
+
+**n8n** remains a notification relay after persistence. It is never consent, approval, retry, delivery, attribution or conversion truth for any WM phase. **Kriti** remains draft-only and never sends.
+
+**Activation:** unchanged. Production callback/token/outbound stays owner-gated (P9). Every WM capability ships fail-closed.
+<!-- WM_0_ARCHITECTURE_FREEZE_END -->

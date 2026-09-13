@@ -21,6 +21,13 @@
 >
 > **Feature activation is separate from hardening and remains owner-gated.**
 >
+> **WhatsApp control plane lane (WM-0…WM-7):** architecture frozen by
+> [ADR-0034](ADR/ADR-0034-complete-whatsapp-marketing-control-plane-and-crm-owned-conversation-access.md)
+> / DEC-0100, plan in
+> [product/whatsapp-marketing-control-plane.md](product/whatsapp-marketing-control-plane.md).
+> It is repository build work in separately reviewed phases. It does not move
+> or satisfy P9: live Meta callback, token and outbound remain owner-gated.
+>
 > One correction the old sequence invites: campaign activation appears below as
 > a later phase, which reads as though it were a matter of turning something on.
 > It is not. Two gates guard live provider traffic and satisfying both is still
