@@ -476,7 +476,7 @@ describe("the composer sends through the one governed path", () => {
     const composer = read(COMPOSER);
     assert.match(composer, /const MAX_BODY = 4096;/);
     assert.match(composer, /maxLength=\{MAX_BODY\}/);
-    assert.match(composer, /disabled=\{pending \|\| length === 0 \|\| over\}/);
+    assert.match(composer, /disabled=\{pending \|\| freeFormBlocked \|\| length === 0 \|\| over\}/);
   });
 
   test("no send permission produces a reason, not a dead button", () => {
