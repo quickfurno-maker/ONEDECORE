@@ -116,8 +116,8 @@ export function InboxComposer({
 
         The banner at the top of the workspace scrolls out of mind; this is
         where someone is about to press Send believing the customer will read
-        it. The button is NOT disabled — recording a reply is a real thing to
-        do in a test environment — but it no longer implies delivery.
+        it. A closed 24-hour service window disables free-form text entirely;
+        the separate approved Utility-template form remains available above.
       */}
       {sending && !sending.reaches ? (
         <p className="od-wa__notice" role="status" style={{ marginBlockEnd: 8 }}>
@@ -182,6 +182,7 @@ function ComposerField({
 }) {
   const [length, setLength] = useState(0);
   const over = length > MAX_BODY;
+  const freeFormBlocked = serviceWindow != null && !serviceWindow.open;
 
   function resize() {
     const node = textareaRef.current;
@@ -205,8 +206,8 @@ function ComposerField({
           rows={1}
           required
           maxLength={MAX_BODY}
-          placeholder="Type a message…"
-          disabled={pending}
+          placeholder={freeFormBlocked ? "Use an approved Utility template above" : "Type a message…"}
+          disabled={pending || freeFormBlocked}
           onInput={resize}
           onKeyDown={(event) => {
             /*
@@ -219,7 +220,7 @@ function ComposerField({
               return;
             }
             event.preventDefault();
-            if (pending) return;
+            if (pending || freeFormBlocked) return;
             const value = event.currentTarget.value.trim();
             if (value.length === 0 || value.length > MAX_BODY) return;
             event.currentTarget.form?.requestSubmit();
@@ -228,9 +229,9 @@ function ComposerField({
         <button
           type="submit"
           className="od-wa__btn od-wa__btn--send"
-          disabled={pending || length === 0 || over}
+          disabled={pending || freeFormBlocked || length === 0 || over}
         >
-          {pending ? "Sending…" : "Send"}
+          {pending ? "Sending…" : freeFormBlocked ? "Template only" : "Send"}
         </button>
       </div>
 

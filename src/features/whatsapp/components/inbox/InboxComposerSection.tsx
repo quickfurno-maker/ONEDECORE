@@ -3,11 +3,13 @@
 import { useRef } from "react";
 import type { ServiceWindowView } from "../../contracts/message-presentation.ts";
 import type { SendingStatusView } from "../../contracts/sending-status.ts";
+import type { WhatsappSendableTemplateView } from "../../contracts/template-studio.ts";
 import { InboxComposer } from "@/features/whatsapp/components/inbox/InboxComposer";
+import { InboxTemplatePicker } from "@/features/whatsapp/components/inbox/InboxTemplatePicker";
 import { InboxKritiAssist } from "@/features/kriti/components/InboxKritiAssist.tsx";
 
 /**
- * The bottom of the chat pane: AI assist, then the composer.
+ * The bottom of the chat pane: AI assist, approved templates, then the composer.
  *
  * THE REF IS THE BRIDGE, AND IT STAYS.
  *
@@ -27,6 +29,12 @@ import { InboxKritiAssist } from "@/features/kriti/components/InboxKritiAssist.t
  *
  * Nothing about Kriti's behaviour moves: it still only drafts, the human still
  * presses Send, and no suggestion can reach WhatsApp on its own.
+ *
+ * WM-2: THE TEMPLATE PICKER IS ITS OWN FORM.
+ *
+ * It is shown only to someone who can use this conversation AND holds
+ * whatsapp.templates.use, collapsed like assist, and never touches the ref:
+ * a template is sent by its own button, not typed into the composer.
  */
 
 interface InboxComposerSectionProps {
@@ -35,6 +43,8 @@ interface InboxComposerSectionProps {
   readonly canUse: boolean;
   readonly serviceWindow?: ServiceWindowView | null;
   readonly sending?: SendingStatusView | null;
+  /** Null when the viewer may not send templates here; the picker is not rendered. */
+  readonly templates?: readonly WhatsappSendableTemplateView[] | null;
 }
 
 export function InboxComposerSection({
@@ -43,6 +53,7 @@ export function InboxComposerSection({
   canUse,
   serviceWindow = null,
   sending = null,
+  templates = null,
 }: InboxComposerSectionProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -64,6 +75,18 @@ export function InboxComposerSection({
             />
           </div>
         </details>
+      ) : null}
+
+      {canUse && serviceWindow && !serviceWindow.open ? (
+        <p className="od-wa__notice" role="note" data-testid="whatsapp-closed-window-guidance">
+          {templates && templates.length > 0
+            ? "Outside the 24-hour window only an approved template can reach this customer. Choose one under Templates."
+            : "Outside the 24-hour window only an approved template can reach this customer, and none is available to you in this conversation."}
+        </p>
+      ) : null}
+
+      {canUse && templates ? (
+        <InboxTemplatePicker conversationId={conversationId} templates={templates} sending={sending} />
       ) : null}
 
       <InboxComposer

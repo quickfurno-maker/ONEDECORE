@@ -113,10 +113,10 @@ describe("Phase 10 COD production readiness", () => {
     assert.match(health, /ok:\s*true/);
     assert.match(health, /no-store/);
     assert.equal(existsSync(join(root, "src/app/api/webhooks/commerce")), false);
-    assert.equal(
-      readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length,
-      73
-    );
+    // Later WhatsApp phases add migrations; none may add a commerce payment surface.
+    const migrations = readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql"));
+    assert.ok(migrations.length >= 73);
+    assert.equal(migrations.filter((n) => /commerce.*payment|online_payment|payment_adapter/i.test(n)).length, 0);
   });
 
   test("activating shop cannot require payment provider env", () => {

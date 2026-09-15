@@ -130,6 +130,19 @@ type NullableRpcArguments = {
   save_landing_experiment_draft: "p_experiment_id";
 
   /**
+   * `p_segment_id uuid` (no default). `if p_segment_id is null then insert
+   * ...` — NULL is the create branch; the WM-3 segment editor passes NULL when
+   * saving a new segment.
+   */
+  save_whatsapp_segment: "p_segment_id";
+
+  /**
+   * `p_destination_id uuid` (no default). `if p_destination_id is null then
+   * insert ...` — NULL is the create branch for a new tracked-link destination.
+   */
+  save_whatsapp_click_destination: "p_destination_id";
+
+  /**
    * `requested_room_code text` (no default). `if requested_room_code is not
    * null and requested_room_code not in (...)` — NULL clears the room category
    * instead of setting one, and the action passes NULL for exactly that.
@@ -240,6 +253,8 @@ export const NULLABLE_RPC_ARGUMENT_OVERRIDES = {
   get_crm_pipeline_value_summary: ["p_owner_id"],
   record_landing_exposure: ["p_experiment_id", "p_variant_key"],
   save_landing_experiment_draft: ["p_experiment_id"],
+  save_whatsapp_click_destination: ["p_destination_id"],
+  save_whatsapp_segment: ["p_segment_id"],
   set_portfolio_media_room_category: ["requested_room_code"],
   verify_live_landing_publication_context: ["p_experiment_reference", "p_variant_key"],
 } as const satisfies Record<keyof NullableRpcArguments, readonly string[]>;

@@ -109,11 +109,10 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
       sorted.includes("20260906120000_sales_manager_control_plane_hardening.sql"),
       "the Sales Manager control plane hardening must still be present"
     );
-    assert.equal(
-      sorted[sorted.length - 1],
-      "20260913130000_whatsapp_inbox_staff_state_attention.sql",
-      "the newest migration is WM-1 WhatsApp inbox staff state and attention"
-    );
+    // Forward-only: WM-1 is still present and everything after it is later in time.
+    const wm1 = sorted.indexOf("20260913130000_whatsapp_inbox_staff_state_attention.sql");
+    assert.ok(wm1 !== -1, "WM-1 WhatsApp inbox staff state and attention must still be present");
+    assert.ok(sorted.slice(wm1 + 1).every((name) => /^2026091[3-9]\d{6}_whatsapp_/.test(name)), "only WhatsApp phases follow WM-1");
     assert.ok(
       sorted.includes("20260913120000_portfolio_standalone_room_media_library.sql"),
       "the portfolio room media library migration must still be present"

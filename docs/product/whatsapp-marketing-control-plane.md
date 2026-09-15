@@ -2,7 +2,7 @@
 
 - **Architecture:** [ADR-0034](../ADR/ADR-0034-complete-whatsapp-marketing-control-plane-and-crm-owned-conversation-access.md) · **Decision:** DEC-0100
 - **Phase:** WM-0 architecture freeze (this document). WM-1…WM-7 implement it.
-- **Implementation status:** WM-1 implemented in repository (migration `20260913130000_whatsapp_inbox_staff_state_attention.sql`, pgTAP `64_whatsapp_inbox_staff_state_attention_test.sql`, `npm run test:wm-1`; audit [wm-1-whatsapp-inbox-completeness](../audits/wm-1-whatsapp-inbox-completeness.md)). Not applied to any managed database; not deployed.
+- **Implementation status:** WM-1 implemented in repository (migration `20260913130000_whatsapp_inbox_staff_state_attention.sql`, pgTAP `64_whatsapp_inbox_staff_state_attention_test.sql`, `npm run test:wm-1`; audit [wm-1-whatsapp-inbox-completeness](../audits/wm-1-whatsapp-inbox-completeness.md)). WM-2 … WM-7 implemented in repository on `feat/whatsapp-complete-environment` (migrations `20260913140000` … `20260918100000`, pgTAP `65`–`69`, `npm run test:wm-7`; audit [wm-2-7-whatsapp-control-plane-completion](../audits/wm-2-7-whatsapp-control-plane-completion.md)). Not applied to any managed database; not deployed; every provider surface defaults to `disabled`.
 - **Baseline:** `origin/main` `9a782ad5bed148d4e0ee92b26c76193d4fe5a995` (PR #186 premium inbox merged)
 - **Code twin:** `src/features/whatsapp-marketing/contracts/*`, `src/features/whatsapp/contracts/{conversation-ownership,template-registry,staff-conversation-state}.ts`
 - **Contract tests:** `npm run test:wm-0`
@@ -50,14 +50,14 @@ No secret value appears in this document.
 | Inbox | `/admin/whatsapp/inbox` | exists; WM-1 filters | inbox.read |
 | Contacts | `/admin/whatsapp/contacts` | WM-3 | whatsapp.contacts.read |
 | Templates | `/admin/whatsapp/templates` | WM-2 | whatsapp.templates.read |
-| Campaigns | `/admin/whatsapp/campaigns` | WM-4 | campaigns.read |
+| Campaigns | `/admin/whatsapp/campaigns` | WM-4 | whatsapp.campaigns.execute |
 | Segments | `/admin/whatsapp/segments` | WM-3 | whatsapp.segments.read |
 | Automations | `/admin/whatsapp/automations` | WM-6 | whatsapp.automations.read |
-| Forms / Flows | `/admin/whatsapp/flows` | WM-6 | whatsapp.flows.read |
-| Analytics | `/admin/whatsapp/analytics` | WM-5 | whatsapp.analytics.read / campaigns.metrics.read |
+| Forms / Flows | `/admin/whatsapp/forms-flows` | WM-6 | whatsapp.flows.read |
+| Analytics | `/admin/whatsapp/analytics` | WM-5 | whatsapp.analytics.read |
 | Settings & Compliance | `/admin/whatsapp/settings` | WM-3 | whatsapp.settings.read |
 
-The list decides what is **offered**; each route's own server guard decides what is **allowed**.
+The list decides what is **offered**; each route's own server guard decides what is **allowed**. As implemented, the table order is Inbox, Contacts, Templates, Campaigns, Segments, Automations, Forms / Flows, Analytics, Settings & Compliance; the `/admin/whatsapp` layout is an active-staff shell, not an inbox gate, and lists only sections the caller's exact permission opens.
 
 ### Future Sales Representative dashboard — "My WhatsApp"
 

@@ -97,7 +97,7 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 73, "Migration count must be exactly 73");
+    assert.equal(files.length, 79, "Migration count must be exactly 79 after WM-2, WM-3, WM-4, the WM runtime hardening, WM-5 and WM-6");
 
     // Workforce V1 attendance lifecycle. Still no payment M38.
     const workforce = files.filter((f) => f.startsWith("20260902160000"));
@@ -256,6 +256,22 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
         // read state, mark-read RPC and the attention read model. WhatsApp
         // inbox only; no COD, order or payment surface of any kind.
         "20260913130000_whatsapp_inbox_staff_state_attention.sql",
+        // WM-2: template registry sync metadata, append-only template
+        // evidence, governed one-to-one UTILITY template sends and the inbound
+        // media view seam. WhatsApp only; no COD, order or payment surface.
+        "20260913140000_whatsapp_template_studio_utility_send.sql",
+        // WM-3: contacts, MARKETING preference evidence, restrictive opt-out,
+        // allowlisted segments and versioned send policy. WhatsApp only.
+        "20260914100000_whatsapp_contacts_consent_segments_policy.sql",
+        // WM-4: governed WhatsApp campaign execution on its own tables, never
+        // public.campaign_runs. No COD, order or payment surface.
+        "20260915100000_whatsapp_campaign_execution.sql",
+        // WM-2/3/4 runtime hardening: signature-stable function repairs only.
+        "20260916100000_whatsapp_control_plane_runtime_hardening.sql",
+        // WM-5: analytics, opaque click tokens, reply attribution, audited export.
+        "20260917100000_whatsapp_analytics_attribution.sql",
+        // WM-6: governed automations, official Flows, CTWA referral evidence.
+        "20260918100000_whatsapp_automations_flows_referrals.sql",
       ],
       "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, CRM 2A-7, CRM 2C cadences, CRM 2D commercial read models, the lead_notes INSERT privilege redrift repair, CRM 2E management analytics, the WhatsApp lead-link repair, and the Workforce V1 attendance lifecycle may follow 9D-D1 COD order foundation"
     );

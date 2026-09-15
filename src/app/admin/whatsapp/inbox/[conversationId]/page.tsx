@@ -9,6 +9,8 @@ import { InboxManualRefreshButton } from "@/features/whatsapp/components/inbox/I
 import { InboxReadAcknowledger } from "@/features/whatsapp/components/inbox/InboxReadAcknowledger";
 import { InboxThread } from "@/features/whatsapp/components/inbox/InboxThread";
 import { WhatsappAccessDenied } from "@/features/whatsapp/components/states/WhatsappAccessDenied";
+import { MarketingOptOutForm } from "@/features/whatsapp/components/control-plane/ContactComplianceForms";
+import { canCurrentUserRecordWhatsappOptOut } from "@/features/whatsapp/server/whatsapp-contacts-queries";
 import "@/features/whatsapp/components/whatsapp-workspace.css";
 import {
   buildInboxListHref,
@@ -31,6 +33,10 @@ import {
   getInboxConversationListPageForCurrentUser,
 } from "@/features/whatsapp/server/whatsapp-inbox-repository";
 import { loadConversationLeadSummary } from "@/features/whatsapp/server/conversation-lead-summary";
+import {
+  listSendableUtilityTemplatesForConversation,
+  probeWhatsappTemplatePermissions,
+} from "@/features/whatsapp/server/whatsapp-template-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +111,25 @@ export default async function WhatsappConversationPage({
   const serviceWindow = presentServiceWindow(detail.lastInboundAt);
   const sending = getWhatsappSendingStatus();
 
+  /*
+   * WM-2: the approved UTILITY templates this viewer may send HERE. Asked only
+   * of someone who can use the conversation and holds whatsapp.templates.use;
+   * the database answers for the exact conversation and live CRM assignment.
+   * `null` means no picker at all, which is what legacy sales and management
+   * see.
+   */
+  const templatePermissions = canUse ? await probeWhatsappTemplatePermissions() : null;
+  const templates = templatePermissions?.["whatsapp.templates.use"]
+    ? await listSendableUtilityTemplatesForConversation(conversationId)
+    : null;
+
+  /*
+   * WM-3: a restrictive marketing opt-out, offered to whoever holds
+   * whatsapp.opt_out.record and can use THIS conversation. For a Sales
+   * Executive that is their assigned lead; the RPC re-checks both.
+   */
+  const canRecordOptOut = canUse && detail.contactId ? await canCurrentUserRecordWhatsappOptOut() : false;
+
   return (
     <div
       className={`od-wa od-wa--with-details${showDetails ? " od-wa--details-route" : ""}`}
@@ -157,6 +182,7 @@ export default async function WhatsappConversationPage({
           canUse={canUse}
           serviceWindow={serviceWindow}
           sending={sending}
+          templates={templates}
         />
       </div>
 
@@ -172,6 +198,11 @@ export default async function WhatsappConversationPage({
           serviceWindow={serviceWindow}
           lead={leadSummary.lead}
           leadHidden={leadSummary.hidden}
+          compliance={
+            canRecordOptOut && detail.contactId ? (
+              <MarketingOptOutForm contactId={detail.contactId} conversationId={conversationId} compact />
+            ) : null
+          }
         />
       </div>
     </div>

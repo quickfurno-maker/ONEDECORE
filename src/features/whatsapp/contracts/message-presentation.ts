@@ -15,12 +15,12 @@
  *
  * WHAT THIS LAYER REFUSES TO DO.
  *
- * It never invents a media URL. ONEDECORE has no route that fetches Meta media
- * bytes and no storage bucket for them, so an `image` message carries a media
- * id this system cannot currently resolve. The presentation says exactly that
- * — filename, type and caption where they exist, and an honest note that the
- * file itself is not downloadable here — rather than rendering a broken
- * `<img>` or a download button that 404s.
+ * It never invents a media URL. Media bytes are only reachable through the
+ * WM-2 governed view route, which re-authorises every open and is offered only
+ * when media viewing is enabled in this environment. Without that, the
+ * presentation says exactly what it knows — filename, type and caption — and
+ * an honest note that the file is not viewable here, rather than rendering a
+ * broken `<img>` or a download button that 404s.
  */
 
 /** The twelve types the database constraint allows. */
@@ -93,9 +93,10 @@ export interface MessageAttachment {
   /**
    * Whether the bytes can actually be opened from here.
    *
-   * Always false today: there is no media-fetch route. It is a field rather
-   * than a hardcoded `false` in the component so that the day the route lands,
-   * one function changes and every message type follows.
+   * WM-2 added the governed media view route. It is true only when the caller
+   * says media viewing is enabled in this environment AND the message is an
+   * inbound media message carrying a provider media id. The route still
+   * re-authorises every open; this flag only decides whether to offer a link.
    */
   readonly retrievable: boolean;
 }
@@ -115,7 +116,12 @@ export interface MessageContact {
 }
 
 export type MessagePresentation =
-  | { readonly kind: "text"; readonly body: string }
+  | {
+      readonly kind: "text";
+      readonly body: string;
+      /** Present only for an outbound approved template; the body is the recorded preview. */
+      readonly templateName?: string;
+    }
   | {
       readonly kind: "attachment";
       readonly attachment: MessageAttachment;
@@ -148,15 +154,19 @@ export function presentMessage(input: {
   readonly providerMessageType: string | null;
   readonly bodyText: string | null;
   readonly content: unknown;
+  /** Set by the server when ONEDECORE_WHATSAPP_MEDIA_MODE is not disabled. */
+  readonly mediaViewEnabled?: boolean;
+  readonly direction?: "inbound" | "outbound";
 }): MessagePresentation {
   const content = record(input.content) ?? {};
   const type = input.normalizedMessageType;
 
   if (type === "text") {
     const body = text(input.bodyText, MAX_BODY) ?? text(content.body, MAX_BODY);
-    return body
-      ? { kind: "text", body }
-      : { kind: "empty", note: "Empty message" };
+    if (!body) return { kind: "empty", note: "Empty message" };
+    const templateName =
+      input.providerMessageType === "template" ? text(record(content.template)?.name, 80) : null;
+    return templateName ? { kind: "text", body, templateName } : { kind: "text", body };
   }
 
   if (type in ATTACHMENT_KIND) {
@@ -171,7 +181,11 @@ export function presentMessage(input: {
         kind: ATTACHMENT_KIND[type]!,
         filename: text(content.filename),
         mediaType: mimeLabel(text(content.mime_type, 120)),
-        retrievable: false,
+        retrievable:
+          input.mediaViewEnabled === true &&
+          input.direction === "inbound" &&
+          typeof content.id === "string" &&
+          /^[0-9]{1,64}$/.test(content.id),
       },
       caption: text(content.caption, MAX_BODY),
     };
@@ -273,7 +287,7 @@ export function presentMessage(input: {
 export function previewForMessage(presentation: MessagePresentation): string {
   switch (presentation.kind) {
     case "text":
-      return presentation.body;
+      return presentation.templateName ? `Template · ${presentation.body}` : presentation.body;
     case "attachment":
       return presentation.caption
         ? `${presentation.attachment.kind} · ${presentation.caption}`
