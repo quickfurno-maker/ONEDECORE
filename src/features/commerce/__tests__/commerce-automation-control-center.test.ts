@@ -75,3 +75,25 @@ describe("Commerce automation control center", () => {
     assert.doesNotMatch(route, /CAMPAIGN_EXECUTION|WHATSAPP|N8N/i);
   });
 });
+
+describe("Commerce automation native scheduler", () => {
+  test("VPS timer invokes only the internal OneDecore worker without exposing the secret in argv", () => {
+    const runner = read("scripts/commerce-automation-dispatch.mjs");
+    const service = read("scripts/systemd/onedecore-commerce-automation.service");
+    const timer = read("scripts/systemd/onedecore-commerce-automation.timer");
+
+    assert.match(runner, /127\.0\.0\.1:3000\/api\/internal\/commerce-automation\/dispatch/);
+    assert.match(runner, /ONEDECORE_COMMERCE_AUTOMATION_ENABLED/);
+    assert.match(runner, /ONEDECORE_COMMERCE_AUTOMATION_WORKER_SECRET/);
+    assert.doesNotMatch(runner, /n8n|graph\.facebook|waba|whatsapp|razorpay/i);
+
+    assert.match(service, /User=onedecore/);
+    assert.match(service, /EnvironmentFile=\/var\/www\/onedecore\/\.env\.production\.local/);
+    assert.match(service, /ExecStart=\/usr\/bin\/node \/var\/www\/onedecore\/scripts\/commerce-automation-dispatch\.mjs/);
+    assert.match(service, /NoNewPrivileges=true/);
+    assert.doesNotMatch(service, /Authorization|Bearer|WORKER_SECRET/);
+
+    assert.match(timer, /OnUnitActiveSec=1min/);
+    assert.match(timer, /Persistent=true/);
+  });
+});
