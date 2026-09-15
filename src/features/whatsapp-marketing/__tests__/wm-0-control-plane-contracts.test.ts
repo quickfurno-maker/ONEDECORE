@@ -240,10 +240,18 @@ describe("2 — Sales Executive target matrix holds no bulk or global authority"
     }
   });
 
-  test("legacy management holds no planned WM code, only its existing M19 inbox grants", () => {
-    const planned = WHATSAPP_CONTROL_PLANE_PERMISSIONS.filter((e) => e.status === "planned");
-    for (const entry of planned) {
+  /** WM codes are those not inserted by M19/M31/M33; once migrated they stay legacy-free. */
+  const wmCodes = WHATSAPP_CONTROL_PLANE_PERMISSIONS.filter(
+    (e) => e.status === "planned" || /^2026091[3-9]\d{6}_whatsapp_/.test(e.source)
+  );
+
+  test("legacy management holds no WM code, only its existing M19 inbox grants", () => {
+    assert.equal(wmCodes.length, 18, "WM-2..WM-6 codes are classified");
+    for (const entry of wmCodes) {
       assert.equal(entry.grantedTo.includes("management"), false, entry.code);
+      for (const { name, sql } of allMigrations) {
+        assert.doesNotMatch(sql, new RegExp(`\\('management'\\s*,\\s*'${entry.code.replace(/\./g, "\\.")}'\\)`), `${entry.code} in ${name}`);
+      }
     }
     assert.deepEqual(
       [...whatsappControlPlaneCodesForRole("management")].sort(),
@@ -255,9 +263,12 @@ describe("2 — Sales Executive target matrix holds no bulk or global authority"
     );
   });
 
-  test("legacy sales holds no planned WM code, only its existing M19 assigned-inbox grants", () => {
-    for (const entry of WHATSAPP_CONTROL_PLANE_PERMISSIONS.filter((e) => e.status === "planned")) {
+  test("legacy sales holds no WM code, only its existing M19 assigned-inbox grants", () => {
+    for (const entry of wmCodes) {
       assert.equal(entry.grantedTo.includes("sales"), false, entry.code);
+      for (const { name, sql } of allMigrations) {
+        assert.doesNotMatch(sql, new RegExp(`\\('sales'\\s*,\\s*'${entry.code.replace(/\./g, "\\.")}'\\)`), `${entry.code} in ${name}`);
+      }
     }
     assert.deepEqual(
       [...whatsappControlPlaneCodesForRole("sales")].sort(),

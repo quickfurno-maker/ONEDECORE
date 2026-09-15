@@ -1284,3 +1284,59 @@
   gap: 8px;
   margin-block-start: 4px;
 }
+
+/* ------------------------------------------------------- WM-2 template picker */
+
+/*
+ * Lives in the same collapsed strip as AI assist and inherits its bounded,
+ * scrolling body, so opening it never pushes the thread off screen.
+ */
+.od-wa__tpl form {
+  display: grid;
+  gap: 10px;
+}
+
+.od-wa__tpl-field {
+  display: grid;
+  gap: 4px;
+}
+
+.od-wa__tpl-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--od-muted, #747d88);
+}
+
+.od-wa__tpl-input {
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+  color: var(--od-text, #f5f3ee);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.od-wa__tpl-input:focus-visible {
+  outline: 2px solid var(--od-gold, #d7a529);
+  outline-offset: 1px;
+}
+
+.od-wa__tpl-preview {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--od-wa-out-line);
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-wa-out);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.od-wa__template-tag {
+  display: inline-block;
+  font-weight: 600;
+}

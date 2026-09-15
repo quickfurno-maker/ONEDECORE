@@ -35,6 +35,43 @@ export interface NormalizedInboundMessage {
   readonly content: Record<string, unknown>;
   readonly contextProviderMessageId: string | null;
   readonly providerTimestamp: string;
+  /**
+   * WM-6: Click-to-WhatsApp referral beside the message, allowlisted and
+   * bounded. Deliberately outside the event hash, so replaying an event that
+   * predates referral capture stays idempotent.
+   */
+  readonly referral: NormalizedReferral | null;
+}
+
+/** Only these referral keys are kept. Meta CDN media URLs (image_url, video_url, thumbnail_url) are dropped. */
+export interface NormalizedReferral {
+  readonly source_url?: string;
+  readonly source_id?: string;
+  readonly source_type?: string;
+  readonly headline?: string;
+  readonly body?: string;
+  readonly media_type?: string;
+  readonly ctwa_clid?: string;
+}
+
+const REFERRAL_LIMITS: Readonly<Record<keyof NormalizedReferral, number>> = {
+  source_url: 2048,
+  source_id: 128,
+  source_type: 16,
+  headline: 200,
+  body: 300,
+  media_type: 16,
+  ctwa_clid: 512,
+};
+
+export function normalizeWhatsappReferral(raw: unknown): NormalizedReferral | null {
+  if (!isRecord(raw)) return null;
+  const out: Record<string, string> = {};
+  for (const [key, limit] of Object.entries(REFERRAL_LIMITS)) {
+    const value = raw[key];
+    if (typeof value === "string" && value.trim() !== "") out[key] = value.trim().slice(0, limit);
+  }
+  return Object.keys(out).length > 0 ? (out as NormalizedReferral) : null;
 }
 
 export interface NormalizedMessageStatus {
@@ -238,6 +275,7 @@ function normalizeInboundMessage(
     content,
     contextProviderMessageId,
     providerTimestamp,
+    referral: normalizeWhatsappReferral(message.referral),
   };
 }
 

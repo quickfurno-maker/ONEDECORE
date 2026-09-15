@@ -613,14 +613,29 @@ describe("Phase 6A persistence boundary", () => {
     }
   });
 
-  test("no automatic consent mutation in ingest path", () => {
+  test("no consent GRANT in ingest path; the only compliance write is the restrictive opt-out RPC", () => {
     const ingestSource = readFileSync(
       join(root, "src/features/whatsapp/server/meta-webhook-ingest.ts"),
       "utf8"
     );
+    // Still no direct consent table write and no purpose code of its own.
     assert.equal(ingestSource.includes("consent_events"), false);
     assert.equal(ingestSource.includes("MARKETING"), false);
     assert.equal(ingestSource.includes("WHATSAPP_SERVICE"), false);
+    assert.doesNotMatch(ingestSource, /granted|grant_whatsapp|record_whatsapp_marketing_preference/);
+    // WM-3: exact opt-out signals are recorded only through the service-role RPC,
+    // which re-classifies in SQL and can only withdraw.
+    const rpcs = [...ingestSource.matchAll(/rpc\(\s*"([a-z_]+)"/g)].map((match) => match[1]);
+    assert.deepEqual(
+      [...new Set(rpcs)].sort(),
+      [
+        "ingest_meta_whatsapp_message",
+        "ingest_meta_whatsapp_status",
+        "record_whatsapp_inbound_evidence",
+        "record_whatsapp_inbound_opt_out",
+        "record_whatsapp_referral_context",
+      ]
+    );
   });
 });
 

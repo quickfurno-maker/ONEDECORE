@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { InboxConversationDetail } from "../../contracts/conversation-dtos.ts";
 import type { ServiceWindowView } from "../../contracts/message-presentation.ts";
 
@@ -40,6 +41,12 @@ interface ConversationDetailsPanelProps {
   readonly lead: ConversationLeadSummary | null;
   /** True when a lead is linked but CRM access was refused. */
   readonly leadHidden?: boolean;
+  /**
+   * WM-3: the restrictive marketing opt-out control, supplied by the mounting
+   * route only when the viewer may record one here. Surface-agnostic: the panel
+   * neither checks permission nor knows the control's action.
+   */
+  readonly compliance?: ReactNode;
 }
 
 const STAMP = new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" });
@@ -65,6 +72,7 @@ export function ConversationDetailsPanel({
   serviceWindow,
   lead,
   leadHidden = false,
+  compliance = null,
 }: ConversationDetailsPanelProps) {
   return (
     <div className="od-wa__scroll" data-testid="whatsapp-details-panel">
@@ -125,6 +133,13 @@ export function ConversationDetailsPanel({
           </p>
         )}
       </section>
+
+      {compliance ? (
+        <section className="od-wa__section">
+          <h2 className="od-wa__panel-label">Marketing</h2>
+          {compliance}
+        </section>
+      ) : null}
     </div>
   );
 }

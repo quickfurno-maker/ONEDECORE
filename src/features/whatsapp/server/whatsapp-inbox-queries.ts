@@ -18,6 +18,7 @@ import {
   type InboxMessageRow,
 } from "../contracts/conversation-dtos.ts";
 import { whatsappInboxErrorFromPostgresMessage } from "./whatsapp-inbox-errors.ts";
+import { getWhatsappMediaMode } from "./whatsapp-business-env.ts";
 
 /*
  * SURFACE-INDEPENDENT BY CONSTRUCTION.
@@ -120,9 +121,11 @@ export async function queryConversationMessagesPage(
 
   const totalCount = count ?? 0;
   const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / query.pageSize);
+  // Offer a media link only where the governed view route can serve it.
+  const mediaViewEnabled = getWhatsappMediaMode() !== "disabled";
 
   return {
-    items: ((data ?? []) as InboxMessageRow[]).map(mapMessageRowToItem),
+    items: ((data ?? []) as InboxMessageRow[]).map((row) => mapMessageRowToItem(row, { mediaViewEnabled })),
     page: query.page,
     pageSize: query.pageSize,
     totalCount,

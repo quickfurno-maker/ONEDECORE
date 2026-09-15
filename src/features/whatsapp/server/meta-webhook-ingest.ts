@@ -19,6 +19,7 @@ import {
   type NormalizedWebhookEvent,
 } from "./meta-webhook-contract.ts";
 import { parseLocalTestHostname } from "../../lead-intake/server/lead-intake-runtime.ts";
+import { classifyWhatsappInboundOptOut } from "../contracts/inbound-opt-out.ts";
 
 export class MetaWebhookError extends Error {
   readonly code: string;
@@ -302,7 +303,43 @@ async function persistInboundMessage(
   }
 
   const row = Array.isArray(data) ? data[0] : data;
-  return (row as { outcome_code?: string } | null)?.outcome_code ?? "persisted";
+  const persisted = row as { outcome_code?: string; message_id?: string | null } | null;
+  const messageId = persisted?.message_id ?? null;
+
+  if (messageId) {
+    const rpc = client as unknown as WebhookRpcClient;
+    // Every follow-up write is idempotent per message. If one fails the
+    // webhook answers 500, Meta retries, and ingest reports a duplicate with
+    // the same message id, so the evidence is completed on the retry.
+    const fail = () =>
+      new MetaWebhookError({
+        code: "WEBHOOK_PERSISTENCE_FAILED",
+        message: "Webhook evidence persistence failed.",
+        httpStatus: 500,
+      });
+
+    // WM-3: an exact whole-message STOP (or Meta's opt-out button) is a
+    // restrictive compliance signal. SQL re-classifies before recording it.
+    if (classifyWhatsappInboundOptOut(event) === "explicit_opt_out") {
+      const { error: optOutError } = await rpc.rpc("record_whatsapp_inbound_opt_out", { p_message_id: messageId });
+      if (optOutError) throw fail();
+    }
+
+    // WM-5/6: reply attribution and completed Flow capture.
+    const { error: evidenceError } = await rpc.rpc("record_whatsapp_inbound_evidence", { p_message_id: messageId });
+    if (evidenceError) throw fail();
+
+    // WM-6: Click-to-WhatsApp referral context, attribution evidence only.
+    if (event.referral) {
+      const { error: referralError } = await rpc.rpc("record_whatsapp_referral_context", {
+        p_message_id: messageId,
+        p_referral: event.referral,
+      });
+      if (referralError) throw fail();
+    }
+  }
+
+  return persisted?.outcome_code ?? "persisted";
 }
 
 async function persistMessageStatus(

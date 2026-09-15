@@ -41,11 +41,11 @@ function walkTs(dir: string, acc: string[] = []): string[] {
 
 describe("Phase 9D-F baseline and payment absence", () => {
   test("latest migration is the public consultation qualifier and deferred payment M38 is absent", () => {
-    assert.equal(
-      latestMigrationName(),
-      "20260913130000_whatsapp_inbox_staff_state_attention.sql"
-    );
-    assert.equal(readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql")).length, 73);
+    // Later migrations may follow; none of them may be a payment migration.
+    assert.ok(latestMigrationName() >= "20260913130000_whatsapp_inbox_staff_state_attention.sql");
+    const names = readdirSync(join(root, "supabase/migrations")).filter((n) => n.endsWith(".sql"));
+    assert.ok(names.length >= 73);
+    assert.equal(names.filter((n) => /commerce.*payment|online_payment|payment_adapter/i.test(n)).length, 0, "no commerce payment migration after the COD baseline");
     assert.equal(
       existsSync(join(root, "supabase/migrations/20260825140000_commerce_online_payment_adapter_foundation.sql")),
       false

@@ -27,54 +27,18 @@ export function isWhatsappMarketingPreferenceCategory(
   );
 }
 
-/**
- * Whole-message opt-out phrases, compared after normalisation. A phrase inside
- * a longer message ("I can't stop smiling", "don't remove me") is NOT an
- * opt-out; those are left to a human. Meta's own marketing-template opt-out
- * button arrives as a button reply and is handled by payload, not by text.
+/*
+ * Whole-message opt-out classification lives in the channel core, because the
+ * webhook must never import the marketing control plane. Re-exported here so
+ * the WM-0 contract surface is unchanged.
  */
-export const WHATSAPP_OPT_OUT_PHRASES = [
-  "stop",
-  "unsubscribe",
-  "remove me",
-  "no marketing",
-  "stop marketing",
-  "opt out",
-  "optout",
-] as const;
-
-export const WHATSAPP_OPT_OUT_MESSAGE_MAX_LENGTH = 40;
-
-export function normalizeWhatsappOptOutCandidate(text: string): string {
-  return text
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/[\s ]+/g, " ")
-    .trim()
-    .replace(/^[\p{P}\p{S}\s]+|[\p{P}\p{S}\s]+$/gu, "")
-    .replace(/-/g, " ")
-    .replace(/ +/g, " ");
-}
-
-export type WhatsappOptOutSignal = "explicit_opt_out" | "none";
-
-/**
- * Deterministic and idempotent: the same text always yields the same answer,
- * and recording a second opt-out for an already opted-out contact is a no-op
- * at the persistence layer (WM-3).
- */
-export function classifyWhatsappOptOutSignal(
-  text: string | null | undefined
-): WhatsappOptOutSignal {
-  if (typeof text !== "string") return "none";
-  if (text.length === 0 || text.length > WHATSAPP_OPT_OUT_MESSAGE_MAX_LENGTH) {
-    return "none";
-  }
-  const normalized = normalizeWhatsappOptOutCandidate(text);
-  return (WHATSAPP_OPT_OUT_PHRASES as readonly string[]).includes(normalized)
-    ? "explicit_opt_out"
-    : "none";
-}
+export {
+  classifyWhatsappOptOutSignal,
+  normalizeWhatsappOptOutCandidate,
+  WHATSAPP_OPT_OUT_MESSAGE_MAX_LENGTH,
+  WHATSAPP_OPT_OUT_PHRASES,
+  type WhatsappOptOutSignal,
+} from "../../whatsapp/contracts/inbound-opt-out.ts";
 
 /** Default business timezone for quiet hours when the policy names none. */
 export const WHATSAPP_MARKETING_DEFAULT_TIMEZONE = "Asia/Kolkata" as const;

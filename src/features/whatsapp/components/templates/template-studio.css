@@ -1,0 +1,308 @@
+/*
+ * WM-2 Template Studio. Ops-suite tokens only, with dark fallbacks that match
+ * `admin-ops/tokens.css` (see whatsapp-workspace.css for why that matters).
+ * Unlike the inbox this is a document page: it scrolls normally.
+ */
+
+.od-tpl {
+  display: grid;
+  gap: 20px;
+  color: var(--od-text, #f5f3ee);
+}
+
+.od-tpl__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block-end: 16px;
+  border-block-end: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+}
+
+.od-tpl__eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--od-gold, #d7a529);
+}
+
+.od-tpl__title {
+  margin: 4px 0 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.od-tpl__lede {
+  margin: 6px 0 0;
+  max-width: 70ch;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--od-muted, #747d88);
+}
+
+.od-tpl__nav {
+  display: flex;
+  gap: 8px;
+}
+
+.od-tpl__panel {
+  padding: 16px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: var(--od-radius, 12px);
+  background: var(--od-surface, #10151b);
+}
+
+.od-tpl__panel-title {
+  margin: 0 0 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--od-text-2, #b7bdc5);
+}
+
+.od-tpl__mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.od-tpl__mode-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.od-tpl__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--od-muted, #747d88);
+}
+
+.od-tpl__dot[data-tone="live"] {
+  background: var(--od-positive, #35c98c);
+}
+
+.od-tpl__dot[data-tone="test"] {
+  background: var(--od-warning, #e2a83b);
+}
+
+.od-tpl__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.od-tpl__field {
+  display: grid;
+  gap: 4px;
+  font-size: 0.74rem;
+  color: var(--od-muted, #747d88);
+}
+
+.od-tpl__field input,
+.od-tpl__field select,
+.od-tpl__field textarea {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+  color: var(--od-text, #f5f3ee);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.od-tpl__field textarea {
+  resize: vertical;
+}
+
+.od-tpl__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+  color: var(--od-text, #f5f3ee);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.od-tpl__btn:hover:not(:disabled) {
+  border-color: var(--od-gold, #d7a529);
+}
+
+.od-tpl__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.od-tpl__btn--primary {
+  border-color: var(--od-gold, #d7a529);
+  background: rgba(215, 165, 41, 0.14);
+  color: var(--od-gold, #d7a529);
+}
+
+.od-tpl__btn--quiet {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.od-tpl__inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.od-tpl__msg {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.od-tpl__msg--ok {
+  color: var(--od-positive, #35c98c);
+}
+
+.od-tpl__msg--err {
+  color: var(--od-negative, #f0616d);
+}
+
+.od-tpl__table-wrap {
+  overflow-x: auto;
+}
+
+.od-tpl__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.od-tpl__table th {
+  padding: 8px 10px;
+  border-block-end: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: start;
+  text-transform: uppercase;
+  color: var(--od-muted, #747d88);
+  white-space: nowrap;
+}
+
+.od-tpl__table td {
+  padding: 10px;
+  border-block-end: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  vertical-align: top;
+}
+
+.od-tpl__name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.od-tpl__body {
+  margin: 4px 0 0;
+  max-width: 48ch;
+  color: var(--od-muted, #747d88);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.od-tpl__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--od-border, rgba(255, 255, 255, 0.07));
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.od-tpl__badge[data-tone="positive"] {
+  border-color: rgba(53, 201, 140, 0.35);
+  color: var(--od-positive, #35c98c);
+}
+
+.od-tpl__badge[data-tone="warning"] {
+  border-color: rgba(226, 168, 59, 0.35);
+  color: var(--od-warning, #e2a83b);
+}
+
+.od-tpl__badge[data-tone="negative"] {
+  border-color: rgba(240, 97, 109, 0.35);
+  color: var(--od-negative, #f0616d);
+}
+
+.od-tpl__raw {
+  display: block;
+  margin-block-start: 3px;
+  font-size: 0.7rem;
+  color: var(--od-muted, #747d88);
+}
+
+.od-tpl__empty {
+  margin: 0;
+  padding: 24px 8px;
+  color: var(--od-muted, #747d88);
+  font-size: 0.86rem;
+}
+
+.od-tpl__pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-block-start: 12px;
+  font-size: 0.8rem;
+  color: var(--od-muted, #747d88);
+}
+
+.od-tpl__create {
+  display: grid;
+  gap: 12px;
+}
+
+.od-tpl__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.od-tpl__hint {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--od-muted, #747d88);
+}
+
+.od-tpl__columns {
+  display: grid;
+  gap: 20px;
+}
+
+@media (min-width: 1280px) {
+  .od-tpl__columns {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    align-items: start;
+  }
+}

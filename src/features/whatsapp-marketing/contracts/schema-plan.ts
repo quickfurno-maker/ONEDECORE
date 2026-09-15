@@ -64,4 +64,11 @@ export const WHATSAPP_PLANNED_SCHEMA_OBJECTS: readonly WhatsappPlannedSchemaObje
   { name: "public.whatsapp_flows", kind: "table", phase: "WM-6", appendOnly: false, purpose: "official Flow registry" },
   { name: "public.whatsapp_flow_responses", kind: "table", phase: "WM-6", appendOnly: true, purpose: "Flow submission evidence" },
   { name: "public.whatsapp_referral_contexts", kind: "table", phase: "WM-6", appendOnly: true, purpose: "Click-to-WhatsApp ad referral context" },
+  { name: "public.whatsapp_click_destinations", kind: "table", phase: "WM-5", appendOnly: false, purpose: "Super Admin allowlisted https redirect destinations" },
+  { name: "public.whatsapp_report_exports", kind: "table", phase: "WM-5", appendOnly: true, purpose: "audit of minimised per-recipient exports" },
+  { name: "public.whatsapp_automation_events", kind: "table", phase: "WM-6", appendOnly: true, purpose: "automation and enrollment lifecycle evidence" },
+  { name: "public.whatsapp_message_automation_attributions", kind: "table", phase: "WM-6", appendOnly: true, purpose: "message to automation/enrollment binding" },
+  { name: "public.whatsapp_flow_provider_requests", kind: "table", phase: "WM-6", appendOnly: true, purpose: "staff decisions to call the official Flows API" },
+  { name: "public.whatsapp_flow_provider_events", kind: "table", phase: "WM-6", appendOnly: true, purpose: "provider answers relayed by service role" },
+  { name: "public.whatsapp_flow_tokens", kind: "table", phase: "WM-6", appendOnly: true, purpose: "opaque per-send Flow tokens (hash only)" },
 ];

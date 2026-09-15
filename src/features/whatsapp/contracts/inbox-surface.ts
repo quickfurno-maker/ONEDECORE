@@ -25,6 +25,18 @@
 
 export const WHATSAPP_ADMIN_INBOX_BASE_PATH = "/admin/whatsapp/inbox";
 
+/**
+ * WM-2 — the governed inbound media view route. Session-scoped and
+ * re-authorised per open, so every surface mounting the inbox can share it.
+ */
+export const WHATSAPP_MEDIA_VIEW_BASE_PATH = "/api/admin/whatsapp/media";
+
+export function buildWhatsappMediaViewHref(messageId: string): string {
+  return `${WHATSAPP_MEDIA_VIEW_BASE_PATH}/${encodeURIComponent(messageId)}`;
+}
+
+export const WHATSAPP_ADMIN_TEMPLATES_PATH = "/admin/whatsapp/templates";
+
 export function buildInboxConversationHref(
   basePath: string,
   conversationId: string,

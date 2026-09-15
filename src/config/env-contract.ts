@@ -321,6 +321,66 @@ export const ONEDECORE_ENV_CONTRACT: readonly EnvKeyContract[] = [
     purpose: "Pins the Graph API version. A safe default applies when unset.",
     inEnvExample: true,
   },
+  {
+    name: "ONEDECORE_WHATSAPP_TEMPLATE_MODE",
+    scope: "server",
+    sensitivity: "config",
+    lifecycle: "activation-gated",
+    subsystem: "whatsapp",
+    purpose:
+      "WM-2 Template Studio provider mode (disabled | local-test | enabled). Fails closed; disabled means sync and submit never call Meta. Template SENDS stay under ONEDECORE_WHATSAPP_OUTBOUND_MODE.",
+    inEnvExample: true,
+  },
+  {
+    name: "META_WHATSAPP_BUSINESS_ACCOUNT_ID",
+    scope: "server",
+    sensitivity: "config",
+    lifecycle: "activation-gated",
+    subsystem: "whatsapp",
+    purpose:
+      "The WhatsApp Business Account (WABA) id whose message templates Template Studio syncs and submits. Required when template mode is not disabled.",
+    inEnvExample: true,
+  },
+  {
+    name: "ONEDECORE_WHATSAPP_MEDIA_MODE",
+    scope: "server",
+    sensitivity: "config",
+    lifecycle: "activation-gated",
+    subsystem: "whatsapp",
+    purpose:
+      "WM-2 governed media mode (disabled | local-test | enabled). Enabled lets staff open inbound media through the authorised server route using the server token; disabled offers no media link.",
+    inEnvExample: true,
+  },
+  {
+    name: "ONEDECORE_WHATSAPP_FLOW_MODE",
+    scope: "server",
+    sensitivity: "config",
+    lifecycle: "activation-gated",
+    subsystem: "whatsapp",
+    purpose:
+      "WM-6 official WhatsApp Flows provider mode (disabled | local-test | enabled). Disabled refuses create/upload/publish/deprecate/sync without calling Meta; local-test uses a fake provider that never publishes. Reuses META_WHATSAPP_ACCESS_TOKEN and META_WHATSAPP_BUSINESS_ACCOUNT_ID.",
+    inEnvExample: true,
+  },
+  {
+    name: "ONEDECORE_WHATSAPP_CLICK_TRACKING_MODE",
+    scope: "server",
+    sensitivity: "config",
+    lifecycle: "activation-gated",
+    subsystem: "whatsapp",
+    purpose:
+      "WM-5 opaque click redirect mode (disabled | local-test | enabled). Disabled redirects every /w/c/<token> to the site home and records nothing.",
+    inEnvExample: true,
+  },
+  {
+    name: "ONEDECORE_WHATSAPP_CLICK_ALLOWED_HOSTS",
+    scope: "server",
+    sensitivity: "config",
+    lifecycle: "optional",
+    subsystem: "whatsapp",
+    purpose:
+      "Comma-separated extra https hosts a tracked WhatsApp link may redirect to, in addition to NEXT_PUBLIC_APP_URL's host. Re-checked at click time.",
+    inEnvExample: true,
+  },
 
   // ------------------------------------------------------------ campaign ---
   {

@@ -1,4 +1,5 @@
 import type { InboxMessageItem } from "../../contracts/conversation-dtos.ts";
+import { buildWhatsappMediaViewHref } from "../../contracts/inbox-surface.ts";
 import {
   presentStatus,
   previewForMessage,
@@ -19,11 +20,12 @@ import {
  *
  * WHAT IT WILL NOT DO.
  *
- * Render media it cannot fetch. ONEDECORE has no route that retrieves Meta
- * media bytes and no bucket holding them, so a photo shows its caption, type
- * and filename and says plainly that the file cannot be opened here. An
- * `<img>` pointed at a media id would be a broken image; a download button
- * would be a 404 with a spinner.
+ * Embed media. A photo shows its caption, type and filename. When media
+ * viewing is enabled (WM-2), it also offers an "Open file" link to the
+ * governed view route, which re-authorises the reader, checks type and size,
+ * and serves the file with no-sniff headers. There is still no `<img>` or
+ * player here: nothing loads until a person asks for it, and the thread never
+ * points the browser at a Meta URL.
  */
 
 interface InboxThreadProps {
@@ -80,11 +82,23 @@ function linkify(body: string): Array<string | { href: string; text: string }> {
   return out;
 }
 
-function MessageBody({ presentation }: { readonly presentation: MessagePresentation }) {
+function MessageBody({
+  presentation,
+  messageId,
+}: {
+  readonly presentation: MessagePresentation;
+  readonly messageId: string;
+}) {
   switch (presentation.kind) {
     case "text":
       return (
         <p className="od-wa__text">
+          {presentation.templateName ? (
+            <span className="od-wa__attach-note od-wa__template-tag">
+              Template · {presentation.templateName}
+              <br />
+            </span>
+          ) : null}
           {linkify(presentation.body).map((part, index) =>
             typeof part === "string" ? (
               part
@@ -129,6 +143,16 @@ function MessageBody({ presentation }: { readonly presentation: MessagePresentat
                   ? "Received"
                   : "Received on WhatsApp — open the phone to view"}
               </span>
+              {presentation.attachment.retrievable ? (
+                <a
+                  className="od-wa__maps"
+                  href={buildWhatsappMediaViewHref(messageId)}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Open file
+                </a>
+              ) : null}
             </span>
           </div>
           {presentation.caption ? (
@@ -352,7 +376,7 @@ export function InboxThread({ messages, olderMessagesHref }: InboxThreadProps) {
                     </span>
                   ) : null}
 
-                  <MessageBody presentation={message.presentation} />
+                  <MessageBody presentation={message.presentation} messageId={message.id} />
 
                   <div className="od-wa__meta">
                     <time dateTime={message.providerTimestamp}>{TIME.format(at)}</time>

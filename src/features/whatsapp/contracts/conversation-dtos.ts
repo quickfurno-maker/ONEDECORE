@@ -222,7 +222,10 @@ export function mapConversationRowToListItem(
   };
 }
 
-export function mapMessageRowToItem(row: InboxMessageRow): InboxMessageItem {
+export function mapMessageRowToItem(
+  row: InboxMessageRow,
+  options: { readonly mediaViewEnabled?: boolean } = {}
+): InboxMessageItem {
   return {
     id: row.id,
     direction: row.direction,
@@ -241,6 +244,8 @@ export function mapMessageRowToItem(row: InboxMessageRow): InboxMessageItem {
       providerMessageType: row.provider_message_type ?? null,
       bodyText: row.body_text,
       content: row.content,
+      mediaViewEnabled: options.mediaViewEnabled === true,
+      direction: row.direction,
     }),
     providerMessageId: row.provider_message_id,
     contextProviderMessageId: row.context_provider_message_id,

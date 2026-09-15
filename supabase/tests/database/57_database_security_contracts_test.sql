@@ -156,9 +156,11 @@ select ok(
 -- The boundary that matters is therefore not the schema. It is which privileged
 -- routines stay closed, which is what follows.
 
--- The service-role-only surface: 30 public definer functions anon and
+-- The service-role-only surface: 55 public definer functions anon and
 -- authenticated must never reach - campaign run operations, WhatsApp ingest and
--- dispatch, COD order creation, landing publication verification, lead intake,
+-- dispatch, WM-2 template provider truth and template dispatch, WM-3 inbound opt-out, WM-4 campaign worker,
+-- WM-5 click and inbound evidence, WM-6 automation worker, Flow provider truth and referral capture,
+-- COD order creation, landing publication verification, lead intake,
 -- quotation grant issuance, project materialization.
 --
 -- Frozen as an exact set on purpose. If one gains authenticated EXECUTE it
@@ -172,16 +174,29 @@ select set_eq(
        and has_function_privilege('service_role', p.oid, 'EXECUTE')
        and not has_function_privilege('authenticated', p.oid, 'EXECUTE')$CONTRACT$,
   array[
+    'apply_whatsapp_template_sync_item(uuid,text,text,text,text,text,text,text,jsonb,text)',
     'bind_campaign_run_operation(uuid,text,text,text,text)',
     'bind_whatsapp_send_intent_dispatch(uuid,text,timestamp with time zone)',
     'claim_campaign_run_operation(text,integer)',
+    'claim_whatsapp_automation_enrollments(text,integer)',
+    'claim_whatsapp_campaign_dispatch_jobs(text,integer)',
+    'claim_whatsapp_campaign_test_sends(text,integer)',
     'claim_whatsapp_send_intent_for_dispatch(uuid,text,text)',
+    'claim_whatsapp_template_send_intent(uuid,text,text)',
     'complete_campaign_run_operation(uuid,text,jsonb)',
+    'complete_whatsapp_automation_dispatch_failure(uuid,uuid,text,text,jsonb)',
+    'complete_whatsapp_automation_dispatch_success(uuid,uuid,text,timestamp with time zone,jsonb)',
+    'complete_whatsapp_campaign_dispatch_failure(uuid,uuid,text,text,jsonb)',
+    'complete_whatsapp_campaign_dispatch_success(uuid,uuid,text,timestamp with time zone,jsonb)',
+    'complete_whatsapp_campaign_test_send(uuid,uuid,text,text,text)',
+    'complete_whatsapp_template_send_intent(uuid,text,text,timestamp with time zone,text,text,integer,jsonb)',
     'consume_commerce_public_rate_limit(text,text,text)',
     'create_public_commerce_cod_order(jsonb,jsonb,jsonb,uuid)',
     'enqueue_campaign_conversion_feedback(uuid)',
     'enqueue_campaign_metrics_sync(uuid,date)',
     'enqueue_pending_attributable_campaign_conversion_feedback()',
+    'enroll_whatsapp_automation_triggers(integer)',
+    'ensure_whatsapp_business_account(text)',
     'fail_campaign_run_operation(uuid,text,boolean)',
     'get_campaign_run_operation_for_reconcile(uuid)',
     'get_live_landing_publication(text)',
@@ -191,12 +206,24 @@ select set_eq(
     'issue_quotation_access_grant_internal(uuid,uuid,uuid,text,text,boolean)',
     'mark_campaign_conversion_feedback_state(uuid,text,text,text)',
     'mark_campaign_run_operation_needs_reconcile(uuid,text)',
+    'mark_whatsapp_automation_provider_request_started(uuid,uuid)',
+    'mark_whatsapp_campaign_provider_request_started(uuid,uuid)',
+    'mark_whatsapp_campaign_test_send_started(uuid,uuid)',
+    'materialize_due_whatsapp_campaign_runs(integer)',
     'materialize_closed_won_project_internal(uuid,text)',
     'quote_public_commerce_cart(jsonb,text,text)',
     'reconcile_whatsapp_dispatch_attempt(uuid,text)',
+    'reconcile_whatsapp_template_dispatch_attempt(uuid,text)',
     'record_landing_exposure(uuid,uuid,text,text,text)',
+    'record_whatsapp_click(text,text)',
     'record_whatsapp_dispatch_attempt_outcome(uuid,text,text,integer,jsonb)',
+    'record_whatsapp_flow_provider_outcome(uuid,text,text,text,text,jsonb)',
+    'record_whatsapp_inbound_evidence(uuid)',
+    'record_whatsapp_inbound_opt_out(uuid)',
+    'record_whatsapp_referral_context(uuid,jsonb)',
+    'record_whatsapp_template_submission_outcome(uuid,text,text,text,text,integer,text)',
     'resolve_campaign_run_create_reconcile_found(uuid,text,text,text,text)',
+    'resolve_whatsapp_campaign_dispatch_reconcile(uuid,text,text,timestamp with time zone,jsonb)',
     'submit_lead_intake(uuid,text,text,text,text,text,text,text,text,text,text,text[],text,jsonb,text,text,text,jsonb,text,boolean,boolean,boolean,boolean,text,text,text,text,text,text,text,text)',
     'upsert_campaign_metric_snapshot(uuid,timestamp with time zone,timestamp with time zone,text,bigint,bigint,bigint,bigint,text,text)',
     'verify_campaign_execution_context_binding(text,text,text,text,integer,text)',
