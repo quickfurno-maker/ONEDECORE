@@ -225,6 +225,27 @@ export const ONEDECORE_ENV_CONTRACT: readonly EnvKeyContract[] = [
       "Proves a public commerce request came from this runtime. Required only once the shop is enabled.",
     inEnvExample: true,
   },
+  {
+    name: "ONEDECORE_COMMERCE_AUTOMATION_ENABLED",
+    scope: "server",
+    sensitivity: "config",
+    lifecycle: "activation-gated",
+    subsystem: "commerce",
+    purpose:
+      "Deployment-level master gate for the isolated commerce automation worker. Defaults closed and is independent of Shop publication or WhatsApp delivery.",
+    inEnvExample: true,
+  },
+  {
+    name: "ONEDECORE_COMMERCE_AUTOMATION_WORKER_SECRET",
+    scope: "server",
+    sensitivity: "secret",
+    lifecycle: "activation-gated",
+    subsystem: "commerce",
+    purpose:
+      "Dedicated bearer secret for the internal commerce automation dispatch endpoint. Minimum 32 characters and never browser-visible.",
+    inEnvExample: true,
+  },
+
 
   // ------------------------------------------------------------- landing ---
   {

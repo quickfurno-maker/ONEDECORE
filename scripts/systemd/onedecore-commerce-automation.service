@@ -1,0 +1,22 @@
+[Unit]
+Description=ONEDECORE commerce automation dispatcher
+After=network-online.target pm2-onedecore.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=onedecore
+Group=onedecore
+WorkingDirectory=/var/www/onedecore
+EnvironmentFile=/var/www/onedecore/.env.production.local
+ExecStart=/usr/bin/node /var/www/onedecore/scripts/commerce-automation-dispatch.mjs
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0077

@@ -19,6 +19,7 @@ import {
   verifyCommerceReviewToken,
 } from "./commerce-review-token.ts";
 import { isShopPublicEnabled } from "./shop-public-gate.ts";
+import { currentCommercePolicyAcceptance } from "../public/commerce-policy.ts";
 
 export type CheckoutQuoteState =
   | { status: "idle" }
@@ -172,7 +173,8 @@ export async function placeCodOrder(
   const reviewToken = boundedText(formData.get("reviewToken"), 4096);
   const idempotencyKey = boundedText(formData.get("idempotencyKey"), 64);
   const checkoutMode = boundedText(formData.get("checkoutMode"), 16) === "buy-now" ? "buy-now" : "cart";
-  if (!lines || !/^[0-9]{6}$/.test(pincode) || !reviewToken || !/^[0-9a-f-]{36}$/.test(idempotencyKey)) {
+  const policyAccepted = formData.get("policyAccepted") === "on";
+  if (!lines || !/^[0-9]{6}$/.test(pincode) || !reviewToken || !/^[0-9a-f-]{36}$/.test(idempotencyKey) || !policyAccepted) {
     return { status: "invalid", message: "Please review your order and try again." };
   }
   const customer = buildCustomerPayload(formData);
@@ -229,6 +231,7 @@ export async function placeCodOrder(
       lines,
       customer,
       delivery,
+      policyAcceptance: currentCommercePolicyAcceptance(),
       idempotencyKey,
     });
     return {

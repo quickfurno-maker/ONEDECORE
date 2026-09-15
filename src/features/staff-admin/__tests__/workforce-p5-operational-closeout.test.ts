@@ -109,10 +109,26 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
       sorted.includes("20260906120000_sales_manager_control_plane_hardening.sql"),
       "the Sales Manager control plane hardening must still be present"
     );
-    // Forward-only: WM-1 is still present and everything after it is later in time.
+    // Forward-only: WM-1 through WM-6 remain an uninterrupted WhatsApp sequence.
+    // A later, separately reviewed commerce closeout may follow WM-6.
     const wm1 = sorted.indexOf("20260913130000_whatsapp_inbox_staff_state_attention.sql");
+    const wm6 = sorted.indexOf("20260918100000_whatsapp_automations_flows_referrals.sql");
     assert.ok(wm1 !== -1, "WM-1 WhatsApp inbox staff state and attention must still be present");
-    assert.ok(sorted.slice(wm1 + 1).every((name) => /^2026091[3-9]\d{6}_whatsapp_/.test(name)), "only WhatsApp phases follow WM-1");
+    assert.ok(wm6 > wm1, "WM-6 must remain after WM-1");
+    assert.ok(
+      sorted.slice(wm1 + 1, wm6 + 1).every((name) => /^2026091[3-8]\d{6}_whatsapp_/.test(name)),
+      "only WhatsApp phases occur between WM-1 and WM-6"
+    );
+    assert.deepEqual(
+      sorted.slice(wm6 + 1),
+      [
+        "20260919120000_commerce_checkout_policy_acceptance.sql",
+        "20260920120000_commerce_vendor_submission_portal.sql",
+        "20260920130000_commerce_automation_control_plane.sql",
+        "20260920133000_commerce_automation_admin_control.sql",
+      ],
+      "post-WM-6 migrations are the reviewed commerce checkout, vendor portal and automation closeout sequence"
+    );
     assert.ok(
       sorted.includes("20260913120000_portfolio_standalone_room_media_library.sql"),
       "the portfolio room media library migration must still be present"

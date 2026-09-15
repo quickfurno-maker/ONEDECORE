@@ -1,0 +1,13 @@
+[Unit]
+Description=Run ONEDECORE commerce automation every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=5s
+RandomizedDelaySec=3s
+Persistent=true
+Unit=onedecore-commerce-automation.service
+
+[Install]
+WantedBy=timers.target
