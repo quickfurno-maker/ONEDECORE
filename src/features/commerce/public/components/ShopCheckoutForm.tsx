@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { formatInrFromPaise } from "@/features/crm/contracts/sales-target-contracts";
 import {
@@ -12,6 +13,7 @@ import {
 import { commerceCartCanonicalLines, readCommerceCartFromStorage } from "../../cart/cart-storage.ts";
 import { clearBuyNowSession, readBuyNowFromSession } from "../../cart/buy-now-storage.ts";
 import { useCommerceCart } from "../../cart/use-commerce-cart.ts";
+import { COMMERCE_POLICY_PATHS } from "../commerce-policy.ts";
 
 const INITIAL_QUOTE: CheckoutQuoteState = { status: "idle" };
 const INITIAL_PLACE: PlaceCodOrderState = { status: "idle" };
@@ -214,6 +216,14 @@ export function ShopCheckoutForm() {
           <label htmlFor="state">State</label>
           <input id="state" name="state" required maxLength={80} />
         </fieldset>
+        <label className="od-shop-note">
+          <input type="checkbox" name="policyAccepted" required />
+          {" "}I agree to the <Link href="/terms" target="_blank">Terms</Link>,{" "}
+          <Link href={COMMERCE_POLICY_PATHS.shippingDelivery} target="_blank">Shipping & Delivery</Link>,{" "}
+          <Link href={COMMERCE_POLICY_PATHS.cancellation} target="_blank">Cancellation</Link>,{" "}
+          <Link href={COMMERCE_POLICY_PATHS.returnsRefunds} target="_blank">Returns & Refunds</Link> and{" "}
+          <Link href={COMMERCE_POLICY_PATHS.productWarranty} target="_blank">Product Warranty</Link> policies.
+        </label>
         <button
           type="submit"
           className="od-shop-btn od-shop-btn--gold"

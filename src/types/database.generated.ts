@@ -1090,6 +1090,470 @@ export type Database = {
           },
         ]
       }
+      commerce_automation_audit: {
+        Row: {
+          action_code: string
+          actor_profile_id: string | null
+          created_at: string
+          entity_id: string
+          entity_kind: string
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          action_code: string
+          actor_profile_id?: string | null
+          created_at?: string
+          entity_id: string
+          entity_kind: string
+          id?: string
+          metadata?: Json
+        }
+        Update: {
+          action_code?: string
+          actor_profile_id?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_kind?: string
+          id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_automation_audit_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_automation_channels: {
+        Row: {
+          adapter_status: string
+          channel_code: string
+          config: Json
+          default_locale: string
+          display_name: string
+          enabled: boolean
+          test_mode: boolean
+          transport_kind: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          adapter_status?: string
+          channel_code: string
+          config?: Json
+          default_locale?: string
+          display_name: string
+          enabled?: boolean
+          test_mode?: boolean
+          transport_kind: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          adapter_status?: string
+          channel_code?: string
+          config?: Json
+          default_locale?: string
+          display_name?: string
+          enabled?: boolean
+          test_mode?: boolean
+          transport_kind?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_automation_channels_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_automation_events: {
+        Row: {
+          created_at: string
+          event_code: string
+          event_key: string
+          id: string
+          occurred_at: string
+          payload: Json
+          source_event_id: string | null
+          source_id: string
+          source_kind: string
+        }
+        Insert: {
+          created_at?: string
+          event_code: string
+          event_key: string
+          id?: string
+          occurred_at: string
+          payload?: Json
+          source_event_id?: string | null
+          source_id: string
+          source_kind: string
+        }
+        Update: {
+          created_at?: string
+          event_code?: string
+          event_key?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          source_event_id?: string | null
+          source_id?: string
+          source_kind?: string
+        }
+        Relationships: []
+      }
+      commerce_automation_jobs: {
+        Row: {
+          action_kind_snapshot: string
+          attempt_count: number
+          audience_snapshot: string | null
+          channel_code_snapshot: string | null
+          claim_token: string | null
+          claimed_at: string | null
+          claimed_by: string | null
+          completed_at: string | null
+          config_snapshot: Json
+          created_at: string
+          event_id: string
+          id: string
+          last_error_code: string | null
+          lease_expires_at: string | null
+          max_attempts: number
+          retry_base_seconds_snapshot: number
+          rule_id: string
+          scheduled_for: string
+          status: string
+          task_code_snapshot: string | null
+          template_code_snapshot: string | null
+          updated_at: string
+        }
+        Insert: {
+          action_kind_snapshot: string
+          attempt_count?: number
+          audience_snapshot?: string | null
+          channel_code_snapshot?: string | null
+          claim_token?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_at?: string | null
+          config_snapshot?: Json
+          created_at?: string
+          event_id: string
+          id?: string
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          max_attempts: number
+          retry_base_seconds_snapshot: number
+          rule_id: string
+          scheduled_for: string
+          status?: string
+          task_code_snapshot?: string | null
+          template_code_snapshot?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action_kind_snapshot?: string
+          attempt_count?: number
+          audience_snapshot?: string | null
+          channel_code_snapshot?: string | null
+          claim_token?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_at?: string | null
+          config_snapshot?: Json
+          created_at?: string
+          event_id?: string
+          id?: string
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          max_attempts?: number
+          retry_base_seconds_snapshot?: number
+          rule_id?: string
+          scheduled_for?: string
+          status?: string
+          task_code_snapshot?: string | null
+          template_code_snapshot?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_automation_jobs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_automation_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_automation_jobs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_automation_notification_outbox: {
+        Row: {
+          audience: string
+          channel_code: string
+          created_at: string
+          event_id: string
+          id: string
+          job_id: string
+          payload: Json
+          sent_at: string | null
+          source_id: string
+          source_kind: string
+          status: string
+          template_code: string
+          updated_at: string
+        }
+        Insert: {
+          audience: string
+          channel_code: string
+          created_at?: string
+          event_id: string
+          id?: string
+          job_id: string
+          payload?: Json
+          sent_at?: string | null
+          source_id: string
+          source_kind: string
+          status?: string
+          template_code: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          channel_code?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          job_id?: string
+          payload?: Json
+          sent_at?: string | null
+          source_id?: string
+          source_kind?: string
+          status?: string
+          template_code?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_automation_notification_outbox_channel_code_fkey"
+            columns: ["channel_code"]
+            isOneToOne: false
+            referencedRelation: "commerce_automation_channels"
+            referencedColumns: ["channel_code"]
+          },
+          {
+            foreignKeyName: "commerce_automation_notification_outbox_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_automation_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_automation_notification_outbox_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "commerce_automation_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_automation_rules: {
+        Row: {
+          action_kind: string
+          archived_at: string | null
+          audience: string | null
+          channel_code: string | null
+          code: string
+          config: Json
+          created_at: string
+          delay_seconds: number
+          description: string
+          enabled: boolean
+          event_code: string
+          id: string
+          max_attempts: number
+          name: string
+          retry_base_seconds: number
+          task_code: string | null
+          template_code: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          action_kind: string
+          archived_at?: string | null
+          audience?: string | null
+          channel_code?: string | null
+          code: string
+          config?: Json
+          created_at?: string
+          delay_seconds?: number
+          description: string
+          enabled?: boolean
+          event_code: string
+          id?: string
+          max_attempts?: number
+          name: string
+          retry_base_seconds?: number
+          task_code?: string | null
+          template_code?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          action_kind?: string
+          archived_at?: string | null
+          audience?: string | null
+          channel_code?: string | null
+          code?: string
+          config?: Json
+          created_at?: string
+          delay_seconds?: number
+          description?: string
+          enabled?: boolean
+          event_code?: string
+          id?: string
+          max_attempts?: number
+          name?: string
+          retry_base_seconds?: number
+          task_code?: string | null
+          template_code?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_automation_rules_channel_code_fkey"
+            columns: ["channel_code"]
+            isOneToOne: false
+            referencedRelation: "commerce_automation_channels"
+            referencedColumns: ["channel_code"]
+          },
+          {
+            foreignKeyName: "commerce_automation_rules_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_automation_settings: {
+        Row: {
+          runtime_enabled: boolean
+          scope: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          runtime_enabled?: boolean
+          scope?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          runtime_enabled?: boolean
+          scope?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_automation_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_automation_tasks: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          detail: string
+          due_at: string | null
+          event_id: string
+          id: string
+          job_id: string
+          source_id: string
+          source_kind: string
+          status: string
+          task_code: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          detail: string
+          due_at?: string | null
+          event_id: string
+          id?: string
+          job_id: string
+          source_id: string
+          source_kind: string
+          status?: string
+          task_code: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          detail?: string
+          due_at?: string | null
+          event_id?: string
+          id?: string
+          job_id?: string
+          source_id?: string
+          source_kind?: string
+          status?: string
+          task_code?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_automation_tasks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_automation_tasks_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_automation_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_automation_tasks_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "commerce_automation_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commerce_categories: {
         Row: {
           category_reference: string
@@ -1433,6 +1897,50 @@ export type Database = {
           },
         ]
       }
+      commerce_order_policy_acceptances: {
+        Row: {
+          acceptance_source: string
+          accepted_at: string
+          bundle_version: string
+          cancellation_version: string
+          order_id: string
+          product_warranty_version: string
+          returns_refunds_version: string
+          shipping_delivery_version: string
+          terms_version: string
+        }
+        Insert: {
+          acceptance_source?: string
+          accepted_at?: string
+          bundle_version: string
+          cancellation_version: string
+          order_id: string
+          product_warranty_version: string
+          returns_refunds_version: string
+          shipping_delivery_version: string
+          terms_version: string
+        }
+        Update: {
+          acceptance_source?: string
+          accepted_at?: string
+          bundle_version?: string
+          cancellation_version?: string
+          order_id?: string
+          product_warranty_version?: string
+          returns_refunds_version?: string
+          shipping_delivery_version?: string
+          terms_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_order_policy_acceptances_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "commerce_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commerce_orders: {
         Row: {
           cancellation_reason_code: string | null
@@ -1767,7 +2275,7 @@ export type Database = {
       commerce_products: {
         Row: {
           archived_at: string | null
-          category_id: string
+          category_id: string | null
           cod_allowed_override: boolean | null
           created_at: string
           created_by: string
@@ -1780,19 +2288,26 @@ export type Database = {
           name: string
           product_reference: string
           published_at: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           seo_description: string | null
           seo_title: string | null
           shipping_charge_paise_override: number | null
           short_description: string | null
           slug: string
           status: string
+          submitted_at: string | null
           tax_rate_id: string | null
           updated_at: string
           updated_by: string | null
+          vendor_id: string | null
+          vendor_stock_status: string | null
+          vendor_submission_status: string | null
         }
         Insert: {
           archived_at?: string | null
-          category_id: string
+          category_id?: string | null
           cod_allowed_override?: boolean | null
           created_at?: string
           created_by: string
@@ -1805,19 +2320,26 @@ export type Database = {
           name: string
           product_reference: string
           published_at?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           seo_description?: string | null
           seo_title?: string | null
           shipping_charge_paise_override?: number | null
           short_description?: string | null
           slug: string
           status?: string
+          submitted_at?: string | null
           tax_rate_id?: string | null
           updated_at?: string
           updated_by?: string | null
+          vendor_id?: string | null
+          vendor_stock_status?: string | null
+          vendor_submission_status?: string | null
         }
         Update: {
           archived_at?: string | null
-          category_id?: string
+          category_id?: string | null
           cod_allowed_override?: boolean | null
           created_at?: string
           created_by?: string
@@ -1830,15 +2352,22 @@ export type Database = {
           name?: string
           product_reference?: string
           published_at?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           seo_description?: string | null
           seo_title?: string | null
           shipping_charge_paise_override?: number | null
           short_description?: string | null
           slug?: string
           status?: string
+          submitted_at?: string | null
           tax_rate_id?: string | null
           updated_at?: string
           updated_by?: string | null
+          vendor_id?: string | null
+          vendor_stock_status?: string | null
+          vendor_submission_status?: string | null
         }
         Relationships: [
           {
@@ -1856,6 +2385,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "commerce_products_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "commerce_products_tax_rate_id_fkey"
             columns: ["tax_rate_id"]
             isOneToOne: false
@@ -1867,6 +2403,13 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_products_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -2022,6 +2565,47 @@ export type Database = {
           {
             foreignKeyName: "commerce_tax_settings_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_vendors: {
+        Row: {
+          created_at: string
+          created_by: string
+          display_name: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+          vendor_code: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          display_name: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          vendor_code: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          display_name?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          vendor_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_vendors_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -9814,6 +10398,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      archive_commerce_automation_rule: {
+        Args: { p_rule_id: string }
+        Returns: Json
+      }
       archive_commerce_product: {
         Args: {
           p_expected_lock_version: number
@@ -9827,6 +10415,10 @@ export type Database = {
         Returns: Json
       }
       archive_holiday: { Args: { p_holiday_id: string }; Returns: Json }
+      archive_my_vendor_product_media: {
+        Args: { p_idempotency_key: string; p_media_id: string }
+        Returns: Json
+      }
       archive_quotation_draft: {
         Args: { p_expected_lock_version: number; p_quotation_id: string }
         Returns: Json
@@ -9918,6 +10510,10 @@ export type Database = {
         Args: { requested_permissions: string[] }
         Returns: Json
       }
+      authorize_my_vendor_product_media_upload: {
+        Args: { p_idempotency_key: string; p_product_id: string }
+        Returns: Json
+      }
       authorize_whatsapp_inbound_media_view: {
         Args: { p_message_id: string }
         Returns: Json
@@ -9992,6 +10588,18 @@ export type Database = {
       }
       cancel_campaign_run: {
         Args: { p_campaign_run_id: string; p_idempotency_key: string }
+        Returns: Json
+      }
+      cancel_commerce_automation_job: {
+        Args: { p_job_id: string }
+        Returns: Json
+      }
+      cancel_commerce_automation_notification: {
+        Args: { p_notification_id: string }
+        Returns: Json
+      }
+      cancel_commerce_automation_task: {
+        Args: { p_task_id: string }
         Returns: Json
       }
       cancel_commerce_order: {
@@ -10167,6 +10775,10 @@ export type Database = {
         Args: { p_claim_ttl_seconds?: number; p_worker_id: string }
         Returns: Json
       }
+      claim_commerce_automation_job: {
+        Args: { p_lease_seconds?: number; p_worker_id: string }
+        Returns: Json
+      }
       claim_whatsapp_automation_enrollments: {
         Args: { p_batch_size?: number; p_worker_id: string }
         Returns: Json
@@ -10220,6 +10832,14 @@ export type Database = {
           p_outcome_code: string
           p_safe_metadata?: Json
         }
+        Returns: Json
+      }
+      complete_commerce_automation_job: {
+        Args: { p_claim_token: string; p_job_id: string }
+        Returns: Json
+      }
+      complete_commerce_automation_task: {
+        Args: { p_task_id: string }
         Returns: Json
       }
       complete_lead_activity: {
@@ -10520,6 +11140,14 @@ export type Database = {
         }
         Returns: Json
       }
+      create_commerce_vendor: {
+        Args: {
+          p_display_name: string
+          p_idempotency_key: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       create_holiday: {
         Args: { p_holiday_date: string; p_name: string }
         Returns: Json
@@ -10814,6 +11442,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_my_vendor_commerce_product: {
+        Args: {
+          p_description: string
+          p_idempotency_key: string
+          p_name: string
+          p_selling_price_paise: number
+          p_sku: string
+          p_stock_status: string
+        }
+        Returns: Json
+      }
       create_next_campaign_version: {
         Args: { p_campaign_id: string; p_idempotency_key: string }
         Returns: Json
@@ -10841,6 +11480,16 @@ export type Database = {
           p_delivery: Json
           p_idempotency_key: string
           p_lines: Json
+        }
+        Returns: Json
+      }
+      create_public_commerce_cod_order_v2: {
+        Args: {
+          p_customer: Json
+          p_delivery: Json
+          p_idempotency_key: string
+          p_lines: Json
+          p_policy_acceptance: Json
         }
         Returns: Json
       }
@@ -11131,11 +11780,24 @@ export type Database = {
         }
         Returns: Json
       }
+      fail_commerce_automation_job: {
+        Args: { p_claim_token: string; p_error_code: string; p_job_id: string }
+        Returns: Json
+      }
       fail_staff_credential_operation: {
         Args: { p_error?: string; p_operation_id: string }
         Returns: Json
       }
       finalize_commerce_product_media: {
+        Args: {
+          p_idempotency_key: string
+          p_media_id: string
+          p_original_path: string
+          p_public_path: string
+        }
+        Returns: Json
+      }
+      finalize_my_vendor_product_media: {
         Args: {
           p_idempotency_key: string
           p_media_id: string
@@ -11220,6 +11882,7 @@ export type Database = {
         Returns: Json
       }
       get_live_landing_publication: { Args: { p_slug: string }; Returns: Json }
+      get_my_commerce_vendor: { Args: never; Returns: Json }
       get_project_design_high_level_status: {
         Args: { p_project_id: string }
         Returns: Json
@@ -12107,6 +12770,10 @@ export type Database = {
         }
         Returns: Json
       }
+      replay_commerce_automation_event: {
+        Args: { p_event_id: string }
+        Returns: Json
+      }
       request_attendance_correction: {
         Args: { p_attendance_date: string; p_note: string }
         Returns: Json
@@ -12298,8 +12965,22 @@ export type Database = {
         Args: { p_run_id: string }
         Returns: Json
       }
+      retry_commerce_automation_job: {
+        Args: { p_job_id: string }
+        Returns: Json
+      }
       return_attendance_for_correction: {
         Args: { p_attendance_date: string; p_note: string; p_staff_id: string }
+        Returns: Json
+      }
+      review_vendor_commerce_product: {
+        Args: {
+          p_decision: string
+          p_expected_lock_version: number
+          p_idempotency_key: string
+          p_note: string
+          p_product_id: string
+        }
         Returns: Json
       }
       revise_sales_target: {
@@ -12459,6 +13140,18 @@ export type Database = {
           p_query: string
           p_sort: string
         }
+        Returns: Json
+      }
+      set_commerce_automation_channel_enabled: {
+        Args: { p_channel_code: string; p_enabled: boolean }
+        Returns: Json
+      }
+      set_commerce_automation_rule_enabled: {
+        Args: { p_enabled: boolean; p_rule_id: string }
+        Returns: Json
+      }
+      set_commerce_automation_runtime_enabled: {
+        Args: { p_enabled: boolean }
         Returns: Json
       }
       set_commerce_category_status: {
@@ -12872,6 +13565,14 @@ export type Database = {
           submission_reference: string
         }[]
       }
+      submit_my_vendor_commerce_product: {
+        Args: {
+          p_expected_lock_version: number
+          p_idempotency_key: string
+          p_product_id: string
+        }
+        Returns: Json
+      }
       sync_staff_access_states: {
         Args: { p_staff_id?: string }
         Returns: number
@@ -13034,6 +13735,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_commerce_automation_channel: {
+        Args: {
+          p_channel_code: string
+          p_config: Json
+          p_default_locale: string
+          p_test_mode: boolean
+        }
+        Returns: Json
+      }
       update_commerce_product: {
         Args: {
           p_category_id: string
@@ -13157,6 +13867,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_my_vendor_commerce_product: {
+        Args: {
+          p_description: string
+          p_expected_lock_version: number
+          p_idempotency_key: string
+          p_name: string
+          p_product_id: string
+          p_selling_price_paise: number
+          p_sku: string
+          p_stock_status: string
+        }
+        Returns: Json
+      }
       update_quotation_draft: {
         Args: {
           p_clear_tax_profile?: boolean
@@ -13201,6 +13924,25 @@ export type Database = {
           p_spend_minor: number
           p_window_end: string
           p_window_start: string
+        }
+        Returns: Json
+      }
+      upsert_commerce_automation_rule: {
+        Args: {
+          p_action_kind: string
+          p_audience: string
+          p_channel_code: string
+          p_code: string
+          p_config: Json
+          p_delay_seconds: number
+          p_description: string
+          p_event_code: string
+          p_max_attempts: number
+          p_name: string
+          p_retry_base_seconds: number
+          p_rule_id: string
+          p_task_code: string
+          p_template_code: string
         }
         Returns: Json
       }

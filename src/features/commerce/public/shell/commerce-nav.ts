@@ -69,4 +69,10 @@ export const COMMERCE_FOOTER_BRAND_LINKS = [
   { label: "Free design consultation", href: "/#consultation" },
 ] as const;
 
-export const COMMERCE_FOOTER_LEGAL_LINKS = PUBLIC_FOOTER_LEGAL;
+export const COMMERCE_FOOTER_LEGAL_LINKS = [
+  ...PUBLIC_FOOTER_LEGAL,
+  { label: "Shipping & Delivery", href: "/shipping-delivery" },
+  { label: "Cancellation", href: "/cancellation" },
+  { label: "Returns & Refunds", href: "/returns-refunds" },
+  { label: "Product Warranty", href: "/product-warranty" },
+] as const;

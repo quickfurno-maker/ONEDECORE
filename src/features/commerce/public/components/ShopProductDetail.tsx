@@ -1,10 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatInrFromPaise } from "@/features/crm/contracts/sales-target-contracts";
 import { COMMERCE_OPTION_KEYS } from "../../domain/option-values.ts";
 import { buildCommercePublicUrl } from "../public-url.ts";
+import { COMMERCE_POLICY_PATHS } from "../commerce-policy.ts";
 import type { PublicCommerceProductDetail, PublicCommerceVariant } from "../public-types.ts";
 import { ShopPincodeChecker } from "./ShopPincodeChecker.tsx";
 import { ShopPurchasePanel } from "./ShopPurchasePanel.tsx";
@@ -189,6 +191,12 @@ export function ShopProductDetail({ product }: { readonly product: PublicCommerc
         <section className="odc-pdp__section odc-pdp__pin">
           <h2>Delivery</h2>
           <ShopPincodeChecker />
+          <p className="od-shop-note">
+            Review our <Link href={COMMERCE_POLICY_PATHS.shippingDelivery}>Shipping & Delivery</Link>,{" "}
+            <Link href={COMMERCE_POLICY_PATHS.cancellation}>Cancellation</Link>,{" "}
+            <Link href={COMMERCE_POLICY_PATHS.returnsRefunds}>Returns & Refunds</Link> and{" "}
+            <Link href={COMMERCE_POLICY_PATHS.productWarranty}>Product Warranty</Link> policies before ordering.
+          </p>
         </section>
       </div>
 

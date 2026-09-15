@@ -156,7 +156,7 @@ select ok(
 -- The boundary that matters is therefore not the schema. It is which privileged
 -- routines stay closed, which is what follows.
 
--- The service-role-only surface: 55 public definer functions anon and
+-- The service-role-only surface: 58 public definer functions anon and
 -- authenticated must never reach - campaign run operations, WhatsApp ingest and
 -- dispatch, WM-2 template provider truth and template dispatch, WM-3 inbound opt-out, WM-4 campaign worker,
 -- WM-5 click and inbound evidence, WM-6 automation worker, Flow provider truth and referral capture,
@@ -178,12 +178,14 @@ select set_eq(
     'bind_campaign_run_operation(uuid,text,text,text,text)',
     'bind_whatsapp_send_intent_dispatch(uuid,text,timestamp with time zone)',
     'claim_campaign_run_operation(text,integer)',
+    'claim_commerce_automation_job(text,integer)',
     'claim_whatsapp_automation_enrollments(text,integer)',
     'claim_whatsapp_campaign_dispatch_jobs(text,integer)',
     'claim_whatsapp_campaign_test_sends(text,integer)',
     'claim_whatsapp_send_intent_for_dispatch(uuid,text,text)',
     'claim_whatsapp_template_send_intent(uuid,text,text)',
     'complete_campaign_run_operation(uuid,text,jsonb)',
+    'complete_commerce_automation_job(uuid,uuid)',
     'complete_whatsapp_automation_dispatch_failure(uuid,uuid,text,text,jsonb)',
     'complete_whatsapp_automation_dispatch_success(uuid,uuid,text,timestamp with time zone,jsonb)',
     'complete_whatsapp_campaign_dispatch_failure(uuid,uuid,text,text,jsonb)',
@@ -192,12 +194,14 @@ select set_eq(
     'complete_whatsapp_template_send_intent(uuid,text,text,timestamp with time zone,text,text,integer,jsonb)',
     'consume_commerce_public_rate_limit(text,text,text)',
     'create_public_commerce_cod_order(jsonb,jsonb,jsonb,uuid)',
+    'create_public_commerce_cod_order_v2(jsonb,jsonb,jsonb,jsonb,uuid)',
     'enqueue_campaign_conversion_feedback(uuid)',
     'enqueue_campaign_metrics_sync(uuid,date)',
     'enqueue_pending_attributable_campaign_conversion_feedback()',
     'enroll_whatsapp_automation_triggers(integer)',
     'ensure_whatsapp_business_account(text)',
     'fail_campaign_run_operation(uuid,text,boolean)',
+    'fail_commerce_automation_job(uuid,uuid,text)',
     'get_campaign_run_operation_for_reconcile(uuid)',
     'get_live_landing_publication(text)',
     'get_public_commerce_order_tracking_snapshot(text)',

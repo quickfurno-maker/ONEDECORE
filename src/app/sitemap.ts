@@ -82,6 +82,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 0.85,
     });
+    for (const path of [
+      "shipping-delivery",
+      "cancellation",
+      "returns-refunds",
+      "product-warranty",
+    ] as const) {
+      routes.push({
+        url: absoluteUrl(path),
+        lastModified: new Date(),
+        changeFrequency: "yearly",
+        priority: 0.35,
+      });
+    }
   }
 
   for (const entry of projectEntries) {

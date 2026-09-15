@@ -1,7 +1,7 @@
 -- ONEDECORE Phase 9D-B commerce catalogue / inventory foundation pgTAP
 
 begin;
-select plan(84);
+select plan(85);
 
 select has_table('public', 'commerce_categories', 'commerce_categories exists');
 select has_table('public', 'commerce_products', 'commerce_products exists');
@@ -44,8 +44,8 @@ select is(
    join public.roles r on r.id = rp.role_id
    join public.permissions p on p.id = rp.permission_id
    where r.code = 'super_admin' and p.code like 'commerce.%'),
-  6,
-  'super_admin has all six commerce permissions'
+  7,
+  'super_admin has the six commerce foundation permissions plus commerce.automation.manage'
 );
 
 select is(
@@ -65,10 +65,20 @@ select is(
    from public.role_permissions rp
    join public.roles r on r.id = rp.role_id
    join public.permissions p on p.id = rp.permission_id
-   where r.code not in ('super_admin','sales_manager')
+   where r.code not in ('super_admin','sales_manager','commerce_vendor')
      and p.code like 'commerce.%'),
   0,
-  'all other roles have no commerce permissions'
+  'all unrelated roles have no commerce permissions'
+);
+
+select is(
+  (select array_agg(p.code order by p.code)
+   from public.role_permissions rp
+   join public.roles r on r.id = rp.role_id
+   join public.permissions p on p.id = rp.permission_id
+   where r.code = 'commerce_vendor' and p.code like 'commerce.%'),
+  array['commerce.vendor.access']::text[],
+  'commerce_vendor has only the isolated vendor portal permission'
 );
 
 select ok(

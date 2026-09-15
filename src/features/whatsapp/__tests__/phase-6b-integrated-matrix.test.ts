@@ -97,7 +97,11 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 79, "Migration count must be exactly 79 after WM-2, WM-3, WM-4, the WM runtime hardening, WM-5 and WM-6");
+    assert.equal(files.length, 83, "Migration count must be exactly 83 after WM-6 plus the reviewed commerce checkout, vendor and automation closeout sequence");
+    assert.ok(
+      files.includes("20260919120000_commerce_checkout_policy_acceptance.sql"),
+      "commerce checkout policy acceptance migration is present"
+    );
 
     // Workforce V1 attendance lifecycle. Still no payment M38.
     const workforce = files.filter((f) => f.startsWith("20260902160000"));
@@ -272,8 +276,17 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
         "20260917100000_whatsapp_analytics_attribution.sql",
         // WM-6: governed automations, official Flows, CTWA referral evidence.
         "20260918100000_whatsapp_automations_flows_referrals.sql",
+        // Commerce launch closeout: immutable customer policy-version acceptance
+        // for COD checkout only. Adds no online payment/provider surface.
+        "20260919120000_commerce_checkout_policy_acceptance.sql",
+        // Commerce vendor submission portal: isolated vendor-owned drafts.
+        "20260920120000_commerce_vendor_submission_portal.sql",
+        // Commerce-owned durable automation queue; no external provider dependency.
+        "20260920130000_commerce_automation_control_plane.sql",
+        // Admin automation controls plus a provisioned-but-disabled WhatsApp adapter bay.
+        "20260920133000_commerce_automation_admin_control.sql",
       ],
-      "Only timeline v2, notes privilege repair, CRM 2A-1, CRM 2A-2, CRM 2A-3, CRM 2A-6 My Day, CRM 2A-7, CRM 2C cadences, CRM 2D commercial read models, the lead_notes INSERT privilege redrift repair, CRM 2E management analytics, the WhatsApp lead-link repair, and the Workforce V1 attendance lifecycle may follow 9D-D1 COD order foundation"
+      "Only the reviewed forward-only migrations, including COD policy acceptance, may follow the 9D-D1 COD order foundation"
     );
     assert.equal(
       files.includes("20260825140000_commerce_online_payment_adapter_foundation.sql"),

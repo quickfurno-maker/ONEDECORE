@@ -39,13 +39,15 @@ export async function createPublicCommerceCodOrder(input: {
   lines: QuoteLines;
   customer: Record<string, unknown>;
   delivery: Record<string, unknown>;
+  policyAcceptance: Record<string, unknown>;
   idempotencyKey: string;
 }): Promise<CommerceCodOrderReceipt> {
   const admin = createAdminClient();
-  const { data, error } = await admin.rpc("create_public_commerce_cod_order", {
+  const { data, error } = await admin.rpc("create_public_commerce_cod_order_v2", {
     p_lines: input.lines as unknown as Json,
     p_customer: input.customer as Json,
     p_delivery: input.delivery as Json,
+    p_policy_acceptance: input.policyAcceptance as Json,
     p_idempotency_key: input.idempotencyKey,
   });
   if (error) throw normalizeCommerceOrderError(error);
