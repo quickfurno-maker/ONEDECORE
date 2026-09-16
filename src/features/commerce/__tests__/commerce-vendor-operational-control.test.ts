@@ -69,6 +69,15 @@ describe("Commerce vendor operational control", () => {
     assert.match(migration, /COMMERCE_ORDER_UNAVAILABLE/);
   });
 
+  test("vendor login authorization is isolated from staff profile activation", () => {
+    const migration = read("supabase/migrations/20260920143000_commerce_vendor_login_auth_boundary.sql");
+    assert.match(migration, /r\.code = 'commerce_vendor'/);
+    assert.match(migration, /p\.code = 'commerce\.vendor\.access'/);
+    assert.match(migration, /v\.status = 'active'/);
+    assert.doesNotMatch(migration, /private\.has_permission\('commerce\.vendor\.access'\)/);
+    const staffAuth = read("supabase/migrations/20260903160000_staff_phone_login_credentials.sql");
+    assert.match(staffAuth, /prof\.status = 'active'/);
+  });
   test("admin review stays separate from publication", () => {
     const review = read("src/features/commerce/vendor/components/VendorReviewPanel.tsx");
     const adminPage = read("src/app/admin/commerce/vendor-review/page.tsx");

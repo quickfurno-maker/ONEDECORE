@@ -97,7 +97,7 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 84, "Migration count must be exactly 84 after WM-6 plus the reviewed commerce checkout, vendor, automation and operational closeout sequence");
+    assert.equal(files.length, 85, "Migration count must be exactly 85 after WM-6 plus the reviewed commerce checkout, vendor, automation, operational closeout and vendor-login authorization repair sequence");
     assert.ok(
       files.includes("20260919120000_commerce_checkout_policy_acceptance.sql"),
       "commerce checkout policy acceptance migration is present"
@@ -287,6 +287,8 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
         "20260920133000_commerce_automation_admin_control.sql",
         // Vendor operational closeout: admin-owned accounts plus vendor-owned stock/sales state.
         "20260920140000_commerce_vendor_operational_controls.sql",
+        // Vendor login authorization repair: external vendor identity no longer depends on staff profile activation.
+        "20260920143000_commerce_vendor_login_auth_boundary.sql",
       ],
       "Only the reviewed forward-only migrations, including COD policy acceptance, may follow the 9D-D1 COD order foundation"
     );
