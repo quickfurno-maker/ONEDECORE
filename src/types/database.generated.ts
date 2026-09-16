@@ -13166,7 +13166,11 @@ export type Database = {
         Returns: Json
       }
       set_commerce_vendor_status: {
-        Args: { p_idempotency_key: string; p_status: string; p_vendor_id: string }
+        Args: {
+          p_idempotency_key: string
+          p_status: string
+          p_vendor_id: string
+        }
         Returns: Json
       }
       set_current_attendance_policy: {
@@ -13248,7 +13252,11 @@ export type Database = {
         }
       }
       set_my_vendor_inventory_quantity: {
-        Args: { p_idempotency_key: string; p_stock_on_hand: number; p_variant_id: string }
+        Args: {
+          p_idempotency_key: string
+          p_stock_on_hand: number
+          p_variant_id: string
+        }
         Returns: Json
       }
       set_my_vendor_product_sales_state: {
