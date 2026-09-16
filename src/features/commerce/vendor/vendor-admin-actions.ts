@@ -9,6 +9,21 @@ function text(formData: FormData, name: string): string {
   return String(formData.get(name) ?? "").trim();
 }
 
+function secret(formData: FormData, name: string): string {
+  return String(formData.get(name) ?? "");
+}
+
+function requireConfirmedPassword(password: string, confirmation: string): void {
+  if (
+    password.length < 12 ||
+    password.length > 128 ||
+    password !== confirmation ||
+    password !== password.trim()
+  ) {
+    throw new Error("COMMERCE_VALIDATION");
+  }
+}
+
 function key(): string {
   return crypto.randomUUID();
 }
@@ -33,8 +48,10 @@ export async function createCommerceVendorAccountAction(
     const supabase = await requireCatalogAuthority();
     const displayName = text(formData, "displayName");
     const email = text(formData, "email").toLowerCase();
-    const password = text(formData, "password");
-    if (displayName.length < 2 || !/^\S+@\S+\.\S+$/.test(email) || password.length < 12 || password.length > 128) {
+    const password = secret(formData, "password");
+    const passwordConfirmation = secret(formData, "passwordConfirmation");
+    requireConfirmedPassword(password, passwordConfirmation);
+    if (displayName.length < 2 || !/^\S+@\S+\.\S+$/.test(email)) {
       throw new Error("COMMERCE_VALIDATION");
     }
 
@@ -95,8 +112,10 @@ export async function resetCommerceVendorPasswordAction(formData: FormData): Pro
   try {
     const supabase = await requireCatalogAuthority();
     const vendorId = text(formData, "vendorId");
-    const password = text(formData, "password");
-    if (!vendorId || password.length < 12 || password.length > 128) throw new Error("COMMERCE_VALIDATION");
+    const password = secret(formData, "password");
+    const passwordConfirmation = secret(formData, "passwordConfirmation");
+    requireConfirmedPassword(password, passwordConfirmation);
+    if (!vendorId) throw new Error("COMMERCE_VALIDATION");
 
     const { data: vendor, error } = await supabase
       .from("commerce_vendors")
