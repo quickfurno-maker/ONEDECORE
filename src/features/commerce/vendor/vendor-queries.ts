@@ -49,6 +49,7 @@ export interface VendorProductSummary extends VendorProductRow {
   readonly reservedQty: number;
   readonly availableQty: number;
   readonly imageCount: number;
+  readonly primaryImagePath: string | null;
 }
 
 const productSelect = [
@@ -113,6 +114,7 @@ export async function listMyVendorProducts(): Promise<readonly VendorProductSumm
       reservedQty: stock?.reserved_qty ?? 0,
       availableQty: stock?.available_qty ?? 0,
       imageCount: media.filter((item) => item.product_id === row.id).length,
+      primaryImagePath: media.find((item) => item.product_id === row.id && item.is_primary)?.public_path ?? media.find((item) => item.product_id === row.id)?.public_path ?? null,
     };
   });
 }

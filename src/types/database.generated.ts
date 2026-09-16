@@ -12037,6 +12037,7 @@ export type Database = {
         Returns: Json
       }
       list_project_high_level_status: { Args: never; Returns: Json }
+      list_my_vendor_commerce_orders: { Args: { p_limit?: number }; Returns: Json }
       list_public_commerce_categories: { Args: never; Returns: Json }
       list_public_commerce_sitemap: { Args: never; Returns: Json }
       list_salary_statements: {
