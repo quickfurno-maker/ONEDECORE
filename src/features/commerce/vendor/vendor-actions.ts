@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { commerceErrorFromUnknown, type CommerceActionResult } from "../server/commerce-errors";
+import { runVendorProductMediaUpload } from "./vendor-media";
 
 function text(formData: FormData, name: string): string {
   return String(formData.get(name) ?? "").trim();
@@ -102,6 +103,7 @@ export async function updateVendorProductAction(formData: FormData): Promise<Com
     return { success: false, message: err.message, code: err.code };
   }
 }
+
 export async function submitVendorProductAction(formData: FormData): Promise<CommerceActionResult> {
   try {
     const productId = text(formData, "productId");
@@ -135,6 +137,59 @@ export async function archiveVendorProductMediaAction(formData: FormData): Promi
     if (error) throw error;
     refreshVendor(productId);
     return { success: true, message: "Image removed." };
+  } catch (error) {
+    const err = commerceErrorFromUnknown(error);
+    return { success: false, message: err.message, code: err.code };
+  }
+}
+
+export async function uploadVendorProductMediaAction(
+  formData: FormData
+): Promise<CommerceActionResult<{ mediaId?: string }>> {
+  return runVendorProductMediaUpload(formData);
+}
+
+export async function setVendorProductSalesStateAction(formData: FormData): Promise<CommerceActionResult> {
+  try {
+    const productId = text(formData, "productId");
+    const enabled = text(formData, "enabled") === "true";
+    const stockStatus = text(formData, "stockStatus");
+    if (!productId || !["in_stock", "made_to_order", "out_of_stock"].includes(stockStatus)) {
+      throw new Error("COMMERCE_VALIDATION");
+    }
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("set_my_vendor_product_sales_state" as never, {
+      p_product_id: productId,
+      p_enabled: enabled,
+      p_stock_status: stockStatus,
+      p_idempotency_key: newKey(),
+    } as never);
+    if (error) throw error;
+    refreshVendor(productId);
+    return { success: true, message: enabled ? "Product sales enabled." : "Product sales paused." };
+  } catch (error) {
+    const err = commerceErrorFromUnknown(error);
+    return { success: false, message: err.message, code: err.code };
+  }
+}
+
+export async function setVendorInventoryQuantityAction(formData: FormData): Promise<CommerceActionResult> {
+  try {
+    const productId = text(formData, "productId");
+    const variantId = text(formData, "variantId");
+    const stockOnHand = Number.parseInt(text(formData, "stockOnHand"), 10);
+    if (!productId || !variantId || !Number.isInteger(stockOnHand) || stockOnHand < 0 || stockOnHand > 1000000) {
+      throw new Error("COMMERCE_VALIDATION");
+    }
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("set_my_vendor_inventory_quantity" as never, {
+      p_variant_id: variantId,
+      p_stock_on_hand: stockOnHand,
+      p_idempotency_key: newKey(),
+    } as never);
+    if (error) throw error;
+    refreshVendor(productId);
+    return { success: true, message: "Stock quantity updated." };
   } catch (error) {
     const err = commerceErrorFromUnknown(error);
     return { success: false, message: err.message, code: err.code };

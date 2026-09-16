@@ -18,6 +18,7 @@
     "src/features/commerce/__tests__/commerce-dashboard-ui.test.ts",
     "src/features/commerce/__tests__/ecommerce-launch-closeout.test.ts",
     "src/features/commerce/__tests__/commerce-automation-control-center.test.ts",
+    "src/features/commerce/__tests__/commerce-vendor-operational-control.test.ts",
     "src/features/commerce/__tests__/phase-10-cod-production-readiness.test.ts",
     "src/features/commerce/__tests__/phase-9d-b-catalogue-inventory.test.ts",
     "src/features/commerce/__tests__/phase-9d-c1-public-storefront.test.ts",

@@ -2302,6 +2302,7 @@ export type Database = {
           updated_at: string
           updated_by: string | null
           vendor_id: string | null
+          vendor_sales_enabled: boolean
           vendor_stock_status: string | null
           vendor_submission_status: string | null
         }
@@ -2334,6 +2335,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           vendor_id?: string | null
+          vendor_sales_enabled?: boolean
           vendor_stock_status?: string | null
           vendor_submission_status?: string | null
         }
@@ -2366,6 +2368,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           vendor_id?: string | null
+          vendor_sales_enabled?: boolean
           vendor_stock_status?: string | null
           vendor_submission_status?: string | null
         }
@@ -13162,6 +13165,14 @@ export type Database = {
         Args: { p_id: string; p_idempotency_key: string; p_status: string }
         Returns: Json
       }
+      set_commerce_vendor_status: {
+        Args: {
+          p_idempotency_key: string
+          p_status: string
+          p_vendor_id: string
+        }
+        Returns: Json
+      }
       set_current_attendance_policy: {
         Args: { p_policy_id: string }
         Returns: Json
@@ -13239,6 +13250,23 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_my_vendor_inventory_quantity: {
+        Args: {
+          p_idempotency_key: string
+          p_stock_on_hand: number
+          p_variant_id: string
+        }
+        Returns: Json
+      }
+      set_my_vendor_product_sales_state: {
+        Args: {
+          p_enabled: boolean
+          p_idempotency_key: string
+          p_product_id: string
+          p_stock_status: string
+        }
+        Returns: Json
       }
       set_portfolio_library_publication: {
         Args: { requested_media_ids: string[]; requested_published: boolean }
