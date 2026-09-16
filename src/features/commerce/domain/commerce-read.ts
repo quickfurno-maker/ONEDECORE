@@ -83,10 +83,11 @@ export function assembleCommerceSettings<TRate, TTax, TShip, TPin>(results: {
 }
 
 export function countProductsByCategory(
-  products: readonly { readonly category_id: string }[]
+  products: readonly { readonly category_id: string | null }[]
 ): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const product of products) {
+    if (!product.category_id) continue;
     counts[product.category_id] = (counts[product.category_id] ?? 0) + 1;
   }
   return counts;

@@ -35,7 +35,7 @@ export interface DashboardProductBase {
   readonly slug: string;
   readonly status: string;
   readonly featured: boolean;
-  readonly category_id: string;
+  readonly category_id: string | null;
   readonly updated_at: string;
 }
 
@@ -185,7 +185,8 @@ function availableFor(inventory: DashboardInventory | undefined): number {
   return inventory.stock_on_hand - inventory.reserved_qty;
 }
 
-function rootIdFor(categoryId: string, byId: Map<string, DashboardCategory>): string {
+function rootIdFor(categoryId: string | null, byId: Map<string, DashboardCategory>): string | null {
+  if (!categoryId) return null;
   const row = byId.get(categoryId);
   if (!row) return categoryId;
   if (!row.parent_category_id) return row.id;
@@ -262,7 +263,7 @@ export function buildCommerceDashboardSnapshot(input: CommerceDashboardInput): C
   };
 
   for (const product of input.products) {
-    const category = categoryById.get(product.category_id) ?? null;
+    const category = product.category_id ? categoryById.get(product.category_id) ?? null : null;
     const activeTax =
       product.tax_rate_id != null &&
       input.taxRates.some((rate) => rate.id === product.tax_rate_id && rate.is_active);
@@ -367,7 +368,7 @@ export function buildCommerceDashboardSnapshot(input: CommerceDashboardInput): C
       const product = input.products.find((row) => row.id === variant.product_id);
       if (product) {
         const root = rootIdFor(product.category_id, categoryById);
-        const name = categoryById.get(root)?.name ?? "Uncategorised";
+        const name = root ? categoryById.get(root)?.name ?? "Uncategorised" : "Uncategorised";
         byRoot.set(name, (byRoot.get(name) ?? 0) + available);
       }
     }
@@ -385,7 +386,7 @@ export function buildCommerceDashboardSnapshot(input: CommerceDashboardInput): C
   }
 
   const readyPublished = published.filter((product) => {
-    const category = categoryById.get(product.category_id) ?? null;
+    const category = product.category_id ? categoryById.get(product.category_id) ?? null : null;
     const activeTax =
       product.tax_rate_id != null &&
       input.taxRates.some((rate) => rate.id === product.tax_rate_id && rate.is_active);
@@ -458,7 +459,7 @@ export function buildCommerceDashboardSnapshot(input: CommerceDashboardInput): C
     return {
       id: product.id,
       name: product.name,
-      categoryName: categoryById.get(product.category_id)?.name ?? "Uncategorised",
+      categoryName: product.category_id ? categoryById.get(product.category_id)?.name ?? "Uncategorised" : "Uncategorised",
       startingPricePaise: minPrice,
       stockMode,
       status: product.status,
@@ -475,7 +476,7 @@ export function buildCommerceDashboardSnapshot(input: CommerceDashboardInput): C
           .filter((row) => row.id === root.id || row.parent_category_id === root.id)
           .map((row) => row.id)
       );
-      const inTree = input.products.filter((row) => ids.has(row.category_id));
+      const inTree = input.products.filter((row) => row.category_id !== null && ids.has(row.category_id));
       return {
         id: root.id,
         name: root.name,
@@ -661,7 +662,7 @@ export function buildProductWorkspaceRows(input: {
       product_reference: product.product_reference,
       name: product.name,
       slug: product.slug,
-      categoryName: categoryById.get(product.category_id)?.name ?? "Uncategorised",
+      categoryName: product.category_id ? categoryById.get(product.category_id)?.name ?? "Uncategorised" : "Uncategorised",
       variantCount: variants.length,
       startingPricePaise: minPrice,
       modeLabel,

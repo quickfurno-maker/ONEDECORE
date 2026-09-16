@@ -2,6 +2,10 @@ export type CommerceActionCode =
   | "COMMERCE_UNAUTHORIZED"
   | "COMMERCE_VALIDATION"
   | "COMMERCE_MEDIA_OBJECT_MISSING"
+  | "COMMERCE_VENDOR_USER_EXISTS"
+  | "COMMERCE_VENDOR_SUBMISSION_NOT_READY"
+  | "COMMERCE_VENDOR_CATEGORY_REQUIRED"
+  | "COMMERCE_VENDOR_APPROVAL_REQUIRED"
   | "COMMERCE_NOT_FOUND"
   | "COMMERCE_PUBLISH_NOT_READY"
   | "COMMERCE_INVENTORY_UNDERFLOW"
@@ -24,7 +28,6 @@ export interface CommerceActionResult<T = Record<string, unknown>> {
   readonly code?: CommerceActionCode;
   readonly data?: T;
 }
-
 export function commerceErrorFromUnknown(error: unknown): CommerceActionError {
   if (error instanceof CommerceActionError) return error;
 
@@ -55,6 +58,30 @@ export function commerceErrorFromUnknown(error: unknown): CommerceActionError {
     return new CommerceActionError(
       "COMMERCE_INVENTORY_UNDERFLOW",
       "That adjustment would take stock below reserved quantity."
+    );
+  }
+  if (combined.includes("COMMERCE_VENDOR_USER_EXISTS")) {
+    return new CommerceActionError(
+      "COMMERCE_VENDOR_USER_EXISTS",
+      "That login is already assigned to a commerce vendor."
+    );
+  }
+  if (combined.includes("COMMERCE_VENDOR_SUBMISSION_NOT_READY")) {
+    return new CommerceActionError(
+      "COMMERCE_VENDOR_SUBMISSION_NOT_READY",
+      "Add valid product details, price and at least one image before submitting for review."
+    );
+  }
+  if (combined.includes("COMMERCE_VENDOR_CATEGORY_REQUIRED")) {
+    return new CommerceActionError(
+      "COMMERCE_VENDOR_CATEGORY_REQUIRED",
+      "Assign an active category before approving this vendor product."
+    );
+  }
+  if (combined.includes("COMMERCE_VENDOR_APPROVAL_REQUIRED")) {
+    return new CommerceActionError(
+      "COMMERCE_VENDOR_APPROVAL_REQUIRED",
+      "Vendor products must be approved before they can be published."
     );
   }
   if (combined.includes("COMMERCE_NOT_FOUND")) {

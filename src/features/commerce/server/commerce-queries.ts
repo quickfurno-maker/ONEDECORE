@@ -50,7 +50,7 @@ export interface CommerceProductListItem {
   readonly slug: string;
   readonly status: string;
   readonly featured: boolean;
-  readonly category_id: string;
+  readonly category_id: string | null;
   readonly lock_version: number;
   readonly updated_at: string;
 }
@@ -128,7 +128,7 @@ export interface CommerceProductDetail {
   readonly product: {
     readonly id: string;
     readonly product_reference: string;
-    readonly category_id: string;
+    readonly category_id: string | null;
     readonly name: string;
     readonly slug: string;
     readonly short_description: string | null;
@@ -229,13 +229,17 @@ export async function getCommerceProductDetailForWorkspace(
   if (found.status === "not_found") return null;
   const row = found.row as unknown as CommerceProductDetail["product"];
 
+  const categoryPromise = row.category_id
+    ? fromCommerce(supabase, "commerce_categories")
+        .select(
+          "id, category_reference, name, slug, parent_category_id, short_description, seo_title, seo_description, sort_order, status, shipping_charge_paise_override, cod_allowed_override, free_shipping_eligible_override"
+        )
+        .eq("id", row.category_id)
+        .maybeSingle()
+    : Promise.resolve({ data: null, error: null });
+
   const [categoryRes, variantsRes, mediaRes, specsRes, relatedRes, taxRatesRes, taxSettingsRes] = await Promise.all([
-    fromCommerce(supabase, "commerce_categories")
-      .select(
-        "id, category_reference, name, slug, parent_category_id, short_description, seo_title, seo_description, sort_order, status, shipping_charge_paise_override, cod_allowed_override, free_shipping_eligible_override"
-      )
-      .eq("id", row.category_id)
-      .maybeSingle(),
+    categoryPromise,
     fromCommerce(supabase, "commerce_product_variants")
       .select(
         "id, product_id, sku, option_values, display_name, selling_price_paise, compare_at_price_paise, status, availability_mode, sort_order"

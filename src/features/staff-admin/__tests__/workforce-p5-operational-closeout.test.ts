@@ -126,8 +126,9 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
         "20260920120000_commerce_vendor_submission_portal.sql",
         "20260920130000_commerce_automation_control_plane.sql",
         "20260920133000_commerce_automation_admin_control.sql",
+        "20260920140000_commerce_vendor_operational_controls.sql",
       ],
-      "post-WM-6 migrations are the reviewed commerce checkout, vendor portal and automation closeout sequence"
+      "post-WM-6 migrations are the reviewed commerce checkout, vendor portal, automation and vendor operational closeout sequence"
     );
     assert.ok(
       sorted.includes("20260913120000_portfolio_standalone_room_media_library.sql"),

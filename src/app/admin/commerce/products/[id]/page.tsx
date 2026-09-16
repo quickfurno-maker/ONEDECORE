@@ -16,6 +16,8 @@ import { ProductDetailShell, ProductSection } from "@/features/commerce/componen
 import { VariantSummaryTable } from "@/features/commerce/components/VariantSummaryTable";
 import { ProductMediaGallery } from "@/features/commerce/components/ProductMediaGallery";
 import { CommerceDataUnavailable } from "@/features/commerce/components/CommerceDataUnavailable";
+import { getVendorProductAdminMeta } from "@/features/commerce/vendor/vendor-admin-queries";
+import { VendorReviewPanel } from "@/features/commerce/vendor/components/VendorReviewPanel";
 import { isCommerceReadError } from "@/features/commerce/domain/commerce-read";
 import {
   DEFAULT_LOGIN_PORTAL,
@@ -42,10 +44,16 @@ export default async function AdminCommerceProductDetailPage({ params }: AdminCo
   }
   let detail: Awaited<ReturnType<typeof getCommerceProductDetailForWorkspace>> | undefined;
   let categories: Awaited<ReturnType<typeof listCommerceCategories>> | undefined;
+  let vendorMeta: Awaited<ReturnType<typeof getVendorProductAdminMeta>> | undefined;
   try {
-    const loaded = await Promise.all([getCommerceProductDetailForWorkspace(id), listCommerceCategories()]);
+    const loaded = await Promise.all([
+      getCommerceProductDetailForWorkspace(id),
+      listCommerceCategories(),
+      getVendorProductAdminMeta(id),
+    ]);
     detail = loaded[0];
     categories = loaded[1];
+    vendorMeta = loaded[2];
   } catch (error) {
     if (!isCommerceReadError(error)) {
       throw error;
@@ -69,6 +77,17 @@ export default async function AdminCommerceProductDetailPage({ params }: AdminCo
       />
       <StorefrontDisabledBanner />
       <CommerceAdminLinks />
+      {vendorMeta ? (
+        <VendorReviewPanel
+          productId={detail.product.id}
+          lockVersion={vendorMeta.lockVersion}
+          status={vendorMeta.submissionStatus}
+          vendorName={vendorMeta.vendorName}
+          vendorCode={vendorMeta.vendorCode}
+          reviewNote={vendorMeta.reviewNote}
+          categoryAssigned={detail.category?.status === "active"}
+        />
+      ) : null}
       <ProductDetailShell
         detail={detail}
         railActions={

@@ -97,7 +97,7 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 83, "Migration count must be exactly 83 after WM-6 plus the reviewed commerce checkout, vendor and automation closeout sequence");
+    assert.equal(files.length, 84, "Migration count must be exactly 84 after WM-6 plus the reviewed commerce checkout, vendor, automation and operational closeout sequence");
     assert.ok(
       files.includes("20260919120000_commerce_checkout_policy_acceptance.sql"),
       "commerce checkout policy acceptance migration is present"
@@ -285,6 +285,8 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
         "20260920130000_commerce_automation_control_plane.sql",
         // Admin automation controls plus a provisioned-but-disabled WhatsApp adapter bay.
         "20260920133000_commerce_automation_admin_control.sql",
+        // Vendor operational closeout: admin-owned accounts plus vendor-owned stock/sales state.
+        "20260920140000_commerce_vendor_operational_controls.sql",
       ],
       "Only the reviewed forward-only migrations, including COD policy acceptance, may follow the 9D-D1 COD order foundation"
     );

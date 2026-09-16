@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { updateCommerceProductAction } from "../server/commerce-actions";
 import type { CommerceCategoryRow, CommerceProductDetail, CommerceTaxRateRow } from "../server/commerce-queries";
@@ -15,6 +16,7 @@ interface ProductGeneralFormProps {
 }
 
 export function ProductGeneralForm({ detail, categories, taxRates }: ProductGeneralFormProps) {
+  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const product = detail.product;
 
@@ -34,6 +36,7 @@ export function ProductGeneralForm({ detail, categories, taxRates }: ProductGene
         }
         const result = await updateCommerceProductAction(formData);
         setMessage(result.message);
+        if (result.success) router.refresh();
       }}
     >
       <h2 className="text-sm font-semibold text-neutral-100">General</h2>
@@ -41,7 +44,8 @@ export function ProductGeneralForm({ detail, categories, taxRates }: ProductGene
       <input type="hidden" name="lockVersion" value={product.lock_version} />
       <label className="block text-xs text-neutral-400">
         Category
-        <select name="categoryId" defaultValue={product.category_id} required className={inputClass}>
+        <select name="categoryId" defaultValue={product.category_id ?? ""} required className={inputClass}>
+          <option value="" disabled>Select category</option>
           {categories.map((row) => (
             <option key={row.id} value={row.id}>
               {row.name}
