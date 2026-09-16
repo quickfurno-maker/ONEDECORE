@@ -12032,6 +12032,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      list_my_vendor_commerce_orders: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
       list_pending_closed_won_project_materializations: {
         Args: never
         Returns: Json

@@ -78,6 +78,27 @@ describe("Commerce vendor operational control", () => {
     const staffAuth = read("supabase/migrations/20260903160000_staff_phone_login_credentials.sql");
     assert.match(staffAuth, /prof\.status = 'active'/);
   });
+  test("vendor order feed is ownership-scoped and PII-free at the database boundary", () => {
+    const migration = read("supabase/migrations/20260920150000_commerce_vendor_private_order_read.sql");
+    assert.match(migration, /private\.commerce_require_vendor\(\)/);
+    assert.match(migration, /p\.vendor_id = v_vendor/);
+    assert.match(migration, /i\.quantity/);
+    assert.match(migration, /commerce_order_events/);
+    assert.doesNotMatch(migration, /customer_name|customer_mobile_e164|customer_email|contact_id/);
+    assert.doesNotMatch(migration, /commerce_order_delivery|recipient_name|address_line_1|pincode/);
+    assert.doesNotMatch(migration, /actor_profile_id|e\\.metadata/);
+  });
+
+  test("vendor order UI exposes operational order data but no client identity", () => {
+    const page = read("src/app/vendor/(portal)/orders/page.tsx");
+    const query = read("src/features/commerce/vendor/vendor-orders.ts");
+    const nav = read("src/features/commerce/vendor/components/VendorNav.tsx");
+    assert.match(page, /Order reference|Quantity|Timeline/i);
+    assert.match(nav, /Orders/);
+    assert.match(query, /list_my_vendor_commerce_orders/);
+    assert.doesNotMatch(page + query, /customerName|customerMobile|customerEmail|deliveryAddress|recipientName/);
+  });
+
   test("admin review stays separate from publication", () => {
     const review = read("src/features/commerce/vendor/components/VendorReviewPanel.tsx");
     const adminPage = read("src/app/admin/commerce/vendor-review/page.tsx");

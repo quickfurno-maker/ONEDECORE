@@ -470,3 +470,100 @@
 .od-crm-dark thead {
   background: var(--crm-surface-subtle);
 }
+
+/* ── Vendor portal — warm premium workspace ─────────────────────────────── */
+.od-vendor {
+  --vendor-bg: #f6f2ed;
+  --vendor-surface: #fffdf9;
+  --vendor-surface-soft: #f1ebe4;
+  --vendor-surface-muted: #ebe3da;
+  --vendor-text: #202521;
+  --vendor-text-2: #4d5650;
+  --vendor-muted: #788078;
+  --vendor-border: #e6ddd2;
+  --vendor-border-strong: #d8ccbe;
+  --vendor-green: #456b50;
+  --vendor-green-hover: #375a42;
+  --vendor-green-soft: #e9f1e9;
+  --vendor-warm: #b56f3c;
+  --vendor-warm-soft: #f7e9dc;
+  --vendor-success: #4f865b;
+  --vendor-warning: #c78b36;
+  --vendor-danger: #bd655d;
+  --vendor-shadow: 0 16px 40px rgba(70, 54, 39, 0.06);
+  --vendor-shadow-sm: 0 8px 22px rgba(70, 54, 39, 0.05);
+
+  --od-bg: var(--vendor-bg);
+  --od-sidebar: var(--vendor-surface);
+  --od-surface: var(--vendor-surface);
+  --od-elevated: var(--vendor-surface-soft);
+  --od-hover: #f2ece5;
+  --od-border: var(--vendor-border);
+  --od-border-strong: var(--vendor-border-strong);
+  --od-text: var(--vendor-text);
+  --od-text-2: var(--vendor-text-2);
+  --od-muted: var(--vendor-muted);
+  --od-gold: var(--vendor-green);
+  --od-gold-hover: var(--vendor-green-hover);
+  --od-positive: var(--vendor-success);
+  --od-warning: var(--vendor-warning);
+  --od-danger: var(--vendor-danger);
+
+  min-height: 100vh;
+  background: var(--vendor-bg);
+  color: var(--vendor-text);
+}
+
+.od-vendor .vendor-panel {
+  border: 1px solid var(--vendor-border);
+  background: rgba(255, 253, 249, 0.96);
+  box-shadow: var(--vendor-shadow-sm);
+  border-radius: 18px;
+}
+
+.od-vendor .vendor-panel-flat {
+  border: 1px solid var(--vendor-border);
+  background: var(--vendor-surface);
+  border-radius: 16px;
+}
+
+.od-vendor .vendor-primary-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 12px;
+  background: var(--vendor-green);
+  color: #fff;
+  padding: 0.65rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+  transition: 160ms ease;
+}
+
+.od-vendor .vendor-primary-button:hover {
+  background: var(--vendor-green-hover);
+  transform: translateY(-1px);
+}
+
+.od-vendor .vendor-secondary-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid var(--vendor-border-strong);
+  border-radius: 12px;
+  background: var(--vendor-surface);
+  color: var(--vendor-text);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: 160ms ease;
+}
+
+.od-vendor .vendor-secondary-button:hover {
+  border-color: #cbbbab;
+  background: #fbf7f2;
+}
