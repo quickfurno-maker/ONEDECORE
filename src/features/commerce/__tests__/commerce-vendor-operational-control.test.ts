@@ -46,6 +46,20 @@ describe("Commerce vendor operational control", () => {
     assert.match(actions, /deleteUser/);
   });
 
+  test("admin password UX requires exact confirmation and never silently trims secrets", () => {
+    const actions = read("src/features/commerce/vendor/vendor-admin-actions.ts");
+    const workspace = read("src/features/commerce/vendor/components/VendorAccountsWorkspace.tsx");
+    assert.match(actions, /secret\(formData, "password"\)/);
+    assert.match(actions, /secret\(formData, "passwordConfirmation"\)/);
+    assert.match(actions, /password !== confirmation/);
+    assert.match(actions, /password !== password\.trim\(\)/);
+    assert.doesNotMatch(actions, /const password = text\(formData, "password"\)/);
+    assert.match(workspace, /name="passwordConfirmation"/);
+    assert.match(workspace, /Show passwords/);
+    assert.match(workspace, /Hide passwords/);
+    assert.match(workspace, /Leading or trailing spaces are not allowed/);
+  });
+
   test("vendor stock workspace owns quantity and sales availability only", () => {
     const stock = read("src/features/commerce/vendor/components/VendorStockWorkspace.tsx");
     const actions = read("src/features/commerce/vendor/vendor-actions.ts");
