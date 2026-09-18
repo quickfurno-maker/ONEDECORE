@@ -118,13 +118,14 @@ describe("the advertising consent cookie fails closed", () => {
   test("a stale version is unknown, so the question gets asked again", () => {
     /*
      * The version is in the value precisely so the question CAN be re-asked.
-     * If what Meta receives ever changes, this string changes, every stored
-     * decision becomes unknown, and nobody is carried over on a yes they gave
-     * to a different description.
+     * If the optional measurement purpose changes, this string changes, every
+     * stored decision becomes unknown, and nobody is carried over on a yes they
+     * gave to a different description.
      */
-    assert.equal(AD_CONSENT_VERSION, "v1");
+    assert.equal(AD_CONSENT_VERSION, "v2");
     assert.equal(parseAdConsent("v0:granted"), "unknown");
-    assert.equal(parseAdConsent("v2:granted"), "unknown");
+    assert.equal(parseAdConsent("v1:granted"), "unknown");
+    assert.equal(parseAdConsent("v3:granted"), "unknown");
   });
 
   test("the cookie name is matched exactly, not by prefix", () => {
@@ -140,8 +141,8 @@ describe("the advertising consent cookie fails closed", () => {
 
   test("it is first-party, versioned, and carries no personal data", () => {
     assert.equal(AD_CONSENT_COOKIE_NAME, "onedecore_ad_tracking_consent");
-    assert.equal(AD_CONSENT_GRANTED_VALUE, "v1:granted");
-    assert.equal(AD_CONSENT_DENIED_VALUE, "v1:denied");
+    assert.equal(AD_CONSENT_GRANTED_VALUE, "v2:granted");
+    assert.equal(AD_CONSENT_DENIED_VALUE, "v2:denied");
     assert.equal(AD_CONSENT_MAX_AGE_SECONDS, 180 * 24 * 60 * 60);
     const source = read(CONSENT);
     assert.match(source, /Path=\/; Max-Age=\$\{AD_CONSENT_MAX_AGE_SECONDS\}/);
@@ -503,7 +504,7 @@ describe("the choice is offered fairly, on public pages only", () => {
     const grantAt = banner.indexOf('data-od-cookie-action="grant"');
     assert.ok(denyAt > 0 && grantAt > denyAt, "decline is the first tab stop");
     assert.match(banner, /Necessary only/);
-    assert.match(banner, /Allow advertising cookies/);
+    assert.match(banner, /Allow analytics & advertising cookies/);
 
     // Same size and target; only the fill differs.
     const css = read(BANNER_CSS);
@@ -591,13 +592,13 @@ describe("the Privacy Notice describes what was consented to", () => {
   test("there is a cookies and advertising measurement section, and it is public", () => {
     const s = section();
     assert.ok(s, "the advertising-measurement section must exist");
-    assert.equal(s!.title, "Cookies and advertising measurement");
+    assert.equal(s!.title, "Cookies, analytics and advertising measurement");
     assert.notEqual(s!.audience, "draft-only");
   });
 
   test("it states the opt-in, and what happens without it", () => {
     const body = section()!.body.join(" ");
-    assert.match(body, /Allow advertising cookies/);
+    assert.match(body, /Allow analytics & advertising cookies/);
     assert.match(body, /Necessary only/);
     assert.match(body, /no Meta script is loaded, no Meta cookie is set and no event is sent/);
   });
@@ -657,7 +658,7 @@ describe("the Privacy Notice describes what was consented to", () => {
      * purpose is recording who agreed to what would be the worst place to be
      * loose about it.
      */
-    assert.equal(PRIVACY_NOTICE_VERSION, "privacy-notice-v1.1");
+    assert.equal(PRIVACY_NOTICE_VERSION, "privacy-notice-v1.2");
     const approval = PRIVACY_NOTICE_ADVERTISING_AMENDMENT.ownerApproval;
     assert.ok(approval, "the published amendment must carry an owner approval");
     assert.equal(approval.approvedBy, "ONEDECORE owner");
@@ -683,8 +684,8 @@ describe("the Privacy Notice describes what was consented to", () => {
   });
 
   test("the processor register records the consent dependency", () => {
-    const entry = PROCESSOR_REGISTER.find((p) =>
-      p.notes?.some((n) => /Meta Platforms/.test(n))
+    const entry = PROCESSOR_REGISTER.find(
+      (p) => /Meta Platforms/.test(p.provider) || p.notes?.some((n) => /Meta Platforms/.test(n))
     );
     assert.ok(entry, "Meta must appear in the processor register");
     const notes = entry!.notes!.join(" ");

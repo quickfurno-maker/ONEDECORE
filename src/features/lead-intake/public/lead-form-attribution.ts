@@ -3,10 +3,13 @@
  */
 
 import { isSafeSameSitePath } from "../same-site-path.ts";
+import { getCurrentWebsiteAnalyticsSessionId } from "../../website-analytics/client/website-analytics-client.ts";
 
 export interface LeadFormAttribution {
   readonly landingPath: string;
   readonly referrerPath?: string;
+  readonly referrerHost?: string;
+  readonly analyticsSessionId?: string;
   readonly utmSource?: string;
   readonly utmMedium?: string;
   readonly utmCampaign?: string;
@@ -63,6 +66,18 @@ function sameOriginReferrerPath(referrer: string): string | undefined {
   }
 }
 
+function externalReferrerHost(referrer: string): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const ref = new URL(referrer);
+    if (ref.origin === window.location.origin) return undefined;
+    const host = ref.hostname.trim().toLowerCase();
+    return /^[a-z0-9.-]{1,253}$/i.test(host) ? host : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Collect same-site landing path and optional referrer / UTM parameters.
  * Safe to call only in the browser.
@@ -79,12 +94,18 @@ export function collectLeadFormAttribution(
   const referrerPath = documentRef.referrer
     ? sameOriginReferrerPath(documentRef.referrer)
     : undefined;
+  const referrerHost = documentRef.referrer
+    ? externalReferrerHost(documentRef.referrer)
+    : undefined;
+  const analyticsSessionId = getCurrentWebsiteAnalyticsSessionId() ?? undefined;
 
   const utm = readUtmParams(new URLSearchParams(location.search));
 
   return {
     landingPath,
     ...(referrerPath ? { referrerPath } : {}),
+    ...(referrerHost ? { referrerHost } : {}),
+    ...(analyticsSessionId ? { analyticsSessionId } : {}),
     ...utm,
   };
 }

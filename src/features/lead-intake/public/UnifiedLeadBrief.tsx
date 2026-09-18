@@ -89,6 +89,7 @@ import {
 } from "./lead-form-idempotency.ts";
 import { submitLeadIntake } from "./lead-intake-client.ts";
 import { trackMetaLead } from "../../marketing/meta/meta-pixel-events.ts";
+import { trackWebsiteAnalyticsEvent } from "../../website-analytics/client/website-analytics-client.ts";
 import { useLeadConsultation } from "./LeadConsultationHost";
 import { unifiedLeadToRequest } from "./unified-lead-request.ts";
 
@@ -439,6 +440,7 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
        * It runs BEFORE `resetAfterSuccess()` clears the key.
        */
       trackMetaLead(idempotencyKey);
+      void trackWebsiteAnalyticsEvent("lead_submit_success", "lead-submit");
       resetAfterSuccess();
       setSubmissionReference(result.submissionReference);
       setUxState(mapClientResultToUxState(result));

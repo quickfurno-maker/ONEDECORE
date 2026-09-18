@@ -68,6 +68,9 @@ export const resolveOpsNavFlags = cache(async (): Promise<OpsNavFlags> => {
     projects: showProjectsLink,
     whatsapp: showWhatsappLink,
     campaigns: showCampaignsLink,
+    analytics:
+      claims?.isActive === true &&
+      claims.permissions.includes("website.analytics.read"),
     landingLab: showLandingLabLink,
     commerce: showCommerceLink,
     portfolio:

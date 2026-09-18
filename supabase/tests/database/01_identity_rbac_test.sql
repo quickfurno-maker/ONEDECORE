@@ -54,8 +54,8 @@ select results_eq(
 -- 5. Verify seeded system permissions count and is_system flag
 select results_eq(
   'select count(*)::integer from public.permissions where is_system = true',
-  array[110],
-  'Should have exactly 110 seeded system permissions including commerce.vendor.access and commerce.automation.manage'
+  array[111],
+  'Should have exactly 111 seeded system permissions including website.analytics.read, commerce.vendor.access and commerce.automation.manage'
 );
 
 -- 6. Verify user_roles starts empty
@@ -104,8 +104,8 @@ select results_eq(
 -- 10. Verify authorized application tables count
 select results_eq(
   'select count(*)::integer from information_schema.tables where table_schema = ''public'' and table_type = ''BASE TABLE''',
-  array[164],
-  'Public schema must contain exactly 164 authorized application tables including checkout policy evidence, vendor registry, and the seven-table commerce automation control plane'
+  array[168],
+  'Public schema must contain exactly 168 authorized application tables including the four-table website analytics foundation'
 );
 
 -- 11. Phase 2C3 — rls_auto_enable existence and security properties

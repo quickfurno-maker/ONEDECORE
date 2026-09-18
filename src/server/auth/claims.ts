@@ -73,6 +73,10 @@ export async function getClaims(): Promise<VerifiedClaims | null> {
     requested_permission: "crm.activities.read",
   });
 
+  const { data: hasWebsiteAnalyticsRead } = await supabase.rpc("authorize", {
+    requested_permission: "website.analytics.read",
+  });
+
   if (hasManage === true) permissions.push("portfolio.manage");
   if (hasRead === true) permissions.push("portfolio.read");
   if (hasAdminAccess === true) permissions.push("admin.access");
@@ -81,6 +85,7 @@ export async function getClaims(): Promise<VerifiedClaims | null> {
   if (hasSourcesRead === true) permissions.push("sources.read");
   if (hasCrmActivitiesRead === true) permissions.push("crm.activities.read");
   if (hasWebsiteManage === true) permissions.push("website.manage");
+  if (hasWebsiteAnalyticsRead === true) permissions.push("website.analytics.read");
 
   return {
     userId: staff.userId,

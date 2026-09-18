@@ -881,6 +881,8 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
     new Set([
       "landingPath",
       "referrerPath",
+      "referrerHost",
+      "analyticsSessionId",
       "utmSource",
       "utmMedium",
       "utmCampaign",
@@ -906,6 +908,8 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
   if (landingPath) attribution.landingPath = landingPath;
   for (const key of [
     "referrerPath",
+    "referrerHost",
+    "analyticsSessionId",
     "utmSource",
     "utmMedium",
     "utmCampaign",
@@ -927,6 +931,19 @@ export function validateLeadIntakePayload(input: unknown): ValidationResult {
           fields.push(`attribution.${key}`);
         } else {
           attribution[key] = val;
+        }
+      } else if (key === "referrerHost") {
+        const host = val.trim().toLowerCase();
+        if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(host)) {
+          fields.push(`attribution.${key}`);
+        } else {
+          attribution[key] = host;
+        }
+      } else if (key === "analyticsSessionId") {
+        if (!UUID_RE.test(val)) {
+          fields.push(`attribution.${key}`);
+        } else {
+          attribution[key] = val.toLowerCase();
         }
       } else {
         attribution[key] = key === "fbclid" || key === "gclid" ? val.trim() : normaliseWhitespace(val);

@@ -7193,6 +7193,154 @@ export type Database = {
           },
         ]
       }
+      website_analytics_events: {
+        Row: {
+          action_key: string | null
+          created_at: string
+          event_type: string
+          id: string
+          occurred_at: string
+          path: string
+          session_id: string
+        }
+        Insert: {
+          action_key?: string | null
+          created_at?: string
+          event_type: string
+          id: string
+          occurred_at: string
+          path: string
+          session_id: string
+        }
+        Update: {
+          action_key?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          path?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_analytics_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "website_analytics_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_analytics_lead_links: {
+        Row: {
+          lead_id: string
+          linked_at: string
+          session_id: string
+        }
+        Insert: {
+          lead_id: string
+          linked_at?: string
+          session_id: string
+        }
+        Update: {
+          lead_id?: string
+          linked_at?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_analytics_lead_links_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_analytics_lead_links_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "website_analytics_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_analytics_sessions: {
+        Row: {
+          has_google_click: boolean
+          has_meta_click: boolean
+          id: string
+          landing_path: string
+          last_seen_at: string
+          medium: string | null
+          referrer_host: string | null
+          source_key: string
+          started_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_term: string | null
+          visitor_id: string
+        }
+        Insert: {
+          has_google_click?: boolean
+          has_meta_click?: boolean
+          id: string
+          landing_path: string
+          last_seen_at: string
+          medium?: string | null
+          referrer_host?: string | null
+          source_key: string
+          started_at: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_term?: string | null
+          visitor_id: string
+        }
+        Update: {
+          has_google_click?: boolean
+          has_meta_click?: boolean
+          id?: string
+          landing_path?: string
+          last_seen_at?: string
+          medium?: string | null
+          referrer_host?: string | null
+          source_key?: string
+          started_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_term?: string | null
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_analytics_sessions_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "website_analytics_visitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_analytics_visitors: {
+        Row: {
+          consent_version: string
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+        }
+        Insert: {
+          consent_version: string
+          first_seen_at?: string
+          id: string
+          last_seen_at?: string
+        }
+        Update: {
+          consent_version?: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+        }
+        Relationships: []
+      }
       website_homepage_banners: {
         Row: {
           alt_text: string | null
@@ -11914,6 +12062,10 @@ export type Database = {
         Args: { p_staff_id: string }
         Returns: Json
       }
+      get_website_analytics_dashboard: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: Json
+      }
       get_website_homepage_draft: { Args: never; Returns: Json }
       get_whatsapp_analytics_overview: {
         Args: { p_from?: string; p_to?: string }
@@ -12359,6 +12511,28 @@ export type Database = {
       record_staff_first_login: { Args: never; Returns: Json }
       record_staff_invite_auth_success: {
         Args: { p_client_request_id: string; p_staff_id: string }
+        Returns: Json
+      }
+      record_website_analytics_event: {
+        Args: {
+          p_action_key?: string
+          p_consent_version: string
+          p_event_id: string
+          p_event_type: string
+          p_has_google_click?: boolean
+          p_has_meta_click?: boolean
+          p_landing_path?: string
+          p_medium?: string
+          p_occurred_at?: string
+          p_path: string
+          p_referrer_host?: string
+          p_session_id: string
+          p_source_key?: string
+          p_utm_campaign?: string
+          p_utm_content?: string
+          p_utm_term?: string
+          p_visitor_id: string
+        }
         Returns: Json
       }
       record_whatsapp_click: {

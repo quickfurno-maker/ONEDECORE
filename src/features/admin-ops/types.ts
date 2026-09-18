@@ -4,6 +4,7 @@ export interface OpsNavFlags {
   readonly projects: boolean;
   readonly whatsapp: boolean;
   readonly campaigns: boolean;
+  readonly analytics: boolean;
   readonly landingLab: boolean;
   readonly commerce: boolean;
   /**

@@ -156,8 +156,8 @@ select ok(
 -- The boundary that matters is therefore not the schema. It is which privileged
 -- routines stay closed, which is what follows.
 
--- The service-role-only surface: 58 public definer functions anon and
--- authenticated must never reach - campaign run operations, WhatsApp ingest and
+-- The service-role-only surface: 59 public definer functions anon and
+-- authenticated must never reach - website analytics ingest, campaign run operations, WhatsApp ingest and
 -- dispatch, WM-2 template provider truth and template dispatch, WM-3 inbound opt-out, WM-4 campaign worker,
 -- WM-5 click and inbound evidence, WM-6 automation worker, Flow provider truth and referral capture,
 -- COD order creation, landing publication verification, lead intake,
@@ -219,6 +219,7 @@ select set_eq(
     'reconcile_whatsapp_dispatch_attempt(uuid,text)',
     'reconcile_whatsapp_template_dispatch_attempt(uuid,text)',
     'record_landing_exposure(uuid,uuid,text,text,text)',
+    'record_website_analytics_event(uuid,uuid,uuid,text,text,text,text,timestamp with time zone,text,text,text,text,text,text,text,boolean,boolean)',
     'record_whatsapp_click(text,text)',
     'record_whatsapp_dispatch_attempt_outcome(uuid,text,text,integer,jsonb)',
     'record_whatsapp_flow_provider_outcome(uuid,text,text,text,text,jsonb)',

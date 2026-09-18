@@ -110,6 +110,9 @@ function buildGroups(flags: OpsNavFlags, hrefs: AdminSidebarProps["hrefs"]): rea
   if (flags.campaigns) {
     marketing.push({ href: hrefs.campaigns, label: "Campaigns", icon: "campaigns" });
   }
+  if (flags.analytics) {
+    marketing.push({ href: "/admin/analytics", label: "Website Analytics", icon: "reports" });
+  }
   if (flags.landingLab) {
     marketing.push({ href: "/admin/landing-pages", label: "Landing Lab", icon: "landing" });
   }

@@ -282,6 +282,10 @@ export interface LeadIntakeRequestBody {
   readonly attribution: {
     readonly landingPath: string;
     readonly referrerPath?: string;
+    /** External referring host only; never a full cross-site URL. */
+    readonly referrerHost?: string;
+    /** Anonymous measured website session, only when analytics consent exists. */
+    readonly analyticsSessionId?: string;
     readonly utmSource?: string;
     readonly utmMedium?: string;
     readonly utmCampaign?: string;

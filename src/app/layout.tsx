@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AdConsentBanner } from "@/features/marketing/meta/AdConsentBanner";
 import { MetaPixel } from "@/features/marketing/meta/MetaPixel";
+import { WebsiteAnalyticsTracker } from "@/features/website-analytics/client/WebsiteAnalyticsTracker";
 import "./globals.css";
 import "@/features/public-site/theme/public-dark-theme.css";
 import "@/features/public-site/chrome/public-site-chrome.css";
@@ -40,6 +41,7 @@ export default function RootLayout({
           that actually protects a visitor — not the environment.
         */}
         <MetaPixel />
+        <WebsiteAnalyticsTracker />
         {/*
           The choice itself, on the same public surfaces and behind the same
           route gate. A page that may never be measured is never asked about
