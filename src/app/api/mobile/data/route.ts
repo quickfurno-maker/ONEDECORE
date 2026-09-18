@@ -206,7 +206,9 @@ export async function POST(request: Request) {
     return errorResponse(403, "Writes are not allowed for that mobile table.");
   }
 
-  // The Supabase builder type changes after every dynamic operation.\n  // eslint-disable-next-line @typescript-eslint/no-explicit-any\n  let query: any;
+  // The Supabase builder type changes after every dynamic operation.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any;
 
   if (payload.action === "select") {
     query = db
