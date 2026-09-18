@@ -46,20 +46,29 @@ test("mobile data bridge is an explicit allowlist, not an arbitrary proxy", () =
 
   for (const rpc of [
     "approve_attendance_day",
+    "approve_leave_request",
     "assign_lead",
     "cancel_lead_follow_up",
+    "complete_lead_activity",
     "complete_lead_follow_up",
     "correct_attendance_day",
+    "create_lead_activity",
     "create_lead_follow_up",
+    "designate_primary_next_action",
     "get_attendance_approval_inbox",
     "get_attendance_monthly_summary",
     "get_crm_lead_commercial_state",
+    "get_crm_my_day",
     "get_project_execution_high_level_status",
-    "has_active_role",
     "list_crm_assignable_executives",
     "list_salary_statements",
     "reject_attendance_day",
+    "reject_leave_request",
+    "reschedule_lead_activity",
     "return_attendance_for_correction",
+    "set_lead_sales_temperature",
+    "transfer_activity_ownership",
+    "transition_lead_status",
   ]) {
     assert.match(route, new RegExp(JSON.stringify(rpc)));
   }
@@ -67,6 +76,11 @@ test("mobile data bridge is an explicit allowlist, not an arbitrary proxy", () =
   assert.match(route, /const INSERT_TABLES = new Set\(\[\s*"lead_notes"/);
   assert.match(route, /payload\.action === "insert"/);
   assert.match(route, /Writes are not allowed for that mobile table/);
+  assert.match(route, /validLeadNoteInsert/);
+  assert.match(route, /MAX_BODY_BYTES/);
+  assert.match(route, /MAX_FILTERS/);
+  assert.match(route, /MAX_RANGE_ROWS/);
+  assert.doesNotMatch(route, /"has_active_role"/);
 });
 
 test("mobile data bridge preserves database enforcement under the caller token", () => {
