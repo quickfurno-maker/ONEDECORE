@@ -8,6 +8,7 @@ import {
   parseWebsiteAnalyticsEvent,
   recordWebsiteAnalyticsEvent,
 } from "@/features/website-analytics/server/ingest";
+import { websiteAnalyticsNoContentResponse } from "@/features/website-analytics/server/analytics-http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export async function POST(request: Request): Promise<Response> {
     return json(403, { ok: false, code: "ORIGIN_DENIED" });
   }
   if (readAdConsentFromHeader(request.headers.get("cookie")) !== "granted") {
-    return json(204, {});
+    return websiteAnalyticsNoContentResponse();
   }
 
   const bounded = await readBoundedRequestBody(request, 8 * 1024);

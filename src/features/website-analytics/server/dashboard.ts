@@ -55,6 +55,11 @@ export interface WebsiteAnalyticsDashboard {
   readonly sources: readonly WebsiteAnalyticsSourceRow[];
   readonly campaigns: readonly WebsiteAnalyticsCampaignRow[];
   readonly pages: readonly WebsiteAnalyticsPageRow[];
+  readonly landingActivity: {
+    readonly exposures: number | null;
+    readonly lastExposureAt: string | null;
+  };
+  readonly lastMeasuredEventAt: string | null;
 }
 
 function asNumber(value: unknown): number {
@@ -123,7 +128,22 @@ function normalize(raw: unknown): WebsiteAnalyticsDashboard | null {
         sessions: asNumber(x.sessions),
       };
     }),
+    landingActivity: {
+      exposures: null,
+      lastExposureAt: null,
+    },
+    lastMeasuredEventAt: null,
   };
+}
+
+function startOfIstDay(date: string): string {
+  return date + "T00:00:00+05:30";
+}
+
+function startOfNextIstDay(date: string): string {
+  const day = new Date(date + "T00:00:00Z");
+  day.setUTCDate(day.getUTCDate() + 1);
+  return day.toISOString().slice(0, 10) + "T00:00:00+05:30";
 }
 
 export async function fetchWebsiteAnalyticsDashboard(
@@ -131,12 +151,46 @@ export async function fetchWebsiteAnalyticsDashboard(
   to: string
 ): Promise<WebsiteAnalyticsDashboard | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_website_analytics_dashboard", {
-    p_from: from,
-    p_to: to,
-  });
-  if (error) return null;
-  return normalize(data);
+  const fromIso = startOfIstDay(from);
+  const untilIso = startOfNextIstDay(to);
+
+  const [dashboardResult, exposureResult, latestEventResult] = await Promise.all([
+    supabase.rpc("get_website_analytics_dashboard", {
+      p_from: from,
+      p_to: to,
+    }),
+    supabase
+      .from("landing_exposures")
+      .select("first_exposed_at", { count: "exact" })
+      .gte("first_exposed_at", fromIso)
+      .lt("first_exposed_at", untilIso)
+      .order("first_exposed_at", { ascending: false })
+      .limit(1),
+    supabase
+      .from("website_analytics_events")
+      .select("occurred_at")
+      .gte("occurred_at", fromIso)
+      .lt("occurred_at", untilIso)
+      .order("occurred_at", { ascending: false })
+      .limit(1),
+  ]);
+
+  if (dashboardResult.error) return null;
+  const normalized = normalize(dashboardResult.data);
+  if (!normalized) return null;
+
+  return {
+    ...normalized,
+    landingActivity: {
+      exposures: exposureResult.error ? null : (exposureResult.count ?? 0),
+      lastExposureAt: exposureResult.error
+        ? null
+        : (exposureResult.data?.[0]?.first_exposed_at ?? null),
+    },
+    lastMeasuredEventAt: latestEventResult.error
+      ? null
+      : (latestEventResult.data?.[0]?.occurred_at ?? null),
+  };
 }
 
 export const WEBSITE_ANALYTICS_SOURCE_LABELS: Readonly<Record<string, string>> = {

@@ -8,6 +8,7 @@ import {
 import {
   parseWebsiteAnalyticsEvent,
 } from "../server/ingest.ts";
+import { websiteAnalyticsNoContentResponse } from "../server/analytics-http.ts";
 import { AD_CONSENT_VERSION } from "../../marketing/meta/ad-consent.ts";
 
 describe("website analytics source resolution", () => {
@@ -91,6 +92,21 @@ describe("website analytics ingestion contract", () => {
     );
   });
 
+  test("no-consent requests return a standards-compliant bodyless 204", async () => {
+    const response = websiteAnalyticsNoContentResponse();
+    assert.equal(response.status, 204);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(response.headers.get("content-type"), null);
+    assert.equal(await response.text(), "");
+
+    const route = readFileSync(
+      join(process.cwd(), "src/app/api/public/analytics/event/route.ts"),
+      "utf8"
+    );
+    assert.match(route, /websiteAnalyticsNoContentResponse\(\)/);
+    assert.doesNotMatch(route, /json\(204/);
+  });
+
   test("root layout mounts one native tracker and the lead success path emits one event", () => {
     const root = process.cwd();
     const layout = readFileSync(join(root, "src/app/layout.tsx"), "utf8");
@@ -113,5 +129,28 @@ describe("website analytics ingestion contract", () => {
     );
     assert.match(helper, /location\.pathname/);
     assert.doesNotMatch(helper, /location\.search|location\.hash/);
+  });
+
+  test("admin analytics separates landing exposures from consented measurement and refreshes live", () => {
+    const dashboard = readFileSync(
+      join(process.cwd(), "src/features/website-analytics/server/dashboard.ts"),
+      "utf8"
+    );
+    const page = readFileSync(
+      join(process.cwd(), "src/app/admin/analytics/page.tsx"),
+      "utf8"
+    );
+    const liveRefresh = readFileSync(
+      join(process.cwd(), "src/features/website-analytics/client/AnalyticsLiveRefresh.tsx"),
+      "utf8"
+    );
+
+    assert.match(dashboard, /\.from\("landing_exposures"\)/);
+    assert.match(dashboard, /count: "exact"/);
+    assert.match(page, /Two measurement layers/);
+    assert.match(page, /Landing exposures/);
+    assert.match(page, /Explicit v2 analytics consent only/);
+    assert.match(liveRefresh, /REFRESH_INTERVAL_MS = 30_000/);
+    assert.match(liveRefresh, /router\.refresh\(\)/);
   });
 });
