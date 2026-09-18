@@ -154,3 +154,45 @@ describe("website analytics ingestion contract", () => {
     assert.match(liveRefresh, /router\.refresh\(\)/);
   });
 });
+
+
+describe("owner mobile website analytics", () => {
+  test("uses the caller bearer token and the shared analytics read model", () => {
+    const route = readFileSync(
+      join(process.cwd(), "src/app/api/mobile/website-analytics/route.ts"),
+      "utf8"
+    );
+    const dashboard = readFileSync(
+      join(process.cwd(), "src/features/website-analytics/server/dashboard.ts"),
+      "utf8"
+    );
+
+    assert.match(route, /readBearerToken\(request\)/);
+    assert.match(route, /createBearerClient\(token\)/);
+    assert.match(route, /db\.auth\.getUser\(\)/);
+    assert.match(route, /fetchWebsiteAnalyticsDashboardForClient/);
+    assert.match(route, /WEBSITE_ANALYTICS_SOURCE_LABELS/);
+    assert.doesNotMatch(route, /service_role|SUPABASE_SERVICE_ROLE_KEY/);
+
+    assert.match(
+      dashboard,
+      /export async function fetchWebsiteAnalyticsDashboardForClient/
+    );
+    assert.match(dashboard, /get_website_analytics_dashboard/);
+    assert.match(dashboard, /\.from\("landing_exposures"\)/);
+    assert.match(dashboard, /\.from\("website_analytics_events"\)/);
+  });
+
+  test("keeps permission and range failures explicit for native callers", () => {
+    const route = readFileSync(
+      join(process.cwd(), "src/app/api/mobile/website-analytics/route.ts"),
+      "utf8"
+    );
+
+    assert.match(route, /error\.code === "42501"/);
+    assert.match(route, /error\.code === "22023"/);
+    assert.match(route, /"forbidden"/);
+    assert.match(route, /"invalid_request"/);
+    assert.match(route, /"unavailable"/);
+  });
+});
