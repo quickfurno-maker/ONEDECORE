@@ -47,6 +47,7 @@ export function crmOverviewNavFlags(
     projects: false,
     whatsapp: false,
     campaigns: false,
+    analytics: false,
     landingLab: false,
     commerce: false,
     // The CRM overview shell offers no Content group.

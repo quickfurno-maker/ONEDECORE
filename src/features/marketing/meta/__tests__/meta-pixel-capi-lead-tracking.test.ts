@@ -63,7 +63,7 @@ const code = (src: string) =>
 
 const TOKEN = "EAAG-fake-token-for-tests-only-not-real-0123456789";
 /** A request that carries an explicit, current advertising-consent grant. */
-const GRANTED_COOKIE = "onedecore_ad_tracking_consent=v1:granted";
+const GRANTED_COOKIE = "onedecore_ad_tracking_consent=v2:granted";
 const PIXEL_ID = "1952479475419612";
 const EVENT_ID = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
 

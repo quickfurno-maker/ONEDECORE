@@ -79,8 +79,9 @@ export function AdConsentBanner() {
           <p className="od-cookie__title">Cookies on ONEDECORE</p>
           <p className="od-cookie__text">
             Necessary cookies keep the site working. With your permission we
-            also use Meta advertising measurement, which tells us which ads led
-            to a real enquiry. It is optional, and the site works either way.{" "}
+            also use first-party website analytics and Meta advertising measurement
+            to understand visits, campaign sources and which ads led to a real enquiry.
+            It is optional, and the site works either way.{" "}
             <Link href="/privacy#advertising-measurement" className="od-cookie__link">
               How we use cookies
             </Link>
@@ -108,7 +109,7 @@ export function AdConsentBanner() {
             onClick={() => decide("granted")}
             data-od-cookie-action="grant"
           >
-            Allow advertising cookies
+            Allow analytics & advertising cookies
           </button>
         </div>
       </section>
@@ -139,7 +140,7 @@ function AdConsentReopener({
       data-od-cookie-reopen=""
       aria-label={
         state === "granted"
-          ? "Cookie preferences — advertising cookies are currently allowed"
+          ? "Cookie preferences — analytics and advertising cookies are currently allowed"
           : "Cookie preferences — necessary cookies only"
       }
     >

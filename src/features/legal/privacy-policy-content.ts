@@ -13,21 +13,21 @@ import {
 /**
  * Published version.
  *
- * v1.1 adds the advertising-measurement disclosure. The change is additive —
- * no existing statement was withdrawn or weakened — but it describes a new
- * recipient and a new cookie, which is a material change and therefore a new
- * version rather than a quiet edit to v1.0.
+ * v1.2 extends the optional measurement disclosure to ONEDECORE first-party
+ * website analytics while retaining Meta advertising measurement. The change
+ * is forward-versioned so no v1.1 consent decision is silently reused.
  *
- * The v1.0 approval record below is kept as history; v1.1 carries its own in
- * `PRIVACY_NOTICE_ADVERTISING_AMENDMENT.ownerApproval`, signed by the owner on
- * 2026-09-12. Neither record blocks a visitor either way: the advertising
- * section renders regardless, and no Meta cookie can be set without an
- * explicit grant from the person reading it.
+ * v1.0 and v1.1 remain explicit history. v1.2 carries its own owner approval
+ * below. The disclosure does not replace the tracking gate: no first-party
+ * analytics event or Meta measurement runs without a current explicit grant.
  */
-export const PRIVACY_NOTICE_VERSION = "privacy-notice-v1.1" as const;
+export const PRIVACY_NOTICE_VERSION = "privacy-notice-v1.2" as const;
 
 /** The version this amendment supersedes. Retained for audit. */
-export const PRIVACY_NOTICE_PREVIOUS_VERSION = "privacy-notice-v1.0" as const;
+export const PRIVACY_NOTICE_PREVIOUS_VERSION = "privacy-notice-v1.1" as const;
+
+/** Original production publication, retained as explicit audit history. */
+export const PRIVACY_NOTICE_ORIGINAL_VERSION = "privacy-notice-v1.0" as const;
 
 /** @deprecated Alias kept for call sites that referenced the proposed id. */
 export const PRIVACY_NOTICE_PROPOSED_PRODUCTION_VERSION = PRIVACY_NOTICE_VERSION;
@@ -47,10 +47,13 @@ export const PRIVACY_NOTICE_PROPOSED_PRODUCTION_VERSION = PRIVACY_NOTICE_VERSION
  * is its own approval record, and Terms of Use keeps its own unchanged date
  * because Terms were not amended.
  */
-export const PRIVACY_NOTICE_EFFECTIVE_DATE: string | null = "2026-09-12";
+export const PRIVACY_NOTICE_EFFECTIVE_DATE: string | null = "2026-09-18";
 
-/** When v1.0 took effect. Retained so the amendment does not erase it. */
-export const PRIVACY_NOTICE_PREVIOUS_EFFECTIVE_DATE = "2026-08-25" as const;
+/** When v1.1 took effect. Retained so the amendment does not erase it. */
+export const PRIVACY_NOTICE_PREVIOUS_EFFECTIVE_DATE = "2026-09-12" as const;
+
+/** Original v1.0 production activation date, retained as historical evidence. */
+export const PRIVACY_NOTICE_ORIGINAL_EFFECTIVE_DATE = "2026-08-25" as const;
 
 export const PRIVACY_NOTICE_OWNER_APPROVAL = {
   approvedBy: "ONEDECORE owner",
@@ -61,11 +64,11 @@ export const PRIVACY_NOTICE_OWNER_APPROVAL = {
 } as const;
 
 /**
- * The v1.1 advertising amendment, and its approval state.
+ * The v1.2 analytics + advertising measurement amendment, and its approval state.
  *
- * `ownerApproval` was null while the copy was being written — an approval an
- * author grants themselves records nothing — and was set by the owner on
- * 2026-09-12, in a separate commit from the one that wrote the section.
+ * The owner instruction to proceed with the complete consent-aware analytics
+ * work is recorded below as the v1.2 approval; external legal-counsel approval
+ * is not claimed.
  *
  * `counselApproval` stays null. No external legal counsel has reviewed this,
  * and recording otherwise would be a false statement in the one file whose
@@ -80,12 +83,12 @@ export const PRIVACY_NOTICE_ADVERTISING_AMENDMENT = {
   version: PRIVACY_NOTICE_VERSION,
   supersedes: PRIVACY_NOTICE_PREVIOUS_VERSION,
   summary:
-    "Adds the advertising-measurement section and names Meta as a recipient when the visitor allows advertising cookies.",
+    "Extends the optional measurement disclosure to ONEDECORE first-party website analytics while retaining Meta advertising measurement behind the same explicit opt-in.",
   ownerApproval: {
     approvedBy: "ONEDECORE owner",
-    approvedAt: "2026-09-12",
+    approvedAt: "2026-09-18",
     reference:
-      "ONEDECORE owner instruction on 2026-09-12: proceed merge and deployment after review of Privacy Notice v1.1 advertising-measurement amendment",
+      "ONEDECORE owner instruction on 2026-09-18: proceed with complete website analytics after review of the consent-aware analytics plan",
   } as null | {
     readonly approvedBy: string;
     readonly approvedAt: string;
@@ -274,14 +277,15 @@ export const PRIVACY_POLICY_CONTENT: readonly LegalContentSection[] = [
      * already recorded in the business identity.
      */
     id: "advertising-measurement",
-    title: "Cookies and advertising measurement",
+    title: "Cookies, analytics and advertising measurement",
     body: [
-      "Necessary cookies keep the website working — for example your session, security, and remembering a preference you have set. These are not used for advertising.",
-      "Optional advertising measurement uses the Meta Pixel and Meta's Conversions API to tell us which advertising led to a real enquiry. It runs only if you choose 'Allow advertising cookies'. If you choose 'Necessary only', or make no choice at all, no Meta script is loaded, no Meta cookie is set and no event is sent.",
+      "Necessary cookies keep the website working — for example your session, security, and remembering a preference you have set. These are not used for analytics or advertising.",
+      "Optional measurement runs only if you choose 'Allow analytics & advertising cookies'. ONEDECORE then uses first-party website analytics to understand measured visits, traffic sources and conversion actions, and uses the Meta Pixel and Meta's Conversions API to understand which Meta advertising led to a real enquiry. If you choose 'Necessary only', or make no choice at all, first-party analytics records no event, no Meta script is loaded, no Meta cookie is set and no event is sent to Meta.",
+      "ONEDECORE first-party analytics stores anonymous random visitor and session identifiers plus page path, landing path, campaign source/medium/name/content/term when present, external referring host, whether a Meta or Google advertising click identifier was present, and bounded page-view, CTA, contact and enquiry-form events. It does not store your name, phone number, email address, enquiry text or quotation data in the analytics tables. If you submit an enquiry, the anonymous session may be linked to the authoritative CRM lead by its internal lead identifier so aggregate sales outcomes can be reported without copying customer details into analytics.",
       "When you allow it, Meta may receive: the event name, event time and an event identifier; the page address the event happened on; that it happened on a website; your browser's user-agent string; your IP address where our hosting rules allow us to read it; and the Meta advertising cookies _fbp and _fbc when they are present.",
       "We do not send Meta your name, phone number, email address, postal address, date of birth, gender, budget, service selection, project details, enquiry message, quotation data or any CRM record. Meta's automatic advanced matching is switched off.",
-      "The event identifier is a random one-time value used only so that the browser report and our server report of the same enquiry are counted once rather than twice. It is not derived from your contact details.",
-      "You can change your choice at any time using the 'Cookie preferences' control on any public page. Choosing 'Necessary only' stops further events immediately and removes the _fbp and _fbc cookies from this browser. Events already sent to Meta before you changed your choice cannot be recalled by us.",
+      "The Meta event identifier is a random one-time value used only so that the browser report and our server report of the same enquiry are counted once rather than twice. It is not derived from your contact details.",
+      "You can change your choice at any time using the 'Cookie preferences' control on any public page. Choosing 'Necessary only' stops further ONEDECORE analytics and Meta events immediately, clears ONEDECORE's analytics browser identifiers, and removes the _fbp and _fbc cookies from this browser. Events already sent to Meta before you changed your choice cannot be recalled by us.",
     ],
   },
   {

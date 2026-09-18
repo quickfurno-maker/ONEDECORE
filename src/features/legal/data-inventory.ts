@@ -238,9 +238,9 @@ export const DATA_INVENTORY: readonly DataInventoryEntry[] = [
     risk: "low",
     accuracyRequirement: "Essential only",
     ownerDecision:
-      "Advertising measurement runs only on explicit opt-in. The visitor's choice is stored in the first-party cookie onedecore_ad_tracking_consent (v1), and is not inferred from communication consent, _fbp, _fbc, fbclid or UTM parameters.",
+      "Optional first-party website analytics and Meta advertising measurement run only on explicit opt-in. The visitor's choice is stored in the first-party cookie onedecore_ad_tracking_consent (v2), and is not inferred from communication consent, _fbp, _fbc, fbclid, gclid or UTM parameters.",
     currentTruth:
-      "Necessary cookies only, unless the visitor allows advertising cookies. With consent granted, Meta receives event name/time/id, the source page URL, action source, user agent, client IP where trusted-proxy rules permit, and _fbp/_fbc when present. Automatic advanced matching is off; no name, phone, email, budget, service selection, enquiry text, quotation or CRM data is sent. Withdrawal stops further events immediately and clears _fbp/_fbc from the browser; events already transmitted cannot be recalled.",
+      "Necessary cookies only unless the visitor allows analytics and advertising cookies. With consent granted, ONEDECORE records anonymous visitor/session UUIDs, bounded page/CTA/form events and traffic-source metadata in Supabase; no name, phone, email, enquiry text or quotation data is stored in analytics tables. Meta receives only the separately documented measurement fields; Automatic advanced matching is off. Withdrawal stops further first-party and Meta events, clears ONEDECORE analytics browser identifiers and _fbp/_fbc; events already transmitted to Meta cannot be recalled.",
   },
   {
     category: "payment-data",

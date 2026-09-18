@@ -35,7 +35,7 @@ export const AD_CONSENT_COOKIE_NAME = "onedecore_ad_tracking_consent";
  * description. A bare "true" could not express that, and silently keeping an
  * old yes for a new purpose is how consent records stop meaning anything.
  */
-export const AD_CONSENT_VERSION = "v1" as const;
+export const AD_CONSENT_VERSION = "v2" as const;
 
 export const AD_CONSENT_GRANTED_VALUE = `${AD_CONSENT_VERSION}:granted` as const;
 export const AD_CONSENT_DENIED_VALUE = `${AD_CONSENT_VERSION}:denied` as const;

@@ -47,8 +47,9 @@ const root = process.cwd();
 const secret = "x".repeat(32);
 const MANAGED = "https://lpurlfmpvriyvpkujvyl.supabase.co";
 const ACTIVATION_DATE = "2026-08-25";
-/** When the owner approved the v1.1 advertising amendment. */
-const AMENDMENT_DATE = "2026-09-12";
+const PREVIOUS_AMENDMENT_DATE = "2026-09-12";
+/** When the owner approved the v1.2 first-party analytics amendment. */
+const ANALYTICS_AMENDMENT_DATE = "2026-09-18";
 
 function enabledEnv(
   overrides: Record<string, string | undefined> = {}
@@ -72,50 +73,44 @@ describe("Phase 10 production lead-intake legal activation", () => {
 
   test("Privacy Notice version and effective date", () => {
     /*
-     * v1.1 adds the advertising-measurement disclosure. Additive — no earlier
-     * statement was withdrawn — but it names a new recipient and a new cookie,
-     * which is a material change and so a new version rather than a quiet edit.
-     *
-     * The v1.0 approval record and activation date are both kept as history,
-     * but the PUBLISHED effective date moves with the published version. The
-     * page prints the two together, so leaving it at the v1.0 date would tell
-     * a reader the advertising disclosure had been in force since 2026-08-25,
-     * weeks before it was written.
+     * v1.2 adds consent-dependent ONEDECORE first-party website analytics to
+     * the v1.1 Meta advertising-measurement disclosure. The earlier versions
+     * remain historical evidence, while the published effective date moves with
+     * the published version.
      *
      * Terms of Use keeps the original activation date, because Terms were not
      * amended — which is also what stops this test passing on a global
      * find-and-replace of the date.
      */
-    assert.equal(PRIVACY_NOTICE_VERSION, "privacy-notice-v1.1");
-    assert.equal(PRIVACY_NOTICE_PREVIOUS_VERSION, "privacy-notice-v1.0");
-    assert.equal(PRIVACY_NOTICE_EFFECTIVE_DATE, AMENDMENT_DATE);
-    assert.equal(PRIVACY_NOTICE_PREVIOUS_EFFECTIVE_DATE, ACTIVATION_DATE);
-    assert.equal(getPrivacyNoticeDisplayVersion(), "privacy-notice-v1.1");
-    assert.equal(getPrivacyNoticeEffectiveDateLabel(), AMENDMENT_DATE);
+    assert.equal(PRIVACY_NOTICE_VERSION, "privacy-notice-v1.2");
+    assert.equal(PRIVACY_NOTICE_PREVIOUS_VERSION, "privacy-notice-v1.1");
+    assert.equal(PRIVACY_NOTICE_EFFECTIVE_DATE, ANALYTICS_AMENDMENT_DATE);
+    assert.equal(PRIVACY_NOTICE_PREVIOUS_EFFECTIVE_DATE, PREVIOUS_AMENDMENT_DATE);
+    assert.equal(getPrivacyNoticeDisplayVersion(), "privacy-notice-v1.2");
+    assert.equal(getPrivacyNoticeEffectiveDateLabel(), ANALYTICS_AMENDMENT_DATE);
 
     // The v1.0 approval record is untouched history.
     assert.equal(PRIVACY_NOTICE_OWNER_APPROVAL.approvedAt, ACTIVATION_DATE);
     assert.match(PRIVACY_NOTICE_OWNER_APPROVAL.reference, /PR #92/);
   });
 
-  test("the v1.1 amendment records a real owner approval, and no counsel approval", () => {
+  test("the v1.2 analytics amendment records a real owner approval, and no counsel approval", () => {
     /*
-     * Approved by the owner on 2026-09-12, in a commit separate from the one
-     * that wrote the section — an approval an author grants itself in the same
-     * breath as the copy records nothing.
+     * Approved by the owner on 2026-09-18 through the instruction to proceed
+     * with the complete consent-aware website analytics work.
      *
      * `counselApproval` stays null. No external legal counsel reviewed this,
      * and this file's only job is to be accurate about who agreed to what.
      */
     const amendment = PRIVACY_NOTICE_ADVERTISING_AMENDMENT;
-    assert.equal(amendment.version, "privacy-notice-v1.1");
-    assert.equal(amendment.supersedes, "privacy-notice-v1.0");
+    assert.equal(amendment.version, "privacy-notice-v1.2");
+    assert.equal(amendment.supersedes, "privacy-notice-v1.1");
 
     assert.ok(amendment.ownerApproval, "the amendment must carry an approval");
     assert.equal(amendment.ownerApproval.approvedBy, "ONEDECORE owner");
-    assert.equal(amendment.ownerApproval.approvedAt, AMENDMENT_DATE);
-    assert.match(amendment.ownerApproval.reference, /proceed merge and deployment/);
-    assert.match(amendment.ownerApproval.reference, /2026-09-12/);
+    assert.equal(amendment.ownerApproval.approvedAt, ANALYTICS_AMENDMENT_DATE);
+    assert.match(amendment.ownerApproval.reference, /complete website analytics/i);
+    assert.match(amendment.ownerApproval.reference, /2026-09-18/);
 
     assert.equal(amendment.counselApproval, null);
     assert.equal(BUSINESS_IDENTITY.legalCounselApprovalReference, null);

@@ -97,7 +97,7 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 86, "Migration count must be exactly 86 after WM-6 plus the reviewed commerce checkout, vendor, automation, operational closeout, vendor-login authorization repair and private vendor order-read sequence");
+    assert.equal(files.length, 87, "Migration count must be exactly 87 after the reviewed commerce closeout plus the website analytics foundation");
     assert.ok(
       files.includes("20260919120000_commerce_checkout_policy_acceptance.sql"),
       "commerce checkout policy acceptance migration is present"
@@ -291,8 +291,11 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
         "20260920143000_commerce_vendor_login_auth_boundary.sql",
         // Private vendor order feed: own product lines and lifecycle only; no customer/delivery PII.
         "20260920150000_commerce_vendor_private_order_read.sql",
+        // Consent-gated first-party website analytics and CRM outcome linkage.
+        // No online payment surface and no customer PII is copied into analytics tables.
+        "20260921100000_website_analytics_foundation.sql",
       ],
-      "Only the reviewed forward-only migrations, including COD policy acceptance, may follow the 9D-D1 COD order foundation"
+      "Only the reviewed forward-only migrations, including the website analytics foundation, may follow the 9D-D1 COD order foundation"
     );
     assert.equal(
       files.includes("20260825140000_commerce_online_payment_adapter_foundation.sql"),
