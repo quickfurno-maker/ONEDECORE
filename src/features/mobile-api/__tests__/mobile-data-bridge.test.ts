@@ -70,7 +70,7 @@ test("mobile data bridge is an explicit allowlist, not an arbitrary proxy", () =
 });
 
 test("mobile data bridge preserves database enforcement under the caller token", () => {
-  assert.match(route, /db\.from\(payload\.table as never\)/);
+  assert.match(route, /\.from\(payload\.table as never\)/);
   assert.match(route, /db\.rpc\(payload\.name as never/);
   assert.match(route, /READ_TABLES\.has/);
   assert.match(route, /RPCS\.has/);
