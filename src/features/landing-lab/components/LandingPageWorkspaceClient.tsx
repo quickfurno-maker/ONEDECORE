@@ -58,6 +58,15 @@ export function LandingPageWorkspaceClient({
     setBlocks(next);
   }, []);
 
+  const onDirtyChange = useCallback((nextDirty: boolean) => {
+    setDirty(nextDirty);
+    if (nextDirty) {
+      // A prior success belongs to the prior snapshot, not these edits.
+      setMessage("");
+      setOk(false);
+    }
+  }, []);
+
   const blocksError = validateLandingPageBlocks(blocks);
 
   async function run(action: (formData: FormData) => Promise<{ success: boolean; message: string }>, formData: FormData) {
@@ -75,7 +84,7 @@ export function LandingPageWorkspaceClient({
    * before the round trip is the only way the author learns what is wrong.
    */
   function saveDraft() {
-    if (!latest) return;
+    if (!latest || saving) return;
     const error = validateLandingPageBlocks(blocks);
     if (error) {
       setMessage(error);
@@ -94,12 +103,12 @@ export function LandingPageWorkspaceClient({
       setMessage(result.message);
       setOk(result.success);
       if (result.success) {
-        setDirty(false);
         /*
-         * The save actions revalidate the LIST route, not this detail route,
-         * so the workspace this component was given is now stale — its
-         * `lockVersion` in particular. Refreshing means a second save does not
-         * fail on a lock conflict the author cannot see or explain.
+         * Do not clear dirty here. The RPC succeeding is not permission to hide
+         * unsaved state while this component still holds an older server
+         * snapshot. router.refresh() reads the saved version back; only when
+         * initialBlocks matches this controlled blocks array will the builder
+         * report clean and disable Save.
          */
         router.refresh();
       }
@@ -162,7 +171,8 @@ export function LandingPageWorkspaceClient({
               type="button"
               className="od-lb__btn od-lb__btn--primary"
               onClick={saveDraft}
-              disabled={saving || !dirty || Boolean(blocksError)}
+              disabled={!dirty || Boolean(blocksError)}
+              aria-busy={saving}
               title={blocksError ?? undefined}
               data-testid="save-draft"
             >
@@ -229,9 +239,10 @@ export function LandingPageWorkspaceClient({
         <LandingPageBuilder
           key={latest.id}
           initialBlocks={latest.blocks}
+          blocks={blocks}
           readOnly={!canManage || !editable}
           onBlocksChange={onBlocksChange}
-          onDirtyChange={setDirty}
+          onDirtyChange={onDirtyChange}
         />
       ) : (
         <p className="od-lb__empty">This page has no versions yet.</p>

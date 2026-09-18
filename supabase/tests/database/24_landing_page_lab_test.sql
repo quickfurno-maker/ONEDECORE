@@ -1,6 +1,6 @@
 -- ONEDECORE Phase 9B M32 — landing page lab pgTAP
 begin;
-select plan(71);
+select plan(73);
 
 select ok(exists (select 1 from public.permissions where code = 'landing_pages.read'), 'landing_pages.read exists');
 select ok(exists (select 1 from public.permissions where code = 'landing_pages.manage'), 'landing_pages.manage exists');
@@ -239,6 +239,34 @@ select throws_ok(
   '22023',
   NULL,
   'idempotency key reuse with different hash is rejected'
+);
+
+select lives_ok(
+  $$select public.save_landing_page_draft(
+    (select lv.id
+     from public.landing_page_versions lv
+     join public.landing_pages lp on lp.id = lv.landing_page_id
+     where lp.slug = 'gurgaon-interiors' and lv.version_number = 1),
+    1,
+    'Gurgaon Interiors',
+    'gurgaon-interiors',
+    '[{"blockId":"third","type":"hero"},{"blockId":"hero-main","type":"hero"},{"blockId":"second","type":"hero"}]'::jsonb,
+    'Initial',
+    '9b000000-0000-0000-0000-000000000009'
+  )$$,
+  'saving a pure block permutation succeeds'
+);
+
+select is(
+  (
+    select string_agg(elem.value->>'blockId', ',' order by elem.ordinality)
+    from public.landing_page_versions lv
+    join public.landing_pages lp on lp.id = lv.landing_page_id
+    cross join lateral jsonb_array_elements(lv.blocks) with ordinality elem(value, ordinality)
+    where lp.slug = 'gurgaon-interiors' and lv.version_number = 1
+  ),
+  'third,hero-main,second',
+  'a reordered block array reads back in the exact saved order'
 );
 
 -- Freeze, next version, publication graph
