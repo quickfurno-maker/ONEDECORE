@@ -84,6 +84,33 @@ describe("authoring is structured, not JSON", () => {
     assert.match(read(WORKSPACE), /formData\.set\("lockVersion", String\(latest\.lockVersion\)\)/);
   });
 
+  test("the builder and Save share one controlled block array", () => {
+    const builder = read(BUILDER);
+    const workspace = read(WORKSPACE);
+    assert.match(builder, /readonly blocks: readonly LandingBlock\[\]/);
+    assert.doesNotMatch(
+      builder,
+      /useState<readonly LandingBlock\[\]>\(initialBlocks\)/,
+      "a private builder copy can diverge from the array Save serialises"
+    );
+    assert.match(workspace, /initialBlocks=\{latest\.blocks\}[\s\S]{0,80}blocks=\{blocks\}/);
+  });
+
+  test("dirty and success UI follow confirmed server state", () => {
+    const workspace = read(WORKSPACE);
+    assert.match(workspace, /if \(nextDirty\) \{[\s\S]{0,160}setMessage\(""\)/);
+    assert.doesNotMatch(
+      workspace,
+      /if \(result\.success\) \{\s*setDirty\(false\)/,
+      "Save must stay dirty until refreshed server blocks match"
+    );
+    assert.match(
+      workspace,
+      /disabled=\{!dirty \|\| Boolean\(blocksError\)\}/,
+      "pending status must not pretend the draft is already clean"
+    );
+  });
+
   test("the builder validates before the round trip, because the server cannot", () => {
     /*
      * `parseBlocks` in the server action discards the validator's message and
@@ -770,9 +797,10 @@ describe("unsaved work is visible and protected", () => {
     assert.match(builder, /removeEventListener\("beforeunload", warn\)/);
   });
 
-  test("saving is explicit, and disabled when there is nothing to save", () => {
+  test("saving is explicit, and disabled only when server-confirmed clean", () => {
     const workspace = read(WORKSPACE);
-    assert.match(workspace, /disabled=\{saving \|\| !dirty \|\| Boolean\(blocksError\)\}/);
+    assert.match(workspace, /disabled=\{!dirty \|\| Boolean\(blocksError\)\}/);
+    assert.match(workspace, /aria-busy=\{saving\}/);
     // No autosave: it would race the optimistic lock the RPC checks.
     assert.doesNotMatch(code(read(BUILDER)), /setInterval|setTimeout\([^)]*save/i);
   });

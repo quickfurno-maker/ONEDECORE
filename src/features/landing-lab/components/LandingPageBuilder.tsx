@@ -69,7 +69,10 @@ const VIEWPORTS: ReadonlyArray<{
 ];
 
 export interface LandingPageBuilderProps {
+  /** Last server-confirmed order, used only as the dirty baseline. */
   readonly initialBlocks: readonly LandingBlock[];
+  /** Current editable order. This is also the array Save serializes. */
+  readonly blocks: readonly LandingBlock[];
   readonly readOnly: boolean;
   readonly onBlocksChange: (blocks: readonly LandingBlock[]) => void;
   readonly onDirtyChange?: (dirty: boolean) => void;
@@ -92,11 +95,11 @@ function blockNote(block: LandingBlock): string {
 
 export function LandingPageBuilder({
   initialBlocks,
+  blocks,
   readOnly,
   onBlocksChange,
   onDirtyChange,
 }: LandingPageBuilderProps) {
-  const [blocks, setBlocks] = useState<readonly LandingBlock[]>(initialBlocks);
   const [selectedId, setSelectedId] = useState<string | null>(
     initialBlocks[0]?.blockId ?? null
   );
@@ -172,7 +175,6 @@ export function LandingPageBuilder({
 
   const commit = useCallback(
     (next: readonly LandingBlock[]) => {
-      setBlocks(next);
       onBlocksChange(next);
     },
     [onBlocksChange]
