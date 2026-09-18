@@ -4,6 +4,7 @@ import {
   fetchWebsiteAnalyticsDashboard,
   WEBSITE_ANALYTICS_SOURCE_LABELS,
 } from "@/features/website-analytics/server/dashboard";
+import { AnalyticsLiveRefresh } from "@/features/website-analytics/client/AnalyticsLiveRefresh";
 
 export const metadata = {
   title: "Website Analytics | ONEDECORE",
@@ -18,11 +19,29 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function isoDate(value: string | undefined, fallback: Date): string {
+function isoDate(value: string | undefined, fallback: string): string {
   if (value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value))) {
     return value;
   }
-  return fallback.toISOString().slice(0, 10);
+  return fallback;
+}
+
+function currentIstDate(): string {
+  const parts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? "";
+  return part("year") + "-" + part("month") + "-" + part("day");
+}
+
+function shiftIsoDate(value: string, days: number): string {
+  const date = new Date(value + "T00:00:00Z");
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 function n(value: number): string {
@@ -38,8 +57,19 @@ function money(minor: number): string {
 }
 
 function rate(numerator: number, denominator: number): string {
-  if (denominator <= 0) return "â€”";
+  if (denominator <= 0) return "-";
   return (100 * numerator / denominator).toFixed(1) + "%";
+}
+
+function timeLabel(value: string | null): string {
+  if (!value) return "None yet";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    dateStyle: "medium",
+    timeStyle: "medium",
+  }).format(date);
 }
 
 export default async function WebsiteAnalyticsPage({
@@ -54,12 +84,12 @@ export default async function WebsiteAnalyticsPage({
   }
 
   const params = await searchParams;
-  const today = new Date();
-  const start = new Date(today);
-  start.setDate(start.getDate() - 29);
-  const from = isoDate(first(params.from), start);
-  const to = isoDate(first(params.to), today);
+  const defaultTo = currentIstDate();
+  const defaultFrom = shiftIsoDate(defaultTo, -29);
+  const from = isoDate(first(params.from), defaultFrom);
+  const to = isoDate(first(params.to), defaultTo);
   const analytics = await fetchWebsiteAnalyticsDashboard(from, to);
+  const loadedAt = new Date().toISOString();
 
   if (!analytics) {
     return (
@@ -73,10 +103,16 @@ export default async function WebsiteAnalyticsPage({
   }
 
   const t = analytics.totals;
+  const landingExposures = analytics.landingActivity.exposures;
   const cards = [
-    ["Measured visitors", n(t.visitors), "Consented first-party measurement"],
-    ["Sessions", n(t.sessions), n(t.page_views) + " page views"],
-    ["Enquiries", n(t.leads), rate(t.leads, t.sessions) + " session â†’ enquiry"],
+    [
+      "Landing exposures",
+      landingExposures === null ? "Unavailable" : n(landingExposures),
+      "Landing Lab operational exposure denominator",
+    ],
+    ["Measured visitors", n(t.visitors), "Explicit v2 analytics consent only"],
+    ["Sessions", n(t.sessions), n(t.page_views) + " consented page views"],
+    ["Enquiries", n(t.leads), rate(t.leads, t.sessions) + " session -> enquiry"],
     ["Qualified", n(t.qualified), rate(t.qualified, t.leads) + " of enquiries"],
     ["Consultations", n(t.consultations), rate(t.consultations, t.leads) + " of enquiries"],
     ["Proposals", n(t.proposals), rate(t.proposals, t.leads) + " of enquiries"],
@@ -89,9 +125,12 @@ export default async function WebsiteAnalyticsPage({
         <div>
           <h1 className="text-2xl font-bold text-neutral-100">Website Analytics</h1>
           <p className="mt-1 max-w-3xl text-xs text-neutral-400">
-            Consented first-party website measurement joined to authoritative CRM outcomes.
-            Visitors who choose Necessary only are not counted here; CRM enquiry totals remain business truth.
+            Landing activity and consented first-party measurement joined to authoritative CRM outcomes.
+            Landing exposures are separate from consented visitors; CRM enquiry totals remain business truth.
           </p>
+          <div className="mt-2">
+            <AnalyticsLiveRefresh loadedAt={loadedAt} />
+          </div>
         </div>
         <form className="flex flex-wrap items-end gap-2" method="get">
           <label className="text-xs text-neutral-400">
@@ -107,6 +146,17 @@ export default async function WebsiteAnalyticsPage({
           </button>
         </form>
       </header>
+
+      <section className="rounded-xl border border-amber-900/40 bg-amber-950/20 p-4 text-xs text-neutral-300">
+        <p className="font-semibold text-amber-200">Two measurement layers</p>
+        <p className="mt-1 leading-relaxed text-neutral-400">
+          <strong className="text-neutral-300">Landing exposures</strong> are the existing privacy-safe Landing Lab denominator used for publication and experiment measurement. They can include ad-platform previews, prefetches, or other automated visits and are not equivalent to people.{" "}
+          <strong className="text-neutral-300">Measured visitors</strong> are recorded only after the visitor explicitly grants the current v2 analytics and advertising consent.
+        </p>
+        <p className="mt-2 text-neutral-500">
+          Last landing exposure: {timeLabel(analytics.landingActivity.lastExposureAt)} · Last consented analytics event: {timeLabel(analytics.lastMeasuredEventAt)}
+        </p>
+      </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map(([label, value, context]) => (
@@ -164,7 +214,7 @@ export default async function WebsiteAnalyticsPage({
             ) : analytics.campaigns.slice(0, 20).map((row) => (
               <div key={row.utm_campaign} className="grid grid-cols-[1fr_auto] gap-3 p-3 text-xs">
                 <div><p className="font-medium text-neutral-200">{row.utm_campaign}</p>
-                  <p className="text-neutral-500">{n(row.sessions)} sessions Â· {n(row.leads)} leads</p></div>
+                  <p className="text-neutral-500">{n(row.sessions)} sessions | {n(row.leads)} leads</p></div>
                 <div className="text-right text-neutral-300">{n(row.qualified)} qualified<br />{n(row.commercial_conversions)} won</div>
               </div>
             ))}
