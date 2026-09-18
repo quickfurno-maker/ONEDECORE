@@ -1,6 +1,8 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
 
 export interface WebsiteAnalyticsTotals {
   readonly visitors: number;
@@ -44,6 +46,13 @@ export interface WebsiteAnalyticsPageRow {
   readonly path: string;
   readonly page_views: number;
   readonly sessions: number;
+}
+
+export class WebsiteAnalyticsReadError extends Error {
+  constructor(readonly code: string | null) {
+    super("Website analytics could not be loaded.");
+    this.name = "WebsiteAnalyticsReadError";
+  }
 }
 
 export interface WebsiteAnalyticsDashboard {
@@ -151,6 +160,19 @@ export async function fetchWebsiteAnalyticsDashboard(
   to: string
 ): Promise<WebsiteAnalyticsDashboard | null> {
   const supabase = await createClient();
+
+  try {
+    return await fetchWebsiteAnalyticsDashboardForClient(supabase, from, to);
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchWebsiteAnalyticsDashboardForClient(
+  supabase: SupabaseClient<Database>,
+  from: string,
+  to: string
+): Promise<WebsiteAnalyticsDashboard> {
   const fromIso = startOfIstDay(from);
   const untilIso = startOfNextIstDay(to);
 
@@ -175,9 +197,14 @@ export async function fetchWebsiteAnalyticsDashboard(
       .limit(1),
   ]);
 
-  if (dashboardResult.error) return null;
+  if (dashboardResult.error) {
+    throw new WebsiteAnalyticsReadError(dashboardResult.error.code ?? null);
+  }
+
   const normalized = normalize(dashboardResult.data);
-  if (!normalized) return null;
+  if (!normalized) {
+    throw new WebsiteAnalyticsReadError("INVALID_PAYLOAD");
+  }
 
   return {
     ...normalized,
