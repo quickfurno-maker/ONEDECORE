@@ -9,6 +9,7 @@ const MAX_ORDERS = 8;
 const MAX_IN_VALUES = 500;
 const MAX_LIMIT = 1_000;
 const MAX_RANGE_ROWS = 1_000;
+const MAX_BATCH_REQUESTS = 20;
 const COLUMN = /^[a-z_][a-z0-9_.]*$/;
 
 const READ_TABLES = new Set([
@@ -132,6 +133,13 @@ type RpcRequest = {
 };
 
 type BridgeRequest = TableRequest | RpcRequest;
+
+type BatchRequest = {
+  kind: "batch";
+  requests: TableRequest[];
+};
+
+type MobileDataRequest = BridgeRequest | BatchRequest;
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return (
@@ -452,8 +460,44 @@ function readTableRequest(
   };
 }
 
-function readRequest(value: unknown): BridgeRequest | null {
+function readRequest(value: unknown): MobileDataRequest | null {
   if (!isObject(value)) return null;
+
+  if (value.kind === "batch") {
+    if (
+      !Array.isArray(value.requests) ||
+      value.requests.length < 1 ||
+      value.requests.length > MAX_BATCH_REQUESTS
+    ) {
+      return null;
+    }
+
+    const requests: TableRequest[] = [];
+
+    for (const raw of value.requests) {
+      if (!isObject(raw) || raw.kind !== "table") {
+        return null;
+      }
+
+      const request = readTableRequest(raw);
+
+      /*
+       * Batch mode is intentionally READ ONLY. Writes and RPCs remain
+       * individually auditable requests, while independent SELECTs from one
+       * screen may share the bearer-authenticated HTTP round trip.
+       */
+      if (!request || request.action !== "select") {
+        return null;
+      }
+
+      requests.push(request);
+    }
+
+    return {
+      kind: "batch",
+      requests,
+    };
+  }
 
   if (value.kind === "rpc") {
     return readRpcRequest(value);
@@ -510,72 +554,13 @@ function serializeResult(result: {
   };
 }
 
-export async function POST(request: Request) {
-  const contentLength = Number(request.headers.get("content-length") ?? "0");
 
-  if (
-    Number.isFinite(contentLength) &&
-    contentLength > MAX_BODY_BYTES
-  ) {
-    return errorResponse(413, "The mobile data request is too large.");
-  }
-
-  const token = readBearerToken(request);
-
-  if (!token) {
-    return errorResponse(401, "Sign in again to continue.");
-  }
-
-  const db = createBearerClient(token);
-  const userResult = await db.auth.getUser();
-
-  if (userResult.error || !userResult.data.user) {
-    return errorResponse(401, "Sign in again to continue.");
-  }
-
-  let payload: BridgeRequest | null = null;
-
-  try {
-    payload = readRequest(await request.json());
-  } catch {
-    return errorResponse(400, "The mobile data request is not valid JSON.");
-  }
-
-  if (!payload) {
-    return errorResponse(400, "The mobile data request is not valid.");
-  }
-
-  if (payload.kind === "rpc") {
-    if (!RPCS.has(payload.name as never)) {
-      return errorResponse(403, "That mobile RPC is not allowed.");
-    }
-
-    const result = await db.rpc(
-      payload.name as never,
-      payload.args as never
-    );
-
-    return Response.json(serializeResult(result));
-  }
-
-  if (!READ_TABLES.has(payload.table as never)) {
-    return errorResponse(403, "That mobile table is not allowed.");
-  }
-
-  if (payload.action === "insert") {
-    if (!INSERT_TABLES.has(payload.table as never)) {
-      return errorResponse(403, "Writes are not allowed for that mobile table.");
-    }
-
-    if (
-      payload.table !== "lead_notes" ||
-      !validLeadNoteInsert(payload.values)
-    ) {
-      return errorResponse(400, "That mobile write payload is not valid.");
-    }
-  }
-
-  // The Supabase builder type changes after every dynamic operation.
+async function runTableRequest(
+  // Supabase's dynamic builder changes type after each operation.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  payload: TableRequest
+) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any;
 
@@ -634,6 +619,92 @@ export async function POST(request: Request) {
     query = query.maybeSingle();
   }
 
-  const result = await query;
+  return await query;
+}
+
+export async function POST(request: Request) {
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+
+  if (
+    Number.isFinite(contentLength) &&
+    contentLength > MAX_BODY_BYTES
+  ) {
+    return errorResponse(413, "The mobile data request is too large.");
+  }
+
+  const token = readBearerToken(request);
+
+  if (!token) {
+    return errorResponse(401, "Sign in again to continue.");
+  }
+
+  const db = createBearerClient(token);
+  const userResult = await db.auth.getUser();
+
+  if (userResult.error || !userResult.data.user) {
+    return errorResponse(401, "Sign in again to continue.");
+  }
+
+  let payload: MobileDataRequest | null = null;
+
+  try {
+    payload = readRequest(await request.json());
+  } catch {
+    return errorResponse(400, "The mobile data request is not valid JSON.");
+  }
+
+  if (!payload) {
+    return errorResponse(400, "The mobile data request is not valid.");
+  }
+
+  if (payload.kind === "batch") {
+    for (const item of payload.requests) {
+      if (!READ_TABLES.has(item.table as never)) {
+        return errorResponse(403, "That mobile table is not allowed.");
+      }
+    }
+
+    const results = await Promise.all(
+      payload.requests.map((item) =>
+        runTableRequest(db, item)
+      )
+    );
+
+    return Response.json({
+      results: results.map(serializeResult),
+    });
+  }
+
+  if (payload.kind === "rpc") {
+    if (!RPCS.has(payload.name as never)) {
+      return errorResponse(403, "That mobile RPC is not allowed.");
+    }
+
+    const result = await db.rpc(
+      payload.name as never,
+      payload.args as never
+    );
+
+    return Response.json(serializeResult(result));
+  }
+
+  if (!READ_TABLES.has(payload.table as never)) {
+    return errorResponse(403, "That mobile table is not allowed.");
+  }
+
+  if (payload.action === "insert") {
+    if (!INSERT_TABLES.has(payload.table as never)) {
+      return errorResponse(403, "Writes are not allowed for that mobile table.");
+    }
+
+    if (
+      payload.table !== "lead_notes" ||
+      !validLeadNoteInsert(payload.values)
+    ) {
+      return errorResponse(400, "That mobile write payload is not valid.");
+    }
+  }
+
+  const result = await runTableRequest(db, payload);
   return Response.json(serializeResult(result));
 }
