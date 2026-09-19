@@ -48,6 +48,14 @@ export interface WebsiteAnalyticsPageRow {
   readonly sessions: number;
 }
 
+export interface WebsiteAnalyticsHomepageActivity {
+  readonly page_views: number | null;
+  readonly cta_actions: number | null;
+  readonly form_starts: number | null;
+  readonly form_submits: number | null;
+  readonly lead_successes: number | null;
+}
+
 export class WebsiteAnalyticsReadError extends Error {
   constructor(readonly code: string | null) {
     super("Website analytics could not be loaded.");
@@ -68,6 +76,7 @@ export interface WebsiteAnalyticsDashboard {
     readonly exposures: number | null;
     readonly lastExposureAt: string | null;
   };
+  readonly homepageActivity: WebsiteAnalyticsHomepageActivity;
   readonly lastMeasuredEventAt: string | null;
 }
 
@@ -141,6 +150,13 @@ function normalize(raw: unknown): WebsiteAnalyticsDashboard | null {
       exposures: null,
       lastExposureAt: null,
     },
+    homepageActivity: {
+      page_views: null,
+      cta_actions: null,
+      form_starts: null,
+      form_submits: null,
+      lead_successes: null,
+    },
     lastMeasuredEventAt: null,
   };
 }
@@ -153,6 +169,27 @@ function startOfNextIstDay(date: string): string {
   const day = new Date(date + "T00:00:00Z");
   day.setUTCDate(day.getUTCDate() + 1);
   return day.toISOString().slice(0, 10) + "T00:00:00+05:30";
+}
+
+async function countHomepageEvents(
+  supabase: SupabaseClient<Database>,
+  fromIso: string,
+  untilIso: string,
+  eventTypes: readonly string[]
+): Promise<number | null> {
+  const query = supabase
+    .from("website_analytics_events")
+    .select("id", { count: "exact", head: true })
+    .eq("path", "/")
+    .gte("occurred_at", fromIso)
+    .lt("occurred_at", untilIso);
+
+  const { count, error } =
+    eventTypes.length === 1
+      ? await query.eq("event_type", eventTypes[0]!)
+      : await query.in("event_type", [...eventTypes]);
+
+  return error ? null : (count ?? 0);
 }
 
 export async function fetchWebsiteAnalyticsDashboard(
@@ -176,7 +213,16 @@ export async function fetchWebsiteAnalyticsDashboardForClient(
   const fromIso = startOfIstDay(from);
   const untilIso = startOfNextIstDay(to);
 
-  const [dashboardResult, exposureResult, latestEventResult] = await Promise.all([
+  const [
+    dashboardResult,
+    exposureResult,
+    latestEventResult,
+    homepagePageViews,
+    homepageCtaActions,
+    homepageFormStarts,
+    homepageFormSubmits,
+    homepageLeadSuccesses,
+  ] = await Promise.all([
     supabase.rpc("get_website_analytics_dashboard", {
       p_from: from,
       p_to: to,
@@ -195,6 +241,15 @@ export async function fetchWebsiteAnalyticsDashboardForClient(
       .lt("occurred_at", untilIso)
       .order("occurred_at", { ascending: false })
       .limit(1),
+    countHomepageEvents(supabase, fromIso, untilIso, ["page_view"]),
+    countHomepageEvents(supabase, fromIso, untilIso, [
+      "cta_click",
+      "contact_whatsapp",
+      "contact_phone",
+    ]),
+    countHomepageEvents(supabase, fromIso, untilIso, ["lead_form_start"]),
+    countHomepageEvents(supabase, fromIso, untilIso, ["lead_form_submit"]),
+    countHomepageEvents(supabase, fromIso, untilIso, ["lead_submit_success"]),
   ]);
 
   if (dashboardResult.error) {
@@ -213,6 +268,13 @@ export async function fetchWebsiteAnalyticsDashboardForClient(
       lastExposureAt: exposureResult.error
         ? null
         : (exposureResult.data?.[0]?.first_exposed_at ?? null),
+    },
+    homepageActivity: {
+      page_views: homepagePageViews,
+      cta_actions: homepageCtaActions,
+      form_starts: homepageFormStarts,
+      form_submits: homepageFormSubmits,
+      lead_successes: homepageLeadSuccesses,
     },
     lastMeasuredEventAt: latestEventResult.error
       ? null
