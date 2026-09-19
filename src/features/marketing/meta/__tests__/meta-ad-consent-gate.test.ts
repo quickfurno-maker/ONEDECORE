@@ -476,7 +476,10 @@ describe("the Conversions API respects the same decision", () => {
      * and reports only a log field, exactly as it did before consent existed.
      */
     const route = read("src/app/api/public/lead-intake/route.ts");
-    assert.match(route, /metaLog = safeMetaCapiLog\(capi\);/);
+    assert.match(
+      route,
+      /capi\s*\?\s*safeMetaCapiLog\(capi\)\s*:\s*\{\}/
+    );
     assert.doesNotMatch(route, /if \(capi[.\s]/);
     assert.doesNotMatch(route, /throw .*capi/);
   });

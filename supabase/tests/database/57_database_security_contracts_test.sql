@@ -413,7 +413,7 @@ select ok(
 -- D. Service-only tables: the protection IS the absent policy
 -- ===========================================================================
 
--- RLS enabled with no policy is default-deny. These six are reachable only
+-- RLS enabled with no policy is default-deny. These seven are reachable only
 -- through postgres-owned definer routines, so listing them makes the design a
 -- decision on the record rather than something a reader has to infer from an
 -- empty pg_policy result.
@@ -423,6 +423,7 @@ select set_eq(
      where n.nspname = 'public' and c.relkind in ('r','p') and c.relrowsecurity
        and (select count(*) from pg_policy pol where pol.polrelid = c.oid) = 0$$,
   array[
+    'mobile_push_tokens',
     'quotation_access_grants',
     'whatsapp_business_accounts',
     'whatsapp_message_status_events',
@@ -439,7 +440,7 @@ select is(
   (select count(*)::int
      from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public'
-      and c.relname in ('quotation_access_grants', 'whatsapp_business_accounts',
+      and c.relname in ('mobile_push_tokens', 'quotation_access_grants', 'whatsapp_business_accounts',
                         'whatsapp_message_status_events', 'whatsapp_phone_numbers',
                         'whatsapp_templates', 'whatsapp_webhook_events')
       and (has_table_privilege('anon', c.oid, 'SELECT')
