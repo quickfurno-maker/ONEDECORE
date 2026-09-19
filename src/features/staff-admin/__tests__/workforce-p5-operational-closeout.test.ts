@@ -130,8 +130,9 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
         "20260920143000_commerce_vendor_login_auth_boundary.sql",
         "20260920150000_commerce_vendor_private_order_read.sql",
         "20260921100000_website_analytics_foundation.sql",
+        "20260921110000_mobile_owner_push_notifications.sql",
       ],
-      "post-WM-6 migrations include the reviewed commerce closeout followed by the forward-only website analytics foundation"
+      "post-WM-6 migrations include the reviewed commerce closeout, website analytics foundation, and mobile owner push foundation"
     );
     assert.ok(
       sorted.includes("20260913120000_portfolio_standalone_room_media_library.sql"),

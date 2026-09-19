@@ -693,12 +693,22 @@ describe("a conversion report cannot fail a lead", () => {
      * enquiry. The value is used for one log field and nothing else.
      */
     const route = read(ROUTE);
-    assert.match(route, /const capi = await reportLeadConversion\(/);
-    assert.match(route, /metaLog = safeMetaCapiLog\(capi\);/);
+    assert.match(route, /const \[capi, push\] = await Promise\.all\(\[/);
+    assert.match(
+      route,
+      /result\.conversion\s*\?\s*reportLeadConversion\(/
+    );
+    assert.match(
+      route,
+      /capi\s*\?\s*safeMetaCapiLog\(capi\)\s*:\s*\{\}/
+    );
     assert.doesNotMatch(route, /if \(capi[.\s]/);
     assert.doesNotMatch(route, /throw .*capi/);
     // And it runs only for an accepted lead.
-    assert.match(route, /if \(result\.conversion\) \{/);
+    assert.match(
+      route,
+      /result\.conversion\s*\?\s*reportLeadConversion\(/
+    );
   });
 
   test("the timeout is short and bounded by AbortController", () => {
