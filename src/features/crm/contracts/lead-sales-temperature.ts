@@ -101,6 +101,19 @@ export function manualTemperatureAsBucket(
 }
 
 /**
+ * Owner-facing temperature for lists and filters.
+ *
+ * An unmarked lead is operationally treated as COLD until someone explicitly
+ * classifies it. The stored null remains intact so audit history can still
+ * distinguish "never marked" from "manually marked Cold".
+ */
+export function displayLeadTemperature(
+  manualTemperature: CrmManualSalesTemperature | null
+): CrmManualSalesTemperature {
+  return manualTemperature ?? "COLD";
+}
+
+/**
  * True while the lifecycle owns the classification, so the temperature control
  * must be disabled: editing it would change nothing visible.
  */

@@ -10,6 +10,7 @@ import {
 } from "../../contracts/lead-milestones.ts";
 import { LeadSalesBucketBadge } from "./LeadSalesBucketBadge.tsx";
 import { LeadStatusBadge } from "./LeadStatusBadge.tsx";
+import { LeadTemperatureBadge } from "./LeadTemperatureBadge.tsx";
 
 interface LeadListTableProps {
   readonly items: readonly CrmLeadListItem[];
@@ -48,6 +49,9 @@ export function LeadListTable({ items }: LeadListTableProps) {
                   own column right beside it and is never replaced by it. */}
               <th scope="col" className="px-4 py-3 font-medium">
                 Bucket
+              </th>
+              <th scope="col" className="px-4 py-3 font-medium">
+                Temperature
               </th>
               <th scope="col" className="px-4 py-3 font-medium">
                 Stage
@@ -140,6 +144,9 @@ export function LeadListTable({ items }: LeadListTableProps) {
                     priorityScore={item.priorityScore}
                     source={item.salesBucketSource}
                   />
+                </td>
+                <td className="px-4">
+                  <LeadTemperatureBadge temperature={item.manualSalesTemperature} />
                 </td>
                 <td className="px-4">
                   <LeadStatusBadge status={item.status} />

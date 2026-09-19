@@ -8,6 +8,10 @@ import {
   parseLeadSalesBucketParam,
   type CrmLeadSalesBucket,
 } from "./lead-sales-bucket.ts";
+import {
+  parseManualSalesTemperature,
+  type CrmManualSalesTemperature,
+} from "./lead-sales-temperature.ts";
 import { LEAD_STAGE_CODES, type LeadStageCode } from "./lead-stages.ts";
 
 export const LEAD_LIST_DEFAULT_PAGE = 1;
@@ -68,6 +72,11 @@ export interface LeadListQuery {
    * mutates the other.
    */
   readonly bucket: CrmLeadSalesBucket | null;
+  /**
+   * Explicit Hot/Warm/Cold working temperature. A stored null is treated as
+   * COLD for this owner-facing filter, without overwriting its audit meaning.
+   */
+  readonly temperature: CrmManualSalesTemperature | null;
   /**
    * Only leads a person has classified by hand.
    *
@@ -196,6 +205,9 @@ export function parseLeadListQuery(
     : null;
 
   const bucket = parseLeadSalesBucketParam(firstParam(searchParams.bucket));
+  const temperature = parseManualSalesTemperature(
+    firstParam(searchParams.temperature)
+  );
 
   const sortRaw = firstParam(searchParams.sort);
   // An unrecognised sort falls back to received order rather than being
@@ -225,6 +237,7 @@ export function parseLeadListQuery(
     assigneeId: parseUuid(firstParam(searchParams.assigneeId)),
     followUpDue,
     bucket,
+    temperature,
     manualOnly,
     sort,
     month,
@@ -242,6 +255,7 @@ export function hasLeadListActiveFilters(query: LeadListQuery): boolean {
       query.assigneeId ||
       query.followUpDue ||
       query.bucket ||
+      query.temperature ||
       query.manualOnly
   );
 }
@@ -272,6 +286,7 @@ export type LeadListClearableFilter =
   | "assigneeId"
   | "followUpDue"
   | "bucket"
+  | "temperature"
   | "secondary";
 
 export interface LeadListHrefOverrides {
@@ -304,6 +319,8 @@ export function buildLeadListHref(
   const assignment = all || clear === "assignment" ? null : query.assignment;
   const assigneeId = all || clear === "assigneeId" ? null : query.assigneeId;
   const followUpDue = all || clear === "followUpDue" ? null : query.followUpDue;
+  const temperature =
+    all || clear === "temperature" ? null : query.temperature;
   const bucket =
     overrides.bucket !== undefined
       ? overrides.bucket
@@ -318,6 +335,7 @@ export function buildLeadListHref(
   if (assignment) params.set("assignment", assignment);
   if (assigneeId) params.set("assigneeId", assigneeId);
   if (followUpDue) params.set("followUpDue", followUpDue);
+  if (temperature) params.set("temperature", temperature.toLowerCase());
   if (bucket) params.set("bucket", leadSalesBucketParam(bucket));
   // All-time is a deliberate, shareable choice, so it stays in the URL; the
   // default current month is implicit and left out to keep links clean.
