@@ -176,22 +176,22 @@ describe("the hero keeps its headline and one CTA", () => {
     assert.doesNotMatch(css, /pm-hero__eyebrow/, "dead eyebrow CSS remains");
   });
 
-  test("the headline is unchanged, all four lines of it", () => {
+  test("the approved conversion headline is rendered in two lines", () => {
     assert.deepEqual(
       PM_HERO.titleLines.map((line) => line.text),
-      ["Beautiful Homes.", "Designed, Built", "& Delivered by", "One Team."]
+      ["Beautiful Interiors.", "Built Smarter."]
     );
     // The gold emphasis sits on the second line and only there.
     assert.deepEqual(
       PM_HERO.titleLines.map((line) => line.emphasize),
-      [false, true, false, false]
+      [false, true]
     );
     assert.match(code(read(HERO)), /<h1 id="pm-hero-title" className="pm-hero__title">/);
   });
 
-  test("one button, still Get Free Consultation, still opening the planner", () => {
+  test("one button, Get Free 3D Design, still opening the canonical planner", () => {
     const hero = code(read(HERO));
-    assert.equal(PM_HERO.primaryCta, "Get Free Consultation");
+    assert.equal(PM_HERO.primaryCta, "Get Free 3D Design");
     assert.match(hero, /\{PM_HERO\.primaryCta\}/);
     assert.match(hero, /data-conversion-action="hero-start-plan"/);
     assert.match(hero, /openPlanner\(getNextIncompleteStep\(\)\)/);
