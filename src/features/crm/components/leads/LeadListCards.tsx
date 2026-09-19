@@ -10,6 +10,7 @@ import {
 } from "../../contracts/lead-milestones.ts";
 import { LeadSalesBucketBadge } from "./LeadSalesBucketBadge.tsx";
 import { LeadStatusBadge } from "./LeadStatusBadge.tsx";
+import { LeadTemperatureBadge } from "./LeadTemperatureBadge.tsx";
 
 interface LeadListCardsProps {
   readonly items: readonly CrmLeadListItem[];
@@ -86,6 +87,7 @@ export function LeadListCards({ items }: LeadListCardsProps) {
                 carries both rather than collapsing them into one signal. */}
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <LeadStatusBadge status={item.status} />
+              <LeadTemperatureBadge temperature={item.manualSalesTemperature} />
               <span className="text-[11px] tabular-nums text-[var(--crm-muted)]">
                 Priority {item.priorityScore}
               </span>

@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import type {
   LeadPropertyCode,
   LeadRoomCode,
-  LeadServiceCode,
   LeadTimelineCode,
 } from "@/features/lead-intake/planner-allowlist";
 import {
@@ -131,14 +130,14 @@ function parseManualLeadFormInput(
       email: parseNullableString(formData.get("email")),
       serviceCode: isAllowed(serviceCode, LEAD_SERVICE_CODES)
         ? serviceCode
-        : ("complete-home-interiors" as LeadServiceCode),
+        : "not-specified",
       propertyCode: isAllowed(propertyCode, LEAD_PROPERTY_CODES)
-        ? propertyCode
-        : ("apartment-2bhk" as LeadPropertyCode),
+        ? (propertyCode as LeadPropertyCode)
+        : "not-specified",
       timelineCode: isAllowed(timelineCode, LEAD_TIMELINE_CODES)
-        ? timelineCode
-        : ("within-1-month" as LeadTimelineCode),
-      primarySourceId: String(formData.get("primarySourceId") ?? ""),
+        ? (timelineCode as LeadTimelineCode)
+        : "not-specified",
+      primarySourceId: parseNullableString(formData.get("primarySourceId")),
       locality: parseNullableString(formData.get("locality")),
       budgetComfortCode:
         budgetRaw && isAllowed(budgetRaw, LEAD_BUDGET_COMFORT_CODES)
@@ -180,10 +179,10 @@ export async function previewManualLeadDuplicateAction(
       email: parseNullableString(formData.get("email")),
       serviceCode: isAllowed(serviceCode, LEAD_SERVICE_CODES)
         ? serviceCode
-        : ("complete-home-interiors" as LeadServiceCode),
+        : "not-specified",
       propertyCode: isAllowed(propertyCode, LEAD_PROPERTY_CODES)
-        ? propertyCode
-        : ("apartment-2bhk" as LeadPropertyCode),
+        ? (propertyCode as LeadPropertyCode)
+        : "not-specified",
       locality: parseNullableString(formData.get("locality")),
     });
 

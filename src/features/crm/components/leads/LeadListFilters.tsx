@@ -14,6 +14,10 @@ import {
   type LeadListQuery,
 } from "../../contracts/lead-list-query.ts";
 import { leadSalesBucketParam } from "../../contracts/lead-sales-bucket.ts";
+import {
+  CRM_MANUAL_SALES_TEMPERATURES,
+  CRM_MANUAL_SALES_TEMPERATURE_LABELS,
+} from "../../contracts/lead-sales-temperature.ts";
 
 interface LeadListFiltersProps {
   readonly query: LeadListQuery;
@@ -145,6 +149,20 @@ export function LeadListFilters({
             </>
           ) : null}
           <select
+            id={`${formId}-temperature`}
+            name="temperature"
+            defaultValue={query.temperature ?? ""}
+            aria-label="Filter by lead temperature"
+            className={selectClass}
+          >
+            <option value="">Temperature</option>
+            {CRM_MANUAL_SALES_TEMPERATURES.map((temperature) => (
+              <option key={temperature} value={temperature}>
+                {CRM_MANUAL_SALES_TEMPERATURE_LABELS[temperature]}
+              </option>
+            ))}
+          </select>
+          <select
             id={`${formId}-follow-up`}
             name="followUpDue"
             defaultValue={query.followUpDue ?? ""}
@@ -197,6 +215,12 @@ export function LeadListFilters({
           <Chip
             label={assigneeLabel ?? "Assignee"}
             href={buildLeadListHref(filterQuery, "assigneeId")}
+          />
+        ) : null}
+        {filterQuery.temperature ? (
+          <Chip
+            label={`Temperature: ${CRM_MANUAL_SALES_TEMPERATURE_LABELS[filterQuery.temperature]}`}
+            href={buildLeadListHref(filterQuery, "temperature")}
           />
         ) : null}
         {filterQuery.followUpDue ? (

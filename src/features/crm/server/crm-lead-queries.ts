@@ -26,7 +26,10 @@ import {
   resolveEffectiveSalesBucket,
   type CrmLeadSalesBucketCounts,
 } from "../contracts/lead-sales-bucket.ts";
-import { parseManualSalesTemperature } from "../contracts/lead-sales-temperature.ts";
+import {
+  displayLeadTemperature,
+  parseManualSalesTemperature,
+} from "../contracts/lead-sales-temperature.ts";
 import {
   compareLeadsByReceivedNewestFirst,
   sortLeadsByReceivedNewestFirst,
@@ -802,9 +805,19 @@ export async function queryLeadListPage(
    * "3 manual HOT leads" means three in the month rather than three on the
    * page the caller happened to ask for.
    */
-  const filtered = query.manualOnly
-    ? bucketed.filter((item) => item.manualSalesTemperature !== null)
+  const temperatureFiltered = query.temperature
+    ? bucketed.filter(
+        (item) =>
+          displayLeadTemperature(item.manualSalesTemperature) ===
+          query.temperature
+      )
     : bucketed;
+
+  const filtered = query.manualOnly
+    ? temperatureFiltered.filter(
+        (item) => item.manualSalesTemperature !== null
+      )
+    : temperatureFiltered;
 
   const ordered = orderLeadCohort(filtered, query.sort, now);
 

@@ -61,6 +61,7 @@ export type EnvSubsystem =
   | "meta-ads"
   | "meta-tracking"
   | "google-ads"
+  | "notifications"
   | "kriti";
 
 export interface EnvKeyContract {
@@ -168,6 +169,18 @@ export const ONEDECORE_ENV_CONTRACT: readonly EnvKeyContract[] = [
     subsystem: "core",
     purpose:
       "Trust X-Forwarded-For. Only safe behind a proxy that OVERWRITES the header; enabling it otherwise lets a caller choose their own client IP.",
+    inEnvExample: true,
+  },
+
+  // ------------------------------------------------------- notifications ---
+  {
+    name: "EXPO_PUSH_ACCESS_TOKEN",
+    scope: "server",
+    sensitivity: "secret",
+    lifecycle: "optional",
+    subsystem: "notifications",
+    purpose:
+      "Optional Expo Push Service bearer token used when push security is enabled for the OneDecore EAS project. Without it, Expo push requests are sent without Authorization.",
     inEnvExample: true,
   },
 

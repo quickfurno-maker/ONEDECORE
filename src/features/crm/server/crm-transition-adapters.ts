@@ -103,6 +103,9 @@ type CrmRpcClient = CrmServerClient & {
     fn: "update_lead_source",
     args: UpdateLeadSourceRpcArgs
   ): ReturnType<CrmServerClient["rpc"]>;
+};
+
+type ManualLeadRpcClient = {
   rpc(
     fn: "check_manual_lead_duplicate",
     args: CheckManualLeadDuplicateRpcArgs
@@ -304,7 +307,7 @@ export async function callCheckManualLeadDuplicate(
     readonly locality: string | null;
   }
 ): Promise<ManualLeadDuplicatePreview> {
-  const rpcClient = client as CrmRpcClient;
+  const rpcClient = client as unknown as ManualLeadRpcClient;
   const { data, error } = await rpcClient.rpc("check_manual_lead_duplicate", {
     p_phone: input.phone,
     p_email: input.email,
@@ -323,9 +326,11 @@ export async function callCheckManualLeadDuplicate(
 
 export async function callCreateManualLead(
   client: CrmServerClient,
-  input: ManualLeadFormInput
+  input: ManualLeadFormInput & {
+    readonly primarySourceId: string;
+  }
 ): Promise<CrmLeadListRow> {
-  const rpcClient = client as CrmRpcClient;
+  const rpcClient = client as unknown as ManualLeadRpcClient;
   const { data, error } = await rpcClient.rpc("create_manual_lead", {
     p_submitted_name: input.submittedName.trim(),
     p_phone: input.phone,

@@ -52,13 +52,13 @@ export async function POST(request: Request) {
     return crmMobileError("invalid_request", CRM_MOBILE_INVALID_JSON_BODY);
   }
 
-  const serviceCode = readStringField(body, "serviceCode");
-  const propertyCode = readStringField(body, "propertyCode");
+  const serviceCode = readOptionalText(body, "serviceCode");
+  const propertyCode = readOptionalText(body, "propertyCode");
 
-  if (serviceCode === null || propertyCode === null) {
+  if (serviceCode === false || propertyCode === false) {
     return crmMobileError(
       "invalid_request",
-      "Provide serviceCode and propertyCode."
+      "serviceCode and propertyCode must be text when provided."
     );
   }
 
@@ -90,8 +90,8 @@ export async function POST(request: Request) {
       {
         phone,
         email,
-        serviceCode: serviceCode as never,
-        propertyCode: propertyCode as never,
+        serviceCode: (serviceCode ?? "not-specified") as never,
+        propertyCode: (propertyCode ?? "not-specified") as never,
         locality,
       },
       auth.db

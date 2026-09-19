@@ -126,6 +126,7 @@ describe("ordering a list is not filtering it", () => {
       assigneeId: null,
       followUpDue: null,
       bucket: null,
+      temperature: null,
       manualOnly: false,
       sort: null,
       month: LEAD_MONTH_ALL,
@@ -171,7 +172,7 @@ describe("both new controls act on the whole cohort", () => {
 
     assert.match(
       body,
-      /const filtered = query\.manualOnly \? bucketed\.filter\(\(item\) => item\.manualSalesTemperature !== null\) : bucketed;/
+      /const filtered = query\.manualOnly \? temperatureFiltered\.filter\(\s*\(item\) => item\.manualSalesTemperature !== null\s*\) : temperatureFiltered;/
     );
 
     /* Filter, then order, then slice — in that order. */

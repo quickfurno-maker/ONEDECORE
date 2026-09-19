@@ -6,6 +6,10 @@ import { getLeadIntakeMode } from "../../../../config/server-env.ts";
 import { readBoundedRequestBody } from "../../../../features/lead-intake/server/bounded-request-body.ts";
 import { reportLeadConversion } from "../../../../features/marketing/meta/server/report-lead-conversion.ts";
 import { safeMetaCapiLog } from "../../../../features/marketing/meta/server/meta-capi-client.ts";
+import {
+  dispatchNewWebsiteEnquiryPush,
+  safeEnquiryPushLog,
+} from "../../../../features/notifications/server/enquiry-push.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -77,19 +81,34 @@ export async function POST(request: Request): Promise<Response> {
      * a slower response, never a failed enquiry. The result is used for one
      * sanitized log field and for nothing else, which is why it is not checked.
      */
-    let metaLog: Record<string, unknown> = {};
-    if (result.conversion) {
-      const capi = await reportLeadConversion({
-        eventId: result.conversion.eventId,
-        cookieHeader: request.headers.get("cookie"),
-        userAgent: request.headers.get("user-agent"),
-        forwardedFor: request.headers.get("x-forwarded-for"),
-        trustProxy: result.conversion.trustProxy,
-        landingPath: result.conversion.landingPath,
-        fbclid: result.conversion.fbclid,
-      });
-      metaLog = safeMetaCapiLog(capi);
-    }
+    const submissionReference =
+      result.outcome === "created"
+        ? result.body.submissionReference
+        : undefined;
+
+    const [capi, push] = await Promise.all([
+      result.conversion
+        ? reportLeadConversion({
+            eventId: result.conversion.eventId,
+            cookieHeader: request.headers.get("cookie"),
+            userAgent: request.headers.get("user-agent"),
+            forwardedFor: request.headers.get("x-forwarded-for"),
+            trustProxy: result.conversion.trustProxy,
+            landingPath: result.conversion.landingPath,
+            fbclid: result.conversion.fbclid,
+          })
+        : Promise.resolve(null),
+      submissionReference
+        ? dispatchNewWebsiteEnquiryPush(submissionReference)
+        : Promise.resolve(null),
+    ]);
+
+    const metaLog: Record<string, unknown> = capi
+      ? safeMetaCapiLog(capi)
+      : {};
+    const pushLog: Record<string, unknown> = push
+      ? safeEnquiryPushLog(push)
+      : {};
 
     console.info(
       "[lead-intake]",
@@ -102,6 +121,7 @@ export async function POST(request: Request): Promise<Response> {
           duplicate: result.duplicate,
         }),
         ...metaLog,
+        ...pushLog,
       })
     );
 

@@ -57,7 +57,11 @@ const ENV_PREFIXES = [
  * given a prefix rule, because one legacy name should not widen the namespace
  * filter that keeps provider error codes out.
  */
-const ENV_EXACT = new Set(["NODE_ENV", "QUOTATION_CAPABILITY_SECRET"]);
+const ENV_EXACT = new Set([
+  "NODE_ENV",
+  "QUOTATION_CAPABILITY_SECRET",
+  "EXPO_PUSH_ACCESS_TOKEN",
+]);
 
 /**
  * Helpers that take the environment as an argument, e.g. `read(env, "KEY")`.

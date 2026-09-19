@@ -100,34 +100,34 @@ describe("normalizeManualLeadPhone", () => {
 });
 
 describe("manual lead phone contract integration", () => {
-  test("empty phone + valid email accepted", () => {
+  test("email cannot replace the required mobile number", () => {
     const errors = validateManualLeadDuplicatePreviewInput({
       phone: null,
       email: "client@example.com",
-      serviceCode: "complete-home-interiors",
-      propertyCode: "apartment-2bhk",
+      serviceCode: "not-specified",
+      propertyCode: "not-specified",
       locality: null,
     });
-    assert.equal(errors.length, 0);
+    assert.ok(errors.some((entry) => entry.field === "phone"));
   });
 
-  test("empty phone + empty email rejected by contact-channel rule", () => {
+  test("empty phone is rejected even when other qualification is unknown", () => {
     const errors = validateManualLeadDuplicatePreviewInput({
       phone: "",
       email: null,
-      serviceCode: "complete-home-interiors",
-      propertyCode: "apartment-2bhk",
+      serviceCode: "not-specified",
+      propertyCode: "not-specified",
       locality: null,
     });
-    assert.ok(errors.some((entry) => entry.field === "contact"));
+    assert.ok(errors.some((entry) => entry.field === "phone"));
   });
 
-  test("duplicate preview rejects malformed phone before proceed", () => {
+  test("duplicate preview rejects malformed raw phone before proceed", () => {
     const errors = validateManualLeadDuplicatePreviewInput({
       phone: "+919876543210",
       email: null,
-      serviceCode: "complete-home-interiors",
-      propertyCode: "apartment-2bhk",
+      serviceCode: "not-specified",
+      propertyCode: "not-specified",
       locality: null,
     });
     assert.ok(errors.some((entry) => entry.field === "phone"));
@@ -173,16 +173,21 @@ describe("manual lead phone contract integration", () => {
 });
 
 describe("ManualLeadForm phone UI policy", () => {
-  test("enforces digit-only 10-char field wiring", () => {
+  test("keeps formatted clipboard paste intact until sanitizer runs", () => {
     const src = readFileSync(
       join(root, "src/features/crm/components/leads/ManualLeadForm.tsx"),
       "utf8"
     );
     assert.match(src, /sanitizeManualLeadPhoneInput/);
-    assert.match(src, /maxLength=\{10\}/);
+    assert.doesNotMatch(src, /maxLength=\{10\}/);
     assert.match(src, /inputMode="numeric"/);
     assert.match(src, /placeholder="9876543210"/);
+    assert.match(src, /required/);
     assert.match(src, /MANUAL_LEAD_PHONE_ERROR_MESSAGE/);
     assert.doesNotMatch(src, /placeholder="\+91/);
+
+    assert.equal(sanitizeManualLeadPhoneInput("+91 98765 43210"), "9876543210");
+    assert.equal(sanitizeManualLeadPhoneInput("0091 98765 43210"), "9876543210");
+    assert.equal(sanitizeManualLeadPhoneInput("0 98765 43210"), "9876543210");
   });
 });

@@ -45,6 +45,7 @@ export async function getLeadsForCurrentUser(): Promise<CrmLeadListItem[]> {
     assigneeId: null,
     followUpDue: null,
     bucket: null,
+    temperature: null,
     manualOnly: false,
     // Received order, as this helper has always returned.
     sort: null,

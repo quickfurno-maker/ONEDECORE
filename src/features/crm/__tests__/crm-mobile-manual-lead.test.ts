@@ -431,27 +431,19 @@ describe("setup answers everything the form needs", () => {
     }
   });
 
-  test("sources are the active catalogue and the default mirrors the browser", () => {
+  test("setup remains canonical while Manual Entry is resolved server-side", () => {
     assert.match(code(SETUP_ROUTE), /fetchActiveLeadSources\(auth\.db\)/);
-
-    /* Exactly the preference `ManualLeadForm` applies. */
-    assert.match(
-      flat(code(SETUP_ROUTE)),
-      /sources\.find\(\(source\) => source\.code === "manual_entry"\)/
-    );
-
-    assert.match(
-      flat(code(SETUP_ROUTE)),
-      /manualEntry\?\.id \?\? sources\[0\]\?\.id \?\? null/
-    );
 
     const form = read(
       "src", "features", "crm", "components", "leads", "ManualLeadForm.tsx"
     );
 
+    assert.doesNotMatch(form, /name="primarySourceId"/);
+    assert.doesNotMatch(form, /Primary source/);
+
     assert.match(
-      flat(form),
-      /manualEntry\?\.id \?\? sources\[0\]\?\.id \?\? ""/
+      flat(code(SERVICE)),
+      /sources\.find\(\(source\) => source\.code === "manual_entry"\)\?\.id/
     );
   });
 
@@ -497,10 +489,12 @@ describe("setup answers everything the form needs", () => {
 /* ====================================================================== */
 
 describe("duplicate preview is advisory and says nothing private", () => {
-  test("it delegates to the canonical service with the caller's client", () => {
+  test("it delegates optional qualification using explicit not-specified sentinels", () => {
+    const body = flat(code(PREVIEW_ROUTE));
+
     assert.match(
-      flat(code(PREVIEW_ROUTE)),
-      /previewManualLeadDuplicateForContext\( auth\.context, \{ phone, email, serviceCode: serviceCode as never, propertyCode: propertyCode as never, locality, \}, auth\.db \)/
+      body,
+      /previewManualLeadDuplicateForContext\( auth\.context, \{ phone, email, serviceCode: \(serviceCode \?\? "not-specified"\) as never, propertyCode: \(propertyCode \?\? "not-specified"\) as never, locality, \}, auth\.db \)/
     );
   });
 
@@ -704,13 +698,19 @@ describe("the browser manual-lead flow still works the same way", () => {
     assert.ok(!SERVICE.includes("await createClient()"));
   });
 
-  test("the browser page and form are untouched", () => {
+  test("the browser uses the same minimal intake rule", () => {
     const page = read(
       "src", "app", "admin", "crm", "leads", "new", "page.tsx"
     );
+    const form = read(
+      "src", "features", "crm", "components", "leads", "ManualLeadForm.tsx"
+    );
 
-    assert.match(page, /fetchActiveLeadSources\(\)/);
+    assert.doesNotMatch(page, /fetchActiveLeadSources\(\)/);
     assert.match(page, /ManualLeadForm/);
+    assert.match(form, /Only client name and mobile number are required/);
+    assert.match(form, /Not specified — add later/);
+    assert.doesNotMatch(form, /name="primarySourceId"/);
   });
 
   test("the AUTH_REQUIRED behaviour the browser relied on is preserved", () => {
