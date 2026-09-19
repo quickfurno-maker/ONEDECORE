@@ -110,6 +110,22 @@ export async function listLeadQuotations(): Promise<readonly ListQuotationItem[]
 }
 
 /**
+ * Reads the Super Admin maximum-discount governance bound. NULL means the
+ * production prerequisite has not been configured and finalization must fail closed.
+ */
+export async function getQuotationMaxDiscountPercentage(): Promise<number | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("quotation_commercial_settings")
+    .select("max_discount_percentage")
+    .eq("setting_key", "global")
+    .maybeSingle();
+
+  if (error) throw quotationErrorFromPostgresMessage(error);
+  return data?.max_discount_percentage == null ? null : Number(data.max_discount_percentage);
+}
+
+/**
  * Lists active tax profiles available for selection.
  */
 export async function listActiveTaxProfiles(): Promise<readonly QuotationTaxProfileDTO[]> {
