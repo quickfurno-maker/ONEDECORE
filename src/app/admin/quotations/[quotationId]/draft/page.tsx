@@ -5,6 +5,7 @@ import { QuotationFinalizedView } from "@/features/quotations/components/Quotati
 import { probeQuotationPermissions } from "@/features/quotations/server/quotation-permissions";
 import {
   getQuotationDraftByQuotationId,
+  getQuotationMaxDiscountPercentage,
   listActiveTaxProfiles,
 } from "@/features/quotations/server/quotation-queries";
 import { createClient } from "@/lib/supabase/server";
@@ -40,6 +41,7 @@ export default async function QuotationDraftPage({ params }: PageProps) {
 
   let draft;
   let taxProfiles;
+  let maxDiscountPercentage: number | null = null;
   let canEditQuotations = false;
   let canSendQuotations = false;
 
@@ -47,8 +49,11 @@ export default async function QuotationDraftPage({ params }: PageProps) {
     const permissions = await probeQuotationPermissions();
     canEditQuotations = permissions.canEditQuotations;
     canSendQuotations = permissions.canSendQuotations;
-    draft = await getQuotationDraftByQuotationId(quotationId);
-    taxProfiles = await listActiveTaxProfiles();
+    [draft, taxProfiles, maxDiscountPercentage] = await Promise.all([
+      getQuotationDraftByQuotationId(quotationId),
+      listActiveTaxProfiles(),
+      getQuotationMaxDiscountPercentage(),
+    ]);
   } catch {
     notFound();
   }
@@ -68,7 +73,11 @@ export default async function QuotationDraftPage({ params }: PageProps) {
   if (isEditableActiveDraft) {
     return (
       <div className="p-6">
-        <QuotationDraftEditor initialDraft={draft} taxProfiles={taxProfiles} />
+        <QuotationDraftEditor
+          initialDraft={draft}
+          taxProfiles={taxProfiles}
+          maxDiscountPercentage={maxDiscountPercentage}
+        />
       </div>
     );
   }
