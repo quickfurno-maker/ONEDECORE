@@ -17,7 +17,10 @@ import type { CrmLeadListRow } from "../contracts/lead-dtos.ts";
 import { canonicalizeOptionalPhone } from "../lib/phone-e164.ts";
 import { getCrmAccessContext } from "./crm-auth.ts";
 import { CrmError } from "./crm-errors.ts";
-import { fetchCrmAssigneeDirectory } from "./crm-lead-queries.ts";
+import {
+  fetchActiveLeadSources,
+  fetchCrmAssigneeDirectory,
+} from "./crm-lead-queries.ts";
 import {
   callCheckManualLeadDuplicate,
   callCreateManualLead,
@@ -145,7 +148,27 @@ export async function createManualLeadForContext(
   }
 
   const supabase = await resolveCrmDb(db);
-  return callCreateManualLead(supabase, withCanonicalPhone(input));
+  const sources = await fetchActiveLeadSources(supabase);
+  const manualSourceId =
+    input.primarySourceId ??
+    sources.find((source) => source.code === "manual_entry")?.id ??
+    null;
+
+  if (!manualSourceId) {
+    throw new CrmError({
+      code: "INVALID_MANUAL_LEAD",
+      message: "Manual Entry lead source is unavailable.",
+      httpStatus: 422,
+    });
+  }
+
+  return callCreateManualLead(
+    supabase,
+    withCanonicalPhone({
+      ...input,
+      primarySourceId: manualSourceId,
+    })
+  );
 }
 
 /** The browser entry point, unchanged in behaviour. */

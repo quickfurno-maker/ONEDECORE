@@ -3,7 +3,6 @@ import Link from "next/link";
 import { CrmPageHeader } from "@/features/crm/components/shell/CrmPageHeader";
 import { ManualLeadForm } from "@/features/crm/components/leads/ManualLeadForm";
 import { requireCrmCreateAccess } from "@/features/crm/server/crm-auth";
-import { fetchActiveLeadSources } from "@/features/crm/server/crm-lead-queries";
 import {
   fetchManualCreateAssigneeDirectory,
   resolveManualCreateAssigneePolicy,
@@ -18,10 +17,7 @@ export const metadata: Metadata = {
 
 export default async function CrmNewLeadPage() {
   const context = await requireCrmCreateAccess("/admin/crm/leads/new");
-  const [sources, assigneeDirectory] = await Promise.all([
-    fetchActiveLeadSources(),
-    fetchManualCreateAssigneeDirectory(context),
-  ]);
+  const assigneeDirectory = await fetchManualCreateAssigneeDirectory(context);
 
   const assigneePolicy = resolveManualCreateAssigneePolicy(context);
 
@@ -41,7 +37,6 @@ export default async function CrmNewLeadPage() {
       />
 
       <ManualLeadForm
-        sources={sources}
         assigneeDirectory={assigneeDirectory}
         assigneePolicy={assigneePolicy}
         canOverrideDuplicate={context.canOverrideLeadDuplicate}

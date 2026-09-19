@@ -22,9 +22,15 @@ export type PhoneNormalizeResult =
  */
 export function sanitizeManualLeadPhoneInput(raw: string): string {
   let digits = String(raw).replace(/\D/g, "");
-  if (digits.startsWith("91") && digits.length >= 12) {
+
+  if (digits.startsWith("0091") && digits.length >= 14) {
+    digits = digits.slice(4);
+  } else if (digits.startsWith("91") && digits.length >= 12) {
     digits = digits.slice(2);
+  } else if (digits.startsWith("0") && digits.length === 11) {
+    digits = digits.slice(1);
   }
+
   return digits.slice(0, 10);
 }
 

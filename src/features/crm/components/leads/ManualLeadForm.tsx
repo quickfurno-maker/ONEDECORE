@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId, useMemo, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import {
   LEAD_BUDGET_COMFORT_CODES,
   LEAD_PROPERTY_CODES,
@@ -9,7 +9,6 @@ import {
   LEAD_TIMELINE_CODES,
 } from "@/features/lead-intake/planner-allowlist";
 import type { CrmAssigneeDirectoryEntry } from "../../contracts/lead-detail-dtos.ts";
-import type { CrmLeadSourceOption } from "../../contracts/lead-detail-dtos.ts";
 import type { ManualCreateAssigneePolicy } from "../../contracts/manual-lead-contracts.ts";
 import { MANUAL_LEAD_CATALOG_LABELS } from "../../contracts/manual-lead-contracts.ts";
 import {
@@ -25,7 +24,6 @@ import {
 import { ManualLeadDuplicateNotice } from "./ManualLeadDuplicateNotice.tsx";
 
 interface ManualLeadFormProps {
-  readonly sources: readonly CrmLeadSourceOption[];
   readonly assigneeDirectory: readonly CrmAssigneeDirectoryEntry[];
   readonly assigneePolicy: ManualCreateAssigneePolicy;
   readonly canOverrideDuplicate: boolean;
@@ -65,7 +63,6 @@ function canSubmitAfterPreview(
 }
 
 export function ManualLeadForm({
-  sources,
   assigneeDirectory,
   assigneePolicy,
   canOverrideDuplicate,
@@ -84,11 +81,6 @@ export function ManualLeadForm({
     createManualLeadAction,
     MANUAL_LEAD_INITIAL_ACTION_STATE
   );
-
-  const defaultSourceId = useMemo(() => {
-    const manualEntry = sources.find((source) => source.code === "manual_entry");
-    return manualEntry?.id ?? sources[0]?.id ?? "";
-  }, [sources]);
 
   const preview = previewState.duplicatePreview;
   const submitAllowed = canSubmitAfterPreview(
@@ -163,7 +155,7 @@ export function ManualLeadForm({
                 type="tel"
                 inputMode="numeric"
                 autoComplete="tel"
-                maxLength={10}
+                required
                 placeholder="9876543210"
                 value={phone}
                 aria-invalid={activePhoneError ? true : undefined}
@@ -195,7 +187,7 @@ export function ManualLeadForm({
                 id={`${formId}-phone-hint`}
                 className="mt-1 text-[12px] text-[var(--crm-muted)]"
               >
-                Optional if email is provided. Enter a 10-digit mobile number only.
+                Required. Paste any Indian mobile format; it will be normalized to 10 digits.
               </p>
               {activePhoneError ? (
                 <p
@@ -222,7 +214,7 @@ export function ManualLeadForm({
             </div>
 
             <p className="md:col-span-2 text-[12px] text-[var(--crm-muted)]">
-              Provide at least one contact channel: phone or email.
+              Only client name and mobile number are required. Email and project details can be added later.
             </p>
           </div>
         </section>
@@ -237,10 +229,10 @@ export function ManualLeadForm({
               <select
                 id={`${formId}-service`}
                 name="serviceCode"
-                required
                 className={fieldClassName}
-                defaultValue="complete-home-interiors"
+                defaultValue=""
               >
+                <option value="">Not specified — add later</option>
                 {LEAD_SERVICE_CODES.map((code) => (
                   <option key={code} value={code}>
                     {MANUAL_LEAD_CATALOG_LABELS.service[code]}
@@ -256,10 +248,10 @@ export function ManualLeadForm({
               <select
                 id={`${formId}-property`}
                 name="propertyCode"
-                required
                 className={fieldClassName}
-                defaultValue="apartment-2bhk"
+                defaultValue=""
               >
+                <option value="">Not specified — add later</option>
                 {LEAD_PROPERTY_CODES.map((code) => (
                   <option key={code} value={code}>
                     {MANUAL_LEAD_CATALOG_LABELS.property[code]}
@@ -275,10 +267,10 @@ export function ManualLeadForm({
               <select
                 id={`${formId}-timeline`}
                 name="timelineCode"
-                required
                 className={fieldClassName}
-                defaultValue="within-1-month"
+                defaultValue=""
               >
+                <option value="">Not specified — add later</option>
                 {LEAD_TIMELINE_CODES.map((code) => (
                   <option key={code} value={code}>
                     {MANUAL_LEAD_CATALOG_LABELS.timeline[code]}
@@ -287,24 +279,6 @@ export function ManualLeadForm({
               </select>
             </div>
 
-            <div>
-              <label htmlFor={`${formId}-source`} className={labelClassName}>
-                Primary source
-              </label>
-              <select
-                id={`${formId}-source`}
-                name="primarySourceId"
-                required
-                className={fieldClassName}
-                defaultValue={defaultSourceId}
-              >
-                {sources.map((source) => (
-                  <option key={source.id} value={source.id}>
-                    {source.displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
         </section>
 

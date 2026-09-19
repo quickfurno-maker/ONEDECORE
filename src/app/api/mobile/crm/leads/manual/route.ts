@@ -93,25 +93,19 @@ export async function POST(request: Request) {
   }
 
   const submittedName = readStringField(body, "submittedName");
-  const serviceCode = readStringField(body, "serviceCode");
-  const propertyCode = readStringField(body, "propertyCode");
-  const timelineCode = readStringField(body, "timelineCode");
-  const primarySourceId = readStringField(body, "primarySourceId");
 
-  if (
-    submittedName === null ||
-    serviceCode === null ||
-    propertyCode === null ||
-    timelineCode === null ||
-    primarySourceId === null
-  ) {
+  if (submittedName === null) {
     return crmMobileError(
       "invalid_request",
-      "Provide submittedName, serviceCode, propertyCode, timelineCode and primarySourceId."
+      "Provide submittedName."
     );
   }
 
   const phone = readOptionalText(body, "phone");
+  const serviceCode = readOptionalText(body, "serviceCode");
+  const propertyCode = readOptionalText(body, "propertyCode");
+  const timelineCode = readOptionalText(body, "timelineCode");
+  const primarySourceId = readOptionalText(body, "primarySourceId");
   const email = readOptionalText(body, "email");
   const locality = readOptionalText(body, "locality");
   const budgetComfortCode = readOptionalText(body, "budgetComfortCode");
@@ -125,6 +119,10 @@ export async function POST(request: Request) {
 
   if (
     phone === false ||
+    serviceCode === false ||
+    propertyCode === false ||
+    timelineCode === false ||
+    primarySourceId === false ||
     email === false ||
     locality === false ||
     budgetComfortCode === false ||
@@ -176,9 +174,9 @@ export async function POST(request: Request) {
         submittedName,
         phone,
         email,
-        serviceCode: serviceCode as never,
-        propertyCode: propertyCode as never,
-        timelineCode: timelineCode as never,
+        serviceCode: (serviceCode ?? "not-specified") as never,
+        propertyCode: (propertyCode ?? "not-specified") as never,
+        timelineCode: (timelineCode ?? "not-specified") as never,
         primarySourceId,
         locality,
         budgetComfortCode: budgetComfortCode as never,

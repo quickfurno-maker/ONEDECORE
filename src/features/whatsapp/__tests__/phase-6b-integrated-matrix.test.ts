@@ -97,7 +97,7 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 88, "Migration count must be exactly 88 after the reviewed commerce closeout, website analytics foundation, and mobile owner push foundation");
+    assert.equal(files.length, 89, "Migration count must be exactly 89 after the reviewed commerce closeout, website analytics, mobile owner push, and minimal manual-enquiry foundations");
     assert.ok(
       files.includes("20260919120000_commerce_checkout_policy_acceptance.sql"),
       "commerce checkout policy acceptance migration is present"
@@ -297,8 +297,9 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
         // Owner-app push token registry and notification delivery foundation.
         // No COD, online payment, or customer-facing commerce surface.
         "20260921110000_mobile_owner_push_notifications.sql",
+        "20260921120000_manual_lead_minimal_intake.sql",
       ],
-      "Only the reviewed forward-only migrations, including website analytics and mobile owner push foundations, may follow the 9D-D1 COD order foundation"
+      "Only the reviewed forward-only migrations, including website analytics, mobile owner push, and minimal manual-enquiry foundations, may follow the 9D-D1 COD order foundation"
     );
     assert.equal(
       files.includes("20260825140000_commerce_online_payment_adapter_foundation.sql"),

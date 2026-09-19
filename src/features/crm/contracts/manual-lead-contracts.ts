@@ -14,7 +14,10 @@ import {
   type LeadServiceCode,
   type LeadTimelineCode,
 } from "../../lead-intake/planner-allowlist.ts";
-import { canonicalizeOptionalPhone } from "../lib/phone-e164.ts";
+import {
+  canonicalizeOptionalPhone,
+  MANUAL_LEAD_PHONE_ERROR_MESSAGE,
+} from "../lib/phone-e164.ts";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -42,14 +45,24 @@ export type ManualCreateAssigneePolicy =
   | { readonly mode: "manager"; readonly allowSelf: true }
   | { readonly mode: "admin"; readonly allowSelf: false };
 
+export type ManualLeadServiceCode =
+  | LeadServiceCode
+  | "not-specified";
+export type ManualLeadPropertyCode =
+  | LeadPropertyCode
+  | "not-specified";
+export type ManualLeadTimelineCode =
+  | LeadTimelineCode
+  | "not-specified";
+
 export interface ManualLeadFormInput {
   readonly submittedName: string;
   readonly phone: string | null;
   readonly email: string | null;
-  readonly serviceCode: LeadServiceCode;
-  readonly propertyCode: LeadPropertyCode;
-  readonly timelineCode: LeadTimelineCode;
-  readonly primarySourceId: string;
+  readonly serviceCode: ManualLeadServiceCode;
+  readonly propertyCode: ManualLeadPropertyCode;
+  readonly timelineCode: ManualLeadTimelineCode;
+  readonly primarySourceId: string | null;
   readonly locality: string | null;
   readonly budgetComfortCode: LeadBudgetComfortCode | null;
   readonly roomCodes: readonly LeadRoomCode[];
@@ -68,8 +81,8 @@ export interface ManualLeadValidationError {
 export interface ManualLeadDuplicatePreviewInput {
   readonly phone: string | null;
   readonly email: string | null;
-  readonly serviceCode: LeadServiceCode;
-  readonly propertyCode: LeadPropertyCode;
+  readonly serviceCode: ManualLeadServiceCode;
+  readonly propertyCode: ManualLeadPropertyCode;
   readonly locality: string | null;
 }
 
@@ -100,10 +113,10 @@ export function validateManualLeadDuplicatePreviewInput(
   const phone = phoneCanonical.phone;
   const email = normalizeOptionalText(input.email);
 
-  if (!phone && !email) {
+  if (!phone) {
     errors.push({
-      field: "contact",
-      message: "Provide a phone number or email address.",
+      field: "phone",
+      message: MANUAL_LEAD_PHONE_ERROR_MESSAGE,
     });
   }
 
@@ -114,11 +127,17 @@ export function validateManualLeadDuplicatePreviewInput(
     });
   }
 
-  if (!isAllowed(input.serviceCode, LEAD_SERVICE_CODES)) {
+  if (
+    input.serviceCode !== "not-specified" &&
+    !isAllowed(input.serviceCode, LEAD_SERVICE_CODES)
+  ) {
     errors.push({ field: "serviceCode", message: "Select a valid service." });
   }
 
-  if (!isAllowed(input.propertyCode, LEAD_PROPERTY_CODES)) {
+  if (
+    input.propertyCode !== "not-specified" &&
+    !isAllowed(input.propertyCode, LEAD_PROPERTY_CODES)
+  ) {
     errors.push({
       field: "propertyCode",
       message: "Select a valid property type.",
@@ -163,14 +182,17 @@ export function validateManualLeadFormInput(
     errors.push({ field: "email", message: "Enter a valid email address." });
   }
 
-  if (!isAllowed(input.timelineCode, LEAD_TIMELINE_CODES)) {
+  if (
+    input.timelineCode !== "not-specified" &&
+    !isAllowed(input.timelineCode, LEAD_TIMELINE_CODES)
+  ) {
     errors.push({ field: "timelineCode", message: "Select a valid timeline." });
   }
 
-  if (!isUuid(input.primarySourceId)) {
+  if (input.primarySourceId !== null && !isUuid(input.primarySourceId)) {
     errors.push({
       field: "primarySourceId",
-      message: "Select a valid lead source.",
+      message: "Lead source identifier is invalid.",
     });
   }
 

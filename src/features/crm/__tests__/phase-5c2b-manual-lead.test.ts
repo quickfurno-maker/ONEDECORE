@@ -56,15 +56,40 @@ describe("Phase 5C2B permissions", () => {
 });
 
 describe("Phase 5C2B contracts", () => {
-  test("duplicate preview requires contact channel", () => {
+  test("duplicate preview requires a mobile number, not email alone", () => {
     const errors = validateManualLeadDuplicatePreviewInput({
       phone: null,
-      email: null,
-      serviceCode: "complete-home-interiors",
-      propertyCode: "apartment-2bhk",
+      email: "client@example.com",
+      serviceCode: "not-specified",
+      propertyCode: "not-specified",
       locality: null,
     });
-    assert.ok(errors.some((entry) => entry.field === "contact"));
+    assert.ok(errors.some((entry) => entry.field === "phone"));
+  });
+
+  test("minimal manual enquiry needs only name, phone and a duplicate verdict", () => {
+    const errors = validateManualLeadFormInput(
+      {
+        submittedName: "Test Client",
+        phone: "9876543210",
+        email: null,
+        serviceCode: "not-specified",
+        propertyCode: "not-specified",
+        timelineCode: "not-specified",
+        primarySourceId: null,
+        locality: null,
+        budgetComfortCode: null,
+        roomCodes: [],
+        message: null,
+        sourceDetail: null,
+        assigneeId: null,
+        duplicateOverride: false,
+        duplicateOverrideReason: null,
+      },
+      { mode: "manager", allowSelf: true }
+    );
+
+    assert.deepEqual(errors, []);
   });
 
   test("override reason validation enforced", () => {
