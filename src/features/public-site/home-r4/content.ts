@@ -405,13 +405,11 @@ export const PM_ASSETS = {
  */
 export const PM_HERO = {
   titleLines: [
-    { text: "Beautiful Homes.", emphasize: false },
-    { text: "Designed, Built", emphasize: true },
-    { text: "& Delivered by", emphasize: false },
-    { text: "One Team.", emphasize: false },
+    { text: "Beautiful Interiors.", emphasize: false },
+    { text: "Built Smarter.", emphasize: true },
   ],
-  titlePlain: "Beautiful Homes. Designed, Built & Delivered by One Team.",
-  primaryCta: PM_CTA.open,
+  titlePlain: "Beautiful Interiors. Built Smarter.",
+  primaryCta: "Get Free 3D Design",
   secondaryCta: PM_CTA.estimate,
   secondaryHref: `#${PM_SECTION_IDS.estimate}`,
 } as const;
