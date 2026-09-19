@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface TaxProfile {
   id: string;
@@ -30,6 +31,7 @@ export function QuotationCommercialSettingsAdmin({
   onCreateTaxProfile,
   onUpdateTaxProfile,
 }: CommercialSettingsAdminProps) {
+  const router = useRouter();
   const [maxDiscount, setMaxDiscount] = useState<string>(
     initialMaxDiscount == null ? '' : String(initialMaxDiscount)
   );
@@ -62,6 +64,7 @@ export function QuotationCommercialSettingsAdmin({
     setSavingDiscount(false);
     if (res.success) {
       setDiscountMsg('Max discount saved successfully.');
+      router.refresh();
     } else {
       setDiscountMsg(res.message || 'Failed to save max discount.');
     }
@@ -87,6 +90,7 @@ export function QuotationCommercialSettingsAdmin({
       setCode('');
       setDisplayName('');
       setRate('');
+      router.refresh();
     } else {
       setTaxMsg(res.message || 'Failed to create tax profile.');
     }
@@ -104,6 +108,9 @@ export function QuotationCommercialSettingsAdmin({
     });
     setUpdatingId(null);
     setTaxMsg(res.success ? 'Tax profile updated.' : res.message || 'Failed to update tax profile.');
+    if (res.success) {
+      router.refresh();
+    }
   };
 
   return (

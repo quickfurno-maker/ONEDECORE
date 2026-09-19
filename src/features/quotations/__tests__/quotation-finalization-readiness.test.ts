@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 import { getQuotationFinalizationReadiness } from "../contracts/finalization-readiness.ts";
 
@@ -35,4 +37,17 @@ test("finalization readiness catches empty work and broken payment percentages",
   assert.equal(result.ready, false);
   assert.ok(result.blockers.some((item) => item.includes("work item")));
   assert.ok(result.blockers.some((item) => item.includes("100%")));
+});
+
+test("commercial settings refresh server truth after successful governance writes", () => {
+  const source = readFileSync(
+    join(process.cwd(), "src/features/quotations/components/QuotationCommercialSettingsAdmin.tsx"),
+    "utf8"
+  );
+  assert.match(source, /useRouter/);
+  assert.equal(
+    (source.match(/router\.refresh\(\)/g) ?? []).length,
+    3,
+    "max-discount save, tax-profile create and activation toggle must each refresh server props"
+  );
 });
