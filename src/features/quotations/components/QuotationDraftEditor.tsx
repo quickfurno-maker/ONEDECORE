@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type {
   PaymentScheduleMode,
@@ -10,6 +11,7 @@ import type {
   QuotationSectionDTO,
   QuotationTaxProfileDTO,
 } from "../contracts/types";
+import { getQuotationFinalizationReadiness } from "../contracts/finalization-readiness";
 import {
   archiveQuotationDraftAction,
   getQuotationDraftAction,
@@ -30,11 +32,13 @@ import { QuotationTotalsSummary } from "./QuotationTotalsSummary";
 interface QuotationDraftEditorProps {
   readonly initialDraft: QuotationDraftDTO;
   readonly taxProfiles: readonly QuotationTaxProfileDTO[];
+  readonly maxDiscountPercentage: number | null;
 }
 
 export function QuotationDraftEditor({
   initialDraft,
   taxProfiles,
+  maxDiscountPercentage,
 }: QuotationDraftEditorProps) {
   const router = useRouter();
   const [draft, setDraft] = useState<QuotationDraftDTO>(initialDraft);
@@ -43,6 +47,11 @@ export function QuotationDraftEditor({
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const version = draft.version;
+  const finalizationReadiness = getQuotationFinalizationReadiness(
+    draft,
+    taxProfiles,
+    maxDiscountPercentage
+  );
 
   const handleRefreshDraft = async () => {
     setSaving(true);
@@ -346,10 +355,29 @@ export function QuotationDraftEditor({
               Commercial Actions (Phase 7B)
             </h4>
             <div className="mt-3 space-y-2">
+              {version.status === "draft" && !finalizationReadiness.ready && (
+                <div className="rounded-lg border border-amber-800/80 bg-amber-950/40 p-3 text-[11px] text-amber-200">
+                  <p className="font-semibold">Finalization prerequisites</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-4 text-amber-300">
+                    {finalizationReadiness.blockers.map((blocker) => (
+                      <li key={blocker}>{blocker}</li>
+                    ))}
+                  </ul>
+                  {maxDiscountPercentage == null || taxProfiles.length === 0 ? (
+                    <p className="mt-2 text-amber-200">
+                      Commercial governance must be configured by Super Admin in{" "}
+                      <Link href="/admin/quotations/settings" className="underline underline-offset-2">
+                        Quotation settings
+                      </Link>.
+                    </p>
+                  ) : null}
+                </div>
+              )}
+
               {version.status === "draft" && (
                 <button
                   type="button"
-                  disabled={saving}
+                  disabled={saving || !finalizationReadiness.ready}
                   className="w-full rounded-lg bg-amber-500 px-4 py-2.5 text-xs font-bold text-neutral-950 hover:bg-amber-400 disabled:opacity-50 transition-colors shadow-sm"
                   onClick={async () => {
                     setSaving(true);

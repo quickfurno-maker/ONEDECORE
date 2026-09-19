@@ -42,6 +42,8 @@ export function QuotationCommercialSettingsAdmin({
   const [savingTax, setSavingTax] = useState(false);
   const [taxMsg, setTaxMsg] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const activeTaxProfileCount = taxProfiles.filter((profile) => profile.is_active).length;
+  const governanceReady = initialMaxDiscount != null && activeTaxProfileCount > 0;
 
   const handleMaxDiscountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,6 +109,12 @@ export function QuotationCommercialSettingsAdmin({
   return (
     <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 space-y-8 text-neutral-100">
       <h2 className="text-lg font-bold text-amber-400">Super Admin Commercial Settings</h2>
+
+      <div className={`rounded-lg border p-4 text-xs ${governanceReady ? "border-emerald-800 bg-emerald-950/40 text-emerald-200" : "border-amber-800 bg-amber-950/40 text-amber-200"}`}>
+        <p className="font-semibold">Production finalization readiness: {governanceReady ? "READY" : "BLOCKED"}</p>
+        <p className="mt-1">Maximum discount: {initialMaxDiscount == null ? "not configured" : `${initialMaxDiscount}% configured`} ? Active tax profiles: {activeTaxProfileCount}</p>
+        {!governanceReady ? <p className="mt-1 text-amber-300">Finalization stays fail-closed until both governance prerequisites are explicitly configured. No GST or discount default is assumed.</p> : null}
+      </div>
 
       <section className="space-y-4 border-b border-neutral-800 pb-6">
         <h3 className="text-sm font-semibold text-neutral-200">Maximum Discount Governance Bound</h3>
