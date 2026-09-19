@@ -80,7 +80,26 @@ test("mobile data bridge is an explicit allowlist, not an arbitrary proxy", () =
   assert.match(route, /MAX_BODY_BYTES/);
   assert.match(route, /MAX_FILTERS/);
   assert.match(route, /MAX_RANGE_ROWS/);
+  assert.match(route, /MAX_BATCH_REQUESTS = 20/);
   assert.doesNotMatch(route, /"has_active_role"/);
+});
+
+test("mobile data batching is bounded and read-only", () => {
+  assert.match(route, /value\.kind === "batch"/);
+  assert.match(route, /value\.requests\.length > MAX_BATCH_REQUESTS/);
+  assert.match(route, /raw\.kind !== "table"/);
+  assert.match(route, /request\.action !== "select"/);
+  assert.match(route, /payload\.requests\.map\(\(item\) =>\s*runTableRequest\(db, item\)/);
+  assert.match(route, /READ_TABLES\.has\(item\.table as never\)/);
+  const batchStart = route.indexOf('if (payload.kind === "batch")');
+  const rpcStart = route.indexOf('if (payload.kind === "rpc")', batchStart);
+
+  assert.ok(batchStart >= 0);
+  assert.ok(rpcStart > batchStart);
+  assert.doesNotMatch(
+    route.slice(batchStart, rpcStart),
+    /\.rpc\s*\(/
+  );
 });
 
 test("mobile data bridge preserves database enforcement under the caller token", () => {
