@@ -1,0 +1,2 @@
+import Link from "next/link"; import { RELATED_SEO_LINKS } from "./related-content";
+export function RelatedSeoLinks({exclude=[]}:{readonly exclude?:readonly string[]}){const links=RELATED_SEO_LINKS.filter(x=>!exclude.includes(x.href));return <section className="od-prose od-detail-section" aria-labelledby="seo-related-title"><h2 id="seo-related-title">Continue planning your Pune interior</h2>{links.map(link=><p key={link.href}><Link href={link.href}>{link.label}</Link> — {link.description}</p>)}</section>}
