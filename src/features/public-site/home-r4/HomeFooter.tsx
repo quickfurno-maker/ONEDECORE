@@ -21,6 +21,8 @@ export function HomeFooter() {
               <li><Link href="/services/wardrobes" className="pm-footer__link">Custom Wardrobes</Link></li>
               <li><Link href="/services/home-renovation" className="pm-footer__link">Home Renovation</Link></li>
               <li><Link href="/interior-cost" className="pm-footer__link">Interior Cost Guide</Link></li>
+              <li><Link href="/pune" className="pm-footer__link">Pune Service Areas</Link></li>
+              <li><Link href="/guides" className="pm-footer__link">Interior Guides</Link></li>
             </ul>
           </div>
 
