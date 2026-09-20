@@ -3,6 +3,7 @@ import { SITE_CONFIG } from "@/config/site";
 import { publicSiteFontVariables } from "@/features/public-site/fonts";
 import { InteriorsConversionPage } from "@/features/public-site/interiors/InteriorsConversionPage";
 import { getPublishedHomepageConfig } from "@/features/website-manager/public/public-homepage-config";
+import { getBusinessJsonLd } from "@/features/seo/business-schema";
 
 /**
  * The homepage is the Interiors experience.
@@ -72,9 +73,14 @@ export const metadata: Metadata = {
  */
 export default async function HomePage() {
   const config = await getPublishedHomepageConfig();
+  const businessJsonLd = getBusinessJsonLd();
 
   return (
     <div className={publicSiteFontVariables}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(businessJsonLd) }}
+      />
       <InteriorsConversionPage config={config} />
     </div>
   );
