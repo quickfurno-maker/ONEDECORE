@@ -6,7 +6,7 @@ import { SITE_CONFIG, absoluteUrl } from "@/config/site";
 import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
 import { canPublishWarrantyPolicy, getLegalRobots } from "@/features/legal";
 import { PUNE_AREA_PAGES } from "@/features/seo/pune-areas";
-import { SEO_GUIDES } from "@/features/seo/guides";
+import { ALL_SEO_GUIDES } from "@/features/seo/guides";
 
 /**
  * The legal pages that share the global publication gate.
@@ -75,7 +75,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.75,
     },
-    ...SEO_GUIDES.map((guide) => ({
+    ...ALL_SEO_GUIDES.map((guide) => ({
       url: absoluteUrl(`guides/${guide.slug}`),
       lastModified: new Date(),
       changeFrequency: "monthly" as const,
