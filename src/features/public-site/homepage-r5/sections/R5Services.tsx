@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import {
   R5_SERVICES,
   R5_SERVICES_COPY,
@@ -76,7 +77,7 @@ export function R5Services() {
                   ) : null}
 
                   <div className="r5-card__body">
-                    <h3 className="r5-card__title">{service.title}</h3>
+                    <h3 className="r5-card__title">{service.href ? <Link href={service.href}>{service.title}</Link> : service.title}</h3>
                     <p className="r5-card__text">{service.description}</p>
                     <ul className="r5-tags">
                       {service.tags.map((tag) => (
