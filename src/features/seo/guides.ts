@@ -65,4 +65,6 @@ export const SEO_GUIDES: readonly SeoGuide[] = [
 {heading:"Budget by scope",body:"Compare quotations only after defining which rooms and components are included. A low number for kitchen-and-wardrobes cannot be compared with an end-to-end home scope."}
 ],relatedService:"/interior-cost/2bhk-interior-cost-pune",relatedLabel:"2 BHK cost planning"}
 ] as const;
-export function getSeoGuide(slug:string){return SEO_GUIDES.find(g=>g.slug===slug);}
+import { ADVANCED_SEO_GUIDES } from "./advanced-guides";
+export const ALL_SEO_GUIDES: readonly SeoGuide[] = [...SEO_GUIDES, ...ADVANCED_SEO_GUIDES];
+export function getSeoGuide(slug:string){return ALL_SEO_GUIDES.find(g=>g.slug===slug);}
