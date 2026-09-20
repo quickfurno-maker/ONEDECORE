@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { getServiceJsonLd } from "./service-schema";
 
@@ -14,7 +15,7 @@ export function ServiceSeoShell({
   readonly eyebrow: string;
   readonly title: string;
   readonly description: string;
-  readonly children: React.ReactNode;
+  readonly children: ReactNode;
 }) {
   const jsonLd = getServiceJsonLd({ name, path, description });
   return (
