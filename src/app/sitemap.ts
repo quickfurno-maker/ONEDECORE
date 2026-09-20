@@ -5,6 +5,7 @@ import { isPublicCommerceReadFailure } from "@/features/commerce/public/public-e
 import { SITE_CONFIG, absoluteUrl } from "@/config/site";
 import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
 import { canPublishWarrantyPolicy, getLegalRobots } from "@/features/legal";
+import { PUNE_AREA_PAGES } from "@/features/seo/pune-areas";
 
 /**
  * The legal pages that share the global publication gate.
@@ -61,6 +62,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: "monthly" as const,
       priority: path === "services" ? 0.85 : 0.9,
+    })),
+    {
+      url: absoluteUrl("pune"),
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.85,
+    },
+    ...PUNE_AREA_PAGES.map((area) => ({
+      url: absoluteUrl(`pune/${area.slug}`),
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.75,
     })),
     {
       url: absoluteUrl("portfolio"),
