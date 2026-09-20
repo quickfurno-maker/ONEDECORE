@@ -57,6 +57,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       "interior-cost/2bhk-interior-cost-pune",
       "interior-cost/3bhk-interior-cost-pune",
       "interior-cost/modular-kitchen-cost-pune",
+      "designs",
+      "designs/modular-kitchen",
+      "designs/wardrobe",
+      "designs/living-room",
+      "designs/bedroom",
     ].map((path) => ({
       url: absoluteUrl(path),
       lastModified: new Date(),
