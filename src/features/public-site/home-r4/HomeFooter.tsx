@@ -16,9 +16,11 @@ export function HomeFooter() {
           <div>
             <p className="pm-footer__heading">{PM_FOOTER.servicesHeading}</p>
             <ul className="pm-footer__list">
-              {PM_FOOTER.serviceNames.map((name) => (
-                <li key={name}>{name}</li>
-              ))}
+              <li><Link href="/services/complete-home-interiors" className="pm-footer__link">Complete Home Interiors</Link></li>
+              <li><Link href="/services/modular-kitchens" className="pm-footer__link">Modular Kitchens</Link></li>
+              <li><Link href="/services/wardrobes" className="pm-footer__link">Custom Wardrobes</Link></li>
+              <li><Link href="/services/home-renovation" className="pm-footer__link">Home Renovation</Link></li>
+              <li><Link href="/interior-cost" className="pm-footer__link">Interior Cost Guide</Link></li>
             </ul>
           </div>
 
