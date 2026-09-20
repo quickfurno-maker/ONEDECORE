@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE_CONFIG, absoluteUrl } from "@/config/site";
+import { RelatedSeoLinks } from "@/features/seo/RelatedSeoLinks";
 
 export const metadata: Metadata = {
   title: `Interior Design Services in Pune — ${SITE_CONFIG.name}`,
@@ -32,6 +33,7 @@ export default function ServicesPage() {
           </article>
         ))}
       </section>
+      <RelatedSeoLinks exclude={["/services/complete-home-interiors", "/services/modular-kitchens", "/services/wardrobes", "/services/home-renovation"]} />
     </main>
   );
 }
