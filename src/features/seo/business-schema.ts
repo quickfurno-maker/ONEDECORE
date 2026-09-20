@@ -1,4 +1,5 @@
 import { SITE_CONFIG } from "@/config/site";
+import { BUSINESS_IDENTITY } from "@/features/legal/business-identity";
 
 /**
  * Search-engine entity graph for ONEDECORE.
@@ -22,6 +23,15 @@ export function getBusinessJsonLd() {
           "@type": "City",
           name: "Pune",
         },
+        address: BUSINESS_IDENTITY.registeredOfficeAddress
+          ? {
+              "@type": "PostalAddress",
+              streetAddress: BUSINESS_IDENTITY.registeredOfficeAddress,
+              addressLocality: "Pune",
+              addressRegion: "Maharashtra",
+              addressCountry: "IN",
+            }
+          : undefined,
       },
       {
         "@type": "WebSite",
