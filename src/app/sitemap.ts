@@ -46,6 +46,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
      * one already listed. The Interiors experience is still here — it is the
      * root entry.
      */
+    ...[
+      "services",
+      "services/complete-home-interiors",
+      "services/modular-kitchens",
+      "services/wardrobes",
+      "services/home-renovation",
+    ].map((path) => ({
+      url: absoluteUrl(path),
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: path === "services" ? 0.85 : 0.9,
+    })),
     {
       url: absoluteUrl("portfolio"),
       lastModified: new Date(),
