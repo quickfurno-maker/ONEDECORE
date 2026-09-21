@@ -5,6 +5,8 @@ import { isPublicCommerceReadFailure } from "@/features/commerce/public/public-e
 import { SITE_CONFIG, absoluteUrl } from "@/config/site";
 import { isShopPublicEnabled } from "@/features/commerce/server/shop-public-gate";
 import { canPublishWarrantyPolicy, getLegalRobots } from "@/features/legal";
+import { PUNE_AREA_PAGES } from "@/features/seo/pune-areas";
+import { ALL_SEO_GUIDES } from "@/features/seo/guides";
 
 /**
  * The legal pages that share the global publication gate.
@@ -46,6 +48,51 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
      * one already listed. The Interiors experience is still here — it is the
      * root entry.
      */
+    ...[
+      "services",
+      "services/complete-home-interiors",
+      "services/modular-kitchens",
+      "services/wardrobes",
+      "services/home-renovation",
+      "interior-cost",
+      "interior-cost/2bhk-interior-cost-pune",
+      "interior-cost/3bhk-interior-cost-pune",
+      "interior-cost/modular-kitchen-cost-pune",
+      "designs",
+      "designs/modular-kitchen",
+      "designs/wardrobe",
+      "designs/living-room",
+      "designs/bedroom",
+    ].map((path) => ({
+      url: absoluteUrl(path),
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: path === "services" ? 0.85 : 0.9,
+    })),
+    {
+      url: absoluteUrl("guides"),
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.75,
+    },
+    ...ALL_SEO_GUIDES.map((guide) => ({
+      url: absoluteUrl(`guides/${guide.slug}`),
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+    {
+      url: absoluteUrl("pune"),
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.85,
+    },
+    ...PUNE_AREA_PAGES.map((area) => ({
+      url: absoluteUrl(`pune/${area.slug}`),
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.75,
+    })),
     {
       url: absoluteUrl("portfolio"),
       lastModified: new Date(),

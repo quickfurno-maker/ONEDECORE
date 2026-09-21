@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import {
   R5_SERVICES,
   R5_SERVICES_COPY,
@@ -15,12 +16,11 @@ import {
  * 1.03 image scale would ship a bundle for something a stylesheet already does,
  * and would cost the page a chunk of its static render for no behaviour.
  *
- * WHY THE CARDS ARE NOT LINKS
+ * WHY SERVICE TITLES LINK
  *
- * There are no per-service routes in this application. A card that looks
- * clickable and goes nowhere is worse than a card that does not, and inventing
- * `/services/modular-kitchens` to satisfy the pattern would be four dead URLs
- * in the sitemap. `href` exists on the model for the day those pages are built.
+ * The service routes now exist as indexable, useful landing pages. Linking the
+ * existing card titles exposes those routes to people and crawlers without
+ * adding another CTA or changing the visual hierarchy of this section.
  *
  * WHY THERE IS NO CTA ON EVERY CARD
  *
@@ -76,7 +76,7 @@ export function R5Services() {
                   ) : null}
 
                   <div className="r5-card__body">
-                    <h3 className="r5-card__title">{service.title}</h3>
+                    <h3 className="r5-card__title">{service.href ? <Link href={service.href}>{service.title}</Link> : service.title}</h3>
                     <p className="r5-card__text">{service.description}</p>
                     <ul className="r5-tags">
                       {service.tags.map((tag) => (

@@ -95,7 +95,7 @@ export const R5_SERVICES: readonly ServiceCard[] = [
     tags: ["Design", "Manufacturing", "Installation"],
     image: PM_ASSETS.interiorCompleteHome.path,
     imageAlt: PM_ASSETS.interiorCompleteHome.alt,
-    href: null,
+    href: "/services/complete-home-interiors",
   },
   {
     id: "modular-kitchens",
@@ -104,7 +104,7 @@ export const R5_SERVICES: readonly ServiceCard[] = [
     tags: ["Smart storage", "Easy workflow", "Factory finish"],
     image: PM_ASSETS.interiorModularKitchen.path,
     imageAlt: PM_ASSETS.interiorModularKitchen.alt,
-    href: null,
+    href: "/services/modular-kitchens",
   },
   {
     id: "wardrobes",
@@ -113,7 +113,7 @@ export const R5_SERVICES: readonly ServiceCard[] = [
     tags: ["Internal zoning", "Lofts", "Premium hardware"],
     image: PM_ASSETS.interiorWardrobes.path,
     imageAlt: PM_ASSETS.interiorWardrobes.alt,
-    href: null,
+    href: "/services/wardrobes",
   },
   {
     id: "renovation",
@@ -122,7 +122,7 @@ export const R5_SERVICES: readonly ServiceCard[] = [
     tags: ["Civil work", "False ceiling", "Electrical"],
     image: PM_ASSETS.interiorRenovation.path,
     imageAlt: PM_ASSETS.interiorRenovation.alt,
-    href: null,
+    href: "/services/home-renovation",
   },
 ];
 

@@ -1,0 +1,70 @@
+export interface SeoGuide {
+  readonly slug: string;
+  readonly title: string;
+  readonly description: string;
+  readonly intro: string;
+  readonly sections: readonly { readonly heading: string; readonly body: string }[];
+  readonly relatedService: string;
+  readonly relatedLabel: string;
+}
+export const SEO_GUIDES: readonly SeoGuide[] = [
+{slug:"how-to-choose-interior-designer-pune",title:"How to Choose an Interior Designer in Pune",description:"A practical homeowner's guide to comparing interior designers in Pune by scope, specification, process, portfolio and quotation clarity.",intro:"A good shortlist is not built from renders alone. The useful comparison is whether two designers are pricing and promising the same scope, materials and execution responsibility.",sections:[
+{heading:"Start with the scope, not the style",body:"Write down the rooms and work you actually need: kitchen, wardrobes, living storage, ceilings, electrical changes, painting, civil work and loose furniture. A beautiful portfolio does not tell you whether those items are included in the proposal."},
+{heading:"Ask what the quotation is specifying",body:"Two totals are difficult to compare when one includes hardware, internal accessories and installation while another leaves them as later selections. Look for material grades, finish names, hardware assumptions, quantities and exclusions."},
+{heading:"Use completed work as evidence",body:"Look for projects that resemble your property type or scope. A kitchen-only project proves something different from an end-to-end occupied-home renovation. Ask how the design changed between concept and site execution."},
+{heading:"Understand who owns coordination",body:"Interior work often crosses cabinetry, electrical, ceiling, painting and civil dependencies. Clarify who measures, approves drawings, coordinates site readiness, checks installation and closes snags."},
+{heading:"Compare change control",body:"Ask what happens when a material changes, a site condition is discovered or you add work. A clear variation process is more useful than a low initial number that cannot be reconciled later."}
+],relatedService:"/services/complete-home-interiors",relatedLabel:"Complete home interiors"},
+{slug:"modular-kitchen-layout-guide-pune",title:"Modular Kitchen Layout Guide for Pune Homes",description:"Compare straight, L-shaped, parallel, U-shaped and island kitchen layouts for Pune apartments and homes.",intro:"The best kitchen layout is usually decided by the room before it is decided by Pinterest: doors, windows, plumbing, appliance positions and circulation establish the workable geometry.",sections:[
+{heading:"Straight kitchens",body:"A single-wall kitchen can work well in compact rooms when the preparation, hob and sink zones have enough uninterrupted counter. Tall storage needs careful placement so it does not consume the main worktop."},
+{heading:"L-shaped kitchens",body:"An L layout uses two adjoining walls and can leave the centre relatively open. Corner access, refrigerator position and the relationship between sink and hob deserve attention before drawer widths are fixed."},
+{heading:"Parallel kitchens",body:"Two opposing runs can create excellent storage and distinct wet and cooking zones. The aisle must remain comfortable when drawers, shutters and appliances are open."},
+{heading:"U-shaped kitchens",body:"Three working sides increase cabinetry and counter area but can feel enclosed if tall units and overheads are overused. Resolve both corners and keep frequently used zones easy to reach."},
+{heading:"Island and peninsula layouts",body:"An island needs genuine circulation around it and a clear purpose—preparation, seating, storage or cooking. In many apartments a peninsula can provide similar utility with fewer circulation demands."}
+],relatedService:"/services/modular-kitchens",relatedLabel:"Modular kitchens"},
+{slug:"kitchen-materials-plywood-mdf-hdhmr",title:"Plywood, MDF or HDHMR? A Kitchen Material Guide",description:"Understand common cabinet-board choices for modular kitchens, where moisture matters and what to ask before approving a specification.",intro:"Board names are often discussed as if one material is automatically right everywhere. A better decision considers moisture exposure, screw holding, finish, fabrication method, maintenance and budget.",sections:[
+{heading:"Ask where the board will be used",body:"A sink cabinet lives in a different environment from a dry overhead unit. The specification should respond to the location rather than using one marketing label for the entire kitchen."},
+{heading:"Plywood",body:"Plywood is built from cross-laminated veneers and is widely used where strength and screw holding are priorities. Grade and manufacturer matter, so ask for the exact product rather than accepting 'ply' as a complete specification."},
+{heading:"MDF and engineered fibre boards",body:"MDF provides a smooth, consistent surface that can suit certain routed or painted finishes. Its suitability depends on the product grade and exposure conditions; generic MDF should not be treated as interchangeable with moisture-rated products."},
+{heading:"HDHMR",body:"High-density high-moisture-resistance boards are engineered for improved density and moisture performance. As with any board, confirm the actual brand, grade, thickness and intended use."},
+{heading:"Do not ignore edges and installation",body:"Good board selection can still be undermined by exposed edges, poor sealing around wet zones or careless plumbing. Detail quality and site installation belong in the material conversation."}
+],relatedService:"/services/modular-kitchens",relatedLabel:"Modular kitchens"},
+{slug:"wardrobe-design-guide-pune",title:"Wardrobe Design Guide for Pune Bedrooms",description:"Plan wardrobe internals, door types, lofts, dresser integration and clearances for bedrooms in Pune homes.",intro:"A wardrobe elevation can look simple while hiding dozens of practical decisions. Start inside: what you own, how you use it and what the room allows.",sections:[
+{heading:"Inventory before elevation",body:"Separate long hanging, short hanging, folded clothes, drawers, accessories, luggage and occasional items. Internal widths should follow this inventory rather than an arbitrary equal-door grid."},
+{heading:"Sliding or hinged doors?",body:"Hinged shutters provide broad access but need swing clearance. Sliding shutters reduce door-swing conflicts but part of the wardrobe remains covered at any moment. Room geometry should decide."},
+{heading:"Use lofts intentionally",body:"Lofts are useful for luggage and infrequent storage, but excessive overhead cabinetry can make a compact bedroom feel heavy. Decide what genuinely needs high storage."},
+{heading:"Coordinate the dresser and electrical points",body:"A dresser, mirror, charging point or television can compete for the same wall. Resolve these functions before wardrobe widths are frozen."},
+{heading:"Check the bed-to-wardrobe aisle",body:"A drawing may fit dimensionally and still be uncomfortable. Test the usable aisle with the bed, bedside tables and wardrobe shutters in their real positions."}
+],relatedService:"/services/wardrobes",relatedLabel:"Custom wardrobes"},
+{slug:"new-flat-interior-checklist-pune",title:"New Flat Interior Checklist for Pune Homeowners",description:"A room-by-room checklist for planning interiors before or after possession of a new flat in Pune.",intro:"The easiest time to prevent expensive interior changes is before manufacturing starts. A possession-ready checklist turns scattered decisions into a sequence.",sections:[
+{heading:"Collect the base information",body:"Keep the builder plan, electrical layout if available, appliance sizes and possession notes together. Treat drawings as a starting point and verify critical dimensions on site before manufacturing."},
+{heading:"List retained and new work",body:"Mark builder-provided flooring, doors, counters, sanitary fittings and electrical points that will remain. This prevents the interior scope from quietly assuming replacement work."},
+{heading:"Freeze appliances early",body:"Refrigerator, hob, chimney, microwave, washing machine, dishwasher and television dimensions influence cabinetry and electrical planning. Unknown appliances create avoidable filler panels and revisions."},
+{heading:"Prioritize storage",body:"Write down the storage problem in each room before discussing finishes. Kitchen pantry, luggage, daily clothes, linen, shoes, cleaning supplies and work-from-home equipment need different solutions."},
+{heading:"Plan site dependencies",body:"Civil changes, electrical relocation, ceiling work, painting and modular installation have an order. Ask for the sequence before scheduling move-in or appliance delivery."}
+],relatedService:"/services/complete-home-interiors",relatedLabel:"Complete home interiors"},
+{slug:"interior-design-quotation-guide-pune",title:"How to Read an Interior Design Quotation in Pune",description:"Learn how to compare interior quotations by scope, quantities, materials, hardware, exclusions and change-control instead of headline price.",intro:"A quotation is useful only when you can tell what the number buys. The largest risk is not necessarily a high quote; it is a quote whose assumptions cannot be compared.",sections:[
+{heading:"Check the scope boundary",body:"Look for a room-by-room list of included work. Painting, electrical, ceiling, plumbing, dismantling, debris removal and appliances are common areas where assumptions differ."},
+{heading:"Check quantities and units",body:"A rate without a quantity is hard to audit. Understand whether cabinetry is measured by square foot, running foot, unit or lump sum, and what that measurement includes."},
+{heading:"Check the material specification",body:"Generic labels such as premium ply, branded hardware or acrylic finish are not enough for a serious comparison. Ask for brand or grade, thickness where relevant, finish system and hardware series."},
+{heading:"Find exclusions before signing",body:"Exclusions are not automatically a problem; hidden exclusions are. Identify countertops, sinks, appliances, lights, loose furniture, transport, taxes and site repairs before comparing totals."},
+{heading:"Understand revisions and variations",body:"Confirm how design revisions and additional site work are approved and priced. Written change control protects both homeowner and contractor from memory-based disputes."}
+],relatedService:"/interior-cost",relatedLabel:"Interior cost guides"},
+{slug:"home-renovation-planning-pune",title:"Home Renovation Planning Guide for Pune",description:"Plan an apartment or home renovation in Pune by separating retained work, demolition, services, new interiors and finishing.",intro:"Renovation is not simply a new interior installed in an old shell. Existing conditions create dependencies that should be discovered before design and pricing are treated as final.",sections:[
+{heading:"Survey before designing",body:"Record existing flooring, walls, plumbing, electrical points, ceilings, windows, doors and fixed furniture. Photograph concealed-risk areas where possible and note visible dampness or damage for investigation."},
+{heading:"Decide what stays",body:"Retaining a sound floor, door or cabinet can save work, but it also creates dimensional and finish constraints. Make retention an explicit design decision."},
+{heading:"Separate demolition from making good",body:"Removing something often creates another task: patching plaster, repairing flooring, relocating wiring or repainting adjacent surfaces. Include the consequence, not just the demolition."},
+{heading:"Sequence wet and dry work",body:"Civil, plumbing and waterproofing work generally need resolution before final cabinetry and decorative finishes. Installation planning should reflect the actual site sequence."},
+{heading:"Keep a contingency for discoveries",body:"Older homes can reveal conditions that were not visible during a non-destructive survey. A sensible renovation plan acknowledges uncertainty rather than pretending every condition is known."}
+],relatedService:"/services/home-renovation",relatedLabel:"Home renovation"},
+{slug:"2bhk-interior-planning-pune",title:"2 BHK Interior Planning Guide for Pune Apartments",description:"Plan a practical 2 BHK interior in Pune around kitchen storage, two bedrooms, living space and budget priorities.",intro:"A 2 BHK rarely needs every possible feature. The stronger plan identifies the household's daily storage and circulation needs, then spends design effort where it changes everyday use.",sections:[
+{heading:"Prioritize the kitchen and wardrobes",body:"These are usually the most storage-intensive fixed elements. Resolve their internal requirements before decorative units consume the budget."},
+{heading:"Give the second bedroom a clear job",body:"Guest room, children's room, parents' room and home office produce very different furniture and storage needs. Designing for all of them at once usually wastes space."},
+{heading:"Keep the living room flexible",body:"Avoid filling every wall with cabinetry. Decide whether television, display, books, pooja, work or toy storage genuinely need a permanent built-in solution."},
+{heading:"Coordinate repeated finishes",body:"Using a controlled palette across cabinetry can make a compact home feel more coherent and can simplify material approvals."},
+{heading:"Budget by scope",body:"Compare quotations only after defining which rooms and components are included. A low number for kitchen-and-wardrobes cannot be compared with an end-to-end home scope."}
+],relatedService:"/interior-cost/2bhk-interior-cost-pune",relatedLabel:"2 BHK cost planning"}
+] as const;
+import { ADVANCED_SEO_GUIDES } from "./advanced-guides";
+export const ALL_SEO_GUIDES: readonly SeoGuide[] = [...SEO_GUIDES, ...ADVANCED_SEO_GUIDES];
+export function getSeoGuide(slug:string){return ALL_SEO_GUIDES.find(g=>g.slug===slug);}
