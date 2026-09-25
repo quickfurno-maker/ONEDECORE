@@ -6,6 +6,7 @@ import {
   TemplateSyncForm,
 } from "@/features/whatsapp/components/templates/TemplateStudioForms";
 import "@/features/whatsapp/components/templates/template-studio.css";
+import "@/features/whatsapp/components/growth-workspace.css";
 import { WHATSAPP_ADMIN_INBOX_BASE_PATH, WHATSAPP_ADMIN_TEMPLATES_PATH } from "@/features/whatsapp/contracts/inbox-surface";
 import {
   parseWhatsappTemplateRegistryQuery,
@@ -130,28 +131,69 @@ export default async function WhatsappTemplatesPage({ searchParams }: WhatsappTe
     listRecentWhatsappTemplateSubmissions(10),
   ]);
   const totalPages = registry.totalCount === 0 ? 1 : Math.ceil(registry.totalCount / query.pageSize);
+  const approvedOnPage = registry.items.filter((item) => item.status === "APPROVED").length;
+  const sendableOnPage = registry.items.filter((item) => item.oneToOneSendable).length;
+  const marketingOnPage = registry.items.filter((item) => item.category === "MARKETING").length;
 
   return (
-    <div className="od-tpl" data-testid="whatsapp-template-studio">
-      <header className="od-tpl__head">
+    <div className="od-tpl od-growth" data-testid="whatsapp-template-studio">
+      <header className="od-growth__hero">
         <div>
-          <p className="od-tpl__eyebrow">WhatsApp</p>
-          <h1 className="od-tpl__title">Template Studio</h1>
-          <p className="od-tpl__lede">
-            Message templates registered on the WhatsApp Business Account. Only APPROVED utility templates can be sent
-            one-to-one from the inbox, and only in conversations the sender can currently reply to. Marketing templates
-            belong to campaigns.
+          <p className="od-growth__eyebrow">WhatsApp growth workspace</p>
+          <h1>Message Templates</h1>
+          <p>
+            Create, sync and govern Meta-approved templates from one place. Utility templates power service conversations;
+            Marketing templates feed consented campaigns.
           </p>
         </div>
-        <nav className="od-tpl__nav" aria-label="WhatsApp sections">
+        <div className="od-growth__actions">
           <Link className="od-tpl__btn" href={WHATSAPP_ADMIN_INBOX_BASE_PATH}>
-            Inbox
+            Open inbox
           </Link>
-          <Link className="od-tpl__btn od-tpl__btn--primary" href={WHATSAPP_ADMIN_TEMPLATES_PATH} aria-current="page">
-            Templates
-          </Link>
-        </nav>
+          {canManage ? (
+            <a className="od-tpl__btn od-tpl__btn--primary" href="#whatsapp-template-create">
+              Create template
+            </a>
+          ) : null}
+        </div>
       </header>
+
+      <section className="od-growth__kpis" aria-label="Template overview">
+        <div className="od-growth__kpi">
+          <strong>{registry.totalCount.toLocaleString("en-IN")}</strong>
+          <span>Total templates</span>
+        </div>
+        <div className="od-growth__kpi">
+          <strong>{approvedOnPage.toLocaleString("en-IN")}</strong>
+          <span>Approved on this page</span>
+        </div>
+        <div className="od-growth__kpi">
+          <strong>{sendableOnPage.toLocaleString("en-IN")}</strong>
+          <span>Inbox-sendable on this page</span>
+        </div>
+        <div className="od-growth__kpi">
+          <strong>{marketingOnPage.toLocaleString("en-IN")}</strong>
+          <span>Marketing on this page</span>
+        </div>
+      </section>
+
+      <nav className="od-growth__tabs" aria-label="Template category shortcuts">
+        <Link className="od-growth__tab" data-active={!query.category} href={WHATSAPP_ADMIN_TEMPLATES_PATH}>
+          All templates
+        </Link>
+        <Link className="od-growth__tab" data-active={query.category === "UTILITY"} href={WHATSAPP_ADMIN_TEMPLATES_PATH + "?category=UTILITY"}>
+          Utility
+        </Link>
+        <Link className="od-growth__tab" data-active={query.category === "MARKETING"} href={WHATSAPP_ADMIN_TEMPLATES_PATH + "?category=MARKETING"}>
+          Marketing
+        </Link>
+        <Link className="od-growth__tab" data-active={query.status === "APPROVED"} href={WHATSAPP_ADMIN_TEMPLATES_PATH + "?status=APPROVED"}>
+          Approved
+        </Link>
+        <Link className="od-growth__tab" data-active={query.status === "PENDING"} href={WHATSAPP_ADMIN_TEMPLATES_PATH + "?status=PENDING"}>
+          Pending review
+        </Link>
+      </nav>
 
       <section className="od-tpl__panel od-tpl__mode" aria-label="Provider connection">
         <div>

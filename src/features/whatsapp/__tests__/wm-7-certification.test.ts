@@ -348,6 +348,41 @@ describe("8 — closed-window composer guidance", () => {
   });
 });
 
+describe("8b — growth workspace UX", () => {
+  test("templates and campaigns expose guided Interakt-style workspaces without relaxing governance", () => {
+    const templatesPage = code(read("src/app/admin/whatsapp/templates/page.tsx"));
+    const templateForms = code(read("src/features/whatsapp/components/templates/TemplateStudioForms.tsx"));
+    const campaignsPage = code(read("src/app/admin/whatsapp/campaigns/page.tsx"));
+    const campaignForms = code(read("src/features/whatsapp/components/campaigns/CampaignExecutionForms.tsx"));
+    const css = read("src/features/whatsapp/components/growth-workspace.css");
+
+    assert.match(templatesPage, /WhatsApp growth workspace/);
+    assert.match(templatesPage, /Message Templates/);
+    assert.match(templatesPage, /Create template/);
+    assert.match(templatesPage, /Pending review/);
+    assert.match(templateForms, /Live preview is illustrative/);
+    assert.match(templateForms, /Submit to Meta for review/);
+    assert.match(templateForms, /Use Utility for enquiry updates/);
+
+    assert.match(campaignsPage, /WhatsApp campaign manager/);
+    assert.match(campaignsPage, /Broadcasts, audiences & delivery/);
+    assert.match(campaignsPage, /Campaign setup/);
+    assert.match(campaignsPage, /Independent approval/);
+    assert.match(campaignsPage, /Operator allowed/);
+    assert.match(campaignForms, /ONEDECORE campaign preview/);
+    assert.match(campaignForms, /revalidated before send/);
+
+    assert.match(css, /od-growth__journey/);
+    assert.match(css, /od-growth__phone/);
+    assert.match(css, /od-growth__campaign-card/);
+
+    assert.match(campaignsPage, /previewWhatsappCampaignAudienceForCurrentUser/);
+    assert.match(campaignsPage, /availableWhatsappCampaignRunOperations/);
+    assert.match(campaignForms, /saveWhatsappCampaignSpecAction/);
+    assert.match(templateForms, /submitWhatsappTemplateAction/);
+  });
+});
+
 describe("9 — no existence oracle", () => {
   test("refused and missing records answer the same in the readers the pages use", () => {
     assert.match(code(read("src/features/whatsapp/server/whatsapp-campaign-queries.ts")), /if \(error\) return null;/);

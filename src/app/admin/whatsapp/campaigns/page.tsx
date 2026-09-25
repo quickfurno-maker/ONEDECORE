@@ -31,6 +31,7 @@ import {
 import { resolveWhatsappControlPlaneAccess } from "@/features/whatsapp/server/whatsapp-control-plane-auth";
 import { listWhatsappFlowsForCurrentUser } from "@/features/whatsapp/server/whatsapp-flow-queries";
 import { listWhatsappSegmentsForCurrentUser } from "@/features/whatsapp/server/whatsapp-segments-queries";
+import "@/features/whatsapp/components/growth-workspace.css";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +110,19 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
 
   const approval = presentWhatsappCampaignApproval(selected?.approval?.decision ?? null);
   const denial = describeWhatsappCampaignOperatorDenial(selected?.operatorDenial ?? null);
+  const approvedCount = versions.filter((version) => version.status === "approved").length;
+  const activeRunCount = versions.filter((version) =>
+    ["scheduled", "dispatching", "paused"].includes(version.latestRun?.status ?? "")
+  ).length;
+  const sentCount = versions.reduce((sum, version) => sum + (version.latestRun?.sentCount ?? 0), 0);
+  const readiness = selected
+    ? [
+        { label: "Template & spec", ready: Boolean(spec) },
+        { label: "Audience frozen", ready: selected.audienceFrozen },
+        { label: "Independent approval", ready: approval.approved },
+        { label: "Operator allowed", ready: !selected.operatorDenial },
+      ]
+    : [];
 
   return (
     <ControlPlaneShell
@@ -117,7 +131,48 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
       lede="Deliver approved campaigns on WhatsApp with an official MARKETING template. Every recipient is re-checked for consent, opt-outs, suppression, caps and quiet hours just before the send."
       permissions={permissions}
     >
-      <div className="od-cp__columns">
+      <div className="od-growth">
+        <section className="od-growth__hero">
+          <div>
+            <p className="od-growth__eyebrow">WhatsApp campaign manager</p>
+            <h1>Broadcasts, audiences & delivery</h1>
+            <p>
+              Build governed WhatsApp campaigns with approved templates, consented audiences, test sends,
+              scheduling and delivery controls in one guided workspace.
+            </p>
+          </div>
+          <div className="od-growth__actions">
+            {permissions["campaigns.draft"] ? (
+              <Link className="od-cp__btn od-cp__btn--primary" href="/admin/campaigns">
+                Create campaign
+              </Link>
+            ) : null}
+            <Link className="od-cp__btn od-cp__btn--quiet" href="/admin/whatsapp/templates">
+              Manage templates
+            </Link>
+          </div>
+        </section>
+
+        <section className="od-growth__kpis" aria-label="Campaign overview">
+          <div className="od-growth__kpi">
+            <strong>{versions.length.toLocaleString("en-IN")}</strong>
+            <span>WhatsApp versions</span>
+          </div>
+          <div className="od-growth__kpi">
+            <strong>{approvedCount.toLocaleString("en-IN")}</strong>
+            <span>Approved versions</span>
+          </div>
+          <div className="od-growth__kpi">
+            <strong>{activeRunCount.toLocaleString("en-IN")}</strong>
+            <span>Scheduled / active runs</span>
+          </div>
+          <div className="od-growth__kpi">
+            <strong>{sentCount.toLocaleString("en-IN")}</strong>
+            <span>Sent in latest runs</span>
+          </div>
+        </section>
+
+        <div className="od-cp__columns">
         <section className="od-cp__panel" aria-labelledby="whatsapp-campaigns-list">
           <div className="od-cp__toolbar">
             <h2 id="whatsapp-campaigns-list" className="od-cp__panel-title" style={{ margin: 0 }}>
@@ -136,11 +191,11 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
                 : "No approved WhatsApp campaign is waiting for an operator."}
             </p>
           ) : (
-            <ul className="od-cp__list">
+            <ul className="od-growth__campaign-list">
               {versions.map((version) => (
                 <li key={version.versionId}>
                   <Link
-                    className="od-cp__list-item"
+                    className="od-growth__campaign-card"
                     href={`${WHATSAPP_ADMIN_CAMPAIGNS_PATH}?version=${version.versionId}`}
                     aria-current={version.versionId === selected?.versionId ? "true" : undefined}
                   >
@@ -151,8 +206,11 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
                       </span>
                     </span>
                     <span className="od-cp__sub">
-                      v{version.versionNumber} · {version.templateName ?? "no spec"}
-                      {version.latestRun ? ` · run ${version.latestRun.status}` : ""}
+                      v{version.versionNumber} · {version.templateName ?? "No template"} · {version.segmentName ?? "No saved segment"}
+                    </span>
+                    <span className="od-cp__sub">
+                      Updated {formatWhen(version.updatedAt)}
+                      {version.latestRun ? ` · latest run ${version.latestRun.status}` : " · not sent yet"}
                     </span>
                   </Link>
                 </li>
@@ -168,6 +226,39 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
             </p>
           ) : selected ? (
             <>
+              <section className="od-cp__panel" aria-labelledby="whatsapp-campaign-journey">
+                <div className="od-cp__toolbar">
+                  <div>
+                    <p className="od-growth__eyebrow">Campaign setup</p>
+                    <h2 id="whatsapp-campaign-journey" className="od-cp__panel-title" style={{ margin: 0 }}>
+                      {selected.campaignName} · v{selected.versionNumber}
+                    </h2>
+                    <p className="od-cp__hint" style={{ marginBlockStart: 6 }}>
+                      Move from template setup to audience proof, approval and governed delivery.
+                    </p>
+                  </div>
+                  <span className="od-cp__badge" data-tone={approval.tone}>
+                    {approval.label}
+                  </span>
+                </div>
+
+                <div className="od-growth__journey" style={{ marginTop: 16 }}>
+                  <div className="od-growth__step" data-state={spec ? "done" : "active"}>Template & spec</div>
+                  <div className="od-growth__step" data-state={selected.audienceFrozen ? "done" : spec ? "active" : undefined}>Audience</div>
+                  <div className="od-growth__step" data-state={approval.approved ? "done" : selected.audienceFrozen ? "active" : undefined}>Approval</div>
+                  <div className="od-growth__step" data-state={latestRun ? "done" : approval.approved ? "active" : undefined}>Send & monitor</div>
+                </div>
+
+                <div className="od-growth__readiness" style={{ marginTop: 16 }}>
+                  {readiness.map((item) => (
+                    <div key={item.label} className="od-growth__readiness-row">
+                      <span><span className="od-growth__dot" data-state={item.ready ? "ready" : "blocked"} />{item.label}</span>
+                      <strong>{item.ready ? "Ready" : "Needs attention"}</strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
               <section className="od-cp__panel" aria-labelledby="whatsapp-campaign-approval">
                 <h2 id="whatsapp-campaign-approval" className="od-cp__panel-title">
                   {selected.campaignName} · v{selected.versionNumber}
@@ -405,6 +496,7 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
           )}
         </div>
       </div>
+    </div>
     </ControlPlaneShell>
   );
 }
