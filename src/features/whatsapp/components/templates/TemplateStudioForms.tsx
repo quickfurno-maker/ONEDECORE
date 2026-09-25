@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+"use client";
+
+import { useActionState, useMemo, useState } from "react";
 import {
   buildWhatsappTemplateStudioSubmission,
   countWhatsappTemplateBodyPlaceholders,
@@ -61,9 +63,20 @@ export function TemplateCreateForm({ available }: { readonly available: boolean 
   const [state, action, pending] = useActionState(submitWhatsappTemplateAction, INITIAL_WHATSAPP_TEMPLATE_STUDIO_ACTION_STATE);
   const [bodyText, setBodyText] = useState("");
   const [headerText, setHeaderText] = useState("");
+  const [footerText, setFooterText] = useState("");
+  const [category, setCategory] = useState("UTILITY");
+  const [examples, setExamples] = useState<Record<number, string>>({});
   const exampleCount = Math.min(countWhatsappTemplateBodyPlaceholders(bodyText), 20);
   const headerHasVariable = countWhatsappTemplateBodyPlaceholders(headerText) > 0;
   const [clientError, setClientError] = useState<{ field: string; message: string } | null>(null);
+  const previewBody = useMemo(
+    () =>
+      (bodyText || "Your template message will preview here.").replace(
+        /{{([1-9][0-9]*)}}/g,
+        (_, raw: string) => examples[Number(raw)]?.trim() || `{{${raw}}}`
+      ),
+    [bodyText, examples]
+  );
 
   /* Validated in the browser for a fast answer, then again on the server. */
   const submit = (formData: FormData) => {
@@ -93,7 +106,8 @@ export function TemplateCreateForm({ available }: { readonly available: boolean 
   const fieldError = clientError?.message ?? (state.success ? "" : state.message);
 
   return (
-    <form action={submit} className="od-tpl__create" aria-label="Create and submit a WhatsApp template">
+    <div className="od-growth__builder">
+      <form action={submit} className="od-tpl__create" aria-label="Create and submit a WhatsApp template">
       <div className="od-tpl__grid">
         <label className="od-tpl__field">
           <span>Name</span>
@@ -111,15 +125,26 @@ export function TemplateCreateForm({ available }: { readonly available: boolean 
         </label>
         <label className="od-tpl__field">
           <span>Category</span>
-          <select name="category" defaultValue="UTILITY" disabled={!available || pending}>
-            {WHATSAPP_TEMPLATE_STUDIO_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category}
+          <select
+            name="category"
+            value={category}
+            onChange={(event) => setCategory(event.currentTarget.value)}
+            disabled={!available || pending}
+          >
+            {WHATSAPP_TEMPLATE_STUDIO_CATEGORIES.map((value) => (
+              <option key={value} value={value}>
+                {value}
               </option>
             ))}
           </select>
         </label>
       </div>
+
+      <p className="od-tpl__hint">
+        {category === "UTILITY"
+          ? "Use Utility for enquiry updates, appointments, site visits, quotations and service communication."
+          : "Use Marketing only for promotions or nurture campaigns with valid marketing consent."}
+      </p>
 
       <label className="od-tpl__field">
         <span>Header text (optional, max 60, one {"{{1}}"} at most)</span>
@@ -156,7 +181,18 @@ export function TemplateCreateForm({ available }: { readonly available: boolean 
           {Array.from({ length: exampleCount }, (_, index) => (
             <label className="od-tpl__field" key={index}>
               <span>Example for {`{{${index + 1}}}`}</span>
-              <input name={`bodyExample${index + 1}`} required maxLength={200} disabled={!available || pending} />
+              <input
+                name={`bodyExample${index + 1}`}
+                required
+                maxLength={200}
+                disabled={!available || pending}
+                onChange={(event) =>
+                  setExamples((current) => ({
+                    ...current,
+                    [index + 1]: event.currentTarget.value,
+                  }))
+                }
+              />
             </label>
           ))}
         </div>
@@ -164,7 +200,14 @@ export function TemplateCreateForm({ available }: { readonly available: boolean 
 
       <label className="od-tpl__field">
         <span>Footer (optional, max 60, no variables)</span>
-        <input name="footerText" maxLength={60} disabled={!available || pending} />
+        <input
+          name="footerText"
+          maxLength={60}
+          value={footerText}
+          onChange={(event) => setFooterText(event.currentTarget.value)}
+          placeholder="ONEDECORE • Spaces for a better you"
+          disabled={!available || pending}
+        />
       </label>
 
       <p className="od-tpl__hint">
@@ -174,7 +217,7 @@ export function TemplateCreateForm({ available }: { readonly available: boolean 
 
       <div className="od-tpl__inline-form">
         <button type="submit" className="od-tpl__btn od-tpl__btn--primary" disabled={!available || pending}>
-          {pending ? "Submitting…" : "Submit for review"}
+          {pending ? "Submitting…" : "Submit to Meta for review"}
         </button>
         {fieldError ? (
           <p className="od-tpl__msg od-tpl__msg--err" role="alert">
@@ -183,6 +226,21 @@ export function TemplateCreateForm({ available }: { readonly available: boolean 
         ) : null}
         {state.success ? <ActionMessage success message={state.message} /> : null}
       </div>
-    </form>
+      </form>
+
+      <aside className="od-growth__preview-sticky" aria-label="Template preview">
+        <div className="od-growth__phone">
+          <div className="od-growth__phone-bar">ONEDECORE</div>
+          <div className="od-growth__bubble">
+            {headerText ? <div className="od-growth__bubble-header">{headerText}</div> : null}
+            <div>{previewBody}</div>
+            {footerText ? <div className="od-growth__bubble-footer">{footerText}</div> : null}
+          </div>
+        </div>
+        <p className="od-tpl__hint" style={{ marginTop: 10 }}>
+          Live preview is illustrative. Meta remains the source of truth for approved rendering and category.
+        </p>
+      </aside>
+    </div>
   );
 }

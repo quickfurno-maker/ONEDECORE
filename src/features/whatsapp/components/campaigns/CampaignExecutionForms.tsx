@@ -14,7 +14,10 @@ import {
 } from "../../contracts/campaign-execution.ts";
 import { WHATSAPP_MARKETING_PREFERENCE_CATEGORIES } from "../../contracts/contacts-compliance.ts";
 import { INITIAL_WHATSAPP_CONTROL_PLANE_ACTION_STATE } from "../../contracts/control-plane.ts";
-import { extractWhatsappTemplateVariables } from "../../contracts/template-components.ts";
+import {
+  extractWhatsappTemplateVariables,
+  readWhatsappTemplateTextParts,
+} from "../../contracts/template-components.ts";
 import {
   createWhatsappCampaignRunAction,
   createWhatsappCampaignTestSendAction,
@@ -53,6 +56,7 @@ export function CampaignSpecForm({
   const [snapshotId, setSnapshotId] = useState(templateSnapshotId);
   const template = templates.find((option) => option.snapshotId === snapshotId) ?? null;
   const variables = useMemo(() => extractWhatsappTemplateVariables(template?.components ?? []), [template]);
+  const preview = useMemo(() => readWhatsappTemplateTextParts(template?.components ?? []), [template]);
 
   return (
     <form action={action} className="od-cp__stack" data-testid="whatsapp-campaign-spec-form">
@@ -97,6 +101,32 @@ export function CampaignSpecForm({
           </select>
         </label>
       </div>
+
+      {template ? (
+        <div className="od-growth__builder">
+          <div className="od-growth__phone">
+            <div className="od-growth__phone-bar">ONEDECORE campaign preview</div>
+            <div className="od-growth__bubble">
+              {preview.header ? <div className="od-growth__bubble-header">{preview.header}</div> : null}
+              <div>{preview.body ?? "Template body unavailable."}</div>
+              {preview.footer ? <div className="od-growth__bubble-footer">{preview.footer}</div> : null}
+              {preview.buttons.length > 0 ? (
+                <div className="od-growth__template-meta">
+                  {preview.buttons.map((button) => (
+                    <span key={button} className="od-cp__badge">{button}</span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className="od-cp__notice">
+            <strong>{template.name}</strong> · {template.language}
+            {template.qualityRating ? ` · quality ${template.qualityRating}` : ""}
+            <br />
+            This preview uses the approved template snapshot. Variable values are mapped below and revalidated before send.
+          </div>
+        </div>
+      ) : null}
 
       {variables.length > 0 ? (
         <table className="od-cp__table" data-testid="whatsapp-campaign-variable-map">
