@@ -113,6 +113,38 @@ type NullableRpcArguments = {
   get_crm_pipeline_value_summary: "p_owner_id";
 
   /**
+   * P2 CRM/WhatsApp linking accepts an omitted/NULL audit reason and an
+   * unassigned lead. Both arguments are declared/handled as SQL NULL.
+   */
+  link_whatsapp_conversation_to_crm_lead: "p_reason";
+  create_crm_lead_from_whatsapp_conversation: "p_assignee_id";
+
+  /**
+   * Media replies may intentionally have no quoted parent message. The routine
+   * receives the required argument as SQL NULL and stores it in a nullable FK.
+   */
+  create_whatsapp_service_media_send_intent: "p_reply_to_message_id";
+
+  /**
+   * Template Studio filters and draft identity/locking fields use DEFAULT NULL
+   * to mean create/no filter/no preset.
+   */
+  save_whatsapp_template_draft:
+    | "p_draft_id"
+    | "p_expected_lock_version"
+    | "p_source_preset_id";
+  list_whatsapp_template_drafts:
+    | "p_status"
+    | "p_category"
+    | "p_language"
+    | "p_search";
+  list_whatsapp_template_registry_p3:
+    | "p_status"
+    | "p_category"
+    | "p_language"
+    | "p_search";
+
+  /**
    * `p_experiment_id uuid`, `p_variant_key text` (no defaults). The routine
    * raises `LANDING_EXPOSURE_INVALID` for a NULL publication, visitor hash or
    * epoch and pointedly does not check these two, then writes them to columns
@@ -187,130 +219,6 @@ type CorrectedFunctions = {
 };
 
 /**
- * Functions introduced by reviewed forward migrations after the last generated
- * snapshot. Keep this list small and remove entries when database.generated.ts
- * is regenerated from the complete migration set.
- */
-type ForwardMigrationFunctions = {
-  save_whatsapp_template_draft: {
-    Args: {
-      p_name: string;
-      p_language: string;
-      p_category: string;
-      p_components: GeneratedFunctions["request_whatsapp_template_submission"]["Args"]["p_components"];
-      p_workflow_status: string;
-      p_draft_id?: string | null;
-      p_expected_lock_version?: number | null;
-      p_source_preset_id?: string | null;
-    };
-    Returns: GeneratedFunctions["list_whatsapp_template_registry"]["Returns"];
-  };
-  archive_whatsapp_template_draft: {
-    Args: { p_draft_id: string; p_expected_lock_version: number };
-    Returns: boolean;
-  };
-  get_whatsapp_template_draft: {
-    Args: { p_draft_id: string };
-    Returns: GeneratedFunctions["list_whatsapp_template_registry"]["Returns"];
-  };
-  list_whatsapp_template_drafts: {
-    Args: {
-      p_status?: string | null;
-      p_category?: string | null;
-      p_language?: string | null;
-      p_search?: string | null;
-      p_page?: number;
-      p_page_size?: number;
-    };
-    Returns: GeneratedFunctions["list_whatsapp_template_registry"]["Returns"];
-  };
-  list_whatsapp_template_registry_p3: {
-    Args: {
-      p_status?: string | null;
-      p_category?: string | null;
-      p_search?: string | null;
-      p_language?: string | null;
-      p_page?: number;
-      p_page_size?: number;
-    };
-    Returns: GeneratedFunctions["list_whatsapp_template_registry"]["Returns"];
-  };
-  list_whatsapp_template_status_timeline: {
-    Args: { p_limit?: number };
-    Returns: GeneratedFunctions["list_whatsapp_template_registry"]["Returns"];
-  };
-  get_whatsapp_inbox_message_origins: {
-    Args: { p_message_ids: string[] };
-    Returns: Array<{
-      message_id: string;
-      origin_kind: string;
-      origin_label: string;
-    }>;
-  };
-  create_whatsapp_service_media_send_intent: {
-    Args: {
-      p_conversation_id: string;
-      p_idempotency_key: string;
-      p_purpose_code: string;
-      p_message_kind: string;
-      p_caption: string;
-      p_reply_to_message_id: string | null;
-      p_media_object_path: string;
-      p_media_file_name: string;
-      p_media_mime_type: string;
-      p_media_size_bytes: number;
-      p_media_sha256: string;
-    };
-    Returns: GeneratedFunctions["create_whatsapp_service_send_intent"]["Returns"] & {
-      message_kind: string;
-      media_object_path: string | null;
-      media_file_name: string | null;
-      media_mime_type: string | null;
-      media_size_bytes: number | null;
-      media_sha256: string | null;
-    };
-  };
-  get_whatsapp_media_dispatch_payload: {
-    Args: { p_send_intent_id: string };
-    Returns: Array<{
-      message_kind: string;
-      media_object_path: string | null;
-      media_file_name: string | null;
-      media_mime_type: string | null;
-      media_size_bytes: number | null;
-      media_sha256: string | null;
-    }>;
-  };
-  create_crm_lead_from_whatsapp_conversation: {
-    Args: {
-      p_conversation_id: string;
-      p_submitted_name: string;
-      p_service_code?: string | null;
-      p_assignee_id?: string | null;
-    };
-    Returns: Array<{
-      outcome_code: string;
-      lead_id: string;
-      contact_id: string;
-    }>;
-  };
-  link_whatsapp_conversation_to_crm_lead: {
-    Args: {
-      p_conversation_id: string;
-      p_lead_id: string;
-      p_reason?: string | null;
-      p_method?: string | null;
-    };
-    Returns: Array<{
-      outcome_code: string;
-      lead_id: string;
-      contact_id: string;
-      phone_match: boolean;
-    }>;
-  };
-};
-
-/**
  * The PostgREST version the managed OneDecore project runs.
  *
  * WHY A HANDWRITTEN LITERAL AND NOT GENERATOR OUTPUT
@@ -359,7 +267,7 @@ export type Database = Omit<GeneratedDatabase, "public" | "__InternalSupabase"> 
     PostgrestVersion: typeof MANAGED_POSTGREST_VERSION;
   };
   public: Omit<GeneratedPublic, "Functions"> & {
-    Functions: CorrectedFunctions & ForwardMigrationFunctions;
+    Functions: CorrectedFunctions;
   };
 };
 
@@ -375,6 +283,26 @@ export const NULLABLE_RPC_ARGUMENT_OVERRIDES = {
   get_crm_management_analytics: ["p_owner_id", "p_source_id"],
   get_crm_my_day: ["p_owner_id"],
   get_crm_pipeline_value_summary: ["p_owner_id"],
+  link_whatsapp_conversation_to_crm_lead: ["p_reason"],
+  create_crm_lead_from_whatsapp_conversation: ["p_assignee_id"],
+  create_whatsapp_service_media_send_intent: ["p_reply_to_message_id"],
+  save_whatsapp_template_draft: [
+    "p_draft_id",
+    "p_expected_lock_version",
+    "p_source_preset_id",
+  ],
+  list_whatsapp_template_drafts: [
+    "p_status",
+    "p_category",
+    "p_language",
+    "p_search",
+  ],
+  list_whatsapp_template_registry_p3: [
+    "p_status",
+    "p_category",
+    "p_language",
+    "p_search",
+  ],
   record_landing_exposure: ["p_experiment_id", "p_variant_key"],
   save_landing_experiment_draft: ["p_experiment_id"],
   save_whatsapp_click_destination: ["p_destination_id"],
