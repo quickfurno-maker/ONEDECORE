@@ -125,6 +125,7 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
       "20260926063000_whatsapp_crm_campaign_audiences.sql",
       "20260926063100_whatsapp_service_lead_acknowledgement.sql",
       "20260926063500_whatsapp_crm_native_campaign_filters.sql",
+      "20260926064000_whatsapp_release_database_hardening.sql",
     ] as const;
     for (const migration of requiredForwardMigrations) {
       assert.ok(files.includes(migration), `required forward migration is present: ${migration}`);

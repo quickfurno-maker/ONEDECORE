@@ -205,6 +205,7 @@ select set_eq(
     'get_campaign_run_operation_for_reconcile(uuid)',
     'get_live_landing_publication(text)',
     'get_public_commerce_order_tracking_snapshot(text)',
+    'get_whatsapp_media_dispatch_payload(uuid)',
     'ingest_meta_whatsapp_message(text,text,text,text,text,text,text,text,text,text,text,text,text,jsonb,text,timestamp with time zone)',
     'ingest_meta_whatsapp_status(text,text,text,text,text,text,text,text,timestamp with time zone,jsonb)',
     'issue_quotation_access_grant_internal(uuid,uuid,uuid,text,text,boolean)',
@@ -413,8 +414,9 @@ select ok(
 -- D. Service-only tables: the protection IS the absent policy
 -- ===========================================================================
 
--- RLS enabled with no policy is default-deny. These seven are reachable only
--- through postgres-owned definer routines, so listing them makes the design a
+-- RLS enabled with no policy is default-deny. These reviewed service-only
+-- tables are reachable only through postgres-owned definer routines, so listing
+-- them makes the design a
 -- decision on the record rather than something a reader has to infer from an
 -- empty pg_policy result.
 select set_eq(
@@ -423,9 +425,12 @@ select set_eq(
      where n.nspname = 'public' and c.relkind in ('r','p') and c.relrowsecurity
        and (select count(*) from pg_policy pol where pol.polrelid = c.oid) = 0$$,
   array[
+    'crm_assignment_setting_events',
+    'crm_assignment_settings',
     'mobile_push_tokens',
     'quotation_access_grants',
     'whatsapp_business_accounts',
+    'whatsapp_crm_link_events',
     'whatsapp_message_status_events',
     'whatsapp_phone_numbers',
     'whatsapp_templates',
@@ -440,9 +445,10 @@ select is(
   (select count(*)::int
      from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public'
-      and c.relname in ('mobile_push_tokens', 'quotation_access_grants', 'whatsapp_business_accounts',
-                        'whatsapp_message_status_events', 'whatsapp_phone_numbers',
-                        'whatsapp_templates', 'whatsapp_webhook_events')
+      and c.relname in ('crm_assignment_setting_events', 'crm_assignment_settings',
+                        'mobile_push_tokens', 'quotation_access_grants', 'whatsapp_business_accounts',
+                        'whatsapp_crm_link_events', 'whatsapp_message_status_events',
+                        'whatsapp_phone_numbers', 'whatsapp_templates', 'whatsapp_webhook_events')
       and (has_table_privilege('anon', c.oid, 'SELECT')
         or has_table_privilege('authenticated', c.oid, 'SELECT')
         or has_table_privilege('authenticated', c.oid, 'INSERT')

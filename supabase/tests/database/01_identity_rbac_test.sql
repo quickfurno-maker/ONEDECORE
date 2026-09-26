@@ -104,8 +104,8 @@ select results_eq(
 -- 10. Verify authorized application tables count
 select results_eq(
   'select count(*)::integer from information_schema.tables where table_schema = ''public'' and table_type = ''BASE TABLE''',
-  array[169],
-  'Public schema must contain exactly 169 authorized application tables including website analytics and the mobile owner push token registry'
+  array[174],
+  'Public schema must contain exactly 174 authorized application tables including the reviewed CRM/WhatsApp P1-P3 additions'
 );
 
 -- 11. Phase 2C3 — rls_auto_enable existence and security properties
