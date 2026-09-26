@@ -184,6 +184,7 @@
     "src/features/whatsapp/__tests__/phase-6b-b3-inbox-ui.test.ts",
     "src/features/whatsapp/__tests__/phase-6b-b4-provider-dispatch.test.ts",
     "src/features/whatsapp/__tests__/phase-6b-integrated-matrix.test.ts",
+    "src/features/whatsapp/__tests__/whatsapp-campaign-scheduler.test.ts",
     "src/features/whatsapp/__tests__/whatsapp-premium-inbox.test.ts",
     "src/features/whatsapp/__tests__/wm-1-inbox-completeness.test.ts",
     "src/features/whatsapp/__tests__/wm-3-contacts-segments-settings.test.ts",

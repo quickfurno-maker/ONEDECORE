@@ -10,6 +10,7 @@ import { TemplateArchiveForm } from "@/features/whatsapp/components/templates/Te
 import "@/features/whatsapp/components/templates/template-studio.css";
 import "@/features/whatsapp/components/growth-workspace.css";
 import { WHATSAPP_ADMIN_INBOX_BASE_PATH, WHATSAPP_ADMIN_TEMPLATES_PATH } from "@/features/whatsapp/contracts/inbox-surface";
+import { WHATSAPP_ADMIN_SCHEDULER_PATH } from "@/features/whatsapp/contracts/control-plane";
 import {
   parseWhatsappTemplateRegistryQuery,
   WHATSAPP_TEMPLATE_REGISTRY_CATEGORY_FILTERS,
@@ -27,7 +28,7 @@ import {
   WHATSAPP_TEMPLATE_DRAFT_STATUSES,
   type WhatsappTemplateDraftQuery,
 } from "@/features/whatsapp/contracts/template-drafts";
-import { getWhatsappInboxAccessContext } from "@/features/whatsapp/server/whatsapp-auth";
+import { resolveWhatsappControlPlaneAccess } from "@/features/whatsapp/server/whatsapp-control-plane-auth";
 import {
   getWhatsappTemplateManagementStatus,
   getWhatsappTemplateDraftForCurrentUser,
@@ -127,8 +128,8 @@ interface WhatsappTemplatesPageProps {
 }
 
 export default async function WhatsappTemplatesPage({ searchParams }: WhatsappTemplatesPageProps) {
-  const context = await getWhatsappInboxAccessContext();
-  if (!context) {
+  const controlAccess = await resolveWhatsappControlPlaneAccess();
+  if (!controlAccess) {
     return <WhatsappAccessDenied />;
   }
 
@@ -161,6 +162,7 @@ export default async function WhatsappTemplatesPage({ searchParams }: WhatsappTe
   const draftId = first(params.draft);
   const duplicateDraftId = first(params.duplicateDraft);
   const canManage = permissions["whatsapp.templates.manage"];
+  const canSchedule = controlAccess.permissions["whatsapp.campaigns.execute"];
   const status = getWhatsappTemplateManagementStatus();
 
   const requestedDraftId =
@@ -489,7 +491,7 @@ export default async function WhatsappTemplatesPage({ searchParams }: WhatsappTe
                     <th scope="col">Quality</th>
                     <th scope="col">Use</th>
                     <th scope="col">Synced</th>
-                    {canManage ? <th scope="col"><span className="sr-only">Actions</span></th> : null}
+                    {canManage || canSchedule ? <th scope="col"><span className="sr-only">Actions</span></th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -541,15 +543,25 @@ export default async function WhatsappTemplatesPage({ searchParams }: WhatsappTe
                       <td>
                         <span className="od-tpl__raw">{formatWhen(item.syncedAt)}</span>
                       </td>
-                      {canManage ? (
+                      {canManage || canSchedule ? (
                         <td>
-                          {item.providerTemplateId ? (
-                            <TemplateSyncForm
-                              available={status.actionsAvailable}
-                              templateId={item.id}
-                              label="Refresh status"
-                            />
-                          ) : null}
+                          <span className="od-tpl__inline-form">
+                            {canSchedule && item.status === "APPROVED" && item.category === "MARKETING" ? (
+                              <Link
+                                className="od-tpl__btn od-tpl__btn--primary"
+                                href={`${WHATSAPP_ADMIN_SCHEDULER_PATH}?templateId=${item.id}#new-schedule`}
+                              >
+                                Schedule campaign
+                              </Link>
+                            ) : null}
+                            {canManage && item.providerTemplateId ? (
+                              <TemplateSyncForm
+                                available={status.actionsAvailable}
+                                templateId={item.id}
+                                label="Refresh status"
+                              />
+                            ) : null}
+                          </span>
                         </td>
                       ) : null}
                     </tr>

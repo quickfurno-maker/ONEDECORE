@@ -8,6 +8,8 @@ import { LeadListTable } from "@/features/crm/components/leads/LeadListTable";
 import { LeadSalesBucketStrip } from "@/features/crm/components/leads/LeadSalesBucketStrip";
 import { parseLeadListQuery } from "@/features/crm/contracts/lead-list-query";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
+import { WHATSAPP_ADMIN_SCHEDULER_PATH } from "@/features/whatsapp/contracts/control-plane";
+import { resolveWhatsappControlPlaneAccess } from "@/features/whatsapp/server/whatsapp-control-plane-auth";
 import {
   fetchActiveLeadSources,
   fetchCrmAssigneeDirectory,
@@ -40,10 +42,11 @@ export default async function CrmNurturePage({ searchParams }: CrmNurturePagePro
     return null;
   }
 
-  const [page, sources, assignees] = await Promise.all([
+  const [page, sources, assignees, whatsappAccess] = await Promise.all([
     getLeadListPageForCurrentUser(query),
     fetchActiveLeadSources(),
     fetchCrmAssigneeDirectory(context),
+    resolveWhatsappControlPlaneAccess(),
   ]);
 
   const hasUserFilters = Boolean(
@@ -63,13 +66,15 @@ export default async function CrmNurturePage({ searchParams }: CrmNurturePagePro
         title="Lead Nurture"
         description="Long-term opportunities whose project timeline is more than 2 months."
         actions={
-          <Link
-            href="/admin/whatsapp/campaigns?audiencePreset=long-term-nurture&audienceTemperature=all#crm-campaign-launcher"
-            className="crm-btn crm-btn-primary w-full sm:w-auto"
-            data-testid="crm-nurture-whatsapp-promotion"
-          >
-            Create WhatsApp promotion
-          </Link>
+          whatsappAccess?.permissions["whatsapp.campaigns.execute"] ? (
+            <Link
+              href={`${WHATSAPP_ADMIN_SCHEDULER_PATH}?audiencePreset=long-term-nurture&audienceTemperature=all#new-schedule`}
+              className="crm-btn crm-btn-primary w-full sm:w-auto"
+              data-testid="crm-nurture-whatsapp-promotion"
+            >
+              Schedule WhatsApp nurture
+            </Link>
+          ) : null
         }
       />
 

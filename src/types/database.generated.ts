@@ -12659,6 +12659,10 @@ export type Database = {
         Returns: Json
       }
       list_whatsapp_automations: { Args: never; Returns: Json }
+      list_whatsapp_campaign_scheduler_runs: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
       list_whatsapp_campaign_template_options: { Args: never; Returns: Json }
       list_whatsapp_campaign_test_destinations: { Args: never; Returns: Json }
       list_whatsapp_campaign_versions: { Args: never; Returns: Json }
@@ -13512,6 +13516,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      reschedule_whatsapp_campaign_run: {
+        Args: { p_run_id: string; p_scheduled_for: string }
+        Returns: Json
       }
       resend_staff_invite: {
         Args: { p_reason: string; p_staff_id: string }

@@ -41,6 +41,9 @@ export function CrmCampaignLauncher({
   startDate,
   canCreate,
   preset = "standard",
+  surfacePath = CAMPAIGNS_PATH,
+  templateSnapshotId = null,
+  schedulerHandoff = false,
 }: {
   readonly month: string;
   readonly temperature: WhatsappCrmAudienceTemperature;
@@ -50,6 +53,9 @@ export function CrmCampaignLauncher({
   readonly startDate: string;
   readonly canCreate: boolean;
   readonly preset?: WhatsappCrmAudiencePreset;
+  readonly surfacePath?: string;
+  readonly templateSnapshotId?: string | null;
+  readonly schedulerHandoff?: boolean;
 }) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
@@ -76,10 +82,11 @@ export function CrmCampaignLauncher({
     params.set("audienceMonth", month);
     params.set("audienceTemperature", value);
     if (nurtureMode) params.set("audiencePreset", "long-term-nurture");
+    if (templateSnapshotId) params.set("templateSnapshotId", templateSnapshotId);
     for (const [key, filterValue] of Object.entries(filters)) {
       if (filterValue) params.set(key, filterValue);
     }
-    return `${CAMPAIGNS_PATH}?${params.toString()}#crm-campaign-launcher`;
+    return `${surfacePath}?${params.toString()}#crm-campaign-launcher`;
   };
   return (
     <section id="crm-campaign-launcher" className="od-cp__panel od-growth__crm-launcher">
@@ -113,8 +120,9 @@ export function CrmCampaignLauncher({
         ))}
       </div>
 
-      <form method="get" action={CAMPAIGNS_PATH} className="od-cp__stack od-growth__crm-filters">
+      <form method="get" action={surfacePath} className="od-cp__stack od-growth__crm-filters">
         <input type="hidden" name="audienceTemperature" value={temperature} />
+        {templateSnapshotId ? <input type="hidden" name="templateSnapshotId" value={templateSnapshotId} /> : null}
         {nurtureMode ? <input type="hidden" name="audiencePreset" value="long-term-nurture" /> : null}
         {nurtureMode ? <input type="hidden" name="projectTimeline" value="after-2-months" /> : null}
         <div className="od-cp__grid">
@@ -207,7 +215,7 @@ export function CrmCampaignLauncher({
         </div>
         <div className="od-tpl__inline-form">
           <button className="od-cp__btn od-cp__btn--primary" type="submit">Apply CRM audience</button>
-          <Link className="od-cp__btn od-cp__btn--quiet" href={`${CAMPAIGNS_PATH}?audienceMonth=${month}&audienceTemperature=${temperature}${nurtureMode ? "&audiencePreset=long-term-nurture" : ""}#crm-campaign-launcher`}>
+          <Link className="od-cp__btn od-cp__btn--quiet" href={`${surfacePath}?audienceMonth=${month}&audienceTemperature=${temperature}${nurtureMode ? "&audiencePreset=long-term-nurture" : ""}${templateSnapshotId ? `&templateSnapshotId=${templateSnapshotId}` : ""}#crm-campaign-launcher`}>
             Clear advanced filters
           </Link>
         </div>
@@ -240,7 +248,13 @@ export function CrmCampaignLauncher({
             const result = await createCampaignDraftAction(formData);
             setMessage(result.message);
             if (result.success && result.data?.campaignVersionId) {
-              router.push(`${CAMPAIGNS_PATH}?version=${result.data.campaignVersionId}&preview=1`);
+              const next = new URLSearchParams({
+                version: result.data.campaignVersionId,
+                preview: "1",
+              });
+              if (templateSnapshotId) next.set("templateSnapshotId", templateSnapshotId);
+              if (schedulerHandoff) next.set("scheduleReturn", "1");
+              router.push(`${CAMPAIGNS_PATH}?${next.toString()}`);
             }
           }}
         >
@@ -268,13 +282,18 @@ export function CrmCampaignLauncher({
           </div>
           <div className="od-tpl__inline-form">
             <button type="submit" className="od-cp__btn od-cp__btn--primary">
-              {nurtureMode ? "Create nurture promotion" : "Create CRM WhatsApp campaign"}
+              {schedulerHandoff
+                ? "Prepare scheduled campaign"
+                : nurtureMode
+                  ? "Create nurture promotion"
+                  : "Create CRM WhatsApp campaign"}
             </button>
             {message ? <p role="status" className="od-cp__hint">{message}</p> : null}
           </div>
           <p className="od-cp__hint">
-            Creating the draft does not send anything. Provider execution remains governed by approved
-            MARKETING template, consent, approval, scheduling and the global WhatsApp execution switch.
+            {schedulerHandoff
+              ? "This creates the governed campaign draft first. Finish template variables, test and approval; it will then appear in Scheduler as ready for a delivery slot."
+              : "Creating the draft does not send anything. Provider execution remains governed by approved MARKETING template, consent, approval, scheduling and the global WhatsApp execution switch."}
           </p>
         </form>
       ) : (

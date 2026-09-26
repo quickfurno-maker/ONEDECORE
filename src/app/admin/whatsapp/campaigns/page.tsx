@@ -19,7 +19,7 @@ import {
   whatsappCampaignRunTone,
   whatsappTemplateButtonSlots,
 } from "@/features/whatsapp/contracts/campaign-execution";
-import { isUuid, WHATSAPP_ADMIN_CAMPAIGNS_PATH } from "@/features/whatsapp/contracts/control-plane";
+import { isUuid, WHATSAPP_ADMIN_CAMPAIGNS_PATH, WHATSAPP_ADMIN_SCHEDULER_PATH } from "@/features/whatsapp/contracts/control-plane";
 import {
   currentIstDate,
   currentIstMonth,
@@ -120,6 +120,9 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
   const templateDraftRaw = first(params.templateDraft);
   const templateDraftId = isUuid(templateDraftRaw) ? templateDraftRaw : null;
   const templateDraftName = first(params.templateDraftName)?.trim().slice(0, 128) ?? null;
+  const preferredTemplateRaw = first(params.templateSnapshotId);
+  const preferredTemplateSnapshotId = isUuid(preferredTemplateRaw) ? preferredTemplateRaw : null;
+  const scheduleReturn = first(params.scheduleReturn) === "1";
   const requestedMonth = first(params.audienceMonth);
   const audienceMonth = isWhatsappCrmLeadMonth(requestedMonth) ? requestedMonth : currentIstMonth();
   const requestedPreset = first(params.audiencePreset);
@@ -175,6 +178,9 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
     latestRun ? getWhatsappCampaignRunBreakdownForCurrentUser(latestRun.id) : Promise.resolve(null),
   ]);
 
+  const preferredTemplate = preferredTemplateSnapshotId
+    ? templates.find((template) => template.snapshotId === preferredTemplateSnapshotId) ?? null
+    : null;
   const approval = presentWhatsappCampaignApproval(selected?.approval?.decision ?? null);
   const denial = describeWhatsappCampaignOperatorDenial(selected?.operatorDenial ?? null);
   const templateButtonCount = spec ? whatsappTemplateButtonSlots(spec.components).length : 0;
@@ -228,6 +234,9 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
                 Create campaign
               </Link>
             ) : null}
+            <Link className="od-cp__btn od-cp__btn--quiet" href={WHATSAPP_ADMIN_SCHEDULER_PATH}>
+              Open scheduler
+            </Link>
             <Link className="od-cp__btn od-cp__btn--quiet" href="/admin/whatsapp/templates">
               Manage templates
             </Link>
@@ -283,6 +292,22 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
                 href={`/admin/whatsapp/templates?draft=${templateDraftId}#whatsapp-template-create`}
               >
                 Edit local draft
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        {scheduleReturn ? (
+          <section className="od-cp__notice" data-testid="scheduler-campaign-handoff">
+            <strong>Scheduler handoff.</strong>{" "}
+            Finish the approved template mapping, test and campaign approval here. Once the
+            version is approved, return to Scheduler to place it on the delivery calendar.
+            {preferredTemplate ? (
+              <> Template preselected: <strong>{preferredTemplate.name}</strong>.</>
+            ) : null}
+            <div style={{ marginBlockStart: 10 }}>
+              <Link className="od-cp__btn od-cp__btn--quiet" href={WHATSAPP_ADMIN_SCHEDULER_PATH}>
+                Back to Scheduler
               </Link>
             </div>
           </section>
@@ -445,7 +470,12 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
                       campaignVersionId={selected.versionId}
                       templates={templates}
                       segments={segments.filter((segment) => segment.isActive).map((segment) => ({ id: segment.id, name: segment.name }))}
-                      templateSnapshotId={spec?.templateSnapshotId ?? selected.previousSpec?.templateSnapshotId ?? ""}
+                      templateSnapshotId={
+                        spec?.templateSnapshotId ??
+                        selected.previousSpec?.templateSnapshotId ??
+                        preferredTemplate?.snapshotId ??
+                        ""
+                      }
                       preferenceCategory={spec?.preferenceCategory ?? selected.previousSpec?.preferenceCategory ?? ""}
                       segmentId={spec?.segmentId ?? ""}
                       defaultParameters={spec?.defaultParameters ?? {}}

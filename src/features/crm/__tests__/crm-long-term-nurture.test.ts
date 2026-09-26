@@ -49,7 +49,8 @@ describe("CRM long-term nurture", () => {
     const counts = read("src/features/whatsapp/server/whatsapp-crm-campaign-queries.ts");
 
     assert.match(page, /audiencePreset=long-term-nurture/);
-    assert.match(page, /Create WhatsApp promotion/);
+    assert.match(page, /Schedule WhatsApp nurture/);
+    assert.match(page, /WHATSAPP_ADMIN_SCHEDULER_PATH/);
     assert.match(campaigns, /Marketing consent and WhatsApp eligibility are still mandatory/);
     assert.match(campaigns, /excludeTerminalStages: nurtureMode/);
     assert.match(counts, /timeline_code", "after-2-months"/);
