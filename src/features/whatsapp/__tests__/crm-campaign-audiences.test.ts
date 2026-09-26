@@ -42,7 +42,7 @@ describe("CRM-native WhatsApp campaign audiences", () => {
   });
 
   test("the migration applies CRM fields to generic preview and WhatsApp execution", () => {
-    const sql = read("supabase/migrations/20260926063000_whatsapp_crm_campaign_audiences.sql");
+    const sql = read("supabase/migrations/20260926090616_whatsapp_crm_campaign_audiences.sql");
     assert.match(sql, /'sales_temperature'/);
     assert.match(sql, /'lead_created_month'/);
     assert.match(sql, /l\.manual_sales_temperature/);
