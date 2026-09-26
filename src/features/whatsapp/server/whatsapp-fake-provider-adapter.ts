@@ -3,6 +3,7 @@ import type { WhatsappProviderAdapter } from "./whatsapp-provider-adapter.ts";
 import type {
   WhatsappProviderDispatchRequest,
   WhatsappProviderDispatchResult,
+  WhatsappProviderMediaDispatchRequest,
 } from "../contracts/provider-dispatch.ts";
 
 function deterministicFakeProviderMessageId(providerAttemptKey: string): string {
@@ -40,6 +41,37 @@ export function createFakeWhatsappProviderAdapter(): WhatsappProviderAdapter {
         responseSnapshot: {
           messaging_product: "whatsapp",
           provider: "fake",
+        },
+      };
+    },
+    async dispatchMediaMessage(
+      request: WhatsappProviderMediaDispatchRequest
+    ): Promise<WhatsappProviderDispatchResult> {
+      if (request.bytes.byteLength < 1) {
+        return {
+          kind: "failed",
+          errorClass: "terminal",
+          code: "validation_empty_media",
+          message: "Media bytes are required.",
+          httpStatus: null,
+          responseSnapshot: {},
+        };
+      }
+
+      return {
+        kind: "success",
+        providerMessageId: deterministicFakeProviderMessageId(
+          request.providerAttemptKey
+        ),
+        providerTimestamp: new Date().toISOString(),
+        httpStatus: 200,
+        responseSnapshot: {
+          messaging_product: "whatsapp",
+          provider: "fake",
+          mediaKind: request.mediaKind,
+          mimeType: request.mimeType,
+          fileName: request.fileName,
+          sizeBytes: request.bytes.byteLength,
         },
       };
     },

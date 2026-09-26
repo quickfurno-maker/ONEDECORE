@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import type { WhatsappAutomationPreset } from "../../contracts/automation-presets.ts";
 import {
   availableWhatsappAutomationActions,
   WHATSAPP_AUTOMATION_ACTION_LABELS,
@@ -29,16 +30,20 @@ type Option = { readonly id: string; readonly label: string };
 
 export function AutomationEditorForm({
   automation,
+  preset = null,
   campaignVersions,
   flows,
 }: {
   readonly automation: WhatsappAutomationView | null;
+  readonly preset?: WhatsappAutomationPreset | null;
   readonly campaignVersions: readonly Option[];
   readonly flows: readonly Option[];
 }) {
   const [state, action, pending] = useActionState(saveWhatsappAutomationAction, INITIAL_WHATSAPP_CONTROL_PLANE_ACTION_STATE);
-  const [trigger, setTrigger] = useState<WhatsappAutomationTrigger>((automation?.triggerType as WhatsappAutomationTrigger) ?? "lead_created");
-  const stops = automation?.stopOnLeadStatuses ?? ["closed_won", "closed_lost"];
+  const [trigger, setTrigger] = useState<WhatsappAutomationTrigger>(
+    (automation?.triggerType as WhatsappAutomationTrigger) ?? (preset?.triggerType as WhatsappAutomationTrigger) ?? "lead_created"
+  );
+  const stops = automation?.stopOnLeadStatuses ?? preset?.stopOnLeadStatuses ?? ["closed_won", "closed_lost"];
 
   return (
     <form action={action} className="od-cp__stack" data-testid="whatsapp-automation-editor">
@@ -46,7 +51,7 @@ export function AutomationEditorForm({
       <div className="od-cp__grid">
         <label className="od-cp__field">
           <span>Name</span>
-          <input name="name" defaultValue={automation?.name ?? ""} minLength={2} maxLength={120} required />
+          <input name="name" defaultValue={automation?.name ?? preset?.title ?? ""} minLength={2} maxLength={120} required />
         </label>
         <label className="od-cp__field">
           <span>Trigger</span>
@@ -61,7 +66,7 @@ export function AutomationEditorForm({
         {trigger === "lead_stage_changed" ? (
           <label className="od-cp__field">
             <span>Stage</span>
-            <select name="toStage" defaultValue={automation?.triggerConfig.to_stage ?? "qualified"}>
+            <select name="toStage" defaultValue={automation?.triggerConfig.to_stage ?? preset?.toStage ?? "qualified"}>
               {WHATSAPP_AUTOMATION_STAGE_OPTIONS.map((stage) => (
                 <option key={stage} value={stage}>
                   {stage.replace(/_/g, " ")}
@@ -119,7 +124,7 @@ export function AutomationEditorForm({
         </label>
         <label className="od-cp__field">
           <span>Delay after trigger (minutes)</span>
-          <input name="delayMinutes" type="number" min={0} max={43200} step={1} defaultValue={automation?.delayMinutes ?? 0} />
+          <input name="delayMinutes" type="number" min={0} max={43200} step={1} defaultValue={automation?.delayMinutes ?? preset?.delayMinutes ?? 0} />
         </label>
       </div>
       <fieldset className="od-cp__chips" style={{ border: 0, padding: 0, margin: 0 }}>
@@ -131,13 +136,13 @@ export function AutomationEditorForm({
           </label>
         ))}
         <label className="od-cp__check">
-          <input type="checkbox" name="stopOnReply" defaultChecked={automation?.stopOnReply ?? true} />
+          <input type="checkbox" name="stopOnReply" defaultChecked={automation?.stopOnReply ?? preset?.stopOnReply ?? true} />
           <span>Stop if the customer replies first</span>
         </label>
       </fieldset>
       <label className="od-cp__field od-cp__field--wide">
         <span>Description (optional)</span>
-        <input name="description" defaultValue={automation?.description ?? ""} maxLength={500} />
+        <input name="description" defaultValue={automation?.description ?? preset?.summary ?? ""} maxLength={500} />
       </label>
       <p className="od-cp__hint">
         Opt-outs, do-not-contact, suppression, missing marketing consent, frequency caps and quiet hours always stop or defer a send.

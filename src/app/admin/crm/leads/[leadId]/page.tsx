@@ -17,6 +17,7 @@ import { LeadDetailSourcePanel } from "@/features/crm/components/leads/LeadDetai
 import { LeadDetailTimeline } from "@/features/crm/components/leads/LeadDetailTimeline";
 import { LeadDetailQuotationPanel } from "@/features/crm/components/leads/LeadDetailQuotationPanel";
 import { LeadStatusTransitionPanel } from "@/features/crm/components/leads/LeadStatusTransitionPanel";
+import { LeadWhatsappPanel } from "@/features/crm/components/leads/LeadWhatsappPanel";
 import { LeadDeleteDangerZone } from "@/features/crm/components/leads/LeadDeleteDangerZone";
 import type { LeadStageCode } from "@/features/crm/contracts/lead-stages";
 import { isTerminalLeadStage } from "@/features/crm/contracts/lead-stages";
@@ -37,6 +38,7 @@ import {
 } from "@/features/crm/server/crm-lead-queries";
 import { getQuotationDraftByLeadId } from "@/features/quotations/server/quotation-queries";
 import { probeQuotationPermissions } from "@/features/quotations/server/quotation-permissions";
+import { getWhatsappConversationForLeadCurrentUser } from "@/features/whatsapp/server/whatsapp-crm-integration";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +78,7 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
     leadCadence,
     enrollableCadences,
     commercialState,
+    whatsappConversation,
   ] =
     await Promise.all([
       needsDirectory ? fetchCrmAssigneeDirectory(context!) : Promise.resolve([]),
@@ -100,6 +103,7 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
       // Canonical deal value + commercial state. The RPC is the only path able
       // to distinguish an ISSUED quotation from a merely FINALIZED one.
       fetchLeadCommercialState(lead.id),
+      getWhatsappConversationForLeadCurrentUser(lead.id),
     ]);
 
   // Only an ACTIVE enrollment with a further step may offer CADENCE_NEXT.
@@ -185,6 +189,11 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
           <div className="xl:hidden">
             <LeadDetailContact contact={lead.contact} />
           </div>
+          {whatsappConversation ? (
+            <div className="xl:hidden">
+              <LeadWhatsappPanel conversation={whatsappConversation} />
+            </div>
+          ) : null}
           <div className="xl:hidden">
             <LeadDetailAssignmentPanel
               assignment={lead.assignment}
@@ -249,6 +258,9 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
 
         <aside className="hidden space-y-5 xl:sticky xl:top-20 xl:block xl:self-start">
           <LeadDetailContact contact={lead.contact} />
+          {whatsappConversation ? (
+            <LeadWhatsappPanel conversation={whatsappConversation} />
+          ) : null}
           <LeadDetailAssignmentPanel
             assignment={lead.assignment}
             leadId={lead.id}

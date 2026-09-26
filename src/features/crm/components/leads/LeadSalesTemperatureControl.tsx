@@ -23,9 +23,8 @@ import type { LifecycleActionState } from "../../contracts/lifecycle-contracts.t
  * One click, no modal: a rep reclassifies leads constantly, and a confirmation
  * step would make the control too slow to actually use.
  *
- * The AUTO / MANUAL badge is the point of the whole component. Without it a
- * highlighted COLD is ambiguous — nobody can tell a considered judgement from a
- * machine guess, and the "Use system" reset would look like a no-op.
+ * The DEFAULT / MANUAL badge makes the rule explicit. An unset lead is Cold by
+ * default; a manual selection records the salesperson's judgement.
  */
 
 const INITIAL: LifecycleActionState = { success: false, message: "" };
@@ -125,10 +124,10 @@ export function LeadSalesTemperatureControl({
                 name="temperature"
                 value=""
                 disabled={pending}
-                data-testid="crm-temperature-use-system"
+                data-testid="crm-temperature-use-default"
                 className="min-h-11 rounded-[10px] border border-dashed border-[var(--crm-border-strong)] px-3 text-[12px] font-medium text-[var(--crm-muted)] transition disabled:opacity-50 hover:text-[var(--crm-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--crm-primary)]"
               >
-                Use system
+                Clear to Cold
               </button>
             ) : null}
           </div>

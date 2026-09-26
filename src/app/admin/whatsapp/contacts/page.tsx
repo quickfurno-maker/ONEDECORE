@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  MarketingConsentEvidenceForm,
   MarketingOptOutForm,
   MarketingPreferenceForm,
 } from "@/features/whatsapp/components/control-plane/ContactComplianceForms";
@@ -33,10 +34,10 @@ export const metadata: Metadata = {
  * WM-3 Contacts. Requires whatsapp.contacts.read (Super Admin, Sales Manager).
  *
  * Shows MARKETING consent as the latest recorded consent event, never derived
- * from service consent. The only consent write offered is a restrictive
- * opt-out (whatsapp.opt_out.record); category preferences additionally need
- * marketing_consents.manage. Every control is re-authorised by its action and
- * again by the database.
+ * from service consent. P5 allows a manager with marketing_consents.manage to
+ * record evidence of an explicit customer opt-in; opt-out remains separately
+ * available and category preferences only narrow eligibility. Every control is
+ * re-authorised by its action and again by the database.
  */
 
 interface WhatsappContactsPageProps {
@@ -128,6 +129,7 @@ export default async function WhatsappContactsPage({ searchParams }: WhatsappCon
                   const consent = presentWhatsappMarketingConsent(contact.marketingConsent);
                   const stopped = optedOutCategories(preferenceStateFor(preferences, contact.contactId));
                   const showOptOut = canOptOut && contact.marketingConsent !== "withdrawn";
+                  const showConsentGrant = canPreferences && contact.marketingConsent !== "granted";
                   return (
                     <tr key={contact.contactId}>
                       <td>
@@ -187,6 +189,8 @@ export default async function WhatsappContactsPage({ searchParams }: WhatsappCon
                             <details className="od-cp__disclosure">
                               <summary className="od-cp__btn od-cp__btn--quiet">Compliance</summary>
                               <div className="od-cp__drawer">
+                                {showConsentGrant ? <MarketingConsentEvidenceForm contactId={contact.contactId} /> : null}
+                                {showConsentGrant && (showOptOut || canPreferences) ? <hr className="od-cp__divider" /> : null}
                                 {showOptOut ? <MarketingOptOutForm contactId={contact.contactId} /> : null}
                                 {showOptOut && canPreferences ? <hr className="od-cp__divider" /> : null}
                                 {canPreferences ? <MarketingPreferenceForm contactId={contact.contactId} /> : null}

@@ -16,7 +16,9 @@ function newKey(): string {
   return crypto.randomUUID();
 }
 
-export async function createCampaignDraftAction(formData: FormData): Promise<CampaignActionResult<{ campaignId: string }>> {
+export async function createCampaignDraftAction(
+  formData: FormData
+): Promise<CampaignActionResult<{ campaignId: string; campaignVersionId: string }>> {
   try {
     const supabase = await createClient();
     const channels = String(formData.get("intendedChannels") ?? "email")
@@ -50,9 +52,16 @@ export async function createCampaignDraftAction(formData: FormData): Promise<Cam
       p_idempotency_key: newKey(),
     });
     if (error) throw error;
-    const campaignId = String((data as Record<string, unknown>).campaign_id);
+    const response = data as Record<string, unknown>;
+    const campaignId = String(response.campaign_id);
+    const campaignVersionId = String(response.campaign_version_id);
     revalidatePath("/admin/campaigns");
-    return { success: true, message: "Campaign draft created.", data: { campaignId } };
+    revalidatePath("/admin/whatsapp/campaigns");
+    return {
+      success: true,
+      message: "Campaign draft created.",
+      data: { campaignId, campaignVersionId },
+    };
   } catch (error) {
     const err = campaignErrorFromUnknown(error);
     return { success: false, message: err.message, code: err.code };

@@ -119,21 +119,27 @@ describe("M57 seeds exactly the owner-approved launch catalogue", () => {
       sorted.slice(wm1 + 1, wm6 + 1).every((name) => /^2026091[3-8]\d{6}_whatsapp_/.test(name)),
       "only WhatsApp phases occur between WM-1 and WM-6"
     );
+    const reviewedPostWm6Baseline = [
+      "20260919120000_commerce_checkout_policy_acceptance.sql",
+      "20260920120000_commerce_vendor_submission_portal.sql",
+      "20260920130000_commerce_automation_control_plane.sql",
+      "20260920133000_commerce_automation_admin_control.sql",
+      "20260920140000_commerce_vendor_operational_controls.sql",
+      "20260920143000_commerce_vendor_login_auth_boundary.sql",
+      "20260920150000_commerce_vendor_private_order_read.sql",
+      "20260921100000_website_analytics_foundation.sql",
+      "20260921110000_mobile_owner_push_notifications.sql",
+      "20260921120000_manual_lead_minimal_intake.sql",
+    ] as const;
     assert.deepEqual(
-      sorted.slice(wm6 + 1),
-      [
-        "20260919120000_commerce_checkout_policy_acceptance.sql",
-        "20260920120000_commerce_vendor_submission_portal.sql",
-        "20260920130000_commerce_automation_control_plane.sql",
-        "20260920133000_commerce_automation_admin_control.sql",
-        "20260920140000_commerce_vendor_operational_controls.sql",
-        "20260920143000_commerce_vendor_login_auth_boundary.sql",
-        "20260920150000_commerce_vendor_private_order_read.sql",
-        "20260921100000_website_analytics_foundation.sql",
-        "20260921110000_mobile_owner_push_notifications.sql",
-        "20260921120000_manual_lead_minimal_intake.sql",
-      ],
-      "post-WM-6 migrations include the reviewed commerce closeout, website analytics, mobile owner push, and minimal manual-enquiry foundations"
+      sorted.slice(wm6 + 1, wm6 + 1 + reviewedPostWm6Baseline.length),
+      reviewedPostWm6Baseline,
+      "the reviewed post-WM-6 workforce/commerce baseline remains ordered and unchanged"
+    );
+    const laterForward = sorted.slice(wm6 + 1 + reviewedPostWm6Baseline.length);
+    assert.ok(
+      laterForward.every((name) => name > reviewedPostWm6Baseline.at(-1)!),
+      "later reviewed phases may append only after the frozen workforce baseline"
     );
     assert.ok(
       sorted.includes("20260913120000_portfolio_standalone_room_media_library.sql"),

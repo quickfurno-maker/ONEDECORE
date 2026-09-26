@@ -348,7 +348,7 @@ describe("server runtime is the only authority on availability", () => {
 });
 
 /* ========================================================================== */
-/* 5. One host, one sheet, one consent                                         */
+/* 5. One host, one sheet, purpose-separated consent                           */
 /* ========================================================================== */
 
 describe("one host mounts the sheet, once", () => {
@@ -371,28 +371,24 @@ describe("one host mounts the sheet, once", () => {
     }
   });
 
-  test("the form shows exactly one consent checkbox", () => {
+  test("the form keeps required enquiry consent and optional WhatsApp service consent distinct", () => {
     const brief = read(BRIEF);
     const checkboxes = brief.match(/type="checkbox"/g) ?? [];
     /*
-     * Two matches, one visible: the consent box and the honeypot, which is
-     * aria-hidden and off-screen. A second VISIBLE consent would mean the
-     * two-checkbox presentation came back.
+     * Exactly two visible consent choices are intentional:
+     * 1) required processing/contact consent for the enquiry;
+     * 2) optional WHATSAPP_SERVICE consent for enquiry updates.
+     * MARKETING remains a separate purpose and is never offered or implied here.
      */
-    assert.ok(checkboxes.length <= 2, "unexpected extra checkbox in the brief");
+    assert.equal(checkboxes.length, 2, "only enquiry consent and optional WhatsApp service consent may be visible");
+    assert.match(brief, /name="consentServiceEnquiry"/);
     assert.match(brief, /SINGLE_CONSENT_CONCISE_COPY/);
-    /*
-     * Import specifiers are stripped before this last check.
-     *
-     * The rule is about CONSENT FIELDS — that `whatsappService`, `marketing`
-     * and `serviceEmail` did not come back as separate boxes. Matching the
-     * whole file also matched a module PATH: the browser Meta event helper
-     * lives under `features/marketing/`, and importing it read as a marketing
-     * consent field returning. Narrowing to the component body keeps the rule
-     * exactly as strict about the thing it is actually guarding.
-     */
+    assert.match(brief, /name="consentWhatsappService"/);
+    assert.match(brief, /pm-consent--optional/);
+    assert.match(brief, /Marketing messages require separate consent\./);
+
     const body = code(brief).replace(/^import[\s\S]*?;$/gm, "");
-    assert.doesNotMatch(body, /whatsappService|marketing|serviceEmail/i);
+    assert.doesNotMatch(body, /marketingConsent|promotionalConsent|serviceEmail/i);
   });
 
   test("the final submit carries the owner-approved label", () => {

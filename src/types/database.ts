@@ -187,6 +187,130 @@ type CorrectedFunctions = {
 };
 
 /**
+ * Functions introduced by reviewed forward migrations after the last generated
+ * snapshot. Keep this list small and remove entries when database.generated.ts
+ * is regenerated from the complete migration set.
+ */
+type ForwardMigrationFunctions = {
+  save_whatsapp_template_draft: {
+    Args: {
+      p_name: string;
+      p_language: string;
+      p_category: string;
+      p_components: GeneratedFunctions["request_whatsapp_template_submission"]["Args"]["p_components"];
+      p_workflow_status: string;
+      p_draft_id?: string | null;
+      p_expected_lock_version?: number | null;
+      p_source_preset_id?: string | null;
+    };
+    Returns: GeneratedFunctions["list_whatsapp_template_registry"]["Returns"];
+  };
+  archive_whatsapp_template_draft: {
+    Args: { p_draft_id: string; p_expected_lock_version: number };
+    Returns: boolean;
+  };
+  get_whatsapp_template_draft: {
+    Args: { p_draft_id: string };
+    Returns: GeneratedFunctions["list_whatsapp_template_registry"]["Returns"];
+  };
+  list_whatsapp_template_drafts: {
+    Args: {
+      p_status?: string | null;
+      p_category?: string | null;
+      p_language?: string | null;
+      p_search?: string | null;
+      p_page?: number;
+      p_page_size?: number;
+    };
+    Returns: GeneratedFunctions["list_whatsapp_template_registry"]["Returns"];
+  };
+  list_whatsapp_template_registry_p3: {
+    Args: {
+      p_status?: string | null;
+      p_category?: string | null;
+      p_search?: string | null;
+      p_language?: string | null;
+      p_page?: number;
+      p_page_size?: number;
+    };
+    Returns: GeneratedFunctions["list_whatsapp_template_registry"]["Returns"];
+  };
+  list_whatsapp_template_status_timeline: {
+    Args: { p_limit?: number };
+    Returns: GeneratedFunctions["list_whatsapp_template_registry"]["Returns"];
+  };
+  get_whatsapp_inbox_message_origins: {
+    Args: { p_message_ids: string[] };
+    Returns: Array<{
+      message_id: string;
+      origin_kind: string;
+      origin_label: string;
+    }>;
+  };
+  create_whatsapp_service_media_send_intent: {
+    Args: {
+      p_conversation_id: string;
+      p_idempotency_key: string;
+      p_purpose_code: string;
+      p_message_kind: string;
+      p_caption: string;
+      p_reply_to_message_id: string | null;
+      p_media_object_path: string;
+      p_media_file_name: string;
+      p_media_mime_type: string;
+      p_media_size_bytes: number;
+      p_media_sha256: string;
+    };
+    Returns: GeneratedFunctions["create_whatsapp_service_send_intent"]["Returns"] & {
+      message_kind: string;
+      media_object_path: string | null;
+      media_file_name: string | null;
+      media_mime_type: string | null;
+      media_size_bytes: number | null;
+      media_sha256: string | null;
+    };
+  };
+  get_whatsapp_media_dispatch_payload: {
+    Args: { p_send_intent_id: string };
+    Returns: Array<{
+      message_kind: string;
+      media_object_path: string | null;
+      media_file_name: string | null;
+      media_mime_type: string | null;
+      media_size_bytes: number | null;
+      media_sha256: string | null;
+    }>;
+  };
+  create_crm_lead_from_whatsapp_conversation: {
+    Args: {
+      p_conversation_id: string;
+      p_submitted_name: string;
+      p_service_code?: string | null;
+      p_assignee_id?: string | null;
+    };
+    Returns: Array<{
+      outcome_code: string;
+      lead_id: string;
+      contact_id: string;
+    }>;
+  };
+  link_whatsapp_conversation_to_crm_lead: {
+    Args: {
+      p_conversation_id: string;
+      p_lead_id: string;
+      p_reason?: string | null;
+      p_method?: string | null;
+    };
+    Returns: Array<{
+      outcome_code: string;
+      lead_id: string;
+      contact_id: string;
+      phone_match: boolean;
+    }>;
+  };
+};
+
+/**
  * The PostgREST version the managed OneDecore project runs.
  *
  * WHY A HANDWRITTEN LITERAL AND NOT GENERATOR OUTPUT
@@ -235,7 +359,7 @@ export type Database = Omit<GeneratedDatabase, "public" | "__InternalSupabase"> 
     PostgrestVersion: typeof MANAGED_POSTGREST_VERSION;
   };
   public: Omit<GeneratedPublic, "Functions"> & {
-    Functions: CorrectedFunctions;
+    Functions: CorrectedFunctions & ForwardMigrationFunctions;
   };
 };
 

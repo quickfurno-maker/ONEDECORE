@@ -6,14 +6,14 @@
  * bucket is resolved from it on every read. Storing the effective bucket would
  * let it drift from the lifecycle the instant a lead was closed or parked.
  *
- * Precedence, in order:
+ * Classification rule, in order:
  *
- *   1. lifecycle override   closed_lost / closed_won / on_hold
- *   2. manual temperature   the salesperson's own judgement
- *   3. system score band    the advisory fallback
+ *   1. closed_lost lifecycle -> LOST
+ *   2. manual temperature    -> HOT / WARM / COLD
+ *   3. no manual temperature -> COLD by default
  *
- * The fallback matters: without it every unjudged lead would land in a seventh
- * "unclassified" bucket, and the monthly counts would stop describing the month.
+ * The system score remains useful intelligence, but it does not classify the
+ * lead. Sales classification is deliberately human-owned and predictable.
  *
  * SALES BUCKET IS NOT PIPELINE STAGE. Stage is where the work has reached
  * (new -> assigned -> contacted -> qualified -> consultation -> proposal ->
@@ -42,13 +42,11 @@ export const CRM_LEAD_SALES_BUCKETS = [
   "WARM",
   "COLD",
   "LOST",
-  "WON",
-  "ON_HOLD",
 ] as const;
 
 export type CrmLeadSalesBucket = (typeof CRM_LEAD_SALES_BUCKETS)[number];
 
-/** The four the owner reaches for most; rendered with the strongest emphasis. */
+/** The complete owner-facing classification vocabulary. */
 export const CRM_LEAD_PRIMARY_SALES_BUCKETS = [
   "HOT",
   "WARM",
@@ -70,8 +68,6 @@ export const CRM_LEAD_SALES_BUCKET_LABELS: Readonly<
   WARM: "Warm",
   COLD: "Cold",
   LOST: "Lost",
-  WON: "Won",
-  ON_HOLD: "On hold",
 };
 
 /**
@@ -85,8 +81,6 @@ export const CRM_LEAD_SALES_BUCKET_DESCRIPTIONS: Readonly<
   WARM: "Nurture and convert.",
   COLD: "Lower intent — re-engagement.",
   LOST: "Closed lost. Terminal, and kept out of the active queues.",
-  WON: "Closed won.",
-  ON_HOLD: "Parked by decision.",
 };
 
 /** URL token <-> bucket. Lowercase so the query string stays readable. */
@@ -97,8 +91,6 @@ export const CRM_LEAD_SALES_BUCKET_PARAMS: Readonly<
   WARM: "warm",
   COLD: "cold",
   LOST: "lost",
-  WON: "won",
-  ON_HOLD: "on_hold",
 };
 
 const PARAM_TO_BUCKET: Readonly<Record<string, CrmLeadSalesBucket>> =
@@ -132,19 +124,12 @@ export interface CrmEffectiveSalesBucket {
  * calls this one function, so the same inputs can never render as two different
  * buckets on two different pages.
  *
- * Lifecycle outcome beats human judgement, and human judgement beats the
- * machine:
+ * Lost is a governed lifecycle outcome, so a closed-lost lead is always LOST.
+ * For every other lead the salesperson's manual HOT / WARM / COLD choice is the
+ * authority. If nobody has classified the lead yet, it is COLD by default.
  *
- * - A lost lead is LOST no matter how hot anyone marked it. Ranking it HOT would
- *   put dead work at the top of a queue that exists to say who to call next.
- * - A salesperson who marks a lead WARM outranks a score that says COLD. The
- *   score is advisory intelligence, not authority.
- * - With no human judgement, the score band decides, so nothing is ever
- *   unclassified.
- *
- * The manual temperature is NOT erased by a lifecycle override — it is only
- * outranked, so a lead resumed from hold returns to the temperature its owner
- * chose.
+ * The score band is intentionally ignored here. It remains visible as advisory
+ * intelligence but can never silently promote or demote the sales classification.
  */
 export function resolveEffectiveSalesBucket(
   status: LeadStageCode,
@@ -155,24 +140,18 @@ export function resolveEffectiveSalesBucket(
     return { bucket: "LOST", source: "lifecycle" };
   }
   if (status === "closed_won") {
-    return { bucket: "WON", source: "lifecycle" };
+    return { bucket: manualTemperature ?? "COLD", source: manualTemperature ? "manual" : "system" };
   }
   if (status === "on_hold") {
-    return { bucket: "ON_HOLD", source: "lifecycle" };
+    return { bucket: manualTemperature ?? "COLD", source: manualTemperature ? "manual" : "system" };
   }
 
   if (manualTemperature !== null) {
     return { bucket: manualTemperature, source: "manual" };
   }
 
-  if (band === "HOT") {
-    return { bucket: "HOT", source: "system" };
-  }
-  if (band === "WARM") {
-    return { bucket: "WARM", source: "system" };
-  }
-  // NURTURE and COLD both present as COLD. The distinction is preserved in the
-  // score engine and remains visible in the score band chip.
+  // The score band is advisory only. An unclassified lead is always Cold.
+  void band;
   return { bucket: "COLD", source: "system" };
 }
 
@@ -201,9 +180,7 @@ const BUCKET_ORDER: Readonly<Record<CrmLeadSalesBucket, number>> = {
   HOT: 0,
   WARM: 1,
   COLD: 2,
-  ON_HOLD: 3,
-  WON: 4,
-  LOST: 5,
+  LOST: 3,
 };
 
 export function leadSalesBucketRank(bucket: CrmLeadSalesBucket): number {
@@ -220,8 +197,6 @@ export function emptySalesBucketCounts(): CrmLeadSalesBucketCounts {
     WARM: 0,
     COLD: 0,
     LOST: 0,
-    WON: 0,
-    ON_HOLD: 0,
     TOTAL: 0,
   };
 }
@@ -235,8 +210,6 @@ export function countSalesBuckets(
     WARM: 0,
     COLD: 0,
     LOST: 0,
-    WON: 0,
-    ON_HOLD: 0,
     TOTAL: 0,
   };
   for (const bucket of buckets) {

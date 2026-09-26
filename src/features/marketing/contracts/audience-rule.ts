@@ -16,6 +16,13 @@ export const AUDIENCE_RULE_FIELDS = [
   "lead_stage",
   "service_interest",
   "locality",
+  "sales_temperature",
+  "lead_created_month",
+  "owner",
+  "budget",
+  "last_interaction_age",
+  "milestone",
+  "dormant_duration",
 ] as const;
 
 export type AudienceRuleField = (typeof AUDIENCE_RULE_FIELDS)[number];

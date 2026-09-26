@@ -12,6 +12,7 @@ import { requireCrmAssignmentRuleAccess } from "./crm-auth.ts";
 import { CrmError, crmErrorFromPostgresMessage } from "./crm-errors.ts";
 import {
   createLeadAssignmentRuleForCurrentUser,
+  setCrmAutoAssignmentEnabledForCurrentUser,
   setLeadAssignmentRuleActiveForCurrentUser,
   updateLeadAssignmentRuleForCurrentUser,
 } from "./crm-assignment-rule-service.ts";
@@ -137,6 +138,37 @@ export async function setLeadAssignmentRuleActiveAction(
     return {
       success: true,
       message: isActive ? "Assignment rule enabled." : "Assignment rule disabled.",
+    };
+  } catch (error: unknown) {
+    return toAssignmentRuleActionState(error);
+  }
+}
+
+export async function setCrmAutoAssignmentEnabledAction(
+  _previousState: AssignmentRuleActionState,
+  formData: FormData
+): Promise<AssignmentRuleActionState> {
+  await requireCrmAssignmentRuleAccess();
+
+  const raw = String(formData.get("enabled") ?? "");
+  if (raw !== "true" && raw !== "false") {
+    return {
+      success: false,
+      message: "Choose whether auto assignment is on or off.",
+      code: "ASSIGNMENT_AUTO_INVALID",
+    };
+  }
+
+  const enabled = raw === "true";
+
+  try {
+    await setCrmAutoAssignmentEnabledForCurrentUser(enabled);
+    revalidatePath("/admin/crm/settings/assignment-rules");
+    return {
+      success: true,
+      message: enabled
+        ? "Auto assignment is ON for future website leads."
+        : "Auto assignment is OFF. New website leads will remain unassigned.",
     };
   } catch (error: unknown) {
     return toAssignmentRuleActionState(error);

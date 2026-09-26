@@ -544,16 +544,26 @@ describe("L1 did not disturb the working lead funnel", () => {
    *
    * `ConsultationLeadForm` was one of four public lead forms and is deleted.
    * The guarantees below moved to the canonical brief — and one of them
-   * INVERTED: consent used to be two visible checkboxes plus an optional
-   * WhatsApp box, and is now a single combined consent. An optional consent
-   * nobody is shown must be ABSENT from the request, never recorded as false.
+   * INVERTED: the old duplicated service consent controls became one required
+   * enquiry-processing/contact consent. P1 later added one purpose-separated,
+   * optional WHATSAPP_SERVICE opt-in for enquiry updates; it never implies
+   * MARKETING consent.
    */
   const form = read("src/features/lead-intake/public/UnifiedLeadBrief.tsx");
 
-  test("one visible consent, and no marketing consent is fabricated", () => {
+  test("required enquiry consent stays singular; WhatsApp service opt-in is separate and never marketing", () => {
     assert.match(form, /SINGLE_CONSENT_CONCISE_COPY/);
     assert.doesNotMatch(code(form), /serviceEnquiryConsent|servicePhoneConsent/);
-    assert.doesNotMatch(code(form), /whatsappService/);
+
+    // P1 adds one OPTIONAL WHATSAPP_SERVICE choice for enquiry updates. It is
+    // visibly separate from the required processing/contact consent and says
+    // marketing needs separate consent.
+    assert.match(form, /name="consentWhatsappService"/);
+    assert.match(form, /checked=\{whatsappService\}/);
+    assert.match(form, /pm-consent--optional/);
+    assert.match(form, /getWhatsappServiceConsentCopy\(\)/);
+    assert.match(form, /Marketing messages require separate consent\./);
+
     for (const forbidden of [
       "marketingConsent",
       "promotionalConsent",

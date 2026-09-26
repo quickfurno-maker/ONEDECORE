@@ -1,0 +1,3 @@
+-- Reserved activation boundary for website-lead WhatsApp service acknowledgements.
+-- Intentionally no-op until the ONEDECORE Utility acknowledgement template has a real Meta template id and APPROVED status.
+-- Service consent is collected and stored separately from MARKETING consent; no provider send or automation is activated by this migration.

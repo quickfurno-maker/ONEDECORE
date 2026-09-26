@@ -42,6 +42,7 @@ export default async function CrmLayout({ children }: { children: ReactNode }) {
         showCadences={resolution.context.canManageCadences}
         showTargets={resolution.context.canReadSalesTargets}
         showReports={resolution.context.canReadCrmReporting}
+        showSlaSettings={resolution.context.canManageSlaPolicy}
         targetsLabel={
           resolution.context.canManageSalesTargets ||
           resolution.context.canReadBroad

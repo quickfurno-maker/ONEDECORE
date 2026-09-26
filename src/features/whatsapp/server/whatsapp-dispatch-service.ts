@@ -16,6 +16,7 @@ import {
   type WhatsappOutboundServerEnv,
 } from './whatsapp-outbound-env.ts';
 import { deriveQuotationCapabilityToken, hashCapabilityToken } from '../../quotations/server/quotation-capability.ts';
+import { downloadVerifiedWhatsappOutboundMedia } from './whatsapp-outbound-media.ts';
 
 export type WhatsappDispatchServiceDeps = {
   readonly getEnv?: typeof getWhatsappOutboundServerEnv;
@@ -136,7 +137,12 @@ export async function dispatchWhatsappSendIntent(
     };
   }
 
-  if (!claim.dispatch_attempt_id || !claim.phone_number_id || !claim.customer_e164 || !claim.body_text) {
+  if (
+    !claim.dispatch_attempt_id ||
+    !claim.phone_number_id ||
+    !claim.customer_e164 ||
+    claim.body_text == null
+  ) {
     return {
       outcome: 'failed',
       sendIntentId: claim.send_intent_id ?? sendIntentId,
@@ -145,14 +151,54 @@ export async function dispatchWhatsappSendIntent(
     };
   }
 
-  // Secure Ephemeral Content Resolution for quotation links
+  const { data: mediaPayloadRows, error: mediaPayloadError } = await admin.rpc(
+    'get_whatsapp_media_dispatch_payload',
+    { p_send_intent_id: claim.send_intent_id }
+  );
+  if (mediaPayloadError) {
+    return {
+      outcome: 'failed',
+      sendIntentId: claim.send_intent_id,
+      dispatchAttemptId: claim.dispatch_attempt_id,
+      message: 'Dispatch media metadata could not be loaded.',
+    };
+  }
+  const mediaPayload = firstRow(mediaPayloadRows);
+  const messageKind = mediaPayload?.message_kind ?? 'text';
+
+  // Secure content and reply-context resolution happen only after the governed
+  // dispatch claim succeeds. The browser never sees provider message ids.
   let dispatchBodyText = claim.body_text;
+  let replyToProviderMessageId: string | null = null;
   if (typeof (admin as unknown as { from?: unknown }).from === 'function') {
     const { data: intentRow } = await admin
       .from('whatsapp_send_intents')
-      .select('secure_content_kind, secure_content_ref')
+      .select('secure_content_kind, secure_content_ref, reply_to_message_id')
       .eq('id', claim.send_intent_id)
       .single();
+
+    if (intentRow?.reply_to_message_id) {
+      const { data: replyRow } = await admin
+        .from('whatsapp_messages')
+        .select('provider_message_id, conversation_id')
+        .eq('id', intentRow.reply_to_message_id)
+        .single();
+
+      if (
+        !replyRow ||
+        replyRow.conversation_id !== claim.conversation_id ||
+        !replyRow.provider_message_id
+      ) {
+        return {
+          outcome: 'failed',
+          sendIntentId: claim.send_intent_id,
+          dispatchAttemptId: claim.dispatch_attempt_id,
+          message: 'Reply target could not be resolved safely.',
+        };
+      }
+
+      replyToProviderMessageId = replyRow.provider_message_id;
+    }
 
     if (intentRow && intentRow.secure_content_kind === 'quotation_link' && intentRow.secure_content_ref) {
       // 1. Fetch grant
@@ -258,12 +304,83 @@ export async function dispatchWhatsappSendIntent(
     }
   }
 
-  const providerResult = await provider.dispatchTextMessage({
-    phoneNumberId: claim.phone_number_id,
-    customerE164: claim.customer_e164,
-    bodyText: dispatchBodyText,
-    providerAttemptKey,
-  });
+  let providerResult;
+  if (messageKind === 'text') {
+    providerResult = await provider.dispatchTextMessage({
+      phoneNumberId: claim.phone_number_id,
+      customerE164: claim.customer_e164,
+      bodyText: dispatchBodyText,
+      providerAttemptKey,
+      replyToProviderMessageId,
+    });
+  } else {
+    if (
+      (messageKind !== 'image' &&
+        messageKind !== 'document' &&
+        messageKind !== 'video') ||
+      !mediaPayload?.media_object_path ||
+      !mediaPayload.media_file_name ||
+      !mediaPayload.media_mime_type ||
+      !mediaPayload.media_size_bytes ||
+      !mediaPayload.media_sha256
+    ) {
+      await admin.rpc('record_whatsapp_dispatch_attempt_outcome', {
+        p_dispatch_attempt_id: claim.dispatch_attempt_id,
+        p_status: 'failed',
+        p_error_class: 'terminal',
+        p_response_snapshot: asJsonSnapshot({
+          code: 'invalid_media_dispatch_metadata',
+          messageKind,
+        }),
+      });
+      return {
+        outcome: 'failed',
+        sendIntentId: claim.send_intent_id,
+        dispatchAttemptId: claim.dispatch_attempt_id,
+        message: 'Media dispatch metadata is incomplete or invalid.',
+      };
+    }
+
+    let mediaBytes: Buffer;
+    try {
+      mediaBytes = await downloadVerifiedWhatsappOutboundMedia({
+        objectPath: mediaPayload.media_object_path,
+        expectedMimeType: mediaPayload.media_mime_type,
+        expectedSizeBytes: mediaPayload.media_size_bytes,
+        expectedSha256: mediaPayload.media_sha256,
+      });
+    } catch (error) {
+      const code =
+        error instanceof Error ? error.message : 'WHATSAPP_MEDIA_VERIFY_FAILED';
+      await admin.rpc('record_whatsapp_dispatch_attempt_outcome', {
+        p_dispatch_attempt_id: claim.dispatch_attempt_id,
+        p_status: 'failed',
+        p_error_class: 'terminal',
+        p_response_snapshot: asJsonSnapshot({
+          code,
+          operation: 'media_download_verify',
+        }),
+      });
+      return {
+        outcome: 'failed',
+        sendIntentId: claim.send_intent_id,
+        dispatchAttemptId: claim.dispatch_attempt_id,
+        message: 'Attachment could not be verified for dispatch.',
+      };
+    }
+
+    providerResult = await provider.dispatchMediaMessage({
+      phoneNumberId: claim.phone_number_id,
+      customerE164: claim.customer_e164,
+      mediaKind: messageKind,
+      bytes: mediaBytes,
+      mimeType: mediaPayload.media_mime_type,
+      fileName: mediaPayload.media_file_name,
+      caption: dispatchBodyText,
+      providerAttemptKey,
+      replyToProviderMessageId,
+    });
+  }
 
   if (providerResult.kind === 'success') {
     const { data: bindRows, error: bindError } = await admin.rpc('bind_whatsapp_send_intent_dispatch', {

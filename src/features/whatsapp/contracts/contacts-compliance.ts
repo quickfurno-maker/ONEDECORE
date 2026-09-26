@@ -228,3 +228,42 @@ export const WHATSAPP_OPT_OUT_SOURCES = {
 } as const;
 
 export const WHATSAPP_PREFERENCE_SOURCE = "staff_contacts_workspace" as const;
+
+
+export const WHATSAPP_MARKETING_CONSENT_CHANNELS = ["whatsapp", "phone", "email", "in-person"] as const;
+export type WhatsappMarketingConsentChannel = (typeof WHATSAPP_MARKETING_CONSENT_CHANNELS)[number];
+
+export const WHATSAPP_MARKETING_CONSENT_CHANNEL_LABELS: Readonly<Record<WhatsappMarketingConsentChannel, string>> = {
+  whatsapp: "WhatsApp",
+  phone: "Phone call",
+  email: "Email",
+  "in-person": "In person",
+};
+
+export const WHATSAPP_MARKETING_CONSENT_INSTRUCTION_SOURCES = [
+  "whatsapp_message",
+  "phone_call",
+  "email",
+  "in_person",
+  "other",
+] as const;
+export type WhatsappMarketingConsentInstructionSource =
+  (typeof WHATSAPP_MARKETING_CONSENT_INSTRUCTION_SOURCES)[number];
+
+export const WHATSAPP_MARKETING_CONSENT_INSTRUCTION_LABELS: Readonly<
+  Record<WhatsappMarketingConsentInstructionSource, string>
+> = {
+  whatsapp_message: "Customer WhatsApp message",
+  phone_call: "Customer phone instruction",
+  email: "Customer email",
+  in_person: "Customer instruction in person",
+  other: "Other explicit customer instruction",
+};
+
+/**
+ * Evidence-schema identifiers for the staff recording workflow.
+ * These do not imply legal approval of a public marketing notice. The staff
+ * member is recording an instruction the customer already gave explicitly.
+ */
+export const WHATSAPP_STAFF_MARKETING_CONSENT_COPY_VERSION = "staff-explicit-customer-instruction-v1" as const;
+export const WHATSAPP_STAFF_MARKETING_CONSENT_NOTICE_VERSION = "staff-evidence-record-v1" as const;

@@ -16,10 +16,7 @@ import {
 } from "../../contracts/deal-value-contracts.ts";
 import type { CrmLeadScore } from "../../contracts/lead-score-contracts.ts";
 import { resolveEffectiveSalesBucket } from "../../contracts/lead-sales-bucket.ts";
-import {
-  isLifecycleControlledBucket,
-  type CrmManualSalesTemperature,
-} from "../../contracts/lead-sales-temperature.ts";
+import type { CrmManualSalesTemperature } from "../../contracts/lead-sales-temperature.ts";
 import {
   isTerminalLeadStage,
   type LeadStageCode,
@@ -117,7 +114,8 @@ export function LeadCommandHeader({
     score.band,
     manualSalesTemperature
   );
-  const lifecycleControlled = isLifecycleControlledBucket(effective.bucket);
+  const lifecycleControlled =
+    status === "closed_lost" || status === "closed_won" || status === "on_hold";
   const probabilityBp = stageProbabilityBasisPoints(status);
   const weightedPaise = computeWeightedValuePaise(
     commercial.taxableBasePaise,
