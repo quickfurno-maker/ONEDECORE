@@ -25,8 +25,10 @@ import {
   currentIstMonth,
   isWhatsappCrmLeadMonth,
   sanitizeWhatsappCrmCampaignFilters,
-  WHATSAPP_CRM_SALES_TEMPERATURES,
-  type WhatsappCrmSalesTemperature,
+  WHATSAPP_CRM_AUDIENCE_PRESETS,
+  WHATSAPP_CRM_AUDIENCE_TEMPERATURES,
+  type WhatsappCrmAudiencePreset,
+  type WhatsappCrmAudienceTemperature,
 } from "@/features/whatsapp/contracts/crm-campaigns";
 import {
   getWhatsappCampaignRunBreakdownForCurrentUser,
@@ -75,11 +77,17 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function campaignStateHref(state: string, month: string, temperature: string): string {
+function campaignStateHref(
+  state: string,
+  month: string,
+  temperature: string,
+  preset: WhatsappCrmAudiencePreset
+): string {
   const params = new URLSearchParams();
   if (state !== "all") params.set("state", state);
   params.set("audienceMonth", month);
   params.set("audienceTemperature", temperature);
+  if (preset !== "standard") params.set("audiencePreset", preset);
   return `${WHATSAPP_ADMIN_CAMPAIGNS_PATH}?${params.toString()}`;
 }
 
@@ -114,11 +122,16 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
   const templateDraftName = first(params.templateDraftName)?.trim().slice(0, 128) ?? null;
   const requestedMonth = first(params.audienceMonth);
   const audienceMonth = isWhatsappCrmLeadMonth(requestedMonth) ? requestedMonth : currentIstMonth();
+  const requestedPreset = first(params.audiencePreset);
+  const audiencePreset: WhatsappCrmAudiencePreset =
+    requestedPreset && WHATSAPP_CRM_AUDIENCE_PRESETS.includes(requestedPreset as WhatsappCrmAudiencePreset)
+      ? (requestedPreset as WhatsappCrmAudiencePreset)
+      : "standard";
   const requestedTemperature = first(params.audienceTemperature);
-  const audienceTemperature: WhatsappCrmSalesTemperature =
-    requestedTemperature && WHATSAPP_CRM_SALES_TEMPERATURES.includes(requestedTemperature as WhatsappCrmSalesTemperature)
-      ? (requestedTemperature as WhatsappCrmSalesTemperature)
-      : "hot";
+  const audienceTemperature: WhatsappCrmAudienceTemperature =
+    requestedTemperature && WHATSAPP_CRM_AUDIENCE_TEMPERATURES.includes(requestedTemperature as WhatsappCrmAudienceTemperature)
+      ? (requestedTemperature as WhatsappCrmAudienceTemperature)
+      : audiencePreset === "long-term-nurture" ? "all" : "hot";
   const audienceFilters = sanitizeWhatsappCrmCampaignFilters({
     stage: first(params.stage),
     service: first(params.service),
@@ -129,6 +142,9 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
     lastInteractionAge: first(params.lastInteractionAge),
     milestone: first(params.milestone),
     dormantDuration: first(params.dormantDuration),
+    projectTimeline: audiencePreset === "long-term-nurture"
+      ? "after-2-months"
+      : first(params.projectTimeline),
   });
   const requestedState = first(params.state);
   const campaignState = ["all", "draft", "approved", "scheduled", "running", "completed"].includes(requestedState ?? "")
@@ -138,7 +154,7 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
   const [versions, selected, crmAudienceCounts, crmFilterOptions, crmEligibilityPreview] = await Promise.all([
     listWhatsappCampaignVersionsForCurrentUser(),
     selectedId ? getWhatsappCampaignVersionForCurrentUser(selectedId) : Promise.resolve(null),
-    getWhatsappCrmAudienceCountsForCurrentUser(audienceMonth),
+    getWhatsappCrmAudienceCountsForCurrentUser(audienceMonth, audiencePreset),
     getWhatsappCrmCampaignFilterOptionsForCurrentUser(),
     selectedId ? previewCampaignAudience(selectedId) : Promise.resolve(null),
   ]);
@@ -280,6 +296,7 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
           counts={crmAudienceCounts}
           startDate={currentIstDate()}
           canCreate={permissions["campaigns.draft"]}
+          preset={audiencePreset}
         />
 
         <nav className="od-growth__tabs" aria-label="Campaign state">
@@ -288,7 +305,7 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
               key={state}
               className="od-growth__tab"
               data-active={campaignState === state}
-              href={campaignStateHref(state, audienceMonth, audienceTemperature)}
+              href={campaignStateHref(state, audienceMonth, audienceTemperature, audiencePreset)}
             >
               {state === "all" ? "All" : state[0]!.toUpperCase() + state.slice(1)}
             </Link>

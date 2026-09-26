@@ -5,21 +5,27 @@ import {
   resolveIstMonthWindow,
   type WhatsappCrmAudienceCounts,
   type WhatsappCrmCampaignFilterOptions,
+  type WhatsappCrmAudiencePreset,
   type WhatsappCrmSalesTemperature,
 } from "../contracts/crm-campaigns";
 
 async function countLeads(
   month: string,
-  temperature: WhatsappCrmSalesTemperature | "any"
+  temperature: WhatsappCrmSalesTemperature | "any",
+  preset: WhatsappCrmAudiencePreset
 ): Promise<number> {
   const supabase = await createClient();
   const { startIso, endIso } = resolveIstMonthWindow(month);
   let query = supabase
     .from("leads")
     .select("id", { count: "exact", head: true })
-    .is("deleted_at", null)
-    .gte("created_at", startIso)
-    .lt("created_at", endIso);
+    .is("deleted_at", null);
+
+  query = preset === "long-term-nurture"
+    ? query
+        .eq("timeline_code", "after-2-months")
+        .not("status", "in", "(closed_won,closed_lost)")
+    : query.gte("created_at", startIso).lt("created_at", endIso);
 
   if (temperature === "lost") {
     query = query.eq("status", "closed_lost");
@@ -40,14 +46,15 @@ async function countLeads(
 }
 
 export async function getWhatsappCrmAudienceCountsForCurrentUser(
-  month: string
+  month: string,
+  preset: WhatsappCrmAudiencePreset = "standard"
 ): Promise<WhatsappCrmAudienceCounts> {
   const [hot, warm, cold, lost, total] = await Promise.all([
-    countLeads(month, "hot"),
-    countLeads(month, "warm"),
-    countLeads(month, "cold"),
-    countLeads(month, "lost"),
-    countLeads(month, "any"),
+    countLeads(month, "hot", preset),
+    countLeads(month, "warm", preset),
+    countLeads(month, "cold", preset),
+    countLeads(month, "lost", preset),
+    countLeads(month, "any", preset),
   ]);
   return { month, hot, warm, cold, lost, total };
 }

@@ -119,6 +119,7 @@ describe("Phase 9 P0 audience rule canonicalization", () => {
       "last_interaction_age",
       "milestone",
       "dormant_duration",
+      "project_timeline",
     ]);
   });
 });

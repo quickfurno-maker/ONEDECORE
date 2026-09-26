@@ -23,6 +23,7 @@ export const AUDIENCE_RULE_FIELDS = [
   "last_interaction_age",
   "milestone",
   "dormant_duration",
+  "project_timeline",
 ] as const;
 
 export type AudienceRuleField = (typeof AUDIENCE_RULE_FIELDS)[number];

@@ -13,6 +13,10 @@ import {
   type CrmManualSalesTemperature,
 } from "./lead-sales-temperature.ts";
 import { LEAD_STAGE_CODES, type LeadStageCode } from "./lead-stages.ts";
+import {
+  LEAD_TIMELINE_CODES,
+  type LeadTimelineCode,
+} from "../../lead-intake/planner-allowlist.ts";
 
 export const LEAD_LIST_DEFAULT_PAGE = 1;
 export const LEAD_LIST_DEFAULT_PAGE_SIZE = 25;
@@ -77,6 +81,10 @@ export interface LeadListQuery {
    * COLD for this owner-facing filter, without overwriting its audit meaning.
    */
   readonly temperature: CrmManualSalesTemperature | null;
+  /** Project timing captured from the enquiry. Used by the Nurture workspace. */
+  readonly timeline?: LeadTimelineCode | null;
+  /** Structural workspace scope, not a URL filter. Nurture excludes completed/lost leads. */
+  readonly excludeTerminal?: boolean;
   /**
    * Only leads a person has classified by hand.
    *
@@ -208,6 +216,11 @@ export function parseLeadListQuery(
   const temperature = parseManualSalesTemperature(
     firstParam(searchParams.temperature)
   );
+  const timelineRaw = firstParam(searchParams.timeline);
+  const timeline =
+    timelineRaw && (LEAD_TIMELINE_CODES as readonly string[]).includes(timelineRaw)
+      ? (timelineRaw as LeadTimelineCode)
+      : null;
 
   const sortRaw = firstParam(searchParams.sort);
   // An unrecognised sort falls back to received order rather than being
@@ -238,6 +251,7 @@ export function parseLeadListQuery(
     followUpDue,
     bucket,
     temperature,
+    timeline,
     manualOnly,
     sort,
     month,
@@ -256,6 +270,7 @@ export function hasLeadListActiveFilters(query: LeadListQuery): boolean {
       query.followUpDue ||
       query.bucket ||
       query.temperature ||
+      query.timeline ||
       query.manualOnly
   );
 }
@@ -287,12 +302,15 @@ export type LeadListClearableFilter =
   | "followUpDue"
   | "bucket"
   | "temperature"
+  | "timeline"
   | "secondary";
 
 export interface LeadListHrefOverrides {
   readonly bucket?: CrmLeadSalesBucket | null;
   readonly month?: string;
   readonly page?: number;
+  /** Reuse the canonical query builder from another CRM list surface. */
+  readonly basePath?: string;
 }
 
 /**
@@ -321,6 +339,7 @@ export function buildLeadListHref(
   const followUpDue = all || clear === "followUpDue" ? null : query.followUpDue;
   const temperature =
     all || clear === "temperature" ? null : query.temperature;
+  const timeline = all || clear === "timeline" ? null : query.timeline;
   const bucket =
     overrides.bucket !== undefined
       ? overrides.bucket
@@ -336,6 +355,7 @@ export function buildLeadListHref(
   if (assigneeId) params.set("assigneeId", assigneeId);
   if (followUpDue) params.set("followUpDue", followUpDue);
   if (temperature) params.set("temperature", temperature.toLowerCase());
+  if (timeline) params.set("timeline", timeline);
   if (bucket) params.set("bucket", leadSalesBucketParam(bucket));
   // All-time is a deliberate, shareable choice, so it stays in the URL; the
   // default current month is implicit and left out to keep links clean.
@@ -352,5 +372,6 @@ export function buildLeadListHref(
   }
 
   const value = params.toString();
-  return value ? `/admin/crm/leads?${value}` : "/admin/crm/leads";
+  const basePath = overrides.basePath ?? "/admin/crm/leads";
+  return value ? `${basePath}?${value}` : basePath;
 }
