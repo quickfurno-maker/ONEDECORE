@@ -34,6 +34,32 @@ describe("CRM-native WhatsApp campaign audiences", () => {
     assert.equal(currentIstMonth(new Date("2026-09-30T20:00:00Z")), "2026-10");
   });
 
+  test("long-term nurture is all-time, timeline-scoped and excludes terminal leads", () => {
+    assert.deepEqual(
+      buildWhatsappCrmAudienceRule(
+        "all",
+        "2026-09",
+        { projectTimeline: "after-2-months" },
+        { allReceivedMonths: true, excludeTerminalStages: true }
+      ),
+      {
+        logic: "and",
+        rules: [
+          {
+            field: "lead_stage",
+            operator: "not_in",
+            values: ["closed_lost", "closed_won"],
+          },
+          {
+            field: "project_timeline",
+            operator: "equals",
+            values: ["after-2-months"],
+          },
+        ],
+      }
+    );
+  });
+
   test("month boundaries are Indian calendar boundaries, represented in UTC", () => {
     assert.deepEqual(resolveIstMonthWindow("2026-09"), {
       startIso: "2026-08-31T18:30:00.000Z",
@@ -53,6 +79,15 @@ describe("CRM-native WhatsApp campaign audiences", () => {
     assert.match(sql, /create or replace function public\.preview_campaign_audience/);
     assert.match(sql, /create or replace function private\.whatsapp_campaign_audience_contact_ids/);
     assert.match(sql, /l\.deleted_at is null/);
+  });
+
+  test("nurture migration extends preview and execution with project timeline", () => {
+    const sql = read("supabase/migrations/20260926170000_whatsapp_long_term_nurture.sql");
+    assert.match(sql, /'project_timeline'/);
+    assert.match(sql, /campaign_rule_group_matches_lead_v4/);
+    assert.match(sql, /l\.timeline_code/);
+    assert.match(sql, /create or replace function public\.preview_campaign_audience/);
+    assert.match(sql, /create or replace function private\.whatsapp_campaign_audience_contact_ids/);
   });
 
   test("unset CRM temperature is Cold and the launcher has no unclassified bucket", () => {

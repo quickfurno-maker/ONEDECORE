@@ -110,12 +110,14 @@ describe("WM-4 RPC names are exactly the migrated ones", () => {
       "create_whatsapp_campaign_test_send",
       "get_whatsapp_campaign_run_breakdown",
       "get_whatsapp_campaign_version",
+      "list_whatsapp_campaign_scheduler_runs",
       "list_whatsapp_campaign_template_options",
       "list_whatsapp_campaign_test_destinations",
       "list_whatsapp_campaign_versions",
       "list_whatsapp_click_destinations",
       "pause_whatsapp_campaign_run",
       "preview_whatsapp_campaign_audience",
+      "reschedule_whatsapp_campaign_run",
       "resolve_whatsapp_campaign_reconcile",
       "resume_whatsapp_campaign_run",
       "save_whatsapp_campaign_spec",
@@ -170,7 +172,7 @@ describe("WM-4 permission model", () => {
     const withCampaigns = visibleWhatsappControlPlaneSections(permissionsFor(["whatsapp.campaigns.execute"]));
     assert.deepEqual(
       withCampaigns.map((s) => s.key),
-      ["campaigns"]
+      ["campaigns", "scheduler"]
     );
     assert.equal(withCampaigns[0]!.href, WHATSAPP_ADMIN_CAMPAIGNS_PATH);
     assert.equal(
@@ -184,12 +186,12 @@ describe("WM-4 caller-session actions authorize before any RPC", () => {
   const actions = code(read(FILES.actions));
   const bodies = actions.split(/export async function /).slice(1);
 
-  test("six actions, each server-only and caller-session", () => {
+  test("seven actions, each server-only and caller-session", () => {
     assert.match(actions, /^"use server";/m);
     assert.match(actions, /import "server-only"/);
     assert.match(actions, /from "@\/lib\/supabase\/server"/);
     assert.ok(!/supabase-js|serviceRoleKey|SUPABASE_SERVICE_ROLE/.test(actions));
-    assert.equal(bodies.length, 6);
+    assert.equal(bodies.length, 7);
   });
 
   for (const body of bodies) {

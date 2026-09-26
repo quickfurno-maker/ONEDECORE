@@ -49,6 +49,8 @@ interface LeadSalesBucketStripProps {
    * withheld rather than under-reported.
    */
   readonly countsExact: boolean;
+  readonly basePath?: string;
+  readonly hideLost?: boolean;
 }
 
 function Tab({
@@ -107,6 +109,8 @@ export function LeadSalesBucketStrip({
   query,
   counts,
   countsExact,
+  basePath = "/admin/crm/leads",
+  hideLost = false,
 }: LeadSalesBucketStripProps) {
   return (
     <section
@@ -129,7 +133,7 @@ export function LeadSalesBucketStrip({
           different bucket is a different result set. */}
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
         <Tab
-          href={buildLeadListHref(query, "bucket", { page: 1 })}
+          href={buildLeadListHref(query, "bucket", { page: 1, basePath })}
           label="All"
           count={counts.TOTAL}
           countsExact={countsExact}
@@ -139,10 +143,10 @@ export function LeadSalesBucketStrip({
           testId="crm-bucket-tab-all"
           bucket="ALL"
         />
-        {PRIMARY.map((bucket) => (
+        {PRIMARY.filter((bucket) => !hideLost || bucket !== "LOST").map((bucket) => (
           <Tab
             key={bucket}
-            href={buildLeadListHref(query, undefined, { bucket, page: 1 })}
+            href={buildLeadListHref(query, undefined, { bucket, page: 1, basePath })}
             label={CRM_LEAD_SALES_BUCKET_LABELS[bucket]}
             count={counts[bucket]}
             countsExact={countsExact}

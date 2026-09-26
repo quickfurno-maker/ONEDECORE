@@ -44,13 +44,21 @@ describe("P4 CRM-native WhatsApp campaigns", () => {
     assert.equal(filters.owner, undefined);
     assert.equal(filters.budget, undefined);
     assert.equal(filters.locality, "Baner");
+    assert.equal(
+      sanitizeWhatsappCrmCampaignFilters({ projectTimeline: "someday" }).projectTimeline,
+      undefined
+    );
+    assert.equal(
+      sanitizeWhatsappCrmCampaignFilters({ projectTimeline: "after-2-months" }).projectTimeline,
+      "after-2-months"
+    );
   });
 
   test("the launcher exposes CRM filters without user-facing JSON", () => {
     const launcher = read(LAUNCHER);
     for (const label of [
       "Lead month", "Stage", "Service", "Source", "Locality", "Owner", "Budget",
-      "Last interaction", "Consultation / site visit / quotation", "Dormant duration",
+      "Last interaction", "Consultation / site visit / quotation", "Project timeline", "Dormant duration",
     ]) {
       assert.equal(launcher.includes(label), true, label);
     }

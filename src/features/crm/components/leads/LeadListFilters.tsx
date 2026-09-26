@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useId } from "react";
 import { LEAD_STAGE_CODES } from "../../contracts/lead-stages.ts";
 import { formatCrmCodeLabel } from "../../contracts/crm-labels.ts";
+import { LEAD_TIMELINE_CODES } from "../../../lead-intake/planner-allowlist.ts";
 import type {
   CrmAssigneeDirectoryEntry,
   CrmLeadSourceOption,
@@ -24,6 +25,8 @@ interface LeadListFiltersProps {
   readonly sources: readonly CrmLeadSourceOption[];
   readonly assignees: readonly CrmAssigneeDirectoryEntry[];
   readonly showBroadFilters: boolean;
+  readonly basePath?: string;
+  readonly lockTimeline?: boolean;
 }
 
 function Chip({ label, href }: { label: string; href: string }) {
@@ -42,12 +45,16 @@ export function LeadListFilters({
   sources,
   assignees,
   showBroadFilters,
+  basePath = "/admin/crm/leads",
+  lockTimeline = false,
 }: LeadListFiltersProps) {
   const formId = useId();
   const selectClass = "crm-select min-h-11 w-full sm:w-auto";
   const filterQuery = query;
   const sourceLabel = sources.find((source) => source.id === query.sourceId)?.displayName;
   const assigneeLabel = assignees.find((row) => row.userId === query.assigneeId)?.displayName;
+  const hrefFor = (clear?: Parameters<typeof buildLeadListHref>[1]) =>
+    buildLeadListHref(filterQuery, clear, { basePath });
 
   return (
     <section className="space-y-3" aria-labelledby={`${formId}-heading`}>
@@ -55,7 +62,7 @@ export function LeadListFilters({
         Filters
       </h2>
       <form
-        action="/admin/crm/leads"
+        action={basePath}
         method="get"
         className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
       >
@@ -70,6 +77,9 @@ export function LeadListFilters({
           Apply resets to page 1.
         */}
         <input type="hidden" name="month" value={query.month.param} />
+        {lockTimeline && query.timeline ? (
+          <input type="hidden" name="timeline" value={query.timeline} />
+        ) : null}
         {query.bucket ? (
           <input
             type="hidden"
@@ -162,6 +172,22 @@ export function LeadListFilters({
               </option>
             ))}
           </select>
+          {lockTimeline ? null : (
+            <select
+              id={`${formId}-timeline`}
+              name="timeline"
+              defaultValue={query.timeline ?? ""}
+              aria-label="Filter by project timeline"
+              className={selectClass}
+            >
+              <option value="">Project timeline</option>
+              {LEAD_TIMELINE_CODES.map((timeline) => (
+                <option key={timeline} value={timeline}>
+                  {formatCrmCodeLabel(timeline)}
+                </option>
+              ))}
+            </select>
+          )}
           <select
             id={`${formId}-follow-up`}
             name="followUpDue"
@@ -184,7 +210,7 @@ export function LeadListFilters({
               dropping them would silently move the operator to a different
               cohort. Page resets to 1. */}
           <Link
-            href={buildLeadListHref(query, "secondary", { page: 1 })}
+            href={buildLeadListHref(query, "secondary", { page: 1, basePath })}
             className="crm-btn crm-btn-ghost min-h-11 flex-1 sm:flex-none"
             data-testid="crm-filters-clear"
           >
@@ -194,37 +220,40 @@ export function LeadListFilters({
       </form>
       <div className="flex flex-wrap gap-1.5">
         {filterQuery.q ? (
-          <Chip label={`Search: ${filterQuery.q}`} href={buildLeadListHref(filterQuery, "q")} />
+          <Chip label={`Search: ${filterQuery.q}`} href={hrefFor("q")} />
         ) : null}
         {filterQuery.status ? (
           <Chip
             label={formatCrmCodeLabel(filterQuery.status.replaceAll("_", "-"))}
-            href={buildLeadListHref(filterQuery, "status")}
+            href={hrefFor("status")}
           />
         ) : null}
         {filterQuery.sourceId ? (
           <Chip
             label={sourceLabel ?? "Source"}
-            href={buildLeadListHref(filterQuery, "sourceId")}
+            href={hrefFor("sourceId")}
           />
         ) : null}
         {filterQuery.assignment ? (
-          <Chip label={filterQuery.assignment} href={buildLeadListHref(filterQuery, "assignment")} />
+          <Chip label={filterQuery.assignment} href={hrefFor("assignment")} />
         ) : null}
         {filterQuery.assigneeId ? (
           <Chip
             label={assigneeLabel ?? "Assignee"}
-            href={buildLeadListHref(filterQuery, "assigneeId")}
+            href={hrefFor("assigneeId")}
           />
         ) : null}
         {filterQuery.temperature ? (
           <Chip
             label={`Temperature: ${CRM_MANUAL_SALES_TEMPERATURE_LABELS[filterQuery.temperature]}`}
-            href={buildLeadListHref(filterQuery, "temperature")}
+            href={hrefFor("temperature")}
           />
         ) : null}
+        {filterQuery.timeline && !lockTimeline ? (
+          <Chip label={`Timeline: ${formatCrmCodeLabel(filterQuery.timeline)}`} href={hrefFor("timeline")} />
+        ) : null}
         {filterQuery.followUpDue ? (
-          <Chip label={filterQuery.followUpDue} href={buildLeadListHref(filterQuery, "followUpDue")} />
+          <Chip label={filterQuery.followUpDue} href={hrefFor("followUpDue")} />
         ) : null}
       </div>
     </section>

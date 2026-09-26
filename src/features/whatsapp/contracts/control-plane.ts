@@ -23,6 +23,7 @@ export const WHATSAPP_ADMIN_INBOX_PATH = "/admin/whatsapp/inbox";
 export const WHATSAPP_ADMIN_CONTACTS_PATH = "/admin/whatsapp/contacts";
 export const WHATSAPP_ADMIN_TEMPLATES_PATH = "/admin/whatsapp/templates";
 export const WHATSAPP_ADMIN_CAMPAIGNS_PATH = "/admin/whatsapp/campaigns";
+export const WHATSAPP_ADMIN_SCHEDULER_PATH = "/admin/whatsapp/scheduler";
 export const WHATSAPP_ADMIN_SEGMENTS_PATH = "/admin/whatsapp/segments";
 export const WHATSAPP_ADMIN_AUTOMATIONS_PATH = "/admin/whatsapp/automations";
 export const WHATSAPP_ADMIN_FLOWS_PATH = "/admin/whatsapp/forms-flows";
@@ -71,6 +72,7 @@ export const WHATSAPP_CONTROL_PLANE_SECTIONS = [
   { key: "contacts", label: "Contacts", href: WHATSAPP_ADMIN_CONTACTS_PATH, requires: "whatsapp.contacts.read" },
   { key: "templates", label: "Templates", href: WHATSAPP_ADMIN_TEMPLATES_PATH, requires: "whatsapp.templates.read" },
   { key: "campaigns", label: "Campaigns", href: WHATSAPP_ADMIN_CAMPAIGNS_PATH, requires: "whatsapp.campaigns.execute" },
+  { key: "scheduler", label: "Scheduler", href: WHATSAPP_ADMIN_SCHEDULER_PATH, requires: "whatsapp.campaigns.execute" },
   { key: "segments", label: "Segments", href: WHATSAPP_ADMIN_SEGMENTS_PATH, requires: "whatsapp.segments.read" },
   { key: "automations", label: "Automations", href: WHATSAPP_ADMIN_AUTOMATIONS_PATH, requires: "whatsapp.automations.read" },
   { key: "flows", label: "Forms / Flows", href: WHATSAPP_ADMIN_FLOWS_PATH, requires: "whatsapp.flows.read" },

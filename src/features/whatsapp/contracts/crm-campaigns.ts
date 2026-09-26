@@ -2,6 +2,10 @@ import type { AudienceRule, AudienceRuleGroup } from "@/features/marketing/contr
 
 export const WHATSAPP_CRM_SALES_TEMPERATURES = ["hot", "warm", "cold", "lost"] as const;
 export type WhatsappCrmSalesTemperature = (typeof WHATSAPP_CRM_SALES_TEMPERATURES)[number];
+export const WHATSAPP_CRM_AUDIENCE_TEMPERATURES = ["all", ...WHATSAPP_CRM_SALES_TEMPERATURES] as const;
+export type WhatsappCrmAudienceTemperature = (typeof WHATSAPP_CRM_AUDIENCE_TEMPERATURES)[number];
+export const WHATSAPP_CRM_AUDIENCE_PRESETS = ["standard", "long-term-nurture"] as const;
+export type WhatsappCrmAudiencePreset = (typeof WHATSAPP_CRM_AUDIENCE_PRESETS)[number];
 
 export const WHATSAPP_CRM_TEMPERATURE_LABELS: Record<WhatsappCrmSalesTemperature, string> = {
   hot: "Hot leads",
@@ -53,6 +57,13 @@ export const WHATSAPP_CRM_MILESTONE_OPTIONS = [
   ["quotation", "Quotation reached"],
 ] as const;
 
+export const WHATSAPP_CRM_PROJECT_TIMELINE_OPTIONS = [
+  ["immediate", "Immediate"],
+  ["within-1-month", "Within 1 month"],
+  ["within-2-months", "Within 2 months"],
+  ["after-2-months", "After 2 months · nurture"],
+] as const;
+
 export const WHATSAPP_CRM_DORMANT_OPTIONS = [
   ["0-7d", "On hold ≤7 days"],
   ["8-14d", "On hold 8–14 days"],
@@ -72,6 +83,7 @@ export interface WhatsappCrmCampaignFilters {
   readonly lastInteractionAge?: string;
   readonly milestone?: string;
   readonly dormantDuration?: string;
+  readonly projectTimeline?: string;
 }
 
 export interface WhatsappCrmCampaignFilterOptions {
@@ -104,6 +116,7 @@ export function sanitizeWhatsappCrmCampaignFilters(input: WhatsappCrmCampaignFil
     lastInteractionAge: oneOf(input.lastInteractionAge, WHATSAPP_CRM_ACTIVITY_AGE_OPTIONS),
     milestone: oneOf(input.milestone, WHATSAPP_CRM_MILESTONE_OPTIONS),
     dormantDuration: oneOf(input.dormantDuration, WHATSAPP_CRM_DORMANT_OPTIONS),
+    projectTimeline: oneOf(input.projectTimeline, WHATSAPP_CRM_PROJECT_TIMELINE_OPTIONS),
   };
 }
 
@@ -141,11 +154,15 @@ export function whatsappCrmMonthLabel(month: string): string {
   }).format(new Date(Date.UTC(year!, rawMonth! - 1, 15)));
 }
 export function buildWhatsappCrmAudienceRule(
-  temperature: WhatsappCrmSalesTemperature,
+  temperature: WhatsappCrmAudienceTemperature,
   month: string,
-  rawFilters: WhatsappCrmCampaignFilters = {}
+  rawFilters: WhatsappCrmCampaignFilters = {},
+  options: {
+    readonly allReceivedMonths?: boolean;
+    readonly excludeTerminalStages?: boolean;
+  } = {}
 ): AudienceRuleGroup {
-  if (!WHATSAPP_CRM_SALES_TEMPERATURES.includes(temperature)) {
+  if (!WHATSAPP_CRM_AUDIENCE_TEMPERATURES.includes(temperature)) {
     throw new Error("Invalid CRM sales temperature.");
   }
   if (!isWhatsappCrmLeadMonth(month)) {
@@ -153,10 +170,20 @@ export function buildWhatsappCrmAudienceRule(
   }
 
   const filters = sanitizeWhatsappCrmCampaignFilters(rawFilters);
-  const rules: AudienceRule[] = [
-    { field: "sales_temperature", operator: "equals", values: [temperature] },
-    { field: "lead_created_month", operator: "equals", values: [month] },
-  ];
+  const rules: AudienceRule[] = [];
+  if (temperature !== "all") {
+    rules.push({ field: "sales_temperature", operator: "equals", values: [temperature] });
+  }
+  if (!options.allReceivedMonths) {
+    rules.push({ field: "lead_created_month", operator: "equals", values: [month] });
+  }
+  if (options.excludeTerminalStages) {
+    rules.push({
+      field: "lead_stage",
+      operator: "not_in",
+      values: ["closed_lost", "closed_won"],
+    });
+  }
 
   const add = (field: AudienceRule["field"], value: string | undefined) => {
     if (value) rules.push({ field, operator: "equals", values: [value] });
@@ -170,7 +197,11 @@ export function buildWhatsappCrmAudienceRule(
   add("last_interaction_age", filters.lastInteractionAge);
   add("milestone", filters.milestone);
   add("dormant_duration", filters.dormantDuration);
+  add("project_timeline", filters.projectTimeline);
 
+  if (rules.length === 0) {
+    throw new Error("CRM campaign audience requires at least one rule.");
+  }
   return { logic: "and", rules };
 }
 

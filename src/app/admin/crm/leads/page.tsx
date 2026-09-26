@@ -10,6 +10,8 @@ import { parseLeadListQuery } from "@/features/crm/contracts/lead-list-query";
 import { LeadListPagination } from "@/features/crm/components/leads/LeadListPagination";
 import { LeadListTable } from "@/features/crm/components/leads/LeadListTable";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
+import { WHATSAPP_ADMIN_SCHEDULER_PATH } from "@/features/whatsapp/contracts/control-plane";
+import { resolveWhatsappControlPlaneAccess } from "@/features/whatsapp/server/whatsapp-control-plane-auth";
 import {
   fetchActiveLeadSources,
   fetchCrmAssigneeDirectory,
@@ -40,11 +42,22 @@ export default async function CrmLeadsPage({ searchParams }: CrmLeadsPageProps) 
     return null;
   }
 
-  const [page, sources, assignees] = await Promise.all([
+  const [page, sources, assignees, whatsappAccess] = await Promise.all([
     getLeadListPageForCurrentUser(query),
     fetchActiveLeadSources(),
     fetchCrmAssigneeDirectory(context),
+    resolveWhatsappControlPlaneAccess(),
   ]);
+
+  const schedulerParams = new URLSearchParams();
+  if (!query.month.isAllTime) schedulerParams.set("audienceMonth", query.month.param);
+  const selectedTemperature =
+    query.temperature?.toLowerCase() ??
+    (query.bucket && ["HOT", "WARM", "COLD"].includes(query.bucket)
+      ? query.bucket.toLowerCase()
+      : null);
+  if (selectedTemperature) schedulerParams.set("audienceTemperature", selectedTemperature);
+  const schedulerHref = `${WHATSAPP_ADMIN_SCHEDULER_PATH}?${schedulerParams.toString()}#new-schedule`;
 
   return (
     <div className="space-y-5">
@@ -53,6 +66,15 @@ export default async function CrmLeadsPage({ searchParams }: CrmLeadsPageProps) 
         description="Track, qualify and move opportunities forward."
         actions={
           <>
+            {whatsappAccess?.permissions["whatsapp.campaigns.execute"] ? (
+              <Link
+                href={schedulerHref}
+                className="crm-btn crm-btn-secondary w-full sm:w-auto"
+                data-testid="crm-leads-whatsapp-scheduler-link"
+              >
+                Schedule WhatsApp
+              </Link>
+            ) : null}
             <Link
               href="/admin/crm/pipeline"
               className="crm-btn crm-btn-secondary w-full sm:w-auto"

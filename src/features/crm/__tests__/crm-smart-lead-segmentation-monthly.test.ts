@@ -423,7 +423,7 @@ describe("the list query carries bucket and month without disturbing the rest", 
 
   test("selecting a bucket or month resets to page 1", () => {
     const src = read(STRIP);
-    assert.match(src, /buildLeadListHref\(query, undefined, \{ bucket, page: 1 \}\)/);
+    assert.match(src, /buildLeadListHref\(query, undefined, \{ bucket, page: 1, basePath \}\)/);
     const monthSrc = read(
       "src/features/crm/components/leads/LeadMonthSelector.tsx"
     );
@@ -887,7 +887,8 @@ describe("the filter form carries the workspace, not just its own fields", () =>
 
   test("the form is a GET to the leads route and omits page, so Apply resets to 1", () => {
     const src = read(FILTERS);
-    assert.match(src, /action="\/admin\/crm\/leads"/);
+    assert.match(src, /basePath = "\/admin\/crm\/leads"/);
+    assert.match(src, /action=\{basePath\}/);
     assert.match(src, /method="get"/);
     assert.doesNotMatch(src, /name="page"/);
     // pageSize is preserved when the reader changed it.
@@ -937,7 +938,7 @@ describe("the filter form carries the workspace, not just its own fields", () =>
 
   test("the Clear control uses that href, not a bare route", () => {
     const src = read(FILTERS);
-    assert.match(src, /buildLeadListHref\(query, "secondary", \{ page: 1 \}\)/);
+    assert.match(src, /buildLeadListHref\(query, "secondary", \{ page: 1, basePath \}\)/);
     // The old bare link silently dropped the cohort.
     assert.doesNotMatch(src, /href="\/admin\/crm\/leads"\s*\n\s*className="crm-btn crm-btn-ghost/);
   });
@@ -1214,7 +1215,7 @@ describe("partial counts are never presented as exact", () => {
     assert.match(src, /data-counts-exact=\{countsExact \? "true" : "false"\}/);
     assert.match(src, /Counts unavailable/);
     // The tabs stay navigable — only the numbers are withheld.
-    assert.match(src, /href=\{buildLeadListHref\(query, undefined, \{ bucket, page: 1 \}\)\}/);
+    assert.match(src, /href=\{buildLeadListHref\(query, undefined, \{ bucket, page: 1, basePath \}\)\}/);
   });
 
   test("the page hands the exactness flag through and explains it", () => {

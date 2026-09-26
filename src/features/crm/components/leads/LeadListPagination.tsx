@@ -8,6 +8,7 @@ import {
 interface LeadListPaginationProps {
   readonly query: LeadListQuery;
   readonly pagination: LeadListPaginationMeta;
+  readonly basePath?: string;
 }
 
 /**
@@ -18,13 +19,14 @@ interface LeadListPaginationProps {
  * have silently dropped both — landing the reader on page 2 of a different
  * cohort than the one they were looking at.
  */
-function buildPageHref(query: LeadListQuery, page: number): string {
-  return buildLeadListHref(query, undefined, { page });
+function buildPageHref(query: LeadListQuery, page: number, basePath: string): string {
+  return buildLeadListHref(query, undefined, { page, basePath });
 }
 
 export function LeadListPagination({
   query,
   pagination,
+  basePath = "/admin/crm/leads",
 }: LeadListPaginationProps) {
   if (!pagination.hasPreviousPage && !pagination.hasNextPage) {
     return null;
@@ -41,7 +43,7 @@ export function LeadListPagination({
       <div className="flex gap-2">
         {pagination.hasPreviousPage ? (
           <Link
-            href={buildPageHref(query, pagination.page - 1)}
+            href={buildPageHref(query, pagination.page - 1, basePath)}
             className="crm-btn crm-btn-secondary min-h-11"
           >
             Previous
@@ -49,7 +51,7 @@ export function LeadListPagination({
         ) : null}
         {pagination.hasNextPage ? (
           <Link
-            href={buildPageHref(query, pagination.page + 1)}
+            href={buildPageHref(query, pagination.page + 1, basePath)}
             className="crm-btn crm-btn-secondary min-h-11"
           >
             Next

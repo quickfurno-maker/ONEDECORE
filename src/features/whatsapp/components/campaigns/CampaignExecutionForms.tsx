@@ -288,27 +288,44 @@ export function CampaignTestSendForm({
   );
 }
 
-export function CampaignCreateRunForm({ campaignVersionId }: { readonly campaignVersionId: string }) {
+export function CampaignCreateRunForm({
+  campaignVersionId,
+  schedulerMode = false,
+}: {
+  readonly campaignVersionId: string;
+  readonly schedulerMode?: boolean;
+}) {
   const [state, action, pending] = useActionState(createWhatsappCampaignRunAction, INITIAL_WHATSAPP_CONTROL_PLANE_ACTION_STATE);
   const [local, setLocal] = useState("");
-  const iso = local ? new Date(local).toISOString() : "";
+  const iso = local
+    ? schedulerMode
+      ? new Date(`${local}:00+05:30`).toISOString()
+      : new Date(local).toISOString()
+    : "";
   return (
     <form action={action} className="od-cp__stack" data-testid="whatsapp-campaign-create-run-form">
       <input type="hidden" name="campaignVersionId" value={campaignVersionId} />
       <input type="hidden" name="scheduledFor" value={iso} />
       <div className="od-cp__grid">
         <label className="od-cp__field">
-          <span>Schedule for (blank = now)</span>
-          <input type="datetime-local" value={local} onChange={(event) => setLocal(event.target.value)} />
+          <span>{schedulerMode ? "Delivery date & time · IST" : "Schedule for (blank = now)"}</span>
+          <input
+            type="datetime-local"
+            value={local}
+            onChange={(event) => setLocal(event.target.value)}
+            required={schedulerMode}
+          />
         </label>
-        <label className="od-cp__check">
-          <input type="checkbox" name="autoStart" value="off" />
-          <span>Materialise only; I will start it myself</span>
-        </label>
+        {schedulerMode ? null : (
+          <label className="od-cp__check">
+            <input type="checkbox" name="autoStart" value="off" />
+            <span>Materialise only; I will start it myself</span>
+          </label>
+        )}
       </div>
       <div>
         <button type="submit" className="od-cp__btn od-cp__btn--primary" disabled={pending}>
-          {pending ? "Creating…" : local ? "Schedule run" : "Create run"}
+          {pending ? "Creating…" : schedulerMode ? "Schedule campaign" : local ? "Schedule run" : "Create run"}
         </button>
       </div>
       <ControlPlaneActionMessage state={state} />

@@ -108,15 +108,16 @@ describe("1 — permission matrix and legacy freeze, from the migrations themsel
 });
 
 describe("2 — navigation and route permissions", () => {
-  test("the nine sections in the locked order, each tied to the exact code its page checks", () => {
+  test("the ten sections in the locked order, each tied to the exact code its page checks", () => {
     assert.deepEqual(
       WHATSAPP_CONTROL_PLANE_SECTIONS.map((section) => section.label),
-      ["Inbox", "Contacts", "Templates", "Campaigns", "Segments", "Automations", "Forms / Flows", "Analytics", "Settings & Compliance"]
+      ["Inbox", "Contacts", "Templates", "Campaigns", "Scheduler", "Segments", "Automations", "Forms / Flows", "Analytics", "Settings & Compliance"]
     );
     const pages: Record<string, string> = {
       contacts: "src/app/admin/whatsapp/contacts/page.tsx",
       templates: "src/app/admin/whatsapp/templates/page.tsx",
       campaigns: "src/app/admin/whatsapp/campaigns/page.tsx",
+      scheduler: "src/app/admin/whatsapp/scheduler/page.tsx",
       segments: "src/app/admin/whatsapp/segments/page.tsx",
       automations: "src/app/admin/whatsapp/automations/page.tsx",
       flows: "src/app/admin/whatsapp/forms-flows/page.tsx",
@@ -133,8 +134,8 @@ describe("2 — navigation and route permissions", () => {
 
   test("what each role is offered", () => {
     const keys = (role: Role) => visibleWhatsappControlPlaneSections(navPermissions(role)).map((section) => section.key);
-    assert.deepEqual(keys("super_admin"), ["inbox", "contacts", "templates", "campaigns", "segments", "automations", "flows", "analytics", "settings"]);
-    assert.deepEqual(keys("sales_manager"), ["inbox", "contacts", "templates", "campaigns", "segments", "automations", "flows", "analytics", "settings"]);
+    assert.deepEqual(keys("super_admin"), ["inbox", "contacts", "templates", "campaigns", "scheduler", "segments", "automations", "flows", "analytics", "settings"]);
+    assert.deepEqual(keys("sales_manager"), ["inbox", "contacts", "templates", "campaigns", "scheduler", "segments", "automations", "flows", "analytics", "settings"]);
     assert.deepEqual(keys("sales_executive"), ["inbox"]);
     assert.deepEqual(keys("management"), ["inbox"]);
     assert.deepEqual(keys("sales"), ["inbox"]);

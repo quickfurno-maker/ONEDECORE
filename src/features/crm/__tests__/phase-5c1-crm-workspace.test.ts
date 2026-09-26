@@ -427,7 +427,14 @@ describe("Phase 5C1 regression guards", () => {
     for (const relativePath of createdPaths) {
       assert.ok(fileExists(relativePath), `${relativePath} should exist`);
       const src = readFileSync(join(root, relativePath), "utf8");
-      assert.doesNotMatch(src, /whatsapp/i);
+      if (relativePath === "src/app/admin/crm/leads/page.tsx") {
+        // CRM may hand a governed audience into the dedicated WhatsApp Scheduler,
+        // but it must not grow a sender/provider implementation of its own.
+        assert.match(src, /WHATSAPP_ADMIN_SCHEDULER_PATH/);
+        assert.doesNotMatch(src, /dispatchTemplateMessage|createAdminClient|whatsapp_campaign_runs/);
+      } else {
+        assert.doesNotMatch(src, /whatsapp/i);
+      }
       assert.doesNotMatch(src, /\bproject conversion\b/i);
 
       // The boundary this guard exists to hold is that CRM must not grow a

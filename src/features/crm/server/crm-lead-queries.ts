@@ -242,7 +242,7 @@ function buildAssigneeLabelMap(
 type LeadListFilterBuilder = {
   in: (column: string, values: readonly string[]) => LeadListFilterBuilder;
   eq: (column: string, value: string) => LeadListFilterBuilder;
-  not: (column: string, operator: string, value: null) => LeadListFilterBuilder;
+  not: (column: string, operator: string, value: string | null) => LeadListFilterBuilder;
   is: (column: string, value: null) => LeadListFilterBuilder;
   gte: (column: string, value: string) => LeadListFilterBuilder;
   lt: (column: string, value: string) => LeadListFilterBuilder;
@@ -339,6 +339,14 @@ function constrainLeadListRequest(
 
   if (query.sourceId) {
     next = next.eq("primary_source_id", query.sourceId);
+  }
+
+  if (query.timeline) {
+    next = next.eq("timeline_code", query.timeline);
+  }
+
+  if (query.excludeTerminal) {
+    next = next.not("status", "in", "(closed_won,closed_lost)");
   }
 
   if (context.canReadBroad) {

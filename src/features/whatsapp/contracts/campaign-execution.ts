@@ -34,6 +34,7 @@ export { WHATSAPP_ADMIN_CAMPAIGNS_PATH } from "./control-plane.ts";
 /** Caller-session RPCs. Every one re-checks its permission in SQL. */
 export const WHATSAPP_CAMPAIGN_EXECUTION_RPC = {
   listVersions: "list_whatsapp_campaign_versions",
+  listSchedulerRuns: "list_whatsapp_campaign_scheduler_runs",
   getVersion: "get_whatsapp_campaign_version",
   listTemplateOptions: "list_whatsapp_campaign_template_options",
   saveSpec: "save_whatsapp_campaign_spec",
@@ -42,6 +43,7 @@ export const WHATSAPP_CAMPAIGN_EXECUTION_RPC = {
   listTestDestinations: "list_whatsapp_campaign_test_destinations",
   createTestSend: "create_whatsapp_campaign_test_send",
   createRun: "create_whatsapp_campaign_run",
+  rescheduleRun: "reschedule_whatsapp_campaign_run",
   startRun: "start_whatsapp_campaign_run",
   pauseRun: "pause_whatsapp_campaign_run",
   resumeRun: "resume_whatsapp_campaign_run",
@@ -394,6 +396,7 @@ export function parseWhatsappCampaignVersionDetail(data: unknown): WhatsappCampa
 
 export interface WhatsappCampaignTemplateOption {
   readonly snapshotId: string;
+  readonly templateId: string | null;
   readonly name: string;
   readonly language: string;
   readonly parameterFormat: string;
@@ -411,6 +414,7 @@ export function parseWhatsappCampaignTemplateOptions(data: unknown): readonly Wh
     if (!row || !snapshotId) continue;
     out.push({
       snapshotId,
+      templateId: str(row.template_id),
       name: str(row.name) ?? "template",
       language: str(row.language) ?? "",
       parameterFormat: str(row.parameter_format) ?? "POSITIONAL",

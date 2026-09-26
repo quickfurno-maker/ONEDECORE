@@ -20,6 +20,7 @@ import { isWhatsappMarketingPreferenceCategory } from "../contracts/contacts-com
 import {
   isUuid,
   WHATSAPP_ADMIN_CAMPAIGNS_PATH,
+  WHATSAPP_ADMIN_SCHEDULER_PATH,
   type WhatsappControlPlaneActionState,
 } from "../contracts/control-plane.ts";
 import { resolveWhatsappControlPlaneAccess } from "./whatsapp-control-plane-auth.ts";
@@ -134,11 +135,50 @@ export async function createWhatsappCampaignRunAction(
   if (error) return { success: false, ...describeWhatsappCampaignRpcError(error) };
 
   revalidatePath(WHATSAPP_ADMIN_CAMPAIGNS_PATH);
+  revalidatePath(WHATSAPP_ADMIN_SCHEDULER_PATH);
   return {
     success: true,
     message: scheduled.value
       ? "Run scheduled. Recipients are re-checked just before each send."
       : "Run created. The worker materialises it on its next tick.",
+  };
+}
+
+export async function rescheduleWhatsappCampaignRunAction(
+  _previous: WhatsappControlPlaneActionState,
+  formData: FormData
+): Promise<WhatsappControlPlaneActionState> {
+  const access = await resolveWhatsappControlPlaneAccess();
+  if (!access?.permissions["whatsapp.campaigns.execute"]) {
+    return denied("You do not have permission to reschedule WhatsApp campaigns.");
+  }
+
+  const runId = String(formData.get("runId") ?? "").trim();
+  if (!isUuid(runId)) {
+    return { success: false, code: "VALIDATION", message: "Unknown campaign run." };
+  }
+  const scheduled = parseWhatsappCampaignScheduledFor(String(formData.get("scheduledFor") ?? ""));
+  if (!scheduled.ok || !scheduled.value) {
+    return {
+      success: false,
+      code: "VALIDATION",
+      field: "scheduledFor",
+      message: scheduled.ok ? "Choose a future schedule time." : scheduled.message,
+    };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc(WHATSAPP_CAMPAIGN_EXECUTION_RPC.rescheduleRun, {
+    p_run_id: runId,
+    p_scheduled_for: scheduled.value,
+  });
+  if (error) return { success: false, ...describeWhatsappCampaignRpcError(error) };
+
+  revalidatePath(WHATSAPP_ADMIN_SCHEDULER_PATH);
+  revalidatePath(WHATSAPP_ADMIN_CAMPAIGNS_PATH);
+  return {
+    success: true,
+    message: "Campaign rescheduled. The live CRM audience will still be calculated only when the run becomes due.",
   };
 }
 

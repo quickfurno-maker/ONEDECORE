@@ -22,6 +22,7 @@ interface CrmNavProps {
 const BASE_NAV_ITEMS = [
   { href: "/admin/crm/my-day", label: "My Day" },
   { href: "/admin/crm/leads", label: "Leads" },
+  { href: "/admin/crm/nurture", label: "Nurture" },
   { href: "/admin/crm/pipeline", label: "Pipeline" },
   { href: "/admin/crm/calendar", label: "Calendar" },
 ] as const;
