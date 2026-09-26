@@ -83,8 +83,8 @@ select ok(
   'repair introduced no conflict table'
 );
 
--- Single authority: inbound ingest and the outbound governed-send authority
--- both call the one writer, and nothing else in the database writes lead_id.
+-- Automatic linking still has one deterministic writer. P2 additionally adds
+-- one governed human-resolution writer for an explicitly chosen CRM lead.
 select results_eq(
   $$select p.prosrc like '%crm_apply_whatsapp_conversation_lead_link%'
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -105,17 +105,20 @@ select results_eq(
     where n.nspname in ('public', 'private')
       and p.prokind = 'f'
       and p.prosrc ~ 'update\s+public\.whatsapp_conversations[^;]*\ylead_id\y'$$,
-  array[1],
-  'exactly one function writes whatsapp_conversations.lead_id'
+  array[2],
+  'exactly two reviewed functions write whatsapp_conversations.lead_id'
 );
-select results_eq(
-  $$select p.proname::text = 'crm_apply_whatsapp_conversation_lead_link'
+select set_eq(
+  $$select p.proname::text
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname in ('public', 'private')
       and p.prokind = 'f'
       and p.prosrc ~ 'update\s+public\.whatsapp_conversations[^;]*\ylead_id\y'$$,
-  array[true],
-  'that single writer is the lead-link applier'
+  array[
+    'crm_apply_whatsapp_conversation_lead_link',
+    'link_whatsapp_conversation_to_crm_lead_impl'
+  ],
+  'lead_id writers are exactly the deterministic auto-linker and governed manual linker'
 );
 
 -- =============================================================================
