@@ -43,6 +43,7 @@ function sampleConversationDetail(): InboxConversationDetail {
         presentation: { kind: "text", body: "Need pricing for modular kitchen" },
         providerMessageId: "wamid.SAMPLE1",
         contextProviderMessageId: null,
+        origin: null,
       },
     ],
   };

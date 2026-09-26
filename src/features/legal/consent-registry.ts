@@ -156,8 +156,9 @@ export const CONSENT_VERSIONS: readonly ConsentVersion[] = [
    * The public requirement form shows a single consent line. Both purposes it
    * covers are REQUIRED — nobody can submit without granting either — so one
    * checkbox is honest here in a way it would not be if an optional purpose
-   * were folded in. WhatsApp stays a separate, optional consent and is simply
-   * not collected by this form; it is never inferred from this checkbox.
+   * were folded in. WhatsApp stays a separate, optional consent. The current
+   * unified public form may offer it as its own unchecked control; it is never
+   * inferred from the required service checkbox.
    *
    * The two versions below carry the SAME conciseCopy because that is the one
    * sentence the visitor actually reads, and consent evidence must record the

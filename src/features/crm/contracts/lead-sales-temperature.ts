@@ -10,9 +10,9 @@
  * temperature would create a second, competing source of truth for whether a
  * deal is dead.
  *
- * NULL is meaningful: it means "no human has judged this lead yet", and the
- * effective bucket falls back to the advisory system score. It is deliberately
- * not a fourth temperature.
+ * NULL is meaningful: it means "no human has judged this lead yet". In the
+ * CRM workspace an unset temperature is presented as COLD by default. It is
+ * deliberately not a fourth stored temperature.
  */
 
 import type { CrmLeadSalesBucket } from "./lead-sales-bucket.ts";
@@ -56,7 +56,7 @@ export const CRM_SALES_BUCKET_SOURCE_LABELS: Readonly<
 > = {
   lifecycle: "Lifecycle",
   manual: "Manual",
-  system: "Auto",
+  system: "Default",
 };
 
 export const CRM_SALES_BUCKET_SOURCE_HINTS: Readonly<
@@ -64,13 +64,13 @@ export const CRM_SALES_BUCKET_SOURCE_HINTS: Readonly<
 > = {
   lifecycle: "Set by the lead's lifecycle stage, not by temperature.",
   manual: "Set by a person on your team.",
-  system: "Using the system suggestion until someone chooses.",
+  system: "No manual classification yet; treated as Cold by default.",
 };
 
 /**
  * Parses a stored value. Anything outside hot/warm/cold — including the
  * lifecycle words — reads as "no override" rather than being coerced, so a bad
- * row degrades to the system suggestion instead of inventing a temperature.
+ * row degrades to the default Cold state instead of inventing a temperature.
  */
 export function parseManualSalesTemperature(
   value: unknown
@@ -120,5 +120,5 @@ export function displayLeadTemperature(
 export function isLifecycleControlledBucket(
   bucket: CrmLeadSalesBucket
 ): boolean {
-  return bucket === "LOST" || bucket === "WON" || bucket === "ON_HOLD";
+  return bucket === "LOST";
 }

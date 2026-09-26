@@ -1,4 +1,5 @@
 import type { InboxMessageItem } from "../../contracts/conversation-dtos.ts";
+import { InboxReplyButton } from "./InboxReplyButton.tsx";
 import { buildWhatsappMediaViewHref } from "../../contracts/inbox-surface.ts";
 import {
   presentStatus,
@@ -32,6 +33,7 @@ interface InboxThreadProps {
   readonly messages: readonly InboxMessageItem[];
   /** Shown above the first message when older pages exist. */
   readonly olderMessagesHref?: string | null;
+  readonly canReply?: boolean;
 }
 
 const TIME = new Intl.DateTimeFormat("en-IN", {
@@ -85,15 +87,17 @@ function linkify(body: string): Array<string | { href: string; text: string }> {
 function MessageBody({
   presentation,
   messageId,
+  suppressTemplateTag = false,
 }: {
   readonly presentation: MessagePresentation;
   readonly messageId: string;
+  readonly suppressTemplateTag?: boolean;
 }) {
   switch (presentation.kind) {
     case "text":
       return (
         <p className="od-wa__text">
-          {presentation.templateName ? (
+          {presentation.templateName && !suppressTemplateTag ? (
             <span className="od-wa__attach-note od-wa__template-tag">
               Template · {presentation.templateName}
               <br />
@@ -246,6 +250,31 @@ function MessageBody({
   }
 }
 
+function MessageOrigin({
+  origin,
+}: {
+  readonly origin: InboxMessageItem["origin"];
+}) {
+  if (!origin) return null;
+
+  const kind =
+    origin.kind === "automation"
+      ? "Automation"
+      : origin.kind === "campaign"
+        ? "Campaign"
+        : "Utility template";
+
+  return (
+    <span
+      className="od-wa__message-origin"
+      data-origin-kind={origin.kind}
+      title={`Sent by ${kind.toLowerCase()}`}
+    >
+      {kind} · {origin.label}
+    </span>
+  );
+}
+
 interface ThreadRow {
   readonly message: InboxMessageItem;
   readonly at: Date;
@@ -304,7 +333,7 @@ export function decorateMessages(
   return rows;
 }
 
-export function InboxThread({ messages, olderMessagesHref }: InboxThreadProps) {
+export function InboxThread({ messages, olderMessagesHref, canReply = false }: InboxThreadProps) {
   if (messages.length === 0) {
     return (
       <div className="od-wa__scroll">
@@ -376,10 +405,26 @@ export function InboxThread({ messages, olderMessagesHref }: InboxThreadProps) {
                     </span>
                   ) : null}
 
-                  <MessageBody presentation={message.presentation} messageId={message.id} />
+                  <MessageOrigin origin={message.origin} />
+                  <MessageBody
+                    presentation={message.presentation}
+                    messageId={message.id}
+                    suppressTemplateTag={
+                      message.origin?.kind === "utility_template"
+                    }
+                  />
 
                   <div className="od-wa__meta">
                     <time dateTime={message.providerTimestamp}>{TIME.format(at)}</time>
+                    {canReply ? (
+                      <InboxReplyButton
+                        selection={{
+                          messageId: message.id,
+                          authorLabel: outbound ? "ONEDECORE" : "Customer",
+                          preview: previewForMessage(message.presentation),
+                        }}
+                      />
+                    ) : null}
                     {status ? (
                       <span
                         className={`od-wa__status od-wa__status--${status.tone}`}

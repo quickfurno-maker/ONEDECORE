@@ -10,6 +10,15 @@ import {
   type WhatsappTemplateRegistryPage,
   type WhatsappTemplateRegistryQuery,
 } from "../contracts/template-studio.ts";
+import {
+  parseWhatsappTemplateDraftItem,
+  parseWhatsappTemplateDraftPage,
+  parseWhatsappTemplateStatusTimeline,
+  type WhatsappTemplateDraftItem,
+  type WhatsappTemplateDraftQuery,
+  type WhatsappTemplateDraftPage,
+  type WhatsappTemplateStatusTimelineItem,
+} from "../contracts/template-drafts.ts";
 import { getWhatsappTemplateManagementMode } from "./whatsapp-business-env.ts";
 import { whatsappInboxErrorFromPostgresMessage } from "./whatsapp-inbox-errors.ts";
 
@@ -41,10 +50,11 @@ export async function listWhatsappTemplateRegistryForCurrentUser(
   query: WhatsappTemplateRegistryQuery
 ): Promise<WhatsappTemplateRegistryPage> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("list_whatsapp_template_registry", {
+  const { data, error } = await supabase.rpc("list_whatsapp_template_registry_p3", {
     p_status: query.status ?? undefined,
     p_category: query.category ?? undefined,
     p_search: query.q ?? undefined,
+    p_language: query.language ?? undefined,
     p_page: query.page,
     p_page_size: query.pageSize,
   });
@@ -154,4 +164,49 @@ export function getWhatsappTemplateManagementStatus(): WhatsappTemplateManagemen
     detail: "Template management is turned off in this environment. The registry below is what ONEDECORE last recorded; sync and submit are unavailable.",
     actionsAvailable: false,
   };
+}
+
+
+export async function listWhatsappTemplateDraftsForCurrentUser(
+  query: WhatsappTemplateDraftQuery
+): Promise<WhatsappTemplateDraftPage> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_whatsapp_template_drafts", {
+    p_status: query.status ?? undefined,
+    p_category: query.category ?? undefined,
+    p_language: query.language ?? undefined,
+    p_search: query.q ?? undefined,
+    p_page: query.page,
+    p_page_size: query.pageSize,
+  });
+  if (error) {
+    throw whatsappInboxErrorFromPostgresMessage(error.message, "RPC_FAILED");
+  }
+  return parseWhatsappTemplateDraftPage(data);
+}
+
+export async function getWhatsappTemplateDraftForCurrentUser(
+  draftId: string
+): Promise<WhatsappTemplateDraftItem | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_whatsapp_template_draft", {
+    p_draft_id: draftId,
+  });
+  if (error) {
+    throw whatsappInboxErrorFromPostgresMessage(error.message, "RPC_FAILED");
+  }
+  return data ? parseWhatsappTemplateDraftItem(data) : null;
+}
+
+export async function listWhatsappTemplateStatusTimelineForCurrentUser(
+  limit = 25
+): Promise<readonly WhatsappTemplateStatusTimelineItem[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_whatsapp_template_status_timeline", {
+    p_limit: Math.min(Math.max(limit, 1), 100),
+  });
+  if (error) {
+    throw whatsappInboxErrorFromPostgresMessage(error.message, "RPC_FAILED");
+  }
+  return parseWhatsappTemplateStatusTimeline(data);
 }

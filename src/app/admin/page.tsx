@@ -79,6 +79,14 @@ export default async function AdminPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {flags.campaigns && flags.whatsapp ? (
+            <Link
+              href="/admin/whatsapp/campaigns#crm-campaign-launcher"
+              className="inline-flex min-h-10 items-center rounded-[8px] border border-[var(--od-border)] bg-[var(--od-surface)] px-4 text-sm font-semibold text-[var(--od-text)]"
+            >
+              WhatsApp Campaign
+            </Link>
+          ) : null}
           {flags.createLead ? (
             <Link
               href="/admin/crm/leads/new"

@@ -93,12 +93,12 @@ const DISCOVERY = "src/features/crm/contracts/lead-id-discovery.ts";
 describe("the sales bucket is deterministic", () => {
   const ACTIVE: LeadStageCode = "qualified";
 
-  test("an active HOT score is HOT", () => {
-    assert.equal(resolveLeadSalesBucket(ACTIVE, "HOT"), "HOT");
+  test("an unclassified active lead is COLD even when the score is HOT", () => {
+    assert.equal(resolveLeadSalesBucket(ACTIVE, "HOT"), "COLD");
   });
 
-  test("an active WARM score is WARM", () => {
-    assert.equal(resolveLeadSalesBucket(ACTIVE, "WARM"), "WARM");
+  test("an unclassified active lead is COLD even when the score is WARM", () => {
+    assert.equal(resolveLeadSalesBucket(ACTIVE, "WARM"), "COLD");
   });
 
   test("an active NURTURE score presents as COLD", () => {
@@ -117,15 +117,15 @@ describe("the sales bucket is deterministic", () => {
     }
   });
 
-  test("closed_won is WON whatever the derived band says", () => {
+  test("closed_won remains a stage; unset classification is COLD", () => {
     for (const band of ["HOT", "WARM", "NURTURE", "COLD"] as CrmLeadScoreBand[]) {
-      assert.equal(resolveLeadSalesBucket("closed_won", band), "WON");
+      assert.equal(resolveLeadSalesBucket("closed_won", band), "COLD");
     }
   });
 
-  test("on_hold is ON_HOLD whatever the derived band says", () => {
+  test("on_hold remains a stage; unset classification is COLD", () => {
     for (const band of ["HOT", "WARM", "NURTURE", "COLD"] as CrmLeadScoreBand[]) {
-      assert.equal(resolveLeadSalesBucket("on_hold", band), "ON_HOLD");
+      assert.equal(resolveLeadSalesBucket("on_hold", band), "COLD");
     }
   });
 
@@ -547,35 +547,27 @@ describe("segmented ordering answers 'who do I call next'", () => {
     assert.deepEqual(forward, backward);
   });
 
-  test("active work outranks terminal and parked work in the mixed view", () => {
+  test("active work outranks lost work in the mixed view", () => {
     const sorted = sortSegmentedLeads(
       [
         lead({ id: "lost", salesBucket: "LOST", priorityScore: 100 }),
-        lead({ id: "won", salesBucket: "WON", priorityScore: 100 }),
-        lead({ id: "hold", salesBucket: "ON_HOLD", priorityScore: 100 }),
         lead({ id: "cold", salesBucket: "COLD", priorityScore: 1 }),
       ],
       NOW
     );
     assert.equal(sorted[0]!.id, "cold", "LOST must never head a conversion queue");
-    assert.deepEqual(sorted.map((entry) => entry.id), ["cold", "hold", "won", "lost"]);
+    assert.deepEqual(sorted.map((entry) => entry.id), ["cold", "lost"]);
   });
 
-  test("LOST, WON and ON_HOLD order by newest closure first", () => {
-    for (const bucket of ["LOST", "WON", "ON_HOLD"] as CrmLeadSalesBucket[]) {
-      const sorted = sortSegmentedLeads(
-        [
-          lead({ id: "old", salesBucket: bucket, stageEnteredAt: "2026-09-01T00:00:00.000Z" }),
-          lead({ id: "new", salesBucket: bucket, stageEnteredAt: "2026-09-09T00:00:00.000Z" }),
-        ],
-        NOW
-      );
-      assert.deepEqual(
-        sorted.map((entry) => entry.id),
-        ["new", "old"],
-        `${bucket} must lead with the most recent transition`
-      );
-    }
+  test("LOST orders by newest closure first", () => {
+    const sorted = sortSegmentedLeads(
+      [
+        lead({ id: "old", salesBucket: "LOST", stageEnteredAt: "2026-09-01T00:00:00.000Z" }),
+        lead({ id: "new", salesBucket: "LOST", stageEnteredAt: "2026-09-09T00:00:00.000Z" }),
+      ],
+      NOW
+    );
+    assert.deepEqual(sorted.map((entry) => entry.id), ["new", "old"]);
   });
 
   test("a terminal row with no stage-entry event still orders safely", () => {
@@ -620,16 +612,12 @@ describe("bucket counts are exact and cohort-wide", () => {
       "COLD",
       "COLD",
       "LOST",
-      "WON",
-      "ON_HOLD",
     ]);
     assert.equal(counts.HOT, 2);
     assert.equal(counts.WARM, 1);
     assert.equal(counts.COLD, 3);
     assert.equal(counts.LOST, 1);
-    assert.equal(counts.WON, 1);
-    assert.equal(counts.ON_HOLD, 1);
-    assert.equal(counts.TOTAL, 9);
+    assert.equal(counts.TOTAL, 7);
   });
 
   test("an empty cohort counts zero everywhere", () => {
@@ -656,8 +644,6 @@ describe("bucket counts are exact and cohort-wide", () => {
     assert.equal(september.HOT, 0);
     assert.equal(september.WARM, 0);
     assert.equal(september.LOST, 0);
-    assert.equal(september.WON, 0);
-    assert.equal(september.ON_HOLD, 0);
 
     const august = countSalesBuckets(
       Array.from({ length: 4 }, () =>
@@ -820,7 +806,7 @@ describe("the workspace shows bucket and stage as separate facts", () => {
     assert.ok(stripAt < filtersAt, "segmentation outranks the secondary filters");
   });
 
-  test("the strip renders all seven tabs with counts", () => {
+  test("the strip renders All plus the four business buckets with counts", () => {
     const src = read(STRIP);
     assert.match(src, /crm-bucket-tab-all/);
     for (const bucket of CRM_LEAD_SALES_BUCKETS) {
@@ -1140,7 +1126,8 @@ describe("site visit and quotation are separate milestone facts", () => {
     // resolveLeadSalesBucket takes ONLY status and band, so no milestone can
     // reach it.
     assert.equal(resolveLeadSalesBucket.length, 2);
-    assert.equal(resolveLeadSalesBucket("negotiation", "HOT"), "HOT");
+    assert.equal(resolveLeadSalesBucket("negotiation", "HOT"), "COLD");
+    assert.equal(resolveLeadSalesBucket("negotiation", "HOT", "HOT"), "HOT");
     assert.equal(resolveLeadSalesBucket("closed_lost", "HOT"), "LOST");
   });
 

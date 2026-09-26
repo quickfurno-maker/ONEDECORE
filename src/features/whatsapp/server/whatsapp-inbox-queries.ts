@@ -13,9 +13,11 @@ import {
   mapConversationRowToListItem,
   mapMessageRowToItem,
   parseInboxConversationListPayload,
+  WHATSAPP_MESSAGE_ORIGIN_KINDS,
   type InboxConversationListItem,
   type InboxMessageItem,
   type InboxMessageRow,
+  type WhatsappMessageOrigin,
 } from "../contracts/conversation-dtos.ts";
 import { whatsappInboxErrorFromPostgresMessage } from "./whatsapp-inbox-errors.ts";
 import { getWhatsappMediaMode } from "./whatsapp-business-env.ts";
@@ -123,9 +125,50 @@ export async function queryConversationMessagesPage(
   const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / query.pageSize);
   // Offer a media link only where the governed view route can serve it.
   const mediaViewEnabled = getWhatsappMediaMode() !== "disabled";
+  const items = ((data ?? []) as InboxMessageRow[]).map((row) =>
+    mapMessageRowToItem(row, { mediaViewEnabled })
+  );
+
+  const outboundIds = items
+    .filter((item) => item.direction === "outbound")
+    .map((item) => item.id);
+  const origins = new Map<string, WhatsappMessageOrigin>();
+
+  if (outboundIds.length > 0) {
+    const { data: originRows, error: originError } = await supabase.rpc(
+      "get_whatsapp_inbox_message_origins",
+      { p_message_ids: outboundIds }
+    );
+
+    if (originError) {
+      throw whatsappInboxErrorFromPostgresMessage(
+        originError.message,
+        "RPC_FAILED"
+      );
+    }
+
+    for (const row of originRows ?? []) {
+      if (
+        typeof row.message_id !== "string" ||
+        typeof row.origin_label !== "string" ||
+        !(WHATSAPP_MESSAGE_ORIGIN_KINDS as readonly string[]).includes(
+          row.origin_kind
+        )
+      ) {
+        continue;
+      }
+      origins.set(row.message_id, {
+        kind: row.origin_kind as WhatsappMessageOrigin["kind"],
+        label: row.origin_label,
+      });
+    }
+  }
 
   return {
-    items: ((data ?? []) as InboxMessageRow[]).map((row) => mapMessageRowToItem(row, { mediaViewEnabled })),
+    items: items.map((item) => ({
+      ...item,
+      origin: origins.get(item.id) ?? null,
+    })),
     page: query.page,
     pageSize: query.pageSize,
     totalCount,

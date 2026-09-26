@@ -144,6 +144,9 @@ describe('Phase 7B Commercial Quotation Finalization, PDF, Secure WhatsApp & Acc
           httpStatus: 200,
           responseSnapshot: {},
         }),
+        dispatchMediaMessage: async () => {
+          throw new Error('Media dispatch is not used in this test.');
+        },
       }),
     };
 
@@ -724,6 +727,9 @@ describe('Phase 7B dispatch resolver + fake provider', () => {
             httpStatus: 200,
             responseSnapshot: { provider: 'fake' },
           };
+        },
+        dispatchMediaMessage: async () => {
+          throw new Error('Media dispatch is not used in this test.');
         },
       }),
     };

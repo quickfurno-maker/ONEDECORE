@@ -99,7 +99,21 @@ export const INBOX_MESSAGE_PUBLIC_KEYS = [
   "presentation",
   "providerMessageId",
   "contextProviderMessageId",
+  "origin",
 ] as const;
+
+export const WHATSAPP_MESSAGE_ORIGIN_KINDS = [
+  "campaign",
+  "automation",
+  "utility_template",
+] as const;
+export type WhatsappMessageOriginKind =
+  (typeof WHATSAPP_MESSAGE_ORIGIN_KINDS)[number];
+
+export interface WhatsappMessageOrigin {
+  readonly kind: WhatsappMessageOriginKind;
+  readonly label: string;
+}
 
 export type InboxMessageItem = {
   readonly id: string;
@@ -120,6 +134,8 @@ export type InboxMessageItem = {
    */
   readonly providerMessageId: string;
   readonly contextProviderMessageId: string | null;
+  /** Existing attribution evidence, projected only for caller-visible messages. */
+  readonly origin: WhatsappMessageOrigin | null;
 };
 
 export type InboxMessageRow = {
@@ -249,5 +265,6 @@ export function mapMessageRowToItem(
     }),
     providerMessageId: row.provider_message_id,
     contextProviderMessageId: row.context_provider_message_id,
+    origin: null,
   };
 }

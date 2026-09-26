@@ -15,8 +15,8 @@ import { CrmError } from "./crm-errors.ts";
  * control too slow to use, and an unused mandatory field collects noise rather
  * than governance.
  *
- * `temperature` is HOT | WARM | COLD, or empty/absent to clear the override and
- * return the lead to the system suggestion.
+ * `temperature` is HOT | WARM | COLD, or empty/absent to clear the manual
+ * classification. An unset lead is treated as Cold by default.
  */
 export async function setLeadSalesTemperatureAction(
   _previousState: LifecycleActionState,
@@ -32,7 +32,7 @@ export async function setLeadSalesTemperatureAction(
   }
 
   const raw = String(formData.get("temperature") ?? "").trim();
-  // An empty value is the explicit "Use system" reset, not a malformed input.
+  // An empty value explicitly clears the manual classification to default Cold.
   const temperature = raw.length === 0 ? null : parseManualSalesTemperature(raw);
 
   if (raw.length > 0 && temperature === null) {
@@ -61,7 +61,7 @@ export async function setLeadSalesTemperatureAction(
       success: true,
       message:
         temperature === null
-          ? "Using the system suggestion."
+          ? "Manual classification cleared. Lead is Cold by default."
           : `Sales temperature set to ${temperature}.`,
     };
   } catch (error: unknown) {

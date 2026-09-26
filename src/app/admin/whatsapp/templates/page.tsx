@@ -5,6 +5,8 @@ import {
   TemplateCreateForm,
   TemplateSyncForm,
 } from "@/features/whatsapp/components/templates/TemplateStudioForms";
+import { TemplateLibrary } from "@/features/whatsapp/components/templates/TemplateLibrary";
+import { TemplateArchiveForm } from "@/features/whatsapp/components/templates/TemplateDraftActions";
 import "@/features/whatsapp/components/templates/template-studio.css";
 import "@/features/whatsapp/components/growth-workspace.css";
 import { WHATSAPP_ADMIN_INBOX_BASE_PATH, WHATSAPP_ADMIN_TEMPLATES_PATH } from "@/features/whatsapp/contracts/inbox-surface";
@@ -15,11 +17,24 @@ import {
   type WhatsappTemplateRegistryItem,
   type WhatsappTemplateRegistryQuery,
 } from "@/features/whatsapp/contracts/template-studio";
+import { getWhatsappTemplateLibraryPreset } from "@/features/whatsapp/contracts/template-library";
+import {
+  editorSeedFromWhatsappTemplateComponents,
+  WHATSAPP_TEMPLATE_STUDIO_LANGUAGES,
+} from "@/features/whatsapp/contracts/template-components";
+import {
+  parseWhatsappTemplateDraftQuery,
+  WHATSAPP_TEMPLATE_DRAFT_STATUSES,
+  type WhatsappTemplateDraftQuery,
+} from "@/features/whatsapp/contracts/template-drafts";
 import { getWhatsappInboxAccessContext } from "@/features/whatsapp/server/whatsapp-auth";
 import {
   getWhatsappTemplateManagementStatus,
+  getWhatsappTemplateDraftForCurrentUser,
   listRecentWhatsappTemplateSubmissions,
+  listWhatsappTemplateDraftsForCurrentUser,
   listWhatsappTemplateRegistryForCurrentUser,
+  listWhatsappTemplateStatusTimelineForCurrentUser,
   probeWhatsappTemplatePermissions,
 } from "@/features/whatsapp/server/whatsapp-template-queries";
 
@@ -51,6 +66,10 @@ const DATE = new Intl.DateTimeFormat("en-IN", {
   hour12: true,
   timeZone: "Asia/Kolkata",
 });
+
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 function formatWhen(value: string | null): string {
   if (!value) return "Never";
@@ -85,10 +104,22 @@ function pageHref(query: WhatsappTemplateRegistryQuery, page: number): string {
   const params = new URLSearchParams();
   if (query.status) params.set("status", query.status);
   if (query.category) params.set("category", query.category);
+  if (query.language) params.set("language", query.language);
   if (query.q) params.set("q", query.q);
   if (page > 1) params.set("page", String(page));
   const qs = params.toString();
   return qs ? `${WHATSAPP_ADMIN_TEMPLATES_PATH}?${qs}` : WHATSAPP_ADMIN_TEMPLATES_PATH;
+}
+
+function draftPageHref(query: WhatsappTemplateDraftQuery, page: number): string {
+  const params = new URLSearchParams();
+  if (query.status) params.set("draftStatus", query.status);
+  if (query.category) params.set("draftCategory", query.category);
+  if (query.language) params.set("language", query.language);
+  if (query.q) params.set("draftQ", query.q);
+  if (page > 1) params.set("draftPage", String(page));
+  const qs = params.toString();
+  return qs ? `${WHATSAPP_ADMIN_TEMPLATES_PATH}?${qs}#onedecore-drafts` : `${WHATSAPP_ADMIN_TEMPLATES_PATH}#onedecore-drafts`;
 }
 
 interface WhatsappTemplatesPageProps {
@@ -123,13 +154,38 @@ export default async function WhatsappTemplatesPage({ searchParams }: WhatsappTe
     );
   }
 
-  const query = parseWhatsappTemplateRegistryQuery(await searchParams);
+  const params = await searchParams;
+  const query = parseWhatsappTemplateRegistryQuery(params);
+  const draftQuery = parseWhatsappTemplateDraftQuery(params);
+  const preset = getWhatsappTemplateLibraryPreset(first(params.preset));
+  const draftId = first(params.draft);
+  const duplicateDraftId = first(params.duplicateDraft);
   const canManage = permissions["whatsapp.templates.manage"];
   const status = getWhatsappTemplateManagementStatus();
-  const [registry, submissions] = await Promise.all([
+
+  const requestedDraftId =
+    draftId && /^[0-9a-f-]{36}$/i.test(draftId)
+      ? draftId
+      : duplicateDraftId && /^[0-9a-f-]{36}$/i.test(duplicateDraftId)
+        ? duplicateDraftId
+        : null;
+
+  const [registry, submissions, drafts, timeline, selectedDraft] = await Promise.all([
     listWhatsappTemplateRegistryForCurrentUser(query),
     listRecentWhatsappTemplateSubmissions(10),
+    listWhatsappTemplateDraftsForCurrentUser(draftQuery),
+    listWhatsappTemplateStatusTimelineForCurrentUser(25),
+    requestedDraftId ? getWhatsappTemplateDraftForCurrentUser(requestedDraftId) : Promise.resolve(null),
   ]);
+
+  const editorSeed = selectedDraft
+    ? editorSeedFromWhatsappTemplateComponents({
+        name: selectedDraft.name,
+        language: selectedDraft.language,
+        category: selectedDraft.category,
+        components: selectedDraft.components,
+      })
+    : null;
   const totalPages = registry.totalCount === 0 ? 1 : Math.ceil(registry.totalCount / query.pageSize);
   const approvedOnPage = registry.items.filter((item) => item.status === "APPROVED").length;
   const sendableOnPage = registry.items.filter((item) => item.oneToOneSendable).length;
@@ -206,6 +262,167 @@ export default async function WhatsappTemplatesPage({ searchParams }: WhatsappTe
         {canManage ? <TemplateSyncForm available={status.actionsAvailable} /> : null}
       </section>
 
+      <TemplateLibrary />
+
+      <section
+        id="onedecore-drafts"
+        className="od-tpl__panel od-tpl__draft-workspace"
+        aria-labelledby="onedecore-template-drafts"
+      >
+        <div className="od-tpl__section-head">
+          <div>
+            <p className="od-growth__eyebrow">Prepare before Meta</p>
+            <h2 id="onedecore-template-drafts" className="od-tpl__panel-title">
+              ONEDECORE Drafts · {drafts.totalCount}
+            </h2>
+            <p className="od-tpl__hint">
+              Local drafts are internal preparation only. They are never treated as
+              Meta-approved or sendable until the provider registry says so.
+            </p>
+          </div>
+          {canManage ? (
+            <a className="od-tpl__btn od-tpl__btn--primary" href="#whatsapp-template-create">
+              New local draft
+            </a>
+          ) : null}
+        </div>
+
+        <form className="od-tpl__filters" method="get" action={WHATSAPP_ADMIN_TEMPLATES_PATH}>
+          <label className="od-tpl__field">
+            <span>Search draft</span>
+            <input name="draftQ" defaultValue={draftQuery.q ?? ""} maxLength={128} />
+          </label>
+          <label className="od-tpl__field">
+            <span>Workflow</span>
+            <select name="draftStatus" defaultValue={draftQuery.status ?? ""}>
+              <option value="">Live drafts</option>
+              {WHATSAPP_TEMPLATE_DRAFT_STATUSES.map((value) => (
+                <option key={value} value={value}>
+                  {value.replace(/_/g, " ")}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="od-tpl__field">
+            <span>Category</span>
+            <select name="draftCategory" defaultValue={draftQuery.category ?? ""}>
+              <option value="">All</option>
+              <option value="UTILITY">UTILITY</option>
+              <option value="MARKETING">MARKETING</option>
+            </select>
+          </label>
+          <label className="od-tpl__field">
+            <span>Language</span>
+            <select name="language" defaultValue={draftQuery.language ?? ""}>
+              <option value="">All</option>
+              {WHATSAPP_TEMPLATE_STUDIO_LANGUAGES.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className="od-tpl__btn">
+            Apply
+          </button>
+        </form>
+
+        {drafts.items.length === 0 ? (
+          <p className="od-tpl__empty">
+            No ONEDECORE drafts match these filters. Start from the library or create
+            one below.
+          </p>
+        ) : (
+          <div className="od-tpl__draft-grid">
+            {drafts.items.map((draft) => (
+              <article className="od-tpl__draft-card" key={draft.id}>
+                <div className="od-tpl__draft-card-head">
+                  <div>
+                    <strong>{draft.name}</strong>
+                    <span className="od-tpl__raw">
+                      {draft.language} · {draft.category}
+                    </span>
+                  </div>
+                  <span
+                    className="od-tpl__badge"
+                    data-tone={
+                      draft.workflowStatus === "locally_reviewed"
+                        ? "positive"
+                        : draft.workflowStatus === "archived"
+                          ? "negative"
+                          : undefined
+                    }
+                  >
+                    {draft.workflowStatus.replace(/_/g, " ")}
+                  </span>
+                </div>
+                <p className="od-tpl__raw">
+                  Updated {formatWhen(draft.updatedAt)} · version {draft.lockVersion}
+                </p>
+                <div className="od-tpl__draft-actions">
+                  <Link
+                    className="od-tpl__btn od-tpl__btn--quiet"
+                    href={`${WHATSAPP_ADMIN_TEMPLATES_PATH}?draft=${draft.id}#whatsapp-template-create`}
+                  >
+                    {draft.workflowStatus === "archived" ? "Reopen & edit" : "Edit"}
+                  </Link>
+                  <Link
+                    className="od-tpl__btn od-tpl__btn--quiet"
+                    href={`${WHATSAPP_ADMIN_TEMPLATES_PATH}?duplicateDraft=${draft.id}#whatsapp-template-create`}
+                  >
+                    Duplicate
+                  </Link>
+                  {draft.category === "MARKETING" ? (
+                    <Link
+                      className="od-tpl__btn od-tpl__btn--quiet"
+                      href={`/admin/whatsapp/campaigns?templateDraft=${draft.id}&templateDraftName=${encodeURIComponent(draft.name)}#crm-campaign-launcher`}
+                    >
+                      Use in Campaign
+                    </Link>
+                  ) : null}
+                  {canManage && draft.workflowStatus !== "archived" ? (
+                    <TemplateArchiveForm
+                      draftId={draft.id}
+                      lockVersion={draft.lockVersion}
+                    />
+                  ) : null}
+                </div>
+                {draft.category === "MARKETING" ? (
+                  <p className="od-tpl__hint">
+                    Campaign handoff is preparation-only until an approved Meta template
+                    is selected for execution.
+                  </p>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        )}
+
+        {drafts.totalCount > draftQuery.pageSize ? (
+          <nav className="od-tpl__pager" aria-label="Draft pages">
+            <span>Page {draftQuery.page}</span>
+            <span className="od-tpl__inline-form">
+              {draftQuery.page > 1 ? (
+                <Link
+                  className="od-tpl__btn od-tpl__btn--quiet"
+                  href={draftPageHref(draftQuery, draftQuery.page - 1)}
+                >
+                  Previous
+                </Link>
+              ) : null}
+              {draftQuery.page * draftQuery.pageSize < drafts.totalCount ? (
+                <Link
+                  className="od-tpl__btn od-tpl__btn--quiet"
+                  href={draftPageHref(draftQuery, draftQuery.page + 1)}
+                >
+                  Next
+                </Link>
+              ) : null}
+            </span>
+          </nav>
+        ) : null}
+      </section>
+
       <div className="od-tpl__columns">
         <section className="od-tpl__panel" aria-labelledby="whatsapp-template-registry">
           <h2 id="whatsapp-template-registry" className="od-tpl__panel-title">
@@ -233,6 +450,17 @@ export default async function WhatsappTemplatesPage({ searchParams }: WhatsappTe
               <select name="category" defaultValue={query.category ?? ""}>
                 <option value="">All</option>
                 {WHATSAPP_TEMPLATE_REGISTRY_CATEGORY_FILTERS.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="od-tpl__field">
+              <span>Language</span>
+              <select name="language" defaultValue={query.language ?? ""}>
+                <option value="">All</option>
+                {WHATSAPP_TEMPLATE_STUDIO_LANGUAGES.map((value) => (
                   <option key={value} value={value}>
                     {value}
                   </option>
@@ -353,11 +581,51 @@ export default async function WhatsappTemplatesPage({ searchParams }: WhatsappTe
         <div className="od-tpl">
           {canManage ? (
             <section className="od-tpl__panel" aria-labelledby="whatsapp-template-create">
-              <h2 id="whatsapp-template-create" className="od-tpl__panel-title">
-                Create and submit
-              </h2>
+              <div className="od-tpl__section-head">
+                <div>
+                  <h2 id="whatsapp-template-create" className="od-tpl__panel-title">
+                    {selectedDraft
+                      ? duplicateDraftId
+                        ? "Duplicate ONEDECORE draft"
+                        : "Edit ONEDECORE draft"
+                      : "Prepare template"}
+                  </h2>
+                  <p className="od-tpl__hint">
+                    Saving and local review work with the provider off. Meta submission
+                    remains a separate governed action.
+                  </p>
+                </div>
+                {selectedDraft ? (
+                  <Link
+                    className="od-tpl__btn od-tpl__btn--quiet"
+                    href={WHATSAPP_ADMIN_TEMPLATES_PATH + "#whatsapp-template-create"}
+                  >
+                    Clear editor
+                  </Link>
+                ) : null}
+              </div>
               {status.actionsAvailable ? null : <p className="od-tpl__hint">{status.detail}</p>}
-              <TemplateCreateForm available={status.actionsAvailable} />
+              <TemplateCreateForm
+                key={
+                  selectedDraft
+                    ? `${selectedDraft.id}:${duplicateDraftId ? "duplicate" : "edit"}`
+                    : preset?.id ?? "blank"
+                }
+                available={status.actionsAvailable}
+                preset={selectedDraft ? null : preset}
+                seed={editorSeed}
+                draftMeta={
+                  selectedDraft && !duplicateDraftId
+                    ? {
+                        id: selectedDraft.id,
+                        lockVersion: selectedDraft.lockVersion,
+                        workflowStatus: selectedDraft.workflowStatus,
+                        sourcePresetId: selectedDraft.sourcePresetId,
+                      }
+                    : null
+                }
+                duplicateMode={Boolean(selectedDraft && duplicateDraftId)}
+              />
             </section>
           ) : null}
 
@@ -407,6 +675,56 @@ export default async function WhatsappTemplatesPage({ searchParams }: WhatsappTe
                   ))}
                 </tbody>
               </table>
+            )}
+          </section>
+
+          <section className="od-tpl__panel" aria-labelledby="whatsapp-template-timeline">
+            <h2 id="whatsapp-template-timeline" className="od-tpl__panel-title">
+              Provider status timeline
+            </h2>
+            <p className="od-tpl__hint">
+              Provider and submission evidence only. Local review never appears here as
+              approval.
+            </p>
+            {timeline.length === 0 ? (
+              <p className="od-tpl__empty">
+                No provider template status or submission events have been recorded yet.
+              </p>
+            ) : (
+              <ol className="od-tpl__timeline">
+                {timeline.map((event) => (
+                  <li key={event.id} className="od-tpl__timeline-item">
+                    <div>
+                      <strong>{event.templateName}</strong>
+                      <span className="od-tpl__raw">
+                        {event.source} · {event.eventKind.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    <div className="od-tpl__timeline-meta">
+                      {event.status ? (
+                        <span className="od-tpl__badge" data-tone={statusTone(event.status)}>
+                          {event.status}
+                        </span>
+                      ) : null}
+                      {event.category ? (
+                        <span className="od-tpl__badge">{event.category}</span>
+                      ) : null}
+                      {event.qualityRating ? (
+                        <span
+                          className="od-tpl__badge"
+                          data-tone={qualityTone(event.qualityRating)}
+                        >
+                          {event.qualityRating}
+                        </span>
+                      ) : null}
+                      <span className="od-tpl__raw">{formatWhen(event.occurredAt)}</span>
+                    </div>
+                    {event.errorCode ? (
+                      <span className="od-tpl__raw">Error: {event.errorCode}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
             )}
           </section>
         </div>

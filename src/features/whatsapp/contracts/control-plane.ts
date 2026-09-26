@@ -109,7 +109,7 @@ export function isUuid(value: unknown): value is string {
 /** Postgres error codes the WM-3 RPCs raise, mapped to what staff can act on. */
 export function describeWhatsappControlPlaneRpcError(
   error: { readonly code?: string | null; readonly message?: string | null },
-  area: "opt_out" | "preference" | "segment" | "policy"
+  area: "opt_out" | "preference" | "consent" | "segment" | "policy"
 ): { readonly code: string; readonly message: string } {
   const code = error.code ?? "";
   if (code === "42501") {
@@ -120,7 +120,9 @@ export function describeWhatsappControlPlaneRpcError(
           ? "You do not have permission to manage WhatsApp segments."
           : area === "preference"
             ? "You do not have permission to record marketing preferences."
-            : "You are not allowed to record an opt-out for this contact.";
+            : area === "consent"
+              ? "You do not have permission to record marketing consent."
+              : "You are not allowed to record an opt-out for this contact.";
     return { code: "ACCESS_DENIED", message };
   }
   if (code === "22023") {

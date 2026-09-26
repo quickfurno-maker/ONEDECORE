@@ -12,6 +12,7 @@ import {
   loadOpsDashboardSnapshot,
 } from "@/features/admin-ops/server/dashboard-snapshot.ts";
 import { resolveOpsNavFlags } from "@/features/admin-ops/server/resolve-ops-nav-flags.ts";
+import { CrmPageHeader } from "@/features/crm/components/shell/CrmPageHeader";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
 
 export const dynamic = "force-dynamic";
@@ -37,26 +38,27 @@ export default async function CrmOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-[24px] font-semibold tracking-tight text-[var(--crm-text)] sm:text-[30px]">
-            CRM
-          </h1>
-          <p className="mt-1 text-sm text-[var(--crm-muted)]">Sales workspace</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {context.canCreateLeads ? (
-            <Link href="/admin/crm/leads/new" className="crm-btn crm-btn-primary">
-              + New Lead
+      <CrmPageHeader
+        title="CRM Overview"
+        description="Monitor sales workload, pipeline health and the leads that need action next."
+        actions={
+          <>
+            <Link href="/admin/crm/my-day" className="crm-btn crm-btn-secondary">
+              Open My Day
             </Link>
-          ) : null}
-          {context.canBulkImportLeads ? (
-            <Link href="/admin/crm/imports/new" className="crm-btn crm-btn-secondary">
-              Import
-            </Link>
-          ) : null}
-        </div>
-      </div>
+            {context.canCreateLeads ? (
+              <Link href="/admin/crm/leads/new" className="crm-btn crm-btn-primary">
+                + New Lead
+              </Link>
+            ) : null}
+            {context.canBulkImportLeads ? (
+              <Link href="/admin/crm/imports/new" className="crm-btn crm-btn-secondary">
+                Import
+              </Link>
+            ) : null}
+          </>
+        }
+      />
       {snapshot.kpis.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {snapshot.kpis.slice(0, 4).map((item, index) => (

@@ -271,17 +271,45 @@ export const WHATSAPP_TEMPLATE_STUDIO_CATEGORIES = ["UTILITY", "MARKETING"] as c
 export type WhatsappTemplateStudioCategory = (typeof WHATSAPP_TEMPLATE_STUDIO_CATEGORIES)[number];
 
 export const WHATSAPP_TEMPLATE_STUDIO_LANGUAGES = ["en", "en_US", "en_GB", "hi", "mr"] as const;
+export const WHATSAPP_TEMPLATE_HEADER_TYPES = [
+  "NONE",
+  "TEXT",
+  "IMAGE",
+  "VIDEO",
+  "DOCUMENT",
+  "LOCATION",
+] as const;
+export type WhatsappTemplateHeaderType = (typeof WHATSAPP_TEMPLATE_HEADER_TYPES)[number];
+
+export const WHATSAPP_TEMPLATE_BUTTON_TYPES = [
+  "QUICK_REPLY",
+  "URL",
+  "PHONE_NUMBER",
+  "FLOW",
+] as const;
+export type WhatsappTemplateButtonType = (typeof WHATSAPP_TEMPLATE_BUTTON_TYPES)[number];
+
+export interface WhatsappTemplateStudioButtonDraft {
+  readonly type: string;
+  readonly text: string;
+  readonly url?: string;
+  readonly phoneNumber?: string;
+  readonly flowId?: string;
+  readonly navigateScreen?: string;
+}
 
 export interface WhatsappTemplateStudioDraft {
   readonly name: string;
   readonly language: string;
   readonly category: string;
+  readonly headerType?: string;
   readonly headerText: string;
+  readonly headerMediaHandle?: string;
   readonly bodyText: string;
   readonly footerText: string;
-  /** Example value per body placeholder, in order: examples[0] is {{1}}. */
   readonly bodyExamples: readonly string[];
   readonly headerExample: string;
+  readonly buttons?: readonly WhatsappTemplateStudioButtonDraft[];
 }
 
 export interface WhatsappTemplateStudioSubmission {
@@ -296,18 +324,165 @@ export type WhatsappTemplateStudioDraftResult =
   | { readonly ok: true; readonly submission: WhatsappTemplateStudioSubmission }
   | { readonly ok: false; readonly field: string; readonly message: string };
 
+export interface WhatsappTemplateEditorSeed {
+  readonly name: string;
+  readonly language: string;
+  readonly category: WhatsappTemplateStudioCategory;
+  readonly headerType: WhatsappTemplateHeaderType;
+  readonly headerText: string;
+  readonly headerMediaHandle: string;
+  readonly bodyText: string;
+  readonly footerText: string;
+  readonly bodyExamples: readonly string[];
+  readonly headerExample: string;
+  readonly buttons: readonly WhatsappTemplateStudioButtonDraft[];
+}
+
+function readStudioHeaderType(components: unknown): WhatsappTemplateHeaderType {
+  const header = componentList(components).find((component) => upper(component.type) === "HEADER");
+  if (!header) return "NONE";
+  const format = upper(header.format);
+  return (WHATSAPP_TEMPLATE_HEADER_TYPES as readonly string[]).includes(format)
+    ? (format as WhatsappTemplateHeaderType)
+    : "NONE";
+}
+
+export function editorSeedFromWhatsappTemplateComponents(input: {
+  readonly name: string;
+  readonly language: string;
+  readonly category: string;
+  readonly components: unknown;
+}): WhatsappTemplateEditorSeed {
+  const list = componentList(input.components);
+  const header = list.find((component) => upper(component.type) === "HEADER");
+  const body = list.find((component) => upper(component.type) === "BODY");
+  const footer = list.find((component) => upper(component.type) === "FOOTER");
+  const buttons = list.find((component) => upper(component.type) === "BUTTONS");
+  const bodyKeys = typeof body?.text === "string" ? placeholderKeys(body.text) : [];
+  const bodyExampleRows =
+    isRecord(body?.example) && Array.isArray(body.example.body_text)
+      ? body.example.body_text
+      : [];
+  const bodyExampleRow = Array.isArray(bodyExampleRows[0]) ? bodyExampleRows[0] : [];
+  const headerExamples =
+    isRecord(header?.example) && Array.isArray(header.example.header_text)
+      ? header.example.header_text
+      : [];
+  const headerHandles =
+    isRecord(header?.example) && Array.isArray(header.example.header_handle)
+      ? header.example.header_handle
+      : [];
+
+  return {
+    name: input.name,
+    language: input.language,
+    category: input.category === "MARKETING" ? "MARKETING" : "UTILITY",
+    headerType: readStudioHeaderType(input.components),
+    headerText: typeof header?.text === "string" ? header.text : "",
+    headerMediaHandle: typeof headerHandles[0] === "string" ? headerHandles[0] : "",
+    bodyText: typeof body?.text === "string" ? body.text : "",
+    footerText: typeof footer?.text === "string" ? footer.text : "",
+    bodyExamples: bodyKeys.map((_, index) =>
+      typeof bodyExampleRow[index] === "string" ? bodyExampleRow[index] : ""
+    ),
+    headerExample: typeof headerExamples[0] === "string" ? headerExamples[0] : "",
+    buttons: Array.isArray(buttons?.buttons)
+      ? buttons.buttons.filter(isRecord).slice(0, 10).map((button) => ({
+          type: upper(button.type),
+          text: typeof button.text === "string" ? button.text : "",
+          url: typeof button.url === "string" ? button.url : undefined,
+          phoneNumber:
+            typeof button.phone_number === "string" ? button.phone_number : undefined,
+          flowId: typeof button.flow_id === "string" ? button.flow_id : undefined,
+          navigateScreen:
+            typeof button.navigate_screen === "string" ? button.navigate_screen : undefined,
+        }))
+      : [],
+  };
+}
+
+function validateStudioButtons(
+  buttons: readonly WhatsappTemplateStudioButtonDraft[]
+): { readonly ok: true; readonly buttons: readonly Record<string, unknown>[] } | {
+  readonly ok: false;
+  readonly field: string;
+  readonly message: string;
+} {
+  if (buttons.length > 10) {
+    return { ok: false, field: "buttons", message: "Use at most 10 buttons." };
+  }
+  const built: Record<string, unknown>[] = [];
+  for (const [index, draft] of buttons.entries()) {
+    const type = draft.type.trim().toUpperCase();
+    const text = draft.text.trim();
+    const field = "button" + String(index + 1);
+    if (!(WHATSAPP_TEMPLATE_BUTTON_TYPES as readonly string[]).includes(type)) {
+      return { ok: false, field, message: "Choose a supported button type." };
+    }
+    if (text.length < 1 || text.length > 25) {
+      return { ok: false, field, message: "Button text must be 1–25 characters." };
+    }
+    if (type === "QUICK_REPLY") {
+      built.push({ type, text });
+      continue;
+    }
+    if (type === "URL") {
+      const url = (draft.url ?? "").trim();
+      if (!/^https:\/\/[^\s{}]{4,1990}$/.test(url)) {
+        return { ok: false, field, message: "Use a static https:// URL for this button." };
+      }
+      built.push({ type, text, url });
+      continue;
+    }
+    if (type === "PHONE_NUMBER") {
+      const phoneNumber = (draft.phoneNumber ?? "").trim();
+      if (!/^\+[1-9]\d{1,14}$/.test(phoneNumber)) {
+        return { ok: false, field, message: "Use an E.164 phone number such as +919876543210." };
+      }
+      built.push({ type, text, phone_number: phoneNumber });
+      continue;
+    }
+    const flowId = (draft.flowId ?? "").trim();
+    const navigateScreen = (draft.navigateScreen ?? "").trim();
+    if (
+      flowId.length < 1 ||
+      flowId.length > 128 ||
+      navigateScreen.length < 1 ||
+      navigateScreen.length > 128
+    ) {
+      return { ok: false, field, message: "Flow ID and destination screen are required." };
+    }
+    built.push({
+      type: "FLOW",
+      text,
+      flow_id: flowId,
+      navigate_screen: navigateScreen,
+      flow_action: "navigate",
+    });
+  }
+  return { ok: true, buttons: built };
+}
+
 /**
- * Turn a Studio form into an official Meta create-template body. POSITIONAL
- * placeholders only, with the examples Meta requires for review. The SQL
- * `whatsapp_template_submission_problem` re-validates the structure.
+ * Build the official create-template component shape.
+ * providerReady=false is the P3 local-draft lane. IMAGE/VIDEO/DOCUMENT headers
+ * may be saved before Meta supplies an upload handle. Provider submission calls
+ * this with providerReady=true, which requires that handle.
  */
 export function buildWhatsappTemplateStudioSubmission(
-  draft: WhatsappTemplateStudioDraft
+  draft: WhatsappTemplateStudioDraft,
+  options: { readonly providerReady?: boolean } = {}
 ): WhatsappTemplateStudioDraftResult {
   const fail = (field: string, message: string) => ({ ok: false, field, message }) as const;
   const name = draft.name.trim();
   const language = draft.language.trim();
   const category = draft.category.trim().toUpperCase();
+  const headerTypeRaw = (
+    draft.headerType ?? (draft.headerText.trim() ? "TEXT" : "NONE")
+  ).trim().toUpperCase();
+  const headerType = (WHATSAPP_TEMPLATE_HEADER_TYPES as readonly string[]).includes(headerTypeRaw)
+    ? (headerTypeRaw as WhatsappTemplateHeaderType)
+    : null;
   const headerText = draft.headerText.trim();
   const bodyText = draft.bodyText.trim();
   const footerText = draft.footerText.trim();
@@ -321,15 +496,15 @@ export function buildWhatsappTemplateStudioSubmission(
   if (!(WHATSAPP_TEMPLATE_STUDIO_CATEGORIES as readonly string[]).includes(category)) {
     return fail("category", "Only UTILITY and MARKETING templates can be created here.");
   }
+  if (!headerType) return fail("headerType", "Choose a supported header type.");
   if (bodyText.length < 1 || bodyText.length > 1024) {
     return fail("bodyText", "Body text is required (max 1024 characters).");
   }
-  if (headerText.length > 60) return fail("headerText", "Header text is at most 60 characters.");
   if (footerText.length > 60) return fail("footerText", "Footer text is at most 60 characters.");
   if (footerText.includes("{{")) return fail("footerText", "The footer cannot contain variables.");
 
   const bodyKeys = placeholderKeys(bodyText);
-  const headerKeys = placeholderKeys(headerText);
+  const headerKeys = headerType === "TEXT" ? placeholderKeys(headerText) : [];
   for (const [field, keys] of [
     ["bodyText", bodyKeys],
     ["headerText", headerKeys],
@@ -347,27 +522,61 @@ export function buildWhatsappTemplateStudioSubmission(
   const examples = draft.bodyExamples.map((value) => value.trim());
   const orderedBody = [...bodyKeys].sort((a, b) => Number(a) - Number(b));
   if (orderedBody.some((_, index) => !examples[index])) {
-    return fail("bodyExamples", "Meta requires an example value for every body variable.");
+    return fail("bodyExamples", "An example value is required for every body variable.");
   }
-  if (headerKeys.length === 1 && !draft.headerExample.trim()) {
-    return fail("headerExample", "Meta requires an example value for the header variable.");
+
+  if (headerType === "TEXT") {
+    if (headerText.length < 1 || headerText.length > 60) {
+      return fail("headerText", "Text headers must be 1–60 characters.");
+    }
+    if (headerKeys.length === 1 && !draft.headerExample.trim()) {
+      return fail("headerExample", "An example value is required for the header variable.");
+    }
+  } else if (headerText) {
+    return fail("headerText", "Only a TEXT header can contain header text.");
   }
 
   const components: Record<string, unknown>[] = [];
-  if (headerText) {
+  if (headerType === "TEXT") {
     components.push({
       type: "HEADER",
       format: "TEXT",
       text: headerText,
-      ...(headerKeys.length === 1 ? { example: { header_text: [draft.headerExample.trim()] } } : {}),
+      ...(headerKeys.length === 1
+        ? { example: { header_text: [draft.headerExample.trim()] } }
+        : {}),
     });
+  } else if (["IMAGE", "VIDEO", "DOCUMENT"].includes(headerType)) {
+    const handle = (draft.headerMediaHandle ?? "").trim();
+    if (options.providerReady && !handle) {
+      return fail(
+        "headerMediaHandle",
+        "Meta media headers need a sample upload handle before submission."
+      );
+    }
+    components.push({
+      type: "HEADER",
+      format: headerType,
+      ...(handle ? { example: { header_handle: [handle] } } : {}),
+    });
+  } else if (headerType === "LOCATION") {
+    components.push({ type: "HEADER", format: "LOCATION" });
   }
+
   components.push({
     type: "BODY",
     text: bodyText,
-    ...(orderedBody.length > 0 ? { example: { body_text: [examples.slice(0, orderedBody.length)] } } : {}),
+    ...(orderedBody.length > 0
+      ? { example: { body_text: [examples.slice(0, orderedBody.length)] } }
+      : {}),
   });
   if (footerText) components.push({ type: "FOOTER", text: footerText });
+
+  const buttons = validateStudioButtons(draft.buttons ?? []);
+  if (!buttons.ok) return fail(buttons.field, buttons.message);
+  if (buttons.buttons.length > 0) {
+    components.push({ type: "BUTTONS", buttons: buttons.buttons });
+  }
 
   return {
     ok: true,
@@ -381,7 +590,6 @@ export function buildWhatsappTemplateStudioSubmission(
   };
 }
 
-/** Numbered body placeholders in a draft, for rendering one example input each. */
 export function countWhatsappTemplateBodyPlaceholders(bodyText: string): number {
   return placeholderKeys(bodyText).length;
 }

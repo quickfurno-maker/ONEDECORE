@@ -40,6 +40,20 @@ export type WhatsappProviderDispatchRequest = {
   readonly customerE164: string;
   readonly bodyText: string;
   readonly providerAttemptKey: string;
+  /** Provider wamid of the message being quoted, when this is a reply. */
+  readonly replyToProviderMessageId?: string | null;
+};
+
+export type WhatsappProviderMediaDispatchRequest = {
+  readonly phoneNumberId: string;
+  readonly customerE164: string;
+  readonly mediaKind: "image" | "document" | "video";
+  readonly bytes: Uint8Array;
+  readonly mimeType: string;
+  readonly fileName: string;
+  readonly caption: string;
+  readonly providerAttemptKey: string;
+  readonly replyToProviderMessageId?: string | null;
 };
 
 export type WhatsappProviderDispatchSuccess = {

@@ -1,12 +1,17 @@
 "use server";
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
   isWhatsappMarketingPreferenceCategory,
+  WHATSAPP_MARKETING_CONSENT_CHANNELS,
+  WHATSAPP_MARKETING_CONSENT_INSTRUCTION_SOURCES,
   WHATSAPP_OPT_OUT_SOURCES,
   WHATSAPP_PREFERENCE_SOURCE,
+  WHATSAPP_STAFF_MARKETING_CONSENT_COPY_VERSION,
+  WHATSAPP_STAFF_MARKETING_CONSENT_NOTICE_VERSION,
 } from "../contracts/contacts-compliance.ts";
 import {
   describeWhatsappControlPlaneRpcError,
@@ -24,9 +29,12 @@ import { canCurrentUserAccessConversation } from "./whatsapp-inbox-queries.ts";
  *   - an opt-out appends a MARKETING `withdrawn` consent event;
  *   - a preference event narrows which marketing categories apply.
  *
- * Neither can grant MARKETING consent, and neither touches WHATSAPP_SERVICE.
- * Every action re-checks permission here, then the SECURITY DEFINER RPC checks
- * it again from `auth.uid()`; the caller's session is the only client.
+ * Opt-out and preference actions only narrow eligibility. P5 additionally
+ * exposes an evidence-backed MARKETING grant recorder for a customer instruction
+ * that already happened; it cannot infer consent from service activity and never
+ * touches WHATSAPP_SERVICE. Every action re-checks permission here, then the
+ * SECURITY DEFINER RPC checks it again from `auth.uid()`; the caller's session
+ * is the only client.
  */
 
 const DENIED: WhatsappControlPlaneActionState = {
@@ -83,6 +91,73 @@ export async function recordWhatsappMarketingOptOutAction(
       outcome === "already_withdrawn"
         ? "This contact had already opted out of marketing. Nothing changed."
         : "Marketing opt-out recorded. Campaigns will skip this contact.",
+  };
+}
+
+export async function recordWhatsappMarketingConsentGrantAction(
+  _previous: WhatsappControlPlaneActionState,
+  formData: FormData
+): Promise<WhatsappControlPlaneActionState> {
+  const contactId = String(formData.get("contactId") ?? "").trim();
+  const channel = String(formData.get("channel") ?? "").trim();
+  const instructionSource = String(formData.get("instructionSource") ?? "").trim();
+  const note = String(formData.get("note") ?? "").replace(/\s+/g, " ").trim();
+  const confirmed = formData.get("confirmExplicit") === "yes";
+
+  if (!isUuid(contactId)) {
+    return { success: false, code: "VALIDATION", message: "Unknown contact." };
+  }
+  if (!(WHATSAPP_MARKETING_CONSENT_CHANNELS as readonly string[]).includes(channel)) {
+    return { success: false, code: "VALIDATION", field: "channel", message: "Choose how the customer gave permission." };
+  }
+  if (!(WHATSAPP_MARKETING_CONSENT_INSTRUCTION_SOURCES as readonly string[]).includes(instructionSource)) {
+    return { success: false, code: "VALIDATION", field: "instructionSource", message: "Choose the source of the customer instruction." };
+  }
+  if (!confirmed) {
+    return {
+      success: false,
+      code: "VALIDATION",
+      field: "confirmExplicit",
+      message: "Confirm that the customer explicitly opted in to optional marketing.",
+    };
+  }
+  if (note.length < 8 || note.length > 500) {
+    return {
+      success: false,
+      code: "VALIDATION",
+      field: "note",
+      message: "Record 8–500 characters of evidence, without adding unnecessary personal data.",
+    };
+  }
+
+  const access = await resolveWhatsappControlPlaneAccess();
+  if (!access?.permissions["whatsapp.contacts.read"] || !access.permissions["marketing_consents.manage"]) {
+    return {
+      success: false,
+      code: "ACCESS_DENIED",
+      message: "You do not have permission to record marketing consent.",
+    };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("record_marketing_consent_event", {
+    p_contact_id: contactId,
+    p_event_type: "granted",
+    p_channel: channel,
+    p_copy_version: WHATSAPP_STAFF_MARKETING_CONSENT_COPY_VERSION,
+    p_notice_version: WHATSAPP_STAFF_MARKETING_CONSENT_NOTICE_VERSION,
+    p_instruction_source: instructionSource,
+    p_note: note,
+    p_idempotency_key: randomUUID(),
+  });
+  if (error) {
+    return { success: false, ...describeWhatsappControlPlaneRpcError(error, "consent") };
+  }
+
+  revalidatePath(WHATSAPP_ADMIN_CONTACTS_PATH);
+  return {
+    success: true,
+    message: "Explicit MARKETING consent evidence recorded. No message was sent and all campaign safeguards still apply.",
   };
 }
 

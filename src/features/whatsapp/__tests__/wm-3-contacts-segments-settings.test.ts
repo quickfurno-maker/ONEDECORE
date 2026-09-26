@@ -5,8 +5,9 @@
  * owned by supabase/migrations/20260914100000_whatsapp_contacts_consent_segments_policy.sql.
  * This suite proves the application half builds directly against it: the
  * contracts mirror its allowlists, the pages and actions gate on its exact
- * permissions through the caller's session, nothing here can grant MARKETING
- * consent, and the deterministic inbound STOP integration is untouched.
+ * permissions through the caller's session, and P5 records MARKETING grants
+ * only as explicit customer evidence. The deterministic inbound STOP
+ * integration is untouched.
  */
 
 import assert from "node:assert/strict";
@@ -459,14 +460,32 @@ describe("Runtime boundaries", () => {
     assert.match(settings, /canManage \? \(\s*<SendPolicyForm/);
   });
 
-  test("MARKETING consent is independent: nothing here grants consent or reads service consent as marketing", () => {
+  test("MARKETING consent stays independent; P5 grant recording requires explicit customer evidence", () => {
     for (const rel of [...SERVER_MODULES, ...Object.values(PAGES), ...COMPONENTS]) {
       const src = code(read(rel));
       assert.doesNotMatch(src, /WHATSAPP_SERVICE|SERVICE_COMMUNICATION/, rel);
       assert.doesNotMatch(src, /from\("consent_events"\)/, rel);
-      assert.doesNotMatch(src, /record_marketing_consent|grant_marketing_consent/, rel);
     }
-    // The opt-out RPC only ever writes `withdrawn`.
+
+    const action = code(read("src/features/whatsapp/server/whatsapp-contacts-actions.ts"));
+    assert.match(action, /permissions\["marketing_consents\.manage"\]/);
+    assert.match(action, /confirmExplicit/);
+    assert.match(action, /record_marketing_consent_event/);
+    assert.match(action, /p_event_type:\s*"granted"/);
+    assert.match(action, /p_idempotency_key:\s*randomUUID\(\)/);
+    assert.match(action, /customer explicitly opted in to optional marketing/i);
+
+    const form = code(read("src/features/whatsapp/components/control-plane/ContactComplianceForms.tsx"));
+    assert.match(form, /Record explicit marketing consent/);
+    assert.match(form, /customer explicitly opted in/i);
+    assert.match(form, /not inferring consent from service activity/i);
+
+    for (const rel of [...SERVER_MODULES, ...Object.values(PAGES), ...COMPONENTS]) {
+      if (rel.endsWith("whatsapp-contacts-actions.ts") || rel.endsWith("ContactComplianceForms.tsx")) continue;
+      assert.doesNotMatch(code(read(rel)), /record_marketing_consent_event|recordWhatsappMarketingConsentGrantAction/, rel);
+    }
+
+    // The opt-out RPC remains narrowing only.
     const optOut = migration.slice(migration.indexOf("function public.record_whatsapp_customer_opt_out"));
     const body = optOut.slice(0, optOut.indexOf("end;$$"));
     assert.match(body, /'MARKETING','whatsapp','withdrawn'/);

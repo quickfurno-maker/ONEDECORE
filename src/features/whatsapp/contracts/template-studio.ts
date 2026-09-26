@@ -89,6 +89,7 @@ export const WHATSAPP_TEMPLATE_REGISTRY_CATEGORY_FILTERS = [
 export type WhatsappTemplateRegistryQuery = {
   readonly status: (typeof WHATSAPP_TEMPLATE_REGISTRY_STATUS_FILTERS)[number] | null;
   readonly category: (typeof WHATSAPP_TEMPLATE_REGISTRY_CATEGORY_FILTERS)[number] | null;
+  readonly language: string | null;
   readonly q: string | null;
   readonly page: number;
   readonly pageSize: number;
@@ -103,6 +104,7 @@ export function parseWhatsappTemplateRegistryQuery(
 ): WhatsappTemplateRegistryQuery {
   const status = first(params.status);
   const category = first(params.category);
+  const languageRaw = first(params.language)?.trim() ?? "";
   const q = first(params.q)?.trim().slice(0, 128) ?? "";
   const page = Number.parseInt(first(params.page) ?? "1", 10);
   return {
@@ -111,6 +113,9 @@ export function parseWhatsappTemplateRegistryQuery(
       : null,
     category: (WHATSAPP_TEMPLATE_REGISTRY_CATEGORY_FILTERS as readonly string[]).includes(category ?? "")
       ? (category as WhatsappTemplateRegistryQuery["category"])
+      : null,
+    language: /^[A-Za-z]{2,3}([_-][A-Za-z0-9]{2,8})?$/.test(languageRaw)
+      ? languageRaw.slice(0, 32)
       : null,
     q: q.length > 0 ? q : null,
     page: Number.isInteger(page) && page >= 1 && page <= 10000 ? page : 1,
@@ -237,6 +242,8 @@ export type WhatsappTemplateStudioActionState = {
   readonly message: string;
   readonly code?: string;
   readonly field?: string;
+  readonly draftId?: string;
+  readonly lockVersion?: number;
 };
 
 export const INITIAL_WHATSAPP_TEMPLATE_STUDIO_ACTION_STATE: WhatsappTemplateStudioActionState = {

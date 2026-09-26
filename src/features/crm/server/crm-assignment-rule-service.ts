@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CrmAccessContext } from "../contracts/crm-access.ts";
 import type {
   CreateLeadAssignmentRuleInput,
+  CrmAutoAssignmentSetting,
   LeadAssignmentRuleSummary,
   UpdateLeadAssignmentRuleInput,
 } from "../contracts/assignment-rule-contracts.ts";
@@ -14,6 +15,15 @@ import {
 import { getCrmAccessContext } from "./crm-auth.ts";
 import { resolveCrmDb, type CrmDb } from "./crm-db.ts";
 import { CrmError, crmErrorFromPostgresMessage } from "./crm-errors.ts";
+
+interface AutoAssignmentSettingRow {
+  readonly enabled: boolean;
+  readonly can_manage: boolean;
+  readonly enabled_by: string | null;
+  readonly enabled_at: string | null;
+  readonly updated_by: string | null;
+  readonly updated_at: string;
+}
 
 interface AssignmentRuleRow {
   readonly id: string;
@@ -28,6 +38,19 @@ interface AssignmentRuleRow {
   readonly updated_at: string;
   readonly lead_sources?: { display_name: string | null } | null;
   readonly profiles?: { display_name: string | null } | null;
+}
+
+function mapAutoAssignmentSetting(
+  row: AutoAssignmentSettingRow
+): CrmAutoAssignmentSetting {
+  return {
+    enabled: row.enabled,
+    canManage: row.can_manage,
+    enabledBy: row.enabled_by,
+    enabledAt: row.enabled_at,
+    updatedBy: row.updated_by,
+    updatedAt: row.updated_at,
+  };
 }
 
 function mapAssignmentRule(row: AssignmentRuleRow): LeadAssignmentRuleSummary {
@@ -240,12 +263,88 @@ export async function setLeadAssignmentRuleActiveForContext(
 }
 
 
+export async function fetchCrmAutoAssignmentSettingForContext(
+  context: CrmAccessContext,
+  db?: CrmDb
+): Promise<CrmAutoAssignmentSetting> {
+  assertAssignmentRulePermission(context);
+
+  const supabase = await phase5dClient(db);
+  const { data, error } = await supabase.rpc("get_crm_auto_assignment_setting");
+
+  if (error) {
+    throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+  }
+
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | AutoAssignmentSettingRow
+    | null;
+  if (!row) {
+    throw new CrmError({
+      code: "RPC_FAILED",
+      message: "Auto-assignment setting could not be loaded.",
+      httpStatus: 500,
+    });
+  }
+
+  return mapAutoAssignmentSetting(row);
+}
+
+export async function setCrmAutoAssignmentEnabledForContext(
+  context: CrmAccessContext,
+  enabled: boolean,
+  db?: CrmDb
+): Promise<CrmAutoAssignmentSetting> {
+  assertAssignmentRulePermission(context);
+
+  const supabase = await phase5dClient(db);
+  const { data, error } = await supabase.rpc(
+    "set_crm_auto_assignment_enabled",
+    {
+      p_enabled: enabled,
+      p_reason: "Changed from CRM assignment settings",
+    }
+  );
+
+  if (error) {
+    throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+  }
+
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | AutoAssignmentSettingRow
+    | null;
+  if (!row) {
+    throw new CrmError({
+      code: "RPC_FAILED",
+      message: "Auto-assignment setting could not be updated.",
+      httpStatus: 500,
+    });
+  }
+
+  return mapAutoAssignmentSetting(row);
+}
+
 /* ---- browser wrappers: cookie context, cookie client, unchanged ---------- */
 
 export async function fetchLeadAssignmentRulesForCurrentUser(): Promise<
   readonly LeadAssignmentRuleSummary[]
 > {
   return fetchLeadAssignmentRulesForContext(await requireAssignmentRuleContext());
+}
+
+export async function fetchCrmAutoAssignmentSettingForCurrentUser(): Promise<CrmAutoAssignmentSetting> {
+  return fetchCrmAutoAssignmentSettingForContext(
+    await requireAssignmentRuleContext()
+  );
+}
+
+export async function setCrmAutoAssignmentEnabledForCurrentUser(
+  enabled: boolean
+): Promise<CrmAutoAssignmentSetting> {
+  return setCrmAutoAssignmentEnabledForContext(
+    await requireAssignmentRuleContext(),
+    enabled
+  );
 }
 
 export async function createLeadAssignmentRuleForCurrentUser(

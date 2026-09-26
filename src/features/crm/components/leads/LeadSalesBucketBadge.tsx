@@ -21,9 +21,6 @@ const BUCKET_STYLES: Readonly<Record<CrmLeadSalesBucket, string>> = {
   WARM: "border-[var(--crm-warning)]/35 bg-[var(--crm-warning-soft)] text-[var(--crm-warning)]",
   COLD: "border-[var(--crm-border-strong)] bg-[var(--crm-surface-subtle)] text-[var(--crm-muted)]",
   LOST: "border-[var(--crm-danger)]/25 bg-[var(--crm-surface-subtle)] text-[var(--crm-danger)]",
-  WON: "border-[var(--crm-success)]/30 bg-[var(--crm-success-soft)] text-[var(--crm-success)]",
-  ON_HOLD:
-    "border-[var(--crm-border-strong)] bg-[var(--crm-surface-subtle)] text-[var(--crm-text-secondary)]",
 };
 
 interface LeadSalesBucketBadgeProps {

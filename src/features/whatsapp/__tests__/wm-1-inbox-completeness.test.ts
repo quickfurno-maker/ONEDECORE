@@ -476,7 +476,7 @@ describe("WM-1 stays inside its scope", () => {
       assert.doesNotMatch(file, /inbox|read-state|staff-state|attention/i, file);
     }
     const port = code(read("src/features/whatsapp/server/whatsapp-provider-adapter.ts"));
-    assert.doesNotMatch(port, /dispatchTemplateMessage|dispatchMediaMessage/);
+    assert.doesNotMatch(port, /dispatchTemplateMessage/);
   });
 
   test("the migration adds no template, marketing, media or permission work", () => {

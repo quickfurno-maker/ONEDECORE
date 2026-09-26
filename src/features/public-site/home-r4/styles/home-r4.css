@@ -5095,3 +5095,22 @@
     transition: none;
   }
 }
+
+[data-public-home-r4] .od-lead .pm-consent--optional {
+  margin-top: 10px;
+  background: color-mix(in srgb, var(--pm-accent, #c9a962) 5%, transparent);
+}
+
+[data-public-home-r4] .od-lead .pm-consent strong {
+  display: block;
+  color: var(--pm-ink, #fff9f0);
+  font-weight: 650;
+}
+
+[data-public-home-r4] .od-lead .pm-consent__detail {
+  display: block;
+  margin-top: 3px;
+  color: var(--pm-stone, #aaa39a);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}

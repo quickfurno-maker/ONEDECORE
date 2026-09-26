@@ -9,10 +9,12 @@ import type { CrmAssigneeDirectoryEntry } from "@/features/crm/contracts/lead-de
 import type { CrmLeadSourceOption } from "@/features/crm/contracts/lead-detail-dtos.ts";
 import type {
   AssignmentRuleActionState,
+  CrmAutoAssignmentSetting,
   LeadAssignmentRuleSummary,
 } from "@/features/crm/contracts/assignment-rule-contracts.ts";
 import {
   createLeadAssignmentRuleAction,
+  setCrmAutoAssignmentEnabledAction,
   setLeadAssignmentRuleActiveAction,
 } from "@/features/crm/server/crm-assignment-rule-actions.ts";
 
@@ -25,12 +27,14 @@ interface AssignmentRulesPanelProps {
   readonly rules: readonly LeadAssignmentRuleSummary[];
   readonly sources: readonly CrmLeadSourceOption[];
   readonly assignees: readonly CrmAssigneeDirectoryEntry[];
+  readonly autoAssignment: CrmAutoAssignmentSetting;
 }
 
 export function AssignmentRulesPanel({
   rules,
   sources,
   assignees,
+  autoAssignment,
 }: AssignmentRulesPanelProps) {
   const [createState, createAction, createPending] = useActionState(
     createLeadAssignmentRuleAction,
@@ -40,16 +44,97 @@ export function AssignmentRulesPanel({
     setLeadAssignmentRuleActiveAction,
     INITIAL_STATE
   );
+  const [autoState, autoAction, autoPending] = useActionState(
+    setCrmAutoAssignmentEnabledAction,
+    INITIAL_STATE
+  );
 
-  const message = createState.message || toggleState.message;
+  const message =
+    autoState.message || createState.message || toggleState.message;
+  const hasEligibleSetup =
+    assignees.length > 0 && rules.some((rule) => rule.isActive);
 
   return (
     <div className="space-y-6">
+      <section className="crm-panel p-5 sm:p-6" aria-labelledby="auto-assignment-title">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2
+                id="auto-assignment-title"
+                className="text-base font-semibold text-[var(--crm-text)]"
+              >
+                Auto Assignment
+              </h2>
+              <span
+                className={`crm-badge ${
+                  autoAssignment.enabled
+                    ? "crm-badge-success"
+                    : "crm-badge-neutral"
+                }`}
+              >
+                {autoAssignment.enabled ? "ON" : "OFF"}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-[var(--crm-muted)]">
+              When ON, future website leads are matched against the active rules
+              below and assigned automatically. Existing leads are never changed
+              by this switch.
+            </p>
+            <p className="mt-1 text-xs text-[var(--crm-muted)]">
+              Unmatched leads stay unassigned for manual review. Assignment also
+              creates the governed First Contact task when SLA applies.
+            </p>
+          </div>
+
+          <div className="shrink-0">
+            {autoAssignment.canManage ? (
+              <form action={autoAction}>
+                <input
+                  type="hidden"
+                  name="enabled"
+                  value={autoAssignment.enabled ? "false" : "true"}
+                />
+                <button
+                  type="submit"
+                  disabled={
+                    autoPending ||
+                    (!autoAssignment.enabled && !hasEligibleSetup)
+                  }
+                  className={
+                    autoAssignment.enabled
+                      ? "crm-btn crm-btn-secondary"
+                      : "crm-btn crm-btn-primary"
+                  }
+                >
+                  {autoPending
+                    ? "Saving…"
+                    : autoAssignment.enabled
+                      ? "Turn Auto Assignment OFF"
+                      : "Turn Auto Assignment ON"}
+                </button>
+              </form>
+            ) : (
+              <span className="crm-badge crm-badge-neutral">
+                Super Admin control
+              </span>
+            )}
+          </div>
+        </div>
+
+        {!autoAssignment.enabled && !hasEligibleSetup ? (
+          <div className="crm-inline-alert crm-inline-alert-warning mt-4">
+            Add at least one active assignment rule with an eligible Sales
+            Executive before turning Auto Assignment on.
+          </div>
+        ) : null}
+      </section>
+
       <form
         action={createAction}
-        className="grid gap-4 rounded-xl border border-neutral-800 bg-neutral-950/60 p-6 md:grid-cols-2"
+        className="crm-panel grid gap-4 p-5 sm:p-6 md:grid-cols-2"
       >
-        <h2 className="md:col-span-2 text-lg font-semibold text-neutral-50">
+        <h2 className="md:col-span-2 text-lg font-semibold text-[var(--crm-text)]">
           Create assignment rule
         </h2>
 
@@ -57,7 +142,7 @@ export function AssignmentRulesPanel({
           <select
             name="sourceId"
             required
-            className="min-h-11 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+            className="crm-input"
           >
             <option value="">Select source</option>
             {sources.map((source) => (
@@ -72,7 +157,7 @@ export function AssignmentRulesPanel({
           <select
             name="targetUserId"
             required
-            className="min-h-11 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+            className="crm-input"
           >
             <option value="">Select assignee</option>
             {assignees.map((assignee) => (
@@ -89,14 +174,14 @@ export function AssignmentRulesPanel({
             type="number"
             min={1}
             required
-            className="min-h-11 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+            className="crm-input"
           />
         </Field>
 
         <Field label="Service (optional)">
           <select
             name="serviceCode"
-            className="min-h-11 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+            className="crm-input"
           >
             <option value="">Any service</option>
             {LEAD_SERVICE_CODES.map((code) => (
@@ -110,14 +195,14 @@ export function AssignmentRulesPanel({
         <Field label="Locality (optional)">
           <input
             name="locality"
-            className="min-h-11 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+            className="crm-input"
           />
         </Field>
 
         <Field label="Budget (optional)">
           <select
             name="budgetComfortCode"
-            className="min-h-11 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+            className="crm-input"
           >
             <option value="">Any budget</option>
             {LEAD_BUDGET_COMFORT_CODES.map((code) => (
@@ -132,7 +217,7 @@ export function AssignmentRulesPanel({
           <button
             type="submit"
             disabled={createPending}
-            className="inline-flex min-h-11 items-center rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950"
+            className="crm-btn crm-btn-primary"
           >
             {createPending ? "Creating…" : "Create rule"}
           </button>
@@ -140,14 +225,14 @@ export function AssignmentRulesPanel({
       </form>
 
       {message ? (
-        <p className="text-sm text-neutral-300" role="status">
+        <p className="text-sm text-[var(--crm-muted)]" role="status">
           {message}
         </p>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-neutral-800">
+      <div className="crm-panel overflow-hidden">
         <table className="min-w-full text-sm">
-          <thead className="bg-neutral-950/80 text-left text-neutral-400">
+          <thead className="bg-[var(--crm-surface-muted)] text-left text-[var(--crm-muted)]">
             <tr>
               <th className="px-4 py-3">Source</th>
               <th className="px-4 py-3">Assignee</th>
@@ -157,34 +242,34 @@ export function AssignmentRulesPanel({
               <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-900">
+          <tbody className="divide-y divide-[var(--crm-border)]">
             {rules.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-neutral-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-[var(--crm-muted)]">
                   No assignment rules configured yet.
                 </td>
               </tr>
             ) : (
               rules.map((rule) => (
                 <tr key={rule.id}>
-                  <td className="px-4 py-3 text-neutral-100">
+                  <td className="px-4 py-3 text-[var(--crm-text)]">
                     {rule.sourceDisplayName ?? rule.sourceId}
                   </td>
-                  <td className="px-4 py-3 text-neutral-300">
+                  <td className="px-4 py-3 text-[var(--crm-text-secondary)]">
                     {rule.targetDisplayName ?? rule.targetUserId}
                   </td>
-                  <td className="px-4 py-3 text-neutral-400">
+                  <td className="px-4 py-3 text-[var(--crm-muted)]">
                     {[rule.serviceCode, rule.localityNormalized, rule.budgetComfortCode]
                       .filter(Boolean)
                       .join(" · ") || "Source only"}
                   </td>
-                  <td className="px-4 py-3 text-neutral-300">{rule.priority}</td>
+                  <td className="px-4 py-3 text-[var(--crm-text-secondary)]">{rule.priority}</td>
                   <td className="px-4 py-3">
                     <span
-                      className={`rounded-full px-2 py-1 text-xs ${
+                      className={`crm-badge ${
                         rule.isActive
-                          ? "bg-emerald-500/15 text-emerald-300"
-                          : "bg-neutral-800 text-neutral-400"
+                          ? "crm-badge-success"
+                          : "crm-badge-neutral"
                       }`}
                     >
                       {rule.isActive ? "Active" : "Disabled"}
@@ -201,7 +286,7 @@ export function AssignmentRulesPanel({
                       <button
                         type="submit"
                         disabled={togglePending}
-                        className="text-sm text-amber-300 hover:underline"
+                        className="text-sm font-medium text-[var(--crm-primary)] hover:underline"
                       >
                         {rule.isActive ? "Disable" : "Enable"}
                       </button>
@@ -225,8 +310,8 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <label className="block space-y-2 text-sm text-neutral-300">
-      <span className="font-medium text-neutral-200">{label}</span>
+    <label className="block space-y-2 text-sm text-[var(--crm-muted)]">
+      <span className="font-medium text-[var(--crm-text)]">{label}</span>
       {children}
     </label>
   );

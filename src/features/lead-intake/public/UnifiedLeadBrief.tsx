@@ -62,6 +62,7 @@ import {
 } from "../../public-site/home-r4/PlanContext";
 import { collectLeadFormAttribution } from "./lead-form-attribution.ts";
 import {
+  getWhatsappServiceConsentCopy,
   LEAD_FORM_FIELD_LIMITS,
   LEAD_FORM_HONEYPOT_FIELD,
   LEAD_FORM_PRIVACY_PATH,
@@ -196,6 +197,7 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
   const [name, setName] = useState(plan.name);
   const [mobile, setMobile] = useState(plan.mobile);
   const [consent, setConsent] = useState(false);
+  const [whatsappService, setWhatsappService] = useState(false);
   const [honeypot, setHoneypot] = useState("");
   const [formStartedAt] = useState(() => new Date().toISOString());
   const [uxState, setUxState] = useState<LeadFormUxState>("idle");
@@ -396,6 +398,7 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
       name,
       mobile,
       consent,
+      whatsappService,
       attribution: collectLeadFormAttribution(),
       antiBot: { website: honeypot, formStartedAt },
       idempotencyKey: "00000000-0000-4000-8000-000000000000",
@@ -801,6 +804,21 @@ export function UnifiedLeadBrief({ onSubmitted }: UnifiedLeadBriefProps) {
           </span>
         </label>
         {errorText("consent")}
+
+        <label className="pm-consent pm-consent--optional">
+          <input
+            type="checkbox"
+            name="consentWhatsappService"
+            checked={whatsappService}
+            onChange={(event) => setWhatsappService(event.target.checked)}
+          />
+          <span>
+            <strong>Send updates about my enquiry on WhatsApp</strong>
+            <span className="pm-consent__detail">
+              {getWhatsappServiceConsentCopy()} Marketing messages require separate consent.
+            </span>
+          </span>
+        </label>
       </fieldset>
 
       <div className="pm-brief__honeypot" aria-hidden="true">
