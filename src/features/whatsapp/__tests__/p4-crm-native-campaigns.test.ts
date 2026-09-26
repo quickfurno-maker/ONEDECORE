@@ -9,7 +9,7 @@ import {
 
 const ROOT = process.cwd();
 const read = (path: string) => readFileSync(join(ROOT, path), "utf8").replace(/\r\n/g, "\n");
-const MIGRATION = "supabase/migrations/20260926063500_whatsapp_crm_native_campaign_filters.sql";
+const MIGRATION = "supabase/migrations/20260926090630_whatsapp_crm_native_campaign_filters.sql";
 const LAUNCHER = "src/features/whatsapp/components/campaigns/CrmCampaignLauncher.tsx";
 const PAGE = "src/app/admin/whatsapp/campaigns/page.tsx";
 const QUERIES = "src/features/whatsapp/server/whatsapp-crm-campaign-queries.ts";
