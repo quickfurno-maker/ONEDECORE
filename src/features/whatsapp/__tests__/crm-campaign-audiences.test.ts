@@ -82,7 +82,7 @@ describe("CRM-native WhatsApp campaign audiences", () => {
   });
 
   test("nurture migration extends preview and execution with project timeline", () => {
-    const sql = read("supabase/migrations/20260926170000_whatsapp_long_term_nurture.sql");
+    const sql = read("supabase/migrations/20260926133930_whatsapp_long_term_nurture.sql");
     assert.match(sql, /'project_timeline'/);
     assert.match(sql, /campaign_rule_group_matches_lead_v4/);
     assert.match(sql, /l\.timeline_code/);

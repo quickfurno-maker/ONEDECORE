@@ -164,7 +164,7 @@ describe("Live CRM truth is evaluated at due-time, then recipients are frozen fo
 describe("Rescheduling is narrow, audited and cannot mutate an active run", () => {
   test("forward migration keeps operator rules and scheduled-only movement", () => {
     const migration = read(
-      "supabase/migrations/20260926183000_whatsapp_campaign_scheduler.sql"
+      "supabase/migrations/20260926133946_whatsapp_campaign_scheduler.sql"
     );
     assert.match(migration, /reschedule_whatsapp_campaign_run/);
     assert.match(migration, /whatsapp\.campaigns\.execute/);
@@ -181,7 +181,7 @@ describe("Rescheduling is narrow, audited and cannot mutate an active run", () =
 
   test("recurrence is not silently activated in the initial scheduler release", () => {
     const migration = read(
-      "supabase/migrations/20260926183000_whatsapp_campaign_scheduler.sql"
+      "supabase/migrations/20260926133946_whatsapp_campaign_scheduler.sql"
     );
     const page = read("src/app/admin/whatsapp/scheduler/page.tsx");
     assert.doesNotMatch(migration, /rrule|recurrence|repeat_interval/i);
