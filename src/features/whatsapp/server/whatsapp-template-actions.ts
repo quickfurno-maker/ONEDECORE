@@ -3,7 +3,12 @@ import "server-only";
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { buildWhatsappTemplateStudioSubmission } from "../contracts/template-components.ts";
+import type { Json } from "@/types/database";
+import {
+  buildWhatsappTemplateStudioSubmission,
+  type WhatsappTemplateStudioButtonDraft,
+  type WhatsappTemplateStudioDraft,
+} from "../contracts/template-components.ts";
 import {
   describeWhatsappTemplateRefusal,
   type WhatsappTemplateSendActionState,
@@ -56,6 +61,151 @@ export async function syncWhatsappTemplatesAction(
   }
 }
 
+function readStudioButtons(formData: FormData): readonly WhatsappTemplateStudioButtonDraft[] {
+  const count = Math.min(Math.max(Number(formData.get("buttonCount") ?? 0) || 0, 0), 10);
+  return Array.from({ length: count }, (_, index) => {
+    const position = index + 1;
+    return {
+      type: String(formData.get(`buttonType${position}`) ?? ""),
+      text: String(formData.get(`buttonText${position}`) ?? ""),
+      url: String(formData.get(`buttonUrl${position}`) ?? ""),
+      phoneNumber: String(formData.get(`buttonPhone${position}`) ?? ""),
+      flowId: String(formData.get(`buttonFlowId${position}`) ?? ""),
+      navigateScreen: String(formData.get(`buttonScreen${position}`) ?? ""),
+    };
+  });
+}
+
+function readStudioDraft(formData: FormData): WhatsappTemplateStudioDraft {
+  const examples: string[] = [];
+  for (let index = 1; index <= 20; index += 1) {
+    const value = formData.get(`bodyExample${index}`);
+    if (value === null) break;
+    examples.push(String(value));
+  }
+  return {
+    name: String(formData.get("name") ?? ""),
+    language: String(formData.get("language") ?? ""),
+    category: String(formData.get("category") ?? ""),
+    headerType: String(formData.get("headerType") ?? "NONE"),
+    headerText: String(formData.get("headerText") ?? ""),
+    headerMediaHandle: String(formData.get("headerMediaHandle") ?? ""),
+    bodyText: String(formData.get("bodyText") ?? ""),
+    footerText: String(formData.get("footerText") ?? ""),
+    bodyExamples: examples,
+    headerExample: String(formData.get("headerExample") ?? ""),
+    buttons: readStudioButtons(formData),
+  };
+}
+
+function studioRpcError(message: string): WhatsappTemplateStudioActionState {
+  if (message.includes("draft_conflict_or_missing")) {
+    return {
+      success: false,
+      code: "CONFLICT",
+      message: "This draft changed in another session. Reload the draft before saving again.",
+    };
+  }
+  if (message.includes("duplicate key") || message.includes("uq_whatsapp_template_drafts_live_name_language")) {
+    return {
+      success: false,
+      code: "EXISTS",
+      field: "name",
+      message: "A live ONEDECORE draft already uses this name and language.",
+    };
+  }
+  const validation = /validation: components \(([a-z_]+)\)/.exec(message);
+  if (validation) {
+    return {
+      success: false,
+      code: "VALIDATION",
+      message: `Draft components are not valid: ${validation[1]!.replace(/_/g, " ")}.`,
+    };
+  }
+  if (message.includes("validation:")) {
+    return { success: false, code: "VALIDATION", message: "The draft is not valid." };
+  }
+  return { success: false, code: "RPC_FAILED", message: "The ONEDECORE draft could not be saved." };
+}
+
+export async function saveWhatsappTemplateDraftAction(
+  _previous: WhatsappTemplateStudioActionState,
+  formData: FormData
+): Promise<WhatsappTemplateStudioActionState> {
+  const denied = await requireManage();
+  if (denied) return denied;
+
+  const draft = buildWhatsappTemplateStudioSubmission(readStudioDraft(formData), {
+    providerReady: false,
+  });
+  if (!draft.ok) {
+    return { success: false, code: "VALIDATION", field: draft.field, message: draft.message };
+  }
+
+  const draftIdRaw = String(formData.get("draftId") ?? "").trim();
+  const lockVersionRaw = String(formData.get("lockVersion") ?? "").trim();
+  const workflowStatus = String(formData.get("workflowStatus") ?? "local_draft").trim();
+  if (draftIdRaw && !UUID.test(draftIdRaw)) {
+    return { success: false, code: "VALIDATION", message: "Unknown ONEDECORE draft." };
+  }
+  const lockVersion = lockVersionRaw ? Number(lockVersionRaw) : null;
+  if (draftIdRaw && (!Number.isInteger(lockVersion) || (lockVersion ?? 0) < 1)) {
+    return { success: false, code: "VALIDATION", message: "Reload this draft before saving." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("save_whatsapp_template_draft", {
+    p_name: draft.submission.name,
+    p_language: draft.submission.language,
+    p_category: draft.submission.category,
+    p_components: draft.submission.components as Json,
+    p_workflow_status: workflowStatus,
+    p_draft_id: draftIdRaw || undefined,
+    p_expected_lock_version: lockVersion ?? undefined,
+    p_source_preset_id: String(formData.get("sourcePresetId") ?? "").trim() || undefined,
+  });
+  if (error) return studioRpcError(error.message);
+
+  const result = data as { id?: unknown; lock_version?: unknown } | null;
+  if (typeof result?.id !== "string") {
+    return { success: false, code: "RPC_FAILED", message: "The saved draft could not be read back." };
+  }
+
+  revalidatePath(TEMPLATES_PATH);
+  return {
+    success: true,
+    message:
+      workflowStatus === "locally_reviewed"
+        ? "ONEDECORE draft marked locally reviewed. This is not Meta approval."
+        : "ONEDECORE draft saved locally. Nothing was submitted to Meta.",
+    draftId: result.id,
+    lockVersion: Number(result.lock_version) || undefined,
+  };
+}
+
+export async function archiveWhatsappTemplateDraftAction(
+  _previous: WhatsappTemplateStudioActionState,
+  formData: FormData
+): Promise<WhatsappTemplateStudioActionState> {
+  const denied = await requireManage();
+  if (denied) return denied;
+
+  const draftId = String(formData.get("draftId") ?? "").trim();
+  const lockVersion = Number(String(formData.get("lockVersion") ?? ""));
+  if (!UUID.test(draftId) || !Number.isInteger(lockVersion) || lockVersion < 1) {
+    return { success: false, code: "VALIDATION", message: "Reload this draft before archiving." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("archive_whatsapp_template_draft", {
+    p_draft_id: draftId,
+    p_expected_lock_version: lockVersion,
+  });
+  if (error) return studioRpcError(error.message);
+  revalidatePath(TEMPLATES_PATH);
+  return { success: true, message: "ONEDECORE draft archived." };
+}
+
 export async function submitWhatsappTemplateAction(
   _previous: WhatsappTemplateStudioActionState,
   formData: FormData
@@ -68,22 +218,8 @@ export async function submitWhatsappTemplateAction(
     return { success: false, code: "VALIDATION", message: "Missing request key. Reload and try again." };
   }
 
-  const examples: string[] = [];
-  for (let index = 1; index <= 20; index += 1) {
-    const value = formData.get(`bodyExample${index}`);
-    if (value === null) break;
-    examples.push(String(value));
-  }
-
-  const draft = buildWhatsappTemplateStudioSubmission({
-    name: String(formData.get("name") ?? ""),
-    language: String(formData.get("language") ?? ""),
-    category: String(formData.get("category") ?? ""),
-    headerText: String(formData.get("headerText") ?? ""),
-    bodyText: String(formData.get("bodyText") ?? ""),
-    footerText: String(formData.get("footerText") ?? ""),
-    bodyExamples: examples,
-    headerExample: String(formData.get("headerExample") ?? ""),
+  const draft = buildWhatsappTemplateStudioSubmission(readStudioDraft(formData), {
+    providerReady: true,
   });
   if (!draft.ok) {
     return { success: false, code: "VALIDATION", field: draft.field, message: draft.message };

@@ -52,6 +52,15 @@ export interface AssignmentRuleActionState {
   readonly fieldErrors?: Readonly<Record<string, string>>;
 }
 
+export interface CrmAutoAssignmentSetting {
+  readonly enabled: boolean;
+  readonly canManage: boolean;
+  readonly enabledBy: string | null;
+  readonly enabledAt: string | null;
+  readonly updatedBy: string | null;
+  readonly updatedAt: string;
+}
+
 export interface AssignmentRuleValidationError {
   readonly field: string;
   readonly message: string;

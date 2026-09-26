@@ -112,6 +112,13 @@ describe("Phase 9 P0 audience rule canonicalization", () => {
       "lead_stage",
       "service_interest",
       "locality",
+      "sales_temperature",
+      "lead_created_month",
+      "owner",
+      "budget",
+      "last_interaction_age",
+      "milestone",
+      "dormant_duration",
     ]);
   });
 });

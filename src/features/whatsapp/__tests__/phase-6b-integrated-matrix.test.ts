@@ -1,6 +1,8 @@
 /**
- * Phase 6B — integrated local matrix (repository schema M1–M21).
- * Complements pgTAP 13/14/15 with orchestration-level dispatch tests.
+ * Phase 6B — integrated local matrix.
+ * Complements pgTAP 13/14/15 with orchestration-level dispatch tests and
+ * protects the frozen historical migration ledger without assuming the
+ * repository can never gain a legitimate forward migration.
  */
 
 import assert from "node:assert/strict";
@@ -97,10 +99,42 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     const files = readdirSync(join(root, "supabase/migrations"))
       .filter((f) => f.endsWith(".sql"))
       .sort();
-    assert.equal(files.length, 89, "Migration count must be exactly 89 after the reviewed commerce closeout, website analytics, mobile owner push, and minimal manual-enquiry foundations");
+    const versions = files.map((file) => file.slice(0, 14));
+    assert.equal(
+      new Set(versions).size,
+      versions.length,
+      "Every migration version/timestamp must stay unique"
+    );
+    assert.ok(
+      files.length >= 89,
+      "The reviewed 89-migration baseline must never shrink; forward migrations are allowed"
+    );
     assert.ok(
       files.includes("20260919120000_commerce_checkout_policy_acceptance.sql"),
       "commerce checkout policy acceptance migration is present"
+    );
+
+    const requiredForwardMigrations = [
+      "20260925153724_crm_auto_assignment_control.sql",
+      "20260925161804_crm_whatsapp_workspace_integration.sql",
+      "20260925165103_whatsapp_reply_to_dispatch.sql",
+      "20260926040414_whatsapp_reply_to_dispatch.sql",
+      "20260926040425_whatsapp_outbound_media_intents.sql",
+      "20260926041623_whatsapp_inbox_message_origin.sql",
+      "20260926062255_whatsapp_template_local_drafts.sql",
+      "20260926063000_whatsapp_crm_campaign_audiences.sql",
+      "20260926063100_whatsapp_service_lead_acknowledgement.sql",
+      "20260926063500_whatsapp_crm_native_campaign_filters.sql",
+      "20260926064000_whatsapp_release_database_hardening.sql",
+    ] as const;
+    for (const migration of requiredForwardMigrations) {
+      assert.ok(files.includes(migration), `required forward migration is present: ${migration}`);
+    }
+
+    assert.equal(
+      sha256File("supabase/migrations/20260925165103_whatsapp_reply_to_dispatch.sql"),
+      sha256File("supabase/migrations/20260926040414_whatsapp_reply_to_dispatch.sql"),
+      "The two production reply-to ledger versions intentionally preserve the exact same idempotent SQL"
     );
 
     // Workforce V1 attendance lifecycle. Still no payment M38.
@@ -182,124 +216,13 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.equal(phase9d_d1.length, 1);
     assert.equal(phase9d_d1[0], "20260824140000_commerce_order_cod_checkout_foundation.sql");
 
-    const later = files.filter((f) => f > "20260824140000_commerce_order_cod_checkout_foundation.sql");
+    const baselineEnd = files.indexOf("20260921120000_manual_lead_minimal_intake.sql");
+    assert.ok(baselineEnd >= 0, "reviewed 89-migration baseline endpoint is present");
+    const forwardOnly = files.slice(baselineEnd + 1);
     assert.deepEqual(
-      later,
-      [
-        "20260825163000_lead_timeline_taxonomy_v2.sql",
-        "20260825170000_crm_lead_notes_insert_privilege_repair.sql",
-        "20260826120000_crm_activity_control_plane_foundation.sql",
-        "20260827140000_crm_business_sla_foundation.sql",
-        "20260828140000_crm_activity_rpc_workflows.sql",
-        "20260829120000_crm_my_day_read_model.sql",
-        "20260829140000_crm_assignment_first_contact_automation.sql",
-        "20260830140000_crm_cadence_playbook_foundation.sql",
-        "20260831140000_crm_lead_commercial_read_models.sql",
-        "20260831174021_crm_lead_notes_insert_privilege_redrift_repair.sql",
-        "20260901140000_crm_management_analytics_read_model.sql",
-        "20260902140000_crm_whatsapp_lead_link_repair.sql",
-        "20260902160000_workforce_attendance_v1_lifecycle.sql",
-        "20260902170000_workforce_salary_payment_ledger.sql",
-        "20260903120000_staff_optional_email_employment_identity.sql",
-        "20260903140000_attendance_policy_publish_weekly_off_optional.sql",
-        "20260903160000_staff_phone_login_credentials.sql",
-        "20260904140000_interior_room_wise_quotation.sql",
-        "20260904150000_crm_manual_sales_temperature.sql",
-        "20260904170000_workforce_p5_launch_catalogue.sql",
-        "20260905120000_public_consultation_qualifier.sql",
-        // The Sales Manager control plane hardening: RBAC only, no COD
-        // or payment surface of any kind.
-        "20260906120000_sales_manager_control_plane_hardening.sql",
-        // The Super Admin enquiry tombstone: CRM only, no COD or payment
-        // surface of any kind.
-        "20260906180000_crm_super_admin_lead_tombstone.sql",
-        // The single-step public consultation contract (public-consult-v2):
-        // lead intake only, no COD or payment surface of any kind.
-        "20260907130000_public_consultation_single_step_v2.sql",
-        // The premium requirement form contract (public-consult-v3):
-        // lead intake only, no COD or payment surface of any kind.
-        "20260907150000_public_requirement_form_v3.sql",
-        // The portfolio room taxonomy: public portfolio navigation only,
-        // no COD or payment surface of any kind.
-        "20260907170000_portfolio_room_category_taxonomy.sql",
-        // The unified public lead form contract (public-consult-v4):
-        // lead intake only, no COD or payment surface of any kind.
-        "20260908140000_public_unified_form_v4.sql",
-        // The many-to-many portfolio room taxonomy: public portfolio browsing
-        // only, no COD or payment surface of any kind.
-        "20260908150000_portfolio_project_categories.sql",
-        // Photo-level room browsing and the Hall -> Living Room correction:
-        // public portfolio browsing only, no COD or payment surface.
-        "20260908160000_portfolio_media_room_browse.sql",
-        // Revokes TRUNCATE/TRIGGER/REFERENCES from `authenticated` on the
-        // attendance, salary, leave, Kriti and staff tables that had inherited
-        // them from Supabase's default GRANT ALL. Removes privilege only:
-        // creates no table, no function and no COD or payment surface.
-        "20260909120000_revoke_authenticated_truncate_trigger.sql",
-        // Batches permission checks into one round trip by looping over the
-        // existing public.authorize. Adds one function, no table, and no COD
-        // or payment surface of any kind.
-        "20260910120000_authorize_many_batch_rpc.sql",
-        // Drops three plain indexes a UNIQUE constraint index already covered.
-        // Removes redundancy only: creates nothing and no COD or payment
-        // surface of any kind.
-        "20260910130000_drop_redundant_shadow_indexes.sql",
-        // Website Manager: homepage section order, visibility and promotional
-        // banners, with their own permission and a versioned draft/publish
-        // model. Public marketing content only — it creates no COD, order or
-        // payment surface of any kind.
-        "20260911120000_website_manager_cms.sql",
-        // Brings stored homepage configurations onto the redesigned section
-        // registry. Public marketing structure only; no COD or payment surface.
-        "20260912120000_homepage_section_registry_r5.sql",
-        // Makes portfolio_media.project_id nullable so room photography can
-        // exist without a project. Marketing media only; no COD or payment
-        // surface is touched.
-        "20260913120000_portfolio_standalone_room_media_library.sql",
-        // WM-1: tombstone-aware conversation READ predicate, per-staff internal
-        // read state, mark-read RPC and the attention read model. WhatsApp
-        // inbox only; no COD, order or payment surface of any kind.
-        "20260913130000_whatsapp_inbox_staff_state_attention.sql",
-        // WM-2: template registry sync metadata, append-only template
-        // evidence, governed one-to-one UTILITY template sends and the inbound
-        // media view seam. WhatsApp only; no COD, order or payment surface.
-        "20260913140000_whatsapp_template_studio_utility_send.sql",
-        // WM-3: contacts, MARKETING preference evidence, restrictive opt-out,
-        // allowlisted segments and versioned send policy. WhatsApp only.
-        "20260914100000_whatsapp_contacts_consent_segments_policy.sql",
-        // WM-4: governed WhatsApp campaign execution on its own tables, never
-        // public.campaign_runs. No COD, order or payment surface.
-        "20260915100000_whatsapp_campaign_execution.sql",
-        // WM-2/3/4 runtime hardening: signature-stable function repairs only.
-        "20260916100000_whatsapp_control_plane_runtime_hardening.sql",
-        // WM-5: analytics, opaque click tokens, reply attribution, audited export.
-        "20260917100000_whatsapp_analytics_attribution.sql",
-        // WM-6: governed automations, official Flows, CTWA referral evidence.
-        "20260918100000_whatsapp_automations_flows_referrals.sql",
-        // Commerce launch closeout: immutable customer policy-version acceptance
-        // for COD checkout only. Adds no online payment/provider surface.
-        "20260919120000_commerce_checkout_policy_acceptance.sql",
-        // Commerce vendor submission portal: isolated vendor-owned drafts.
-        "20260920120000_commerce_vendor_submission_portal.sql",
-        // Commerce-owned durable automation queue; no external provider dependency.
-        "20260920130000_commerce_automation_control_plane.sql",
-        // Admin automation controls plus a provisioned-but-disabled WhatsApp adapter bay.
-        "20260920133000_commerce_automation_admin_control.sql",
-        // Vendor operational closeout: admin-owned accounts plus vendor-owned stock/sales state.
-        "20260920140000_commerce_vendor_operational_controls.sql",
-        // Vendor login authorization repair: external vendor identity no longer depends on staff profile activation.
-        "20260920143000_commerce_vendor_login_auth_boundary.sql",
-        // Private vendor order feed: own product lines and lifecycle only; no customer/delivery PII.
-        "20260920150000_commerce_vendor_private_order_read.sql",
-        // Consent-gated first-party website analytics and CRM outcome linkage.
-        // No online payment surface and no customer PII is copied into analytics tables.
-        "20260921100000_website_analytics_foundation.sql",
-        // Owner-app push token registry and notification delivery foundation.
-        // No COD, online payment, or customer-facing commerce surface.
-        "20260921110000_mobile_owner_push_notifications.sql",
-        "20260921120000_manual_lead_minimal_intake.sql",
-      ],
-      "Only the reviewed forward-only migrations, including website analytics, mobile owner push, and minimal manual-enquiry foundations, may follow the 9D-D1 COD order foundation"
+      forwardOnly,
+      [...requiredForwardMigrations],
+      "Only the explicitly reviewed P1-P4 forward migrations may follow the frozen 89-migration baseline"
     );
     assert.equal(
       files.includes("20260825140000_commerce_online_payment_adapter_foundation.sql"),
@@ -392,6 +315,21 @@ describe("Phase 6B integrated — dispatch orchestration", () => {
               error: null,
             };
           }
+          if (name === "get_whatsapp_media_dispatch_payload") {
+            return {
+              data: [
+                {
+                  message_kind: "text",
+                  media_object_path: null,
+                  media_file_name: null,
+                  media_mime_type: null,
+                  media_size_bytes: null,
+                  media_sha256: null,
+                },
+              ],
+              error: null,
+            };
+          }
           if (name === "bind_whatsapp_send_intent_dispatch") {
             return {
               data: [
@@ -412,7 +350,8 @@ describe("Phase 6B integrated — dispatch orchestration", () => {
 
     assert.equal(result.outcome, "bound");
     assert.equal(calls[0], "claim_whatsapp_send_intent_for_dispatch");
-    assert.equal(calls[1], "bind_whatsapp_send_intent_dispatch");
+    assert.equal(calls[1], "get_whatsapp_media_dispatch_payload");
+    assert.equal(calls[2], "bind_whatsapp_send_intent_dispatch");
     assert.equal(result.providerMessageId, "wamid.fake.test");
     assert.match(result.message, /webhook evidence/i);
   });
@@ -445,6 +384,21 @@ describe("Phase 6B integrated — dispatch orchestration", () => {
               error: null,
             };
           }
+          if (name === "get_whatsapp_media_dispatch_payload") {
+            return {
+              data: [
+                {
+                  message_kind: "text",
+                  media_object_path: null,
+                  media_file_name: null,
+                  media_mime_type: null,
+                  media_size_bytes: null,
+                  media_sha256: null,
+                },
+              ],
+              error: null,
+            };
+          }
           if (name === "record_whatsapp_dispatch_attempt_outcome") {
             return { data: [{ outcome_code: "recorded" }], error: null };
           }
@@ -461,6 +415,9 @@ describe("Phase 6B integrated — dispatch orchestration", () => {
             httpStatus: 400,
             responseSnapshot: {},
           };
+        },
+        async dispatchMediaMessage() {
+          throw new Error("Media dispatch is not used in this test.");
         },
       }),
     });
@@ -499,6 +456,21 @@ describe("Phase 6B integrated — dispatch orchestration", () => {
               error: null,
             };
           }
+          if (name === "get_whatsapp_media_dispatch_payload") {
+            return {
+              data: [
+                {
+                  message_kind: "text",
+                  media_object_path: null,
+                  media_file_name: null,
+                  media_mime_type: null,
+                  media_size_bytes: null,
+                  media_sha256: null,
+                },
+              ],
+              error: null,
+            };
+          }
           if (name === "record_whatsapp_dispatch_attempt_outcome") {
             return { data: [{ outcome_code: "recorded" }], error: null };
           }
@@ -514,6 +486,9 @@ describe("Phase 6B integrated — dispatch orchestration", () => {
             httpStatus: 504,
             responseSnapshot: {},
           };
+        },
+        async dispatchMediaMessage() {
+          throw new Error("Media dispatch is not used in this test.");
         },
       }),
     });
@@ -551,6 +526,21 @@ describe("Phase 6B integrated — dispatch orchestration", () => {
             return {
               data: null,
               error: { message: "bind failed" },
+            };
+          }
+          if (name === "get_whatsapp_media_dispatch_payload") {
+            return {
+              data: [
+                {
+                  message_kind: "text",
+                  media_object_path: null,
+                  media_file_name: null,
+                  media_mime_type: null,
+                  media_size_bytes: null,
+                  media_sha256: null,
+                },
+              ],
+              error: null,
             };
           }
           if (name === "record_whatsapp_dispatch_attempt_outcome") {

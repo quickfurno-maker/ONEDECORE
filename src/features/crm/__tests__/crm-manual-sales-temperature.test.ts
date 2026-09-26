@@ -75,7 +75,7 @@ const ACTIVE: LeadStageCode = "qualified";
 /* 1. Effective bucket precedence                                              */
 /* ========================================================================== */
 
-describe("effective bucket = lifecycle > manual > system", () => {
+describe("effective bucket = lost lifecycle > manual > default Cold", () => {
   test("closed_lost is LOST whatever anyone marked it", () => {
     for (const manual of [...CRM_MANUAL_SALES_TEMPERATURES, null]) {
       const result = resolveEffectiveSalesBucket("closed_lost", "HOT", manual);
@@ -84,22 +84,17 @@ describe("effective bucket = lifecycle > manual > system", () => {
     }
   });
 
-  test("closed_won is WON whatever anyone marked it", () => {
-    for (const manual of [...CRM_MANUAL_SALES_TEMPERATURES, null]) {
-      assert.equal(
-        resolveEffectiveSalesBucket("closed_won", "COLD", manual).bucket,
-        "WON"
-      );
-    }
-  });
-
-  test("on_hold is ON_HOLD whatever anyone marked it", () => {
-    for (const manual of [...CRM_MANUAL_SALES_TEMPERATURES, null]) {
-      assert.equal(
-        resolveEffectiveSalesBucket("on_hold", "HOT", manual).bucket,
-        "ON_HOLD"
-      );
-    }
+  test("won and on-hold remain lifecycle stages, not sales classifications", () => {
+    assert.equal(
+      resolveEffectiveSalesBucket("closed_won", "HOT", "WARM").bucket,
+      "WARM"
+    );
+    assert.equal(
+      resolveEffectiveSalesBucket("on_hold", "HOT", "HOT").bucket,
+      "HOT"
+    );
+    assert.equal(resolveEffectiveSalesBucket("closed_won", "HOT", null).bucket, "COLD");
+    assert.equal(resolveEffectiveSalesBucket("on_hold", "HOT", null).bucket, "COLD");
   });
 
   test("a manual WARM overrides a computed COLD", () => {
@@ -121,21 +116,16 @@ describe("effective bucket = lifecycle > manual > system", () => {
     );
   });
 
-  test("with no manual choice the system band decides", () => {
-    for (const [band, expected] of [
-      ["HOT", "HOT"],
-      ["WARM", "WARM"],
-      ["NURTURE", "COLD"],
-      ["COLD", "COLD"],
-    ] as const) {
+  test("with no manual choice every score band defaults to COLD", () => {
+    for (const band of ["HOT", "WARM", "NURTURE", "COLD"] as const) {
       const result = resolveEffectiveSalesBucket(ACTIVE, band, null);
-      assert.equal(result.bucket, expected, `${band} should fall back to ${expected}`);
+      assert.equal(result.bucket, "COLD", `${band} must not auto-classify the lead`);
       assert.equal(result.source, "system");
     }
   });
 
-  test("NURTURE still folds into COLD, and only at this layer", () => {
-    assert.equal(resolveEffectiveSalesBucket(ACTIVE, "NURTURE", null).bucket, "COLD");
+  test("the advisory score remains intact but does not classify leads", () => {
+    assert.equal(resolveEffectiveSalesBucket(ACTIVE, "HOT", null).bucket, "COLD");
     const scoreSource = read(SCORE);
     assert.match(scoreSource, /"HOT", "WARM", "NURTURE", "COLD"/);
     assert.match(scoreSource, /NURTURE: 20/);
@@ -167,10 +157,10 @@ describe("effective bucket = lifecycle > manual > system", () => {
     }
   });
 
-  test("a parked lead resumes to the temperature its owner chose", () => {
-    // Held: the lifecycle wins and the stored HOT is merely outranked.
-    assert.equal(resolveEffectiveSalesBucket("on_hold", "COLD", "HOT").bucket, "ON_HOLD");
-    // Resumed with the SAME stored value: the human's judgement returns.
+  test("a parked lead keeps the temperature its owner chose", () => {
+    const held = resolveEffectiveSalesBucket("on_hold", "COLD", "HOT");
+    assert.equal(held.bucket, "HOT");
+    assert.equal(held.source, "manual");
     const resumed = resolveEffectiveSalesBucket("qualified", "COLD", "HOT");
     assert.equal(resumed.bucket, "HOT");
     assert.equal(resumed.source, "manual");
@@ -236,10 +226,8 @@ describe("LOST / WON / HOLD are lifecycle-only", () => {
     }
   });
 
-  test("lifecycle-controlled buckets are recognised", () => {
+  test("only Lost is a lifecycle-controlled classification bucket", () => {
     assert.equal(isLifecycleControlledBucket("LOST"), true);
-    assert.equal(isLifecycleControlledBucket("WON"), true);
-    assert.equal(isLifecycleControlledBucket("ON_HOLD"), true);
     assert.equal(isLifecycleControlledBucket("HOT"), false);
     assert.equal(isLifecycleControlledBucket("WARM"), false);
     assert.equal(isLifecycleControlledBucket("COLD"), false);
@@ -270,9 +258,9 @@ describe("setting and clearing", () => {
     assert.equal(parseManualSalesTemperature("tepid"), null);
   });
 
-  test("the Use system control submits an empty value", () => {
+  test("the Clear to Cold control submits an empty value", () => {
     const src = read(CONTROL);
-    assert.match(src, /crm-temperature-use-system/);
+    assert.match(src, /crm-temperature-use-default/);
     assert.match(src, /name="temperature"\s*\n\s*value=""/);
     // Offered only when there is an override to clear.
     assert.match(src, /\{isManual \? \(/);
@@ -281,7 +269,7 @@ describe("setting and clearing", () => {
   test("an empty submission is a reset, not a validation failure", () => {
     const src = read(ACTIONS);
     assert.match(src, /raw\.length === 0 \? null : parseManualSalesTemperature\(raw\)/);
-    assert.match(src, /Using the system suggestion/);
+    assert.match(src, /Cold by default/);
   });
 
   test("a reason is optional, never mandatory", () => {
@@ -652,14 +640,13 @@ describe("the pipeline board shows the same effective bucket", () => {
     assert.equal(resolveEffectiveSalesBucket("qualified", "COLD", "WARM").bucket, "WARM");
     assert.equal(resolveEffectiveSalesBucket("qualified", "HOT", "COLD").bucket, "COLD");
     assert.equal(resolveEffectiveSalesBucket("qualified", "COLD", null).bucket, "COLD");
-    assert.equal(resolveEffectiveSalesBucket("qualified", "HOT", null).bucket, "HOT");
+    assert.equal(resolveEffectiveSalesBucket("qualified", "HOT", null).bucket, "COLD");
   });
 
-  test("an ON HOLD card reads HOLD, because lifecycle wins", () => {
-    // `on_hold` is a board column, so this is a case the board really renders.
+  test("an ON HOLD card keeps its manual sales classification", () => {
     const held = resolveEffectiveSalesBucket("on_hold", "HOT", "HOT");
-    assert.equal(held.bucket, "ON_HOLD");
-    assert.equal(held.source, "lifecycle");
+    assert.equal(held.bucket, "HOT");
+    assert.equal(held.source, "manual");
   });
 
   test("existing urgency ordering is untouched", () => {
@@ -987,20 +974,20 @@ describe("the workspace labels every indicator", () => {
     assert.doesNotMatch(src, /deriveLeadScore/);
   });
 
-  test("AUTO vs MANUAL is explicit", () => {
+  test("DEFAULT vs MANUAL is explicit", () => {
     const src = read(CONTROL);
     assert.match(src, /CRM_SALES_BUCKET_SOURCE_LABELS\[source\]/);
     assert.match(src, /data-testid="crm-temperature-source"/);
     const contract = read(TEMPERATURE);
-    assert.match(contract, /system: "Auto"/);
+    assert.match(contract, /system: "Default"/);
     assert.match(contract, /manual: "Manual"/);
-    assert.match(contract, /Using the system suggestion/);
+    assert.match(contract, /treated as Cold by default/);
   });
 
   test("the control is disabled while the lifecycle owns the bucket", () => {
     const src = read(HEADER);
     assert.match(src, /canEdit=\{canSetTemperature && !lifecycleControlled\}/);
-    assert.match(src, /isLifecycleControlledBucket\(effective\.bucket\)/);
+    assert.match(src, /status === "closed_lost" \|\| status === "closed_won" \|\| status === "on_hold"/);
     const control = read(CONTROL);
     assert.match(control, /crm-temperature-locked/);
     assert.match(control, /returns when the lead resumes/);
@@ -1028,7 +1015,7 @@ describe("the workspace labels every indicator", () => {
     assert.match(badge, /<span className="sr-only">Set manually<\/span>/);
   });
 
-  test("the strip keeps all seven tabs and its labels", () => {
+  test("the strip keeps All plus Hot, Warm, Cold and Lost", () => {
     const src = read(STRIP);
     assert.match(src, /crm-bucket-tab-all/);
     assert.match(src, /CRM_LEAD_SALES_BUCKET_LABELS\[bucket\]/);

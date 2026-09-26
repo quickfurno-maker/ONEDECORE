@@ -1,11 +1,17 @@
 "use client";
 
-import { useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ServiceWindowView } from "../../contracts/message-presentation.ts";
 import type { SendingStatusView } from "../../contracts/sending-status.ts";
 import type { WhatsappSendableTemplateView } from "../../contracts/template-studio.ts";
 import { InboxComposer } from "@/features/whatsapp/components/inbox/InboxComposer";
 import { InboxTemplatePicker } from "@/features/whatsapp/components/inbox/InboxTemplatePicker";
+import { InboxSavedReplies } from "@/features/whatsapp/components/inbox/InboxSavedReplies";
+import { InboxAttachmentComposer } from "@/features/whatsapp/components/inbox/InboxAttachmentComposer";
+import {
+  WHATSAPP_REPLY_SELECT_EVENT,
+  type WhatsappReplySelection,
+} from "../../contracts/inbox-reply.ts";
 import { InboxKritiAssist } from "@/features/kriti/components/InboxKritiAssist.tsx";
 
 /**
@@ -56,6 +62,22 @@ export function InboxComposerSection({
   templates = null,
 }: InboxComposerSectionProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [replySelection, setReplySelection] =
+    useState<WhatsappReplySelection | null>(null);
+
+  useEffect(() => {
+    const selectReply = (event: Event) => {
+      const detail = (event as CustomEvent<WhatsappReplySelection>).detail;
+      if (!detail?.messageId) return;
+      setReplySelection(detail);
+      textareaRef.current?.focus();
+    };
+    window.addEventListener(WHATSAPP_REPLY_SELECT_EVENT, selectReply);
+    return () =>
+      window.removeEventListener(WHATSAPP_REPLY_SELECT_EVENT, selectReply);
+  }, []);
+
+  const clearReply = useCallback(() => setReplySelection(null), []);
 
   return (
     <>
@@ -85,6 +107,37 @@ export function InboxComposerSection({
         </p>
       ) : null}
 
+      {canUse && replySelection ? (
+        <div className="od-wa__reply-compose" data-testid="whatsapp-reply-selection">
+          <span className="od-wa__quote">
+            <span className="od-wa__quote-who">
+              Replying to {replySelection.authorLabel}
+            </span>
+            <span className="od-wa__quote-text">{replySelection.preview}</span>
+          </span>
+          <button
+            type="button"
+            className="od-wa__reply-cancel"
+            aria-label="Cancel reply"
+            onClick={clearReply}
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
+
+      {canUse ? <InboxSavedReplies textareaRef={textareaRef} /> : null}
+
+      {canUse && serviceWindow ? (
+        <InboxAttachmentComposer
+          conversationId={conversationId}
+          serviceWindow={serviceWindow}
+          sending={sending}
+          replyToMessageId={replySelection?.messageId ?? null}
+          onAcceptedSend={clearReply}
+        />
+      ) : null}
+
       {canUse && templates ? (
         <InboxTemplatePicker conversationId={conversationId} templates={templates} sending={sending} />
       ) : null}
@@ -95,6 +148,8 @@ export function InboxComposerSection({
         textareaRef={textareaRef}
         serviceWindow={serviceWindow}
         sending={sending}
+        replyToMessageId={replySelection?.messageId ?? null}
+        onAcceptedSend={clearReply}
       />
     </>
   );

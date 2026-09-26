@@ -49,6 +49,7 @@ import { validateLeadIntakePayload } from "../server/lead-intake-validation.ts";
 import {
   SINGLE_CONSENT_SERVICE_COMMUNICATION_COPY_VERSION,
   SINGLE_CONSENT_SERVICE_ENQUIRY_COPY_VERSION,
+  WHATSAPP_COPY_VERSION,
 } from "../contracts.ts";
 import {
   getNextIncompleteStep,
@@ -452,17 +453,27 @@ describe("consent is recorded as the sentence the visitor actually read", () => 
     );
   });
 
-  test("WhatsApp consent is ABSENT, not false", () => {
-    /*
-     * An absent optional consent is one nobody was asked for. A `false` one
-     * implies a question that was shown and declined. This form does not ask,
-     * so it must not answer.
-     */
-    const { body } = throughServer(KITCHEN);
-    assert.equal("whatsappService" in body.consent, false);
-    assert.equal("whatsappCopyVersion" in body.consent, false);
+  test("WhatsApp service consent is separate, optional and evidence-versioned", () => {
+    const { body: declined } = throughServer(KITCHEN);
+    assert.equal("whatsappService" in declined.consent, false);
+    assert.equal("whatsappCopyVersion" in declined.consent, false);
+
+    const { body: granted, result } = throughServer({
+      ...KITCHEN,
+      whatsappService: true,
+    });
+    assert.equal(granted.consent.whatsappService, true);
+    assert.equal(granted.consent.whatsappCopyVersion, WHATSAPP_COPY_VERSION);
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.value.consentWhatsapp, true);
+      assert.equal(result.value.copyWhatsapp, WHATSAPP_COPY_VERSION);
+    }
+
     const brief = code(read(BRIEF));
-    assert.doesNotMatch(brief, /whatsappService|whatsappConsent/);
+    assert.match(brief, /consentWhatsappService/);
+    assert.match(brief, /Send updates about my enquiry on WhatsApp/);
+    assert.match(brief, /Marketing messages require separate consent/);
   });
 
   test("an unticked box is refused, with the field named", () => {

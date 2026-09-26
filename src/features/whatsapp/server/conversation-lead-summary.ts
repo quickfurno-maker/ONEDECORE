@@ -1,6 +1,16 @@
 import "server-only";
 
+import { getCrmAccessContext } from "@/features/crm/server/crm-auth.ts";
 import { getLeadDetailForCurrentUser } from "@/features/crm/server/crm-lead-repository";
+import { fetchDealValues } from "@/features/crm/server/crm-lead-score-batch.ts";
+import { resolveEffectiveSalesBucket } from "@/features/crm/contracts/lead-sales-bucket.ts";
+import {
+  CRM_SALES_BUCKET_SOURCE_LABELS,
+  parseManualSalesTemperature,
+} from "@/features/crm/contracts/lead-sales-temperature.ts";
+import { formatLeadQuotationState } from "@/features/crm/contracts/lead-milestones.ts";
+import { getQuotationDraftByLeadId } from "@/features/quotations/server/quotation-queries.ts";
+import { probeQuotationPermissions } from "@/features/quotations/server/quotation-permissions.ts";
 import type { ConversationLeadSummary } from "../components/inbox/ConversationDetailsPanel.tsx";
 
 /**
@@ -41,6 +51,31 @@ function humanise(code: string | null | undefined): string | null {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+function latestWhatsappConsent(
+  items: readonly {
+    readonly purposeCode: string;
+    readonly channel: string;
+    readonly eventType: string;
+    readonly occurredAt: string;
+  }[],
+  purposeCode: string
+): string {
+  const latest = [...items]
+    .filter(
+      (item) =>
+        item.channel.toLowerCase() === "whatsapp" &&
+        item.purposeCode.toUpperCase() === purposeCode
+    )
+    .sort(
+      (left, right) =>
+        Date.parse(right.occurredAt) - Date.parse(left.occurredAt)
+    )[0];
+
+  return latest?.eventType.toLowerCase() === "granted"
+    ? "Granted"
+    : "Not granted";
+}
+
 export async function loadConversationLeadSummary(
   leadId: string | null
 ): Promise<ConversationLeadSummaryResult> {
@@ -49,23 +84,96 @@ export async function loadConversationLeadSummary(
   }
 
   try {
-    const detail = await getLeadDetailForCurrentUser(leadId);
+    const [detail, crmContext, dealValues, quotationDraft, quotationPermissions] =
+      await Promise.all([
+        getLeadDetailForCurrentUser(leadId),
+        getCrmAccessContext(),
+        fetchDealValues([leadId]),
+        getQuotationDraftByLeadId(leadId).catch(() => null),
+        probeQuotationPermissions().catch(() => ({
+          canReadQuotations: false,
+          canCreateQuotations: false,
+          canEditQuotations: false,
+          canSendQuotations: false,
+        })),
+      ]);
+
     if (!detail) {
       return { lead: null, hidden: true };
     }
 
     const overview = detail.overview;
+    const manual = parseManualSalesTemperature(
+      overview.manualSalesTemperature
+    );
+    const effective = resolveEffectiveSalesBucket(
+      overview.status,
+      "COLD",
+      manual
+    );
+    const primaryNextAction =
+      detail.followUps
+        .filter(
+          (item) =>
+            item.status === "open" && item.isPrimaryNextAction
+        )
+        .sort(
+          (left, right) =>
+            Date.parse(left.dueAt) - Date.parse(right.dueAt)
+        )[0] ?? null;
+    const quotation = dealValues[leadId];
 
     return {
       lead: {
         leadId,
         name: overview.submittedName,
         status: humanise(overview.status),
+        statusCode: overview.status,
+        resumeTargetStatus: detail.statusSummary.resumeTargetStatus,
         service: humanise(overview.serviceCode),
         scope: humanise(overview.projectScopeCode ?? overview.propertyCode),
-        budget: humanise(overview.budgetRangeCode ?? overview.budgetComfortCode),
+        budget: humanise(
+          overview.budgetRangeCode ?? overview.budgetComfortCode
+        ),
         timeline: humanise(overview.timelineCode),
         locality: overview.locality,
+        owner: detail.assignment.currentAssigneeLabel || "Unassigned",
+        ownerId: detail.assignment.currentAssigneeId,
+        manualSalesTemperature: manual,
+        salesBucket: effective.bucket,
+        salesBucketSource:
+          CRM_SALES_BUCKET_SOURCE_LABELS[effective.source],
+        nextActionId: primaryNextAction?.id ?? null,
+        nextActionTitle: primaryNextAction?.title ?? null,
+        nextActionDueAt: primaryNextAction?.dueAt ?? null,
+        slaDueAt: detail.slaClock.slaDueAt,
+        firstContactAttemptAt: detail.slaClock.firstContactAttemptAt,
+        quotation: formatLeadQuotationState(
+          quotation?.state ?? "unknown"
+        ),
+        quotationId: quotationDraft?.quotationId ?? null,
+        canReadQuotation: quotationPermissions.canReadQuotations,
+        canCreateQuotation: quotationPermissions.canCreateQuotations,
+        canEditQuotation: quotationPermissions.canEditQuotations,
+        canTransitionLeads: crmContext?.canTransitionLeads ?? false,
+        canManageLeadNotes: crmContext?.canManageLeadNotes ?? false,
+        canManageLeadFollowUps: crmContext?.canManageLeadFollowUps ?? false,
+        canSetSalesTemperature:
+          (crmContext?.canTransitionLeads ?? false) &&
+          !["closed_lost", "closed_won", "on_hold"].includes(overview.status),
+        canReadConsents: crmContext?.canReadConsents ?? false,
+        whatsappServiceConsent: crmContext?.canReadConsents
+          ? latestWhatsappConsent(
+              detail.consentSummary,
+              "WHATSAPP_SERVICE"
+            )
+          : null,
+        whatsappMarketingConsent: crmContext?.canReadConsents
+          ? latestWhatsappConsent(
+              detail.consentSummary,
+              "MARKETING"
+            )
+          : null,
       },
       hidden: false,
     };

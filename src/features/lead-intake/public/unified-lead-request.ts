@@ -32,11 +32,11 @@
  *
  * CONSENT
  *
- * One checkbox, two required purposes, and the copy versions recorded are the
- * combined ones the visitor actually read. WhatsApp is optional, is not on this
- * form, and is therefore never sent — not `false`, absent. An absent optional
- * consent is a consent nobody was asked for; a `false` one implies a question
- * that was declined.
+ * One required checkbox covers the two required service purposes, and a
+ * separate optional checkbox controls WHATSAPP_SERVICE only. An unticked
+ * WhatsApp choice is omitted rather than converted into marketing consent or
+ * treated as a marketing preference. The stored copy version identifies the
+ * approved WhatsApp service wording shown beside that optional control.
  */
 
 import {
@@ -46,6 +46,7 @@ import {
   PUBLIC_CONSULT_V4_PLANNER_VERSION,
   SINGLE_CONSENT_SERVICE_COMMUNICATION_COPY_VERSION,
   SINGLE_CONSENT_SERVICE_ENQUIRY_COPY_VERSION,
+  WHATSAPP_COPY_VERSION,
   v4RequiresScope,
   type LeadIntakeRequestBody,
   type LeadServiceCode,
@@ -86,6 +87,8 @@ export interface UnifiedLeadFormInput {
   readonly name: string;
   readonly mobile: string;
   readonly consent: boolean;
+  /** Optional service-channel permission. Never marketing consent. */
+  readonly whatsappService?: boolean;
   readonly attribution: LeadFormAttribution;
   readonly antiBot: { readonly website: string; readonly formStartedAt: string };
   readonly idempotencyKey: string;
@@ -245,6 +248,12 @@ export function unifiedLeadToRequest(
         serviceEnquiryCopyVersion: SINGLE_CONSENT_SERVICE_ENQUIRY_COPY_VERSION,
         serviceCommunicationCopyVersion:
           SINGLE_CONSENT_SERVICE_COMMUNICATION_COPY_VERSION,
+        ...(input.whatsappService === true
+          ? {
+              whatsappService: true as const,
+              whatsappCopyVersion: WHATSAPP_COPY_VERSION,
+            }
+          : {}),
         noticeVersion: LEAD_INTAKE_NOTICE_VERSION,
       },
       attribution: input.attribution,

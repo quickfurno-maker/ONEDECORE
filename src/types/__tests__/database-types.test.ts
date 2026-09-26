@@ -201,8 +201,11 @@ type _EnumsUntouched = Expect<
 type _CompositesUntouched = Expect<
   Equals<Database["public"]["CompositeTypes"], GeneratedDatabase["public"]["CompositeTypes"]>
 >;
-type _FunctionNamesUnchanged = Expect<
-  Equals<keyof Database["public"]["Functions"], keyof GeneratedDatabase["public"]["Functions"]>
+type _FunctionNamesMatchGeneratedSchema = Expect<
+  Equals<
+    keyof Database["public"]["Functions"],
+    keyof GeneratedDatabase["public"]["Functions"]
+  >
 >;
 
 // --------------------------------------------- D. surfaces that were missing ---

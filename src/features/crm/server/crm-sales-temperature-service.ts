@@ -37,7 +37,7 @@ export async function setLeadSalesTemperatureForCurrentUser(input: {
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_lead_sales_temperature", {
     p_lead_id: input.leadId,
-    // null clears the override and returns the lead to the system suggestion.
+    // null clears the manual classification; the CRM then treats it as Cold.
     p_temperature: manualSalesTemperatureValue(input.temperature) as string,
     ...(input.reason ? { p_reason: input.reason } : {}),
   });

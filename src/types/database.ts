@@ -113,6 +113,38 @@ type NullableRpcArguments = {
   get_crm_pipeline_value_summary: "p_owner_id";
 
   /**
+   * P2 CRM/WhatsApp linking accepts an omitted/NULL audit reason and an
+   * unassigned lead. Both arguments are declared/handled as SQL NULL.
+   */
+  link_whatsapp_conversation_to_crm_lead: "p_reason";
+  create_crm_lead_from_whatsapp_conversation: "p_assignee_id";
+
+  /**
+   * Media replies may intentionally have no quoted parent message. The routine
+   * receives the required argument as SQL NULL and stores it in a nullable FK.
+   */
+  create_whatsapp_service_media_send_intent: "p_reply_to_message_id";
+
+  /**
+   * Template Studio filters and draft identity/locking fields use DEFAULT NULL
+   * to mean create/no filter/no preset.
+   */
+  save_whatsapp_template_draft:
+    | "p_draft_id"
+    | "p_expected_lock_version"
+    | "p_source_preset_id";
+  list_whatsapp_template_drafts:
+    | "p_status"
+    | "p_category"
+    | "p_language"
+    | "p_search";
+  list_whatsapp_template_registry_p3:
+    | "p_status"
+    | "p_category"
+    | "p_language"
+    | "p_search";
+
+  /**
    * `p_experiment_id uuid`, `p_variant_key text` (no defaults). The routine
    * raises `LANDING_EXPOSURE_INVALID` for a NULL publication, visitor hash or
    * epoch and pointedly does not check these two, then writes them to columns
@@ -251,6 +283,26 @@ export const NULLABLE_RPC_ARGUMENT_OVERRIDES = {
   get_crm_management_analytics: ["p_owner_id", "p_source_id"],
   get_crm_my_day: ["p_owner_id"],
   get_crm_pipeline_value_summary: ["p_owner_id"],
+  link_whatsapp_conversation_to_crm_lead: ["p_reason"],
+  create_crm_lead_from_whatsapp_conversation: ["p_assignee_id"],
+  create_whatsapp_service_media_send_intent: ["p_reply_to_message_id"],
+  save_whatsapp_template_draft: [
+    "p_draft_id",
+    "p_expected_lock_version",
+    "p_source_preset_id",
+  ],
+  list_whatsapp_template_drafts: [
+    "p_status",
+    "p_category",
+    "p_language",
+    "p_search",
+  ],
+  list_whatsapp_template_registry_p3: [
+    "p_status",
+    "p_category",
+    "p_language",
+    "p_search",
+  ],
   record_landing_exposure: ["p_experiment_id", "p_variant_key"],
   save_landing_experiment_draft: ["p_experiment_id"],
   save_whatsapp_click_destination: ["p_destination_id"],

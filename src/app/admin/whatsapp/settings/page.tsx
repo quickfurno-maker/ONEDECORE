@@ -234,7 +234,7 @@ export default async function WhatsappSettingsPage() {
             A customer message that is exactly STOP, UNSUBSCRIBE, OPT OUT or similar records a marketing opt-out
             automatically.
           </li>
-          <li>Staff can record an opt-out, but no staff control can grant marketing consent.</li>
+          <li>Authorized managers may record an explicit customer MARKETING opt-in only with evidence; service consent or a staff assumption never counts.</li>
           <li>Meta&apos;s &ldquo;Stop promotions&rdquo; button on a marketing template records the same opt-out.</li>
           <li>Frequency caps count every campaign and automation send to a contact, including sends still in flight.</li>
         </ul>

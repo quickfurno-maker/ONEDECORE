@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { previewCampaignAudience } from "@/features/marketing/server/campaign-queries";
 import {
   CampaignButtonBindingsForm,
   CampaignCreateRunForm,
@@ -8,6 +9,7 @@ import {
   CampaignSpecForm,
   CampaignTestSendForm,
 } from "@/features/whatsapp/components/campaigns/CampaignExecutionForms";
+import { CrmCampaignLauncher } from "@/features/whatsapp/components/campaigns/CrmCampaignLauncher";
 import { ControlPlaneDenied, ControlPlaneShell } from "@/features/whatsapp/components/control-plane/ControlPlaneShell";
 import {
   availableWhatsappCampaignRunOperations,
@@ -15,8 +17,17 @@ import {
   describeWhatsappCampaignReason,
   presentWhatsappCampaignApproval,
   whatsappCampaignRunTone,
+  whatsappTemplateButtonSlots,
 } from "@/features/whatsapp/contracts/campaign-execution";
 import { isUuid, WHATSAPP_ADMIN_CAMPAIGNS_PATH } from "@/features/whatsapp/contracts/control-plane";
+import {
+  currentIstDate,
+  currentIstMonth,
+  isWhatsappCrmLeadMonth,
+  sanitizeWhatsappCrmCampaignFilters,
+  WHATSAPP_CRM_SALES_TEMPERATURES,
+  type WhatsappCrmSalesTemperature,
+} from "@/features/whatsapp/contracts/crm-campaigns";
 import {
   getWhatsappCampaignRunBreakdownForCurrentUser,
   getWhatsappCampaignSpecButtonBindingsForCurrentUser,
@@ -29,6 +40,10 @@ import {
   previewWhatsappCampaignAudienceForCurrentUser,
 } from "@/features/whatsapp/server/whatsapp-campaign-queries";
 import { resolveWhatsappControlPlaneAccess } from "@/features/whatsapp/server/whatsapp-control-plane-auth";
+import {
+  getWhatsappCrmAudienceCountsForCurrentUser,
+  getWhatsappCrmCampaignFilterOptionsForCurrentUser,
+} from "@/features/whatsapp/server/whatsapp-crm-campaign-queries";
 import { listWhatsappFlowsForCurrentUser } from "@/features/whatsapp/server/whatsapp-flow-queries";
 import { listWhatsappSegmentsForCurrentUser } from "@/features/whatsapp/server/whatsapp-segments-queries";
 import "@/features/whatsapp/components/growth-workspace.css";
@@ -60,6 +75,14 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function campaignStateHref(state: string, month: string, temperature: string): string {
+  const params = new URLSearchParams();
+  if (state !== "all") params.set("state", state);
+  params.set("audienceMonth", month);
+  params.set("audienceTemperature", temperature);
+  return `${WHATSAPP_ADMIN_CAMPAIGNS_PATH}?${params.toString()}`;
+}
+
 interface WhatsappCampaignsPageProps {
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
@@ -86,10 +109,38 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
   const selectedRaw = first(params.version);
   const selectedId = isUuid(selectedRaw) ? selectedRaw : null;
   const wantsPreview = first(params.preview) === "1";
+  const templateDraftRaw = first(params.templateDraft);
+  const templateDraftId = isUuid(templateDraftRaw) ? templateDraftRaw : null;
+  const templateDraftName = first(params.templateDraftName)?.trim().slice(0, 128) ?? null;
+  const requestedMonth = first(params.audienceMonth);
+  const audienceMonth = isWhatsappCrmLeadMonth(requestedMonth) ? requestedMonth : currentIstMonth();
+  const requestedTemperature = first(params.audienceTemperature);
+  const audienceTemperature: WhatsappCrmSalesTemperature =
+    requestedTemperature && WHATSAPP_CRM_SALES_TEMPERATURES.includes(requestedTemperature as WhatsappCrmSalesTemperature)
+      ? (requestedTemperature as WhatsappCrmSalesTemperature)
+      : "hot";
+  const audienceFilters = sanitizeWhatsappCrmCampaignFilters({
+    stage: first(params.stage),
+    service: first(params.service),
+    source: first(params.source),
+    locality: first(params.locality),
+    owner: first(params.owner),
+    budget: first(params.budget),
+    lastInteractionAge: first(params.lastInteractionAge),
+    milestone: first(params.milestone),
+    dormantDuration: first(params.dormantDuration),
+  });
+  const requestedState = first(params.state);
+  const campaignState = ["all", "draft", "approved", "scheduled", "running", "completed"].includes(requestedState ?? "")
+    ? requestedState!
+    : "all";
 
-  const [versions, selected] = await Promise.all([
+  const [versions, selected, crmAudienceCounts, crmFilterOptions, crmEligibilityPreview] = await Promise.all([
     listWhatsappCampaignVersionsForCurrentUser(),
     selectedId ? getWhatsappCampaignVersionForCurrentUser(selectedId) : Promise.resolve(null),
+    getWhatsappCrmAudienceCountsForCurrentUser(audienceMonth),
+    getWhatsappCrmCampaignFilterOptionsForCurrentUser(),
+    selectedId ? previewCampaignAudience(selectedId) : Promise.resolve(null),
   ]);
 
   const spec = selected?.spec ?? null;
@@ -110,10 +161,24 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
 
   const approval = presentWhatsappCampaignApproval(selected?.approval?.decision ?? null);
   const denial = describeWhatsappCampaignOperatorDenial(selected?.operatorDenial ?? null);
+  const templateButtonCount = spec ? whatsappTemplateButtonSlots(spec.components).length : 0;
+  const ctaReady = Boolean(spec) && (templateButtonCount === 0 || Object.keys(buttonBindings).length >= templateButtonCount);
+  const previewReady = Boolean(crmEligibilityPreview);
+  const testReady = testSends.some((item) => item.outcome === "succeeded");
+  const scheduledReady = Boolean(latestRun);
+  const launched = Boolean(latestRun && ["dispatching", "paused", "completed"].includes(latestRun.status));
   const approvedCount = versions.filter((version) => version.status === "approved").length;
   const activeRunCount = versions.filter((version) =>
     ["scheduled", "dispatching", "paused"].includes(version.latestRun?.status ?? "")
   ).length;
+  const visibleVersions = versions.filter((version) => {
+    if (campaignState === "all") return true;
+    if (campaignState === "draft") return version.status === "draft";
+    if (campaignState === "approved") return version.status === "approved" && !version.latestRun;
+    if (campaignState === "scheduled") return version.latestRun?.status === "scheduled";
+    if (campaignState === "running") return ["dispatching", "paused"].includes(version.latestRun?.status ?? "");
+    return ["completed", "cancelled", "failed"].includes(version.latestRun?.status ?? "");
+  });
   const sentCount = versions.reduce((sum, version) => sum + (version.latestRun?.sentCount ?? 0), 0);
   const readiness = selected
     ? [
@@ -172,11 +237,69 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
           </div>
         </section>
 
+        <nav className="od-growth__tabs" aria-label="Campaign type">
+          <Link className="od-growth__tab" data-active="true" href={WHATSAPP_ADMIN_CAMPAIGNS_PATH}>
+            One-time campaigns
+          </Link>
+          <Link className="od-growth__tab" href="/admin/whatsapp/automations">
+            Automated campaigns
+          </Link>
+        </nav>
+
+        {templateDraftId ? (
+          <section
+            className="od-cp__panel"
+            aria-label="Local template draft handoff"
+            data-testid="campaign-local-template-handoff"
+          >
+            <div className="od-cp__panel-head">
+              <div>
+                <p className="od-growth__eyebrow">Template preparation handoff</p>
+                <h2>{templateDraftName || "ONEDECORE local draft"}</h2>
+                <p>
+                  This local draft is attached only as preparation context. It is not
+                  Meta approved and cannot be selected for campaign execution until an
+                  approved MARKETING template appears in the provider registry.
+                </p>
+              </div>
+              <Link
+                className="od-cp__btn od-cp__btn--quiet"
+                href={`/admin/whatsapp/templates?draft=${templateDraftId}#whatsapp-template-create`}
+              >
+                Edit local draft
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        <CrmCampaignLauncher
+          month={audienceMonth}
+          temperature={audienceTemperature}
+          filters={audienceFilters}
+          options={crmFilterOptions}
+          counts={crmAudienceCounts}
+          startDate={currentIstDate()}
+          canCreate={permissions["campaigns.draft"]}
+        />
+
+        <nav className="od-growth__tabs" aria-label="Campaign state">
+          {["all", "draft", "approved", "scheduled", "running", "completed"].map((state) => (
+            <Link
+              key={state}
+              className="od-growth__tab"
+              data-active={campaignState === state}
+              href={campaignStateHref(state, audienceMonth, audienceTemperature)}
+            >
+              {state === "all" ? "All" : state[0]!.toUpperCase() + state.slice(1)}
+            </Link>
+          ))}
+        </nav>
+
         <div className="od-cp__columns">
         <section className="od-cp__panel" aria-labelledby="whatsapp-campaigns-list">
           <div className="od-cp__toolbar">
             <h2 id="whatsapp-campaigns-list" className="od-cp__panel-title" style={{ margin: 0 }}>
-              WhatsApp campaign versions · {versions.length}
+              WhatsApp campaign versions · {visibleVersions.length}
             </h2>
             {permissions["campaigns.draft"] ? (
               <Link className="od-cp__btn od-cp__btn--quiet" href="/admin/campaigns">
@@ -184,7 +307,7 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
               </Link>
             ) : null}
           </div>
-          {versions.length === 0 ? (
+          {visibleVersions.length === 0 ? (
             <p className="od-cp__empty">
               {permissions["campaigns.read"]
                 ? "No WhatsApp-only campaign version yet. Draft one in Campaigns with channel whatsapp and direct/custom targeting."
@@ -192,7 +315,7 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
             </p>
           ) : (
             <ul className="od-growth__campaign-list">
-              {versions.map((version) => (
+              {visibleVersions.map((version) => (
                 <li key={version.versionId}>
                   <Link
                     className="od-growth__campaign-card"
@@ -242,11 +365,17 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
                   </span>
                 </div>
 
-                <div className="od-growth__journey" style={{ marginTop: 16 }}>
-                  <div className="od-growth__step" data-state={spec ? "done" : "active"}>Template & spec</div>
-                  <div className="od-growth__step" data-state={selected.audienceFrozen ? "done" : spec ? "active" : undefined}>Audience</div>
-                  <div className="od-growth__step" data-state={approval.approved ? "done" : selected.audienceFrozen ? "active" : undefined}>Approval</div>
-                  <div className="od-growth__step" data-state={latestRun ? "done" : approval.approved ? "active" : undefined}>Send & monitor</div>
+                <div className="od-growth__journey od-growth__journey--campaign" style={{ marginTop: 16 }}>
+                  <div className="od-growth__step" data-state="done">Audience</div>
+                  <div className="od-growth__step" data-state={previewReady ? "done" : "active"}>Eligibility</div>
+                  <div className="od-growth__step" data-state={spec ? "done" : previewReady ? "active" : undefined}>Template</div>
+                  <div className="od-growth__step" data-state={spec ? "done" : undefined}>Variables</div>
+                  <div className="od-growth__step" data-state={ctaReady ? "done" : spec ? "active" : undefined}>CTA</div>
+                  <div className="od-growth__step" data-state={previewReady ? "done" : spec ? "active" : undefined}>Preview</div>
+                  <div className="od-growth__step" data-state={testReady ? "done" : previewReady ? "active" : undefined}>Test</div>
+                  <div className="od-growth__step" data-state={approval.approved ? "done" : testReady ? "active" : undefined}>Approval</div>
+                  <div className="od-growth__step" data-state={scheduledReady ? "done" : approval.approved ? "active" : undefined}>Schedule</div>
+                  <div className="od-growth__step" data-state={launched ? "done" : scheduledReady ? "active" : undefined}>Launch</div>
                 </div>
 
                 <div className="od-growth__readiness" style={{ marginTop: 16 }}>
@@ -346,10 +475,40 @@ export default async function WhatsappCampaignsPage({ searchParams }: WhatsappCa
                     </Link>
                   ) : null}
                 </div>
-                {!spec ? (
-                  <p className="od-cp__empty">Save a spec before previewing the audience.</p>
+                {!spec && crmEligibilityPreview ? (
+                  <>
+                    <div className="od-cp__stats" data-testid="crm-campaign-eligibility-counts">
+                      <div className="od-cp__stat">
+                        <span className="od-cp__stat-value">{crmEligibilityPreview.ruleMatchLeadCount.toLocaleString("en-IN")}</span>
+                        <span className="od-cp__stat-label">CRM matched leads</span>
+                      </div>
+                      <div className="od-cp__stat">
+                        <span className="od-cp__stat-value">{crmEligibilityPreview.distinctContactCount.toLocaleString("en-IN")}</span>
+                        <span className="od-cp__stat-label">Distinct contacts</span>
+                      </div>
+                      <div className="od-cp__stat">
+                        <span className="od-cp__stat-value">{crmEligibilityPreview.currentMarketingConsentCount.toLocaleString("en-IN")}</span>
+                        <span className="od-cp__stat-label">Marketing consent</span>
+                      </div>
+                      <div className="od-cp__stat">
+                        <span className="od-cp__stat-value">{crmEligibilityPreview.dncBlockedCount.toLocaleString("en-IN")}</span>
+                        <span className="od-cp__stat-label">DNC blocked</span>
+                      </div>
+                      <div className="od-cp__stat">
+                        <span className="od-cp__stat-value">{(crmEligibilityPreview.eligibleDirectOrCustomCount ?? 0).toLocaleString("en-IN")}</span>
+                        <span className="od-cp__stat-label">Channel eligible</span>
+                      </div>
+                    </div>
+                    <p className="od-cp__hint" style={{ marginBlockStart: 12 }}>
+                      This is the pre-template CRM eligibility proof. Choose an approved MARKETING template next;
+                      the detailed WhatsApp preview will then add template status, variables, opt-out/suppression,
+                      frequency caps, quiet hours and CTA readiness.
+                    </p>
+                  </>
+                ) : !spec ? (
+                  <p className="od-cp__empty">The CRM audience eligibility preview is unavailable for this version.</p>
                 ) : preview === null ? (
-                  <p className="od-cp__hint">Counts are computed in SQL; no recipient list leaves the database.</p>
+                  <p className="od-cp__hint">CRM eligibility is proven. Use Preview audience for the template-aware WhatsApp checks.</p>
                 ) : preview.kind === "ready" ? (
                   <>
                     <div className="od-cp__stats" data-testid="whatsapp-campaign-preview-counts">

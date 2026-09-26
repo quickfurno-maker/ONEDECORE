@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { INITIAL_WHATSAPP_SEND_ACTION_STATE } from "../../contracts/send-action-state.ts";
 import { createWhatsappServiceSendIntentAction } from "../../server/whatsapp-send-actions.ts";
 import type { ServiceWindowView } from "../../contracts/message-presentation.ts";
 import type { SendingStatusView } from "../../contracts/sending-status.ts";
+
 
 /**
  * The message composer.
@@ -48,6 +49,8 @@ interface InboxComposerProps {
    * the server and arrives as three known words, never an account identifier.
    */
   readonly sending?: SendingStatusView | null;
+  readonly replyToMessageId?: string | null;
+  readonly onAcceptedSend?: () => void;
 }
 
 const MAX_BODY = 4096;
@@ -59,6 +62,8 @@ export function InboxComposer({
   serviceWindow = null,
   unavailableReason = null,
   sending = null,
+  replyToMessageId = null,
+  onAcceptedSend,
 }: InboxComposerProps) {
   const [state, formAction, pending] = useActionState(
     createWhatsappServiceSendIntentAction,
@@ -66,6 +71,12 @@ export function InboxComposer({
   );
   const internalTextareaRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = externalTextareaRef ?? internalTextareaRef;
+
+  useEffect(() => {
+    if (state.success) {
+      onAcceptedSend?.();
+    }
+  }, [state.success, state.intentId, onAcceptedSend]);
 
   /*
    * The idempotency key is stamped on at submit, not rendered.
@@ -142,6 +153,7 @@ export function InboxComposer({
           textareaRef={textareaRef}
           pending={pending}
           serviceWindow={serviceWindow}
+          replyToMessageId={replyToMessageId}
         />
 
         {/*
@@ -175,10 +187,12 @@ function ComposerField({
   textareaRef,
   pending,
   serviceWindow,
+  replyToMessageId,
 }: {
   readonly textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   readonly pending: boolean;
   readonly serviceWindow: ServiceWindowView | null;
+  readonly replyToMessageId: string | null;
 }) {
   const [length, setLength] = useState(0);
   const over = length > MAX_BODY;
@@ -194,6 +208,13 @@ function ComposerField({
 
   return (
     <>
+      {replyToMessageId ? (
+        <input
+          type="hidden"
+          name="replyToMessageId"
+          value={replyToMessageId}
+        />
+      ) : null}
       <div className="od-wa__composer-row">
         <label className="sr-only" htmlFor="od-wa-body">
           Message

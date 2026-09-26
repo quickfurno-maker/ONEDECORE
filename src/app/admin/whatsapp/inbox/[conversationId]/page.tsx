@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConversationDetailsPanel } from "@/features/whatsapp/components/inbox/ConversationDetailsPanel";
+import { ConversationCrmResolution } from "@/features/whatsapp/components/inbox/ConversationCrmResolution";
+import { ConversationCrmActions } from "@/features/whatsapp/components/inbox/ConversationCrmActions";
 import { ConversationHeader } from "@/features/whatsapp/components/inbox/ConversationHeader";
 import { InboxComposerSection } from "@/features/whatsapp/components/inbox/InboxComposerSection";
 import { InboxListPane } from "@/features/whatsapp/components/inbox/InboxListPane";
@@ -33,6 +35,10 @@ import {
   getInboxConversationListPageForCurrentUser,
 } from "@/features/whatsapp/server/whatsapp-inbox-repository";
 import { loadConversationLeadSummary } from "@/features/whatsapp/server/conversation-lead-summary";
+import {
+  getWhatsappCrmCreateOptionsForCurrentUser,
+  searchWhatsappCrmLeadCandidatesForCurrentUser,
+} from "@/features/whatsapp/server/whatsapp-crm-integration";
 import {
   listSendableUtilityTemplatesForConversation,
   probeWhatsappTemplatePermissions,
@@ -108,6 +114,17 @@ export default async function WhatsappConversationPage({
    */
   const leadSummary = await loadConversationLeadSummary(detail.leadId);
 
+  const crmResolution =
+    context.canManage && !detail.leadId
+      ? await Promise.all([
+          searchWhatsappCrmLeadCandidatesForCurrentUser({
+            conversationE164: detail.customerE164,
+            query: null,
+          }),
+          getWhatsappCrmCreateOptionsForCurrentUser(),
+        ])
+      : null;
+
   const serviceWindow = presentServiceWindow(detail.lastInboundAt);
   const sending = getWhatsappSendingStatus();
 
@@ -169,6 +186,7 @@ export default async function WhatsappConversationPage({
 
         <InboxThread
           messages={detail.messages}
+          canReply={canUse}
           olderMessagesHref={
             detail.messagePage * detail.messagePageSize < detail.messageTotalCount
               ? `?page=${detail.messagePage + 1}`
@@ -198,6 +216,24 @@ export default async function WhatsappConversationPage({
           serviceWindow={serviceWindow}
           lead={leadSummary.lead}
           leadHidden={leadSummary.hidden}
+          crmActions={
+            leadSummary.lead ? (
+              <ConversationCrmActions lead={leadSummary.lead} />
+            ) : null
+          }
+          crmResolution={
+            crmResolution ? (
+              <ConversationCrmResolution
+                conversationId={conversationId}
+                customerE164={detail.customerE164}
+                displayName={detail.displayNameSnapshot}
+                initialCandidates={crmResolution[0]}
+                canCreateLead={crmResolution[1]?.canCreateLead ?? false}
+                assigneePolicy={crmResolution[1]?.assigneePolicy ?? null}
+                assignees={crmResolution[1]?.assignees ?? []}
+              />
+            ) : null
+          }
           compliance={
             canRecordOptOut && detail.contactId ? (
               <MarketingOptOutForm contactId={detail.contactId} conversationId={conversationId} compact />

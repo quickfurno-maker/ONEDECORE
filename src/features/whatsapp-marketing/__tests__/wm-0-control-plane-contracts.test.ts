@@ -681,10 +681,11 @@ describe("7 — no marketing provider call in WM-0", () => {
     }
   });
 
-  test("the provider port still exposes text dispatch only", () => {
+  test("the service provider port supports text and media but not marketing template dispatch", () => {
     const port = code(read("src/features/whatsapp/server/whatsapp-provider-adapter.ts"));
     assert.match(port, /dispatchTextMessage\(/);
-    assert.doesNotMatch(port, /dispatchTemplateMessage|dispatchMediaMessage/);
+    assert.match(port, /dispatchMediaMessage\(/);
+    assert.doesNotMatch(port, /dispatchTemplateMessage/);
   });
 
   test("the WhatsApp /messages Graph call site is still the single Meta adapter", () => {

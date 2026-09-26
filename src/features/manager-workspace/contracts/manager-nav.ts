@@ -111,6 +111,16 @@ export const MANAGER_NAV_GROUPS: readonly ManagerNavGroup[] = [
         label: "WhatsApp",
         detail: "Reply to customers and route conversations across the team.",
       },
+      {
+        href: "/admin/whatsapp/campaigns",
+        label: "WhatsApp Campaigns",
+        detail: "Work CRM audiences, previews, approvals and governed campaign delivery.",
+      },
+      {
+        href: "/admin/whatsapp/automations",
+        label: "WhatsApp Automations",
+        detail: "Prepare governed trigger-based follow-ups; CRM Cadences remain separate.",
+      },
     ],
   },
   {

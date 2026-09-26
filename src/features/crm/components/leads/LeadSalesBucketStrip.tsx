@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   CRM_LEAD_PRIMARY_SALES_BUCKETS,
-  CRM_LEAD_SALES_BUCKETS,
   CRM_LEAD_SALES_BUCKET_DESCRIPTIONS,
   CRM_LEAD_SALES_BUCKET_LABELS,
   type CrmLeadSalesBucket,
@@ -22,8 +21,8 @@ import { leadMonthCohortHeading } from "../../contracts/lead-month-cohort.ts";
  * cohort — never over the current page — so the strip keeps telling the truth
  * about where the rest of the month's leads are while one bucket is selected.
  *
- * HOT / WARM / COLD / LOST are the owner's quick actions and carry the strongest
- * emphasis; WON and ON HOLD stay available but quieter.
+ * HOT / WARM / COLD / LOST are the business classification queues. Won and
+ * On Hold remain lifecycle stages and are intentionally not duplicated here.
  */
 
 const PRIMARY: readonly CrmLeadSalesBucket[] = CRM_LEAD_PRIMARY_SALES_BUCKETS;
@@ -37,9 +36,6 @@ const ACTIVE_STYLES: Readonly<Record<CrmLeadSalesBucket, string>> = {
   WARM: "border-[var(--crm-warning)] bg-[var(--crm-warning-soft)] text-[var(--crm-warning)]",
   COLD: "border-[var(--crm-info)]/50 bg-[var(--crm-info-soft)] text-[var(--crm-info)]",
   LOST: "border-[var(--crm-danger)]/60 bg-[var(--crm-surface-subtle)] text-[var(--crm-danger)]",
-  WON: "border-[var(--crm-success)] bg-[var(--crm-success-soft)] text-[var(--crm-success)]",
-  ON_HOLD:
-    "border-[var(--crm-warning)]/40 bg-[var(--crm-surface-subtle)] text-[var(--crm-text-secondary)]",
 };
 
 interface LeadSalesBucketStripProps {
@@ -112,10 +108,6 @@ export function LeadSalesBucketStrip({
   counts,
   countsExact,
 }: LeadSalesBucketStripProps) {
-  const secondary = CRM_LEAD_SALES_BUCKETS.filter(
-    (bucket) => !PRIMARY.includes(bucket)
-  );
-
   return (
     <section
       aria-label="Sales bucket"
@@ -163,22 +155,6 @@ export function LeadSalesBucketStrip({
         ))}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {secondary.map((bucket) => (
-          <Tab
-            key={bucket}
-            href={buildLeadListHref(query, undefined, { bucket, page: 1 })}
-            label={CRM_LEAD_SALES_BUCKET_LABELS[bucket]}
-            count={counts[bucket]}
-            countsExact={countsExact}
-            selected={query.bucket === bucket}
-            emphasis={false}
-            title={CRM_LEAD_SALES_BUCKET_DESCRIPTIONS[bucket]}
-            testId={`crm-bucket-tab-${bucket.toLowerCase()}`}
-            bucket={bucket}
-          />
-        ))}
-      </div>
     </section>
   );
 }

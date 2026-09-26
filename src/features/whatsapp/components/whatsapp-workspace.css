@@ -1340,3 +1340,242 @@
   display: inline-block;
   font-weight: 600;
 }
+
+
+/* --------------------------------------------------------- CRM inline actions */
+
+.od-wa__crm-actions {
+  margin-block-start: 14px;
+  padding-block-start: 14px;
+  border-block-start: 1px solid var(--od-border, #23262b);
+}
+
+.od-wa__crm-actions-head,
+.od-wa__crm-block {
+  margin-block-end: 12px;
+}
+
+.od-wa__crm-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-block-start: 7px;
+}
+
+.od-wa__crm-chip {
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  background: var(--od-elevated, #141a21);
+  color: var(--od-text-2, #b7bdc5);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.od-wa__crm-chip:hover,
+.od-wa__crm-chip:focus-visible,
+.od-wa__crm-chip[data-active="true"] {
+  border-color: var(--od-gold, #d7a529);
+  background: rgba(215, 165, 41, 0.12);
+  color: var(--od-gold, #d7a529);
+}
+
+.od-wa__crm-chip:disabled,
+.od-wa__crm-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.od-wa__crm-disclosure {
+  margin-block: 10px;
+  border: 1px solid var(--od-border, #23262b);
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+}
+
+.od-wa__crm-disclosure > summary {
+  min-height: 44px;
+  padding: 11px 12px;
+  color: var(--od-text-2, #b7bdc5);
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.od-wa__crm-form {
+  display: grid;
+  gap: 9px;
+  padding: 0 12px 12px;
+}
+
+.od-wa__crm-form textarea.od-wa__input {
+  resize: vertical;
+  min-height: 84px;
+}
+
+.od-wa__crm-success,
+.od-wa__crm-error {
+  margin-block-start: 7px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.od-wa__crm-success {
+  color: var(--od-success, #6fcf97);
+}
+
+.od-wa__crm-error {
+  color: var(--od-danger, #ff7b7b);
+}
+
+.od-wa__crm-subtle-link {
+  display: inline-block;
+  margin-block-start: 7px;
+  color: var(--od-muted, #747d88);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+
+/* ----------------------------------------------------------- reply + snippets */
+
+.od-wa__msg-reply {
+  border: 0;
+  background: transparent;
+  color: var(--od-muted, #747d88);
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.od-wa__msg-reply:hover,
+.od-wa__msg-reply:focus-visible {
+  color: var(--od-gold, #d7a529);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.od-wa__reply-compose {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-block-end: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--od-border, #23262b);
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-elevated, #141a21);
+}
+
+.od-wa__reply-compose .od-wa__quote {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.od-wa__reply-cancel {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--od-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--od-muted, #747d88);
+  font: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.od-wa__reply-cancel:hover,
+.od-wa__reply-cancel:focus-visible {
+  color: var(--od-text, #f5f3ee);
+  border-color: var(--od-gold, #d7a529);
+}
+
+.od-wa__saved-reply-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.od-wa__saved-reply {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid var(--od-border, #23262b);
+  border-radius: var(--od-radius-sm, 8px);
+  background: var(--od-bg, #090c10);
+  color: var(--od-text-2, #b7bdc5);
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+}
+
+.od-wa__saved-reply:hover,
+.od-wa__saved-reply:focus-visible {
+  border-color: var(--od-gold, #d7a529);
+}
+
+.od-wa__saved-reply strong {
+  color: var(--od-text, #f5f3ee);
+  font-size: 0.79rem;
+}
+
+.od-wa__saved-reply span {
+  color: var(--od-muted, #747d88);
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+
+
+.od-wa__attachment-form {
+  display: grid;
+  gap: 10px;
+}
+
+.od-wa__attachment-field {
+  display: grid;
+  gap: 5px;
+  color: var(--od-text-2, #b7bdc5);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.od-wa__attachment-field small {
+  color: var(--od-muted, #747d88);
+  font-size: 0.7rem;
+  font-weight: 400;
+}
+
+.od-wa__attachment-form input[type="file"] {
+  min-height: 42px;
+  padding: 8px 10px;
+}
+
+.od-wa__attachment-form textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+
+
+.od-wa__message-origin {
+  display: inline-flex;
+  max-width: 100%;
+  margin: 0 0 5px;
+  padding: 2px 7px;
+  border: 1px solid var(--od-border, #2c3138);
+  border-radius: 999px;
+  background: var(--od-surface-2, #171a1f);
+  color: var(--od-muted, #9aa3ad);
+  font-size: 0.66rem;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

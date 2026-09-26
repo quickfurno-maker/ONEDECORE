@@ -362,7 +362,8 @@ describe("8b — growth workspace UX", () => {
     assert.match(templatesPage, /Pending review/);
     assert.match(templateForms, /Live preview is illustrative/);
     assert.match(templateForms, /Submit to Meta for review/);
-    assert.match(templateForms, /Use Utility for enquiry updates/);
+    assert.match(templateForms, /Utility is for enquiry updates/);
+    assert.match(templateForms, /Marketing is for nurture or promotions/);
 
     assert.match(campaignsPage, /WhatsApp campaign manager/);
     assert.match(campaignsPage, /Broadcasts, audiences & delivery/);
