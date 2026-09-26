@@ -201,22 +201,9 @@ type _EnumsUntouched = Expect<
 type _CompositesUntouched = Expect<
   Equals<Database["public"]["CompositeTypes"], GeneratedDatabase["public"]["CompositeTypes"]>
 >;
-type _FunctionNamesUnchangedExceptReviewedForwardMigrations = Expect<
+type _FunctionNamesMatchGeneratedSchema = Expect<
   Equals<
-    Exclude<
-      keyof Database["public"]["Functions"],
-      | "link_whatsapp_conversation_to_crm_lead"
-      | "create_crm_lead_from_whatsapp_conversation"
-      | "create_whatsapp_service_media_send_intent"
-      | "get_whatsapp_media_dispatch_payload"
-      | "get_whatsapp_inbox_message_origins"
-      | "save_whatsapp_template_draft"
-      | "archive_whatsapp_template_draft"
-      | "get_whatsapp_template_draft"
-      | "list_whatsapp_template_drafts"
-      | "list_whatsapp_template_registry_p3"
-      | "list_whatsapp_template_status_timeline"
-    >,
+    keyof Database["public"]["Functions"],
     keyof GeneratedDatabase["public"]["Functions"]
   >
 >;
