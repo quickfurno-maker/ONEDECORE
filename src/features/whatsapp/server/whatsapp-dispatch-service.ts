@@ -151,6 +151,28 @@ export async function dispatchWhatsappSendIntent(
     };
   }
 
+  if (
+    env.mode === 'enabled' &&
+    env.phoneNumberId &&
+    claim.phone_number_id !== env.phoneNumberId
+  ) {
+    await admin.rpc('record_whatsapp_dispatch_attempt_outcome', {
+      p_dispatch_attempt_id: claim.dispatch_attempt_id,
+      p_status: 'failed',
+      p_error_class: 'terminal',
+      p_response_snapshot: asJsonSnapshot({
+        code: 'production_sender_mismatch',
+        provider: 'meta',
+      }),
+    });
+    return {
+      outcome: 'failed',
+      sendIntentId: claim.send_intent_id,
+      dispatchAttemptId: claim.dispatch_attempt_id,
+      message: 'This conversation belongs to a retired WhatsApp sender. Open or receive the conversation on the production number before replying.',
+    };
+  }
+
   const { data: mediaPayloadRows, error: mediaPayloadError } = await admin.rpc(
     'get_whatsapp_media_dispatch_payload',
     { p_send_intent_id: claim.send_intent_id }

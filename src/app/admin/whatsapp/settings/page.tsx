@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ControlPlaneDenied, ControlPlaneShell } from "@/features/whatsapp/components/control-plane/ControlPlaneShell";
 import { ClickDestinationForm } from "@/features/whatsapp/components/control-plane/ClickDestinationForm";
 import { SendPolicyForm } from "@/features/whatsapp/components/control-plane/SendPolicyForm";
+import { ProductionSenderActivationForm } from "@/features/whatsapp/components/control-plane/ProductionSenderActivationForm";
 import {
   describeWhatsappFrequencyRule,
   WHATSAPP_MARKETING_DEFAULT_TIMEZONE,
@@ -9,6 +10,11 @@ import {
 import { listWhatsappClickDestinationsForCurrentUser } from "@/features/whatsapp/server/whatsapp-campaign-queries";
 import { resolveWhatsappControlPlaneAccess } from "@/features/whatsapp/server/whatsapp-control-plane-auth";
 import { getWhatsappMarketingReadiness } from "@/features/whatsapp/server/whatsapp-readiness";
+import {
+  getWhatsappProductionActivationEnvironment,
+  getWhatsappProductionSenderStatusForCurrentUser,
+} from "@/features/whatsapp/server/whatsapp-production-activation";
+import { productionSenderMatchesEnvironment } from "@/features/whatsapp/contracts/production-activation";
 import {
   getWhatsappSendPolicyForCurrentUser,
   listWhatsappSendPolicyVersionsForCurrentUser,
@@ -49,12 +55,16 @@ export default async function WhatsappSettingsPage() {
 
   const { permissions } = access;
   const canManage = permissions["whatsapp.settings.manage"];
-  const [read, versions, destinations] = await Promise.all([
+  const activationEnv = getWhatsappProductionActivationEnvironment();
+  const [read, versions, destinations, productionSender] = await Promise.all([
     getWhatsappSendPolicyForCurrentUser(),
     listWhatsappSendPolicyVersionsForCurrentUser(),
     listWhatsappClickDestinationsForCurrentUser(),
+    getWhatsappProductionSenderStatusForCurrentUser(),
   ]);
   const readiness = getWhatsappMarketingReadiness();
+  const productionSenderAligned = productionSenderMatchesEnvironment(productionSender, activationEnv);
+  const productionEnvReady = activationEnv.accessTokenConfigured && activationEnv.wabaIdConfigured && activationEnv.phoneNumberIdConfigured;
   const policy = read.kind === "configured" ? read.policy : null;
   const executing = policy?.executionEnabled === true;
 
@@ -65,6 +75,65 @@ export default async function WhatsappSettingsPage() {
       lede="How often a contact may receive marketing, when marketing is quiet, and whether approved campaigns may execute at all. Each change publishes a new, permanent version."
       permissions={permissions}
     >
+      <section className="od-cp__panel" aria-labelledby="whatsapp-production-sender">
+        <div className="od-cp__toolbar">
+          <div>
+            <p className="od-growth__eyebrow">Phase 1 production activation</p>
+            <h2 id="whatsapp-production-sender" className="od-cp__panel-title" style={{ margin: 0 }}>
+              Production Meta sender
+            </h2>
+          </div>
+          <span
+            className="od-cp__badge"
+            data-tone={productionSenderAligned ? "positive" : "warning"}
+          >
+            {productionSenderAligned ? "Locked & aligned" : "Cutover required"}
+          </span>
+        </div>
+        <p className="od-cp__hint" style={{ marginBlockStart: 8 }}>
+          ONEDECORE keeps one explicit production sender. Test and legacy Meta numbers remain in historical evidence,
+          but they are archived from all new outbound selection after the verified cutover.
+        </p>
+        <div className="od-cp__columns" style={{ marginBlockStart: 12 }}>
+          <div>
+            <h3 className="od-cp__panel-title">Configured environment</h3>
+            <dl className="od-cp__dl">
+              <dt>WABA</dt>
+              <dd>{activationEnv.wabaIdLast6 ? `…${activationEnv.wabaIdLast6}` : "Missing"}</dd>
+              <dt>Phone Number ID</dt>
+              <dd>{activationEnv.phoneNumberIdLast6 ? `…${activationEnv.phoneNumberIdLast6}` : "Missing"}</dd>
+              <dt>Meta credential</dt>
+              <dd>{activationEnv.accessTokenConfigured ? "Configured" : "Missing"}</dd>
+              <dt>Graph API</dt>
+              <dd>{activationEnv.graphApiVersion}</dd>
+            </dl>
+          </div>
+          <div>
+            <h3 className="od-cp__panel-title">Database sender lock</h3>
+            <dl className="od-cp__dl">
+              <dt>Sender</dt>
+              <dd>{productionSender.displayPhoneNumber ?? "Not activated"}</dd>
+              <dt>WABA</dt>
+              <dd>{productionSender.wabaIdLast6 ? `…${productionSender.wabaIdLast6}` : "—"}</dd>
+              <dt>Phone Number ID</dt>
+              <dd>{productionSender.phoneNumberIdLast6 ? `…${productionSender.phoneNumberIdLast6}` : "—"}</dd>
+              <dt>Active identities</dt>
+              <dd>{productionSender.activeAccountCount} account · {productionSender.activePhoneCount} phone</dd>
+            </dl>
+          </div>
+        </div>
+        <div style={{ marginBlockStart: 14 }}>
+          <ProductionSenderActivationForm
+            canActivate={canManage}
+            readyForVerification={productionEnvReady}
+          />
+        </div>
+        <p className="od-cp__hint" style={{ marginBlockStart: 10 }}>
+          This verifies the configured number against Meta and changes sender identity only. It does not enable the
+          marketing execution gate and does not send a customer message.
+        </p>
+      </section>
+
       <section className="od-cp__panel od-cp__gate" aria-label="Campaign execution gate">
         <div>
           <p className="od-cp__name" style={{ margin: 0 }}>

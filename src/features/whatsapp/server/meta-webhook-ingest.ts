@@ -393,6 +393,19 @@ async function persistEvent(
   return persistMessageStatus(client, event, envelopeHash);
 }
 
+export function metaWebhookEventMatchesProductionSender(
+  env: MetaWebhookServerEnv,
+  event: NormalizedWebhookEvent
+): boolean {
+  if (env.mode !== "enabled") return true;
+  return (
+    env.expectedWabaId !== null &&
+    env.expectedPhoneNumberId !== null &&
+    event.wabaId === env.expectedWabaId &&
+    event.phoneNumberId === env.expectedPhoneNumberId
+  );
+}
+
 export interface MetaWebhookSignedBodyRequest {
   readonly env: MetaWebhookServerEnv;
   readonly signatureHeader: string | null;
@@ -461,9 +474,23 @@ export async function handleMetaWebhookSignedBody(
     };
   }
 
+  const acceptedEvents = normalized.events.filter((event) =>
+    metaWebhookEventMatchesProductionSender(env, event)
+  );
+  if (acceptedEvents.length === 0) {
+    return {
+      httpStatus: 200,
+      body: JSON.stringify({ ok: true, outcome: "ignored_sender_mismatch" }),
+      contentType: "application/json; charset=utf-8",
+      correlationId,
+      outcome: "ignored_sender_mismatch",
+      eventCount: 0,
+    };
+  }
+
   const client = createAdmin(env);
   let lastOutcome = "persisted";
-  for (const event of normalized.events) {
+  for (const event of acceptedEvents) {
     lastOutcome = await persistEvent(client, event, envelopeHash);
   }
 
@@ -477,7 +504,7 @@ export async function handleMetaWebhookSignedBody(
     contentType: "application/json; charset=utf-8",
     correlationId,
     outcome: lastOutcome,
-    eventCount: normalized.events.length,
+    eventCount: acceptedEvents.length,
   };
 }
 

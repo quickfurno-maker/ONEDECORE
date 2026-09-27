@@ -13,6 +13,8 @@ export interface MetaWebhookServerEnv {
   readonly serviceRoleKey: string | null;
   readonly verifyToken: string | null;
   readonly appSecret: string | null;
+  readonly expectedWabaId: string | null;
+  readonly expectedPhoneNumberId: string | null;
 }
 
 const MODE_VALUES = new Set<MetaWebhookMode>([
@@ -73,6 +75,8 @@ export function getMetaWebhookServerEnv(
       serviceRoleKey: null,
       verifyToken: null,
       appSecret: null,
+      expectedWabaId: null,
+      expectedPhoneNumberId: null,
     };
   }
 
@@ -100,6 +104,8 @@ export function getMetaWebhookServerEnv(
   const serviceRoleKey = readOptional(env, "SUPABASE_SERVICE_ROLE_KEY");
   const verifyToken = readOptional(env, "META_WHATSAPP_WEBHOOK_VERIFY_TOKEN");
   const appSecret = readOptional(env, "META_WHATSAPP_APP_SECRET");
+  const expectedWabaId = readOptional(env, "META_WHATSAPP_BUSINESS_ACCOUNT_ID");
+  const expectedPhoneNumberId = readOptional(env, "META_WHATSAPP_PHONE_NUMBER_ID");
   const publishable = readOptional(env, "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 
   if (!serviceRoleKey) {
@@ -121,6 +127,16 @@ export function getMetaWebhookServerEnv(
     if (!appSecret || appSecret.length < 16 || appSecret.length > 256) {
       throw safeEnvError("META_WHATSAPP_APP_SECRET is required for enabled mode.");
     }
+    if (!expectedWabaId || !/^[0-9]{1,64}$/.test(expectedWabaId)) {
+      throw safeEnvError(
+        "META_WHATSAPP_BUSINESS_ACCOUNT_ID is required for enabled mode."
+      );
+    }
+    if (!expectedPhoneNumberId || !/^[0-9]{1,64}$/.test(expectedPhoneNumberId)) {
+      throw safeEnvError(
+        "META_WHATSAPP_PHONE_NUMBER_ID is required for enabled mode."
+      );
+    }
   }
 
   return {
@@ -129,6 +145,8 @@ export function getMetaWebhookServerEnv(
     serviceRoleKey,
     verifyToken,
     appSecret,
+    expectedWabaId,
+    expectedPhoneNumberId,
   };
 }
 

@@ -298,7 +298,7 @@ export const ONEDECORE_ENV_CONTRACT: readonly EnvKeyContract[] = [
     sensitivity: "config",
     lifecycle: "activation-gated",
     subsystem: "whatsapp",
-    purpose: "Inbound webhook mode. Fails closed; currently disabled.",
+    purpose: "Inbound Meta webhook mode. Fails closed; enabled production ingestion can be locked to the configured WABA and Phone Number ID.",
     inEnvExample: true,
   },
   {
@@ -307,7 +307,7 @@ export const ONEDECORE_ENV_CONTRACT: readonly EnvKeyContract[] = [
     sensitivity: "config",
     lifecycle: "activation-gated",
     subsystem: "whatsapp",
-    purpose: "Outbound send mode. Fails closed; currently disabled.",
+    purpose: "Outbound send mode. Fails closed; enabled production dispatch is additionally locked to the configured Meta Phone Number ID.",
     inEnvExample: true,
   },
   {
@@ -372,7 +372,7 @@ export const ONEDECORE_ENV_CONTRACT: readonly EnvKeyContract[] = [
     lifecycle: "activation-gated",
     subsystem: "whatsapp",
     purpose:
-      "The WhatsApp Business Account (WABA) id whose message templates Template Studio syncs and submits. Required when template mode is not disabled.",
+      "The production WhatsApp Business Account (WABA) id. Used to verify and lock the real production sender, and by Template Studio / Flows provider operations.",
     inEnvExample: true,
   },
   {

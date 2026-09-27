@@ -144,7 +144,8 @@ async function dispatchOneJob(
   admin: WhatsappCampaignWorkerAdminClient,
   adapter: WhatsappTemplateMessageAdapter,
   queue: QueueSpec,
-  job: WhatsappCampaignClaimedJob
+  job: WhatsappCampaignClaimedJob,
+  expectedPhoneNumberId: string | null
 ): Promise<JobOutcome> {
   // Recorded before the provider call. If this cannot be recorded, do not send.
   const { error: markError } = await admin.rpc(queue.markRpc, { [queue.idArg]: job.jobId, p_claim_token: job.claimToken });
@@ -156,6 +157,11 @@ async function dispatchOneJob(
   }
   if (!job.phoneNumberId || !job.recipientE164 || !job.templateName || !job.templateLanguage || !job.components) {
     return failJob(admin, queue, job, "terminal", "claim_fields_missing");
+  }
+  if (expectedPhoneNumberId && job.phoneNumberId !== expectedPhoneNumberId) {
+    return failJob(admin, queue, job, "terminal", "production_sender_mismatch", {
+      provider: "meta",
+    });
   }
 
   let result;
@@ -199,7 +205,8 @@ async function dispatchOneJob(
 async function dispatchOneTestSend(
   admin: WhatsappCampaignWorkerAdminClient,
   adapter: WhatsappTemplateMessageAdapter,
-  job: WhatsappCampaignClaimedJob
+  job: WhatsappCampaignClaimedJob,
+  expectedPhoneNumberId: string | null
 ): Promise<JobOutcome> {
   const { error: markError } = await admin.rpc(WHATSAPP_CAMPAIGN_WORKER_RPC.markTestSendStarted, {
     p_test_send_id: job.jobId,
@@ -218,6 +225,9 @@ async function dispatchOneTestSend(
   };
   if (!job.phoneNumberId || !job.recipientE164 || !job.templateName || !job.templateLanguage || !job.components) {
     return complete("failed", { p_error_code: "claim_fields_missing" });
+  }
+  if (expectedPhoneNumberId && job.phoneNumberId !== expectedPhoneNumberId) {
+    return complete("failed", { p_error_code: "production_sender_mismatch" });
   }
   let result;
   try {
@@ -281,7 +291,7 @@ export async function dispatchWhatsappCampaignJobs(
     for (const job of jobs) {
       let outcome: JobOutcome;
       try {
-        outcome = await dispatchOneJob(admin, adapter, CAMPAIGN_QUEUE, job);
+        outcome = await dispatchOneJob(admin, adapter, CAMPAIGN_QUEUE, job, env.mode === "enabled" ? env.phoneNumberId : null);
       } catch {
         outcome = "skipped";
       }
@@ -299,7 +309,7 @@ export async function dispatchWhatsappCampaignJobs(
     for (const job of claimed) {
       let outcome: JobOutcome;
       try {
-        outcome = await dispatchOneTestSend(admin, adapter, job);
+        outcome = await dispatchOneTestSend(admin, adapter, job, env.mode === "enabled" ? env.phoneNumberId : null);
       } catch {
         outcome = "skipped";
       }
@@ -324,7 +334,7 @@ export async function dispatchWhatsappCampaignJobs(
     for (const job of claimed) {
       let outcome: JobOutcome;
       try {
-        outcome = await dispatchOneJob(admin, adapter, AUTOMATION_QUEUE, job);
+        outcome = await dispatchOneJob(admin, adapter, AUTOMATION_QUEUE, job, env.mode === "enabled" ? env.phoneNumberId : null);
       } catch {
         outcome = "skipped";
       }
