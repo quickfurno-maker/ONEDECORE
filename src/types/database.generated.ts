@@ -9545,6 +9545,7 @@ export type Database = {
           display_phone_number: string | null
           id: string
           phone_number_id: string
+          production_sender_at: string | null
           status: string
           updated_at: string
         }
@@ -9554,6 +9555,7 @@ export type Database = {
           display_phone_number?: string | null
           id?: string
           phone_number_id: string
+          production_sender_at?: string | null
           status?: string
           updated_at?: string
         }
@@ -9563,6 +9565,7 @@ export type Database = {
           display_phone_number?: string | null
           id?: string
           phone_number_id?: string
+          production_sender_at?: string | null
           status?: string
           updated_at?: string
         }
@@ -11515,6 +11518,14 @@ export type Database = {
         }
         Returns: Json
       }
+      configure_whatsapp_production_sender: {
+        Args: {
+          p_display_phone_number: string
+          p_phone_number_id: string
+          p_waba_id: string
+        }
+        Returns: Json
+      }
       confirm_lead_import_batch_direct: {
         Args: { p_batch_id: string; p_expected_revision: number }
         Returns: {
@@ -12534,6 +12545,7 @@ export type Database = {
           message_kind: string
         }[]
       }
+      get_whatsapp_production_sender_status: { Args: never; Returns: Json }
       get_whatsapp_referral_analytics: {
         Args: { p_from?: string; p_to?: string }
         Returns: Json

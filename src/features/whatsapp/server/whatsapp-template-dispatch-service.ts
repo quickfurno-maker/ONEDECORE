@@ -149,6 +149,26 @@ export async function dispatchWhatsappTemplateSendIntent(
     return { outcome: "failed", intentId, reason: "claim_fields_missing", message: "The template send could not be prepared." };
   }
 
+  if (
+    env.mode === "enabled" &&
+    env.phoneNumberId &&
+    claim.phone_number_id !== env.phoneNumberId
+  ) {
+    await admin.rpc("complete_whatsapp_template_send_intent", {
+      p_dispatch_attempt_id: claim.dispatch_attempt_id,
+      p_outcome: "failed",
+      p_error_class: "terminal",
+      p_error_code: "production_sender_mismatch",
+      p_response_snapshot: { provider: "meta" },
+    });
+    return {
+      outcome: "failed",
+      intentId,
+      reason: "production_sender_mismatch",
+      message: "This template send belongs to a retired WhatsApp sender.",
+    };
+  }
+
   const result = await adapter.dispatchTemplateMessage({
     phoneNumberId: claim.phone_number_id,
     customerE164: claim.customer_e164,

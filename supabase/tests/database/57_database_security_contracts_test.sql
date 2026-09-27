@@ -184,6 +184,7 @@ select set_eq(
     'claim_whatsapp_campaign_test_sends(text,integer)',
     'claim_whatsapp_send_intent_for_dispatch(uuid,text,text)',
     'claim_whatsapp_template_send_intent(uuid,text,text)',
+    'configure_whatsapp_production_sender(text,text,text)',
     'complete_campaign_run_operation(uuid,text,jsonb)',
     'complete_commerce_automation_job(uuid,uuid)',
     'complete_whatsapp_automation_dispatch_failure(uuid,uuid,text,text,jsonb)',

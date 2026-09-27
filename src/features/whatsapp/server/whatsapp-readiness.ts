@@ -4,6 +4,7 @@ import { getCampaignExecutionWorkerSecret } from "../../marketing/execution/serv
 import { getWhatsappFlowManagementMode, getWhatsappMediaMode, getWhatsappTemplateManagementMode } from "./whatsapp-business-env.ts";
 import { getWhatsappClickTrackingMode } from "./whatsapp-click-env.ts";
 import { getWhatsappOutboundMode } from "./whatsapp-outbound-env.ts";
+import { getWhatsappProductionActivationEnvironment } from "./whatsapp-production-activation.ts";
 
 /**
  * WM-7 — configuration truth for Settings & Compliance, without secrets. Every
@@ -20,6 +21,8 @@ export interface WhatsappReadinessRow {
 
 export function getWhatsappMarketingReadiness(): readonly WhatsappReadinessRow[] {
   const outbound = getWhatsappOutboundMode();
+  const activation = getWhatsappProductionActivationEnvironment();
+  const senderConfigured = activation.wabaIdConfigured && activation.phoneNumberIdConfigured && activation.accessTokenConfigured;
   const workerSecret = (() => {
     try {
       return getCampaignExecutionWorkerSecret() ? "configured" : "missing";
@@ -28,6 +31,14 @@ export function getWhatsappMarketingReadiness(): readonly WhatsappReadinessRow[]
     }
   })();
   return [
+    {
+      key: "sender",
+      label: "Production Meta sender",
+      mode: senderConfigured ? "configured" : "missing",
+      note: senderConfigured
+        ? `WABA …${activation.wabaIdLast6 ?? "?"} and Phone Number ID …${activation.phoneNumberIdLast6 ?? "?"} are configured; Settings verifies and locks them against Meta before cutover.`
+        : "WABA ID, Phone Number ID and Meta access token must all be configured before production sender cutover.",
+    },
     {
       key: "outbound",
       label: "Outbound sends (kill switch)",

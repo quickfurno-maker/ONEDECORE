@@ -152,14 +152,27 @@ describe("Phase 6A webhook env", () => {
         META_WHATSAPP_APP_SECRET: APP_SECRET,
       })
     );
+    assert.throws(() =>
+      getMetaWebhookServerEnv({
+        ONEDECORE_WHATSAPP_WEBHOOK_MODE: "enabled",
+        NEXT_PUBLIC_SUPABASE_URL: MANAGED,
+        SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key-not-publishable",
+        META_WHATSAPP_WEBHOOK_VERIFY_TOKEN: VERIFY_TOKEN,
+        META_WHATSAPP_APP_SECRET: APP_SECRET,
+      })
+    );
     const env = getMetaWebhookServerEnv({
       ONEDECORE_WHATSAPP_WEBHOOK_MODE: "enabled",
       NEXT_PUBLIC_SUPABASE_URL: MANAGED,
       SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key-not-publishable",
       META_WHATSAPP_WEBHOOK_VERIFY_TOKEN: VERIFY_TOKEN,
       META_WHATSAPP_APP_SECRET: APP_SECRET,
+      META_WHATSAPP_BUSINESS_ACCOUNT_ID: "111222333444",
+      META_WHATSAPP_PHONE_NUMBER_ID: "555666777888",
     });
     assert.equal(env.mode, "enabled");
+    assert.equal(env.expectedWabaId, "111222333444");
+    assert.equal(env.expectedPhoneNumberId, "555666777888");
   });
 
   test("secrets remain server-only in env module", () => {
