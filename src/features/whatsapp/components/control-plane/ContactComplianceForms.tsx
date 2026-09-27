@@ -28,10 +28,12 @@ import "./control-plane.css";
 export function MarketingOptOutForm({
   contactId,
   conversationId = null,
+  leadId = null,
   compact = false,
 }: {
   readonly contactId: string;
   readonly conversationId?: string | null;
+  readonly leadId?: string | null;
   readonly compact?: boolean;
 }) {
   const [state, action, pending] = useActionState(
@@ -42,6 +44,7 @@ export function MarketingOptOutForm({
     <form action={action} className="od-cp__stack" data-testid="whatsapp-opt-out-form">
       <input type="hidden" name="contactId" value={contactId} />
       {conversationId ? <input type="hidden" name="conversationId" value={conversationId} /> : null}
+      {leadId ? <input type="hidden" name="crmLeadId" value={leadId} /> : null}
       {compact ? null : (
         <p className="od-cp__hint">
           Records that the customer asked to stop marketing messages. Service replies in the inbox are not affected.
@@ -61,7 +64,13 @@ export function MarketingOptOutForm({
   );
 }
 
-export function MarketingConsentEvidenceForm({ contactId }: { readonly contactId: string }) {
+export function MarketingConsentEvidenceForm({
+  contactId,
+  leadId = null,
+}: {
+  readonly contactId: string;
+  readonly leadId?: string | null;
+}) {
   const [state, action, pending] = useActionState(
     recordWhatsappMarketingConsentGrantAction,
     INITIAL_WHATSAPP_CONTROL_PLANE_ACTION_STATE
@@ -69,6 +78,7 @@ export function MarketingConsentEvidenceForm({ contactId }: { readonly contactId
   return (
     <form action={action} className="od-cp__stack" data-testid="marketing-consent-evidence-form">
       <input type="hidden" name="contactId" value={contactId} />
+      {leadId ? <input type="hidden" name="crmLeadId" value={leadId} /> : null}
       <p className="od-cp__hint">
         Use only when the customer explicitly opted in to optional ONEDECORE marketing.
         A website enquiry, service consent or an existing WhatsApp conversation is never enough.

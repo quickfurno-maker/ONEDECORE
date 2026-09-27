@@ -50,6 +50,7 @@ import {
 } from "../contracts/lead-cohort-limits.ts";
 import {
   CRM_EMPTY_ENGAGEMENT,
+  CRM_EMPTY_WHATSAPP_ENGAGEMENT,
   fetchLeadScoreBatch,
   type CrmLeadScoreBatch,
 } from "./crm-lead-score-batch.ts";
@@ -687,6 +688,7 @@ export function enrichLeadRow(
   const engagement = batch.engagement[row.id] ?? CRM_EMPTY_ENGAGEMENT;
   const deal = batch.dealValues[row.id] ?? null;
   const touch = batch.salesTouches[row.id] ?? null;
+  const whatsapp = batch.whatsapp[row.id] ?? CRM_EMPTY_WHATSAPP_ENGAGEMENT;
   const status = row.status as LeadStageCode;
   const manualSalesTemperature = parseManualSalesTemperature(
     row.manual_sales_temperature
@@ -712,6 +714,9 @@ export function enrichLeadRow(
       hasOpenPrimaryNextAction: primary !== null,
       primaryNextActionDueAt: primary?.dueAt ?? null,
       slaDueAt: sla?.slaDueAt ?? null,
+      whatsappLinked: whatsapp.linked,
+      hasWhatsappCustomerReply: whatsapp.hasCustomerReply,
+      lastWhatsappInboundAt: whatsapp.lastInboundAt,
     },
     now
   );

@@ -12341,6 +12341,10 @@ export type Database = {
         Args: { p_waba_id: string }
         Returns: string
       }
+      ensure_whatsapp_conversation_for_crm_lead: {
+        Args: { p_lead_id: string }
+        Returns: Json
+      }
       export_whatsapp_campaign_run_report: {
         Args: { p_run_id: string }
         Returns: Json
@@ -12463,6 +12467,10 @@ export type Database = {
       }
       get_crm_pipeline_value_summary: {
         Args: { p_owner_id?: string }
+        Returns: Json
+      }
+      get_crm_whatsapp_marketing_state: {
+        Args: { p_lead_id: string }
         Returns: Json
       }
       get_live_landing_publication: { Args: { p_slug: string }; Returns: Json }
@@ -12653,6 +12661,17 @@ export type Database = {
           display_name: string
           role_code: string
           user_id: string
+        }[]
+      }
+      list_crm_whatsapp_lead_signals: {
+        Args: { p_lead_ids: string[] }
+        Returns: {
+          has_customer_reply: boolean
+          last_inbound_at: string
+          lead_id: string
+          production_conversation_id: string
+          production_sender_ready: boolean
+          whatsapp_linked: boolean
         }[]
       }
       list_my_vendor_commerce_orders: {

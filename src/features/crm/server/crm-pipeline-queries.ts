@@ -24,12 +24,14 @@ import { fetchCrmPipelineValueSummary } from "./crm-lead-commercial-queries.ts";
 // implementations happening to agree.
 import {
   CRM_EMPTY_ENGAGEMENT,
+  CRM_EMPTY_WHATSAPP_ENGAGEMENT,
   fetchDealValues,
   fetchEngagementSignals,
   fetchPrimaryNextActions,
   fetchSalesTouchSignals,
   fetchSlaSignals,
   fetchStageEntryInstants,
+  fetchWhatsappEngagementSignals,
 } from "./crm-lead-score-batch.ts";
 
 const PIPELINE_LEAD_SELECT =
@@ -108,6 +110,7 @@ export async function fetchCrmPipelineBoard(
     dealValues,
     valueSummary,
     salesTouches,
+    whatsapp,
   ] = await Promise.all([
     context.canReadBroad
       ? fetchCrmAssigneeDirectory(context, db)
@@ -120,6 +123,7 @@ export async function fetchCrmPipelineBoard(
     // Totals come from the full RLS-scoped set, never from the fetched head.
     fetchCrmPipelineValueSummary(scopeOwnerId, db),
     fetchSalesTouchSignals(leadIds, db),
+    fetchWhatsappEngagementSignals(leadIds, db),
   ]);
 
   const assigneeLabels = Object.fromEntries(
@@ -137,6 +141,8 @@ export async function fetchCrmPipelineBoard(
       const signals = engagement[row.id] ?? CRM_EMPTY_ENGAGEMENT;
       const deal = dealValues[row.id] ?? null;
       const touch = salesTouches[row.id] ?? null;
+      const whatsappSignal =
+        whatsapp[row.id] ?? CRM_EMPTY_WHATSAPP_ENGAGEMENT;
 
       // Same pure derivation the lead detail page uses, from the same signal
       // shape, so a lead can never score differently on the two surfaces.
@@ -158,6 +164,9 @@ export async function fetchCrmPipelineBoard(
           hasOpenPrimaryNextAction: primary !== null,
           primaryNextActionDueAt: primary?.dueAt ?? null,
           slaDueAt: sla?.slaDueAt ?? null,
+          whatsappLinked: whatsappSignal.linked,
+          hasWhatsappCustomerReply: whatsappSignal.hasCustomerReply,
+          lastWhatsappInboundAt: whatsappSignal.lastInboundAt,
         },
         now
       );

@@ -81,6 +81,22 @@ export interface CrmSalesTouchSignal {
   readonly latestQuotationEventAt: string | null;
 }
 
+export interface CrmWhatsappEngagementSignal {
+  readonly linked: boolean;
+  readonly hasCustomerReply: boolean;
+  readonly lastInboundAt: string | null;
+  readonly productionConversationId: string | null;
+  readonly productionSenderReady: boolean;
+}
+
+export const CRM_EMPTY_WHATSAPP_ENGAGEMENT: CrmWhatsappEngagementSignal = {
+  linked: false,
+  hasCustomerReply: false,
+  lastInboundAt: null,
+  productionConversationId: null,
+  productionSenderReady: false,
+};
+
 /**
  * The SITE VISIT milestone, batched.
  *
@@ -427,6 +443,40 @@ export async function fetchSalesTouchSignals(
   return map;
 }
 
+
+
+export async function fetchWhatsappEngagementSignals(
+  leadIds: readonly string[],
+  db?: CrmDb
+): Promise<Readonly<Record<string, CrmWhatsappEngagementSignal>>> {
+  const chunks = chunkLeadIds(leadIds);
+  if (chunks.length === 0) return {};
+
+  const supabase = await resolveCrmDb(db);
+  const map: Record<string, CrmWhatsappEngagementSignal> = {};
+
+  for (const chunk of chunks) {
+    const { data, error } = await supabase.rpc("list_crm_whatsapp_lead_signals", {
+      p_lead_ids: [...chunk],
+    });
+    if (error) {
+      throw crmErrorFromPostgresMessage(error.message, "RPC_FAILED");
+    }
+
+    for (const row of data ?? []) {
+      map[row.lead_id] = {
+        linked: row.whatsapp_linked,
+        hasCustomerReply: row.has_customer_reply,
+        lastInboundAt: row.last_inbound_at,
+        productionConversationId: row.production_conversation_id,
+        productionSenderReady: row.production_sender_ready,
+      };
+    }
+  }
+
+  return map;
+}
+
 export interface CrmLeadScoreBatch {
   readonly primaryActions: Readonly<Record<string, CrmPrimaryNextAction>>;
   readonly slaClocks: CrmSlaSignalResult;
@@ -435,6 +485,7 @@ export interface CrmLeadScoreBatch {
   readonly dealValues: Readonly<Record<string, CrmDealValueSignal>>;
   readonly salesTouches: Readonly<Record<string, CrmSalesTouchSignal>>;
   readonly siteVisits: Readonly<Record<string, CrmSiteVisitState>>;
+  readonly whatsapp: Readonly<Record<string, CrmWhatsappEngagementSignal>>;
 }
 
 /**
@@ -457,6 +508,7 @@ export async function fetchLeadScoreBatch(
     dealValues,
     salesTouches,
     siteVisits,
+    whatsapp,
   ] = await Promise.all([
     fetchPrimaryNextActions(leadIds, db),
     fetchSlaSignals(leadIds, db),
@@ -465,6 +517,7 @@ export async function fetchLeadScoreBatch(
     fetchDealValues(leadIds, db),
     fetchSalesTouchSignals(leadIds, db),
     fetchSiteVisitSignals(leadIds, db),
+    fetchWhatsappEngagementSignals(leadIds, db),
   ]);
 
   return {
@@ -475,5 +528,6 @@ export async function fetchLeadScoreBatch(
     dealValues,
     salesTouches,
     siteVisits,
+    whatsapp,
   };
 }

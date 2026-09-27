@@ -49,9 +49,14 @@ export async function recordWhatsappMarketingOptOutAction(
 ): Promise<WhatsappControlPlaneActionState> {
   const contactId = String(formData.get("contactId") ?? "").trim();
   const conversationRaw = String(formData.get("conversationId") ?? "").trim();
+  const crmLeadRaw = String(formData.get("crmLeadId") ?? "").trim();
   const confirmed = formData.get("confirm") === "yes";
 
-  if (!isUuid(contactId) || (conversationRaw !== "" && !isUuid(conversationRaw))) {
+  if (
+    !isUuid(contactId) ||
+    (conversationRaw !== "" && !isUuid(conversationRaw)) ||
+    (crmLeadRaw !== "" && !isUuid(crmLeadRaw))
+  ) {
     return { success: false, code: "VALIDATION", message: "Unknown contact." };
   }
   if (!confirmed) {
@@ -83,6 +88,7 @@ export async function recordWhatsappMarketingOptOutAction(
 
   revalidatePath(WHATSAPP_ADMIN_CONTACTS_PATH);
   if (conversationId) revalidatePath(`${WHATSAPP_ADMIN_INBOX_BASE_PATH}/${conversationId}`);
+  if (crmLeadRaw) revalidatePath(`/admin/crm/leads/${crmLeadRaw}`);
 
   const outcome = (data as { outcome?: unknown } | null)?.outcome;
   return {
@@ -99,12 +105,13 @@ export async function recordWhatsappMarketingConsentGrantAction(
   formData: FormData
 ): Promise<WhatsappControlPlaneActionState> {
   const contactId = String(formData.get("contactId") ?? "").trim();
+  const crmLeadRaw = String(formData.get("crmLeadId") ?? "").trim();
   const channel = String(formData.get("channel") ?? "").trim();
   const instructionSource = String(formData.get("instructionSource") ?? "").trim();
   const note = String(formData.get("note") ?? "").replace(/\s+/g, " ").trim();
   const confirmed = formData.get("confirmExplicit") === "yes";
 
-  if (!isUuid(contactId)) {
+  if (!isUuid(contactId) || (crmLeadRaw !== "" && !isUuid(crmLeadRaw))) {
     return { success: false, code: "VALIDATION", message: "Unknown contact." };
   }
   if (!(WHATSAPP_MARKETING_CONSENT_CHANNELS as readonly string[]).includes(channel)) {
@@ -155,6 +162,7 @@ export async function recordWhatsappMarketingConsentGrantAction(
   }
 
   revalidatePath(WHATSAPP_ADMIN_CONTACTS_PATH);
+  if (crmLeadRaw) revalidatePath(`/admin/crm/leads/${crmLeadRaw}`);
   return {
     success: true,
     message: "Explicit MARKETING consent evidence recorded. No message was sent and all campaign safeguards still apply.",

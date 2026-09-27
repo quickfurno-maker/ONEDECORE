@@ -237,7 +237,8 @@ describe("the refactor is additive", () => {
     ["crm-permissions.ts", 10],
     /* 8 since queryLeadIntelligence: the cohort read's 7, plus one. */
     ["crm-lead-queries.ts", 8],
-    ["crm-lead-score-batch.ts", 7],
+    /* Phase 2 adds one content-free WhatsApp engagement batch read. */
+    ["crm-lead-score-batch.ts", 8],
     ["crm-lead-commercial-queries.ts", 2],
     ["crm-pipeline-queries.ts", 1],
     /* CRM-M7A: the calendar snapshot now runs for a bearer caller too. */

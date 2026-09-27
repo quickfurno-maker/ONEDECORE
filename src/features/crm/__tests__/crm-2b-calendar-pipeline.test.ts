@@ -129,6 +129,9 @@ function makeCard(overrides: Partial<CrmPipelineCard> = {}): CrmPipelineCard {
         hasOpenPrimaryNextAction: true,
         primaryNextActionDueAt: "2026-09-10T06:00:00.000Z",
         slaDueAt: null,
+        whatsappLinked: false,
+        hasWhatsappCustomerReply: false,
+        lastWhatsappInboundAt: null,
       },
       Date.parse("2026-09-05T06:00:00.000Z")
     ),

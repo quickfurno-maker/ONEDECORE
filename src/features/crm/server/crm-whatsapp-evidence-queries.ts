@@ -66,3 +66,52 @@ export async function fetchGovernedWhatsappSendIntentsForLead(
     label: formatIntentLabel(row.purpose_code, row.created_at),
   }));
 }
+
+
+export interface CrmWhatsappMarketingState {
+  readonly contactId: string;
+  readonly currentGranted: boolean;
+  readonly latestEventType: string | null;
+  readonly latestOccurredAt: string | null;
+  readonly dnc: boolean;
+  readonly contactStatus: string;
+  readonly emailSuppressed: boolean;
+  readonly whatsappSuppressed: boolean;
+  readonly outreachBlocked: boolean;
+}
+
+/**
+ * Lead-scoped consent visibility for CRM. The database requires both lead
+ * visibility and either consents.read or marketing_consents.manage, so the
+ * caller never gains a broader contact lookup through this helper.
+ */
+export async function fetchCrmWhatsappMarketingStateForLead(
+  leadId: string
+): Promise<CrmWhatsappMarketingState | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(
+    "get_crm_whatsapp_marketing_state",
+    { p_lead_id: leadId }
+  );
+  if (error || !data || typeof data !== "object" || Array.isArray(data)) {
+    return null;
+  }
+
+  const row = data as Record<string, unknown>;
+  return {
+    contactId: String(row.contact_id ?? ""),
+    currentGranted: row.current_granted === true,
+    latestEventType:
+      typeof row.latest_event_type === "string" ? row.latest_event_type : null,
+    latestOccurredAt:
+      typeof row.latest_occurred_at === "string"
+        ? row.latest_occurred_at
+        : null,
+    dnc: row.dnc === true,
+    contactStatus:
+      typeof row.contact_status === "string" ? row.contact_status : "active",
+    emailSuppressed: row.email_suppressed === true,
+    whatsappSuppressed: row.whatsapp_suppressed === true,
+    outreachBlocked: row.outreach_blocked === true,
+  };
+}

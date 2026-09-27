@@ -5,9 +5,8 @@ import { LeadCommandHeader } from "@/features/crm/components/leads/LeadCommandHe
 import { LeadQuickActions } from "@/features/crm/components/leads/LeadQuickActions";
 import { LeadDetailAssignmentPanel } from "@/features/crm/components/leads/LeadDetailAssignmentPanel";
 import { LeadDetailConsentSummary, LeadDetailStatusSummary } from "@/features/crm/components/leads/LeadDetailConsentSummary";
-import { MarketingConsentPanel } from "@/features/marketing/components/MarketingConsentPanel";
+import { LeadWhatsappIntelligencePanel } from "@/features/crm/components/leads/LeadWhatsappIntelligencePanel";
 import { probeCampaignPermissions } from "@/features/marketing/server/campaign-permissions";
-import { getMarketingConsentState } from "@/features/marketing/server/campaign-queries";
 import { LeadDetailContact } from "@/features/crm/components/leads/LeadDetailContact";
 import { LeadActivityWorkspace } from "@/features/crm/components/activities/LeadActivityWorkspace.tsx";
 import { LeadCadencePanel } from "@/features/crm/components/leads/LeadCadencePanel";
@@ -25,8 +24,15 @@ import { deriveLeadScore } from "@/features/crm/contracts/lead-score-contracts";
 import { getLeadDetailForCurrentUser } from "@/features/crm/server/crm-lead-repository";
 import { fetchLeadCommercialState } from "@/features/crm/server/crm-lead-commercial-queries";
 import { buildLeadScoreSignalsFromDetail } from "@/features/crm/server/crm-lead-score-signals";
+import {
+  CRM_EMPTY_WHATSAPP_ENGAGEMENT,
+  fetchWhatsappEngagementSignals,
+} from "@/features/crm/server/crm-lead-score-batch";
 import { listActivityOutcomeOptionsForCurrentUser } from "@/features/crm/server/crm-activity-service.ts";
-import { fetchGovernedWhatsappSendIntentsForLead } from "@/features/crm/server/crm-whatsapp-evidence-queries.ts";
+import {
+  fetchCrmWhatsappMarketingStateForLead,
+  fetchGovernedWhatsappSendIntentsForLead,
+} from "@/features/crm/server/crm-whatsapp-evidence-queries.ts";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
 import {
   fetchEnrollableCadenceTemplates,
@@ -39,6 +45,8 @@ import {
 import { getQuotationDraftByLeadId } from "@/features/quotations/server/quotation-queries";
 import { probeQuotationPermissions } from "@/features/quotations/server/quotation-permissions";
 import { getWhatsappConversationForLeadCurrentUser } from "@/features/whatsapp/server/whatsapp-crm-integration";
+import { getWhatsappInboxAccessContext } from "@/features/whatsapp/server/whatsapp-auth";
+import { canCurrentUserRecordWhatsappOptOut } from "@/features/whatsapp/server/whatsapp-contacts-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +87,9 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
     enrollableCadences,
     commercialState,
     whatsappConversation,
+    whatsappSignalMap,
+    whatsappAccess,
+    canRecordWhatsappOptOut,
   ] =
     await Promise.all([
       needsDirectory ? fetchCrmAssigneeDirectory(context!) : Promise.resolve([]),
@@ -104,6 +115,9 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
       // to distinguish an ISSUED quotation from a merely FINALIZED one.
       fetchLeadCommercialState(lead.id),
       getWhatsappConversationForLeadCurrentUser(lead.id),
+      fetchWhatsappEngagementSignals([lead.id]),
+      getWhatsappInboxAccessContext(),
+      canCurrentUserRecordWhatsappOptOut(),
     ]);
 
   // Only an ACTIVE enrollment with a further step may offer CADENCE_NEXT.
@@ -111,9 +125,13 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
     leadCadence?.status === "active" ? leadCadence.enrollmentId : null;
   const hasNextCadenceStep = leadCadence?.upcomingStepTitle != null;
 
-  const marketingConsentState = campaignPermissions.canManageMarketingConsent
-    ? await getMarketingConsentState(lead.contact.id)
-    : null;
+  const marketingConsentState =
+    context?.canReadConsents || campaignPermissions.canManageMarketingConsent
+      ? await fetchCrmWhatsappMarketingStateForLead(lead.id)
+      : null;
+
+  const whatsappSignal =
+    whatsappSignalMap[lead.id] ?? CRM_EMPTY_WHATSAPP_ENGAGEMENT;
 
   const quotationId = existingDraft?.quotationId ?? null;
   const quotationLabel = existingDraft?.version?.title ?? existingDraft?.quotationNumber ?? null;
@@ -131,6 +149,7 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
       timeline: lead.timeline,
       slaClock: lead.slaClock,
       commercialState: commercialState.state,
+      whatsapp: whatsappSignal,
     }),
     nowMs
   );
@@ -173,6 +192,9 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
             quotationId={quotationId}
             canCreateQuotation={quotationPermissions.canCreateQuotations}
             canEditQuotation={quotationPermissions.canEditQuotations}
+            canUseWhatsapp={whatsappAccess?.canUse ?? false}
+            whatsappConversationId={whatsappSignal.productionConversationId ?? whatsappConversation?.conversationId ?? null}
+            whatsappProductionReady={whatsappSignal.productionSenderReady}
           />
         }
       />
@@ -247,11 +269,14 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
             <LeadDetailSourcePanel source={lead.source} />
             <LeadDetailStatusSummary summary={lead.statusSummary} />
             <LeadDetailConsentSummary items={lead.consentSummary} />
-            <MarketingConsentPanel
+            <LeadWhatsappIntelligencePanel
               leadId={lead.id}
               contactId={lead.contact.id}
-              canManage={campaignPermissions.canManageMarketingConsent}
-              state={marketingConsentState}
+              signal={whatsappSignal}
+              conversation={whatsappConversation}
+              consent={marketingConsentState}
+              canManageConsent={campaignPermissions.canManageMarketingConsent}
+              canRecordOptOut={canRecordWhatsappOptOut}
             />
           </div>
         </div>
@@ -272,11 +297,14 @@ export default async function CrmLeadDetailPage({ params }: CrmLeadDetailPagePro
           <LeadDetailSourcePanel source={lead.source} />
           <LeadDetailStatusSummary summary={lead.statusSummary} />
           <LeadDetailConsentSummary items={lead.consentSummary} />
-          <MarketingConsentPanel
+          <LeadWhatsappIntelligencePanel
             leadId={lead.id}
             contactId={lead.contact.id}
-            canManage={campaignPermissions.canManageMarketingConsent}
-            state={marketingConsentState}
+            signal={whatsappSignal}
+            conversation={whatsappConversation}
+            consent={marketingConsentState}
+            canManageConsent={campaignPermissions.canManageMarketingConsent}
+            canRecordOptOut={canRecordWhatsappOptOut}
           />
         </aside>
       </div>

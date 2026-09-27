@@ -5,19 +5,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { isTerminalLeadStage, type LeadStageCode } from "../../contracts/lead-stages.ts";
 import { createQuotationDraftAction } from "@/features/quotations/server/quotation-draft-actions";
+import { startCrmWhatsappConversationAction } from "../../server/crm-whatsapp-actions.ts";
 import { useLeadActions } from "./LeadActionsProvider.tsx";
 
 /**
- * CRM 2D-1 — the five owner-locked quick actions (Q8).
+ * CRM command quick actions — canonical mutations plus WhatsApp workspace navigation.
  *
  * Every action either dispatches an intent to the component that already owns
- * the mutation, or navigates. NOTHING here writes a table, calls Supabase, or
- * introduces a second server action: the canonical activity, note, and
- * quotation authorities remain untouched.
+ * the mutation, navigates, or calls the one governed WhatsApp preparation
+ * action. This component never writes a table or calls Supabase directly;
+ * canonical activity, note, quotation and WhatsApp authorities remain server-side.
  *
- * There is deliberately NO WhatsApp quick action — `whatsapp_conversations.lead_id`
- * has no canonical writer, so no lead can be resolved to a conversation. See the
- * CRM 2D design doc §P.1 (pre-launch blocker).
+ * WhatsApp now uses the canonical CRM↔conversation link. Opening an existing
+ * production thread navigates only; starting one calls the governed CRM server
+ * action, which prepares local conversation evidence and never sends by itself.
  *
  * Permission-denied actions are OMITTED rather than rendered disabled, matching
  * the gating used throughout the activity workspace.
@@ -33,6 +34,9 @@ interface LeadQuickActionsProps {
   readonly quotationId: string | null;
   readonly canCreateQuotation: boolean;
   readonly canEditQuotation: boolean;
+  readonly canUseWhatsapp: boolean;
+  readonly whatsappConversationId: string | null;
+  readonly whatsappProductionReady: boolean;
 }
 
 const ACTION_CLASS =
@@ -48,10 +52,14 @@ export function LeadQuickActions({
   quotationId,
   canCreateQuotation,
   canEditQuotation,
+  canUseWhatsapp,
+  whatsappConversationId,
+  whatsappProductionReady,
 }: LeadQuickActionsProps) {
   const router = useRouter();
   const actions = useLeadActions();
   const [creatingQuotation, setCreatingQuotation] = useState(false);
+  const [openingWhatsapp, setOpeningWhatsapp] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const isTerminal = isTerminalLeadStage(leadStatus);
@@ -88,8 +96,34 @@ export function LeadQuickActions({
     ? canEditQuotation && leadStatus !== "closed_lost"
     : canCreateQuotation && !isTerminal;
 
+  const showWhatsapp = canUseWhatsapp && (whatsappConversationId !== null || !isTerminal);
+
+  const handleWhatsapp = async () => {
+    setErrorMessage(null);
+    if (whatsappConversationId) {
+      router.push(`/admin/whatsapp/inbox/${whatsappConversationId}`);
+      return;
+    }
+    if (!whatsappProductionReady) {
+      setErrorMessage("The real ONEDECORE WhatsApp number is not activated yet. Meta setup can be completed later.");
+      return;
+    }
+
+    setOpeningWhatsapp(true);
+    const result = await startCrmWhatsappConversationAction(leadId);
+    setOpeningWhatsapp(false);
+    if (!result.success) {
+      setErrorMessage(result.message);
+      return;
+    }
+    router.push(`/admin/whatsapp/inbox/${result.conversationId}`);
+  };
+
   const hasAnyAction =
-    canMutateActivities || (canManageLeadNotes && !isTerminal) || showQuotation;
+    canMutateActivities ||
+    (canManageLeadNotes && !isTerminal) ||
+    showQuotation ||
+    showWhatsapp;
 
   if (!hasAnyAction) {
     return null;
@@ -150,6 +184,19 @@ export function LeadQuickActions({
             onClick={() => actions?.dispatchIntent({ kind: "add-note" })}
           >
             Add note
+          </button>
+        ) : null}
+
+        {showWhatsapp ? (
+          <button
+            type="button"
+            className={ACTION_CLASS}
+            data-testid="crm-quick-action-whatsapp"
+            disabled={openingWhatsapp}
+            onClick={handleWhatsapp}
+            title={whatsappProductionReady || whatsappConversationId ? undefined : "Production WhatsApp setup pending"}
+          >
+            {openingWhatsapp ? "Opening…" : "WhatsApp"}
           </button>
         ) : null}
 

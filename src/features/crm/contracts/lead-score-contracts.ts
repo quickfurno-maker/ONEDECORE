@@ -13,9 +13,11 @@
  * community status and must never enter a sales priority ranking. No
  * protected-attribute column exists in the schema and CRM 2D adds none.
  *
- * Also excluded by owner lock: `budget_comfort_code`, `leads.estimate_snapshot`,
- * and every WhatsApp reply/inbound signal (blocked by the unresolved
- * conversation lead-link defect — see the CRM 2D design doc §P.1).
+ * Also excluded by owner lock: `budget_comfort_code` and `leads.estimate_snapshot`.
+ * WhatsApp contributes only content-free engagement evidence from a canonically
+ * linked conversation: whether the customer has replied and the timestamp of
+ * the latest inbound message. Message text, phone number and profile metadata
+ * never enter scoring.
  */
 
 import type { CrmCommercialState } from "./deal-value-contracts.ts";
@@ -129,6 +131,8 @@ export const CRM_SCORE_ENGAGEMENT_POINTS = {
   CONSULTATION_OR_SITE_VISIT: 10,
   LIVE_ISSUED_QUOTATION: 10,
   RECENT_MEANINGFUL_ACTIVITY: 5,
+  WHATSAPP_CUSTOMER_REPLY: 5,
+  RECENT_WHATSAPP_REPLY: 5,
 } as const;
 
 /** Outcome codes that count as a meaningful contact result (Q3). */
@@ -144,9 +148,9 @@ export const CRM_SCORE_RECENT_ACTIVITY_DAYS = 7;
  * OWNER-LOCKED staleness threshold: 168 hours (7 x 24) without a meaningful
  * sales touch marks an active lead STALE.
  *
- * `latestMeaningfulSalesTouchAt` is MAX(completed non-`internal_task` activity
- * `completed_at`, lead note `created_at`, client-visible quotation event
- * `occurred_at`), falling back to the lead's receipt instant when none exists.
+ * STALE uses the newest of CRM meaningful sales touch, latest inbound WhatsApp
+ * reply and lead receipt. WhatsApp contributes only the inbound timestamp, never
+ * message content or contact/profile attributes.
  *
  * This is a RISK FLAG ONLY. It never changes the priority score, the stage
  * probability, or the weighted value.
@@ -167,6 +171,8 @@ export const CRM_SCORE_REASON_CODES = [
   "CONSULTATION_OR_SITE_VISIT",
   "LIVE_ISSUED_QUOTATION",
   "RECENT_MEANINGFUL_ACTIVITY",
+  "WHATSAPP_CUSTOMER_REPLY",
+  "RECENT_WHATSAPP_REPLY",
   "TERMINAL_WON_OVERRIDE",
   "TERMINAL_LOST_OVERRIDE",
   "PARKED_OVERRIDE",
@@ -211,6 +217,12 @@ export interface CrmLeadScoreSignals {
   readonly primaryNextActionDueAt: string | null;
   /** `crm_sla_clocks.sla_due_at` — null whenever no SLA policy is active. */
   readonly slaDueAt: string | null;
+  /** A canonical CRM↔WhatsApp conversation exists. Content is never read. */
+  readonly whatsappLinked: boolean;
+  /** At least one inbound customer message exists on a linked conversation. */
+  readonly hasWhatsappCustomerReply: boolean;
+  /** Latest inbound WhatsApp instant across linked conversations, ISO or null. */
+  readonly lastWhatsappInboundAt: string | null;
 }
 
 export interface CrmLeadScore {
@@ -290,8 +302,18 @@ function deriveRiskFlags(
   // returned above; on_hold is excluded because a parked lead is deliberately
   // not being worked.
   if (!parked) {
-    const touchAt = signals.latestMeaningfulSalesTouchAt ?? signals.receivedAt;
-    const touchMs = Date.parse(touchAt);
+    const crmTouchMs = signals.latestMeaningfulSalesTouchAt
+      ? Date.parse(signals.latestMeaningfulSalesTouchAt)
+      : Number.NEGATIVE_INFINITY;
+    const whatsappTouchMs = signals.lastWhatsappInboundAt
+      ? Date.parse(signals.lastWhatsappInboundAt)
+      : Number.NEGATIVE_INFINITY;
+    const receivedMs = Date.parse(signals.receivedAt);
+    const touchMs = Math.max(
+      Number.isNaN(crmTouchMs) ? Number.NEGATIVE_INFINITY : crmTouchMs,
+      Number.isNaN(whatsappTouchMs) ? Number.NEGATIVE_INFINITY : whatsappTouchMs,
+      Number.isNaN(receivedMs) ? Number.NEGATIVE_INFINITY : receivedMs
+    );
     if (
       !Number.isNaN(touchMs) &&
       nowMs - touchMs >= CRM_STALE_AFTER_HOURS * HOUR_MS
@@ -387,6 +409,31 @@ export function deriveLeadScore(
     }
   }
 
+  if (signals.hasWhatsappCustomerReply) {
+    engagementPoints += CRM_SCORE_ENGAGEMENT_POINTS.WHATSAPP_CUSTOMER_REPLY;
+    reasons.push({
+      code: "WHATSAPP_CUSTOMER_REPLY",
+      label: "Customer replied on WhatsApp",
+      points: CRM_SCORE_ENGAGEMENT_POINTS.WHATSAPP_CUSTOMER_REPLY,
+    });
+  }
+
+  if (signals.lastWhatsappInboundAt !== null) {
+    const inboundMs = Date.parse(signals.lastWhatsappInboundAt);
+    if (
+      !Number.isNaN(inboundMs) &&
+      inboundMs <= nowMs &&
+      nowMs - inboundMs <= CRM_SCORE_RECENT_ACTIVITY_DAYS * DAY_MS
+    ) {
+      engagementPoints += CRM_SCORE_ENGAGEMENT_POINTS.RECENT_WHATSAPP_REPLY;
+      reasons.push({
+        code: "RECENT_WHATSAPP_REPLY",
+        label: `Customer replied on WhatsApp in the last ${CRM_SCORE_RECENT_ACTIVITY_DAYS} days`,
+        points: CRM_SCORE_ENGAGEMENT_POINTS.RECENT_WHATSAPP_REPLY,
+      });
+    }
+  }
+
   engagementPoints = Math.min(engagementPoints, CRM_SCORE_ENGAGEMENT_MAX);
 
   let priorityScore = clampScore(maturityPoints + engagementPoints);
@@ -429,8 +476,7 @@ export function deriveLeadScore(
     computedAt: new Date(nowMs).toISOString(),
     signalsAvailable: {
       slaPolicyActive: signals.slaDueAt !== null,
-      // Blocked until whatsapp_conversations.lead_id gains a canonical writer.
-      whatsappLinked: false,
+      whatsappLinked: signals.whatsappLinked,
     },
   };
 }

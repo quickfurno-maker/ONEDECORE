@@ -105,8 +105,8 @@ select results_eq(
     where n.nspname in ('public', 'private')
       and p.prokind = 'f'
       and p.prosrc ~ 'update\s+public\.whatsapp_conversations[^;]*\ylead_id\y'$$,
-  array[2],
-  'exactly two reviewed functions write whatsapp_conversations.lead_id'
+  array[3],
+  'exactly three reviewed functions write whatsapp_conversations.lead_id'
 );
 select set_eq(
   $$select p.proname::text
@@ -116,9 +116,10 @@ select set_eq(
       and p.prosrc ~ 'update\s+public\.whatsapp_conversations[^;]*\ylead_id\y'$$,
   array[
     'crm_apply_whatsapp_conversation_lead_link',
-    'link_whatsapp_conversation_to_crm_lead_impl'
+    'link_whatsapp_conversation_to_crm_lead_impl',
+    'ensure_whatsapp_conversation_for_crm_lead_impl'
   ],
-  'lead_id writers are exactly the deterministic auto-linker and governed manual linker'
+  'lead_id writers are exactly the deterministic auto-linker, governed manual linker and CRM WhatsApp starter'
 );
 
 -- =============================================================================
