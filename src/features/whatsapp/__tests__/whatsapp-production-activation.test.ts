@@ -207,7 +207,7 @@ test("enabled webhook sender lock accepts only the configured WABA + phone pair"
 
 test("migration preserves the current sender until explicit cutover and exposes only service-role cutover", () => {
   const migration = read(
-    "supabase/migrations/20260927045845_whatsapp_production_sender_activation.sql"
+    "supabase/migrations/20260927061751_whatsapp_production_sender_activation.sql"
   );
   assert.match(migration, /production_sender_at/);
   assert.match(migration, /Installing the migration does NOT retire the current test\/legacy sender/);
