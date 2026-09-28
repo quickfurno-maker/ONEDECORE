@@ -15,6 +15,10 @@ import {
   fetchCrmAssigneeDirectory,
 } from "@/features/crm/server/crm-lead-queries";
 import { getLeadListPageForCurrentUser } from "@/features/crm/server/crm-lead-repository";
+import {
+  countCrmNurtureStages,
+  fetchCrmNurtureV2Signals,
+} from "@/features/crm/server/crm-nurture-v2";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +32,17 @@ interface CrmNurturePageProps {
 }
 
 const NURTURE_PATH = "/admin/crm/nurture";
+const NURTURE_DATE = new Intl.DateTimeFormat("en-IN", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "Asia/Kolkata",
+});
+function formatNurtureDate(value: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : NURTURE_DATE.format(date);
+}
+
 export default async function CrmNurturePage({ searchParams }: CrmNurturePageProps) {
   const resolvedSearchParams = await searchParams;
   const parsed = parseLeadListQuery({
@@ -48,6 +63,16 @@ export default async function CrmNurturePage({ searchParams }: CrmNurturePagePro
     fetchCrmAssigneeDirectory(context),
     resolveWhatsappControlPlaneAccess(),
   ]);
+
+  const nurtureSignals = await fetchCrmNurtureV2Signals(page.items.map((item) => item.id));
+  const nurtureStageCounts = countCrmNurtureStages(nurtureSignals);
+  const nurturedVisibleCount = Object.values(nurtureSignals).filter(
+    (signal) => signal.nurtureCount > 0
+  ).length;
+  const nurtureReactivationRate =
+    nurturedVisibleCount > 0
+      ? nurtureStageCounts.re_engaged / nurturedVisibleCount
+      : null;
 
   const hasUserFilters = Boolean(
     query.q ||
@@ -103,6 +128,80 @@ export default async function CrmNurturePage({ searchParams }: CrmNurturePagePro
           eligibility are checked before delivery.
         </p>
       </section>
+      <section className="crm-surface rounded-[14px] p-4" data-testid="crm-nurture-v2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--crm-primary)]">
+              Nurture V2 · current page
+            </p>
+            <h2 className="mt-1 text-[15px] font-semibold text-[var(--crm-text)]">
+              Dormancy and reactivation intelligence
+            </h2>
+          </div>
+          <span className="text-[12px] text-[var(--crm-muted)]">
+            {page.items.length} visible lead{page.items.length === 1 ? "" : "s"}
+          </span>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-6">
+          {[
+            ["Long horizon", nurtureStageCounts.long_horizon],
+            ["Dormant · 30d", nurtureStageCounts.dormant_30],
+            ["Dormant · 60d", nurtureStageCounts.dormant_60],
+            ["Dormant · 90d", nurtureStageCounts.dormant_90],
+            ["Re-engaged", nurtureStageCounts.re_engaged],
+            [
+              "Reactivation",
+              nurtureReactivationRate === null
+                ? "—"
+                : Math.round(nurtureReactivationRate * 100) + "%",
+            ],
+          ].map(([label, count]) => (
+            <div key={String(label)} className="rounded-[10px] border border-[var(--crm-border)] p-3">
+              <strong className="block text-[18px] text-[var(--crm-text)]">{count}</strong>
+              <span className="text-[11px] text-[var(--crm-muted)]">{label}</span>
+            </div>
+          ))}
+        </div>
+        {page.items.length > 0 ? (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[780px] text-left text-[12px]">
+              <thead className="text-[var(--crm-muted)]">
+                <tr>
+                  <th className="pb-2 pr-3">Lead</th>
+                  <th className="pb-2 pr-3">Nurture stage</th>
+                  <th className="pb-2 pr-3">Next nurture</th>
+                  <th className="pb-2 pr-3">Count</th>
+                  <th className="pb-2 pr-3">Last template</th>
+                  <th className="pb-2">Suppression</th>
+                </tr>
+              </thead>
+              <tbody>
+                {page.items.map((lead) => {
+                  const signal = nurtureSignals[lead.id];
+                  return (
+                    <tr key={lead.id} className="border-t border-[var(--crm-border)]">
+                      <td className="py-2 pr-3 font-semibold text-[var(--crm-text)]">{lead.submittedName}</td>
+                      <td className="py-2 pr-3">{signal?.stageLabel ?? "Long horizon"}</td>
+                      <td className="py-2 pr-3">{formatNurtureDate(signal?.nextNurtureAt ?? null)}</td>
+                      <td className="py-2 pr-3">{signal?.nurtureCount ?? 0}</td>
+                      <td className="py-2 pr-3">{signal?.lastTemplateName ?? "—"}</td>
+                      <td className="py-2">
+                        {signal?.temporarilySuppressed
+                          ? "Until " + formatNurtureDate(signal.suppressedUntil)
+                          : "Active"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+        <p className="mt-3 text-[11px] leading-5 text-[var(--crm-muted)]">
+          Dormancy uses canonical CRM/customer activity. Re-engaged requires a customer reply after an attributed nurture send. Suppression is explicit; no unapproved default suppression interval is invented.
+        </p>
+      </section>
+
       <LeadSalesBucketStrip
         query={query}
         counts={page.bucketCounts}

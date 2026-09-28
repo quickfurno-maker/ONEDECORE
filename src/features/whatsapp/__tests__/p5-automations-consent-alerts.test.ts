@@ -42,7 +42,7 @@ describe("P5 automations, consent and operational attention", () => {
     assert.match(forms, /Choose an approved campaign/);
   });
 
-  test("the full agreed Utility journey recipe catalogue is prepared but non-executable", () => {
+  test("the full agreed Utility journey catalogue is application-active and provider-gated", () => {
     assert.equal(ONEDECORE_WHATSAPP_UTILITY_AUTOMATION_RECIPES.length, 13);
     const ids = new Set<string>(ONEDECORE_WHATSAPP_UTILITY_AUTOMATION_RECIPES.map((recipe) => recipe.id));
     for (const id of [
@@ -55,8 +55,10 @@ describe("P5 automations, consent and operational attention", () => {
     }
     const page = read(AUTOMATIONS_PAGE);
     assert.match(page, /Prepared Utility journeys/);
-    assert.match(page, /current WhatsApp Automation engine remains MARKETING-only/);
-    assert.match(page, /no Utility recipe can/);
+    assert.match(page, /13 lifecycle mappings are active application-side/);
+    assert.match(page, /exact ONEDECORE UTILITY template is currently APPROVED/);
+    assert.match(page, /no fallback template is substituted/);
+    assert.match(page, /service consent, conversation access and outbound gates/);
   });
 
   test("CRM Cadence and WhatsApp Automation are visibly separate", () => {

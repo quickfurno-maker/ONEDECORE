@@ -1,0 +1,16 @@
+begin;
+select plan(12);
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='leads' and column_name='nurture_count'),'nurture count exists');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='leads' and column_name='last_nurture_template_name'),'last nurture template exists');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='leads' and column_name='last_nurture_at'),'last nurture time exists');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='leads' and column_name='next_nurture_at'),'next nurture time exists');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='leads' and column_name='nurture_reengaged_at'),'re-engagement evidence exists');
+select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='leads' and column_name='nurture_suppressed_until'),'explicit suppression exists');
+select ok(to_regclass('public.idx_leads_long_term_nurture_next') is not null,'next-nurture partial index exists');
+select ok(to_regclass('public.idx_leads_long_term_nurture_suppressed') is not null,'suppression partial index exists');
+select ok(to_regprocedure('private.capture_long_term_nurture_send()') is not null,'nurture-send evidence trigger function exists');
+select ok(to_regprocedure('private.capture_long_term_nurture_reply()') is not null,'nurture-reply evidence trigger function exists');
+select ok(exists(select 1 from pg_trigger where tgname='trg_capture_long_term_nurture_send' and not tgisinternal),'nurture send trigger is installed');
+select ok(exists(select 1 from pg_trigger where tgname='trg_capture_long_term_nurture_reply' and not tgisinternal),'nurture reply trigger is installed');
+select * from finish();
+rollback;

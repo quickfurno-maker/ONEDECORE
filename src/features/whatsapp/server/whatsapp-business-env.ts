@@ -34,6 +34,8 @@ export interface WhatsappBusinessServerEnv {
   readonly serviceRoleKey: string | null;
   readonly graphApiVersion: string;
   readonly accessToken: string | null;
+  /** Meta App ID for Resumable Upload template header samples. */
+  readonly appId: string | null;
   /** The WhatsApp Business Account id (templates only). */
   readonly wabaId: string | null;
 }
@@ -93,6 +95,7 @@ function resolveServerEnv(
       serviceRoleKey: null,
       graphApiVersion,
       accessToken: null,
+      appId: null,
       wabaId: null,
     };
   }
@@ -114,6 +117,7 @@ function resolveServerEnv(
   }
 
   const accessToken = readOptional(env, "META_WHATSAPP_ACCESS_TOKEN");
+  const appId = readOptional(env, "META_WHATSAPP_APP_ID");
   const wabaId = readOptional(env, "META_WHATSAPP_BUSINESS_ACCOUNT_ID");
 
   if (requireWaba && (!wabaId || !/^[0-9]{1,64}$/.test(wabaId))) {
@@ -130,6 +134,7 @@ function resolveServerEnv(
     serviceRoleKey,
     graphApiVersion,
     accessToken: mode === "enabled" ? accessToken : null,
+    appId: mode === "enabled" && appId && /^[0-9]{1,64}$/.test(appId) ? appId : null,
     wabaId: requireWaba ? wabaId : null,
   };
 }

@@ -338,6 +338,15 @@ export const ONEDECORE_ENV_CONTRACT: readonly EnvKeyContract[] = [
     inEnvExample: true,
   },
   {
+    name: "META_WHATSAPP_APP_ID",
+    scope: "server",
+    sensitivity: "config",
+    lifecycle: "activation-gated",
+    subsystem: "whatsapp",
+    purpose: "Meta App ID for Template Studio Resumable Upload sessions. Never used by browser code.",
+    inEnvExample: true,
+  },
+  {
     name: "META_WHATSAPP_PHONE_NUMBER_ID",
     scope: "server",
     sensitivity: "config",

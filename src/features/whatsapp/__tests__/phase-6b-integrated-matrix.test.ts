@@ -131,6 +131,10 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
       "20260927061751_whatsapp_production_sender_activation.sql",
       "20260928000826_crm_whatsapp_intelligence.sql",
       "20260928000836_crm_whatsapp_intelligence.sql",
+      "20260928035818_whatsapp_phase35_utility_realtime.sql",
+      "20260928035927_whatsapp_scheduler_recurrence_nurture_v2.sql",
+      "20260928040018_whatsapp_revenue_roi_attribution.sql",
+      "20260928044923_phase35_database_lint_ambiguity_closeout.sql",
     ] as const;
     for (const migration of requiredForwardMigrations) {
       assert.ok(files.includes(migration), `required forward migration is present: ${migration}`);
@@ -227,7 +231,7 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
     assert.deepEqual(
       forwardOnly,
       [...requiredForwardMigrations],
-      "Only the explicitly reviewed P1-P4 forward migrations may follow the frozen 89-migration baseline"
+      "Only the explicitly reviewed CRM/WhatsApp forward migrations may follow the frozen 89-migration baseline"
     );
     assert.equal(
       files.includes("20260825140000_commerce_online_payment_adapter_foundation.sql"),

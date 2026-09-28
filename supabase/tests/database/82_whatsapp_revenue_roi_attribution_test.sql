@@ -1,0 +1,12 @@
+begin;
+select plan(8);
+select ok(to_regprocedure('public.get_whatsapp_analytics_overview(timestamp with time zone,timestamp with time zone)') is not null,'analytics overview remains the revenue read surface');
+select is(has_function_privilege('authenticated','public.get_whatsapp_analytics_overview(timestamp with time zone,timestamp with time zone)','execute'),true,'authenticated staff may call the governed overview RPC');
+select is(has_function_privilege('anon','public.get_whatsapp_analytics_overview(timestamp with time zone,timestamp with time zone)','execute'),false,'anonymous callers cannot read analytics');
+select ok(position('quotation_acceptances' in pg_get_functiondef('public.get_whatsapp_analytics_overview(timestamp with time zone,timestamp with time zone)'::regprocedure))>0,'revenue comes from accepted quotation evidence');
+select ok(position('grand_total_paise' in pg_get_functiondef('public.get_whatsapp_analytics_overview(timestamp with time zone,timestamp with time zone)'::regprocedure))>0,'accepted quotation grand total is the revenue measure');
+select ok(position('whatsapp_attribution_window' in pg_get_functiondef('public.get_whatsapp_analytics_overview(timestamp with time zone,timestamp with time zone)'::regprocedure))>0,'revenue uses the existing bounded attribution window');
+select ok(position('order by s.sent_at desc' in pg_get_functiondef('public.get_whatsapp_analytics_overview(timestamp with time zone,timestamp with time zone)'::regprocedure))>0,'last prior WhatsApp touch wins attribution');
+select ok(position('total_budget_paise' in pg_get_functiondef('public.get_whatsapp_analytics_overview(timestamp with time zone,timestamp with time zone)'::regprocedure))>0,'ROI uses the governed campaign budget snapshot');
+select * from finish();
+rollback;

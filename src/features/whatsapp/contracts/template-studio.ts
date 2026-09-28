@@ -244,6 +244,7 @@ export type WhatsappTemplateStudioActionState = {
   readonly field?: string;
   readonly draftId?: string;
   readonly lockVersion?: number;
+  readonly mediaHandle?: string;
 };
 
 export const INITIAL_WHATSAPP_TEMPLATE_STUDIO_ACTION_STATE: WhatsappTemplateStudioActionState = {

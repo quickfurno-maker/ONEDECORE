@@ -1,81 +1,116 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 /**
- * Keeping the inbox current, and saying honestly how.
+ * Inbox freshness has two independent paths:
+ *   1. authenticated Supabase Postgres Changes for low-latency refresh;
+ *   2. a bounded 30-second poll as a safety net when a socket drops silently.
  *
- * THIS IS POLLING. IT IS NOT REAL TIME, AND IT DOES NOT SAY IT IS.
- *
- * Supabase Realtime is not available to this application: `connect-src` in
- * `http-security.ts` lists no websocket scheme, no table is in the
- * `supabase_realtime` publication, and nothing in `src/` opens a channel.
- * Turning that on is a change to the production security header and to the
- * database publication — not a change to an admin screen — so this lane does
- * not make it.
- *
- * What is left is a server round-trip on a timer. `router.refresh()` re-runs
- * the server component and reconciles the result, so client state survives:
- * a half-typed reply is still in the composer afterwards, because the textarea
- * is uncontrolled and its DOM node is not replaced.
- *
- * The label says "Auto · 10s" and the title says polling, because a reader who
- * believes this is a live socket will trust a silent pane to mean a silent
- * customer. Every ten seconds, with the tab in front of them, is the actual
- * guarantee.
- *
- * WHEN IT DOES NOT RUN.
- *
- * A hidden tab polls nothing. Staff leave the inbox open all day beside other
- * work, and a background tab hitting the database every ten seconds for nobody
- * is pure cost. Becoming visible refreshes once immediately, so coming back to
- * the tab shows current data rather than whatever was on screen at lunchtime.
+ * The manual Refresh button always remains. Realtime never replaces the
+ * server-side RLS-scoped repository read: an event only asks Next to re-run the
+ * existing Server Component query.
  */
+const FALLBACK_POLL_MS = 30_000;
+const REFRESH_DEBOUNCE_MS = 250;
 
-const POLL_MS = 10_000;
+type InboxFreshnessState = "connecting" | "live" | "fallback";
 
 export function InboxManualRefreshButton() {
   const router = useRouter();
   const [auto, setAuto] = useState(true);
+  const [freshness, setFreshness] = useState<InboxFreshnessState>("connecting");
+  const refreshTimer = useRef<number | null>(null);
 
   useEffect(() => {
     if (!auto) return;
 
-    const tick = () => {
-      /*
-       * A hidden tab is skipped rather than unscheduled. The interval is cheap
-       * and a skipped tick costs nothing; tearing the timer down and building
-       * it again on every visibility change is more moving parts for the same
-       * result.
-       */
+    const supabase = createClient();
+    let closed = false;
+
+    const refreshVisible = () => {
       if (document.visibilityState !== "visible") return;
-      router.refresh();
-    };
-    const onVisible = () => {
-      if (document.visibilityState === "visible") router.refresh();
+      if (refreshTimer.current !== null) return;
+      refreshTimer.current = window.setTimeout(() => {
+        refreshTimer.current = null;
+        router.refresh();
+      }, REFRESH_DEBOUNCE_MS);
     };
 
-    const id = window.setInterval(tick, POLL_MS);
+    const channel = supabase
+      .channel("onedecore-whatsapp-inbox-v1")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "whatsapp_messages" },
+        refreshVisible
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "whatsapp_message_status_events" },
+        refreshVisible
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "whatsapp_conversations" },
+        refreshVisible
+      )
+      .subscribe((status) => {
+        if (closed) return;
+        if (status === "SUBSCRIBED") {
+          setFreshness("live");
+        } else if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
+          setFreshness("fallback");
+        }
+      });
+
+    const fallbackId = window.setInterval(refreshVisible, FALLBACK_POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshVisible();
+    };
     document.addEventListener("visibilitychange", onVisible);
+
     return () => {
-      window.clearInterval(id);
+      closed = true;
+      window.clearInterval(fallbackId);
       document.removeEventListener("visibilitychange", onVisible);
+      if (refreshTimer.current !== null) {
+        window.clearTimeout(refreshTimer.current);
+        refreshTimer.current = null;
+      }
+      void supabase.removeChannel(channel);
     };
   }, [auto, router]);
+
+  const label = !auto
+    ? "Auto off"
+    : freshness === "live"
+      ? "Live · 30s safety"
+      : freshness === "fallback"
+        ? "Fallback · 30s"
+        : "Connecting…";
 
   return (
     <div className="od-wa__refresh">
       <label
         className="od-wa__toggle"
-        title={`Polls the server every ${POLL_MS / 1000} seconds while this tab is in front. This is not a live connection.`}
+        title="Realtime refreshes on WhatsApp database changes. A 30-second visible-tab poll remains as a safety fallback."
       >
         <input
           type="checkbox"
           checked={auto}
-          onChange={(event) => setAuto(event.currentTarget.checked)}
+          onChange={(event) => {
+            const nextAuto = event.currentTarget.checked;
+            setAuto(nextAuto);
+            if (nextAuto) setFreshness("connecting");
+          }}
         />
-        <span>Auto · {POLL_MS / 1000}s</span>
+        <span>{label}</span>
       </label>
       <button
         type="button"

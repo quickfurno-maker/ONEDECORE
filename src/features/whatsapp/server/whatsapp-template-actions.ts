@@ -23,6 +23,7 @@ import {
   syncWhatsappTemplatesFromProvider,
 } from "./whatsapp-template-management-service.ts";
 import { probeWhatsappTemplatePermissions } from "./whatsapp-template-queries.ts";
+import { uploadWhatsappTemplateHeaderMedia } from "./whatsapp-template-media-upload.ts";
 
 const TEMPLATES_PATH = "/admin/whatsapp/templates";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -34,6 +35,35 @@ async function requireManage(): Promise<WhatsappTemplateStudioActionState | null
     return { success: false, code: "ACCESS_DENIED", message: "You do not have permission to manage WhatsApp templates." };
   }
   return null;
+}
+
+export async function uploadWhatsappTemplateHeaderMediaAction(
+  _previous: WhatsappTemplateStudioActionState,
+  formData: FormData
+): Promise<WhatsappTemplateStudioActionState> {
+  const denied = await requireManage();
+  if (denied) return denied;
+
+  const headerType = String(formData.get("headerType") ?? "").trim();
+  const file = formData.get("headerMediaFile");
+  if (!(file instanceof File)) {
+    return { success: false, code: "VALIDATION", field: "headerMediaFile", message: "Choose a header file." };
+  }
+
+  const result = await uploadWhatsappTemplateHeaderMedia({ headerType, file });
+  if (result.outcome === "uploaded") {
+    return {
+      success: true,
+      message: result.message,
+      mediaHandle: result.handle,
+    };
+  }
+  return {
+    success: false,
+    code: result.outcome === "disabled" ? "DISABLED" : result.code,
+    field: "headerMediaFile",
+    message: result.message,
+  };
 }
 
 export async function syncWhatsappTemplatesAction(

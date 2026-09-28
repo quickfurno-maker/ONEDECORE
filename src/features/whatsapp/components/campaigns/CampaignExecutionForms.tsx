@@ -21,6 +21,7 @@ import {
 import {
   createWhatsappCampaignRunAction,
   createWhatsappCampaignTestSendAction,
+  prepareNextWhatsappRecurringVersionAction,
   resolveWhatsappCampaignReconcileAction,
   saveWhatsappCampaignButtonBindingsAction,
   saveWhatsappCampaignSpecAction,
@@ -328,6 +329,29 @@ export function CampaignCreateRunForm({
           {pending ? "Creating…" : schedulerMode ? "Schedule campaign" : local ? "Schedule run" : "Create run"}
         </button>
       </div>
+      <ControlPlaneActionMessage state={state} />
+    </form>
+  );
+}
+
+export function CampaignPrepareNextOccurrenceForm({
+  campaignId,
+}: {
+  readonly campaignId: string;
+}) {
+  const [state, action, pending] = useActionState(
+    prepareNextWhatsappRecurringVersionAction,
+    INITIAL_WHATSAPP_CONTROL_PLANE_ACTION_STATE
+  );
+  return (
+    <form action={action} className="od-cp__stack" data-testid="whatsapp-recurrence-next-version">
+      <input type="hidden" name="campaignId" value={campaignId} />
+      <button type="submit" className="od-cp__btn od-cp__btn--quiet" disabled={pending}>
+        {pending ? "Preparing…" : "Prepare next occurrence"}
+      </button>
+      <span className="od-cp__sub">
+        Creates the next governed draft version only. It still needs WhatsApp spec review and independent approval.
+      </span>
       <ControlPlaneActionMessage state={state} />
     </form>
   );
