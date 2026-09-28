@@ -204,6 +204,7 @@ describe("Flow contracts and provider path", () => {
     serviceRoleKey: "service",
     graphApiVersion: "v22.0",
     accessToken: null,
+    appId: null,
     wabaId: "900000000000691",
   };
 

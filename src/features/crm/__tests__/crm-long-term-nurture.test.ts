@@ -6,6 +6,10 @@ import {
   buildLeadListHref,
   parseLeadListQuery,
 } from "../contracts/lead-list-query.ts";
+import {
+  isCrmNurtureTemporarilySuppressed,
+  resolveCrmNurtureStage,
+} from "../contracts/nurture-v2.ts";
 
 const ROOT = process.cwd();
 const read = (path: string) =>
@@ -41,6 +45,28 @@ describe("CRM long-term nurture", () => {
     assert.match(page, /hideLost/);
     assert.match(query, /not\("status", "in", "\(closed_won,closed_lost\)"\)/);
     assert.match(nav, /\/admin\/crm\/nurture/);
+  });
+
+  test("Nurture V2 derives dormancy, re-engagement and explicit suppression from evidence", () => {
+    const now = new Date("2026-09-28T04:30:00.000Z");
+    const base = {
+      createdAt: "2026-05-01T00:00:00.000Z",
+      lastMeaningfulActivityAt: null,
+      lastInboundAt: null,
+      lastNurtureAt: null,
+      reengagedAt: null,
+    };
+    assert.equal(resolveCrmNurtureStage(base, now), "dormant_90");
+    assert.equal(resolveCrmNurtureStage({ ...base, lastInboundAt: "2026-08-10T00:00:00.000Z" }, now), "dormant_30");
+    assert.equal(resolveCrmNurtureStage({ ...base, lastNurtureAt: "2026-09-01T00:00:00.000Z", reengagedAt: "2026-09-02T00:00:00.000Z" }, now), "re_engaged");
+    assert.equal(isCrmNurtureTemporarilySuppressed("2026-10-01T00:00:00.000Z", now), true);
+    assert.equal(isCrmNurtureTemporarilySuppressed(null, now), false);
+
+    const migration = read("supabase/migrations/20260928035927_whatsapp_scheduler_recurrence_nurture_v2.sql");
+    assert.match(migration, /nurture_count/);
+    assert.match(migration, /capture_long_term_nurture_send/);
+    assert.match(migration, /capture_long_term_nurture_reply/);
+    assert.match(migration, /status not in \('closed_won','closed_lost'\)/);
   });
 
   test("CRM nurture links directly into consent-aware WhatsApp promotions", () => {

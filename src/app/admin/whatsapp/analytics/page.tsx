@@ -3,6 +3,7 @@ import Link from "next/link";
 import { WhatsappFunnel } from "@/features/whatsapp/components/analytics/WhatsappFunnel";
 import { ControlPlaneDenied, ControlPlaneShell } from "@/features/whatsapp/components/control-plane/ControlPlaneShell";
 import {
+  formatWhatsappMoney,
   formatWhatsappRate,
   resolveWhatsappAnalyticsRange,
   WHATSAPP_ANALYTICS_RANGES,
@@ -128,6 +129,83 @@ export default async function WhatsappAnalyticsPage({ searchParams }: WhatsappAn
             <p className="od-cp__hint" style={{ marginBlockStart: 10 }}>
               A message with no status event is counted as neither delivered nor failed. Nothing is inferred from silence.
             </p>
+          </section>
+
+          <section className="od-cp__panel" aria-labelledby="whatsapp-analytics-revenue" data-testid="whatsapp-revenue-attribution">
+            <h2 id="whatsapp-analytics-revenue" className="od-cp__panel-title">
+              Revenue attribution
+            </h2>
+            <div className="od-cp__stats">
+              <div className="od-cp__stat">
+                <span className="od-cp__stat-value">{formatWhatsappMoney(overview.revenue.attributedRevenuePaise)}</span>
+                <span className="od-cp__stat-label">Attributed booking revenue</span>
+              </div>
+              <div className="od-cp__stat">
+                <span className="od-cp__stat-value">{n(overview.revenue.bookingCount)}</span>
+                <span className="od-cp__stat-label">Accepted quotations</span>
+              </div>
+              <div className="od-cp__stat">
+                <span className="od-cp__stat-value">{formatWhatsappMoney(overview.revenue.plannedBudgetPaise)}</span>
+                <span className="od-cp__stat-label">Planned campaign budget</span>
+              </div>
+              <div className="od-cp__stat">
+                <span className="od-cp__stat-value">{formatWhatsappRate(overview.revenue.roi)}</span>
+                <span className="od-cp__stat-label">Budget ROI</span>
+              </div>
+            </div>
+            <p className="od-cp__hint" style={{ marginBlockStart: 10 }}>
+              Last-touch attribution within {overview.attributionWindowDays} days. Each booking is credited to at most one prior WhatsApp campaign send. ROI is shown only when a real planned campaign budget exists.
+            </p>
+            {overview.revenue.campaigns.length > 0 ? (
+              <div className="od-cp__table-wrap" style={{ marginBlockStart: 14 }}>
+                <table className="od-cp__table">
+                  <thead><tr><th>Campaign</th><th>Bookings</th><th>Revenue</th><th>Budget</th><th>ROI</th></tr></thead>
+                  <tbody>
+                    {overview.revenue.campaigns.map((row) => (
+                      <tr key={row.campaignId ?? row.campaignName}>
+                        <td>{row.campaignName}</td>
+                        <td>{n(row.bookingCount)}</td>
+                        <td>{formatWhatsappMoney(row.revenuePaise)}</td>
+                        <td>{formatWhatsappMoney(row.plannedBudgetPaise)}</td>
+                        <td>{formatWhatsappRate(row.roi)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+            {(overview.revenue.templates.length > 0 || overview.revenue.months.length > 0) ? (
+              <div className="od-cp__columns" style={{ marginBlockStart: 14 }}>
+                <div className="od-cp__table-wrap">
+                  <table className="od-cp__table" data-testid="whatsapp-revenue-by-template">
+                    <thead><tr><th>Template</th><th>Bookings</th><th>Revenue</th></tr></thead>
+                    <tbody>
+                      {overview.revenue.templates.map((row) => (
+                        <tr key={row.templateName}>
+                          <td>{row.templateName}</td>
+                          <td>{n(row.bookingCount)}</td>
+                          <td>{formatWhatsappMoney(row.revenuePaise)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="od-cp__table-wrap">
+                  <table className="od-cp__table" data-testid="whatsapp-revenue-by-month">
+                    <thead><tr><th>Month</th><th>Bookings</th><th>Revenue</th></tr></thead>
+                    <tbody>
+                      {overview.revenue.months.map((row) => (
+                        <tr key={row.month}>
+                          <td>{row.month}</td>
+                          <td>{n(row.bookingCount)}</td>
+                          <td>{formatWhatsappMoney(row.revenuePaise)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
           </section>
 
           <section className="od-cp__panel" aria-labelledby="whatsapp-analytics-campaigns">

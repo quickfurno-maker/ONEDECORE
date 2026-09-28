@@ -17,6 +17,7 @@ import {
   saveWhatsappTemplateDraftAction,
   submitWhatsappTemplateAction,
   syncWhatsappTemplatesAction,
+  uploadWhatsappTemplateHeaderMediaAction,
 } from "../../server/whatsapp-template-actions.ts";
 
 function ActionMessage({ success, message }: { readonly success: boolean; readonly message: string }) {
@@ -92,10 +93,14 @@ export function TemplateCreateForm({ available, preset, seed, draftMeta, duplica
   const initialName = duplicateMode && initial?.name ? `${initial.name}_copy`.slice(0, 128) : initial?.name ?? "";
   const [saveState, saveAction, savePending] = useActionState(saveWhatsappTemplateDraftAction, INITIAL_WHATSAPP_TEMPLATE_STUDIO_ACTION_STATE);
   const [submitState, submitAction, submitPending] = useActionState(submitWhatsappTemplateAction, INITIAL_WHATSAPP_TEMPLATE_STUDIO_ACTION_STATE);
+  const [mediaState, mediaAction, mediaPending] = useActionState(
+    uploadWhatsappTemplateHeaderMediaAction,
+    INITIAL_WHATSAPP_TEMPLATE_STUDIO_ACTION_STATE
+  );
   const [bodyText, setBodyText] = useState(initial?.bodyText ?? "");
   const [headerType, setHeaderType] = useState(initial?.headerType ?? "NONE");
   const [headerText, setHeaderText] = useState(initial?.headerText ?? "");
-  const [headerMediaHandle, setHeaderMediaHandle] = useState(initial?.headerMediaHandle ?? "");
+  const [headerMediaHandle] = useState(initial?.headerMediaHandle ?? "");
   const [footerText, setFooterText] = useState(initial?.footerText ?? "");
   const [category, setCategory] = useState<string>(initial?.category ?? preset?.category ?? "UTILITY");
   const [language, setLanguage] = useState(initial?.language ?? "en");
@@ -105,7 +110,10 @@ export function TemplateCreateForm({ available, preset, seed, draftMeta, duplica
   const [clientError, setClientError] = useState<{ field: string; message: string } | null>(null);
   const exampleCount = Math.min(countWhatsappTemplateBodyPlaceholders(bodyText), 20);
   const headerHasVariable = headerType === "TEXT" && countWhatsappTemplateBodyPlaceholders(headerText) > 0;
-  const pending = savePending || submitPending;
+  const pending = savePending || submitPending || mediaPending;
+
+  const effectiveHeaderMediaHandle =
+    mediaState.success && mediaState.mediaHandle ? mediaState.mediaHandle : headerMediaHandle;
   const effectiveDraftId = saveState.draftId ?? draftMeta?.id ?? "";
   const effectiveLockVersion = saveState.lockVersion ?? draftMeta?.lockVersion ?? null;
   const sourcePresetId = draftMeta?.sourcePresetId ?? preset?.id ?? "";
@@ -179,7 +187,42 @@ export function TemplateCreateForm({ available, preset, seed, draftMeta, duplica
             {headerType === "TEXT" ? <label className="od-tpl__field od-tpl__field--wide"><span>Header text · max 60 · one {"{{1}}"} at most</span><input name="headerText" maxLength={60} value={headerText} onChange={(event) => setHeaderText(event.currentTarget.value)} disabled={pending} /></label> : <input type="hidden" name="headerText" value="" />}
           </div>
           {headerHasVariable ? <label className="od-tpl__field"><span>Header example value</span><input name="headerExample" maxLength={60} required value={headerExample} onChange={(event) => setHeaderExample(event.currentTarget.value)} disabled={pending} /></label> : <input type="hidden" name="headerExample" value="" />}
-          {["IMAGE", "VIDEO", "DOCUMENT"].includes(headerType) ? <label className="od-tpl__field"><span>Meta sample upload handle · optional while local, required for provider submission</span><input name="headerMediaHandle" maxLength={2048} value={headerMediaHandle} onChange={(event) => setHeaderMediaHandle(event.currentTarget.value)} placeholder="Add later after Meta media upload is available" disabled={pending} /></label> : <input type="hidden" name="headerMediaHandle" value="" />}
+          {["IMAGE", "VIDEO", "DOCUMENT"].includes(headerType) ? (
+            <div className="od-tpl__field od-tpl__field--wide" data-testid="whatsapp-template-media-uploader">
+              <span>Meta header sample</span>
+              <input type="hidden" name="headerMediaHandle" value={effectiveHeaderMediaHandle} />
+              <input
+                type="file"
+                name="headerMediaFile"
+                accept={
+                  headerType === "IMAGE"
+                    ? "image/jpeg,image/png,.jpg,.jpeg,.png"
+                    : headerType === "VIDEO"
+                      ? "video/mp4,video/3gpp,.mp4,.3gp"
+                      : "application/pdf,.pdf"
+                }
+                disabled={!available || pending}
+              />
+              <div className="od-tpl__workflow-actions">
+                <button
+                  type="submit"
+                  formAction={mediaAction}
+                  formNoValidate
+                  className="od-tpl__btn od-tpl__btn--quiet"
+                  disabled={!available || pending}
+                >
+                  {mediaPending ? "Uploading…" : effectiveHeaderMediaHandle ? "Replace Meta sample" : "Upload to Meta"}
+                </button>
+                {effectiveHeaderMediaHandle ? (
+                  <span className="od-tpl__badge" data-tone="positive">Media handle ready</span>
+                ) : null}
+              </div>
+              <p className="od-tpl__hint">
+                JPEG/PNG, MP4/3GPP or PDF according to the selected header. The server validates file bytes and sends them through Meta’s resumable upload flow; the access token never reaches the browser.
+              </p>
+              <ActionMessage success={mediaState.success} message={mediaState.message} />
+            </div>
+          ) : <input type="hidden" name="headerMediaHandle" value="" />}
           {headerType === "LOCATION" ? <p className="od-tpl__hint">Location headers are structural; actual location values are supplied by the governed send/campaign path later.</p> : null}
         </fieldset>
 

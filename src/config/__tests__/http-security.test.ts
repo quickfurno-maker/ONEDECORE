@@ -174,8 +174,12 @@ describe("what the production policy must contain", () => {
       ["'self'", "data:", "blob:", MANAGED_SUPABASE_ORIGIN, "https://www.facebook.com"],
     ],
     ["font-src", ["'self'", "data:"]],
-    // ...and where it falls back to fetch when an image beacon will not do.
-    ["connect-src", ["'self'", MANAGED_SUPABASE_ORIGIN, "https://www.facebook.com"]],
+    // Supabase REST + the websocket origin derived from the same pinned project,
+    // plus the Meta Pixel fetch fallback.
+    [
+      "connect-src",
+      ["'self'", MANAGED_SUPABASE_ORIGIN, MANAGED_SUPABASE_ORIGIN.replace("https:", "wss:"), "https://www.facebook.com"],
+    ],
     ["object-src", ["'none'"]],
     ["base-uri", ["'self'"]],
     ["form-action", ["'self'"]],

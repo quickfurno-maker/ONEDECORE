@@ -105,6 +105,7 @@ const BASELINE_HEADERS: readonly HttpSecurityHeader[] = [
 export function buildContentSecurityPolicy(
   supabaseOrigin: string = MANAGED_SUPABASE_ORIGIN
 ): string {
+  const supabaseRealtimeOrigin = supabaseOrigin.replace(/^https:/, "wss:").replace(/^http:/, "ws:");
   const directives: readonly (readonly string[])[] = [
     // Everything not named below falls back to same-origin.
     ["default-src", "'self'"],
@@ -148,8 +149,9 @@ export function buildContentSecurityPolicy(
     ["font-src", "'self'", "data:"],
 
     /*
-     * The Supabase REST/auth endpoints. No websocket scheme: the application
-     * subscribes to no realtime channel.
+     * Supabase REST/auth plus the matching Realtime websocket origin. The
+     * websocket host is derived from the same pinned project origin rather than
+     * widened to wss: globally, so connect-src still names one Supabase project.
      *
      * `www.facebook.com` is where the Pixel posts its beacons — as an image
      * when it can and via `fetch` when it cannot, which is why the origin
@@ -157,7 +159,7 @@ export function buildContentSecurityPolicy(
      * server-to-server call to `graph.facebook.com` and needs no CSP entry at
      * all: a browser never makes it.
      */
-    ["connect-src", "'self'", supabaseOrigin, META_PIXEL_BEACON_ORIGIN],
+    ["connect-src", "'self'", supabaseOrigin, supabaseRealtimeOrigin, META_PIXEL_BEACON_ORIGIN],
 
     ["object-src", "'none'"],
     ["base-uri", "'self'"],

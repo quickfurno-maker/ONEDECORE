@@ -186,12 +186,12 @@ describe("WM-4 caller-session actions authorize before any RPC", () => {
   const actions = code(read(FILES.actions));
   const bodies = actions.split(/export async function /).slice(1);
 
-  test("seven actions, each server-only and caller-session", () => {
+  test("eight actions, each server-only and caller-session", () => {
     assert.match(actions, /^"use server";/m);
     assert.match(actions, /import "server-only"/);
     assert.match(actions, /from "@\/lib\/supabase\/server"/);
     assert.ok(!/supabase-js|serviceRoleKey|SUPABASE_SERVICE_ROLE/.test(actions));
-    assert.equal(bodies.length, 7);
+    assert.equal(bodies.length, 8);
   });
 
   for (const body of bodies) {

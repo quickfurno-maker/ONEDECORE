@@ -162,7 +162,10 @@ describe("P3 Meta-independent Template Studio", () => {
     assert.match(forms, /QUICK_REPLY/);
     assert.match(forms, /PHONE_NUMBER/);
     assert.match(forms, /FLOW/);
-    assert.match(forms, /Meta sample upload handle/);
+    assert.match(forms, /whatsapp-template-media-uploader/);
+    assert.match(forms, /uploadWhatsappTemplateHeaderMediaAction/);
+    assert.match(forms, /name="headerMediaHandle"/);
+    assert.match(forms, /Upload to Meta/);
   });
 
   test("draft list supports edit, duplicate, archive, language filter and provider timeline", () => {
@@ -204,5 +207,21 @@ describe("P3 Meta-independent Template Studio", () => {
       assert.doesNotMatch(body, /marketing_execution_enabled\s*=\s*true/i);
       assert.doesNotMatch(body, /WHATSAPP_OUTBOUND_MODE\s*=\s*enabled/i);
     }
+  });
+});
+
+
+describe("P3 provider media upload hardening", () => {
+  test("media upload stays server-only, validates bytes and uses Meta resumable upload", () => {
+    const upload = read("src/features/whatsapp/server/whatsapp-template-media-upload.ts");
+    const env = read("src/features/whatsapp/server/whatsapp-business-env.ts");
+    assert.match(upload, /import "server-only"/);
+    assert.match(upload, /magicMatches/);
+    assert.match(upload, /file_length/);
+    assert.match(upload, /\/uploads\?/);
+    assert.match(upload, /Authorization: "Bearer " \+ env\.accessToken/);
+    assert.match(upload, /mode === "disabled"/);
+    assert.match(upload, /mode === "local-test"/);
+    assert.match(env, /META_WHATSAPP_APP_ID/);
   });
 });

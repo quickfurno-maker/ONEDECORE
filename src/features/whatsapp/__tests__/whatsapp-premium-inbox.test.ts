@@ -783,44 +783,53 @@ describe("secrets stay on the server and the source stays clean", () => {
 /* Staying current                                                            */
 /* ========================================================================== */
 
-describe("the inbox refreshes by polling, and says so", () => {
-  test("it never calls itself live or real-time", () => {
-    /*
-     * THE RULE THIS ENFORCES.
-     *
-     * Supabase Realtime is not available to this application: `connect-src`
-     * carries no websocket scheme, no table is published to
-     * `supabase_realtime`, and nothing in src/ opens a channel. A reader who
-     * believes the pane is a live socket will read silence as "no new
-     * messages" rather than "this has not polled yet".
-     */
+describe("the inbox uses Realtime with a bounded polling fallback", () => {
+  test("authenticated Postgres Changes only trigger the existing RLS-scoped server refresh", () => {
     const refresh = code(read(REFRESH));
-
-    /*
-     * Matched against visible strings rather than the whole file. A blanket
-     * ban on the word would also reject the sentence that does the work here
-     * — "This is not a live connection" — which is the opposite of the rule.
-     */
-    assert.doesNotMatch(refresh, /[>"]\s*(Live|Real-?time)\b/i);
-    assert.match(refresh, /Auto · \{POLL_MS \/ 1000\}s/);
-    assert.match(refresh, /This is not a live connection/);
+    assert.match(refresh, /\.channel\("onedecore-whatsapp-inbox-v1"\)/);
+    assert.match(refresh, /"postgres_changes"/);
+    for (const table of [
+      "whatsapp_messages",
+      "whatsapp_message_status_events",
+      "whatsapp_conversations",
+    ]) {
+      assert.match(refresh, new RegExp('table: "' + table + '"'));
+    }
+    assert.match(refresh, /status === "SUBSCRIBED"/);
+    assert.match(refresh, /router\.refresh\(\)/);
+    assert.match(refresh, /supabase\.removeChannel\(channel\)/);
   });
 
-  test("no websocket is opened, and the CSP would not allow one", () => {
-    assert.doesNotMatch(read(REFRESH), /new WebSocket|\.channel\(/);
+  test("CSP allows only the websocket origin derived from the pinned Supabase origin", () => {
     const csp = read("src/config/http-security.ts");
-    assert.match(csp, /\["connect-src", "'self'", supabaseOrigin, META_PIXEL_BEACON_ORIGIN\]/);
-    assert.doesNotMatch(csp, /wss:/);
+    assert.match(csp, /const supabaseRealtimeOrigin = supabaseOrigin\.replace/);
+    assert.match(csp, /\["connect-src", "'self'", supabaseOrigin, supabaseRealtimeOrigin, META_PIXEL_BEACON_ORIGIN\]/);
+    assert.doesNotMatch(csp, /\["connect-src"[^\]]*["']wss:["']/);
+    assert.doesNotMatch(csp, /\["connect-src"[^\]]*\*\.supabase\.co/);
   });
 
-  test("polling is bounded, and a hidden tab polls nothing", () => {
+  test("only the three inbox tables are added to the existing Supabase Realtime publication", () => {
+    const migration = read("supabase/migrations/20260928035818_whatsapp_phase35_utility_realtime.sql");
+    assert.match(migration, /pubname='supabase_realtime'/);
+    for (const table of [
+      "whatsapp_messages",
+      "whatsapp_message_status_events",
+      "whatsapp_conversations",
+    ]) {
+      assert.match(migration, new RegExp("'" + table + "'"));
+    }
+    assert.doesNotMatch(migration, /create schema realtime|alter schema realtime/i);
+  });
+
+  test("fallback polling is bounded, visible-tab only and fully torn down", () => {
     const refresh = read(REFRESH);
-    assert.match(refresh, /const POLL_MS = 10_000;/);
+    assert.match(refresh, /const FALLBACK_POLL_MS = 30_000;/);
     assert.match(refresh, /if \(document\.visibilityState !== "visible"\) return;/);
     assert.match(refresh, /document\.addEventListener\("visibilitychange", onVisible\)/);
-    // And it is torn down, so a navigation does not leave a timer behind.
-    assert.match(refresh, /window\.clearInterval\(id\)/);
+    assert.match(refresh, /window\.clearInterval\(fallbackId\)/);
     assert.match(refresh, /document\.removeEventListener\("visibilitychange", onVisible\)/);
+    assert.match(refresh, /Live · 30s safety/);
+    assert.match(refresh, /Fallback · 30s/);
   });
 
   test("auto-refresh can be turned off, and manual refresh always remains", () => {

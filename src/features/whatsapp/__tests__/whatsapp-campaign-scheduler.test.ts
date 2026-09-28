@@ -12,6 +12,10 @@ import {
   whatsappSchedulerEvents,
 } from "../contracts/campaign-scheduler.ts";
 import type { WhatsappCampaignVersionSummary } from "../contracts/campaign-execution.ts";
+import {
+  buildWhatsappRecurrenceOccurrences,
+  whatsappRecurrenceWarnings,
+} from "../contracts/campaign-recurrence.ts";
 
 const ROOT = process.cwd();
 const read = (path: string) =>
@@ -179,12 +183,46 @@ describe("Rescheduling is narrow, audited and cannot mutate an active run", () =
     assert.doesNotMatch(migration, /service_role/);
   });
 
-  test("recurrence is not silently activated in the initial scheduler release", () => {
-    const migration = read(
-      "supabase/migrations/20260926133946_whatsapp_campaign_scheduler.sql"
-    );
+  test("Scheduler V2 plans recurrence without bypassing one-approval-per-delivery", () => {
     const page = read("src/app/admin/whatsapp/scheduler/page.tsx");
-    assert.doesNotMatch(migration, /rrule|recurrence|repeat_interval/i);
-    assert.doesNotMatch(page, /enable recurrence|repeat every/i);
+    const planner = read(
+      "src/features/whatsapp/components/campaigns/CampaignRecurrencePlanner.tsx"
+    );
+    const actions = read(
+      "src/features/whatsapp/server/whatsapp-campaign-actions.ts"
+    );
+
+    assert.match(page, /CampaignRecurrencePlanner/);
+    assert.match(page, /CampaignPrepareNextOccurrenceForm/);
+    assert.match(planner, /One approval = one delivery/);
+    assert.match(planner, /frequencyRules/);
+    assert.match(actions, /create_next_campaign_version/);
+    assert.match(actions, /review.*approval.*scheduling|review.*approve.*scheduling/i);
+    assert.doesNotMatch(actions, /approve_campaign_version/);
+  });
+
+  test("recurrence math is IST-stable and warns against live frequency caps", () => {
+    const monthly = buildWhatsappRecurrenceOccurrences({
+      firstScheduledFor: "2026-01-31T04:30:00.000Z",
+      cadence: "monthly",
+      count: 3,
+    });
+    assert.deepEqual(monthly, [
+      "2026-01-31T04:30:00.000Z",
+      "2026-02-28T04:30:00.000Z",
+      "2026-03-31T04:30:00.000Z",
+    ]);
+
+    const weekly = buildWhatsappRecurrenceOccurrences({
+      firstScheduledFor: "2026-10-01T05:30:00.000Z",
+      cadence: "weekly",
+      count: 3,
+    });
+    const warnings = whatsappRecurrenceWarnings({
+      occurrences: weekly,
+      frequencyRules: [{ windowHours: 24 * 14, maxMessages: 1 }],
+      now: new Date("2026-09-28T00:00:00.000Z"),
+    });
+    assert.ok(warnings.some((warning) => warning.code === "frequency_cap_overlap"));
   });
 });

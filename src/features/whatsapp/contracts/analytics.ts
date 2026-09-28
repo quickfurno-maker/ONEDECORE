@@ -83,6 +83,87 @@ export function formatWhatsappRate(rate: number | null): string {
   return rate === null ? "—" : `${(rate * 100).toFixed(rate >= 0.1 ? 0 : 1)}%`;
 }
 
+export interface WhatsappRevenueSummary {
+  readonly bookingCount: number;
+  readonly attributedRevenuePaise: number;
+  readonly plannedBudgetPaise: number;
+  readonly roi: number | null;
+  readonly campaigns: readonly {
+    readonly campaignId: string | null;
+    readonly campaignName: string;
+    readonly bookingCount: number;
+    readonly revenuePaise: number;
+    readonly plannedBudgetPaise: number;
+    readonly roi: number | null;
+  }[];
+  readonly templates: readonly {
+    readonly templateName: string;
+    readonly bookingCount: number;
+    readonly revenuePaise: number;
+  }[];
+  readonly months: readonly {
+    readonly month: string;
+    readonly bookingCount: number;
+    readonly revenuePaise: number;
+  }[];
+}
+
+function moneyNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function nullableRate(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+export function parseWhatsappRevenueSummary(value: unknown): WhatsappRevenueSummary {
+  const row = asRecord(value);
+  return {
+    bookingCount: moneyNumber(row?.booking_count),
+    attributedRevenuePaise: moneyNumber(row?.attributed_revenue_paise),
+    plannedBudgetPaise: moneyNumber(row?.planned_budget_paise),
+    roi: nullableRate(row?.roi),
+    campaigns: (Array.isArray(row?.campaigns) ? row.campaigns : []).flatMap((item) => {
+      const entry = asRecord(item);
+      if (!entry) return [];
+      return [{
+        campaignId: str(entry.campaign_id),
+        campaignName: str(entry.campaign_name) ?? "Campaign",
+        bookingCount: moneyNumber(entry.booking_count),
+        revenuePaise: moneyNumber(entry.revenue_paise),
+        plannedBudgetPaise: moneyNumber(entry.planned_budget_paise),
+        roi: nullableRate(entry.roi),
+      }];
+    }),
+    templates: (Array.isArray(row?.templates) ? row.templates : []).flatMap((item) => {
+      const entry = asRecord(item);
+      const templateName = str(entry?.template_name);
+      return entry && templateName ? [{
+        templateName,
+        bookingCount: moneyNumber(entry.booking_count),
+        revenuePaise: moneyNumber(entry.revenue_paise),
+      }] : [];
+    }),
+    months: (Array.isArray(row?.months) ? row.months : []).flatMap((item) => {
+      const entry = asRecord(item);
+      const month = str(entry?.month);
+      return entry && month ? [{
+        month,
+        bookingCount: moneyNumber(entry.booking_count),
+        revenuePaise: moneyNumber(entry.revenue_paise),
+      }] : [];
+    }),
+  };
+}
+
+export function formatWhatsappMoney(paise: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(paise / 100);
+}
+
 export interface WhatsappAnalyticsRunRow {
   readonly runId: string;
   readonly status: string;
@@ -99,6 +180,7 @@ export interface WhatsappAnalyticsOverview {
   readonly attributionWindowDays: number;
   readonly channel: WhatsappFunnelSummary;
   readonly campaignFunnel: WhatsappFunnelSummary;
+  readonly revenue: WhatsappRevenueSummary;
   readonly runs: readonly WhatsappAnalyticsRunRow[];
 }
 
@@ -112,6 +194,7 @@ export function parseWhatsappAnalyticsOverview(data: unknown): WhatsappAnalytics
     attributionWindowDays: typeof row.attribution_window_days === "number" ? row.attribution_window_days : 30,
     channel: counts(row.channel),
     campaignFunnel: counts(row.campaign_funnel),
+    revenue: parseWhatsappRevenueSummary(row.revenue),
     runs: (Array.isArray(row.runs) ? row.runs : []).flatMap((item) => {
       const run = asRecord(item);
       const runId = str(run?.run_id);

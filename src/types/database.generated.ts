@@ -4740,12 +4740,18 @@ export type Database = {
           estimate_snapshot: Json | null
           id: string
           landing_path: string | null
+          last_nurture_at: string | null
+          last_nurture_template_name: string | null
           locality: string | null
           manual_sales_temperature: string | null
           manual_sales_temperature_reason: string | null
           manual_sales_temperature_set_at: string | null
           manual_sales_temperature_set_by: string | null
           message: string | null
+          next_nurture_at: string | null
+          nurture_count: number
+          nurture_reengaged_at: string | null
+          nurture_suppressed_until: string | null
           on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
@@ -4782,12 +4788,18 @@ export type Database = {
           estimate_snapshot?: Json | null
           id?: string
           landing_path?: string | null
+          last_nurture_at?: string | null
+          last_nurture_template_name?: string | null
           locality?: string | null
           manual_sales_temperature?: string | null
           manual_sales_temperature_reason?: string | null
           manual_sales_temperature_set_at?: string | null
           manual_sales_temperature_set_by?: string | null
           message?: string | null
+          next_nurture_at?: string | null
+          nurture_count?: number
+          nurture_reengaged_at?: string | null
+          nurture_suppressed_until?: string | null
           on_hold_previous_status?: string | null
           on_hold_reason?: string | null
           on_hold_since?: string | null
@@ -4824,12 +4836,18 @@ export type Database = {
           estimate_snapshot?: Json | null
           id?: string
           landing_path?: string | null
+          last_nurture_at?: string | null
+          last_nurture_template_name?: string | null
           locality?: string | null
           manual_sales_temperature?: string | null
           manual_sales_temperature_reason?: string | null
           manual_sales_temperature_set_at?: string | null
           manual_sales_temperature_set_by?: string | null
           message?: string | null
+          next_nurture_at?: string | null
+          nurture_count?: number
+          nurture_reengaged_at?: string | null
+          nurture_suppressed_until?: string | null
           on_hold_previous_status?: string | null
           on_hold_reason?: string | null
           on_hold_since?: string | null
@@ -10943,12 +10961,18 @@ export type Database = {
           estimate_snapshot: Json | null
           id: string
           landing_path: string | null
+          last_nurture_at: string | null
+          last_nurture_template_name: string | null
           locality: string | null
           manual_sales_temperature: string | null
           manual_sales_temperature_reason: string | null
           manual_sales_temperature_set_at: string | null
           manual_sales_temperature_set_by: string | null
           message: string | null
+          next_nurture_at: string | null
+          nurture_count: number
+          nurture_reengaged_at: string | null
+          nurture_suppressed_until: string | null
           on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
@@ -11925,12 +11949,18 @@ export type Database = {
           estimate_snapshot: Json | null
           id: string
           landing_path: string | null
+          last_nurture_at: string | null
+          last_nurture_template_name: string | null
           locality: string | null
           manual_sales_temperature: string | null
           manual_sales_temperature_reason: string | null
           manual_sales_temperature_set_at: string | null
           manual_sales_temperature_set_by: string | null
           message: string | null
+          next_nurture_at: string | null
+          nurture_count: number
+          nurture_reengaged_at: string | null
+          nurture_suppressed_until: string | null
           on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
@@ -13945,12 +13975,18 @@ export type Database = {
           estimate_snapshot: Json | null
           id: string
           landing_path: string | null
+          last_nurture_at: string | null
+          last_nurture_template_name: string | null
           locality: string | null
           manual_sales_temperature: string | null
           manual_sales_temperature_reason: string | null
           manual_sales_temperature_set_at: string | null
           manual_sales_temperature_set_by: string | null
           message: string | null
+          next_nurture_at: string | null
+          nurture_count: number
+          nurture_reengaged_at: string | null
+          nurture_suppressed_until: string | null
           on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null
@@ -14409,12 +14445,18 @@ export type Database = {
           estimate_snapshot: Json | null
           id: string
           landing_path: string | null
+          last_nurture_at: string | null
+          last_nurture_template_name: string | null
           locality: string | null
           manual_sales_temperature: string | null
           manual_sales_temperature_reason: string | null
           manual_sales_temperature_set_at: string | null
           manual_sales_temperature_set_by: string | null
           message: string | null
+          next_nurture_at: string | null
+          nurture_count: number
+          nurture_reengaged_at: string | null
+          nurture_suppressed_until: string | null
           on_hold_previous_status: string | null
           on_hold_reason: string | null
           on_hold_since: string | null

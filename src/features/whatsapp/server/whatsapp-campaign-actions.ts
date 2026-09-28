@@ -144,6 +144,43 @@ export async function createWhatsappCampaignRunAction(
   };
 }
 
+export async function prepareNextWhatsappRecurringVersionAction(
+  _previous: WhatsappControlPlaneActionState,
+  formData: FormData
+): Promise<WhatsappControlPlaneActionState> {
+  const access = await resolveWhatsappControlPlaneAccess();
+  if (!access?.permissions["campaigns.draft"]) {
+    return denied("Only a Super Admin with campaign drafting access can prepare the next recurrence.");
+  }
+
+  const campaignId = String(formData.get("campaignId") ?? "").trim();
+  if (!isUuid(campaignId)) {
+    return { success: false, code: "VALIDATION", message: "Unknown campaign." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_next_campaign_version", {
+    p_campaign_id: campaignId,
+    p_idempotency_key: crypto.randomUUID(),
+  });
+  if (error) return { success: false, ...describeWhatsappCampaignRpcError(error) };
+
+  const row = data && typeof data === "object" && !Array.isArray(data)
+    ? (data as Record<string, unknown>)
+    : null;
+  const versionNumber = typeof row?.version_number === "number" ? row.version_number : null;
+
+  revalidatePath(WHATSAPP_ADMIN_CAMPAIGNS_PATH);
+  revalidatePath(WHATSAPP_ADMIN_SCHEDULER_PATH);
+  revalidatePath("/admin/campaigns/" + campaignId);
+  return {
+    success: true,
+    message: versionNumber
+      ? "Occurrence v" + versionNumber + " prepared as a draft. Review its WhatsApp spec, request approval, then schedule it."
+      : "Next occurrence prepared as a draft. Review and approve it before scheduling.",
+  };
+}
+
 export async function rescheduleWhatsappCampaignRunAction(
   _previous: WhatsappControlPlaneActionState,
   formData: FormData

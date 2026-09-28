@@ -16,6 +16,7 @@ import {
   presetTriggerLabel,
 } from "@/features/whatsapp/contracts/automation-presets";
 import { WHATSAPP_AUTOMATION_TRIGGER_LABELS, type WhatsappAutomationTrigger } from "@/features/whatsapp/contracts/automations";
+import { getWhatsappTemplateLibraryPreset } from "@/features/whatsapp/contracts/template-library";
 import { describeWhatsappCampaignOperatorDenial, describeWhatsappCampaignReason } from "@/features/whatsapp/contracts/campaign-execution";
 import { isUuid, WHATSAPP_ADMIN_AUTOMATIONS_PATH } from "@/features/whatsapp/contracts/control-plane";
 import {
@@ -90,7 +91,7 @@ export default async function WhatsappAutomationsPage({ searchParams }: Whatsapp
       ? outboundRow.mode
       : "disabled";
 
-  const [automations, selected, versions, flows, sendPolicy, acknowledgementRegistry, crmOperationalAttention] = await Promise.all([
+  const [automations, selected, versions, flows, sendPolicy, utilityRegistry, crmOperationalAttention] = await Promise.all([
     listWhatsappAutomationsForCurrentUser(),
     selectedId ? getWhatsappAutomationForCurrentUser(selectedId) : Promise.resolve(null),
     canManage && permissions["whatsapp.campaigns.execute"] ? listWhatsappCampaignVersionsForCurrentUser() : Promise.resolve([]),
@@ -103,9 +104,9 @@ export default async function WhatsappAutomationsPage({ searchParams }: Whatsapp
           status: "APPROVED",
           category: "UTILITY",
           language: null,
-          q: "onedecore_new_enquiry_ack",
+          q: null,
           page: 1,
-          pageSize: 25,
+          pageSize: 100,
         })
       : Promise.resolve({ items: [], totalCount: 0, page: 1, pageSize: 25 }),
     listWhatsappCrmOperationalAttentionForCurrentUser(),
@@ -115,9 +116,22 @@ export default async function WhatsappAutomationsPage({ searchParams }: Whatsapp
     .filter((version) => version.status === "approved" && version.specState === "frozen")
     .map((version) => ({ id: version.versionId, label: `${version.campaignName} · v${version.versionNumber} · ${version.templateName ?? "template"}` }));
   const flowOptions = flows.map((flow) => ({ id: flow.id, label: `${flow.name} · ${flow.providerStatus}` }));
-  const approvedAcknowledgementTemplateCount = acknowledgementRegistry.items.filter(
+  const approvedAcknowledgementTemplateCount = utilityRegistry.items.filter(
     (template) => template.name === "onedecore_new_enquiry_ack" && template.status === "APPROVED" && template.category === "UTILITY"
   ).length;
+  const utilityJourneyReadiness = ONEDECORE_WHATSAPP_UTILITY_AUTOMATION_RECIPES.map((recipe) => {
+    const preset = getWhatsappTemplateLibraryPreset(recipe.templatePresetId);
+    const provider = preset
+      ? utilityRegistry.items.find(
+          (template) =>
+            template.name === preset.name &&
+            template.status === "APPROVED" &&
+            template.category === "UTILITY"
+        ) ?? null
+      : null;
+    return { recipe, preset, provider, ready: Boolean(provider) };
+  });
+  const utilityReadyCount = utilityJourneyReadiness.filter((journey) => journey.ready).length;
   const operationalAlerts = buildWhatsappOperationalAlerts({
     automations,
     approvedCampaignCount: campaignOptions.length,
@@ -230,25 +244,29 @@ export default async function WhatsappAutomationsPage({ searchParams }: Whatsapp
               Prepared Utility journeys
             </h2>
           </div>
-          <span className="od-cp__badge">{ONEDECORE_WHATSAPP_UTILITY_AUTOMATION_RECIPES.length} recipes</span>
+          <span className="od-cp__badge">{utilityReadyCount}/{ONEDECORE_WHATSAPP_UTILITY_AUTOMATION_RECIPES.length} provider-ready</span>
         </div>
         <p className="od-cp__hint">
-          These map ONEDECORE lifecycle events to local UTILITY templates for new enquiry, assignment,
-          appointments, quotation, project, payment, installation, handover and feedback. They are preparation
-          records only: the current WhatsApp Automation engine remains MARKETING-only, so no Utility recipe can
-          execute until its later governed service-automation lane and Meta approval are deliberately activated.
+          The 13 lifecycle mappings are active application-side. Each journey is independently provider-ready
+          only when its exact ONEDECORE UTILITY template is currently APPROVED; no fallback template is substituted.
+          Provider delivery remains blocked by the existing service consent, conversation access and outbound gates.
         </p>
         <div className="od-growth__template-grid" style={{ marginBlockStart: 12 }}>
-          {ONEDECORE_WHATSAPP_UTILITY_AUTOMATION_RECIPES.map((recipe) => (
+          {utilityJourneyReadiness.map(({ recipe, preset, provider, ready }) => (
             <article key={recipe.id} className="od-growth__template-card">
               <div>
                 <strong className="od-cp__name">{recipe.title}</strong>
                 <span className="od-cp__sub">{recipe.detail}</span>
                 <div className="od-growth__template-meta">
-                  <span className="od-cp__badge">UTILITY · prepared</span>
+                  <span className="od-cp__badge" data-tone={ready ? "positive" : "warning"}>
+                    {ready ? "UTILITY · approved" : "UTILITY · waiting for Meta"}
+                  </span>
                   <span className="od-cp__badge">{recipe.event}</span>
                 </div>
-                <span className="od-cp__sub">Template preset: {recipe.templatePresetId}</span>
+                <span className="od-cp__sub">
+                  {preset?.name ?? recipe.templatePresetId}
+                  {provider?.qualityRating ? ` · quality ${provider.qualityRating}` : ""}
+                </span>
               </div>
             </article>
           ))}

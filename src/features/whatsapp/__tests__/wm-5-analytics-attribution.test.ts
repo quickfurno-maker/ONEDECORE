@@ -242,3 +242,25 @@ describe("minimised export", () => {
     assert.match(csv.csv.split("\r\n")[0]!, /^recipient_ref,contact_id,phone_last4/);
   });
 });
+
+
+describe("Phase 5 revenue and ROI attribution", () => {
+  test("booking revenue is last-touch, bounded and sourced from accepted quotations", () => {
+    const revenue = read("supabase/migrations/20260928040018_whatsapp_revenue_roi_attribution.sql");
+    assert.match(revenue, /quotation_acceptances/);
+    assert.match(revenue, /grand_total_paise/);
+    assert.match(revenue, /private\.whatsapp_attribution_window\(\)/);
+    assert.match(revenue, /order by s\.sent_at desc,s\.recipient_id desc[\s\S]*limit 1/);
+    assert.match(revenue, /budget_snapshot->'total_budget_paise'/);
+  });
+
+  test("analytics UI exposes revenue without inventing ROI when budget is absent", () => {
+    const page = read(FILES.page);
+    const revenue = read("supabase/migrations/20260928040018_whatsapp_revenue_roi_attribution.sql");
+    assert.match(page, /whatsapp-revenue-attribution/);
+    assert.match(page, /Attributed booking revenue/);
+    assert.match(page, /one prior WhatsApp campaign send/);
+    assert.match(revenue, /when bt\.planned_budget_paise>0[\s\S]*else null/);
+    assert.match(revenue, /'revenue',coalesce\(v_revenue,'\{\}'::jsonb\)/);
+  });
+});

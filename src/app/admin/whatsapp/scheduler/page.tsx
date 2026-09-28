@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CampaignCreateRunForm } from "@/features/whatsapp/components/campaigns/CampaignExecutionForms";
+import {
+  CampaignCreateRunForm,
+  CampaignPrepareNextOccurrenceForm,
+} from "@/features/whatsapp/components/campaigns/CampaignExecutionForms";
+import { CampaignRecurrencePlanner } from "@/features/whatsapp/components/campaigns/CampaignRecurrencePlanner";
 import { CampaignSchedulerCalendar } from "@/features/whatsapp/components/campaigns/CampaignSchedulerCalendar";
 import { CrmCampaignLauncher } from "@/features/whatsapp/components/campaigns/CrmCampaignLauncher";
 import {
@@ -42,6 +46,7 @@ import {
   getWhatsappCrmCampaignFilterOptionsForCurrentUser,
 } from "@/features/whatsapp/server/whatsapp-crm-campaign-queries";
 import { listWhatsappSchedulerEventsForCurrentUser } from "@/features/whatsapp/server/whatsapp-campaign-scheduler-queries";
+import { getWhatsappSendPolicyForCurrentUser } from "@/features/whatsapp/server/whatsapp-settings-queries";
 import "@/features/whatsapp/components/growth-workspace.css";
 import "@/features/whatsapp/components/campaigns/campaign-scheduler.css";
 
@@ -159,7 +164,7 @@ export default async function WhatsappSchedulerPage({
     access.permissions["campaigns.draft"] &&
     access.permissions["whatsapp.templates.read"];
 
-  const [versions, templates, crmCounts, crmOptions, schedulerEvents] = await Promise.all([
+  const [versions, templates, crmCounts, crmOptions, schedulerEvents, sendPolicy] = await Promise.all([
     listWhatsappCampaignVersionsForCurrentUser(),
     canDraft
       ? listWhatsappCampaignTemplateOptionsForCurrentUser()
@@ -167,7 +172,12 @@ export default async function WhatsappSchedulerPage({
     getWhatsappCrmAudienceCountsForCurrentUser(audienceMonth, audiencePreset),
     getWhatsappCrmCampaignFilterOptionsForCurrentUser(),
     listWhatsappSchedulerEventsForCurrentUser(month),
+    access.permissions["whatsapp.settings.read"]
+      ? getWhatsappSendPolicyForCurrentUser()
+      : Promise.resolve({ kind: "unreadable" } as const),
   ]);
+  const recurrenceFrequencyRules =
+    sendPolicy.kind === "configured" ? sendPolicy.policy.frequencyRules : [];
   const requestedSnapshot = first(params.templateSnapshotId);
   const requestedTemplateId = first(params.templateId);
   const selectedTemplate =
@@ -307,6 +317,8 @@ export default async function WhatsappSchedulerPage({
           todayDateKey={today}
         />
 
+        <CampaignRecurrencePlanner frequencyRules={recurrenceFrequencyRules} />
+
         <section className="od-scheduler__ready" aria-labelledby="scheduler-ready">
           <div className="od-scheduler__section-head">
             <div>
@@ -352,6 +364,9 @@ export default async function WhatsappSchedulerPage({
                     campaignVersionId={version.versionId}
                     schedulerMode
                   />
+                  {canDraft ? (
+                    <CampaignPrepareNextOccurrenceForm campaignId={version.campaignId} />
+                  ) : null}
                   <Link
                     className="od-scheduler__text-link"
                     href={`${WHATSAPP_ADMIN_CAMPAIGNS_PATH}?version=${version.versionId}&preview=1`}
