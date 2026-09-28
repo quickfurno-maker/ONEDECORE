@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MetricCard } from "@/features/admin-ops/components/MetricCard.tsx";
 import { NeedsAttentionPanel } from "@/features/admin-ops/components/NeedsAttentionPanel.tsx";
 import { PipelinePanel } from "@/features/admin-ops/components/PipelinePanel.tsx";
 import { ActivityFeed } from "@/features/admin-ops/components/ActivityFeed.tsx";
@@ -12,8 +11,10 @@ import {
   loadOpsDashboardSnapshot,
 } from "@/features/admin-ops/server/dashboard-snapshot.ts";
 import { resolveOpsNavFlags } from "@/features/admin-ops/server/resolve-ops-nav-flags.ts";
+import { CrmExecutiveBar } from "@/features/crm/components/dashboard/CrmExecutiveBar.tsx";
 import { CrmPageHeader } from "@/features/crm/components/shell/CrmPageHeader";
 import { getCrmAccessContext } from "@/features/crm/server/crm-auth";
+import { fetchCrmExecutiveSummary } from "@/features/crm/server/crm-executive-summary.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -29,12 +30,15 @@ export default async function CrmOverviewPage() {
   }
 
   const flags = await resolveOpsNavFlags();
-  const snapshot = await loadOpsDashboardSnapshot(
-    crmOverviewNavFlags(context, {
-      quotations: flags.quotations,
-      createQuotation: flags.createQuotation,
-    })
-  );
+  const [snapshot, executive] = await Promise.all([
+    loadOpsDashboardSnapshot(
+      crmOverviewNavFlags(context, {
+        quotations: flags.quotations,
+        createQuotation: flags.createQuotation,
+      })
+    ),
+    fetchCrmExecutiveSummary(context, { includeWhatsapp: flags.whatsapp }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -59,17 +63,23 @@ export default async function CrmOverviewPage() {
           </>
         }
       />
-      {snapshot.kpis.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {snapshot.kpis.slice(0, 4).map((item, index) => (
-            <MetricCard key={item.id} item={item} index={index} />
-          ))}
+      <CrmExecutiveBar summary={executive} />
+      <div className="crm-dashboard-section-heading">
+        <div>
+          <p>Priority workspace</p>
+          <h2>What needs your attention now</h2>
         </div>
-      ) : null}
+      </div>
       <div className="grid gap-4 xl:grid-cols-3">
         <NeedsAttentionPanel items={snapshot.attention} />
         <PipelinePanel stages={snapshot.pipeline} />
         <TargetPanel target={snapshot.target} />
+      </div>
+      <div className="crm-dashboard-section-heading">
+        <div>
+          <p>Business signal</p>
+          <h2>Where leads are coming from and moving next</h2>
+        </div>
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
         <SourceDonut slices={snapshot.sources} />

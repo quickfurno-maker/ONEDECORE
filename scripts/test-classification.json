@@ -43,6 +43,7 @@
     "src/features/crm/__tests__/crm-long-term-nurture.test.ts",
     "src/features/crm/__tests__/crm-leads-latest-first.test.ts",
     "src/features/crm/__tests__/crm-manual-sales-temperature.test.ts",
+    "src/features/crm/__tests__/crm-premium-dark-refresh.test.ts",
     "src/features/crm/__tests__/crm-mobile-admin-contracts.test.ts",
     "src/features/crm/__tests__/crm-mobile-calendar.test.ts",
     "src/features/crm/__tests__/crm-mobile-dashboard-summary.test.ts",

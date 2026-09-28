@@ -91,7 +91,7 @@
   color: #f5d58a;
 }
 
-/* ── CRM-scoped light premium workspace (does not recolor .od-ops shell) ── */
+/* ── CRM base tokens. The workspace root always applies the dark override. ── */
 
 .od-crm {
   --crm-bg: #f6f7f9;
@@ -352,17 +352,13 @@
 }
 
 /* ===========================================================================
-   PREMIUM DARK — Leads workspace only
+   PREMIUM DARK — complete CRM workspace
    ===========================================================================
 
-   Scoped to /admin/crm/leads and /admin/crm/leads/[leadId] by an extra class on
-   the page, NOT applied CRM-wide: My Day, Pipeline, Calendar and Reports were
-   built and reviewed against the light palette, and flipping them unreviewed
-   would be a bigger, riskier change than this PR asks for.
-
-   It redefines ONLY the existing `--crm-*` tokens. Every CRM component already
-   reads them, so the whole surface re-themes without a single component edit —
-   and there is exactly one place to adjust the palette.
+   Applied once at the CRM workspace root so Overview, My Day, Leads, Nurture,
+   Pipeline, Calendar, Reports, Targets, Imports and settings share one visual
+   contract. It redefines the existing `--crm-*` tokens, so shared CRM and ops
+   components inherit the same palette without page-by-page theme switches.
 
    Contrast, MEASURED (WCAG AA needs 4.5:1 body text, 3:1 large/UI):
      text        #eef2f6 on #0b1017   16.96:1
@@ -469,6 +465,215 @@
 /* The table head is the one place a slightly lifted ground helps scanning. */
 .od-crm-dark thead {
   background: var(--crm-surface-subtle);
+}
+
+/* CRM-wide premium app frame. */
+.od-crm-dark.crm-app-shell {
+  min-height: calc(100vh - 7rem);
+  border: 1px solid var(--crm-border);
+  background: var(--crm-bg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 24px 70px rgba(0, 0, 0, 0.18);
+}
+
+.od-crm-dark .crm-nav {
+  position: sticky;
+  top: 4.75rem;
+  z-index: 20;
+  border: 1px solid var(--crm-border);
+  border-radius: 14px;
+  background: #101720;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+.od-crm-dark .crm-dashboard-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.25rem;
+}
+
+.od-crm-dark .crm-dashboard-section-heading p {
+  color: var(--crm-primary);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.od-crm-dark .crm-dashboard-section-heading h2 {
+  margin-top: 0.2rem;
+  color: var(--crm-text);
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+/* Premium executive command bar on the CRM overview. */
+.od-crm-dark .crm-executive-bar {
+  overflow: hidden;
+  border: 1px solid var(--crm-border-strong);
+  border-radius: 16px;
+  background: #101720;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 18px 42px rgba(0, 0, 0, 0.24);
+}
+
+.od-crm-dark .crm-executive-bar__intro {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1rem 0.85rem;
+  border-bottom: 1px solid var(--crm-border);
+}
+
+.od-crm-dark .crm-executive-bar__eyebrow {
+  color: var(--crm-primary);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.od-crm-dark .crm-executive-bar__intro h2 {
+  margin-top: 0.15rem;
+  color: var(--crm-text);
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.od-crm-dark .crm-executive-bar__intro > p {
+  max-width: 28rem;
+  color: var(--crm-muted);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.od-crm-dark .crm-executive-bar__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.od-crm-dark .crm-executive-metric {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.9rem 0.85rem;
+  border-right: 1px solid var(--crm-border);
+  border-bottom: 1px solid var(--crm-border);
+  transition:
+    background-color var(--crm-ease),
+    transform var(--crm-ease);
+}
+
+.od-crm-dark .crm-executive-metric:hover {
+  background: var(--crm-surface-subtle);
+}
+
+.od-crm-dark .crm-executive-metric__icon {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--crm-surface-subtle);
+  color: var(--crm-text-secondary);
+}
+
+.od-crm-dark .crm-executive-metric__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.od-crm-dark .crm-executive-metric__copy strong {
+  color: var(--crm-text);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.od-crm-dark .crm-executive-metric__copy span {
+  overflow: hidden;
+  color: var(--crm-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.od-crm-dark .crm-executive-metric[data-tone="gold"] .crm-executive-metric__icon {
+  background: var(--crm-primary-soft);
+  color: var(--crm-primary);
+}
+
+.od-crm-dark .crm-executive-metric[data-tone="danger"] .crm-executive-metric__icon {
+  background: var(--crm-danger-soft);
+  color: var(--crm-danger);
+}
+
+.od-crm-dark .crm-executive-metric[data-tone="warning"] .crm-executive-metric__icon {
+  background: var(--crm-warning-soft);
+  color: var(--crm-warning);
+}
+
+.od-crm-dark .crm-executive-metric[data-tone="info"] .crm-executive-metric__icon {
+  background: var(--crm-info-soft);
+  color: var(--crm-info);
+}
+
+.od-crm-dark .crm-executive-metric[data-tone="positive"] .crm-executive-metric__icon {
+  background: var(--crm-success-soft);
+  color: var(--crm-success);
+}
+
+.od-crm-dark select option {
+  background: var(--crm-surface);
+  color: var(--crm-text);
+}
+
+@media (min-width: 640px) {
+  .od-crm-dark .crm-executive-bar__metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .od-crm-dark .crm-executive-bar__metrics {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
+  .od-crm-dark .crm-executive-metric {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .od-crm-dark .crm-executive-bar__intro {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .od-crm-dark .crm-executive-bar__intro > p {
+    text-align: left;
+  }
+
+  .od-crm-dark .crm-nav {
+    top: 4.25rem;
+  }
 }
 
 /* ── Vendor portal — warm premium workspace ─────────────────────────────── */

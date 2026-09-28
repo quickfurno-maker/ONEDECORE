@@ -14,7 +14,8 @@ export function CrmPageHeader({
   return (
     <header className="mb-1 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        <h1 className="text-[24px] font-semibold tracking-tight text-[var(--crm-text)] sm:text-[30px]">
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--crm-primary)]">ONEDECORE CRM</p>
+        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-[var(--crm-text)] sm:text-[30px]">
           {title}
         </h1>
         {description ? (

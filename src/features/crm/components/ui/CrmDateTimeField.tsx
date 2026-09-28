@@ -330,7 +330,7 @@ export function CrmDateTimeField({
           id={popoverId}
           role="dialog"
           aria-label={label}
-          className="absolute left-0 z-40 mt-2 w-[min(100vw-1.5rem,22rem)] rounded-[12px] border border-[var(--crm-border-strong)] bg-white p-3 shadow-[0_12px_32px_rgba(15,23,42,0.12)] motion-safe:transition-opacity motion-safe:duration-150"
+          className="absolute left-0 z-40 mt-2 w-[min(100vw-1.5rem,22rem)] rounded-[12px] border border-[var(--crm-border-strong)] bg-[var(--crm-surface)] p-3 shadow-[0_18px_48px_rgba(0,0,0,0.42)] motion-safe:transition-opacity motion-safe:duration-150"
         >
           <div className="mb-3 flex items-center justify-between gap-2">
             <button

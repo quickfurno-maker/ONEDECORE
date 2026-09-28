@@ -62,6 +62,9 @@ function buildGroups(flags: OpsNavFlags, hrefs: AdminSidebarProps["hrefs"]): rea
       { href: "/admin/crm", label: "Overview", icon: "crm" },
       { href: "/admin/crm/my-day", label: "My Day", icon: "clock" },
       { href: hrefs.crmLeads, label: "Leads", icon: "leads" },
+      { href: "/admin/crm/nurture", label: "Nurture", icon: "spark" },
+      { href: "/admin/crm/pipeline", label: "Pipeline", icon: "opportunity" },
+      { href: "/admin/crm/calendar", label: "Calendar", icon: "clock" },
     ];
     if (flags.crmTargets) {
       children.push({ href: "/admin/crm/targets", label: "Sales Targets", icon: "targets" });
