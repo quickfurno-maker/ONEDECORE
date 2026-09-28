@@ -83,7 +83,7 @@ export function CalendarEventDialog({
           </span>
           <LeadStatusBadge status={event.leadStatus} />
           {event.isPrimaryNextAction ? (
-            <span className="inline-flex items-center rounded-md border border-[var(--crm-brand-gold)]/35 bg-[#fdf8ec] px-2 py-0.5 text-[11px] font-medium text-[#8a6c1f]">
+            <span className="inline-flex items-center rounded-md border border-[var(--crm-primary)]/35 bg-[var(--crm-primary-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--crm-primary)]">
               Primary next action
             </span>
           ) : null}

@@ -84,16 +84,16 @@ export function CrmNav({
           key={item.href}
           href={item.href}
           aria-current={isActive ? "page" : undefined}
-          className={`relative inline-flex min-h-11 shrink-0 items-center rounded-t-[8px] px-3 text-[13px] font-medium transition-colors duration-150 ${
+          className={`relative inline-flex min-h-10 shrink-0 items-center rounded-[9px] border px-3 text-[13px] font-medium transition-all duration-150 ${
             isActive
-              ? "bg-[var(--crm-primary-soft)] text-[var(--crm-primary)]"
-              : "text-[var(--crm-muted)] hover:bg-[var(--crm-primary-soft)] hover:text-[var(--crm-text)]"
+              ? "border-[var(--crm-primary)]/25 bg-[var(--crm-primary-soft)] text-[var(--crm-primary)]"
+              : "border-transparent text-[var(--crm-muted)] hover:border-[var(--crm-border)] hover:bg-[var(--crm-surface-subtle)] hover:text-[var(--crm-text)]"
           }`}
         >
           {isActive ? (
             <span
               aria-hidden
-              className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-[var(--crm-primary)]"
+              className="absolute inset-x-3 bottom-0 h-px rounded-full bg-[var(--crm-primary)]"
             />
           ) : null}
           {item.label}
@@ -104,7 +104,7 @@ export function CrmNav({
   return (
     <nav
       aria-label="CRM workspace"
-      className="-mx-1 space-y-1.5 border-b border-[var(--crm-border)] pb-1"
+      className="crm-nav -mx-1 space-y-1.5 px-2 py-2"
     >
       <div className="crm-scrollbar-x flex min-w-0 items-center gap-1 px-1">
         <span className="shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--crm-muted)]">

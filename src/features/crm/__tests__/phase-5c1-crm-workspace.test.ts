@@ -432,6 +432,15 @@ describe("Phase 5C1 regression guards", () => {
         // but it must not grow a sender/provider implementation of its own.
         assert.match(src, /WHATSAPP_ADMIN_SCHEDULER_PATH/);
         assert.doesNotMatch(src, /dispatchTemplateMessage|createAdminClient|whatsapp_campaign_runs/);
+      } else if (relativePath === "src/app/admin/crm/page.tsx") {
+        // The executive bar may expose an RLS-scoped WhatsApp engagement metric
+        // when the caller has WhatsApp access. Transport/provider code remains
+        // outside CRM and is still forbidden here.
+        assert.match(src, /includeWhatsapp: flags\.whatsapp/);
+        assert.doesNotMatch(
+          src,
+          /dispatchTemplateMessage|createAdminClient|META_WHATSAPP|whatsapp_campaign_runs/
+        );
       } else if (relativePath === "src/features/crm/server/crm-lead-queries.ts") {
         // Phase 2 permits content-free WhatsApp engagement in the canonical
         // scoring batch. Provider transport and message content remain outside CRM.

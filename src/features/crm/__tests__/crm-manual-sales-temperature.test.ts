@@ -37,7 +37,6 @@ import {
   sortPipelineCards,
   type CrmPipelineCard,
 } from "../contracts/pipeline-contracts.ts";
-import { isLeadsWorkspacePath } from "../contracts/crm-workspace-theme.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
 
 const root = process.cwd();
@@ -522,7 +521,7 @@ describe("site visit and quotation are untouched", () => {
 /* 9. Premium dark theme                                                       */
 /* ========================================================================== */
 
-describe("the Leads workspace is premium dark", () => {
+describe("the CRM workspace is premium dark", () => {
   test("a dark token layer exists and is centralized", () => {
     const css = read(TOKENS);
     assert.match(css, /\.od-crm-dark \{/);
@@ -564,14 +563,11 @@ describe("the Leads workspace is premium dark", () => {
     assert.match(dark, /box-shadow:[\s\S]{0,140}rgba\(0, 0, 0, 0\.4\)/);
   });
 
-  test("the theme is applied at the CRM ROOT for Leads routes only", () => {
-    // It used to sit on an inner page div, which left the outer workspace, the
-    // nav and the gutters light around a dark island.
-    assert.equal(isLeadsWorkspacePath("/admin/crm/leads"), true);
-    assert.equal(isLeadsWorkspacePath("/admin/crm/pipeline"), false);
-    assert.match(read(SHELL), /od-crm space-y-5\$\{dark \? " od-crm-dark" : ""\}/);
-    // Deliberately not CRM-wide: other workspaces keep their reviewed palette.
-    assert.match(read(TOKENS), /NOT applied CRM-wide/);
+  test("the theme is applied once at the CRM root for every route", () => {
+    const shell = read(SHELL);
+    assert.match(shell, /od-crm od-crm-dark crm-app-shell space-y-5/);
+    assert.match(shell, /data-crm-theme="dark"/);
+    assert.doesNotMatch(shell, /usePathname|data-crm-theme=\{dark/);
   });
 
   test("no CRM badge is stranded on a hardcoded light colour", () => {
@@ -792,62 +788,29 @@ describe("the temperature audit is visible in the timeline", () => {
 });
 
 /* ========================================================================== */
-/* 12. The dark theme reaches the workspace ROOT                               */
+/* 12. The dark theme reaches the complete CRM                                 */
 /* ========================================================================== */
 
-describe("the Leads dark theme is route-scoped at the CRM root", () => {
-  test("only the Leads routes activate it", () => {
-    for (const path of [
-      "/admin/crm/leads",
-      "/admin/crm/leads/new",
-      "/admin/crm/leads/11111111-1111-4111-8111-111111111111",
-      "/admin/crm/leads/abc/anything",
-    ]) {
-      assert.equal(isLeadsWorkspacePath(path), true, `${path} should be dark`);
-    }
-  });
-
-  test("every other CRM route stays light", () => {
-    for (const path of [
-      "/admin/crm",
-      "/admin/crm/pipeline",
-      "/admin/crm/my-day",
-      "/admin/crm/calendar",
-      "/admin/crm/reports",
-      "/admin/crm/imports",
-      // A near-miss that must NOT match: a different segment with the prefix.
-      "/admin/crm/leadsources",
-      "/admin/quotations",
-      null,
-    ]) {
-      assert.equal(isLeadsWorkspacePath(path), false, `${path} should stay light`);
-    }
-  });
-
-  test("the class lands on the SAME element as .od-crm", () => {
+describe("the complete CRM inherits one premium dark root", () => {
+  test("the root is permanently dark with no route switch", () => {
     const shell = read(SHELL);
-    // `.od-crm` declares `background: var(--crm-bg)`; the dark layer only
-    // redefines that variable. On a different element the outer workspace, the
-    // nav and the gutters stayed light around a dark island.
-    assert.match(shell, /className=\{`od-crm space-y-5\$\{dark \? " od-crm-dark" : ""\}`\}/);
-    assert.match(shell, /data-crm-theme=\{dark \? "dark" : "light"\}/);
+    assert.match(shell, /className="od-crm od-crm-dark crm-app-shell space-y-5"/);
+    assert.match(shell, /data-crm-theme="dark"/);
+    assert.doesNotMatch(shell, /usePathname|isLeadsWorkspacePath|\? " od-crm-dark"/);
   });
 
-  test("the CRM layout renders that shell, so the nav is inside it", () => {
+  test("the CRM layout renders that shell, so navigation and every page inherit it", () => {
     const layout = read(CRM_LAYOUT);
     assert.match(layout, /<CrmWorkspaceShell>/);
     assert.match(layout, /<\/CrmWorkspaceShell>/);
-    // The nav is a CHILD of the themed root, so it inherits the dark tokens.
     const shellStart = layout.indexOf("<CrmWorkspaceShell>", layout.indexOf("return ("));
     const navAt = layout.indexOf("<CrmNav", shellStart);
     const shellEnd = layout.indexOf("</CrmWorkspaceShell>", shellStart);
     assert.ok(navAt > shellStart && navAt < shellEnd, "CrmNav must sit inside the themed root");
-    // No raw `.od-crm` div left behind.
     assert.doesNotMatch(layout, /className="od-crm /);
   });
 
-  test("the pages no longer carry a second copy of the theme class", () => {
-    // Two sources for one theme is exactly how they drift apart.
+  test("pages do not carry their own theme class", () => {
     assert.doesNotMatch(read(LEADS_PAGE), /od-crm-dark/);
     assert.doesNotMatch(read(DETAIL_PAGE), /od-crm-dark/);
   });
@@ -856,7 +819,6 @@ describe("the Leads dark theme is route-scoped at the CRM root", () => {
     const css = read(TOKENS);
     const blocks = css.match(/^\.od-crm-dark \{/gm) ?? [];
     assert.equal(blocks.length, 1, "the dark palette must not be duplicated");
-    // And the token names are declared once inside it.
     const dark = css.slice(css.indexOf(".od-crm-dark {"));
     assert.equal((dark.match(/--crm-bg:/g) ?? []).length, 1);
     assert.equal((dark.match(/--crm-primary:/g) ?? []).length, 1);
