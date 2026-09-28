@@ -1,6 +1,6 @@
 # CRM 2D — Communication + Intelligence (Design + Owner Policy Lock)
 
-> **2026-09-27 implementation update:** the historical WhatsApp lead-link blocker in §§C.5/P.1 and the five-action Q8 snapshot are **superseded**. `20260902140000_crm_whatsapp_lead_link_repair.sql` established the canonical conversation→lead writer, and Phase 2 `20260927170127_crm_whatsapp_intelligence.sql` now permits content-free inbound WhatsApp engagement in scoring plus a governed CRM WhatsApp quick action. The original sections below remain as decision history, not current runtime truth.
+> **2026-09-27 implementation update:** the historical WhatsApp lead-link blocker in §§C.5/P.1 and the five-action Q8 snapshot are **superseded**. `20260902140000_crm_whatsapp_lead_link_repair.sql` established the canonical conversation→lead writer, and Phase 2 `20260928000826_crm_whatsapp_intelligence.sql` (with the managed-ledger duplicate `20260928000836_crm_whatsapp_intelligence.sql`, preserved byte-for-byte for production parity) now permits content-free inbound WhatsApp engagement in scoring plus a governed CRM WhatsApp quick action. The original sections below remain as decision history, not current runtime truth.
 
 **Document status:** **OWNER-LOCKED (Q1–Q10) — IMPLEMENTATION AUTHORIZED** (locks recorded 2026-08-31)
 **Repository:** quickfurno-maker/ONEDECORE
