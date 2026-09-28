@@ -12,6 +12,7 @@ import {
   type CrmLeadScoreSignals,
 } from "../contracts/lead-score-contracts.ts";
 import type { LeadStageCode } from "../contracts/lead-stages.ts";
+import type { CrmWhatsappEngagementSignal } from "./crm-lead-score-batch.ts";
 
 const MEANINGFUL_OUTCOME_CODES: readonly string[] =
   CRM_SCORE_MEANINGFUL_OUTCOME_CODES;
@@ -53,6 +54,7 @@ export function buildLeadScoreSignalsFromDetail(input: {
   readonly timeline: CrmLeadTimelinePage;
   readonly slaClock: CrmLeadDetailSlaClock;
   readonly commercialState: CrmCommercialState;
+  readonly whatsapp: CrmWhatsappEngagementSignal;
 }): CrmLeadScoreSignals {
   const primary =
     input.followUps.find(
@@ -124,5 +126,8 @@ export function buildLeadScoreSignalsFromDetail(input: {
     hasOpenPrimaryNextAction: primary !== null,
     primaryNextActionDueAt: primary?.dueAt ?? null,
     slaDueAt: input.slaClock.slaDueAt,
+    whatsappLinked: input.whatsapp.linked,
+    hasWhatsappCustomerReply: input.whatsapp.hasCustomerReply,
+    lastWhatsappInboundAt: input.whatsapp.lastInboundAt,
   };
 }

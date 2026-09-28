@@ -70,6 +70,10 @@ const TIMELINE_QUERIES = "src/features/crm/server/crm-lead-timeline-queries.ts";
 const LEAD_REPOSITORY = "src/features/crm/server/crm-lead-repository.ts";
 const LEAD_PAGE = "src/app/admin/crm/leads/[leadId]/page.tsx";
 const QUICK_ACTIONS = "src/features/crm/components/leads/LeadQuickActions.tsx";
+const WHATSAPP_QUICK_ACTION_SERVER = "src/features/crm/server/crm-whatsapp-actions.ts";
+const WHATSAPP_INTELLIGENCE_PANEL = "src/features/crm/components/leads/LeadWhatsappIntelligencePanel.tsx";
+const WHATSAPP_EVIDENCE_QUERIES = "src/features/crm/server/crm-whatsapp-evidence-queries.ts";
+const WHATSAPP_SCORE_BATCH = "src/features/crm/server/crm-lead-score-batch.ts";
 const COMMAND_HEADER = "src/features/crm/components/leads/LeadCommandHeader.tsx";
 const TIMELINE_UI = "src/features/crm/components/leads/LeadDetailTimeline.tsx";
 const NOTES_UI = "src/features/crm/components/leads/LeadDetailNotes.tsx";
@@ -118,6 +122,9 @@ function makeSignals(
     hasOpenPrimaryNextAction: true,
     primaryNextActionDueAt: "2026-09-05T06:00:00.000Z",
     slaDueAt: null,
+    whatsappLinked: false,
+    hasWhatsappCustomerReply: false,
+    lastWhatsappInboundAt: null,
     ...overrides,
   };
 }
@@ -367,9 +374,9 @@ describe("CRM 2D timeline — labels and disclosure", () => {
     assert.match(src, /actor_type === "staff" \? "Staff member" : "Client"/);
   });
 
-  test("WhatsApp sources stay out of the timeline while the lead link is unwritten", () => {
+  test("the CRM decision timeline does not duplicate the full WhatsApp transcript", () => {
     const src = readSrc(TIMELINE_QUERIES);
-    assert.doesNotMatch(src, /whatsapp_messages|whatsapp_conversations/);
+    assert.doesNotMatch(src, /whatsapp_messages|body_text/);
   });
 });
 
@@ -423,13 +430,14 @@ describe("CRM 2D lead detail wiring", () => {
 /* ========================================================================== */
 
 describe("CRM 2D quick actions", () => {
-  test("exactly the five locked actions ship", () => {
+  test("the six governed command actions ship without becoming a button wall", () => {
     const src = readSrc(QUICK_ACTIONS);
     for (const testId of [
       "crm-quick-action-call",
       "crm-quick-action-complete",
       "crm-quick-action-add-activity",
       "crm-quick-action-add-note",
+      "crm-quick-action-whatsapp",
       "crm-quick-action-quotation",
     ]) {
       assert.match(src, new RegExp(testId));
@@ -439,22 +447,51 @@ describe("CRM 2D quick actions", () => {
         (id) => !id.includes("crm-quick-action-error")
       )
     );
-    assert.equal(actionIds.size, 5, "no button wall: exactly five quick actions");
+    assert.equal(actionIds.size, 6, "exactly six governed command actions");
   });
 
-  test("no WhatsApp quick action while the conversation lead link is unwritten", () => {
-    const code = stripComments(readSrc(QUICK_ACTIONS));
-    assert.doesNotMatch(code, /whatsapp/i);
-    // The exclusion must stay documented so it is not silently "fixed" later.
-    assert.match(readSrc(QUICK_ACTIONS), /no canonical writer/);
+  test("WhatsApp quick action uses the canonical conversation link and never sends directly", () => {
+    const src = readSrc(QUICK_ACTIONS);
+    assert.match(src, /startCrmWhatsappConversationAction/);
+    assert.match(src, /\/admin\/whatsapp\/inbox\//);
+    assert.match(src, /whatsappProductionReady/);
+    assert.doesNotMatch(src, /dispatchTemplateMessage|META_WHATSAPP|graph\.facebook/i);
   });
 
-  test("quick actions never write a table or add a server action", () => {
+  test("quick actions never write a table or call Supabase directly", () => {
     const src = readSrc(QUICK_ACTIONS);
     assert.doesNotMatch(src, /createClient|supabase|\.from\(|\.rpc\(/);
-    // The only mutation it calls directly is the existing quotation-draft action.
     assert.match(src, /createQuotationDraftAction/);
+    assert.match(src, /startCrmWhatsappConversationAction/);
     assert.doesNotMatch(src, /createLeadActivityAction|addLeadNoteAction/);
+  });
+
+  test("CRM WhatsApp starter only calls the governed local conversation RPC", () => {
+    const src = stripComments(readSrc(WHATSAPP_QUICK_ACTION_SERVER));
+    assert.match(src, /ensure_whatsapp_conversation_for_crm_lead/);
+    assert.doesNotMatch(
+      src,
+      /dispatchTemplateMessage|graph\.facebook|META_WHATSAPP|fetch\s*\(/
+    );
+    assert.match(src, /provider_send_started|No message has been sent/i);
+  });
+
+  test("lead workspace colocates WhatsApp intelligence with evidence-backed consent controls", () => {
+    const panel = readSrc(WHATSAPP_INTELLIGENCE_PANEL);
+    const page = readSrc(LEAD_PAGE);
+    const consentQuery = readSrc(WHATSAPP_EVIDENCE_QUERIES);
+
+    assert.match(page, /LeadWhatsappIntelligencePanel/);
+    assert.match(panel, /MarketingConsentEvidenceForm/);
+    assert.match(panel, /MarketingOptOutForm/);
+    assert.match(panel, /content-free/);
+    assert.match(consentQuery, /get_crm_whatsapp_marketing_state/);
+  });
+
+  test("WhatsApp score batching reads only the content-free signal RPC", () => {
+    const src = stripComments(readSrc(WHATSAPP_SCORE_BATCH));
+    assert.match(src, /list_crm_whatsapp_lead_signals/);
+    assert.doesNotMatch(src, /body_text|whatsapp_messages|customer_e164/);
   });
 
   test("stage transition and cadence stay in their own controls", () => {
@@ -524,9 +561,10 @@ describe("CRM 2D scoring — determinism and bounds", () => {
       Math.max(...Object.values(CRM_SCORE_MATURITY_POINTS)),
       CRM_SCORE_MATURITY_MAX
     );
-    assert.equal(
-      Object.values(CRM_SCORE_ENGAGEMENT_POINTS).reduce((a, b) => a + b, 0),
-      CRM_SCORE_ENGAGEMENT_MAX
+    assert.ok(
+      Object.values(CRM_SCORE_ENGAGEMENT_POINTS).reduce((a, b) => a + b, 0) >=
+        CRM_SCORE_ENGAGEMENT_MAX,
+      "raw engagement factors may exceed the cap, but scored engagement remains capped at 40"
     );
   });
 
@@ -967,11 +1005,48 @@ describe("CRM 2D scoring — non-discrimination", () => {
     assert.match(src, /NON-DISCRIMINATION/);
   });
 
-  test("no WhatsApp signal enters the score while the lead link is unwritten", () => {
-    const score = deriveLeadScore(makeSignals(), NOW);
-    assert.equal(score.signalsAvailable.whatsappLinked, false);
-    const signals = makeSignals();
-    assert.ok(!Object.keys(signals).some((key) => /whatsapp/i.test(key)));
+  test("WhatsApp contributes only linked customer-reply timing, never message content", () => {
+    const baseline = deriveLeadScore(makeSignals(), NOW);
+    const replied = deriveLeadScore(
+      makeSignals({
+        whatsappLinked: true,
+        hasWhatsappCustomerReply: true,
+        lastWhatsappInboundAt: new Date(NOW - HOUR_MS).toISOString(),
+      }),
+      NOW
+    );
+
+    assert.equal(baseline.signalsAvailable.whatsappLinked, false);
+    assert.equal(replied.signalsAvailable.whatsappLinked, true);
+    assert.equal(replied.priorityScore, baseline.priorityScore + 10);
+    assert.ok(
+      replied.reasons.some((reason) => reason.code === "WHATSAPP_CUSTOMER_REPLY")
+    );
+    assert.ok(
+      replied.reasons.some((reason) => reason.code === "RECENT_WHATSAPP_REPLY")
+    );
+
+    const keys = Object.keys(makeSignals({ whatsappLinked: true }));
+    assert.ok(keys.includes("whatsappLinked"));
+    assert.ok(keys.includes("hasWhatsappCustomerReply"));
+    assert.ok(keys.includes("lastWhatsappInboundAt"));
+    assert.ok(!keys.some((key) => /body|message|phone|e164|displayname/i.test(key)));
+  });
+
+  test("a recent inbound WhatsApp reply clears STALE without reading message content", () => {
+    const score = deriveLeadScore(
+      makeSignals({
+        latestMeaningfulSalesTouchAt: new Date(
+          NOW - 240 * HOUR_MS
+        ).toISOString(),
+        receivedAt: new Date(NOW - 300 * HOUR_MS).toISOString(),
+        whatsappLinked: true,
+        hasWhatsappCustomerReply: true,
+        lastWhatsappInboundAt: new Date(NOW - 2 * HOUR_MS).toISOString(),
+      }),
+      NOW
+    );
+    assert.ok(!score.riskFlags.includes("STALE"));
   });
 });
 
@@ -989,6 +1064,9 @@ describe("CRM 2D scoring — surface parity", () => {
       "hasOpenPrimaryNextAction",
       "primaryNextActionDueAt",
       "slaDueAt",
+      "whatsappLinked",
+      "hasWhatsappCustomerReply",
+      "lastWhatsappInboundAt",
     ]) {
       assert.match(detail, new RegExp(field), `detail must set ${field}`);
       assert.match(pipeline, new RegExp(field), `pipeline must set ${field}`);
