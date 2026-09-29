@@ -8,6 +8,10 @@ import {
 import {
   parseWebsiteAnalyticsEvent,
 } from "../server/ingest.ts";
+import {
+  normalizeBusinessLandingPath,
+  summarizeWebsiteLeadAttribution,
+} from "../server/business-attribution.ts";
 import { websiteAnalyticsNoContentResponse } from "../server/analytics-http.ts";
 import { AD_CONSENT_VERSION } from "../../marketing/meta/ad-consent.ts";
 
@@ -49,6 +53,69 @@ describe("website analytics source resolution", () => {
       "referral"
     );
     assert.equal(resolveWebsiteTrafficSource({}).sourceKey, "direct");
+  });
+});
+
+describe("website business attribution", () => {
+  test("normalizes homepage query and hash variants to one pathname", () => {
+    assert.equal(normalizeBusinessLandingPath("/"), "/");
+    assert.equal(normalizeBusinessLandingPath("/#consultation"), "/");
+    assert.equal(normalizeBusinessLandingPath("/?utm_source=facebook#hero"), "/");
+    assert.equal(
+      normalizeBusinessLandingPath("/lp/budget-kitchen-pune?utm_campaign=sep"),
+      "/lp/budget-kitchen-pune"
+    );
+  });
+
+  test("summarizes all website enquiries independently of analytics consent", () => {
+    const summary = summarizeWebsiteLeadAttribution([
+      {
+        landing_path: "/",
+        created_at: "2026-09-19T09:00:00.000Z",
+        attribution: { landingPath: "/" },
+      },
+      {
+        landing_path: "/#consultation",
+        created_at: "2026-09-19T09:10:00.000Z",
+        attribution: {
+          landingPath: "/#consultation",
+          utmSource: "facebook",
+          utmMedium: "paid_social",
+          utmCampaign: "home_sep",
+          fbclid: "click",
+        },
+      },
+      {
+        landing_path: "/lp/budget-kitchen-pune?utm_source=instagram",
+        created_at: "2026-09-19T09:20:00.000Z",
+        attribution: {
+          landingPath: "/lp/budget-kitchen-pune?utm_source=instagram",
+          utmSource: "instagram",
+          utmMedium: "paid_social",
+          utmCampaign: "kitchen_sep",
+          fbclid: "click-2",
+        },
+      },
+    ]);
+
+    assert.equal(summary.totalEnquiries, 3);
+    assert.equal(summary.homepageEnquiries, 2);
+    assert.equal(summary.pages.find((row) => row.path === "/")?.enquiries, 2);
+    assert.equal(
+      summary.sources.find((row) => row.source_key === "direct")?.enquiries,
+      1
+    );
+    assert.equal(
+      summary.sources.find((row) => row.source_key === "facebook_ads")
+        ?.homepage_enquiries,
+      1
+    );
+    assert.equal(
+      summary.sources.find((row) => row.source_key === "instagram_ads")
+        ?.enquiries,
+      1
+    );
+    assert.equal(summary.campaigns.length, 2);
   });
 });
 
@@ -131,9 +198,16 @@ describe("website analytics ingestion contract", () => {
     assert.doesNotMatch(helper, /location\.search|location\.hash/);
   });
 
-  test("admin analytics separates landing exposures from consented measurement and refreshes live", () => {
+  test("admin analytics separates operational, consented and CRM truth and refreshes live", () => {
     const dashboard = readFileSync(
       join(process.cwd(), "src/features/website-analytics/server/dashboard.ts"),
+      "utf8"
+    );
+    const business = readFileSync(
+      join(
+        process.cwd(),
+        "src/features/website-analytics/server/business-attribution.ts"
+      ),
       "utf8"
     );
     const page = readFileSync(
@@ -146,10 +220,25 @@ describe("website analytics ingestion contract", () => {
     );
 
     assert.match(dashboard, /\.from\("landing_exposures"\)/);
+    assert.match(dashboard, /countHomepageEvents/);
+    assert.match(dashboard, /\.eq\("path", "\/"\)/);
     assert.match(dashboard, /count: "exact"/);
-    assert.match(page, /Two measurement layers/);
-    assert.match(page, /Landing exposures/);
-    assert.match(page, /Explicit v2 analytics consent only/);
+
+    assert.match(business, /permissions\.includes\("website\.analytics\.read"\)/);
+    assert.match(business, /\.eq\("source", WEBSITE_SOURCE\)/);
+    assert.match(business, /\.select\("landing_path, attribution, created_at"\)/);
+    assert.doesNotMatch(business, /submitted_name|submitted_email|message/);
+
+    assert.match(page, /Three reporting layers/);
+    assert.match(page, /Landing Lab exposures/);
+    assert.match(page, /CRM website enquiries/);
+    assert.match(page, /Measured source performance/);
+    assert.match(page, /CRM website enquiry sources/);
+    assert.match(page, /Homepage performance/);
+    assert.match(page, /Page performance/);
+    assert.match(page, /Session semantics/);
+    assert.doesNotMatch(page, /�/);
+
     assert.match(liveRefresh, /REFRESH_INTERVAL_MS = 30_000/);
     assert.match(liveRefresh, /router\.refresh\(\)/);
   });
