@@ -38,4 +38,4 @@ node scripts/int9-worker-contention-lab.mjs
 
 ## Current release decision
 
-**HOLD; Internal Development Complete is not declared.** Draft PR #218 remains for internal review. Managed Staging, Production, Meta and outbound messaging require independent security/release approvals.
+**Superseded by INT-10 acceptance:** See `INT10-FINAL-INTERNAL-CERTIFICATION-20261023.md` for the passing authenticated Scheduler and role-transition browser retests. The historical observations above remain accurate for their earlier test runs. Deployment/activation remains HOLD pending independent security and release approvals.

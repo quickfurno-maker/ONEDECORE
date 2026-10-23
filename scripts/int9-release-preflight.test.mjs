@@ -29,10 +29,10 @@ test("added migration or missing source evidence fails", () => {
   y.sourceFileCount -= 1;
   assert.throws(() => verifyInt9Manifest(y));
 });
-test("forged reviewer approval, production, Meta or outbound permission fails closed", () => {
+test("all certification and reviewer gate field alterations fail closed", () => {
   for (const field of Object.keys(baseline.safety)) {
     const x = copy();
-    x.safety[field] = true;
+    x.safety[field] = !x.safety[field];
     assert.throws(() => verifyInt9Manifest(x), field);
   }
   const x = copy();

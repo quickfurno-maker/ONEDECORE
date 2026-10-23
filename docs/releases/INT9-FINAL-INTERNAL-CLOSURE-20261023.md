@@ -43,4 +43,4 @@ Fingerprint: `ops/releases/onedecore-int9-20261023-hold.json` (canonical LF text
 
 See `INT9ABC-INTERNAL-ACCEPTANCE-20261023.md`: historical INT-7 source inventory remains unavailable; synthetic **two-worker concurrent SQL execution passed 11/11 with zero provider messages**; the isolated CRM 2E owner suite passed **30/30**; real mobile browser audit found Scheduler overflow at 360/390/768 px (**13/16 pre-fix passes**). A focused CSS correction and source regression test passed; a real Chrome **offline stylesheet/representative DOM check passed 4/4** with zero root overflow. The authenticated whole-page post-fix browser rerun and Sales Executive role-switch certification are still unverified.
 
-**Final state: HOLD. Do not declare Internal Development Complete until missing evidence is independently verified. Production, Meta, and outbound messaging remain unchanged.**
+**INT-10 superseding result (23 October):** The verified source-development acceptance outcome is in `INT10-FINAL-INTERNAL-CERTIFICATION-20261023.md`. Internal completion is separate from activation approval; **Production, managed Staging, Meta and outbound messaging remain HOLD**.

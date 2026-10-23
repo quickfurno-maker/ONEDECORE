@@ -17,6 +17,10 @@ const pinned = [
   "supabase/config.toml",
   "docs/releases/INT9-FINAL-INTERNAL-CLOSURE-20261023.md",
   "docs/releases/INT9ABC-INTERNAL-ACCEPTANCE-20261023.md",
+  "docs/releases/INT10-FINAL-INTERNAL-CERTIFICATION-20261023.md",
+  "scripts/crm-2e-owner-qa.mjs",
+  "scripts/crm-2e-browser-qa.mjs",
+  "scripts/int10-governance-audit.mjs",
   "scripts/int9-worker-contention-lab.mjs",
   "scripts/int9-crm-browser-a11y.mjs",
   "src/features/whatsapp/components/campaigns/campaign-scheduler.css",
@@ -46,13 +50,13 @@ const frozen = {
   safety: {
     independentAppsecApproved: false,
     independentDbaApproved: false,
-    disposableCampaignConcurrencyCertified: false,
-    mobileBrowserAccessibilityCertified: false,
+    disposableCampaignConcurrencyCertified: true,
+    mobileBrowserAccessibilityCertified: true,
     controlledStagingAuthorized: false,
     productionAuthorized: false,
     metaActivationAuthorized: false,
     outboundMessagingAuthorized: false,
-    internalDevelopmentComplete: false
+    internalDevelopmentComplete: true
   },
   decision: "HOLD"
 };

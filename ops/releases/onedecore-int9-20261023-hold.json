@@ -2,8 +2,8 @@
   "schema": "onedecore.int9.review-candidate.v1",
   "project": "ONEDECORE",
   "sourceBaseline": "27521f031195a8b749bebeceae0ba22ad475b816",
-  "sourceDigest": "51758399c2aa4e52ada4078227efc10455d442d25ea2da62b220081246f7f89d",
-  "sourceFileCount": 123,
+  "sourceDigest": "05dd67ac238dca609332f5586212617a38910b3abc793310a4a27ef9a721f59d",
+  "sourceFileCount": 127,
   "migrationCount": 109,
   "source": [
     {
@@ -11,12 +11,16 @@
       "sha256": "f889e57b06a56afd32b444c656df6d39fc01418dafef18037c95c234328a82f6"
     },
     {
+      "file": "docs/releases/INT10-FINAL-INTERNAL-CERTIFICATION-20261023.md",
+      "sha256": "bb28a67ef66d8a0a00dbd319d11afd2a6229d4b703a31936984d9c4346c34a0d"
+    },
+    {
       "file": "docs/releases/INT9-FINAL-INTERNAL-CLOSURE-20261023.md",
-      "sha256": "0ece785908da77f3272b9cf5dcbccfa02d62afb21ff59652636dd1561c8f9bad"
+      "sha256": "a070e021375a63f7bbe88b5bbfcd0d78bd2533ba291d6be9933cf77eeef0ef0c"
     },
     {
       "file": "docs/releases/INT9ABC-INTERNAL-ACCEPTANCE-20261023.md",
-      "sha256": "aa7712f0f79d6cc91f5c8f1f012fe69ac5ca6e38488067df328ac62d47fa0601"
+      "sha256": "5dc7248c1f9687637d0065ec0ce98044ff8475229e9312cdd6b944cdebdc8ab0"
     },
     {
       "file": "package-lock.json",
@@ -27,16 +31,28 @@
       "sha256": "fc9d33d0ff1328ab540219b9c3c6cbaffa3dfbf766764d6d3856a4a99de8a499"
     },
     {
+      "file": "scripts/crm-2e-browser-qa.mjs",
+      "sha256": "4a955943fb1c189547658300a0ffc7ac7cf6ee01ea7dd57bf626b3e9fd61ed02"
+    },
+    {
+      "file": "scripts/crm-2e-owner-qa.mjs",
+      "sha256": "f2933afcc4ec678739c164bb85c4a39e48168ac2675478b731b832f0fb0243ef"
+    },
+    {
+      "file": "scripts/int10-governance-audit.mjs",
+      "sha256": "67d4fb5c29e12123813f3bff6e4626ad417bc1cdaa361b1b0859c804f4012490"
+    },
+    {
       "file": "scripts/int9-crm-browser-a11y.mjs",
-      "sha256": "5a8d29caa75e321e0f641c81e33adf3dfa25f8f3b20e1038886e52825ab307a9"
+      "sha256": "85fe05a101d4c2f1da201392fbe41da81d1112333cac4fc75635f048ae90ee98"
     },
     {
       "file": "scripts/int9-release-preflight.mjs",
-      "sha256": "4a675127d291830c1b18352b3b7126b4375bb872095c9e1019523ff2f92b0a49"
+      "sha256": "1db88db832a0844ab4cc1b96a212ccb471ab4c5ba1b720812152c43742018dc6"
     },
     {
       "file": "scripts/int9-release-preflight.test.mjs",
-      "sha256": "77fc2b05ab157bca2bca4c90059ed1d395511b8aa53ec3f59f76bb72e5972f92"
+      "sha256": "245f592e319418c0afa47431dfaf88635ddd255a7551235f235ab0e7bddff077"
     },
     {
       "file": "scripts/int9-worker-contention-lab.mjs",
@@ -502,13 +518,13 @@
   "safety": {
     "independentAppsecApproved": false,
     "independentDbaApproved": false,
-    "disposableCampaignConcurrencyCertified": false,
-    "mobileBrowserAccessibilityCertified": false,
+    "disposableCampaignConcurrencyCertified": true,
+    "mobileBrowserAccessibilityCertified": true,
     "controlledStagingAuthorized": false,
     "productionAuthorized": false,
     "metaActivationAuthorized": false,
     "outboundMessagingAuthorized": false,
-    "internalDevelopmentComplete": false
+    "internalDevelopmentComplete": true
   },
   "decision": "HOLD"
 }

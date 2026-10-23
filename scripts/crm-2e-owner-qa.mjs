@@ -43,8 +43,10 @@ const EXEC_B = "f4444444-4444-4444-4444-444444444444";
 const STAFF = [
   { id: SUPER_ADMIN, email: "owner-qa-sa@example.test" },
   { id: MANAGER, email: "owner-qa-mgr@example.test" },
-  { id: EXEC_A, email: "owner-qa-execa@example.test" },
-  { id: EXEC_B, email: "owner-qa-execb@example.test" },
+  // INT-10C: employees authenticate through the governed 10-digit staff portal,
+  // not by submitting a staff email to the Super Admin portal.
+  { id: EXEC_A, email: "8300000011@staff-login.onedecore.invalid" },
+  { id: EXEC_B, email: "8300000012@staff-login.onedecore.invalid" },
 ];
 
 /** Owner-review placeholders. No migration seeds a production sales target. */
