@@ -2,13 +2,13 @@
   "schema": "onedecore.int9.review-candidate.v1",
   "project": "ONEDECORE",
   "sourceBaseline": "27521f031195a8b749bebeceae0ba22ad475b816",
-  "sourceDigest": "05dd67ac238dca609332f5586212617a38910b3abc793310a4a27ef9a721f59d",
-  "sourceFileCount": 127,
+  "sourceDigest": "4fd43d476a6b3174dfea7df92fca6c3aeef5e0e17e800689a4b533cb2eea7492",
+  "sourceFileCount": 130,
   "migrationCount": 109,
   "source": [
     {
       "file": ".github/workflows/quality-gate.yml",
-      "sha256": "f889e57b06a56afd32b444c656df6d39fc01418dafef18037c95c234328a82f6"
+      "sha256": "cbd6d6a2922c1f232d0bc207f198fd9463a1cb3f5da2b4b01044e4a537e599a4"
     },
     {
       "file": "docs/releases/INT10-FINAL-INTERNAL-CERTIFICATION-20261023.md",
@@ -21,6 +21,10 @@
     {
       "file": "docs/releases/INT9ABC-INTERNAL-ACCEPTANCE-20261023.md",
       "sha256": "5dc7248c1f9687637d0065ec0ce98044ff8475229e9312cdd6b944cdebdc8ab0"
+    },
+    {
+      "file": "docs/releases/PROD1-CODE-ONLY-RELEASE-GATE-20261023.md",
+      "sha256": "83fe04728498ba37f6e60195a2fe37f28b14382a06331830f895aa5f7bb4bbc3"
     },
     {
       "file": "package-lock.json",
@@ -48,7 +52,7 @@
     },
     {
       "file": "scripts/int9-release-preflight.mjs",
-      "sha256": "1db88db832a0844ab4cc1b96a212ccb471ab4c5ba1b720812152c43742018dc6"
+      "sha256": "7c2fc6492b5d0b2c72e59c9c4e5f5d2c31a8d85a682321548cf7b43bf15c0b92"
     },
     {
       "file": "scripts/int9-release-preflight.test.mjs",
@@ -57,6 +61,14 @@
     {
       "file": "scripts/int9-worker-contention-lab.mjs",
       "sha256": "57595e9df8f3f4739f6465a37f4fd7d5e9fc097a28dda44a5c2eb850fccc4029"
+    },
+    {
+      "file": "scripts/prod1-readonly-vps-preflight.sh",
+      "sha256": "84099edbac9e17eee987d62f1a43dc0bfb7de95bf893b0eb261cd31d61a988ce"
+    },
+    {
+      "file": "scripts/prod1-readonly-vps-preflight.test.mjs",
+      "sha256": "918ea3b302390302c529563775912efcb18618eb55482b3a4adf26f94da70bdd"
     },
     {
       "file": "scripts/verify-dependency-security.mjs",
