@@ -2,485 +2,485 @@
   "schema": "onedecore.int9.review-candidate.v1",
   "project": "ONEDECORE",
   "sourceBaseline": "27521f031195a8b749bebeceae0ba22ad475b816",
-  "sourceDigest": "737060b3df015af597b013ecb06a4c3bd246a81f29271db691760de3f39e42c1",
+  "sourceDigest": "e90639b014ec21d1b9b46ed053f446c7c8089693a01bbb549588f9d527d66e65",
   "sourceFileCount": 119,
   "migrationCount": 109,
   "source": [
     {
       "file": ".github/workflows/quality-gate.yml",
-      "sha256": "927c117a4239e382bb3e6feeaf4bdfc76ba165fd08b8d83735cadbacb9a1df99"
+      "sha256": "f889e57b06a56afd32b444c656df6d39fc01418dafef18037c95c234328a82f6"
     },
     {
       "file": "docs/releases/INT9-FINAL-INTERNAL-CLOSURE-20261023.md",
-      "sha256": "478a4539be8cd870922cbb25343a7b07f9512aa0ca37532cb18e0a38879bd3fc"
+      "sha256": "1ac6fae778c2bc602fb6c3158957c160fcd743fe00820e0090b0fb07f5987ec9"
     },
     {
       "file": "package-lock.json",
-      "sha256": "ed837c73c4173882bc6ed4c7be673a68edbd51965d70347a1a716380b3cfac04"
+      "sha256": "bc04450fb054f686e92b4c049e3944c22384d3c5303e46c56db99a7de387d924"
     },
     {
       "file": "package.json",
-      "sha256": "41720b5b64b13acf0ff4e1a8b5f491ffb45fe29c615b26c7e626c62926dbdc6d"
+      "sha256": "fc9d33d0ff1328ab540219b9c3c6cbaffa3dfbf766764d6d3856a4a99de8a499"
     },
     {
       "file": "scripts/int9-release-preflight.mjs",
-      "sha256": "c2645762da5ec51a786a20bf81ddf9a874b457524d089201352fa980e1907f17"
+      "sha256": "58b7eb5bcb3bf68da2880d01df79942b7bca9d7238fb7cd08a57cbb1521a34ee"
     },
     {
       "file": "scripts/int9-release-preflight.test.mjs",
-      "sha256": "795ad37ea6373d8dec5d384e277e273b2a62d14ab6923bac08c8004179c58d13"
+      "sha256": "77fc2b05ab157bca2bca4c90059ed1d395511b8aa53ec3f59f76bb72e5972f92"
     },
     {
       "file": "scripts/verify-dependency-security.mjs",
-      "sha256": "92927b12d13f6e4ae9889bb0546a3ed4b99fa94141dfc2b5fec266e082db7a3d"
+      "sha256": "b061afa090d0364438b9803420e78cf0171e375543495ebd832fee66a1655200"
     },
     {
       "file": "src/features/whatsapp/__tests__/whatsapp-campaign-scheduler.test.ts",
-      "sha256": "97110e032ca4d3e2aab2d79ad96c711c8c15ad1e4313e7a6e5dea822e3a66f04"
+      "sha256": "a7deda1cc339a000526bd3f3765cc43cb096e080a64b748fd26084175352b79a"
     },
     {
       "file": "src/features/whatsapp/server/whatsapp-campaign-worker.ts",
-      "sha256": "d37a5d578128d1d5dddca4d1a982669238cda51f17c4de3c3d7d925f15ba0701"
+      "sha256": "ffdb1fa71877aed7ee642cb52c863f690c37f6f8e975fd1494d988581db315a7"
     },
     {
       "file": "supabase/config.toml",
-      "sha256": "cf9b76d0cb6ca59e8304659b389b6408bbe9dba4d34f805b4c65ba21098295b6"
+      "sha256": "b821263269fadaeabe71ac187e3d3899ddffb96c9372eb13f3b2ed357a927a3e"
     },
     {
       "file": "supabase/migrations/20260724174648_identity_rbac_foundation.sql",
-      "sha256": "1aaf5a54d091f5d7acbb1cd18a7672166d6b386c4bfdff5389332594eb180db0"
+      "sha256": "a19dc6d497401b6cdd1df7bee6f8c5bc1e5f1aa354135debebfab4a659e1a9dd"
     },
     {
       "file": "supabase/migrations/20260724192233_secure_rls_event_trigger_and_index_assignment_actor.sql",
-      "sha256": "63703d78c81553041d8181476806d8866f680dbcac25438a3c28727404e8b847"
+      "sha256": "3ef8512a50a26610d8ee2960661dcf21f8bf8a0142064fea0bd02e75ba0c4c1b"
     },
     {
       "file": "supabase/migrations/20260725013043_staff_authorization_rpc.sql",
-      "sha256": "420759bec1cfd085f248fe10b6e4b6c93a456c083a8100f769954f32333b72d7"
+      "sha256": "ead1c5413b097c615188558db76d8ca850982e5eab8ae6a29e8823ffa2237296"
     },
     {
       "file": "supabase/migrations/20260725020833_enforce_active_staff_authorization.sql",
-      "sha256": "96fa1ae89f105c444a75f9ae2eccb119ca720e18026e2d62ec50548e9134700f"
+      "sha256": "193d7780ab27480d27c4b8a350de5804c177e9ff6b0710fcbddf36cf58e1b832"
     },
     {
       "file": "supabase/migrations/20260725031137_portfolio_media_foundation.sql",
-      "sha256": "01f9058d28105177fcd7428f74453dae8c3bb30bb1dab6ef060a411dcf7a93a4"
+      "sha256": "5196de49a49c985c21df01c0042f14ebb1fbafe43a54f108e8468ef46b70e229"
     },
     {
       "file": "supabase/migrations/20260725033329_harden_portfolio_rls_and_audit_privileges.sql",
-      "sha256": "efaf1f3d379505ea7db373f9a03cbe6866907382739985c8bdad84ea8a8b6464"
+      "sha256": "6f0a9fd28f88c4ac58012956cb1bc74f6cf9e30b0efdf88841e0f029e199d59b"
     },
     {
       "file": "supabase/migrations/20260725044930_portfolio_cms_publication_workflow.sql",
-      "sha256": "4192800878faabedbeb252e17f8a697627ea801e4c6207787893d31803f0be6d"
+      "sha256": "46b9e5dc248b5087018eba5513667ea5ef150bc4fdac4ff0a930fe1e73efecee"
     },
     {
       "file": "supabase/migrations/20260725123040_harden_portfolio_status_rpc_exposure.sql",
-      "sha256": "4abdc074b9ade9d00095b77b838a0ac98c3619379bee3c7940003b621b024a2a"
+      "sha256": "a9fbb142e48aa222c80c80fa78daabded67a46a831266584f0dafe7f6fe1b729"
     },
     {
       "file": "supabase/migrations/20260729162245_lead_intake_data_plane.sql",
-      "sha256": "5f55d61d65cb17edef0deac2c071979a0e231e39c1879111d62684d7ae32d9b8"
+      "sha256": "386bebe10be725e83e4a6a77cb91e3b781ff14ba202efba7bf03dee76ee853f1"
     },
     {
       "file": "supabase/migrations/20260730053756_lead_intake_covering_indexes.sql",
-      "sha256": "ca0f1b6ab3b021e5684fcb40606a6174bfe1615d2684fd91117e3ed829f615ad"
+      "sha256": "ae730dc550656f7a4a9109991ecd26eb056d990c3b5e81af92fa7121eeacfa1f"
     },
     {
       "file": "supabase/migrations/20260730184426_crm_identity_core_foundation.sql",
-      "sha256": "673aa456ba3696c7de92ae07a42ee7e5cbfd40359eaf22b4d149fc5d4049f40f"
+      "sha256": "7633795e75c1996bb506fe77b02a77b85662a48493fe5f1391499ff195b48001"
     },
     {
       "file": "supabase/migrations/20260731120000_crm_workspace_access_foundation.sql",
-      "sha256": "c3a3faff93423c78df2f1d51c198e64c34f83c467e48d827dbbaec6b8572aa4d"
+      "sha256": "f5897122afa119e29489495b789269066f5604001065bb7816099d4f5bdb55b2"
     },
     {
       "file": "supabase/migrations/20260731143050_crm_assignment_mutation_hardening.sql",
-      "sha256": "4b9df35eed22176bc912b96f6d0ca69ca62370abb7298b5d42f0ba49724afe18"
+      "sha256": "d090414830ccea1e4c3345ff3220b171fd27e90081e9f7fd0adfe3d19c447d59"
     },
     {
       "file": "supabase/migrations/20260801140000_crm_manual_lead_duplicate_safe_flow.sql",
-      "sha256": "f14053c3e9ceed8937b83a7dd8a5a9adfa3f5da3d109f071a67514a1f1e6a6fd"
+      "sha256": "011a6288a267cc12a874afa2176d626c3edea7893aa6bfc12edecfd7b04ab649"
     },
     {
       "file": "supabase/migrations/20260802140000_crm_bulk_import_source_assignment_foundation.sql",
-      "sha256": "a089e478eb28bea7ffbab44283c391650052f1a9f64df9e4ae9d0e15da87f088"
+      "sha256": "3aa8372505a4dc23cfc17b02c181c6027da5bec83e7afe60cf5dbfa8d55bb168"
     },
     {
       "file": "supabase/migrations/20260803140000_crm_sales_targets_reporting_foundation.sql",
-      "sha256": "777a0ddb77910b7bb9a069048b10b40ce48144d5fb1d34e714875cff0f972a58"
+      "sha256": "2bdc5d27c504f6afc048f4349348d0c4e2c32a38d873c753573b8ef0dab6bdf2"
     },
     {
       "file": "supabase/migrations/20260804140000_controlled_public_lead_activation_hardening.sql",
-      "sha256": "b8f5b75ac6ee64de1e9abd571a215ff3aabe6f54d98efe1f8bbef679871a0fc6"
+      "sha256": "a97330b08ff8994e3f8ec784fe254991fed7b13b0e2bc8fd833cb88432fb183b"
     },
     {
       "file": "supabase/migrations/20260804150000_meta_whatsapp_data_webhook_foundation.sql",
-      "sha256": "43af93c6cf8cf7067a1cffed6c1232614e2ca6a4c63c37184b0d6a8b7351f098"
+      "sha256": "2d6a5f3632bfea892a1a2e3bdc17f7c3e553997ea479bf5a75d63a025128f8b5"
     },
     {
       "file": "supabase/migrations/20260805140000_whatsapp_shared_inbox_send_intent_foundation.sql",
-      "sha256": "acc743f9d6e73961f4ac18589374d81db4fd43d5fab6713a21328ebd2a1cc82c"
+      "sha256": "77c8c994c8c391c1e5423584740fdaa1da9d38064898fc1dea0cdb99a41bb7f4"
     },
     {
       "file": "supabase/migrations/20260807140000_whatsapp_shared_inbox_read_model_foundation.sql",
-      "sha256": "38df4251d0f4de6c86288f23323947175294814a06ac13eaf570577f7ef6f825"
+      "sha256": "a80bab2fe5e0c7e5e2b986839573ac8881c773ef49a81b8a15ef9eb7cf5a05eb"
     },
     {
       "file": "supabase/migrations/20260808140000_whatsapp_provider_dispatch_foundation.sql",
-      "sha256": "13ef6b7d33cb4740dcbe98aa61c04311041e3e74c9ea5b3e93a1c54b3be540da"
+      "sha256": "15178d62677667cd49b08dca9d2d9907a2af2f24c658a56cf3acc1d73f9900de"
     },
     {
       "file": "supabase/migrations/20260809140000_kriti_audit_persistence_foundation.sql",
-      "sha256": "1394cd75ace0e808e118cd11302c193007f4f3bfd7b94742c0be806e4471cbb8"
+      "sha256": "74f79fb7985bac4d556701371555f7717a026ec5ec5f77da314a42f643775630"
     },
     {
       "file": "supabase/migrations/20260810140000_staff_attendance_leave_foundation.sql",
-      "sha256": "89c848d3b3f980b059dbb0cb54fb2fc83c9b65e98e3585e4ab3a16ae0b06e513"
+      "sha256": "64f4f15a9501fcf6bda954e021812b0b826022304654dbc49699f0cab7051634"
     },
     {
       "file": "supabase/migrations/20260811140000_staff_attendance_idempotency_repair.sql",
-      "sha256": "0d99e310804070f35a2b1af89dcc4ff6888f54bffafe59251500666d10dad4a4"
+      "sha256": "029a88db95bafe5cfd8791baf77fb94695da7febed41b5251898cfede5a860b2"
     },
     {
       "file": "supabase/migrations/20260812140000_commercial_quotation_draft_foundation.sql",
-      "sha256": "a67508f6b6527e17af1abe534a60e967a5d122750627715bee60b2fb59ac47db"
+      "sha256": "baf8e61e2a491a09f76422cc90215b77e0b353897e24ec4275ead229c5e33bc8"
     },
     {
       "file": "supabase/migrations/20260813140000_commercial_quotation_finalization_delivery_acceptance.sql",
-      "sha256": "9da50fab181d242f0130319a59d77fe1977ededbd4378d717af53157351eb036"
+      "sha256": "231bfa6216aba1ebb8615e78c877f4af7eb896c42f47a9a45a20c50a98c693c1"
     },
     {
       "file": "supabase/migrations/20260814140000_quotation_trigger_execute_privilege_hardening.sql",
-      "sha256": "1bb808c7d4d4ea285a8c558a1b9eb057fd903d1a45b3d4e9c2b0c3404a4bf387"
+      "sha256": "a0a90f913c63f174f8d9ca0b9c759e246561a725d96370d07c8c83950b45f257"
     },
     {
       "file": "supabase/migrations/20260815140000_closed_won_project_conversion_pm_handover.sql",
-      "sha256": "934ec3d65fb89dfb4271da2e319ef9a998fd069ae357abda8fa33e2caab37538"
+      "sha256": "f83f98bfd5139e1d0678bc3b1b45cfc09f284074596feb89e79b9a50c40fb84f"
     },
     {
       "file": "supabase/migrations/20260816140000_designer_assignment_design_collaboration.sql",
-      "sha256": "7e82070a6f17517965b5f4e82695568f47f9473ca9f9e53c9892ce7aea5adcfc"
+      "sha256": "6e9b89773350e64ce95b5e1c9e4a1b4b71c3d56e863154131f580bf058976347"
     },
     {
       "file": "supabase/migrations/20260817140000_project_execution_workspace.sql",
-      "sha256": "5bb9364c4a391b47306b1fbb5e159f50f6e195c950eb25ac8f0e44105d005fad"
+      "sha256": "55166887c692c3967e3dc379474c1812a899e906d21da1ea25aa183f9d6c0cac"
     },
     {
       "file": "supabase/migrations/20260818140000_campaign_consent_audience_approval_foundation.sql",
-      "sha256": "f4e415901aa7243448da87449b7e365ab121966b9e4e67a418ae1846e1981e93"
+      "sha256": "f033e21236f1eac5c2f0c81865c0801c095e784f6f5b844564464e287f83fb26"
     },
     {
       "file": "supabase/migrations/20260819140000_landing_page_lab_experimentation_foundation.sql",
-      "sha256": "b4709ddf9fa36218330267ede61670a4501600fb8fef549b3f18c1910f06c56e"
+      "sha256": "2975192b5a7e8ce4ea8f24825eaff69b0f0fab526d07643be1bddb21eb68cca0"
     },
     {
       "file": "supabase/migrations/20260820140000_campaign_execution_foundation.sql",
-      "sha256": "31c88e5e126a009f1bcf68699e339293d2d7cbf643f308438d470d5415ffb8b3"
+      "sha256": "c87d4b478ea6c76520a715c58d669238f425dafb1d595db6fee50a80de277c84"
     },
     {
       "file": "supabase/migrations/20260821140000_campaign_metrics_conversion_feedback_foundation.sql",
-      "sha256": "a360f6bc9c48069591a45131096960ad296f7b257fc9b8d3e8728e1798c7c2c7"
+      "sha256": "208626bab69a10136f9aa214cb5d4f75f3bbebdef321985884df0a1bf78e06c5"
     },
     {
       "file": "supabase/migrations/20260822140000_commerce_catalogue_inventory_foundation.sql",
-      "sha256": "80eb98bbaf34054192be547ce84caeebbce7de329544c951b5212ffce369d598"
+      "sha256": "1d8ddd6377cda301ddc52f26757aa9d09294b2e41ee6cd6b807b51dcad2c8742"
     },
     {
       "file": "supabase/migrations/20260823140000_commerce_public_storefront_read_foundation.sql",
-      "sha256": "9d8c85bf5857a4cc05b7641c4c521d67b748738bc5ac22afbcb509f4685351e0"
+      "sha256": "2cead7e36022d8a6b6855b27e5e54370633385b2e56fcfcc1d526760d7d20c53"
     },
     {
       "file": "supabase/migrations/20260824140000_commerce_order_cod_checkout_foundation.sql",
-      "sha256": "5b88319fb612cfda9d3cff99851527900998482391814d7460673f744c049d51"
+      "sha256": "cb27d7fb848f2983ce05056c0e47a2c0e06e4290cdca2b890674cf67542765fc"
     },
     {
       "file": "supabase/migrations/20260825163000_lead_timeline_taxonomy_v2.sql",
-      "sha256": "7f478a8aa088fb90a34816fa8c62e04b2b2134dfcbf211e47e0392e9589660f9"
+      "sha256": "173e06fe610d964e48f8eff6635ebceef7d51ec2fbc16af839ef8990e4b8e225"
     },
     {
       "file": "supabase/migrations/20260825170000_crm_lead_notes_insert_privilege_repair.sql",
-      "sha256": "472860a8ae09000000ac7c78a046c591a928408db4368946d6a5cfac862a9c91"
+      "sha256": "4e17ed6a6ed21a68416f0b170e4cecf591e667900efe61fb45b7c57c43582944"
     },
     {
       "file": "supabase/migrations/20260826120000_crm_activity_control_plane_foundation.sql",
-      "sha256": "c692fb169c81a3956e4d768e6f90f1fbd2506c23be0e0bed6e8a2366535aec2c"
+      "sha256": "d9855409b8d094486d62b1de9544cd892a8c31607997dfeae6184516167adcfb"
     },
     {
       "file": "supabase/migrations/20260827140000_crm_business_sla_foundation.sql",
-      "sha256": "1fc5e16c18349ad3ecc332a807ca576b42a23c8a5275731ded56b9126f8da9dd"
+      "sha256": "fc11a934df4acc1ab90dd9aee8b5b7af771ddde0fadcd817502cf15c1b2c4b78"
     },
     {
       "file": "supabase/migrations/20260828140000_crm_activity_rpc_workflows.sql",
-      "sha256": "7f61bf17fe200491b7b5d37d98ad86372df6ce5a4a60a0c0320dbbf36b9d5256"
+      "sha256": "b2412dc52e882944f88093456d4f498e82165b02b87eacca5970fbb741885e4e"
     },
     {
       "file": "supabase/migrations/20260829120000_crm_my_day_read_model.sql",
-      "sha256": "74433bb9400d087cf2b92ca2e423897bf00bc573bf2c8630e113820bc06b3b50"
+      "sha256": "d9f2267f71ae7f42602b6a80591812161143a6f8c2268b9684e2f0e382a0cbac"
     },
     {
       "file": "supabase/migrations/20260829140000_crm_assignment_first_contact_automation.sql",
-      "sha256": "2df57b9c279a66280c54d9bd3ed3f85c285153d676ec170ffccc41534381c170"
+      "sha256": "1a561a32b807329be96cedca5b17925afd94da4303fa99410b0bb6aca750cfab"
     },
     {
       "file": "supabase/migrations/20260830140000_crm_cadence_playbook_foundation.sql",
-      "sha256": "10797bf776d72311d0b0e54bb6129009fdf5c35c22c63f74d5a62484c45e1c42"
+      "sha256": "65827e83681405e4434fc3eba393de8862ac0ce06fe32771579981fe8aec3593"
     },
     {
       "file": "supabase/migrations/20260831140000_crm_lead_commercial_read_models.sql",
-      "sha256": "de82805694e681831f7eca584573fcf6753e339d4e32153572d3bb9d22af0756"
+      "sha256": "68d89c3e103748a9d1947813bc7f997699dc1df29e0a837b5d3078d8a3508a18"
     },
     {
       "file": "supabase/migrations/20260831174021_crm_lead_notes_insert_privilege_redrift_repair.sql",
-      "sha256": "12c5a67e0f731b051f18cc7fabd4ac77f164f877248ba851637ad141e9ff52e3"
+      "sha256": "e0174475d4ea2a354c85f819a219e8f3bd11c83da01e29c42b670605485e7fe3"
     },
     {
       "file": "supabase/migrations/20260901140000_crm_management_analytics_read_model.sql",
-      "sha256": "6e423f416a037e914cf182ef8e9d3add19b2feeaffbde29e04ad2b60049b6be0"
+      "sha256": "62c48d39641ac67a342d859f05ed60f6616dfeab49df77bdcf28832999f77c20"
     },
     {
       "file": "supabase/migrations/20260902140000_crm_whatsapp_lead_link_repair.sql",
-      "sha256": "f082831719d6ecd11af7882ff6527682ba47cbb729c5e0423ff4ec1d411185f3"
+      "sha256": "b0c1d892d76adc55f5d6f978162d79449bade3116288865e0acfb20c54a5d962"
     },
     {
       "file": "supabase/migrations/20260902160000_workforce_attendance_v1_lifecycle.sql",
-      "sha256": "0ebddc9a50c294c9795a7e40eaadc1e676f1b6acae78f3a5e18416c7cc4e1302"
+      "sha256": "75ec2689fe145d03cb955590a7e1c98b5ffb377b2ff0237e3c723a46204b4073"
     },
     {
       "file": "supabase/migrations/20260902170000_workforce_salary_payment_ledger.sql",
-      "sha256": "dd00539235584c84b77750f65bd5eed897621b2c5d084e5e2a7306ca0bbf4674"
+      "sha256": "649aacb086f286d36439a9f27b8805ae0d5c7f21b5101f205765e289f7a91ea7"
     },
     {
       "file": "supabase/migrations/20260903120000_staff_optional_email_employment_identity.sql",
-      "sha256": "96d487ed34958f352753f581cc8159d5ba82fef7a5f869cd20d1c04e3f241dbd"
+      "sha256": "86888505255a40cb5b596923d317d0c7c6d388e5a63236cfaf1eb521c1266a86"
     },
     {
       "file": "supabase/migrations/20260903140000_attendance_policy_publish_weekly_off_optional.sql",
-      "sha256": "325c8241599598d2d921f5101263cb73bd7bd2045fcb80bc45b8bf628acb305a"
+      "sha256": "cbb23df09b63b7802c8558bc29740fbceff8e246c81cd5aaa070dcb397075eff"
     },
     {
       "file": "supabase/migrations/20260903160000_staff_phone_login_credentials.sql",
-      "sha256": "a28c0995c0903b3dcce348a9a7ea8c40eb454ed20047fd7f9c0a56c1a763ec76"
+      "sha256": "cabef486980e8bf6c48d94b257c025936ff0ce248762a6fc2dd06b87e8637d6a"
     },
     {
       "file": "supabase/migrations/20260904140000_interior_room_wise_quotation.sql",
-      "sha256": "14425a585cd38debfd2985f3de2eca531cd32fa91707a6463630d14b71f655ae"
+      "sha256": "45b0f06bcc096181b77ff991df528e8eab4a0c65f6220f6ad8887db25d542344"
     },
     {
       "file": "supabase/migrations/20260904150000_crm_manual_sales_temperature.sql",
-      "sha256": "1033967b9dd8dcd6f1b1432e22f424c4cf21506c0958f372eb38f9d2114833d4"
+      "sha256": "41d66d0b361b4708e4c47284ef91f11731cbaa61fb89769360dd2725e763f11d"
     },
     {
       "file": "supabase/migrations/20260904170000_workforce_p5_launch_catalogue.sql",
-      "sha256": "71b09ed92d326f09cecd3a7176d30bb447db977605b8613c571ae3e3987be5a7"
+      "sha256": "38f900b803a2e16b39fb887f1c8a0b2dfd4086e9755d634891cf7eb6a880c0c2"
     },
     {
       "file": "supabase/migrations/20260905120000_public_consultation_qualifier.sql",
-      "sha256": "5a59dfbd79f267b02ce192e98e7b21d5ef8ac5d1bece55eda55bab5b54d235fd"
+      "sha256": "76a59b2c2db9a772c9548ab6e7973fbfcbd1a27f9d2c1c9b7b26cd5844c1f31a"
     },
     {
       "file": "supabase/migrations/20260906120000_sales_manager_control_plane_hardening.sql",
-      "sha256": "49ea010b271683244e7a370ea8b2b2919201d977fe1bafbcf3dba3706c263dbe"
+      "sha256": "6f0fa9a17605a1cca77a74efbad0e18df87b9b24a17916e072199bae98ba7ec6"
     },
     {
       "file": "supabase/migrations/20260906180000_crm_super_admin_lead_tombstone.sql",
-      "sha256": "cfba8c356645985256c509920350ca5e9b67bfd13a2825956026ce874798fe09"
+      "sha256": "fc7a5e744bfd2284049ae612d8d710aa2467ca6f8b1314ff51f0de8989c7910f"
     },
     {
       "file": "supabase/migrations/20260907130000_public_consultation_single_step_v2.sql",
-      "sha256": "02f0dfe70ca2a6a1aeab9333a6cd5937657502c4cf9a5942336f27de75c17bf3"
+      "sha256": "207c385de4b1cfd05b01c9236681912faf17b45fb7f5d7791d8493a659263b91"
     },
     {
       "file": "supabase/migrations/20260907150000_public_requirement_form_v3.sql",
-      "sha256": "ea3c0b94c3f908a5a055d74a668a201f296e5df1e43c7442765faef38a574b23"
+      "sha256": "e0aa802aa01626adc9b13afcdd0f49b8d32fdd950e6aea8340c7aaff75741e57"
     },
     {
       "file": "supabase/migrations/20260907170000_portfolio_room_category_taxonomy.sql",
-      "sha256": "d3181766e5832f11b744963574ac836f6ccf65b5b5f1de62e5f7275f6a752a81"
+      "sha256": "7def9a954cbe45dbbc31b8832901e1c403ce101bbdc699a67cc5f752c996c16a"
     },
     {
       "file": "supabase/migrations/20260908140000_public_unified_form_v4.sql",
-      "sha256": "d998a625c7fabaade8046afc1e874cdfad9edf54f9344835f1357c502c4c2751"
+      "sha256": "7c65aa09fad654644005007ae704688a64b75a8c7c78f236dc243dc32180aa25"
     },
     {
       "file": "supabase/migrations/20260908150000_portfolio_project_categories.sql",
-      "sha256": "a637ef0788e226184322ad71118d01fb56e632aabdf059527097f61606e77982"
+      "sha256": "39e235970db573d793ed885b07029681322176a08ee0147909cdb0a35b4c1d1f"
     },
     {
       "file": "supabase/migrations/20260908160000_portfolio_media_room_browse.sql",
-      "sha256": "e959a3e2ac33fe6b734a45799ab635261523a12f172b281b3b5235f0f5cf521e"
+      "sha256": "033949815ab568d665f5b3369a61e22bcfa0bac591ca8f7b648b93b002b58844"
     },
     {
       "file": "supabase/migrations/20260909120000_revoke_authenticated_truncate_trigger.sql",
-      "sha256": "19b17d675ee1b12293251b39ae9ccff129af88697fb0d8f3147eb227f6f46356"
+      "sha256": "fbf7fcbf7360809cc302ac8d4d5bc7e91c2fcf926f8ab8309208e4125cd6b5db"
     },
     {
       "file": "supabase/migrations/20260910120000_authorize_many_batch_rpc.sql",
-      "sha256": "934baba36a0cd806820cd52df0142e2a5c88b2a54b9f8e453fba45c804a67620"
+      "sha256": "9267b90523b14a4ac9705d00f30b8cc4b80f64b345c2de4432dea7440a21394d"
     },
     {
       "file": "supabase/migrations/20260910130000_drop_redundant_shadow_indexes.sql",
-      "sha256": "3f4390aebe32a88c0e5bc9be768562ce953e2679ccbe81fe48f16eaf205fce00"
+      "sha256": "696723ec31822fccb25a8aca4c98a458a7424223160ddb6d0616911fad034ebd"
     },
     {
       "file": "supabase/migrations/20260911120000_website_manager_cms.sql",
-      "sha256": "c4139bfaae2211c3e711d3bb385e77778c83bf01aedf3b40788adf1bd643e2b7"
+      "sha256": "54c967206693ce46eef4eba2adc84eaefeab031138fa8fe02ddb6499f2a7d6f0"
     },
     {
       "file": "supabase/migrations/20260912120000_homepage_section_registry_r5.sql",
-      "sha256": "11e463431a77603ac2344d844855f73a5cb02129b3deb20262acc99eaad7f5ba"
+      "sha256": "140c802105f51cff65f6b088bf5847dbeaf84862133be7487cb55a28707642e2"
     },
     {
       "file": "supabase/migrations/20260913120000_portfolio_standalone_room_media_library.sql",
-      "sha256": "af5ad647563489e43722bb87696d3b034121ae5e23e262027e391287c4982bdd"
+      "sha256": "2d20ae710309d1a35d356859c326dea3c1dba34e313ce250e08f2eb4af9e43af"
     },
     {
       "file": "supabase/migrations/20260913130000_whatsapp_inbox_staff_state_attention.sql",
-      "sha256": "80315681bc8096ae974391d2faa758780ba4024c14a8e6e4bcb2f1d732e72176"
+      "sha256": "2d16214dd61f910e55eee88c8251c1cbb883d57745b3ef252655bf294d4d5c6e"
     },
     {
       "file": "supabase/migrations/20260913140000_whatsapp_template_studio_utility_send.sql",
-      "sha256": "160b3111c9c7670aff353dabf475856e481be3d236b957877990192a07dc74a7"
+      "sha256": "221bf1ca393ca83c53681c615f9d2e70b0badc84dfcf21c861119418ca28922c"
     },
     {
       "file": "supabase/migrations/20260914100000_whatsapp_contacts_consent_segments_policy.sql",
-      "sha256": "a2626b2ed8c058c709f904246653481cd58c19f74ca00f85c01423d5f3a15f6b"
+      "sha256": "95c9ba0a8f44f55d160daf1c4a0da965ecf93ef7e62c432dc7f2c4e6ad6db2ef"
     },
     {
       "file": "supabase/migrations/20260915100000_whatsapp_campaign_execution.sql",
-      "sha256": "6018afa2952f9540849e4a1e16dbdeb222ed3de739919094824f0766e3c50198"
+      "sha256": "e92e0baf4688629af3c0b035a996fcdcfdd686571eb1f52d775a411b3c4cbc97"
     },
     {
       "file": "supabase/migrations/20260916100000_whatsapp_control_plane_runtime_hardening.sql",
-      "sha256": "5824a322999258afc1be9710f1c319f41ffb224bdc675ba1fbb7957ea8c058a5"
+      "sha256": "e4bb919a14addc0f38b26b1c90b09ed72e198209ee429b22fdc9474ca9d08925"
     },
     {
       "file": "supabase/migrations/20260917100000_whatsapp_analytics_attribution.sql",
-      "sha256": "42fa1907d3a28d977767aa66a6b67be7fe9b9b2be792551e0d4cd2e98dbb28a2"
+      "sha256": "9cc1c4504c53418efc028fde6875b34eb83c3753f11fba567674bc7b123622f3"
     },
     {
       "file": "supabase/migrations/20260918100000_whatsapp_automations_flows_referrals.sql",
-      "sha256": "59d4732b9ef795e09cd75021c273b79ddf518c3634c38f5dc42f0aef1858bc7b"
+      "sha256": "f47b1af699dabd70ba4a4f72381a41519f93206fa349f0fd051784a67178e772"
     },
     {
       "file": "supabase/migrations/20260919120000_commerce_checkout_policy_acceptance.sql",
-      "sha256": "b7bea47b6603d2b2f1a308502bad9961eb9ba079d26eb8b8a98f50394a52ac9b"
+      "sha256": "1925047de4c8ef16d1564f51d3c053f81b38405a14ebdad48b9a257f2deeac9e"
     },
     {
       "file": "supabase/migrations/20260920120000_commerce_vendor_submission_portal.sql",
-      "sha256": "664eaf223941c0f007166d777d6e9714157821892d274b6091dbf345470ab105"
+      "sha256": "a9299898831144948670f13792c004ad27149026815b99ae1d37cc49b071e927"
     },
     {
       "file": "supabase/migrations/20260920130000_commerce_automation_control_plane.sql",
-      "sha256": "4b42ff4ac43d27db3509c0f58dd4c741ddf96edc09874f12886eb18f68871c6f"
+      "sha256": "e415c6174311ba34833a7b4cd239132e167c322495efc10947772f5e24e680e6"
     },
     {
       "file": "supabase/migrations/20260920133000_commerce_automation_admin_control.sql",
-      "sha256": "1ce235b27ce91dc464d1c239019c9f57e84bfcffbd71430a3b4d3cb48a28be61"
+      "sha256": "654835afa11756adc21aef6321b90c3d3616d98529ad09d02f1dbbb81b64dc9b"
     },
     {
       "file": "supabase/migrations/20260920140000_commerce_vendor_operational_controls.sql",
-      "sha256": "640ae954346f3ad1b598c7b8e6fad051acc6e95ff5e55872b5879f3722b1d18a"
+      "sha256": "ff34563089103332d143d47c0034a211751b471d15ea9269b671389ff9f39fc2"
     },
     {
       "file": "supabase/migrations/20260920143000_commerce_vendor_login_auth_boundary.sql",
-      "sha256": "5063a44f531c2ab0d235d8174656b3c8221f4e944ee90062ea68967717818f35"
+      "sha256": "2b33765d4ad343272f8ebaaa1677352c68f244e610420def65e7e5cc601df29f"
     },
     {
       "file": "supabase/migrations/20260920150000_commerce_vendor_private_order_read.sql",
-      "sha256": "1b4c39c152424ca5f093c5b991396a748519496765b2258524e4f8f0fdf5d3f6"
+      "sha256": "b07c3f4f94f744c4dbc52480f20376ae1a339987ab2df9826769dbd0c1ea01cf"
     },
     {
       "file": "supabase/migrations/20260921100000_website_analytics_foundation.sql",
-      "sha256": "3659137a0a0ac478f50230a10eb2b98a3281d46cc23cc3976c8f1f098818da2d"
+      "sha256": "364a624bac01c25137a5c8a1476794c83d6ae490fda2a472206b0ce55d0b0367"
     },
     {
       "file": "supabase/migrations/20260921110000_mobile_owner_push_notifications.sql",
-      "sha256": "d685bc9b30d82d4cbd05c9c93c57dfdd9adb90efe44cb0a7eeea591c113ad4c7"
+      "sha256": "67f73d82c0531d42484c56349bea14be8966a60887eb22d6de7019dc47e3b954"
     },
     {
       "file": "supabase/migrations/20260921120000_manual_lead_minimal_intake.sql",
-      "sha256": "e6e876251ab92f2b22690bec0d214eacbc04f94c4af2138a705d0ab9edab37e4"
+      "sha256": "d87f50484882d629d5c5aba8851f4f1de1e70f0a532247648d2c301b00d71dc8"
     },
     {
       "file": "supabase/migrations/20260925153724_crm_auto_assignment_control.sql",
-      "sha256": "0e131c65b85aabe829425692f3a74316e6585fec58d431594112f2c7cac8b394"
+      "sha256": "4563f6de348ae01a20576c704988330dafef0508ffd119566e7a6ecd70c8c0e9"
     },
     {
       "file": "supabase/migrations/20260925161804_crm_whatsapp_workspace_integration.sql",
-      "sha256": "0111681df08ebbc27adc998e197dcd277897227b3a17e161d5713e69b2db8049"
+      "sha256": "336f0c5fdc93bf810a2833dd3aecf643f583a6ec6448be272c850e4d9cb08de9"
     },
     {
       "file": "supabase/migrations/20260925165103_whatsapp_reply_to_dispatch.sql",
-      "sha256": "0ed4021900bea3b881eb0b060f52b3a01e3e199fa9c49320e19306018e8f7868"
+      "sha256": "b268670dc62e4e7250eba6c73794c3b34d16be9f58f5993177ca545bf16669df"
     },
     {
       "file": "supabase/migrations/20260926040414_whatsapp_reply_to_dispatch.sql",
-      "sha256": "0ed4021900bea3b881eb0b060f52b3a01e3e199fa9c49320e19306018e8f7868"
+      "sha256": "b268670dc62e4e7250eba6c73794c3b34d16be9f58f5993177ca545bf16669df"
     },
     {
       "file": "supabase/migrations/20260926040425_whatsapp_outbound_media_intents.sql",
-      "sha256": "8c59f5f1bad6e4c73b47154fe5bd01efe0355d80fa6b7ce4a4aa87592dd4c0b6"
+      "sha256": "cc7164cb12bf052d411b5b6c170d564dbe72300fddf0693ee62377b3677d1b05"
     },
     {
       "file": "supabase/migrations/20260926041623_whatsapp_inbox_message_origin.sql",
-      "sha256": "f80380f9adac474bb22dc723635a87715feaa71625b53de3466d0080b376d239"
+      "sha256": "247e8fb2e2ddf66940a9e69b80acc39cc33d29f00e43ff913dc56de4d6d3ffc6"
     },
     {
       "file": "supabase/migrations/20260926062255_whatsapp_template_local_drafts.sql",
-      "sha256": "8fddb450b4cdcfffdd8e4497e54d3f5bcc5260206ab82aad4d8831a78b10cc14"
+      "sha256": "a2635534ee97e505429ffdba27f14fc9655f46cc4797e97d4006660bcac16ea6"
     },
     {
       "file": "supabase/migrations/20260926090616_whatsapp_crm_campaign_audiences.sql",
-      "sha256": "4612b23012301c79c97848daae3d05958de7496ab8d5da33d7c200c4797c5f93"
+      "sha256": "bdccdde6035e46c3ba1f2e02152eeb8d7317ba040156f84eb640e32318954abf"
     },
     {
       "file": "supabase/migrations/20260926090626_whatsapp_service_lead_acknowledgement.sql",
-      "sha256": "3dd20d8e632e243f6563c5cce1c2620f324ee505427e468ad39dbf5e8e66c91e"
+      "sha256": "dae09f4891206858dd32bdec7749870ae1743eb8d1b61fcb670e201810e71a63"
     },
     {
       "file": "supabase/migrations/20260926090630_whatsapp_crm_native_campaign_filters.sql",
-      "sha256": "387e5c379b837d365178ebffedc530102f819fd94e8f5df2cc283b09d3a52105"
+      "sha256": "60c8f4d1024007f9ea7f93dce84bfc114965f6da89ec2b4fc69c414d989f8f9e"
     },
     {
       "file": "supabase/migrations/20260926090634_whatsapp_release_database_hardening.sql",
-      "sha256": "bc7549a04d18eb07598ab38d309e04b72e6cd7712af32daef610c0f170a91142"
+      "sha256": "787fa7ee016248fbd23bedc380a56d42754b49b15ed2d447b118ebd3619af7fe"
     },
     {
       "file": "supabase/migrations/20260926133930_whatsapp_long_term_nurture.sql",
-      "sha256": "678bc72c93e55ab38a083c076bd1b46ff27a061a5a1bfe6180d31b33a5d3fd50"
+      "sha256": "aa1515325aac3fe14ab7c7f768b85db79c94a2b783f77255bbed04601fcf6423"
     },
     {
       "file": "supabase/migrations/20260926133946_whatsapp_campaign_scheduler.sql",
-      "sha256": "00340a4e79c53770b538376f90943fc05421db8a44f918a217455a10b867d7d0"
+      "sha256": "d9e9723d2be95329d6df0f8a0a1a5fcaae3cca5c8ba8d68a109099d20090c64d"
     },
     {
       "file": "supabase/migrations/20260927061751_whatsapp_production_sender_activation.sql",
-      "sha256": "9cf3fdd249135f97adeb3c674d8b491141dc2374a9453d9feaf0f6fdede917d2"
+      "sha256": "436a76abf236046c29a99f0d09a636b33a0f46ba825124514c83f56e8cde4a8c"
     },
     {
       "file": "supabase/migrations/20260928000826_crm_whatsapp_intelligence.sql",
-      "sha256": "45205ebff43177e2e4cc9009cf4299265324285c4eccd54895640d0fd0ef4cd1"
+      "sha256": "932e33b47f97fcf25cc58ee4d8d15c3cccb552e0936a3dae5028f7cb2bc517ac"
     },
     {
       "file": "supabase/migrations/20260928000836_crm_whatsapp_intelligence.sql",
-      "sha256": "45205ebff43177e2e4cc9009cf4299265324285c4eccd54895640d0fd0ef4cd1"
+      "sha256": "932e33b47f97fcf25cc58ee4d8d15c3cccb552e0936a3dae5028f7cb2bc517ac"
     },
     {
       "file": "supabase/migrations/20260928035818_whatsapp_phase35_utility_realtime.sql",
-      "sha256": "6f4610fe972da3097f2622bdbd77a094f8fc88c6d3c4f6a62419d66c68d07e49"
+      "sha256": "998cb9832a80f418fadb539680340dcb23b9b28ee5b99ebec77c95499e3a1aec"
     },
     {
       "file": "supabase/migrations/20260928035927_whatsapp_scheduler_recurrence_nurture_v2.sql",
-      "sha256": "2be6ffb2bb95a565e858df0022e56638d9f4701cb021afc4d1dc40feb02c3483"
+      "sha256": "c05d4ed35ee17e52329c0d85f88acc51dd89940128a6fa92ae2468fe4048e285"
     },
     {
       "file": "supabase/migrations/20260928040018_whatsapp_revenue_roi_attribution.sql",
-      "sha256": "adeda24256d3927a3b884b347f2f0ee7e4e133cec5a28f83511cab8707b6b227"
+      "sha256": "204da554d4f05a66cfe96f1251e4510fcfa151dee36b775c825bb8206a61d146"
     },
     {
       "file": "supabase/migrations/20260928044923_phase35_database_lint_ambiguity_closeout.sql",
-      "sha256": "605793d5c887eb9591f0c6f3e0126b5d5b52196f88c40cce671a15cf01597114"
+      "sha256": "5d1c4077ffcc6f2abc7d7c20cff75e4a10fa3846835588cd0852b5c60d488b63"
     }
   ],
   "safety": {

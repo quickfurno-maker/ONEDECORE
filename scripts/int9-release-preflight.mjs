@@ -8,7 +8,8 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const pathOf = (p) => resolve(root, p);
-const sha = (raw) => createHash("sha256").update(raw).digest("hex");
+// Canonical LF prevents Windows working-tree CRLF from disagreeing with committed Git blobs on Linux CI.
+export const sha = (raw) => createHash("sha256").update(String(Buffer.isBuffer(raw) ? raw.toString("utf8") : raw).replace(/\r\n/g, "\n")).digest("hex");
 const pinned = [
   "package.json",
   "package-lock.json",

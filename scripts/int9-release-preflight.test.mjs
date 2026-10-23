@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { verifyInt9Manifest } from "./int9-release-preflight.mjs";
+import { verifyInt9Manifest, sha } from "./int9-release-preflight.mjs";
+test("CRLF and LF text get identical portable fingerprints", () => {
+  assert.equal(sha(Buffer.from("a\r\nb\r\n")), sha(Buffer.from("a\nb\n")));
+});
 
 const baseline = JSON.parse(readFileSync(new URL("../ops/releases/onedecore-int9-20261023-hold.json", import.meta.url), "utf8"));
 const copy = () => structuredClone(baseline);

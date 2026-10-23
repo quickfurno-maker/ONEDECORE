@@ -37,6 +37,6 @@ node --test scripts/int9-release-preflight.test.mjs
 
 Database verification requires an **exclusively disposable** local Supabase project. Never reset managed Staging/Production or another shared local project.
 
-Fingerprint: `ops/releases/onedecore-int9-20261023-hold.json`. Approval flags and `internalDevelopmentComplete` are **false**. This is source-integrity evidence, not independent security approval, a deploy credential, or provider send authority.
+Fingerprint: `ops/releases/onedecore-int9-20261023-hold.json` (canonical LF text hashes, portable across Windows/Linux Git checkout). Approval flags and `internalDevelopmentComplete` are **false**. This is source-integrity evidence, not independent security approval, a deploy credential, or provider send authority.
 
 **Final state: HOLD. Do not declare Internal Development Complete until missing evidence is independently verified. Production, Meta, and outbound messaging remain unchanged.**
