@@ -1,6 +1,17 @@
+/* The seven-day calendar scrolls inside its own month viewport on narrow screens.
+   Keep the parent grid shrinkable so its 760px track does not widen the page. */
 .od-scheduler {
   display: grid;
+  min-width: 0;
+  width: 100%;
   gap: 18px;
+}
+
+.od-scheduler > *,
+.od-scheduler__calendar-shell,
+.od-scheduler__month {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .od-scheduler__hero {

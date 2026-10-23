@@ -2,8 +2,8 @@
   "schema": "onedecore.int9.review-candidate.v1",
   "project": "ONEDECORE",
   "sourceBaseline": "27521f031195a8b749bebeceae0ba22ad475b816",
-  "sourceDigest": "e90639b014ec21d1b9b46ed053f446c7c8089693a01bbb549588f9d527d66e65",
-  "sourceFileCount": 119,
+  "sourceDigest": "51758399c2aa4e52ada4078227efc10455d442d25ea2da62b220081246f7f89d",
+  "sourceFileCount": 123,
   "migrationCount": 109,
   "source": [
     {
@@ -12,7 +12,11 @@
     },
     {
       "file": "docs/releases/INT9-FINAL-INTERNAL-CLOSURE-20261023.md",
-      "sha256": "1ac6fae778c2bc602fb6c3158957c160fcd743fe00820e0090b0fb07f5987ec9"
+      "sha256": "0ece785908da77f3272b9cf5dcbccfa02d62afb21ff59652636dd1561c8f9bad"
+    },
+    {
+      "file": "docs/releases/INT9ABC-INTERNAL-ACCEPTANCE-20261023.md",
+      "sha256": "aa7712f0f79d6cc91f5c8f1f012fe69ac5ca6e38488067df328ac62d47fa0601"
     },
     {
       "file": "package-lock.json",
@@ -23,12 +27,20 @@
       "sha256": "fc9d33d0ff1328ab540219b9c3c6cbaffa3dfbf766764d6d3856a4a99de8a499"
     },
     {
+      "file": "scripts/int9-crm-browser-a11y.mjs",
+      "sha256": "5a8d29caa75e321e0f641c81e33adf3dfa25f8f3b20e1038886e52825ab307a9"
+    },
+    {
       "file": "scripts/int9-release-preflight.mjs",
-      "sha256": "58b7eb5bcb3bf68da2880d01df79942b7bca9d7238fb7cd08a57cbb1521a34ee"
+      "sha256": "4a675127d291830c1b18352b3b7126b4375bb872095c9e1019523ff2f92b0a49"
     },
     {
       "file": "scripts/int9-release-preflight.test.mjs",
       "sha256": "77fc2b05ab157bca2bca4c90059ed1d395511b8aa53ec3f59f76bb72e5972f92"
+    },
+    {
+      "file": "scripts/int9-worker-contention-lab.mjs",
+      "sha256": "57595e9df8f3f4739f6465a37f4fd7d5e9fc097a28dda44a5c2eb850fccc4029"
     },
     {
       "file": "scripts/verify-dependency-security.mjs",
@@ -36,7 +48,11 @@
     },
     {
       "file": "src/features/whatsapp/__tests__/whatsapp-campaign-scheduler.test.ts",
-      "sha256": "a7deda1cc339a000526bd3f3765cc43cb096e080a64b748fd26084175352b79a"
+      "sha256": "61254a63b2f4fd2712a2b2e163cccb6fd11df33545bea1c6277f269050c6334f"
+    },
+    {
+      "file": "src/features/whatsapp/components/campaigns/campaign-scheduler.css",
+      "sha256": "7b324c7ac0e89eb3399a776336e329500d7ec48b5ed13b098ff2a2c1a414c187"
     },
     {
       "file": "src/features/whatsapp/server/whatsapp-campaign-worker.ts",

@@ -39,4 +39,8 @@ Database verification requires an **exclusively disposable** local Supabase proj
 
 Fingerprint: `ops/releases/onedecore-int9-20261023-hold.json` (canonical LF text hashes, portable across Windows/Linux Git checkout). Approval flags and `internalDevelopmentComplete` are **false**. This is source-integrity evidence, not independent security approval, a deploy credential, or provider send authority.
 
+### INT-9A/B/C supplemental acceptance (23 October)
+
+See `INT9ABC-INTERNAL-ACCEPTANCE-20261023.md`: historical INT-7 source inventory remains unavailable; synthetic **two-worker concurrent SQL execution passed 11/11 with zero provider messages**; the isolated CRM 2E owner suite passed **30/30**; real mobile browser audit found Scheduler overflow at 360/390/768 px (**13/16 pre-fix passes**). A focused CSS correction and source regression test passed; a real Chrome **offline stylesheet/representative DOM check passed 4/4** with zero root overflow. The authenticated whole-page post-fix browser rerun and Sales Executive role-switch certification are still unverified.
+
 **Final state: HOLD. Do not declare Internal Development Complete until missing evidence is independently verified. Production, Meta, and outbound messaging remain unchanged.**
