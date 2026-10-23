@@ -36,7 +36,7 @@ const BASE = process.env.CRM_2E_BASE_URL ?? "http://localhost:3000";
 const PASSWORD = requireQaPassword();
 
 const SUPER_ADMIN_EMAIL = process.env.CRM_2E_QA_EMAIL ?? "owner-qa-sa@example.test";
-const EXEC_EMAIL = process.env.CRM_2E_QA_EXEC_EMAIL ?? "owner-qa-execa@example.test";
+const EXEC_PHONE = process.env.CRM_2E_QA_EXEC_PHONE ?? "8300000011";
 
 const REPORTS_PATH = "/admin/crm/reports";
 
@@ -255,20 +255,20 @@ class Cdp {
   }
 }
 
-async function login(cdp, email) {
+async function login(cdp, identifier, portal = "admin") {
   await cdp.navigate(
-    `${BASE}/auth/login?next=${encodeURIComponent(REPORTS_PATH)}`
+    `${BASE}/auth/login?portal=${portal}&next=${encodeURIComponent(REPORTS_PATH)}`
   );
   // Dev builds compile /auth/login on demand; wait for hydration before typing.
   await waitFor(
     async () =>
       await cdp.evaluate(
-        `return Boolean(document.querySelector('input[type="email"], input[name="email"]'))`
+        `return Boolean(document.querySelector('input[name="identifier"]'))`
       ),
     { timeout: 120000, label: "login form" }
   );
   await cdp.evaluate(`
-    const email = document.querySelector('input[type="email"], input[name="email"]');
+    const email = document.querySelector('input[name="identifier"]');
     const password = document.querySelector('input[type="password"], input[name="password"]');
     if (!email || !password) throw new Error('login form not found');
     const setValue = (el, value) => {
@@ -277,7 +277,7 @@ async function login(cdp, email) {
       el.dispatchEvent(new Event('input', { bubbles: true }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
     };
-    setValue(email, ${JSON.stringify(email)});
+    setValue(email, ${JSON.stringify(identifier)});
     setValue(password, ${JSON.stringify(PASSWORD)});
     (email.form ?? document.querySelector('form')).requestSubmit();
     return true;
@@ -867,10 +867,10 @@ async function main() {
 
     /* ---- Sales executive: My Performance, personal scope only ------------ */
     await cdp.setViewport(VIEWPORTS[6]);
-    await cdp.navigate(`${BASE}/auth/signout`);
+    // /auth/signout accepts POST only. The disposable browser clears its own cookies before switching portal.
     await cdp.clearCookies();
-    await login(cdp, EXEC_EMAIL);
-    record("login as sales_executive", true, EXEC_EMAIL);
+    await login(cdp, EXEC_PHONE, "staff");
+    record("login as sales_executive via staff phone portal", true, EXEC_PHONE);
 
     await cdp.navigate(`${BASE}${REPORTS_PATH}`);
     const execLayout = await cdp.evaluate(LAYOUT_PROBE);

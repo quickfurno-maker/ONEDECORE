@@ -226,3 +226,10 @@ describe("Rescheduling is narrow, audited and cannot mutate an active run", () =
     assert.ok(warnings.some((warning) => warning.code === "frequency_cap_overlap"));
   });
 });
+
+test("INT-9C scheduler is shrinkable while the month calendar scrolls internally", () => {
+  const css = read("src/features/whatsapp/components/campaigns/campaign-scheduler.css");
+  assert.match(css, /\.od-scheduler\s*\{[^}]*min-width:\s*0;[^}]*width:\s*100%/);
+  assert.match(css, /\.od-scheduler__calendar-shell,[\s\S]*?\.od-scheduler__month\s*\{[^}]*max-width:\s*100%/);
+  assert.match(css, /@media \(max-width: 880px\)\s*\{[\s\S]*?\.od-scheduler__month\s*\{[^}]*overflow-x:\s*auto;/);
+});

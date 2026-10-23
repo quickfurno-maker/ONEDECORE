@@ -48,6 +48,12 @@ jobs:
       - name: Image pipeline tests
         run: npm run test:image
 
+      - name: INT-9 source-only release HOLD integrity
+        run: |
+          npm run int9:verify
+          node --test scripts/int9-release-preflight.test.mjs
+          node --test scripts/prod1-readonly-vps-preflight.test.mjs
+
   database-quality:
     name: Database Quality
     runs-on: ubuntu-latest
