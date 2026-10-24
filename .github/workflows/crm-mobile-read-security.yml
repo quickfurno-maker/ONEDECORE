@@ -1,0 +1,49 @@
+# Read-only API source certification; no deployment, migration or credentials.
+name: CRM mobile read-only contract review
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/api/mobile/crm/**'
+      - 'src/features/crm/**'
+      - 'scripts/crm-sync5-migration-parity*'
+      - 'scripts/crm-sync6-staging-sql.test.mjs'
+      - 'scripts/sql/crm_sync6_staging_readonly_audit.sql'
+      - 'scripts/test-classification.json'
+      - 'scripts/crm-sync7-*'
+      - 'scripts/crm-sync8-*'
+      - 'scripts/crm-sync9-*'
+      - 'scripts/sql/crm_sync9_staging_rls_snapshot.sql'
+      - '.github/workflows/crm-mobile-read-security.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  security-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Restore exact dependencies
+        run: npm ci --ignore-scripts
+      - name: Block high and critical dependency findings
+        run: npm audit --omit=dev --audit-level=high
+      - name: Read-only mobile CRM contracts
+        run: npm run test:crm-mobile-read
+      - name: New mobile endpoint permission and privacy guards
+        run: node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/crm/__tests__/crm-mobile-extensions.test.ts
+      - name: Migration reconciliation guard self-tests (synthetic only)
+        run: node --test scripts/crm-sync5-migration-parity.test.mjs
+      - name: Read-only DBA staging query safety guards
+        run: node --test scripts/crm-sync6-staging-sql.test.mjs
+      - name: CRM-SYNC-7 staging and privilege guard self-tests
+        run: node --test scripts/crm-sync7-staging-preflight.test.mjs scripts/crm-sync7-permission-review.test.mjs
+      - name: CRM-SYNC-8 staging backend/mobile metadata consistency guards
+        run: node --test scripts/crm-sync8-staging-pair.test.mjs
+      - name: CRM-SYNC-9 read-only policy audit guards
+        run: node --test scripts/crm-sync9-rls-review.test.mjs scripts/crm-sync9-staging-sql.test.mjs
+      - name: Server typecheck
+        run: npm run typecheck
