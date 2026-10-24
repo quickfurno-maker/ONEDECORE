@@ -7,6 +7,8 @@ on:
       - 'src/app/api/mobile/crm/**'
       - 'src/features/crm/**'
       - 'scripts/crm-sync5-migration-parity*'
+      - 'scripts/crm-sync6-staging-sql.test.mjs'
+      - 'scripts/sql/crm_sync6_staging_readonly_audit.sql'
       - 'scripts/test-classification.json'
       - '.github/workflows/crm-mobile-read-security.yml'
   workflow_dispatch:
@@ -31,5 +33,7 @@ jobs:
         run: node --import ./scripts/register-server-only-stub.mjs --experimental-strip-types --test src/features/crm/__tests__/crm-mobile-extensions.test.ts
       - name: Migration reconciliation guard self-tests (synthetic only)
         run: node --test scripts/crm-sync5-migration-parity.test.mjs
+      - name: Read-only DBA staging query safety guards
+        run: node --test scripts/crm-sync6-staging-sql.test.mjs
       - name: Server typecheck
         run: npm run typecheck
