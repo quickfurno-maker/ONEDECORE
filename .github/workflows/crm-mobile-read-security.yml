@@ -10,6 +10,7 @@ on:
       - 'scripts/crm-sync6-staging-sql.test.mjs'
       - 'scripts/sql/crm_sync6_staging_readonly_audit.sql'
       - 'scripts/test-classification.json'
+      - 'scripts/crm-sync7-*'
       - '.github/workflows/crm-mobile-read-security.yml'
   workflow_dispatch:
 permissions:
@@ -35,5 +36,7 @@ jobs:
         run: node --test scripts/crm-sync5-migration-parity.test.mjs
       - name: Read-only DBA staging query safety guards
         run: node --test scripts/crm-sync6-staging-sql.test.mjs
+      - name: CRM-SYNC-7 staging and privilege guard self-tests
+        run: node --test scripts/crm-sync7-staging-preflight.test.mjs scripts/crm-sync7-permission-review.test.mjs
       - name: Server typecheck
         run: npm run typecheck
