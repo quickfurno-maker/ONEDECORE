@@ -38,7 +38,7 @@ export async function GET(request: Request) {
       capturedAt: page.capturedAt,
       visibleStageCounts: countCrmNurtureStages(signals),
       countScope: "current_page",
-    });
+    }, { headers: { "Cache-Control": "no-store, private" } });
   } catch (error) {
     console.error("[mobile/crm/nurture]", error);
     return crmMobileError("unavailable", "Nurture leads are unavailable right now.");

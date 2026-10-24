@@ -12,8 +12,15 @@ describe("mobile CRM extensions are governed read-only surfaces", () => {
     const code = source("leads", "[leadId]", "whatsapp-engagement");
     assert.match(code, /resolveCrmMobileAuth\(request\)/);
     assert.match(code, /isCrmLeadIdShape\(leadId\)/);
-    assert.match(code, /queryLeadIntelligence\(auth\.context, leadId\.trim\(\), auth\.db\)/);
-    assert.match(code, /fetchLeadScoreBatch\(\[leadId\.trim\(\)\], auth\.db\)/);
+    assert.match(code, /\.from\("leads"\)/);
+    assert.match(code, /\.select\("id"\)/);
+    assert.match(code, /\.eq\("id", leadId\.trim\(\)\)/);
+    assert.match(code, /\.maybeSingle\(\)/);
+    assert.match(code, /if \(!visibleLead\) return crmMobileError\("not_found"/);
+    assert.match(code, /fetchWhatsappEngagementSignals\(\[visibleLead\.id\], auth\.db\)/);
+    assert.ok(code.indexOf('if (!visibleLead)') < code.indexOf('const signals = await fetchWhatsappEngagementSignals'));
+    assert.doesNotMatch(code, /fetchLeadScoreBatch|queryLeadIntelligence/);
+    assert.match(code, /Cache-Control.*no-store, private/);
     assert.match(code, /hasCustomerReply: signal\.hasCustomerReply/);
     assert.doesNotMatch(code, /return NextResponse\.json\(signal\)/);
     assert.doesNotMatch(code, /sendWhatsapp|dispatchWhatsapp|service_role|SUPABASE_SERVICE_ROLE/i);
@@ -28,6 +35,7 @@ describe("mobile CRM extensions are governed read-only surfaces", () => {
     assert.match(code, /auth\.context/);
     assert.match(code, /auth\.db/);
     assert.match(code, /countScope: "current_page"/);
+    assert.match(code, /Cache-Control.*no-store, private/);
     assert.doesNotMatch(code, /sendWhatsapp|scheduleCampaign|service_role|SUPABASE_SERVICE_ROLE/i);
     assert.doesNotMatch(code, /POST|DELETE|PUT/);
   });
