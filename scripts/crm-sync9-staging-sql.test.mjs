@@ -13,6 +13,7 @@ test('staging RLS snapshot SQL is a single SELECT and never changes data',()=>{
 test('snapshot reads RLS metadata and not customer rows or secrets',()=>{
  assert.match(sql,/pg_policy/);
  assert.match(sql,/pg_get_expr/);
+ assert.match(sql,/polpermissive/);
  assert.match(sql,/relrowsecurity/);
  assert.match(sql,/whatsapp_messages/);
  assert.doesNotMatch(sql,/\bFROM\s+(leads|whatsapp_messages|whatsapp_conversations)\b/i);

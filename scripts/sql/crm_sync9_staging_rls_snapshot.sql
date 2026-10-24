@@ -9,6 +9,7 @@ SELECT n.nspname AS schema_name,
          json_agg(json_build_object(
            'name', p.polname,
            'cmd', p.polcmd,
+           'permissive', p.polpermissive,
            'roles', ARRAY(SELECT rolname FROM pg_roles WHERE oid = ANY(p.polroles)),
            'predicate', pg_get_expr(p.polqual, p.polrelid)
          )) FILTER (WHERE p.oid IS NOT NULL),
