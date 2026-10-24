@@ -12,6 +12,8 @@ on:
       - 'scripts/test-classification.json'
       - 'scripts/crm-sync7-*'
       - 'scripts/crm-sync8-*'
+      - 'scripts/crm-sync9-*'
+      - 'scripts/sql/crm_sync9_staging_rls_snapshot.sql'
       - '.github/workflows/crm-mobile-read-security.yml'
   workflow_dispatch:
 permissions:
@@ -41,5 +43,7 @@ jobs:
         run: node --test scripts/crm-sync7-staging-preflight.test.mjs scripts/crm-sync7-permission-review.test.mjs
       - name: CRM-SYNC-8 staging backend/mobile metadata consistency guards
         run: node --test scripts/crm-sync8-staging-pair.test.mjs
+      - name: CRM-SYNC-9 read-only policy audit guards
+        run: node --test scripts/crm-sync9-rls-review.test.mjs scripts/crm-sync9-staging-sql.test.mjs
       - name: Server typecheck
         run: npm run typecheck
