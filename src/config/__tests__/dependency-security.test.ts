@@ -240,8 +240,10 @@ describe("csv-parse prototype replacement is not reachable here", () => {
       false
     );
     assert.equal(({} as Record<string, unknown>).polluted, undefined);
-    // The column is dropped rather than assigned.
-    assert.deepEqual(Object.keys(records[0] ?? {}), ["name"]);
+    // v7 preserves the key as an own property, without prototype replacement.
+    // The ONEDECORE importer also rejects this header before materializing records.
+    assert.deepEqual(Object.keys(records[0] ?? {}), ["__proto__", "name"]);
+    assert.equal(Object.getPrototypeOf(records[0]), Object.prototype);
   });
 
   test("a constructor header is an ordinary key", () => {

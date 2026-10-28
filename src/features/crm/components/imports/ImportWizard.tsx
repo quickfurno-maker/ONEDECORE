@@ -29,9 +29,15 @@ export function ImportWizard({ sources }: ImportWizardProps) {
       className="space-y-6 rounded-xl border border-neutral-800 bg-neutral-950/60 p-6"
     >
       <div className="space-y-2">
-        <label htmlFor="import-file" className="text-sm font-medium text-neutral-200">
-          Import file
-        </label>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label htmlFor="import-file" className="text-sm font-medium text-neutral-200">
+            Bulk upload
+          </label>
+          <a href="/admin/crm/imports/template" download
+             className="inline-flex min-h-11 items-center rounded-lg border border-amber-500/50 px-4 text-sm font-semibold text-amber-300 hover:bg-amber-500/10">
+            Download Excel template
+          </a>
+        </div>
         <input
           id="import-file"
           name="file"
@@ -40,9 +46,13 @@ export function ImportWizard({ sources }: ImportWizardProps) {
           required
           className="block w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 file:mr-4 file:rounded-md file:border-0 file:bg-amber-500 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-neutral-950"
         />
+        <p className="text-xs text-neutral-400">
+          Paste Name and Mobile Number; Source is optional per row. Up to 1,000 contacts. CRM cleans Indian mobile
+          numbers, then separates invalid and duplicate enquiries before import.
+        </p>
+
         <p className="text-xs text-neutral-500">
-          CSV (UTF-8 with BOM) or XLSX values only. Max 5 MiB, 1000 rows, 50
-          columns. Formulas are rejected. Bulk import does not record marketing or WhatsApp consent — use the consent workflow separately when required.
+          Advanced CSV/XLSX mapping remains available. Bulk import does not record marketing or WhatsApp consent.
         </p>
       </div>
 
@@ -51,20 +61,23 @@ export function ImportWizard({ sources }: ImportWizardProps) {
           htmlFor="default-source"
           className="text-sm font-medium text-neutral-200"
         >
-          Default lead source
+          Default source (used when Excel Source is blank)
         </label>
         <select
           id="default-source"
           name="defaultSourceId"
           className="min-h-11 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
         >
-          <option value="">Select default source</option>
+          <option value="">No fallback — every row must provide Source</option>
           {sources.map((source) => (
             <option key={source.id} value={source.id}>
               {source.displayName}
             </option>
           ))}
         </select>
+        <a href="#import-source-manager" className="inline-block text-xs font-semibold text-amber-300 hover:underline">
+          Need another source? Add it below, then download a fresh Excel template.
+        </a>
       </div>
 
       <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
@@ -88,7 +101,7 @@ export function ImportWizard({ sources }: ImportWizardProps) {
         disabled={pending}
         className="inline-flex min-h-11 items-center rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {pending ? "Uploading…" : "Upload and map columns"}
+        {pending ? "Uploading…" : "Validate bulk enquiries"}
       </button>
     </form>
   );

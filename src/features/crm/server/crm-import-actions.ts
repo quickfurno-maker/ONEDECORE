@@ -9,9 +9,15 @@ import type {
 } from "../contracts/lead-import-contracts.ts";
 import {
   isLeadImportMappingField,
+  LEAD_IMPORT_LIMITS,
+  validateLeadImportMappingInput,
   validateLeadImportRejectionReason,
 } from "../contracts/lead-import-contracts.ts";
 import { requireCrmBulkImportAccess } from "./crm-auth.ts";
+import { fetchLeadImportBatchDetail } from "./crm-import-queries.ts";
+import { fetchActiveLeadSources } from "./crm-lead-queries.ts";
+import { resolveMappedImportSources } from "./lead-import-source-resolver.ts";
+import { resolveCrmDb } from "./crm-db.ts";
 import { CrmError, crmErrorFromPostgresMessage } from "./crm-errors.ts";
 import {
   approveLeadImportBatchForCurrentUser,
@@ -32,6 +38,7 @@ import {
   parseCsvRecordsForMapping,
   parseLeadImportFile,
   parseXlsxRecordsForMapping,
+  simpleNameMobileMapping,
 } from "./lead-import-file-parser.ts";
 
 function toImportActionState(error: unknown): LeadImportActionState {
@@ -84,6 +91,9 @@ export async function uploadLeadImportFileAction(
       };
     }
 
+    if (file.size > LEAD_IMPORT_LIMITS.maxFileBytes) {
+      return { success: false, message: "Import file exceeds 5 MiB.", code: "IMPORT_FILE_TOO_LARGE" };
+    }
     const fileType = detectLeadImportFileType(file.name, file.type);
     if (!fileType) {
       return {
@@ -98,6 +108,21 @@ export async function uploadLeadImportFileAction(
     const clientRequestId = randomUUID();
     const defaultSourceId = String(formData.get("defaultSourceId") ?? "").trim() || null;
 
+    const simpleMapping = simpleNameMobileMapping(parsed.headers);
+    const rawRecords = simpleMapping
+      ? (fileType === "csv"
+          ? parseCsvRecordsForMapping(buffer).records
+          : (await parseXlsxRecordsForMapping(buffer)).records)
+      : null;
+    // Verify every Source name/code BEFORE creating a staged batch.
+    const simpleRows = simpleMapping && rawRecords
+      ? resolveMappedImportSources(
+          applyMappingToRawRecords(parsed.headers, rawRecords, simpleMapping),
+          await fetchActiveLeadSources(),
+          defaultSourceId
+        )
+      : null;
+
     const batch = await createLeadImportBatchForCurrentUser({
       clientRequestId,
       originalFilename: file.name,
@@ -109,7 +134,7 @@ export async function uploadLeadImportFileAction(
       defaultSourceId,
     });
 
-    const mapping = Object.fromEntries(
+    const mapping = simpleMapping ?? Object.fromEntries(
       parsed.headers
         .filter((header) => header.trim().length > 0)
         .map((header) => [header, ""])
@@ -121,8 +146,12 @@ export async function uploadLeadImportFileAction(
       defaultSourceId,
     });
 
+    if (simpleRows) {
+      await replaceLeadImportRowsForCurrentUser(batch.id, simpleRows);
+      await validateLeadImportBatchForCurrentUser(batch.id);
+    }
     revalidatePath("/admin/crm/imports");
-    redirect(`/admin/crm/imports/${batch.id}?step=mapping`);
+    redirect(`/admin/crm/imports/${batch.id}${simpleMapping ? "" : "?step=mapping"}`);
   } catch (error: unknown) {
     if (
       error &&
@@ -156,6 +185,9 @@ export async function saveLeadImportMappingAction(
       };
     }
 
+    if (file.size > LEAD_IMPORT_LIMITS.maxFileBytes) {
+      return { success: false, message: "Import file exceeds 5 MiB.", code: "IMPORT_FILE_TOO_LARGE" };
+    }
     const fileType = detectLeadImportFileType(file.name, file.type);
     if (!fileType) {
       return {
@@ -167,6 +199,19 @@ export async function saveLeadImportMappingAction(
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const parsed = await parseLeadImportFile(buffer, fileType);
+    const original = await fetchLeadImportBatchDetail(batchId);
+    if (!original || original.fileSha256 !== computeLeadImportFileSha256(buffer) ||
+        original.fileType !== fileType || original.headerFingerprint !== parsed.headerFingerprint) {
+      throw new CrmError({
+        code: "IMPORT_SOURCE_FILE_MISMATCH",
+        message: "Re-upload the exact original file. This file does not match the staged batch.",
+        httpStatus: 422,
+      });
+    }
+    const errors = validateLeadImportMappingInput({ mapping });
+    if (errors.length > 0) {
+      throw new CrmError({ code: "IMPORT_INVALID_MAPPING", message: errors[0].message, httpStatus: 422 });
+    }
     const rawRecords =
       fileType === "csv"
         ? parseCsvRecordsForMapping(buffer).records
@@ -178,10 +223,10 @@ export async function saveLeadImportMappingAction(
       defaultSourceId,
     });
 
-    const mappedRows = applyMappingToRawRecords(
-      parsed.headers,
-      rawRecords,
-      mapping
+    const mappedRows = resolveMappedImportSources(
+      applyMappingToRawRecords(parsed.headers, rawRecords, mapping),
+      await fetchActiveLeadSources(),
+      defaultSourceId
     );
 
     await replaceLeadImportRowsForCurrentUser(batchId, mappedRows);
@@ -370,5 +415,46 @@ export async function processLeadImportBatchAction(
     };
   } catch (error: unknown) {
     return toImportActionState(error);
+  }
+}
+
+
+/** Explicit Super Admin-only source catalog creation, separate from customer imports. */
+export async function addLeadImportSourceAction(
+  _previousState: LeadImportActionState,
+  formData: FormData
+): Promise<LeadImportActionState> {
+  const context = await requireCrmBulkImportAccess();
+  if (!context.canManageLeadSources) {
+    return { success: false, message: "You cannot manage lead sources.", code: "PERMISSION_DENIED" };
+  }
+  const name = String(formData.get("sourceName") ?? "").trim().replace(/\s+/g, " ");
+  const code = String(formData.get("sourceCode") ?? "").trim().toLowerCase();
+  if (name.length < 2 || name.length > 120 || !/^[a-z][a-z0-9_]{1,63}$/.test(code)) {
+    return {
+      success: false,
+      message: "Enter a source name (2–120 characters) and code such as local_expo_2026.",
+      code: "VALIDATION_FAILED",
+    };
+  }
+  const existing = await fetchActiveLeadSources();
+  if (existing.some((item) =>
+    item.code === code || item.displayName.toLowerCase() === name.toLowerCase()
+  )) {
+    return { success: false, message: "This source already exists. Choose it in Excel.", code: "VALIDATION_FAILED" };
+  }
+  try {
+    const db = await resolveCrmDb();
+    const { error } = await db.rpc("create_lead_source", {
+      p_code: code,
+      p_display_name: name,
+      p_display_order: 0,
+    });
+    if (error) throw error;
+    revalidatePath("/admin/crm/imports/new");
+    revalidatePath("/admin/crm/imports");
+    return { success: true, message: "Source created. Download a fresh Excel template to see it." };
+  } catch {
+    return { success: false, message: "Unable to add source. Check its name/code or contact the administrator.", code: "RPC_FAILED" };
   }
 }
