@@ -1360,14 +1360,12 @@ describe("imports parse on the server and nowhere else", () => {
     assert.doesNotMatch(body, /form\.get\("fileSizeBytes"\)/);
   });
 
-  test("a suggestion is returned but never persisted", () => {
+  test("generic suggestions are not persisted; official two-column mapping is explicitly recognized", () => {
     const body = flat(code(IMPORT_UPLOAD));
 
-    /* What is SAVED is every header pointing at an empty target. */
-    assert.match(
-      body,
-      /const mapping = Object\.fromEntries\( parsed\.headers \.filter\(\(header\) => header\.trim\(\)\.length > 0\) \.map\(\(header\) => \[header, ""\]\) \);/
-    );
+    /* Generic files remain neutral; exact Name + Mobile Number is deliberately mapped. */
+    assert.match(body, /const simpleMapping = simpleNameMobileMapping\(parsed\.headers\);/);
+    assert.match(body, /const mapping = simpleMapping \?\? Object\.fromEntries\(/);
     assert.match(body, /mapping: mapping as LeadImportColumnMapping,/);
 
     /* The suggestion is a separate, returned-only field. */

@@ -16,11 +16,13 @@ import {
 } from "@/features/crm/contracts/lead-import-contracts.ts";
 import {
   applyMappingToRawRecords,
+  computeLeadImportFileSha256,
   detectLeadImportFileType,
   parseCsvRecordsForMapping,
   parseLeadImportFile,
   parseXlsxRecordsForMapping,
 } from "@/features/crm/server/lead-import-file-parser.ts";
+import { fetchLeadImportBatchDetail } from "@/features/crm/server/crm-import-queries.ts";
 import {
   replaceLeadImportMappingForContext,
   replaceLeadImportRowsForContext,
@@ -186,6 +188,11 @@ export async function POST(
      * `applyMappingToRawRecords` needs to re-key by mapped field.
      */
     const parsed = await parseLeadImportFile(buffer, fileType);
+    const original = await fetchLeadImportBatchDetail(target, auth.db);
+    if (!original || original.fileSha256 !== computeLeadImportFileSha256(buffer) ||
+        original.fileType !== fileType || original.headerFingerprint !== parsed.headerFingerprint) {
+      return crmMobileError("invalid_request", "Re-upload the exact original file to continue.");
+    }
     const rawRecords =
       fileType === "csv"
         ? parseCsvRecordsForMapping(buffer).records

@@ -135,6 +135,7 @@ describe("Phase 6B integrated — frozen migration ledger", () => {
       "20260928035927_whatsapp_scheduler_recurrence_nurture_v2.sql",
       "20260928040018_whatsapp_revenue_roi_attribution.sql",
       "20260928044923_phase35_database_lint_ambiguity_closeout.sql",
+      "20261028092333_crm_two_column_indian_mobile_import.sql",
     ] as const;
     for (const migration of requiredForwardMigrations) {
       assert.ok(files.includes(migration), `required forward migration is present: ${migration}`);

@@ -367,7 +367,15 @@ export function validateLeadImportMappingInput(input: {
 }): readonly LeadImportMappingValidationError[] {
   const errors: LeadImportMappingValidationError[] = [];
 
+  const usedTargets = new Set<string>();
   for (const [header, field] of Object.entries(input.mapping)) {
+    if (field.length > 0 && usedTargets.has(field)) {
+      errors.push({
+        field: "mapping",
+        message: "Multiple columns cannot map to the same CRM field: " + field,
+      });
+    }
+    if (field.length > 0) usedTargets.add(field);
     if (field.length > 0 && !isLeadImportMappingField(field)) {
       errors.push({
         field: "mapping",

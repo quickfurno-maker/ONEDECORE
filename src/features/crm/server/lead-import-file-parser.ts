@@ -17,6 +17,45 @@ function stripUtf8Bom(value: string): string {
   return value.charCodeAt(0) === 0xfeff ? value.slice(1) : value;
 }
 
+/** Normalize Indian 10-digit mobiles and common +91 / 91 / 0 prefixes. */
+export function normalizeIndianImportMobile(raw: string): string {
+  const input = raw.trim();
+  const compact = input.replace(/[\s()\u002d]/g, "");
+  let digits = compact;
+  if (/^\+91[6-9]\d{9}$/.test(compact)) digits = compact.slice(3);
+  else if (/^91[6-9]\d{9}$/.test(compact)) digits = compact.slice(2);
+  else if (/^0[6-9]\d{9}$/.test(compact)) digits = compact.slice(1);
+  return /^[6-9]\d{9}$/.test(digits) ? "+91" + digits : input;
+}
+
+/** The official two-column template can be staged and validated in one upload. */
+export function simpleNameMobileMapping(headers: readonly string[]): Record<string, "submitted_name" | "phone"> | null {
+  if (headers.length !== 2) return null;
+  const mapping: Record<string, "submitted_name" | "phone"> = {};
+  for (const header of headers) {
+    const normalized = header.trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+    if (["name", "full name", "customer name"].includes(normalized)) mapping[header] = "submitted_name";
+    else if (["mobile number", "mobile", "phone", "phone number", "contact number"].includes(normalized)) mapping[header] = "phone";
+    else return null;
+  }
+  return new Set(Object.values(mapping)).size === 2 ? mapping : null;
+}
+
+function assertUniqueHeaders(headers: readonly string[]): void {
+  const seen = new Set<string>();
+  for (const header of headers) {
+    const key = header.trim().toLowerCase();
+    if (!key || seen.has(key) || ["__proto__", "constructor", "prototype"].includes(key)) {
+      throw new CrmError({
+        code: "IMPORT_AMBIGUOUS_HEADERS",
+        message: "Column names must be non-empty and unique. Rename duplicate or blank columns.",
+        httpStatus: 422,
+      });
+    }
+    seen.add(key);
+  }
+}
+
 function normalizeCellValue(value: unknown): string {
   if (value == null) {
     return "";
@@ -71,11 +110,11 @@ function mapRecordToParsedRow(
   return {
     rowNumber,
     submittedName: record.submitted_name ?? record.name ?? "",
-    phone: record.phone || null,
+    phone: record.phone ? normalizeIndianImportMobile(record.phone) : null,
     email: record.email || null,
-    serviceCode: record.service_code ?? record.service ?? "",
-    propertyCode: record.property_code ?? record.property ?? "",
-    timelineCode: record.timeline_code ?? record.timeline ?? "",
+    serviceCode: record.service_code || record.service || "not-specified",
+    propertyCode: record.property_code || record.property || "not-specified",
+    timelineCode: record.timeline_code || record.timeline || "not-specified",
     primarySourceId: record.primary_source_id || null,
     locality: record.locality || null,
     budgetComfortCode: record.budget_comfort_code || null,
@@ -92,7 +131,7 @@ function parseCsvBuffer(buffer: Buffer): LeadImportParseResult {
   const text = stripUtf8Bom(buffer.toString("utf8"));
   const records = parseCsv(text, {
     bom: true,
-    columns: true,
+    columns: (headers: string[]) => { assertUniqueHeaders(headers); return headers; },
     skip_empty_lines: true,
     relax_column_count: false,
     trim: true,
@@ -184,15 +223,16 @@ export async function extractXlsxHeadersAndRecords(
   await assertNoXlsxFormulas(worksheet);
 
   const headerRow = worksheet.getRow(1);
-  const headers: string[] = [];
+  const compactHeaders: string[] = [];
+  const sourceColumnIndexes: number[] = [];
   headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
     const value = normalizeCellValue(cell.value);
     if (value.length > 0) {
-      headers[colNumber - 1] = value;
+      compactHeaders.push(value);
+      sourceColumnIndexes.push(colNumber);
     }
   });
-
-  const compactHeaders = headers.filter((header) => header && header.length > 0);
+  assertUniqueHeaders(compactHeaders);
   assertColumnLimit(compactHeaders);
 
   const records: Record<string, string>[] = [];
@@ -203,7 +243,7 @@ export async function extractXlsxHeadersAndRecords(
 
     const record: Record<string, string> = {};
     compactHeaders.forEach((header, index) => {
-      record[header] = normalizeCellValue(row.getCell(index + 1).value);
+      record[header] = normalizeCellValue(row.getCell(sourceColumnIndexes[index]).value);
     });
 
     if (Object.values(record).every((value) => value.length === 0)) {
@@ -303,7 +343,7 @@ export function parseCsvRecordsForMapping(
   const text = stripUtf8Bom(buffer.toString("utf8"));
   const records = parseCsv(text, {
     bom: true,
-    columns: true,
+    columns: (headers: string[]) => { assertUniqueHeaders(headers); return headers; },
     skip_empty_lines: true,
     relax_column_count: false,
     trim: true,

@@ -14,11 +14,17 @@ import {
 import {
   computeLeadImportFileSha256,
   detectLeadImportFileType,
+  parseCsvRecordsForMapping,
+  parseXlsxRecordsForMapping,
   parseLeadImportFile,
+  applyMappingToRawRecords,
+  simpleNameMobileMapping,
 } from "@/features/crm/server/lead-import-file-parser.ts";
 import {
   createLeadImportBatchForContext,
   replaceLeadImportMappingForContext,
+  replaceLeadImportRowsForContext,
+  validateLeadImportBatchForContext,
 } from "@/features/crm/server/crm-import-service.ts";
 
 /**
@@ -135,8 +141,9 @@ export async function POST(request: Request) {
       auth.db
     );
 
-    /* Neutral mapping: every header present, every target empty. Not a suggestion. */
-    const mapping = Object.fromEntries(
+    const simpleMapping = simpleNameMobileMapping(parsed.headers);
+    /* Generic files remain neutral until staff confirms the mapping. */
+    const mapping = simpleMapping ?? Object.fromEntries(
       parsed.headers
         .filter((header) => header.trim().length > 0)
         .map((header) => [header, ""])
@@ -152,8 +159,17 @@ export async function POST(request: Request) {
       auth.db
     );
 
+    let finalBatch = withMapping;
+    if (simpleMapping) {
+      const rawRecords = fileType === "csv"
+        ? parseCsvRecordsForMapping(buffer).records
+        : (await parseXlsxRecordsForMapping(buffer)).records;
+      const rows = applyMappingToRawRecords(parsed.headers, rawRecords, simpleMapping);
+      await replaceLeadImportRowsForContext(auth.context, batch.id, rows, auth.db);
+      finalBatch = await validateLeadImportBatchForContext(auth.context, batch.id, auth.db);
+    }
     return NextResponse.json({
-      batch: withMapping,
+      batch: finalBatch,
       headers: parsed.headers,
       /* A hint the client confirms. Persisted only by an explicit map-validate. */
       suggestedMapping: suggestMappingFromHeaders(parsed.headers),

@@ -40,9 +40,16 @@ export function ImportWizard({ sources }: ImportWizardProps) {
           required
           className="block w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 file:mr-4 file:rounded-md file:border-0 file:bg-amber-500 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-neutral-950"
         />
+        <p className="text-xs text-neutral-400">
+          Paste only Name and Mobile Number. Up to 1,000 contacts. CRM cleans Indian mobile
+          numbers, then separates invalid and duplicate enquiries before import.
+        </p>
+        <a href="/templates/ONEDECORE_Bulk_Enquiries_Template.xlsx" download
+           className="inline-flex min-h-10 items-center rounded-md border border-amber-500/40 px-3 text-sm font-semibold text-amber-300 hover:bg-amber-500/10">
+          Download two-column Excel template
+        </a>
         <p className="text-xs text-neutral-500">
-          CSV (UTF-8 with BOM) or XLSX values only. Max 5 MiB, 1000 rows, 50
-          columns. Formulas are rejected. Bulk import does not record marketing or WhatsApp consent — use the consent workflow separately when required.
+          Advanced CSV/XLSX mapping remains available. Bulk import does not record marketing or WhatsApp consent.
         </p>
       </div>
 
@@ -56,6 +63,7 @@ export function ImportWizard({ sources }: ImportWizardProps) {
         <select
           id="default-source"
           name="defaultSourceId"
+          required
           className="min-h-11 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
         >
           <option value="">Select default source</option>

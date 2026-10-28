@@ -9,9 +9,12 @@ import type {
 } from "../contracts/lead-import-contracts.ts";
 import {
   isLeadImportMappingField,
+  LEAD_IMPORT_LIMITS,
+  validateLeadImportMappingInput,
   validateLeadImportRejectionReason,
 } from "../contracts/lead-import-contracts.ts";
 import { requireCrmBulkImportAccess } from "./crm-auth.ts";
+import { fetchLeadImportBatchDetail } from "./crm-import-queries.ts";
 import { CrmError, crmErrorFromPostgresMessage } from "./crm-errors.ts";
 import {
   approveLeadImportBatchForCurrentUser,
@@ -32,6 +35,7 @@ import {
   parseCsvRecordsForMapping,
   parseLeadImportFile,
   parseXlsxRecordsForMapping,
+  simpleNameMobileMapping,
 } from "./lead-import-file-parser.ts";
 
 function toImportActionState(error: unknown): LeadImportActionState {
@@ -84,6 +88,9 @@ export async function uploadLeadImportFileAction(
       };
     }
 
+    if (file.size > LEAD_IMPORT_LIMITS.maxFileBytes) {
+      return { success: false, message: "Import file exceeds 5 MiB.", code: "IMPORT_FILE_TOO_LARGE" };
+    }
     const fileType = detectLeadImportFileType(file.name, file.type);
     if (!fileType) {
       return {
@@ -109,7 +116,8 @@ export async function uploadLeadImportFileAction(
       defaultSourceId,
     });
 
-    const mapping = Object.fromEntries(
+    const simpleMapping = simpleNameMobileMapping(parsed.headers);
+    const mapping = simpleMapping ?? Object.fromEntries(
       parsed.headers
         .filter((header) => header.trim().length > 0)
         .map((header) => [header, ""])
@@ -121,8 +129,17 @@ export async function uploadLeadImportFileAction(
       defaultSourceId,
     });
 
+    if (simpleMapping) {
+      const rawRecords = fileType === "csv"
+        ? parseCsvRecordsForMapping(buffer).records
+        : (await parseXlsxRecordsForMapping(buffer)).records;
+      await replaceLeadImportRowsForCurrentUser(
+        batch.id, applyMappingToRawRecords(parsed.headers, rawRecords, simpleMapping)
+      );
+      await validateLeadImportBatchForCurrentUser(batch.id);
+    }
     revalidatePath("/admin/crm/imports");
-    redirect(`/admin/crm/imports/${batch.id}?step=mapping`);
+    redirect(`/admin/crm/imports/${batch.id}${simpleMapping ? "" : "?step=mapping"}`);
   } catch (error: unknown) {
     if (
       error &&
@@ -156,6 +173,9 @@ export async function saveLeadImportMappingAction(
       };
     }
 
+    if (file.size > LEAD_IMPORT_LIMITS.maxFileBytes) {
+      return { success: false, message: "Import file exceeds 5 MiB.", code: "IMPORT_FILE_TOO_LARGE" };
+    }
     const fileType = detectLeadImportFileType(file.name, file.type);
     if (!fileType) {
       return {
@@ -167,6 +187,19 @@ export async function saveLeadImportMappingAction(
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const parsed = await parseLeadImportFile(buffer, fileType);
+    const original = await fetchLeadImportBatchDetail(batchId);
+    if (!original || original.fileSha256 !== computeLeadImportFileSha256(buffer) ||
+        original.fileType !== fileType || original.headerFingerprint !== parsed.headerFingerprint) {
+      throw new CrmError({
+        code: "IMPORT_SOURCE_FILE_MISMATCH",
+        message: "Re-upload the exact original file. This file does not match the staged batch.",
+        httpStatus: 422,
+      });
+    }
+    const errors = validateLeadImportMappingInput({ mapping });
+    if (errors.length > 0) {
+      throw new CrmError({ code: "IMPORT_INVALID_MAPPING", message: errors[0].message, httpStatus: 422 });
+    }
     const rawRecords =
       fileType === "csv"
         ? parseCsvRecordsForMapping(buffer).records

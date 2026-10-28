@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { CrmAccessContext } from "@/features/crm/contracts/crm-access.ts";
@@ -80,6 +80,28 @@ export function ImportBatchDetail({
     INITIAL_STATE
   );
 
+  const [rowFilter, setRowFilter] = useState<"all" | "valid" | "invalid" | "duplicate">("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+  const sortedRows = useMemo(() => {
+    const selected = rows.filter((row) =>
+      rowFilter === "all" ? true :
+      rowFilter === "invalid" ? row.validationStatus === "invalid" :
+      rowFilter === "duplicate" ? row.importStatus === "skipped" :
+      row.validationStatus === "valid" && row.importStatus !== "skipped"
+    );
+    return [...selected].sort((left, right) => {
+      const rank = (row: LeadImportRowDetail) =>
+        row.validationStatus === "invalid" ? 2 : row.importStatus === "skipped" ? 1 : 0;
+      const byStatus = rank(left) - rank(right);
+      if (byStatus) return byStatus;
+      return (left.phone ?? "").localeCompare(right.phone ?? "", "en", {numeric: true})
+        || left.rowNumber - right.rowNumber;
+    });
+  }, [rows, rowFilter]);
+  const pages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+  const currentPage = Math.min(page, pages);
+  const visibleRows = sortedRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const router = useRouter();
 
   useEffect(() => {
@@ -110,8 +132,10 @@ export function ImportBatchDetail({
     headers.length > 0
       ? suggestMappingFromHeaders(headers)
       : ({} as Record<string, string>);
-  const showMapping =
-    initialStep === "mapping" || isEditableImportBatchStatus(batch.status);
+  const isSimpleNameMobile = headers.length === 2 &&
+    Object.values(batch.mapping).slice().sort().join("|") === "phone|submitted_name";
+  const showMapping = initialStep === "mapping" ||
+    (isEditableImportBatchStatus(batch.status) && !isSimpleNameMobile);
 
   const latestMessage =
     [
@@ -337,28 +361,49 @@ export function ImportBatchDetail({
         <div className="border-b border-neutral-800 px-4 py-3">
           <h2 className="text-lg font-semibold text-neutral-50">Staged rows</h2>
         </div>
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+          {(["all", "valid", "duplicate", "invalid"] as const).map((filter) => (
+            <button key={filter} type="button" onClick={() => { setRowFilter(filter); setPage(1); }}
+              className={rowFilter === filter
+                ? "rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-neutral-950"
+                : "rounded-md border border-neutral-700 px-3 py-2 text-xs text-neutral-300"}>
+              {filter.charAt(0).toUpperCase() + filter.slice(1)}
+            </button>
+          ))}
+          <span className="ml-auto text-xs text-neutral-400">
+            {sortedRows.length} rows · sorted by Indian mobile number
+          </span>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-neutral-950/80 text-left text-neutral-400">
               <tr>
                 <th className="px-4 py-3">#</th>
                 <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Mobile</th>
                 <th className="px-4 py-3">Validation</th>
                 <th className="px-4 py-3">Duplicate</th>
                 <th className="px-4 py-3">Import</th>
+                <th className="px-4 py-3">Issue / correction</th>
                 <th className="px-4 py-3">Lead</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-900">
-              {rows.map((row) => (
+              {visibleRows.map((row) => (
                 <tr key={row.id}>
                   <td className="px-4 py-3 text-neutral-400">{row.rowNumber}</td>
                   <td className="px-4 py-3 text-neutral-100">{row.submittedName}</td>
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-neutral-300">{row.phone ?? "—"}</td>
                   <td className="px-4 py-3 text-neutral-300">{row.validationStatus}</td>
                   <td className="px-4 py-3 text-neutral-300">
                     {row.duplicateOutcome ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-neutral-300">{row.importStatus}</td>
+                  <td className="max-w-xs px-4 py-3 text-xs text-rose-300">
+                    {row.validationErrors.map((error) => error.message).join("; ")
+                      || row.importErrorCode
+                      || (row.importStatus === "skipped" ? "Duplicate — skipped" : "—")}
+                  </td>
                   <td className="px-4 py-3">
                     {row.leadId ? (
                       <Link
@@ -375,6 +420,21 @@ export function ImportBatchDetail({
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between border-t border-neutral-800 px-4 py-3">
+          <span className="text-xs text-neutral-400">Page {currentPage} of {pages} · 20 rows per page</span>
+          <div className="flex gap-2">
+            <button type="button" disabled={currentPage === 1}
+              onClick={() => setPage((value) => Math.max(1, value - 1))}
+              className="rounded-md border border-neutral-700 px-3 py-2 text-xs text-neutral-200 disabled:opacity-40">
+              Previous
+            </button>
+            <button type="button" disabled={currentPage >= pages}
+              onClick={() => setPage((value) => Math.min(pages, value + 1))}
+              className="rounded-md border border-neutral-700 px-3 py-2 text-xs text-neutral-200 disabled:opacity-40">
+              Next
+            </button>
+          </div>
         </div>
       </section>
     </div>
