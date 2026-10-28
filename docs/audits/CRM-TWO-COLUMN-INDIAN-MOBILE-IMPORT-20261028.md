@@ -8,9 +8,9 @@
 
 ## Owner workflow
 
-1. Download `/templates/ONEDECORE_Bulk_Enquiries_Template.xlsx` from CRM → Lead imports → New import; sheet **Enquiries** has exactly **Name** and **Mobile Number** columns.
+1. CRM → Lead imports displays **Download Excel** immediately beside **Bulk Upload**. The protected `/admin/crm/imports/template` download provides **Name**, **Mobile Number**, and optional **Source** columns, with a refreshed source catalogue and Excel dropdown. The original two-column format is still supported.
 2. Paste up to 1,000 rows; mobile cells are text. Accept `9876543210`, `+91 9876543210`, `919876543210`, `09876543210`, and spaces/hyphens/parentheses. Successful normalization produces `+91` plus 10 digits starting 6–9.
-3. Choose an **active lead source** once and upload. For the exact two-column format, one upload stages, maps and validates; other CSV/XLSX files continue through manual mapping.
+3. Choose an **active default lead source** once and upload. The optional Source cell may contain any existing active CRM source **name**, **code**, or ID; blank cells use the default. The strict 2/3-column format stages, maps, and validates in one upload. Unknown or ambiguous names fail before staging with the Excel row number; no silent fallback or auto-created source. Other CSV/XLSX files continue through manual mapping.
 4. Review normalized mobiles, original row numbers, valid/duplicate/invalid filters, 20 rows per page and number sorting. Invalid rows remain excluded; valid rows can still proceed.
 5. Super Admin reviews and confirms direct import. The database processes at most 100 records per chunk. With no configured assignment rules imported enquiries remain **Unassigned**. The CRM default lead temperature is **Cold**.
 6. Importing does **not grant WhatsApp marketing consent** or send any messages.
@@ -23,6 +23,7 @@
 - Omitted service/property/timeline fields use existing `not-specified` taxonomy values; no false assumptions.
 - The additive SQL migration replaces only the import validator and batch validator based on their latest source versions, adding unknown-field support, within-file duplicate detection and valid-subset approval.
 - Duplicate protection is repeated when processing each row against CRM. No anonymous privileges or weakened RBAC.
+- The inline **Add Source in CRM** panel calls the existing `create_lead_source` RPC only after the Super Admin permission check. It never imports leads or creates WhatsApp consent. A fresh download includes newly added active sources; the old generated workbook can be re-used with a matching name/code.
 - Super Admin is the only role with bulk import permission in the managed Production schema; other roles unchanged.
 
 ## QA / release control

@@ -132,8 +132,9 @@ export function ImportBatchDetail({
     headers.length > 0
       ? suggestMappingFromHeaders(headers)
       : ({} as Record<string, string>);
-  const isSimpleNameMobile = headers.length === 2 &&
-    Object.values(batch.mapping).slice().sort().join("|") === "phone|submitted_name";
+  const savedFields = Object.values(batch.mapping).slice().sort().join("|");
+  const isSimpleNameMobile = (headers.length === 2 && savedFields === "phone|submitted_name") ||
+    (headers.length === 3 && savedFields === "phone|primary_source_id|submitted_name");
   const showMapping = initialStep === "mapping" ||
     (isEditableImportBatchStatus(batch.status) && !isSimpleNameMobile);
 

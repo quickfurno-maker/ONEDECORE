@@ -37,6 +37,7 @@
     "src/features/crm/__tests__/crm-auto-assignment-control.test.ts",
     "src/features/crm/__tests__/crm-dashboard-task-summary.test.ts",
     "src/features/crm/__tests__/crm-datetime-field.test.ts",
+    "src/features/crm/__tests__/crm-import-source-provision.test.ts",
     "src/features/crm/__tests__/crm-lead-delete.test.ts",
     "src/features/crm/__tests__/crm-lead-sort-manual-filter.test.ts",
     "src/features/crm/__tests__/crm-lead-temperature-list.test.ts",

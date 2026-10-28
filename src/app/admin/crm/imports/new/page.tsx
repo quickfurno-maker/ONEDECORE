@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CrmPageHeader } from "@/features/crm/components/shell/CrmPageHeader";
 import { ImportWizard } from "@/features/crm/components/imports/ImportWizard";
+import { ImportSourceManager } from "@/features/crm/components/imports/ImportSourceManager";
 import { requireCrmBulkImportAccess } from "@/features/crm/server/crm-auth";
 import { fetchActiveLeadSources } from "@/features/crm/server/crm-lead-queries";
 
@@ -22,6 +23,7 @@ export default async function CrmNewImportPage() {
         description="Upload a CSV or XLSX file. Parsed rows are staged server-side — raw files are not persisted."
       />
       <ImportWizard sources={sources} />
+      <ImportSourceManager sources={sources} />
     </div>
   );
 }

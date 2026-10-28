@@ -23,6 +23,8 @@ import {
   parseXlsxRecordsForMapping,
 } from "@/features/crm/server/lead-import-file-parser.ts";
 import { fetchLeadImportBatchDetail } from "@/features/crm/server/crm-import-queries.ts";
+import { fetchActiveLeadSources } from "@/features/crm/server/crm-lead-queries.ts";
+import { resolveMappedImportSources } from "@/features/crm/server/lead-import-source-resolver.ts";
 import {
   replaceLeadImportMappingForContext,
   replaceLeadImportRowsForContext,
@@ -218,10 +220,10 @@ export async function POST(
       auth.db
     );
 
-    const mappedRows = applyMappingToRawRecords(
-      parsed.headers,
-      rawRecords,
-      persistedMapping
+    const mappedRows = resolveMappedImportSources(
+      applyMappingToRawRecords(parsed.headers, rawRecords, persistedMapping),
+      await fetchActiveLeadSources(auth.db),
+      defaultSourceId
     );
 
     await replaceLeadImportRowsForContext(

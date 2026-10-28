@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { fetchActiveLeadSources } from "@/features/crm/server/crm-lead-queries.ts";
+import { resolveMappedImportSources } from "@/features/crm/server/lead-import-source-resolver.ts";
 import { NextResponse } from "next/server";
 import {
   crmMobileAuthError,
@@ -124,6 +126,21 @@ export async function POST(request: Request) {
     /* The canonical parser. Column limit, row limit and formula rejection live here. */
     const parsed = await parseLeadImportFile(buffer, fileType);
 
+    const simpleMapping = simpleNameMobileMapping(parsed.headers);
+    const simpleRows = simpleMapping
+      ? resolveMappedImportSources(
+          applyMappingToRawRecords(
+            parsed.headers,
+            fileType === "csv"
+              ? parseCsvRecordsForMapping(buffer).records
+              : (await parseXlsxRecordsForMapping(buffer)).records,
+            simpleMapping
+          ),
+          await fetchActiveLeadSources(auth.db),
+          defaultSourceId
+        )
+      : null;
+
     const batch = await createLeadImportBatchForContext(
       auth.context,
       {
@@ -141,7 +158,6 @@ export async function POST(request: Request) {
       auth.db
     );
 
-    const simpleMapping = simpleNameMobileMapping(parsed.headers);
     /* Generic files remain neutral until staff confirms the mapping. */
     const mapping = simpleMapping ?? Object.fromEntries(
       parsed.headers
@@ -160,12 +176,8 @@ export async function POST(request: Request) {
     );
 
     let finalBatch = withMapping;
-    if (simpleMapping) {
-      const rawRecords = fileType === "csv"
-        ? parseCsvRecordsForMapping(buffer).records
-        : (await parseXlsxRecordsForMapping(buffer)).records;
-      const rows = applyMappingToRawRecords(parsed.headers, rawRecords, simpleMapping);
-      await replaceLeadImportRowsForContext(auth.context, batch.id, rows, auth.db);
+    if (simpleRows) {
+      await replaceLeadImportRowsForContext(auth.context, batch.id, simpleRows, auth.db);
       finalBatch = await validateLeadImportBatchForContext(auth.context, batch.id, auth.db);
     }
     return NextResponse.json({

@@ -28,17 +28,21 @@ export function normalizeIndianImportMobile(raw: string): string {
   return /^[6-9]\d{9}$/.test(digits) ? "+91" + digits : input;
 }
 
-/** The official two-column template can be staged and validated in one upload. */
-export function simpleNameMobileMapping(headers: readonly string[]): Record<string, "submitted_name" | "phone"> | null {
-  if (headers.length !== 2) return null;
-  const mapping: Record<string, "submitted_name" | "phone"> = {};
+/** The two-column and optional Source template can be validated in one upload. */
+export function simpleNameMobileMapping(
+  headers: readonly string[]
+): Record<string, "submitted_name" | "phone" | "primary_source_id"> | null {
+  if (headers.length < 2 || headers.length > 3) return null;
+  const mapping: Record<string, "submitted_name" | "phone" | "primary_source_id"> = {};
   for (const header of headers) {
-    const normalized = header.trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+    const normalized = header.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
     if (["name", "full name", "customer name"].includes(normalized)) mapping[header] = "submitted_name";
     else if (["mobile number", "mobile", "phone", "phone number", "contact number"].includes(normalized)) mapping[header] = "phone";
+    else if (["source", "lead source", "source optional"].includes(normalized)) mapping[header] = "primary_source_id";
     else return null;
   }
-  return new Set(Object.values(mapping)).size === 2 ? mapping : null;
+  const targets = new Set(Object.values(mapping));
+  return targets.has("submitted_name") && targets.has("phone") && targets.size === headers.length ? mapping : null;
 }
 
 function assertUniqueHeaders(headers: readonly string[]): void {
